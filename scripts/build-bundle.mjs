@@ -47,6 +47,8 @@ const parts = [
   "nodalia-insignia-card.js",
   "nodalia-person-card.js",
   "nodalia-weather-card.js",
+  "nodalia-calendar-card.js",
+  "nodalia-notifications-card.js",
   "nodalia-vacuum-card.js",
 ];
 
@@ -66,6 +68,7 @@ try {
     target: ["es2020"],
     charset: "utf8",
     legalComments: "none",
+    minify: true,
     plugins: [
       {
         name: "strip-standalone-utils-embed",
@@ -81,7 +84,7 @@ try {
       },
     ],
   });
-  body = result.outputFiles?.[0]?.text || "";
+  body = (result.outputFiles?.[0]?.text || "").replace(/[ \t]+$/gm, "");
 } finally {
   if (fs.existsSync(entryPath)) {
     fs.unlinkSync(entryPath);
@@ -93,6 +96,25 @@ const footer = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSO
   pkgVersion: pkg.version,
   contentSha256_12: contentHash,
 })};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v${pkg.version} (${contentHash}) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}`;
-const outPath = path.join(root, "nodalia-cards.js");
-fs.writeFileSync(outPath, `${body}\n${footer}\n`);
-console.log(`Wrote ${path.relative(root, outPath)} (${parts.length} modules + i18n, ${contentHash}).`);
+const bundleFile = "nodalia-cards.bundle.js";
+const manifestFile = "nodalia-cards.manifest.js";
+const loaderFile = "nodalia-cards.js";
+const bundlePath = path.join(root, bundleFile);
+const manifestPath = path.join(root, manifestFile);
+const loaderPath = path.join(root, loaderFile);
+const manifest = {
+  pkgVersion: pkg.version,
+  contentSha256_12: contentHash,
+  file: bundleFile,
+};
+const manifestSource = `export default ${JSON.stringify(manifest, null, 2)};\nexport const pkgVersion = ${JSON.stringify(pkg.version)};\nexport const contentSha256_12 = ${JSON.stringify(contentHash)};\nexport const file = ${JSON.stringify(bundleFile)};\n`;
+const inlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
+  mode: "inline",
+  pkgVersion: pkg.version,
+  contentSha256_12: contentHash,
+  file: loaderFile,
+})};}`;
+fs.writeFileSync(bundlePath, `${body}\n${footer}\n`);
+fs.writeFileSync(manifestPath, manifestSource);
+fs.writeFileSync(loaderPath, `${body}\n${footer}\n${inlineLoaderFooter}\n`);
+console.log(`Wrote ${path.relative(root, loaderPath)} self-contained bundle + ${bundleFile} artifact (${parts.length} modules + i18n, ${contentHash}).`);

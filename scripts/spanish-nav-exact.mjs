@@ -148,6 +148,7 @@ export const SPANISH_TO_ENGLISH_EXACT = {
   "Fondo del progreso": "Progress background",
   "Tintado activo TV": "TV active tint",
   "Color de acento": "Accent color",
+  "Color de acento (si el tintado automático está desactivado)": "Accent color (when automatic tinting is disabled)",
   "Fondo del navegador": "Browser background",
   "Veladura del navegador": "Browser backdrop",
   Comportamiento: "Behavior",
@@ -164,8 +165,13 @@ export const SPANISH_TO_ENGLISH_EXACT = {
     "You can edit popup and media player here. For very advanced actions, it is still better to complete YAML.",
   "Selección": "Selection",
   Ligero: "Light",
+  Ligera: "Light",
   Medio: "Medium",
+  Media: "Medium",
   Intenso: "Heavy",
+  Fuerte: "Heavy",
+  Intensidad: "Intensity",
+  Error: "Error",
   "Éxito": "Success",
   Aviso: "Warning",
   Fallo: "Failure",
@@ -179,4 +185,35 @@ export const SPANISH_TO_ENGLISH_EXACT = {
   "Opciones generales del reproductor integrado y lista de players visibles.":
     "General options for the embedded player and visible player list.",
   "Opciones base de la barra, layout y visibilidad general.": "Base bar options, layout and general visibility.",
+  Posicion: "Position",
+  "Mas informacion": "More info",
+  "Fondo del reproductor": "Player background",
+  "Modos visibles": "Visible modes",
+  "Oculta los modos que expone el ventilador pero no quieres mostrar en la tarjeta.":
+    "Hide the modes exposed by the fan that you do not want to show on the card.",
+  "Oculta los modos que expone la integración pero no quieres mostrar en la tarjeta.":
+    "Hide the modes exposed by the integration that you do not want to show on the card.",
+  "Modos de aspirado visibles": "Visible vacuum modes",
+  "Oculta las potencias o modos de aspirado que no quieras mostrar en la tarjeta.":
+    "Hide the suction powers or vacuum modes that you do not want to show on the card.",
+  "Acción principal": "Main action",
+  "Auto (toggle o info)": "Auto (toggle or info)",
+  "Sin acción al tocar": "No action on tap",
+  "Servicios permitidos (separados por comas)": "Allowed services (comma-separated)",
+  "Helper del código": "Code helper",
+  "Vibración/feedback táctil en acciones como abrir el calendario, borrar o crear eventos.":
+    "Vibration/tactile feedback for actions like opening the calendar, deleting or creating events.",
+  "Positivo importacion, negativo exportacion. Si exportas, valor en positivo y subtitulo «A la red» (o traduccion).":
+    "Positive import, negative export. If exporting, use a positive value and subtitle 'To grid' (or translation).",
+  "Opcional: entidad vacia = consumo calculado (solar + red + bateria). Con entidad, valor del sensor.":
+    "Optional: empty entity = calculated consumption (solar + grid + battery). With entity, sensor value.",
+  "Produccion solar instantanea.": "Instant solar production.",
+  "Potencia de bateria. Positiva descarga, negativa carga.": "Battery power. Positive discharges, negative charges.",
+  "Caudal o consumo de agua hacia el hogar.": "Water flow or consumption toward the home.",
+  "Caudal o consumo de gas hacia el hogar.": "Gas flow or consumption toward the home.",
+  "Una linea por entidad: `entity|nombre|icono|color`.": "One line per entity: `entity|name|icon|color`.",
+  "Mostrar detalles de Style,": "Show style details",
+  "Tamaño del nombre": "Name size",
+  "Tamaño del valor": "Value size",
+  "Tamaño del icono": "Icon size",
 };

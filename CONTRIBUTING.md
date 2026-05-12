@@ -135,11 +135,11 @@ Three channels keep risk and expectations clear:
 
 | Branch | Who it’s for | Version examples | Expectations |
 |--------|----------------|------------------|--------------|
-| **`main`** | Everyone | **`v0.4.0`**, **`v0.5.0`**, **`v0.6.0`**, **`v0.6.1`** (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
-| **`beta`** | Testers, early adopters | **`0.6.0-beta.1`**, **`0.6.0-beta.2`**, **`0.6.0-beta.3`**, … (tags **`v0.6.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
+| **`main`** | Everyone | **`v0.6.1`**, **`v1.0.0`**, **`v1.0.1`**, … (semver **only** stable minors/patches) | **Recommended** for normal dashboards. Only merged when the maintainer is happy to endorse the build widely. |
+| **`beta`** | Testers, early adopters | **`1.0.0-beta.1`**, **`1.0.0-beta.2`**, … (tags **`v1.0.0-beta.1`**, …) | **Pretty usable**; features are exercised but not guaranteed frozen. Promoted from **`alpha`** when a slice of work is **polished enough** (merge or cherry-pick). |
 | **`alpha`** | Developers / brave testers | **`1.0.0-alpha.1`**, **`1.0.0-alpha.2`**, … (tags **`v1.0.0-alpha.1`**, … optional) | **High churn**. Frequent commits; **dashboards may break**. Breaking YAML or behaviour is allowed here. |
 
-**Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the whole minor is ready, **`beta`** merges to **`main`** as **`v0.5.0`** (example). Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.
+**Promotion flow (typical):** experimental work lands on **`alpha`** → when a feature (or batch) is stable enough, it moves to **`beta`** → when the major is ready, **`beta`** merges to **`main`** as **`v1.0.0`**. Avoid merging **`alpha` → `main`** directly if you want **`beta`** to stay the gate for “probably OK for testers”.
 
 **Semver notes:** use **`package.json`** `version` identical to the Git tag (without **`v`**) so **`__NODALIA_BUNDLE__.pkgVersion`** and HACS match. Prerelease identifiers **`alpha.N`** and **`beta.N`** sort correctly on GitHub if **`N`** increments monotonically (**`1`**, **`2`**, … or zero-padded **`01`**, **`02`** if you prefer—pick one style per line and stick to it).
 
@@ -150,7 +150,7 @@ After **`v0.4.0`** is on **`main`** (and optionally after **`beta`** exists), cr
 ```bash
 git checkout main && git pull
 git checkout -b alpha
-# set package.json to e.g. 1.0.0-alpha.1, changelog section, npm run bundle
+# set package.json to e.g. 1.0.0-alpha.78, changelog section, npm run bundle
 git push -u origin alpha
 ```
 
@@ -160,11 +160,11 @@ Or branch **`alpha`** from **`beta`** if **`beta`** already tracks **`0.5.0-beta
 
 1. **`main` (stable)** — **`package.json`** e.g. **`0.5.0`**, **`CHANGELOG`** **`[0.5.0]`**, **`npm run bundle`**, tag **`v0.5.0`**, GitHub **Release**.
 
-2. **`beta` (first prerelease of the next minor)** — merge **`main`** into **`beta`**, bump to **`0.6.0-beta.1`**, **`CHANGELOG`** **`## [0.6.0-beta.1]`**, **`npm run bundle`**, tag **`v0.6.0-beta.1`**.
+2. **`beta` (first prerelease of the next major)** — merge **`main`** into **`beta`**, bump to **`1.0.0-beta.1`**, **`CHANGELOG`** **`## [1.0.0-beta.1]`**, **`npm run bundle`**, tag **`v1.0.0-beta.1`**.
 
-3. **`alpha` (experimental)** — after shipping **`0.6.1` stable, start the next major line at `1.0.0-alpha.1`** and iterate as needed before promoting to beta.
+3. **`alpha` / `beta` (experimental)** — **`1.0.0` stable** is on **`main`** (see **`CHANGELOG`** **`[1.0.0]`**). Further risky work may continue on **`alpha`** / **`beta`** under a new prerelease line (for example **`1.0.1-alpha.*`**) per maintainer workflow. The last train before **`1.0.0`** included **`1.0.0-alpha.96`** and **`1.0.0-beta.7`**.
 
-4. **Stable minor** — when **`beta`** is release-ready, merge **`beta` → `main`**, set the stable version (currently **`0.6.1`**), and tag accordingly.
+4. **Stable major** — merge **`beta` → `main`** (or the agreed promotion path), set **`package.json`** to **`1.0.0`**, **`CHANGELOG`** **`## [1.0.0]`**, **`npm run bundle`**, tag **`v1.0.0`**, GitHub **Release**.
 
 ---
 
@@ -185,6 +185,6 @@ Even small contributions help:
 - Sharing ideas
 - Testing features
 
-Everything helps move Nodalia Cards closer to a polished 1.0 version.
+Everything helps keep Nodalia Cards polished after **1.0.0**.
 
 Thanks again for your support! 🙌

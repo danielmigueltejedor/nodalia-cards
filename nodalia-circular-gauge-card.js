@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -2601,7 +2694,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2728,7 +2821,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
       this._getNumericEntityOptions().forEach(option => {
         const optionElement = document.createElement("option");
@@ -3074,53 +3167,53 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad numérica principal, nombre, icono y rango del gauge."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.general_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderEntityField("Entidad numérica", "entity", config.entity, {
+            ${this._renderEntityField("ed.circular_gauge.numeric_entity", "entity", config.entity, {
               placeholder: "sensor.enchufe_inteligente_potencia",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Potencia",
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: this._editorLabel("ed.circular_gauge.name_placeholder_power"),
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:flash",
               fullWidth: true,
             })}
-            ${this._renderTextField("Unidad", "unit", config.unit, {
+            ${this._renderTextField("ed.circular_gauge.unit", "unit", config.unit, {
               placeholder: "W",
             })}
-            ${this._renderTextField("Minimo", "min", config.min, {
+            ${this._renderTextField("ed.circular_gauge.min_value", "min", config.min, {
               placeholder: "0",
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Maximo", "max", config.max, {
+            ${this._renderTextField("ed.circular_gauge.max_value", "max", config.max, {
               placeholder: "2500",
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Etiqueta minimo", "min_label", config.min_label, {
+            ${this._renderTextField("ed.circular_gauge.label_min", "min_label", config.min_label, {
               placeholder: "0",
             })}
-            ${this._renderTextField("Etiqueta maximo", "max_label", config.max_label, {
+            ${this._renderTextField("ed.circular_gauge.label_max", "max_label", config.max_label, {
               placeholder: "∞",
             })}
-            ${this._renderTextField("Decimales", "decimals", config.decimals, {
+            ${this._renderTextField("ed.entity.number_decimals", "decimals", config.decimals, {
               placeholder: "0",
               type: "number",
               valueType: "number",
             })}
             ${this._renderSelectField(
-              "Tap action",
+              "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin acción" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
             )}
           </div>
@@ -3128,15 +3221,15 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ayuda a compactar el gauge según el espacio disponible en la vista."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.media_player.layout_section"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.layout_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Rows de grid", "grid_options.rows", config.grid_options?.rows, {
+            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Columnas de grid", "grid_options.columns", config.grid_options?.columns, {
+            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
               type: "number",
               valueType: "number",
             })}
@@ -3145,42 +3238,42 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes de cabecera, chips y rango visible."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.visibility_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Empezar desde cero", "start_from_zero", config.start_from_zero !== false)}
-            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
-            ${this._renderCheckboxField("Mostrar nombre", "show_name", config.show_name !== false)}
-            ${this._renderCheckboxField("Mostrar nombre en chip", "show_name_chip", config.show_name_chip !== false)}
-            ${this._renderCheckboxField("Mostrar icono", "show_icon", config.show_icon !== false)}
-            ${this._renderCheckboxField("Mostrar chip de porcentaje", "show_percentage_chip", config.show_percentage_chip === true)}
-            ${this._renderCheckboxField("Mostrar rango min/max", "show_range_labels", config.show_range_labels !== false)}
-            ${this._renderCheckboxField("Mostrar icono inferior", "show_bottom_icon_bubble", config.show_bottom_icon_bubble === true)}
-            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.circular_gauge.start_from_zero", "start_from_zero", config.start_from_zero !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_header", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("ed.person.show_name", "show_name", config.show_name !== false)}
+            ${this._renderCheckboxField("ed.circular_gauge.show_name_chip", "show_name_chip", config.show_name_chip !== false)}
+            ${this._renderCheckboxField("ed.circular_gauge.show_icon", "show_icon", config.show_icon !== false)}
+            ${this._renderCheckboxField("ed.circular_gauge.percentage_chip", "show_percentage_chip", config.show_percentage_chip === true)}
+            ${this._renderCheckboxField("ed.circular_gauge.range_labels", "show_range_labels", config.show_range_labels !== false)}
+            ${this._renderCheckboxField("ed.circular_gauge.bottom_icon_bubble", "show_bottom_icon_bubble", config.show_bottom_icon_bubble === true)}
+            ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.vacuum.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -3188,8 +3281,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la transición del dial, la entrada del contenido y el rebote al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.animations_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3198,7 +3291,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -3206,16 +3299,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("Dial (ms)", "animations.dial_duration", config.animations.dial_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("ed.circular_gauge.dial_duration_ms", "animations.dial_duration", config.animations.dial_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("Rebote tap (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("Entrada del contenido (ms)", "animations.content_duration", config.animations.content_duration, {
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", config.animations.content_duration, {
                     type: "number",
                     valueType: "number",
                   })}
@@ -3227,8 +3320,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Personaliza el look Nodalia, el dial circular, la nueva burbuja del thumb y la escala de tinte del gauge."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.styles_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3237,7 +3330,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -3245,44 +3338,44 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamaño burbuja entidad", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.circular_gauge.entity_bubble_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
+                  ${this._renderColorField("ed.circular_gauge.bubble_icon_color", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Tamaño valor", "styles.value_size", config.styles.value_size)}
-                  ${this._renderTextField("Tamaño rango", "styles.range_size", config.styles.range_size)}
-                  ${this._renderTextField("Máx ancho chip nombre", "styles.name_chip_max_width", config.styles.name_chip_max_width)}
-                  ${this._renderTextField("Tamaño dial", "styles.gauge.size", config.styles.gauge.size)}
-                  ${this._renderTextField("Grosor dial", "styles.gauge.stroke", config.styles.gauge.stroke)}
-                  ${this._renderTextField("Tamaño thumb", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
-                  ${this._renderColorField("Fondo dial", "styles.gauge.background", config.styles.gauge.background, {
+                  ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.circular_gauge.value_size", "styles.value_size", config.styles.value_size)}
+                  ${this._renderTextField("ed.circular_gauge.range_size", "styles.range_size", config.styles.range_size)}
+                  ${this._renderTextField("ed.circular_gauge.name_chip_max_width", "styles.name_chip_max_width", config.styles.name_chip_max_width)}
+                  ${this._renderTextField("ed.circular_gauge.dial_size", "styles.gauge.size", config.styles.gauge.size)}
+                  ${this._renderTextField("ed.circular_gauge.dial_stroke", "styles.gauge.stroke", config.styles.gauge.stroke)}
+                  ${this._renderTextField("ed.circular_gauge.thumb_size", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
+                  ${this._renderColorField("ed.circular_gauge.dial_background", "styles.gauge.background", config.styles.gauge.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
                   })}
-                  ${this._renderColorField("Tinte mínimo gauge", "styles.gauge.min_tint_color", config.styles.gauge.min_tint_color, {
+                  ${this._renderColorField("ed.circular_gauge.min_tint", "styles.gauge.min_tint_color", config.styles.gauge.min_tint_color, {
                     fallbackValue: DEFAULT_GAUGE_MIN_TINT_COLOR,
                   })}
-                  ${this._renderColorField("Tinte máximo gauge", "styles.gauge.max_tint_color", config.styles.gauge.max_tint_color, {
+                  ${this._renderColorField("ed.circular_gauge.max_tint", "styles.gauge.max_tint_color", config.styles.gauge.max_tint_color, {
                     fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
-                  ${this._renderColorField("Color fijo gauge", "styles.gauge.foreground_color", config.styles.gauge.foreground_color, {
+                  ${this._renderColorField("ed.circular_gauge.fixed_gauge_color", "styles.gauge.foreground_color", config.styles.gauge.foreground_color, {
                     fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
                   })}
-                  ${this._renderColorField("Track gauge", "styles.gauge.track_color", config.styles.gauge.track_color, {
+                  ${this._renderColorField("ed.circular_gauge.track_color", "styles.gauge.track_color", config.styles.gauge.track_color, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
                   })}
-                  ${this._renderTextField("Tamaño chip", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.person.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.person.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
                 </div>
               `
               : ""

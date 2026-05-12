@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -393,7 +486,7 @@
 
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "0.12.3";
+const CARD_VERSION = "0.12.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -409,6 +502,9 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   language: "auto",
+  unit_system: "auto",
+  temperature_unit: "auto",
+  wind_speed_unit: "auto",
   tap_action: "more-info",
   show_condition: true,
   show_humidity_chip: true,
@@ -432,6 +528,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     content_duration: 420,
     button_bounce_duration: 320,
   },
@@ -825,38 +922,24 @@ function getSupportedForecastTypes(state) {
   return types.length ? types : ["hourly", "daily"];
 }
 
-function formatForecastDateTime(value, type) {
+function formatForecastDateTime(value, type, locale) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
+  const localeArg = locale && locale !== "auto" ? locale : undefined;
 
   if (type === "hourly") {
-    return date.toLocaleTimeString([], {
+    return date.toLocaleTimeString(localeArg, {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
 
-  return date.toLocaleDateString([], {
+  return date.toLocaleDateString(localeArg, {
     weekday: "short",
     day: "numeric",
   });
-}
-
-function formatForecastTemperature(item, type) {
-  const temperature = formatNumber(item?.temperature);
-  const low = formatNumber(item?.templow);
-
-  if (!temperature) {
-    return "--";
-  }
-
-  if (type === "daily" && low) {
-    return `${temperature}° / ${low}°`;
-  }
-
-  return `${temperature}°`;
 }
 
 function getForecastTemperatureValue(item, type) {
@@ -1076,6 +1159,32 @@ function getConditionIcon(value) {
   }
 }
 
+function getConditionIconMotionClass(value) {
+  switch (normalizeTextKey(value)) {
+    case "rainy":
+    case "pouring":
+    case "lightning_rainy":
+    case "snowy_rainy":
+      return "weather-card__icon--rain-motion";
+    case "snowy":
+    case "hail":
+      return "weather-card__icon--snow-motion";
+    case "sunny":
+      return "weather-card__icon--sun-motion";
+    case "windy":
+    case "windy_variant":
+      return "weather-card__icon--wind-motion";
+    case "cloudy":
+    case "partlycloudy":
+    case "fog":
+      return "weather-card__icon--cloud-motion";
+    case "lightning":
+      return "weather-card__icon--storm-motion";
+    default:
+      return "";
+  }
+}
+
 function getConditionAccent(value) {
   switch (normalizeTextKey(value)) {
     case "sunny":
@@ -1110,6 +1219,64 @@ function getConditionAccent(value) {
 
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+}
+
+function normalizeUnitSystem(value) {
+  const normalized = normalizeTextKey(value);
+  if (["metric", "eu", "europe", "european"].includes(normalized)) {
+    return "metric";
+  }
+  if (["imperial", "us", "usa", "american"].includes(normalized)) {
+    return "imperial";
+  }
+  return "auto";
+}
+
+function normalizeTemperatureUnitPreference(value) {
+  const normalized = normalizeTextKey(value);
+  if (["c", "celsius", "centigrade"].includes(normalized)) {
+    return "c";
+  }
+  if (["f", "fahrenheit"].includes(normalized)) {
+    return "f";
+  }
+  return "auto";
+}
+
+function normalizeWindUnitPreference(value) {
+  const normalized = normalizeTextKey(value);
+  if (["km_h", "kmh", "kph", "kilometers_per_hour", "kilometres_per_hour"].includes(normalized)) {
+    return "kmh";
+  }
+  if (["mph", "miles_per_hour"].includes(normalized)) {
+    return "mph";
+  }
+  return "auto";
+}
+
+function normalizeTemperatureUnitFromState(value) {
+  const normalized = normalizeTextKey(value);
+  if (normalized.includes("f")) {
+    return "f";
+  }
+  return "c";
+}
+
+function normalizeWindUnitFromState(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) {
+    return "kmh";
+  }
+  if (raw.includes("mph")) {
+    return "mph";
+  }
+  if (raw.includes("km")) {
+    return "kmh";
+  }
+  if (raw.includes("m/s") || raw.includes("mps")) {
+    return "ms";
+  }
+  return "kmh";
 }
 
 class NodaliaWeatherCard extends HTMLElement {
@@ -1226,6 +1393,9 @@ class NodaliaWeatherCard extends HTMLElement {
       humidity: Number(attrs.humidity ?? -1),
       pressure: Number(attrs.pressure ?? -1),
       windSpeed: Number(attrs.wind_speed ?? -1),
+      unitSystem: normalizeUnitSystem(this._config?.unit_system),
+      temperatureUnit: normalizeTemperatureUnitPreference(this._config?.temperature_unit),
+      windSpeedUnit: normalizeWindUnitPreference(this._config?.wind_speed_unit),
       windBearing: Number(attrs.wind_bearing ?? -1),
       visibility: Number(attrs.visibility ?? -1),
       precipitation: Number(attrs.precipitation ?? -1),
@@ -1352,14 +1522,17 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _formatTemperature(state) {
-    const value = formatNumber(state?.attributes?.temperature);
-    const unit = String(state?.attributes?.temperature_unit || "°C").trim();
-
+    const prefs = this._getUnitPreferences(state);
+    const converted = this._convertTemperatureValue(
+      state?.attributes?.temperature,
+      prefs.sourceTemperatureUnit,
+      prefs.targetTemperatureUnit,
+    );
+    const value = formatNumber(converted);
     if (!value) {
       return "--";
     }
-
-    return `${value}${unit.startsWith("°") ? unit : ` ${unit}`}`;
+    return `${value}${this._temperatureUnitLabel(prefs.targetTemperatureUnit)}`;
   }
 
   _formatHumidity(state) {
@@ -1368,14 +1541,17 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _formatWind(state) {
-    const value = formatNumber(state?.attributes?.wind_speed);
-    const unit = String(state?.attributes?.wind_speed_unit || "").trim();
-
+    const prefs = this._getUnitPreferences(state);
+    const converted = this._convertWindSpeedValue(
+      state?.attributes?.wind_speed,
+      prefs.sourceWindUnit,
+      prefs.targetWindUnit,
+    );
+    const value = formatNumber(converted);
     if (!value) {
       return null;
     }
-
-    return unit ? `${value} ${unit}` : value;
+    return `${value} ${this._windUnitLabel(prefs.targetWindUnit)}`;
   }
 
   _formatPressure(state) {
@@ -1387,6 +1563,96 @@ class NodaliaWeatherCard extends HTMLElement {
     }
 
     return unit ? `${value} ${unit}` : value;
+  }
+
+  _getUnitPreferences(state) {
+    const attrs = state?.attributes || {};
+    const unitSystem = normalizeUnitSystem(this._config?.unit_system);
+    let temperaturePreference = normalizeTemperatureUnitPreference(this._config?.temperature_unit);
+    let windPreference = normalizeWindUnitPreference(this._config?.wind_speed_unit);
+    if (temperaturePreference === "auto" && unitSystem !== "auto") {
+      temperaturePreference = unitSystem === "imperial" ? "f" : "c";
+    }
+    if (windPreference === "auto" && unitSystem !== "auto") {
+      windPreference = unitSystem === "imperial" ? "mph" : "kmh";
+    }
+    const sourceTemperatureUnit = normalizeTemperatureUnitFromState(attrs.temperature_unit);
+    const sourceWindUnit = normalizeWindUnitFromState(attrs.wind_speed_unit);
+    return {
+      sourceTemperatureUnit,
+      sourceWindUnit,
+      targetTemperatureUnit: temperaturePreference === "auto" ? sourceTemperatureUnit : temperaturePreference,
+      targetWindUnit: windPreference === "auto"
+        ? (sourceWindUnit === "ms" ? "kmh" : sourceWindUnit)
+        : windPreference,
+    };
+  }
+
+  _temperatureUnitLabel(unit) {
+    return unit === "f" ? "°F" : "°C";
+  }
+
+  _windUnitLabel(unit) {
+    return unit === "mph" ? "mph" : "km/h";
+  }
+
+  _convertTemperatureValue(value, fromUnit, toUnit) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    if (fromUnit === toUnit) {
+      return numeric;
+    }
+    if (fromUnit === "f" && toUnit === "c") {
+      return (numeric - 32) * (5 / 9);
+    }
+    if (fromUnit === "c" && toUnit === "f") {
+      return (numeric * (9 / 5)) + 32;
+    }
+    return numeric;
+  }
+
+  _convertWindSpeedValue(value, fromUnit, toUnit) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    if (fromUnit === toUnit) {
+      return numeric;
+    }
+    let kmh = numeric;
+    if (fromUnit === "mph") {
+      kmh = numeric * 1.609344;
+    } else if (fromUnit === "ms") {
+      kmh = numeric * 3.6;
+    }
+    if (toUnit === "mph") {
+      return kmh * 0.621371192;
+    }
+    return kmh;
+  }
+
+  _formatForecastTemperature(item, type, targetTemperatureUnit) {
+    const sourceUnit = normalizeTemperatureUnitFromState(this._getState()?.attributes?.temperature_unit);
+    const high = formatNumber(this._convertTemperatureValue(
+      getForecastTemperatureSeriesValue(item, "high"),
+      sourceUnit,
+      targetTemperatureUnit,
+    ));
+    const low = formatNumber(this._convertTemperatureValue(
+      getForecastTemperatureSeriesValue(item, "low"),
+      sourceUnit,
+      targetTemperatureUnit,
+    ));
+    if (!high) {
+      return "--";
+    }
+    const unitLabel = this._temperatureUnitLabel(targetTemperatureUnit);
+    if (type === "daily" && low) {
+      return `${high}${unitLabel} / ${low}${unitLabel}`;
+    }
+    return `${high}${unitLabel}`;
   }
 
   _triggerHaptic(styleOverride = null) {
@@ -1430,6 +1696,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       buttonBounceDuration: clamp(
         Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
         120,
@@ -1800,7 +2067,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return Array.isArray(legacyForecast) ? legacyForecast : [];
   }
 
-  _renderForecastChart(items, type, state) {
+  _renderForecastChart(items, type, state, forecastLocale = undefined, unitPrefs = null) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const cfgLang = this._config?.language ?? "auto";
     const wf = key => (window.NodaliaI18n?.translateWeatherForecastUi
@@ -1895,8 +2162,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const lowFillId = `weather-chart-fill-${type}-low`;
     const highFillMaskId = `weather-chart-fill-mask-${type}-high`;
     const lowFillMaskId = `weather-chart-fill-mask-${type}-low`;
-    const unit = String(state?.attributes?.temperature_unit || "°").trim() || "°";
-    const unitLabel = unit.startsWith("°") ? unit : ` ${unit}`;
+    const prefs = unitPrefs || this._getUnitPreferences(state);
+    const unitLabel = this._temperatureUnitLabel(prefs.targetTemperatureUnit);
     const precipitationUnit = String(state?.attributes?.precipitation_unit || "").trim();
     const allCoordinates = [
       ...highCoordinates.map(point => ({ ...point, series: "high" })),
@@ -1921,15 +2188,29 @@ class NodaliaWeatherCard extends HTMLElement {
       const item = popupPoint.item || {};
       const accent = getConditionAccent(item?.condition || state?.state);
       const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
-      const highLabel = formatNumber(getForecastTemperatureSeriesValue(item, "high"));
-      const lowLabel = formatNumber(getForecastTemperatureSeriesValue(item, "low"));
+      const highLabel = formatNumber(this._convertTemperatureValue(
+        getForecastTemperatureSeriesValue(item, "high"),
+        prefs.sourceTemperatureUnit,
+        prefs.targetTemperatureUnit,
+      ));
+      const lowLabel = formatNumber(this._convertTemperatureValue(
+        getForecastTemperatureSeriesValue(item, "low"),
+        prefs.sourceTemperatureUnit,
+        prefs.targetTemperatureUnit,
+      ));
       const humidityLabel = formatNumber(item?.humidity);
-      const windLabel = formatNumber(item?.wind_speed);
-      const windUnit = String(state?.attributes?.wind_speed_unit || item?.wind_speed_unit || "").trim();
+      const windLabel = formatNumber(this._convertWindSpeedValue(
+        item?.wind_speed,
+        normalizeWindUnitFromState(state?.attributes?.wind_speed_unit || item?.wind_speed_unit || ""),
+        prefs.targetWindUnit,
+      ));
+      const windUnit = this._windUnitLabel(prefs.targetWindUnit);
       const popupRows = [
         type === "daily" && highLabel ? [wf("maxLabel") || "Máxima", `${highLabel}${unitLabel}`] : null,
         type === "daily" && lowLabel ? [wf("minLabel") || "Mínima", `${lowLabel}${unitLabel}`] : null,
-        type !== "daily" ? [wf("temperatureLabel") || "Temperatura", `${formatNumber(popupPoint.value)}${unitLabel}`] : null,
+        type !== "daily"
+          ? [wf("temperatureLabel") || "Temperatura", `${formatNumber(this._convertTemperatureValue(popupPoint.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit))}${unitLabel}`]
+          : null,
         precipitationLabel ? [wf("rainLabel") || "Lluvia", precipitationLabel] : null,
         humidityLabel ? [wf("humidityLabel") || "Humedad", `${humidityLabel}%`] : null,
         windLabel ? [wf("windLabel") || "Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
@@ -1947,7 +2228,7 @@ class NodaliaWeatherCard extends HTMLElement {
           <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Cerrar detalle")}">
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
-          <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type))}</div>
+          <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</div>
           <div class="weather-card__forecast-popup-main">
             <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
             <span>${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</span>
@@ -1971,9 +2252,12 @@ class NodaliaWeatherCard extends HTMLElement {
       const top = this._forecastHoverPreview?.top || "50%";
       const highValue = getForecastTemperatureSeriesValue(item, "high");
       const lowValue = getForecastTemperatureSeriesValue(item, "low");
-      const temperatureLabel = type === "daily" && Number.isFinite(highValue) && Number.isFinite(lowValue)
-        ? `${formatCompactTemperature(highValue, unitLabel)} / ${formatCompactTemperature(lowValue, unitLabel)}`
-        : formatCompactTemperature(hoverPreviewPoint.value, unitLabel);
+      const convertedHigh = this._convertTemperatureValue(highValue, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit);
+      const convertedLow = this._convertTemperatureValue(lowValue, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit);
+      const convertedHover = this._convertTemperatureValue(hoverPreviewPoint.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit);
+      const temperatureLabel = type === "daily" && Number.isFinite(convertedHigh) && Number.isFinite(convertedLow)
+        ? `${formatCompactTemperature(convertedHigh, unitLabel)} / ${formatCompactTemperature(convertedLow, unitLabel)}`
+        : formatCompactTemperature(convertedHover, unitLabel);
 
       return `
         <div
@@ -1982,7 +2266,7 @@ class NodaliaWeatherCard extends HTMLElement {
           data-weather-action="noop"
         >
           <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
-          <span>${escapeHtml(formatForecastDateTime(item?.datetime, type))}</span>
+          <span>${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</span>
           ${temperatureLabel ? `<strong>${escapeHtml(temperatureLabel)}</strong>` : ""}
         </div>
       `;
@@ -2040,20 +2324,20 @@ class NodaliaWeatherCard extends HTMLElement {
           ${lowPath ? `<path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--low" style="${colorChartEnabled ? `stroke:url(#${lowGradientId});` : ""}" pathLength="1" d="${lowPath}"></path>` : ""}
           <path class="weather-card__forecast-chart-line weather-card__forecast-chart-line--high" style="${colorChartEnabled ? `stroke:url(#${highGradientId});` : ""}" pathLength="1" d="${highPath}"></path>
           ${highCoordinates.map((point, coordinateIndex) => `
-            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
+            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="high" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type, forecastLocale))}: ${escapeHtml(formatNumber(this._convertTemperatureValue(point.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit)))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="22"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--high" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5.7"></circle>
-              ${showChartLabels ? `<text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>` : ""}
+              ${showChartLabels ? `<text class="weather-card__forecast-chart-value" x="${point.x.toFixed(1)}" y="${Math.max(13, point.y - 14).toFixed(1)}">${escapeHtml(formatNumber(this._convertTemperatureValue(point.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit)))}${escapeHtml(unitLabel)}</text>` : ""}
               ${showChartLabels && (coordinateIndex === 0 || coordinateIndex === highCoordinates.length - 1)
-                ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}</text>`
+                ? `<text class="weather-card__forecast-chart-label" x="${point.x.toFixed(1)}" y="${dateLabelY}">${escapeHtml(formatForecastDateTime(point.item?.datetime, type, forecastLocale))}</text>`
                 : ""}
             </g>
           `).join("")}
           ${lowCoordinates.map(point => `
-            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type))}: ${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}">
+            <g class="weather-card__forecast-chart-hit" data-weather-action="open-forecast-point" data-forecast-type="${escapeHtml(type)}" data-forecast-series="low" data-forecast-index="${point.index}" role="button" tabindex="0" aria-label="${escapeHtml(formatForecastDateTime(point.item?.datetime, type, forecastLocale))}: ${escapeHtml(formatNumber(this._convertTemperatureValue(point.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit)))}${escapeHtml(unitLabel)}">
               <circle class="weather-card__forecast-chart-touch" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="21"></circle>
               <circle class="weather-card__forecast-chart-point weather-card__forecast-chart-point--low" style="--forecast-delay:${Math.min(point.index, 8) * 34}ms; ${colorChartEnabled ? `--forecast-point-color:${escapeHtml(getForecastChartPointColor(point, colorChartMode, state?.state))};` : ""}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"></circle>
-              ${showChartLabels ? `<text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(lowLabelY, point.y + 31).toFixed(1)}">${escapeHtml(formatNumber(point.value))}${escapeHtml(unitLabel)}</text>` : ""}
+              ${showChartLabels ? `<text class="weather-card__forecast-chart-value weather-card__forecast-chart-value--low" x="${point.x.toFixed(1)}" y="${Math.min(lowLabelY, point.y + 31).toFixed(1)}">${escapeHtml(formatNumber(this._convertTemperatureValue(point.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit)))}${escapeHtml(unitLabel)}</text>` : ""}
             </g>
           `).join("")}
         </svg>
@@ -2084,9 +2368,12 @@ class NodaliaWeatherCard extends HTMLElement {
     const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
       ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
       : "");
+    const langFc = window.NodaliaI18n?.resolveLanguage?.(hassFc, cfgLangFc) ?? "es";
+    const forecastLocale = window.NodaliaI18n?.localeTag?.(langFc) || langFc;
     const emptyForecastMsg = activeType === "hourly"
       ? (wfFc("emptyHourly") || "Sin previsión por horas disponible.")
       : (wfFc("emptyDaily") || "Sin previsión semanal disponible.");
+    const unitPrefs = this._getUnitPreferences(state);
 
     return `
       <section class="weather-card__forecast ${shouldAnimateEntrance ? "weather-card__forecast--entering" : ""} ${shouldAnimateForecast ? "weather-card__forecast--switching" : ""}">
@@ -2127,7 +2414,7 @@ class NodaliaWeatherCard extends HTMLElement {
             ? `
               ${
                 activeView === "chart"
-                  ? this._renderForecastChart(visibleItems, activeType, state)
+                  ? this._renderForecastChart(visibleItems, activeType, state, forecastLocale, unitPrefs)
                   : `
                     <div class="weather-card__forecast-strip">
                       ${
@@ -2136,9 +2423,9 @@ class NodaliaWeatherCard extends HTMLElement {
                             const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
                             return `
                               <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(getConditionAccent(item?.condition || state?.state))}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
-                                <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType))}</div>
+                                <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType, forecastLocale))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
-                                <div class="weather-card__forecast-temp">${escapeHtml(formatForecastTemperature(item, activeType))}</div>
+                                <div class="weather-card__forecast-temp">${escapeHtml(this._formatForecastTemperature(item, activeType, unitPrefs.targetTemperatureUnit))}</div>
                                 <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</div>
                                 ${precipitationLabel ? `<div class="weather-card__forecast-rain"><ha-icon icon="mdi:weather-rainy"></ha-icon><span>${escapeHtml(precipitationLabel)}</span></div>` : ""}
                               </article>
@@ -2180,8 +2467,12 @@ class NodaliaWeatherCard extends HTMLElement {
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
-    const accentColor = this._getAccentColor(state);
+    const animations = this._getAnimationSettings();
     const showUnavailableBadge = isUnavailableState(state);
+    const iconMotionClass = animations.enabled && animations.iconAnimation && !showUnavailableBadge
+      ? getConditionIconMotionClass(state?.state)
+      : "";
+    const accentColor = this._getAccentColor(state);
     const conditionLabel = translateCondition(state?.state, this._hass, this._config?.language ?? "auto");
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
@@ -2196,7 +2487,6 @@ class NodaliaWeatherCard extends HTMLElement {
         : "",
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
-    const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateForecast = animations.enabled && this._animateForecastOnNextRender;
     const configuredBorder = String(styles.card.border || "").trim();
@@ -2326,6 +2616,43 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
+          backface-visibility: hidden;
+          transform: translateZ(0);
+          will-change: transform, opacity;
+        }
+
+        .weather-card__icon--rain-motion::after,
+        .weather-card__icon--snow-motion::after {
+          animation: weather-card-icon-fall 0.95s linear infinite;
+          background:
+            radial-gradient(circle at 22% 18%, currentColor 0 1.3px, transparent 1.8px),
+            radial-gradient(circle at 58% 44%, currentColor 0 1.2px, transparent 1.8px),
+            radial-gradient(circle at 78% 6%, currentColor 0 1.1px, transparent 1.7px);
+          content: "";
+          inset: 18% 18% 12%;
+          opacity: 0.42;
+          pointer-events: none;
+          position: absolute;
+          transform: translateZ(0);
+          will-change: transform, opacity;
+        }
+
+        .weather-card__icon--snow-motion::after {
+          animation-duration: 1.35s;
+          opacity: 0.5;
+        }
+
+        .weather-card__icon--sun-motion ha-icon {
+          animation: weather-card-icon-pulse 2.1s ease-in-out infinite;
+        }
+
+        .weather-card__icon--wind-motion ha-icon,
+        .weather-card__icon--cloud-motion ha-icon {
+          animation: weather-card-icon-drift 2.2s ease-in-out infinite;
+        }
+
+        .weather-card__icon--storm-motion ha-icon {
+          animation: weather-card-icon-flash 1.3s steps(2, end) infinite;
         }
 
         .weather-card__unavailable-badge {
@@ -3344,12 +3671,59 @@ class NodaliaWeatherCard extends HTMLElement {
           }
         }
 
+        @keyframes weather-card-icon-fall {
+          from {
+            transform: translateY(-6px);
+          }
+          to {
+            transform: translateY(10px);
+          }
+        }
+
+        @keyframes weather-card-icon-pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.12);
+          }
+        }
+
+        @keyframes weather-card-icon-drift {
+          0%, 100% {
+            transform: translateX(-2px);
+          }
+          50% {
+            transform: translateX(3px);
+          }
+        }
+
+        @keyframes weather-card-icon-flash {
+          0%, 100% {
+            opacity: 1;
+            transform: translateZ(0) scale(1);
+          }
+          50% {
+            opacity: 0.72;
+            transform: translateZ(0) scale(1.04);
+          }
+        }
+
         ${animations.enabled ? "" : `
         ha-card,
         .weather-card,
         .weather-card * {
           animation: none !important;
           transition: none !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .weather-card__icon,
+          .weather-card__icon::after,
+          .weather-card__icon ha-icon {
+            animation: none !important;
+            transition: none !important;
+          }
         }
         `}
       </style>
@@ -3361,7 +3735,7 @@ class NodaliaWeatherCard extends HTMLElement {
               ${chips.length ? `<div class="weather-card__chips ${shouldAnimateEntrance ? "weather-card__chips--entering" : ""}">${chips.join("")}</div>` : ""}
             </div>
             <div class="weather-card__main">
-              <div class="weather-card__icon ${shouldAnimateEntrance ? "weather-card__icon--entering" : ""}">
+              <div class="weather-card__icon ${shouldAnimateEntrance ? "weather-card__icon--entering" : ""} ${iconMotionClass}">
                 <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                 ${showUnavailableBadge ? `<span class="weather-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
               </div>
@@ -3717,7 +4091,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3846,7 +4220,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.weather.select_entity");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -4144,78 +4518,109 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad meteorologica principal, nombre visible, icono y contenido mostrado."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.weather.entity_main", "entity", config.entity, {
               placeholder: "weather.casa",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.weather.icon", "icon", config.icon, {
               placeholder: "mdi:weather-partly-cloudy",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Tiempo",
+            ${this._renderTextField("ed.weather.name", "name", config.name, {
+              placeholder: this._editorLabel("ed.weather.name_placeholder"),
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.weather.tap_action",
               "tap_action",
               tapAction,
               [
-                { value: "more-info", label: "Mas informacion" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.weather.tap_more_info" },
+                { value: "none", label: "ed.weather.tap_none" },
               ],
               { fullWidth: true },
             )}
-            ${this._renderCheckboxField("Mostrar condicion", "show_condition", config.show_condition !== false)}
-            ${this._renderCheckboxField("Mostrar chip humedad", "show_humidity_chip", config.show_humidity_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip viento", "show_wind_chip", config.show_wind_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip presion", "show_pressure_chip", config.show_pressure_chip === true)}
-            ${this._renderCheckboxField("Mostrar chip Meteoalarm", "show_meteoalarm_chip", config.show_meteoalarm_chip === true)}
-            ${config.show_meteoalarm_chip === true ? this._renderEntityPickerField("Entidad Meteoalarm", "meteoalarm_entity", config.meteoalarm_entity, {
+            ${this._renderSelectField(
+              "ed.weather.unit_system",
+              "unit_system",
+              normalizeUnitSystem(config.unit_system),
+              [
+                { value: "auto", label: "ed.weather.unit_auto_ha" },
+                { value: "metric", label: "ed.weather.unit_metric" },
+                { value: "imperial", label: "ed.weather.unit_imperial" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.weather.temperature_unit",
+              "temperature_unit",
+              normalizeTemperatureUnitPreference(config.temperature_unit),
+              [
+                { value: "auto", label: "ed.weather.unit_auto_short" },
+                { value: "c", label: "°C" },
+                { value: "f", label: "°F" },
+              ],
+            )}
+            ${this._renderSelectField(
+              "ed.weather.wind_speed_unit",
+              "wind_speed_unit",
+              normalizeWindUnitPreference(config.wind_speed_unit),
+              [
+                { value: "auto", label: "ed.weather.unit_auto_short" },
+                { value: "kmh", label: "ed.weather.wind_kmh" },
+                { value: "mph", label: "ed.weather.wind_mph" },
+              ],
+            )}
+            ${this._renderCheckboxField("ed.weather.show_condition", "show_condition", config.show_condition !== false)}
+            ${this._renderCheckboxField("ed.weather.show_humidity_chip", "show_humidity_chip", config.show_humidity_chip !== false)}
+            ${this._renderCheckboxField("ed.weather.show_wind_chip", "show_wind_chip", config.show_wind_chip !== false)}
+            ${this._renderCheckboxField("ed.weather.show_pressure_chip", "show_pressure_chip", config.show_pressure_chip === true)}
+            ${this._renderCheckboxField("ed.weather.show_meteoalarm_chip", "show_meteoalarm_chip", config.show_meteoalarm_chip === true)}
+            ${config.show_meteoalarm_chip === true ? this._renderEntityPickerField("ed.weather.meteoalarm_entity", "meteoalarm_entity", config.meteoalarm_entity, {
               domains: ["binary_sensor"],
               placeholder: "binary_sensor.meteoalarm",
               fullWidth: true,
             }) : ""}
-            ${this._renderCheckboxField("Mostrar prediccion ampliada", "show_forecast_details", config.show_forecast_details === true)}
+            ${this._renderCheckboxField("ed.weather.show_forecast_details", "show_forecast_details", config.show_forecast_details === true)}
             ${config.show_forecast_details === true ? `
-              ${this._renderCheckboxField("Mostrar selector de vista", "show_forecast_toggle", config.show_forecast_toggle !== false)}
+              ${this._renderCheckboxField("ed.weather.show_forecast_toggle", "show_forecast_toggle", config.show_forecast_toggle !== false)}
               ${this._renderSelectField(
-                "Vista visual inicial",
+                "ed.weather.forecast_view_visual",
                 "forecast_view",
                 normalizeForecastView(config.forecast_view),
                 [
-                  { value: "cards", label: "Tarjetas" },
-                  { value: "chart", label: "Grafico" },
+                  { value: "cards", label: "ed.weather.forecast_view_cards" },
+                  { value: "chart", label: "ed.weather.forecast_view_chart" },
                 ],
               )}
               ${this._renderSelectField(
-                "Vista inicial",
+                "ed.weather.forecast_type",
                 "forecast_type",
                 normalizeForecastType(config.forecast_type),
                 [
-                  { value: "hourly", label: "Por horas" },
-                  { value: "daily", label: "Semanal" },
+                  { value: "hourly", label: "ed.weather.forecast_hourly" },
+                  { value: "daily", label: "ed.weather.forecast_daily" },
                 ],
               )}
-              ${this._renderCheckboxField("Mostrar etiquetas del grafico", "forecast_chart_labels", config.forecast_chart_labels === true)}
-              ${this._renderCheckboxField("Grafico en color", "forecast_chart_color_enabled", config.forecast_chart_color_enabled === true)}
+              ${this._renderCheckboxField("ed.weather.forecast_chart_labels", "forecast_chart_labels", config.forecast_chart_labels === true)}
+              ${this._renderCheckboxField("ed.weather.forecast_chart_color", "forecast_chart_color_enabled", config.forecast_chart_color_enabled === true)}
               ${config.forecast_chart_color_enabled === true ? this._renderSelectField(
-                "Color del grafico",
+                "ed.weather.forecast_chart_color_mode",
                 "forecast_chart_color_mode",
                 normalizeForecastChartColorMode(config.forecast_chart_color_mode),
                 [
-                  { value: "temperature", label: "Por temperatura" },
-                  { value: "condition", label: "Por condicion" },
+                  { value: "temperature", label: "ed.weather.chart_color_temperature" },
+                  { value: "condition", label: "ed.weather.chart_color_condition" },
                 ],
               ) : ""}
-              ${this._renderTextField("Horas visibles", "forecast_slots_hourly", config.forecast_slots_hourly, {
+              ${this._renderTextField("ed.weather.forecast_slots_hourly", "forecast_slots_hourly", config.forecast_slots_hourly, {
                 type: "number",
               })}
-              ${this._renderTextField("Dias visibles", "forecast_slots_daily", config.forecast_slots_daily, {
+              ${this._renderTextField("ed.weather.forecast_slots_daily", "forecast_slots_daily", config.forecast_slots_daily, {
                 type: "number",
               })}
             ` : ""}
@@ -4224,8 +4629,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4234,7 +4639,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4242,11 +4647,12 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderCheckboxField("ed.weather.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.weather.icon_animation_condition", "animations.icon_animation", animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.weather.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -4257,24 +4663,24 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al tocar la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Usar vibracion de respaldo", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.weather.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.weather.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.weather.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Seleccion" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Exito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -4282,8 +4688,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4292,7 +4698,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4300,25 +4706,25 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio borde", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding interior", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separacion interna", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja icono", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.weather.card_background", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.weather.card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.weather.border_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.weather.box_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.weather.padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.weather.gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.weather.icon_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.weather.icon_bubble_background", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono", "styles.icon.color", config.styles.icon.color, {
+                  ${this._renderColorField("ed.weather.icon_color", "styles.icon.color", config.styles.icon.color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding chips", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Tamano temperatura", "styles.temperature_size", config.styles.temperature_size)}
-                  ${this._renderTextField("Tamano condicion", "styles.condition_size", config.styles.condition_size)}
+                  ${this._renderTextField("ed.weather.chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.weather.chip_font_size", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.weather.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.weather.title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.weather.temperature_size", "styles.temperature_size", config.styles.temperature_size)}
+                  ${this._renderTextField("ed.weather.condition_size", "styles.condition_size", config.styles.condition_size)}
                 </div>
               `
               : ""

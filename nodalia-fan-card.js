@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -393,7 +486,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "0.6.3";
+const CARD_VERSION = "0.6.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -424,6 +517,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     power_duration: 600,
     controls_duration: 600,
     preset_duration: 800,
@@ -1169,6 +1263,7 @@ class NodaliaFanCard extends HTMLElement {
     const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
@@ -2251,8 +2346,16 @@ class NodaliaFanCard extends HTMLElement {
           left: 50%;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%);
+          backface-visibility: hidden;
+          transform: translate3d(-50%, -50%, 0);
+          transform-origin: 50% 50%;
           width: calc(${styles.icon.size} * 0.46);
+          will-change: transform;
+        }
+
+        .fan-card__icon--active-motion ha-icon {
+          animation: fan-card-icon-spin 1.35s linear infinite;
+          transform: translate3d(-50%, -50%, 0);
         }
 
         .fan-card__unavailable-badge {
@@ -2825,6 +2928,15 @@ class NodaliaFanCard extends HTMLElement {
           }
         }
 
+        @keyframes fan-card-icon-spin {
+          from {
+            transform: translate3d(-50%, -50%, 0) rotate(0deg);
+          }
+          to {
+            transform: translate3d(-50%, -50%, 0) rotate(360deg);
+          }
+        }
+
         ${animations.enabled ? "" : `
         .fan-card,
         .fan-card::after,
@@ -2859,6 +2971,10 @@ class NodaliaFanCard extends HTMLElement {
             animation: none !important;
             transition: none !important;
           }
+
+          .fan-card__icon--active-motion ha-icon {
+            animation: none !important;
+          }
         }
 
         @media (max-width: 420px) {
@@ -2891,7 +3007,7 @@ class NodaliaFanCard extends HTMLElement {
           <div class="fan-card__hero">
             <button
               type="button"
-              class="fan-card__icon"
+              class="fan-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "fan-card__icon--active-motion" : ""}"
               data-fan-action="toggle"
               aria-label="Encender o apagar"
             >
@@ -3273,7 +3389,7 @@ class NodaliaFanCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3485,6 +3601,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
     const presetModeVisibilityOptions = this._getPresetModeVisibilityOptions();
+    const phFanName = this._editorLabel("ed.light.name_placeholder");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3786,20 +3903,20 @@ class NodaliaFanCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderFanEntityField("Entidad de ventilador", "entity", config.entity, {
+            ${this._renderFanEntityField("ed.fan.fan_entity", "entity", config.entity, {
               placeholder: "fan.salon",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:fan",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Salón",
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: phFanName,
               fullWidth: true,
             })}
           </div>
@@ -3807,32 +3924,32 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Qué bloques quieres mostrar dentro de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.visibility_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "Layout estrecho",
+              "ed.vacuum.layout_narrow",
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automático (<4 columnas)" },
-                { value: "always", label: "Centrado siempre" },
-                { value: "never", label: "Nunca centrar" },
+                { value: "auto", label: "ed.vacuum.layout_auto" },
+                { value: "always", label: "ed.vacuum.layout_always" },
+                { value: "never", label: "ed.vacuum.layout_never" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state === true)}
-            ${this._renderCheckboxField("Mostrar chip de velocidad", "show_percentage_chip", config.show_percentage_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de modo", "show_mode_chip", config.show_mode_chip !== false)}
-            ${this._renderCheckboxField("Mostrar slider", "show_slider", config.show_slider !== false)}
-            ${this._renderCheckboxField("Mostrar botón de oscilación", "show_oscillation", config.show_oscillation !== false)}
-            ${this._renderCheckboxField("Mostrar presets de modo", "show_preset_modes", config.show_preset_modes !== false)}
+            ${this._renderCheckboxField("ed.fan.show_state_bubble", "show_state", config.show_state === true)}
+            ${this._renderCheckboxField("ed.fan.speed_chip", "show_percentage_chip", config.show_percentage_chip !== false)}
+            ${this._renderCheckboxField("ed.fan.mode_chip", "show_mode_chip", config.show_mode_chip !== false)}
+            ${this._renderCheckboxField("ed.fan.show_slider", "show_slider", config.show_slider !== false)}
+            ${this._renderCheckboxField("ed.fan.oscillation_button", "show_oscillation", config.show_oscillation !== false)}
+            ${this._renderCheckboxField("ed.fan.preset_modes_toggle", "show_preset_modes", config.show_preset_modes !== false)}
             ${
               presetModeVisibilityOptions.length
                 ? `
                   <div class="editor-subsection editor-field--full">
-                    <div class="editor-subsection__title">Modos visibles</div>
-                    <div class="editor-subsection__hint">Oculta los modos que expone el ventilador pero no quieres mostrar en la tarjeta.</div>
+                    <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.fan.preset_modes_title"))}</div>
+                    <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.fan.preset_modes_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
                       ${presetModeVisibilityOptions.map(mode => this._renderPresetModeVisibilityField(mode)).join("")}
                     </div>
@@ -3845,24 +3962,24 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta háptica opcional para los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibración", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.vacuum.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -3870,8 +3987,8 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Transiciones suaves al encender, apagar, desplegar controles, abrir modos y dar respuesta visual a los botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.fan.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3880,7 +3997,7 @@ class NodaliaFanCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -3888,29 +4005,30 @@ class NodaliaFanCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 4000,
                     step: 10,
                   })}
-                  ${this._renderTextField("Expansión de controles (ms)", "animations.controls_duration", config.animations.controls_duration, {
+                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("Panel de modos (ms)", "animations.preset_duration", config.animations.preset_duration, {
+                  ${this._renderTextField("ed.fan.anim_preset_ms", "animations.preset_duration", config.animations.preset_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
@@ -3925,8 +4043,8 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales básicos del look Nodalia."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -3935,7 +4053,7 @@ class NodaliaFanCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -3943,25 +4061,25 @@ class NodaliaFanCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Background", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radius", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Color icono encendido", "styles.icon.on_color", config.styles.icon.on_color)}
-                  ${this._renderColorField("Color icono apagado", "styles.icon.off_color", config.styles.icon.off_color)}
-                  ${this._renderTextField("Tamaño botón", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background)}
-                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color)}
-                  ${this._renderTextField("Alto burbuja info", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto burbuja info", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding burbuja info", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamaño título", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Alto contenedor slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
-                  ${this._renderTextField("Grosor slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderColorField("Color slider", "styles.slider_color", config.styles.slider_color)}
+                  ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderTextField("ed.vacuum.style_button_size", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background)}
+                  ${this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color)}
+                  ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.light.slider_wrap_height", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
+                  ${this._renderTextField("ed.light.slider_height", "styles.slider_height", config.styles.slider_height)}
+                  ${this._renderColorField("ed.light.slider_color", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `
               : ""

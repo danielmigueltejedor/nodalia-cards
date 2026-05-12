@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -393,7 +486,7 @@
 
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "0.6.3";
+const CARD_VERSION = "0.6.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -428,6 +521,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     power_duration: 600,
     controls_duration: 600,
     panel_duration: 800,
@@ -1181,7 +1275,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const deviceClass = normalizeTextKey(state?.attributes?.device_class);
     if (deviceClass === "dehumidifier") {
-      return "mdi:air-humidifier-off";
+      return this._isOn(state) ? "mdi:air-humidifier" : "mdi:air-humidifier-off";
     }
 
     return String(state?.attributes?.icon || "mdi:air-humidifier");
@@ -1277,6 +1371,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
       controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2400),
@@ -2509,8 +2604,30 @@ class NodaliaHumidifierCard extends HTMLElement {
           left: 50%;
           position: absolute;
           top: 50%;
-          transform: translate(-50%, -50%);
+          backface-visibility: hidden;
+          transform: translate3d(-50%, -50%, 0);
+          transform-origin: 50% 50%;
           width: calc(${styles.icon.size} * 0.46);
+          will-change: transform;
+        }
+
+        .humidifier-card__icon--active-motion ha-icon {
+          animation: humidifier-card-icon-breathe 1.8s ease-in-out infinite;
+          transform: translate3d(-50%, -50%, 0);
+        }
+
+        .humidifier-card__icon--active-motion::after {
+          animation: humidifier-card-icon-mist 1.65s ease-in-out infinite;
+          background: radial-gradient(circle, currentColor 0 34%, transparent 38%);
+          content: "";
+          height: 5px;
+          left: 50%;
+          opacity: 0.42;
+          position: absolute;
+          top: 26%;
+          transform: translate3d(-50%, 0, 0);
+          width: 5px;
+          will-change: transform, opacity;
         }
 
         .humidifier-card__unavailable-badge {
@@ -3086,6 +3203,29 @@ class NodaliaHumidifierCard extends HTMLElement {
           }
         }
 
+        @keyframes humidifier-card-icon-breathe {
+          0%, 100% {
+            transform: translate3d(-50%, -50%, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(-50%, -54%, 0) scale(1.08);
+          }
+        }
+
+        @keyframes humidifier-card-icon-mist {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 8px) scale(0.7);
+          }
+          42% {
+            opacity: 0.5;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -14px) scale(1.35);
+          }
+        }
+
         @keyframes humidifier-card-fade-up {
           0% {
             opacity: 0;
@@ -3130,6 +3270,11 @@ class NodaliaHumidifierCard extends HTMLElement {
             animation: none !important;
             transition: none !important;
           }
+
+          .humidifier-card__icon--active-motion ha-icon,
+          .humidifier-card__icon--active-motion::after {
+            animation: none !important;
+          }
         }
 
         @media (max-width: 620px) {
@@ -3172,7 +3317,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           <div class="humidifier-card__hero">
             <button
               type="button"
-              class="humidifier-card__icon"
+              class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "humidifier-card__icon--active-motion" : ""}"
               data-humidifier-action="toggle"
               aria-label="Encender o apagar"
             >
@@ -3593,7 +3738,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -3739,10 +3884,11 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderHumidifierEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="humidifier-entity"
@@ -3754,10 +3900,11 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _renderSelectEntityField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="select-entity"
@@ -3890,6 +4037,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     const hapticStyle = config.haptics?.style || "medium";
     const modeVisibilityOptions = this._getModeVisibilityOptions();
     const fanModeVisibilityOptions = this._getFanModeVisibilityOptions();
+    const phHumName = this._editorLabel("ed.humidifier.name_placeholder");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4191,20 +4339,20 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, nombre visible e icono de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderHumidifierEntityField("Entidad principal", "entity", config.entity, {
+            ${this._renderHumidifierEntityField("ed.entity.entity_main", "entity", config.entity, {
               placeholder: "humidifier.deshumidificador",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:air-humidifier",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Deshumidificador",
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
+              placeholder: phHumName,
               fullWidth: true,
             })}
           </div>
@@ -4212,15 +4360,15 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Entidades auxiliares"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selectores opcionales para el modo principal y la ventilación."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.aux_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.aux_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderSelectEntityField("Selector de modo", "mode_entity", config.mode_entity, {
+            ${this._renderSelectEntityField("ed.humidifier.mode_select", "mode_entity", config.mode_entity, {
               placeholder: "select.deshumidificador_modo",
               fullWidth: true,
             })}
-            ${this._renderSelectEntityField("Selector de ventilación", "fan_mode_entity", config.fan_mode_entity, {
+            ${this._renderSelectEntityField("ed.humidifier.fan_mode_select", "fan_mode_entity", config.fan_mode_entity, {
               placeholder: "select.deshumidificador_ventilador",
               fullWidth: true,
             })}
@@ -4229,33 +4377,33 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa u oculta cada bloque de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.visibility_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "Modo compacto",
+              "ed.entity.compact_mode",
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automático (<4 columnas)" },
-                { value: "always", label: "Compacto siempre" },
-                { value: "never", label: "Nunca compacto" },
+                { value: "auto", label: "ed.entity.compact_auto" },
+                { value: "always", label: "ed.entity.compact_always" },
+                { value: "never", label: "ed.entity.compact_never" },
               ],
             )}
-            ${this._renderCheckboxField("Mostrar estado actual", "show_state", config.show_state === true)}
-            ${this._renderCheckboxField("Mostrar chip de humedad objetivo", "show_target_humidity_chip", config.show_target_humidity_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de modo", "show_mode_chip", config.show_mode_chip !== false)}
-            ${this._renderCheckboxField("Mostrar chip de ventilación", "show_fan_mode_chip", config.show_fan_mode_chip !== false)}
-            ${this._renderCheckboxField("Mostrar control deslizante", "show_slider", config.show_slider !== false)}
-            ${this._renderCheckboxField("Mostrar botón de modo", "show_mode_button", config.show_mode_button !== false)}
-            ${this._renderCheckboxField("Mostrar botón de ventilación", "show_fan_mode_button", config.show_fan_mode_button !== false)}
+            ${this._renderCheckboxField("ed.humidifier.show_state", "show_state", config.show_state === true)}
+            ${this._renderCheckboxField("ed.humidifier.target_humidity_chip", "show_target_humidity_chip", config.show_target_humidity_chip !== false)}
+            ${this._renderCheckboxField("ed.fan.mode_chip", "show_mode_chip", config.show_mode_chip !== false)}
+            ${this._renderCheckboxField("ed.humidifier.fan_mode_chip", "show_fan_mode_chip", config.show_fan_mode_chip !== false)}
+            ${this._renderCheckboxField("ed.humidifier.show_slider", "show_slider", config.show_slider !== false)}
+            ${this._renderCheckboxField("ed.humidifier.mode_button", "show_mode_button", config.show_mode_button !== false)}
+            ${this._renderCheckboxField("ed.humidifier.fan_mode_button", "show_fan_mode_button", config.show_fan_mode_button !== false)}
             ${
               modeVisibilityOptions.length
                 ? `
                   <div class="editor-subsection editor-field--full">
-                    <div class="editor-subsection__title">Modos visibles</div>
-                    <div class="editor-subsection__hint">Oculta los modos que expone la integración pero no quieres mostrar en la tarjeta.</div>
+                    <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.humidifier.modes_title"))}</div>
+                    <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.humidifier.modes_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
                       ${modeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_modes", mode)).join("")}
                     </div>
@@ -4267,8 +4415,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
               fanModeVisibilityOptions.length
                 ? `
                   <div class="editor-subsection editor-field--full">
-                    <div class="editor-subsection__title">Velocidades visibles</div>
-                    <div class="editor-subsection__hint">Elige qué opciones de ventilación quieres dejar disponibles.</div>
+                    <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.humidifier.fan_speeds_title"))}</div>
+                    <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.humidifier.fan_speeds_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
                       ${fanModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_fan_modes", mode)).join("")}
                     </div>
@@ -4281,24 +4429,24 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional al usar los controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.vacuum.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -4306,8 +4454,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Transiciones suaves al encender, apagar, desplegar controles, cambiar paneles y dar respuesta visual a los botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4316,7 +4464,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4324,29 +4472,30 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("Encendido y apagado (ms)", "animations.power_duration", config.animations.power_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 4000,
                     step: 10,
                   })}
-                  ${this._renderTextField("Expansión de controles (ms)", "animations.controls_duration", config.animations.controls_duration, {
+                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("Paneles (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderTextField("ed.humidifier.anim_panel_ms", "animations.panel_duration", config.animations.panel_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
@@ -4361,8 +4510,8 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales principales de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4371,7 +4520,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4379,25 +4528,25 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo de la tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde de la tarjeta", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio del borde", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Relleno interior", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separación interna", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamaño botón principal", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color)}
-                  ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color)}
-                  ${this._renderTextField("Tamaño botones auxiliares", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo de acento", "styles.control.accent_background", config.styles.control.accent_background)}
-                  ${this._renderColorField("Color de acento", "styles.control.accent_color", config.styles.control.accent_color)}
-                  ${this._renderTextField("Alto burbuja informativa", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto burbuja informativa", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Relleno burbuja informativa", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamaño del título", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Alto del contenedor del slider", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
-                  ${this._renderTextField("Grosor del slider", "styles.slider_height", config.styles.slider_height)}
-                  ${this._renderColorField("Color del slider", "styles.slider_color", config.styles.slider_color)}
+                  ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color)}
+                  ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color)}
+                  ${this._renderTextField("ed.entity.style_aux_button_size", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background)}
+                  ${this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color)}
+                  ${this._renderTextField("ed.person.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.person.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.person.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.light.slider_wrap_height", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
+                  ${this._renderTextField("ed.light.slider_height", "styles.slider_height", config.styles.slider_height)}
+                  ${this._renderColorField("ed.light.slider_color", "styles.slider_color", config.styles.slider_color)}
                 </div>
               `
               : ""

@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -393,7 +486,9 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.3";
+const CARD_VERSION = "1.0.0";
+/** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
+const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -668,6 +763,7 @@ const DEFAULT_CONFIG = {
   max_zone_selections: 5,
   max_repeats: 3,
   shared_cleaning_session_entity: "",
+  shared_cleaning_session_webhook: "",
   suction_select_entity: "",
   mop_select_entity: "",
   mop_mode_select_entity: "",
@@ -682,6 +778,11 @@ const DEFAULT_CONFIG = {
   predefined_zones: [],
   icons: [],
   map_modes: [],
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -689,6 +790,7 @@ const DEFAULT_CONFIG = {
   },
   animations: {
     enabled: true,
+    icon_animation: true,
     content_duration: 520,
     panel_duration: 420,
     button_bounce_duration: 320,
@@ -1072,6 +1174,23 @@ function appendQueryParam(url, key, value) {
   }
 
   return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+}
+
+/** Map image URL identity without cache-buster (for reuse / crossfade decisions). */
+function stripMapCacheBuster(raw) {
+  const s = String(raw || "").trim();
+  if (!s) {
+    return "";
+  }
+  try {
+    const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost";
+    const u = new URL(s, origin);
+    u.searchParams.delete("nodalia_ts");
+    const q = u.searchParams.toString();
+    return `${u.pathname}${q ? `?${q}` : ""}${u.hash}`;
+  } catch {
+    return s;
+  }
 }
 
 function parseRectangleLike(value) {
@@ -1834,6 +1953,7 @@ function normalizeConfig(rawConfig) {
   config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
   config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
   config.routines = normalizeRoutineItems(config.routines);
+  config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
   return config;
 }
 
@@ -1893,6 +2013,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pointerSurfaceRect = null;
     this._suppressedRoomSelectionClick = null;
     this._lastSubmittedSharedCleaningSessionValue = null;
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -2038,6 +2159,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pendingRoomSelectionTap = null;
     this._suppressedRoomSelectionClick = null;
     this._lastSubmittedSharedCleaningSessionValue = null;
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
     this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
@@ -2097,6 +2219,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     return {
       enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
       contentDuration: clamp(Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration, 120, 2400),
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2000),
       buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
@@ -2449,6 +2572,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: normalizedSession.pendingStartAt,
       resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
       resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+      modePanelPreset: normalizedSession.modePanelPreset,
+      utilityPanel: normalizedSession.utilityPanel,
     });
   }
 
@@ -2496,6 +2621,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (snapshot.resumeRepeatsAfterZone) {
       parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
     }
+    if (snapshot.modePanelPreset) {
+      parts.push(`pp=${encodeURIComponent(snapshot.modePanelPreset)}`);
+    }
+    if (snapshot.utilityPanel) {
+      parts.push(`xu=${encodeURIComponent(snapshot.utilityPanel)}`);
+    }
 
     return parts.join("&");
   }
@@ -2532,6 +2663,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: Number(params.get("p") || 0),
       resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
       resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+      modePanelPreset: params.get("pp") || "",
+      utilityPanel: params.get("xu") || "",
     });
   }
 
@@ -2547,12 +2680,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _persistSharedCleaningSession(session) {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
     const entityId = this._getSharedCleaningSessionEntityId();
-    if (!entityId) {
+    if (!webhookId && !entityId) {
       return;
     }
 
-    const maxLength = this._getSharedCleaningSessionMaxLength();
+    const maxLength = entityId ? this._getSharedCleaningSessionMaxLength() : 255;
     let serialized = this._serializeSharedCleaningSession(session);
 
     if (serialized.length > maxLength) {
@@ -2560,27 +2694,106 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     if (serialized.length > maxLength) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
+      if (this._lastSharedCleaningSessionOverflowFingerprint !== serialized) {
+        this._lastSharedCleaningSessionOverflowFingerprint = serialized;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
+        }
       }
-      serialized = "";
-    }
-
-    const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
-    if (serialized === currentValue || serialized === this._lastSubmittedSharedCleaningSessionValue) {
+      this._lastSubmittedSharedCleaningSessionValue = SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL;
       return;
     }
 
-    this._lastSubmittedSharedCleaningSessionValue = serialized;
-    this._callNamedService("input_text.set_value", {
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
+    const serializedTrim = serialized.trim();
+    const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
+    const hasEntityTarget = Boolean(entityId);
+    const hasWebhookTarget = Boolean(webhookId);
+    if (hasEntityTarget && serializedTrim === currentValue) {
+      return;
+    }
+    if (hasEntityTarget && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+      return;
+    }
+    if (
+      !hasEntityTarget &&
+      hasWebhookTarget &&
+      serializedTrim === this._lastSubmittedSharedCleaningSessionValue
+    ) {
+      return;
+    }
+
+    this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (!post) {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn(
+            "Nodalia Advance Vacuum Card: Missing NodaliaUtils.postHomeAssistantWebhook (update nodalia-cards / nodalia-utils).",
+          );
+        }
+        return;
+      }
+      void post(webhookId, { value: serializedTrim }, this._hass).then(ok => {
+        if (!ok) {
+          this._lastSubmittedSharedCleaningSessionValue = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Advance Vacuum Card: Persistence webhook rejected or failed; check webhook_id and your Home Assistant automation.",
+            );
+          }
+        }
+      });
+      return;
+    }
+
+    const pending = this._callInternalService("input_text.set_value", {
       entity_id: entityId,
-      value: serialized,
+      value: serializedTrim,
     });
+    if (pending && typeof pending.then === "function") {
+      pending.catch(err => {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Advance Vacuum Card: Non-admin users need control permission on the shared cleaning session input_text helper, or set shared_cleaning_session_webhook.",
+          );
+        }
+      });
+    }
   }
 
   _clearSharedCleaningSession() {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
     const entityId = this._getSharedCleaningSessionEntityId();
-    if (!entityId) {
+    if (!webhookId && !entityId) {
+      return;
+    }
+
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
+    if (webhookId) {
+      const post =
+        typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+          ? window.NodaliaUtils.postHomeAssistantWebhook
+          : null;
+      if (post) {
+        this._lastSubmittedSharedCleaningSessionValue = "";
+        void post(webhookId, { value: "" }, this._hass).then(ok => {
+          if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Advance Vacuum Card: Webhook clear for shared cleaning session failed.");
+          }
+        });
+      } else if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Advance Vacuum Card: Missing NodaliaUtils.postHomeAssistantWebhook (update nodalia-cards / nodalia-utils).",
+        );
+      }
       return;
     }
 
@@ -2593,7 +2806,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCleaningSessionValue = "";
-    this._callNamedService("input_text.set_value", {
+    this._callInternalService("input_text.set_value", {
       entity_id: entityId,
       value: "",
     });
@@ -2605,7 +2818,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
-    const activeMode = ["all", "rooms", "zone", "goto"].includes(session.activeMode) ? session.activeMode : "";
+    const activeMode = ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode)
+      ? session.activeMode
+      : "";
     const activeRoomIds = arrayFromMaybe(session.activeRoomIds)
       .map(item => String(item || "").trim())
       .filter(Boolean);
@@ -2628,6 +2843,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .map(item => String(item || "").trim())
       .filter(Boolean);
     const resumeRepeatsAfterZone = clamp(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
+    const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
+    const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
 
     if (
       !mode &&
@@ -2639,7 +2856,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       !manualZones.length &&
       !selectionUpdatedAt &&
       !pendingStartAt &&
-      !resumeRoomIdsAfterZone.length
+      !resumeRoomIdsAfterZone.length &&
+      !modePanelPreset &&
+      !utilityPanel
     ) {
       return null;
     }
@@ -2657,6 +2876,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt,
       resumeRoomIdsAfterZone,
       resumeRepeatsAfterZone,
+      modePanelPreset,
+      utilityPanel,
     };
   }
 
@@ -2684,6 +2905,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._activeMode = persistedSession.activeMode;
     }
     this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+    const presetPersist = String(persistedSession.modePanelPreset ?? "").trim().slice(0, 64);
+    if (presetPersist) {
+      this._activeModePanelPreset = presetPersist;
+      this._lastResolvedModePanelPreset = presetPersist;
+    }
+    const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
+    if (utilPersist) {
+      this._activeUtilityPanel = utilPersist;
+    }
     return true;
   }
 
@@ -2751,6 +2981,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       pendingStartAt: this._pendingCleaningSessionStartAt,
       resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
       resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
+      modePanelPreset: String(this._activeModePanelPreset || "").trim().slice(0, 64),
+      utilityPanel: this._activeUtilityPanel ? String(this._activeUtilityPanel).trim().slice(0, 64) : "",
     });
   }
 
@@ -3086,7 +3318,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._markCleaningSessionPendingStart();
     this._persistCurrentCleaningSessionState("rooms");
 
-    Promise.resolve(this._callNamedService("vacuum.send_command", {
+    Promise.resolve(this._callInternalService("vacuum.send_command", {
       entity_id: this._config.entity,
       command: "app_segment_clean",
       params: [{
@@ -3270,13 +3502,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const refreshToken = [
-      String(mapState?.last_updated || mapState?.last_changed || ""),
-      this._isCleaning(state) || this._isPaused(state) || this._isReturning(state)
-        ? String(state?.last_updated || state?.last_changed || "")
-        : "",
-      String(this._getCurrentVacuumRoomId(state) || ""),
-    ].filter(Boolean).join("|");
+    const refreshToken = String(mapState?.last_updated || mapState?.last_changed || "");
 
     const fromPicture = mapState.attributes?.entity_picture;
     if (fromPicture) {
@@ -3328,6 +3554,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       },
       sharedSession: {
         entity: String(sharedSessionEntityId || ""),
+        webhook: String(this._config?.shared_cleaning_session_webhook || "").trim(),
         state: String(sharedSessionState?.state || ""),
         lastUpdated: String(sharedSessionState?.last_updated || ""),
       },
@@ -3594,7 +3821,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const domain = this._getEntityDomain(entityId);
     const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-    this._callNamedService(serviceName, {
+    this._callInternalService(serviceName, {
       entity_id: entityId,
       option: value,
     });
@@ -4524,6 +4751,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const selection = this._getModePanelPresetSelection(presetId, state);
     if (!selection) {
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
       this._triggerHaptic("selection");
       this._render();
       return;
@@ -4550,6 +4780,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
     }
 
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
     this._triggerHaptic("selection");
     this._render();
   }
@@ -5218,7 +5451,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (["call_service", "call-service", "perform_action", "perform-action"].includes(action)) {
       const service = actionConfig.service || actionConfig.perform_action;
-      if (!service || !this._hass || !this._isServiceAllowed(service)) {
+      if (!service || !this._hass) {
+        return;
+      }
+      if (!this._isServiceAllowed(service)) {
+        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
         return;
       }
       const [domain, serviceName] = String(service).split(".");
@@ -5263,7 +5500,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _callNamedService(service, data = {}, target = null) {
-    if (!this._hass || !service || !this._isServiceAllowed(service)) {
+    if (!this._hass || !service) {
+      return;
+    }
+    if (!this._isServiceAllowed(service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
       return;
     }
 
@@ -5272,6 +5513,21 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    return this._hass.callService(domain, serviceName, data, target || undefined);
+  }
+
+  /**
+   * Fixed, card-owned service calls that must not be blocked by strict allowlists.
+   * External/user-provided service actions still go through _callNamedService.
+   */
+  _callInternalService(service, data = {}, target = null) {
+    if (!this._hass || !service) {
+      return;
+    }
+    const [domain, serviceName] = String(service).split(".");
+    if (!domain || !serviceName) {
+      return;
+    }
     return this._hass.callService(domain, serviceName, data, target || undefined);
   }
 
@@ -5374,6 +5630,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   _toggleUtilityPanel(panelId) {
     this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
     this._triggerHaptic("selection");
     this._render();
   }
@@ -5468,7 +5727,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._persistCurrentCleaningSessionState("rooms", {
             markSelectionChange: true,
           });
-          await this._callNamedService("vacuum.send_command", {
+          await this._callInternalService("vacuum.send_command", {
             entity_id: this._config.entity,
             command: "app_segment_clean",
             params: [{
@@ -5516,7 +5775,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           await new Promise(resolve => window.setTimeout(resolve, 450));
         }
 
-        await this._callNamedService("vacuum.send_command", {
+        await this._callInternalService("vacuum.send_command", {
           entity_id: this._config.entity,
           command: "app_zoned_clean",
           params: selectedZones,
@@ -5542,7 +5801,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._activeCleaningSessionMode = "";
         this._clearCleaningSessionPendingStart();
         this._clearPersistedCleaningSession();
-        await this._callNamedService("roborock.set_vacuum_goto_position", {
+        await this._callInternalService("roborock.set_vacuum_goto_position", {
           entity_id: this._config.entity,
           x: Math.round(this._gotoPoint.x),
           y: Math.round(this._gotoPoint.y),
@@ -6797,11 +7056,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             </button>
           </div>
         `,
-      this._activeMode === "zone"
-        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._manualZones.length + this._selectedPredefinedZoneIds.length}</strong><span>${escapeHtml(u?.zonesWord ?? "zonas")}</span></div>`
-        : this._activeMode === "goto"
-          ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
-          : "",
+      this._activeMode === "goto"
+        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
+        : "",
     ].filter(Boolean).join("");
     if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
       return "";
@@ -7032,6 +7289,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const chipPadding = styles.chip_padding || "0 10px";
       const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
       const mapImageUrl = this._getMapImageUrl(state);
+      const previousMapNorm = stripMapCacheBuster(previousImageSrc);
+      const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
+      const mapImageStartsPending =
+        Boolean(mapImageUrl) &&
+        previousImage?.tagName === "IMG" &&
+        Boolean(previousMapNorm) &&
+        Boolean(nextMapNorm) &&
+        previousMapNorm !== nextMapNorm;
       const unavailable = isUnavailableState(state) || !mapImageUrl;
       this._syncRememberedModeSelections(state);
       this._sanitizeSelectedManualZoneIndex();
@@ -7099,6 +7364,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           --advance-vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --advance-vacuum-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --advance-vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --av-surface: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          --av-surface-raised: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          --av-border: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          --av-border-strong: color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          --av-inset: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          --av-inset-soft: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          --av-float: 0 10px 24px rgba(0, 0, 0, 0.12);
+          --av-float-subtle: 0 6px 18px rgba(0, 0, 0, 0.1);
+          --av-accent-hover: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-accent-hover-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
+          --av-selected-bg: color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          --av-selected-border: color-mix(in srgb, ${accentColor} 38%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          --av-selected-inset: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          --av-selected-glow: 0 8px 20px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.12));
+          --av-selected-ring: 0 0 0 2px color-mix(in srgb, ${accentColor} 30%, transparent);
+          --av-cta-bg: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-cta-border: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          --av-cta-inset: color-mix(in srgb, ${accentColor} 28%, transparent);
+          --av-cta-float: 0 12px 28px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.12));
+          --av-cta-color: ${styles.control.accent_color};
+          --av-float-lift: 0 16px 30px rgba(0, 0, 0, 0.14);
+          --av-accent-tile-bg: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-accent-tile-border: color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          --av-accent-tile-inset: color-mix(in srgb, ${accentColor} 22%, transparent);
           display: block;
         }
 
@@ -7174,16 +7463,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__control {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           display: inline-flex;
+          flex-shrink: 0;
           height: ${controlSize}px;
           justify-content: center;
-          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
           width: ${controlSize}px;
         }
 
@@ -7196,7 +7486,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         :is(
-          .advance-vacuum-card__control,
+          .advance-vacuum-card__control--primary,
           .advance-vacuum-card__mode-button,
           .advance-vacuum-card__map-tool,
           .advance-vacuum-card__room-marker,
@@ -7209,8 +7499,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
+        .advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary) {
+          animation: advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
         .advance-vacuum-card__control ha-icon {
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
+        }
+
+        .advance-vacuum-card__control--active-motion ha-icon {
+          animation: advance-vacuum-icon-sweep 1.45s ease-in-out infinite;
+          transform-origin: 50% 70%;
         }
 
         .advance-vacuum-card__modes {
@@ -7220,15 +7519,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__modes-bubble {
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           display: inline-flex;
           flex-wrap: wrap;
-          gap: 3px;
+          gap: 4px;
           justify-content: center;
           max-width: 100%;
-          padding: 3px;
+          padding: 4px;
         }
 
         .advance-vacuum-card__mode-button {
@@ -7244,18 +7546,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           gap: 8px;
           min-height: 30px;
           padding: 0 11px;
-          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, color 160ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
         }
 
         .advance-vacuum-card__mode-button:hover {
-          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          box-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
+          background: var(--av-accent-hover);
+          box-shadow: var(--av-accent-hover-shadow);
         }
 
         .advance-vacuum-card__mode-button.is-active {
-          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
           color: var(--primary-text-color);
           font-weight: 700;
         }
@@ -7315,10 +7619,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__utility-option {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -7328,17 +7634,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           margin: 0;
           min-height: 34px;
           padding: 0 12px;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .advance-vacuum-card__utility-option.is-active {
-          background: color-mix(in srgb, var(--primary-color) 22%, color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)));
-          border-color: color-mix(in srgb, var(--primary-color) 52%, color-mix(in srgb, ${accentColor} 36%, var(--primary-text-color)));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-ring),
+            var(--av-selected-glow);
           color: var(--primary-text-color);
           font-weight: 700;
+        }
+
+        .advance-vacuum-card__utility-option:not(.is-active):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-color) 18%, transparent),
-            0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
-            0 10px 22px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.14));
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
         }
 
         .advance-vacuum-card__utility-option--menu ha-icon {
@@ -7355,10 +7670,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__utility-select {
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 16px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--primary-text-color);
           cursor: pointer;
           font: inherit;
@@ -7386,7 +7703,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%),
             color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border: 1px solid var(--av-border);
           border-radius: ${cardRadius}px;
           margin: -${mapTopBleed}px -${mapHorizontalBleed}px 0;
           overflow: hidden;
@@ -7424,8 +7741,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           opacity: 1;
           position: absolute;
           transition: opacity 220ms ease-out;
-          will-change: opacity;
           width: 100%;
+          z-index: 0;
+        }
+
+        .advance-vacuum-card__map-image[data-map-image-previous="true"] {
+          z-index: 0;
+        }
+
+        .advance-vacuum-card__map-image[data-map-image] {
+          z-index: 1;
         }
 
         .advance-vacuum-card__map-image.is-pending,
@@ -7557,12 +7882,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__zone-handle {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 16%, transparent);
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 22px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           color: var(--primary-text-color);
           display: inline-flex;
           height: 34px;
@@ -7649,12 +7974,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__map-tool {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           color: var(--primary-text-color);
           display: inline-flex;
           gap: 6px;
@@ -7663,11 +7988,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           min-width: 44px;
           padding: 0 14px;
           pointer-events: auto;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
         }
 
         .advance-vacuum-card__map-tool--add {
-          background: color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 36%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
           font-size: 12px;
           font-weight: 700;
         }
@@ -7680,15 +8009,28 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           opacity: 0.45;
         }
 
+        .advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__map-tool--add:not(.is-disabled):hover {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
+        }
+
         .advance-vacuum-card__room-marker,
         .advance-vacuum-card__goto-marker {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float);
           color: var(--primary-text-color);
           display: inline-flex;
           gap: var(--room-marker-gap, 8px);
@@ -7720,11 +8062,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__room-marker.is-selected,
         .advance-vacuum-card__goto-marker.is-selected {
-          background: color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 42%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, ${accentColor} 22%, transparent),
-            0 14px 28px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.12));
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
         }
 
         .advance-vacuum-card__room-marker ha-icon,
@@ -7752,10 +8094,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__room-chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--secondary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -7763,12 +8107,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           min-height: 36px;
           padding: 0 14px;
           touch-action: manipulation;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .advance-vacuum-card__room-chip.is-selected {
-          background: color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 42%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
           color: var(--primary-text-color);
+        }
+
+        .advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
         }
 
         .advance-vacuum-card__room-chip ha-icon {
@@ -7790,48 +8146,68 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__controls-row {
           align-items: center;
-          column-gap: 10px;
+          column-gap: 14px;
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
           width: 100%;
         }
 
-        .advance-vacuum-card__controls-main,
-        .advance-vacuum-card__controls-side {
+        .advance-vacuum-card__controls-slot {
+          align-items: center;
           display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
+          min-height: ${Math.round(controlSize * 1.16)}px;
         }
 
-        .advance-vacuum-card__controls-main {
-          align-items: center;
-          grid-column: 2;
+        .advance-vacuum-card__controls-slot--left {
+          gap: 10px;
+          justify-content: flex-end;
+        }
+
+        .advance-vacuum-card__controls-slot--center {
+          flex: 0 0 auto;
           justify-content: center;
         }
 
-        .advance-vacuum-card__controls-side {
-          align-items: center;
-          grid-column: 3;
+        .advance-vacuum-card__controls-slot--right {
+          gap: 10px;
           justify-content: flex-start;
         }
 
-        .advance-vacuum-card__control.is-primary {
-          background: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+        .advance-vacuum-card__control.is-panel-open {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, ${accentColor} 28%, transparent),
-            0 12px 28px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.12));
-          color: ${styles.control.accent_color};
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          height: ${controlSize}px;
+          width: ${controlSize}px;
+        }
+
+        .advance-vacuum-card__control--primary {
+          background: var(--av-cta-bg);
+          border-color: var(--av-cta-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-cta-inset),
+            var(--av-cta-float);
+          color: var(--av-cta-color);
+          flex-shrink: 0;
           height: ${Math.round(controlSize * 1.16)}px;
           width: ${Math.round(controlSize * 1.16)}px;
         }
 
+        .advance-vacuum-card__control--primary ha-icon {
+          --mdc-icon-size: ${Math.round(controlSize * 1.16 * 0.48)}px;
+        }
+
         .advance-vacuum-card__selection-chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: 12px;
@@ -7845,6 +8221,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .advance-vacuum-card__selection-chip:hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
         .advance-vacuum-card__routines {
           display: grid;
           gap: 10px;
@@ -7855,12 +8239,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__routine-button {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 18px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 12px 26px rgba(0, 0, 0, 0.1);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           color: var(--primary-text-color);
           cursor: pointer;
           display: grid;
@@ -7876,8 +8260,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__routine-button:hover {
           transform: translateY(-1px);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 16px 30px rgba(0, 0, 0, 0.14);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float-lift);
         }
 
         .advance-vacuum-card__routine-button.is-disabled {
@@ -7887,10 +8271,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__routine-icon {
           align-items: center;
-          background: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          background: var(--av-accent-tile-bg);
+          border: 1px solid var(--av-accent-tile-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, ${accentColor} 22%, transparent);
+          box-shadow: inset 0 1px 0 var(--av-accent-tile-inset);
           display: inline-flex;
           height: 46px;
           justify-content: center;
@@ -7959,6 +8343,27 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           72% { transform: scale(1.035); }
           100% { transform: scale(1); }
         }
+
+        @keyframes advance-vacuum-button-bounce-subtle {
+          0% { transform: scale(1); }
+          40% { transform: scale(0.965); }
+          72% { transform: scale(1.02); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes advance-vacuum-icon-sweep {
+          0%, 100% { transform: translateX(-3px) rotate(-10deg); }
+          50% { transform: translateX(4px) rotate(12deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .advance-vacuum-card,
+          .advance-vacuum-card *,
+          .advance-vacuum-card__control--active-motion ha-icon {
+            animation: none !important;
+            transition: none !important;
+          }
+        }
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
         <div class="advance-vacuum-card__map">
@@ -7967,7 +8372,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
                 ${
                   mapImageUrl
-                    ? `<img class="advance-vacuum-card__map-image" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
+                    ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
@@ -8078,29 +8483,33 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         <div class="advance-vacuum-card__controls">
           <div class="advance-vacuum-card__controls-row">
-            <div class="advance-vacuum-card__controls-main">
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--left">
               ${
                 showModeMenuButton
                   ? `
-                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml((activeModePanelPresetConfig?.id ? advanceVacuumStrings?.panelModes?.[activeModePanelPresetConfig.id] : "") || advanceVacuumStrings?.utility?.modesFallbackTitle || "Modos de aspirado y fregado")}">
+                    <button type="button" class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-panel-open" : ""}" data-control-action="toggle_modes" title="${escapeHtml((activeModePanelPresetConfig?.id ? advanceVacuumStrings?.panelModes?.[activeModePanelPresetConfig.id] : "") || advanceVacuumStrings?.utility?.modesFallbackTitle || "Modos de aspirado y fregado")}">
                       <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
                     </button>
                   `
                   : ""
               }
+            </div>
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--center">
               ${
                 showPrimaryActionButton
                   ? `
-                    <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
+                    <button type="button" class="advance-vacuum-card__control advance-vacuum-card__control--primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
                       <ha-icon icon="${primaryButtonIcon}"></ha-icon>
                     </button>
                   `
                   : ""
               }
+            </div>
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--right">
               ${
                 showDockMenuButton
                   ? `
-                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml((activeDockPanelSectionConfig?.id ? advanceVacuumStrings?.dockSections?.[activeDockPanelSectionConfig.id] : "") || advanceVacuumStrings?.utility?.chargingStation || "Base de carga")}">
+                    <button type="button" class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-panel-open" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml((activeDockPanelSectionConfig?.id ? advanceVacuumStrings?.dockSections?.[activeDockPanelSectionConfig.id] : "") || advanceVacuumStrings?.utility?.chargingStation || "Base de carga")}">
                       <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
                     </button>
                 `
@@ -8120,20 +8529,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
 
       let image = this.shadowRoot.querySelector("[data-map-image]");
-      const imageSrc = image?.getAttribute("src") || "";
       const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
-      if (previousImage && image && previousImageSrc && previousImageSrc === imageSrc) {
+      if (previousImage && image && previousMapNorm && nextMapNorm && previousMapNorm === nextMapNorm) {
         image.replaceWith(previousImage);
         image = previousImage;
+        image.removeAttribute("data-map-image-previous");
+        image.setAttribute("data-map-image", "");
+        if (mapImageUrl && image.getAttribute("src") !== mapImageUrl) {
+          image.setAttribute("src", mapImageUrl);
+        }
         image.classList.remove("is-pending", "is-fading-out");
         image.classList.add("is-loaded");
-      } else if (previousImage && image && previousImageSrc && imageSrc && canvas) {
+      } else if (previousImage && image && canvas && previousMapNorm && nextMapNorm && previousMapNorm !== nextMapNorm) {
         previousImage.removeEventListener("load", this._onMapImageLoad);
         previousImage.removeAttribute("data-map-image");
         previousImage.setAttribute("data-map-image-previous", "true");
         previousImage.classList.remove("is-pending", "is-fading-out");
         previousImage.classList.add("is-loaded");
-        image.classList.add("is-pending");
         canvas.insertBefore(previousImage, image);
       } else if (image) {
         image.classList.remove("is-pending", "is-fading-out");
@@ -8440,6 +8852,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
   _renderTextField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
+    const hintRaw = options.hint ? String(options.hint) : "";
+    const hintHtml = hintRaw
+      ? `<span class="editor-field__hint">${escapeHtml(this._editorLabel(hintRaw))}</span>`
+      : "";
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
@@ -8450,6 +8866,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           value="${escapeHtml(value ?? "")}"
           placeholder="${escapeHtml(options.placeholder || "")}"
         />
+        ${hintHtml}
       </label>
     `;
   }
@@ -8535,28 +8952,34 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       .filter(Boolean);
     let control = null;
 
-    if (customElements.get("ha-selector")) {
-      const entitySelector = domains.length
-        ? { domain: domains.length === 1 ? domains[0] : domains }
-        : {};
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      if (domains.length) {
+        control.includeDomains = domains;
+        control.entityFilter = stateObj =>
+          domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      control.allowCustomEntity = true;
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
+      const entitySelector =
+        domains.length === 1
+          ? { domain: domains[0] }
+          : domains.length > 1
+            ? { domain: domains }
+            : {};
       control.selector = { entity: entitySelector };
       if (placeholder) {
         control.setAttribute("label", placeholder);
-      }
-    } else if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = domains;
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => !domains.length || domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
       }
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.vacuum.select_entity");
       control.appendChild(emptyOption);
       this._getEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
@@ -8568,7 +8991,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
     control.dataset.field = field;
     control.dataset.value = nextValue;
-    control.hass = this._hass;
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
 
     if ("value" in control) {
       control.value = nextValue;
@@ -8767,6 +9192,13 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           font-weight: 600;
         }
 
+        .editor-field__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.45;
+        }
+
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
@@ -8888,12 +9320,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-          <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad del robot y fuente principal del mapa."))} ${escapeHtml(this._editorLabel("Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado)."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.general_section_title"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.general_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderSelectField("Idioma de la tarjeta", "language", config.language ?? "auto", [
-              { value: "auto", labelKey: "Automático (perfil Home Assistant)" },
+            ${this._renderSelectField("ed.advance_vacuum.card_language", "language", config.language ?? "auto", [
+              { value: "auto", labelKey: "ed.advance_vacuum.lang_auto_ha_profile" },
               { value: "es", label: "Español" },
               { value: "en", label: "English" },
               { value: "de", label: "Deutsch" },
@@ -8901,60 +9333,80 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "it", label: "Italiano" },
               { value: "nl", label: "Nederlands" },
             ], { fullWidth: true })}
-            ${this._renderEntityPickerField("Entidad vacuum", "entity", config.entity, { domains: ["vacuum"] })}
-            ${this._renderTextField("Nombre", "name", config.name, { placeholder: "Roborock Qrevo S" })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
-            ${this._renderEntityPickerField("Entidad mapa (camera/image)", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
-            ${this._renderSelectField("Plataforma", "vacuum_platform", config.vacuum_platform || "Roborock", [
+            ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, { domains: ["vacuum"] })}
+            ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
+            ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "Roborock", [
               { value: "Roborock", label: "Roborock" },
               { value: "send_command", label: "Send command" },
             ])}
-            ${this._renderEntityPickerField("Entidad calibracion", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
-            ${this._renderEntityPickerField("Helper sesion compartida", "shared_cleaning_session_entity", config.shared_cleaning_session_entity, { domains: ["input_text"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
+            <div class="editor-field editor-field--full">
+              <span>${escapeHtml(this._editorLabel("ed.advance_vacuum.shared_session_helper_label"))}</span>
+              <div
+                class="editor-control-host"
+                data-mounted-control="entity"
+                data-field="shared_cleaning_session_entity"
+                data-domains="input_text"
+                data-value="${escapeHtml(String(config.shared_cleaning_session_entity ?? ""))}"
+                data-placeholder="${escapeHtml("input_text.roborock_session")}"
+              ></div>
+              <span class="editor-field__hint">${escapeHtml(
+                this._editorLabel(
+                  "ed.advance_vacuum.shared_session_helper_hint",
+                ),
+              )}</span>
+            </div>
+            ${this._renderTextField("ed.advance_vacuum.shared_session_webhook", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
+              fullWidth: true,
+              placeholder: "nodalia_advance_vacuum_session",
+              hint: "ed.advance_vacuum.shared_session_webhook_hint",
+            })}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Mapa"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("La tarjeta reutiliza automaticamente tu config legacy de \\`map_modes\\` e \\`icons\\` si la pegas en YAML."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.map_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.map_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Calibracion desde camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
-            ${this._renderCheckboxField("Mapa bloqueado", "map_locked", config.map_locked !== false)}
-            ${this._renderCheckboxField("Mostrar etiquetas habitaciones", "show_room_labels", config.show_room_labels !== false)}
-            ${this._renderCheckboxField("Mostrar marcadores habitaciones", "show_room_markers", config.show_room_markers !== false)}
-            ${this._renderCheckboxField("Modo habitaciones", "allow_segment_mode", config.allow_segment_mode !== false)}
-            ${this._renderCheckboxField("Modo zona", "allow_zone_mode", config.allow_zone_mode !== false)}
-            ${this._renderCheckboxField("Modo ir a punto", "allow_goto_mode", config.allow_goto_mode !== false)}
-            ${this._renderTextField("Max zonas", "max_zone_selections", config.max_zone_selections, { type: "number", valueType: "number", placeholder: "5" })}
-            ${this._renderTextField("Max repeticiones", "max_repeats", config.max_repeats, { type: "number", valueType: "number", placeholder: "3" })}
+            ${this._renderCheckboxField("ed.advance_vacuum.calibration_from_camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.map_locked", "map_locked", config.map_locked !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.show_room_labels", "show_room_labels", config.show_room_labels !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.show_room_markers", "show_room_markers", config.show_room_markers !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.segment_mode", "allow_segment_mode", config.allow_segment_mode !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.zone_mode", "allow_zone_mode", config.allow_zone_mode !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.goto_mode", "allow_goto_mode", config.allow_goto_mode !== false)}
+            ${this._renderTextField("ed.advance_vacuum.max_zones", "max_zone_selections", config.max_zone_selections, { type: "number", valueType: "number", placeholder: "5" })}
+            ${this._renderTextField("ed.advance_vacuum.max_repeats", "max_repeats", config.max_repeats, { type: "number", valueType: "number", placeholder: "3" })}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Controles avanzados"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Selector de aspirado/fregado, menu derecho y rutinas configurables. En rutinas puedes usar \\`entity\\`, \\`label\\`, \\`icon\\`, \\`service\\`, \\`service_data\\` o \\`tap_action\\`."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.advanced_controls_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.advanced_controls_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Modo todo", "show_all_mode", config.show_all_mode !== false)}
-            ${this._renderEntityPickerField("Select aspirado", "suction_select_entity", config.suction_select_entity, { domains: ["select"] })}
-            ${this._renderEntityPickerField("Select fregado", "mop_select_entity", config.mop_select_entity, { domains: ["select"] })}
-            ${this._renderEntityPickerField("Select modo mopa", "mop_mode_select_entity", config.mop_mode_select_entity, { domains: ["select"] })}
-            ${this._renderTextField("Etiqueta menu derecho", "custom_menu.label", config.custom_menu?.label, {
+            ${this._renderCheckboxField("ed.advance_vacuum.show_all_mode", "show_all_mode", config.show_all_mode !== false)}
+            ${this._renderEntityPickerField("ed.vacuum.suction_select", "suction_select_entity", config.suction_select_entity, { domains: ["select"] })}
+            ${this._renderEntityPickerField("ed.vacuum.mop_select", "mop_select_entity", config.mop_select_entity, { domains: ["select"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.mop_mode_select", "mop_mode_select_entity", config.mop_mode_select_entity, { domains: ["select"] })}
+            ${this._renderTextField("ed.advance_vacuum.custom_menu_label", "custom_menu.label", config.custom_menu?.label, {
               placeholder: "Base",
             })}
-            ${this._renderIconPickerField("Icono menu derecho", "custom_menu.icon", config.custom_menu?.icon, {
+            ${this._renderIconPickerField("ed.advance_vacuum.custom_menu_icon", "custom_menu.icon", config.custom_menu?.icon, {
               placeholder: "mdi:home-import-outline",
             })}
-            ${this._renderTextareaField("Items del menu derecho (JSON)", "custom_menu.items", JSON.stringify(config.custom_menu?.items || [], null, 2), {
+            ${this._renderTextareaField("ed.advance_vacuum.custom_menu_items_json", "custom_menu.items", JSON.stringify(config.custom_menu?.items || [], null, 2), {
               fullWidth: true,
               rows: 10,
               valueType: "json",
               placeholder: '[\n  {\n    "label": "Vaciar deposito",\n    "icon": "mdi:delete-empty",\n    "visible_when": "docked",\n    "tap_action": {\n      "action": "perform-action",\n      "perform_action": "vacuum.send_command",\n      "service_data": {\n        "entity_id": "vacuum.roborock_qrevo_s",\n        "command": "app_start_emptying"\n      }\n    }\n  },\n  {\n    "label": "Volver a base",\n    "icon": "mdi:home-import-outline",\n    "visible_when": "active",\n    "builtin_action": "return_to_base"\n  }\n]',
             })}
-            ${this._renderTextareaField("Rutinas (JSON)", "routines", JSON.stringify(config.routines || [], null, 2), {
+            ${this._renderTextareaField("ed.advance_vacuum.routines_json", "routines", JSON.stringify(config.routines || [], null, 2), {
               fullWidth: true,
               rows: 12,
               valueType: "json",
@@ -8965,28 +9417,28 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Que elementos quieres mantener siempre visibles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.visibility_always_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Chip de estado", "show_state_chip", config.show_state_chip !== false)}
-            ${this._renderCheckboxField("Chip de bateria", "show_battery_chip", config.show_battery_chip !== false)}
-            ${this._renderCheckboxField("Iconos cabecera", "show_header_icons", config.show_header_icons !== false)}
-            ${this._renderCheckboxField("Boton volver a base", "show_return_to_base", config.show_return_to_base !== false)}
-            ${this._renderCheckboxField("Boton parar", "show_stop", config.show_stop !== false)}
-            ${this._renderCheckboxField("Boton localizar", "show_locate", config.show_locate !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_state_chip", "show_state_chip", config.show_state_chip !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_battery_chip", "show_battery_chip", config.show_battery_chip !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.show_header_icons", "show_header_icons", config.show_header_icons !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_return_base", "show_return_to_base", config.show_return_to_base !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_stop", "show_stop", config.show_stop !== false)}
+            ${this._renderCheckboxField("ed.vacuum.show_locate", "show_locate", config.show_locate !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional para clicks y selecciones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
-            ${this._renderSelectField("Estilo", "haptics.style", hapticStyle, [
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField("ed.entity.haptic_style", "haptics.style", hapticStyle, [
               { value: "selection", label: "Selection" },
               { value: "light", label: "Light" },
               { value: "medium", label: "Medium" },
@@ -9000,19 +9452,19 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Seguridad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla si las acciones de servicio externas (routines/menu) usan allowlist estricta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.security_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.security_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField(
-              "Seguridad de servicios (modo estricto)",
+              "ed.entity.security_strict",
               "security.strict_service_actions",
               config.security?.strict_service_actions !== false,
             )}
             ${
               config.security?.strict_service_actions !== false
                 ? this._renderTextField(
-                    "Servicios permitidos (separados por comas)",
+                    "ed.entity.allowed_services_csv",
                     "security.allowed_services",
                     Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
                     {
@@ -9028,20 +9480,21 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave de la tarjeta, paneles y respuesta visual al pulsar controles."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.animations_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-            ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+            ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+            ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+            ${this._renderTextField("ed.advance_vacuum.content_duration_ms", "animations.content_duration", animations.content_duration, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Paneles (ms)", "animations.panel_duration", animations.panel_duration, {
+            ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", animations.panel_duration, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Rebote botones (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+            ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
               type: "number",
               valueType: "number",
             })}
@@ -9050,8 +9503,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base del mapa y las burbujas."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.advance_vacuum.style_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.style_section_hint_map"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -9059,26 +9512,26 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
                 data-editor-toggle="styles"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${this._showStyleSection ? "Ocultar" : "Mostrar"}</span>
+                <span>${escapeHtml(this._editorLabel(this._showStyleSection ? "ed.weather.hide_style_settings" : "ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
           ${this._showStyleSection ? `
             <div class="editor-grid">
-              ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
-              ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
-              ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
-              ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
-              ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-              ${this._renderTextField("Separacion", "styles.card.gap", config.styles?.card?.gap)}
-              ${this._renderTextField("Tamano burbuja entidad", "styles.icon.size", config.styles?.icon?.size)}
-              ${this._renderTextField("Tamano chips", "styles.chip_height", config.styles?.chip_height)}
-              ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
-              ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-              ${this._renderTextField("Tamano botones", "styles.control.size", config.styles?.control?.size)}
-              ${this._renderTextField("Radius mapa", "styles.map.radius", config.styles?.map?.radius)}
-              ${this._renderTextField("Tamano marcadores", "styles.map.marker_size", config.styles?.map?.marker_size)}
-              ${this._renderTextField("Texto marcadores", "styles.map.label_size", config.styles?.map?.label_size)}
+              ${this._renderTextField("ed.entity.style_card_bg", "styles.card.background", config.styles?.card?.background)}
+              ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles?.card?.border)}
+              ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+              ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+              ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles?.card?.padding)}
+              ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles?.card?.gap)}
+              ${this._renderTextField("ed.vacuum.style_main_bubble_size", "styles.icon.size", config.styles?.icon?.size)}
+              ${this._renderTextField("ed.vacuum.style_chip_height", "styles.chip_height", config.styles?.chip_height)}
+              ${this._renderTextField("ed.vacuum.style_chip_font", "styles.chip_font_size", config.styles?.chip_font_size)}
+              ${this._renderTextField("ed.vacuum.style_title_size", "styles.title_size", config.styles?.title_size)}
+              ${this._renderTextField("ed.vacuum.style_button_size", "styles.control.size", config.styles?.control?.size)}
+              ${this._renderTextField("ed.advance_vacuum.map_radius", "styles.map.radius", config.styles?.map?.radius)}
+              ${this._renderTextField("ed.advance_vacuum.map_marker_size", "styles.map.marker_size", config.styles?.map?.marker_size)}
+              ${this._renderTextField("ed.advance_vacuum.map_label_size", "styles.map.label_size", config.styles?.map?.label_size)}
             </div>
           ` : ""}
         </section>
@@ -9118,6 +9571,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Advance Vacuum Card",
-  description: "Tarjeta de mapa avanzada para robots con estilo Nodalia y seleccion de habitaciones, zonas y puntos.",
+  description: "Advanced map card for vacuum robots in Nodalia style with room, zone, and point selection.",
   preview: true,
 });

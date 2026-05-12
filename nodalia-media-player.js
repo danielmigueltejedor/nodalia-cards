@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -2373,6 +2466,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     if (!this._isServiceAllowed(action.service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Media Player", action.service);
       return;
     }
 
@@ -6002,7 +6096,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -6079,38 +6173,38 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderActionConfigFields(title, path, action = {}) {
+  _renderActionConfigFields(titleKey, path, action = {}) {
     return `
       <div class="player-editor-subgroup">
-        <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(title))}</div>
+        <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(titleKey))}</div>
         <div class="editor-grid">
           ${this._renderSelectField(
-            "Acción",
+            "ed.media_player.action_block",
             `${path}.action`,
             action?.action || "default",
             [
-              { value: "default", label: "Por defecto" },
-              { value: "none", label: "Sin acción" },
-              { value: "more-info", label: "Más información" },
-              { value: "navigate", label: "Navegar" },
-              { value: "url", label: "Abrir URL" },
-              { value: "call-service", label: "Llamar servicio" },
+              { value: "default", label: "ed.media_player.action_default" },
+              { value: "none", label: "ed.entity.tap_none" },
+              { value: "more-info", label: "ed.entity.tap_more_info" },
+              { value: "navigate", label: "ed.media_player.action_navigate" },
+              { value: "url", label: "ed.entity.tap_open_url" },
+              { value: "call-service", label: "ed.entity.tap_service" },
             ],
           )}
-          ${this._renderEntityField("Entidad de más información", `${path}.entity`, action?.entity, {
+          ${this._renderEntityField("ed.media_player.more_info_entity", `${path}.entity`, action?.entity, {
             placeholder: "media_player.salon",
           })}
-          ${this._renderTextField("Ruta de navegación", `${path}.navigation_path`, action?.navigation_path, {
+          ${this._renderTextField("ed.media_player.navigation_path", `${path}.navigation_path`, action?.navigation_path, {
             placeholder: "/lovelace/salon",
           })}
-          ${this._renderTextField("URL", `${path}.url`, action?.url || action?.url_path, {
+          ${this._renderTextField("ed.entity.tap_url_field", `${path}.url`, action?.url || action?.url_path, {
             placeholder: "https://example.com",
           })}
-          ${this._renderCheckboxField("Abrir URL en pestaña nueva", `${path}.new_tab`, action?.new_tab === true)}
-          ${this._renderTextField("Servicio", `${path}.service`, action?.service, {
+          ${this._renderCheckboxField("ed.entity.tap_new_tab", `${path}.new_tab`, action?.new_tab === true)}
+          ${this._renderTextField("ed.entity.tap_service_field", `${path}.service`, action?.service, {
             placeholder: "input_boolean.turn_off",
           })}
-          ${this._renderTextareaField("Datos del servicio (JSON)", `${path}.service_data`, action?.service_data, {
+          ${this._renderTextareaField("ed.entity.tap_service_data_json", `${path}.service_data`, action?.service_data, {
             placeholder: '{"entity_id":"input_boolean.media_power"}',
           })}
         </div>
@@ -6157,76 +6251,77 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _renderPlayerCard(player, index) {
+    const phShort = this._editorLabel("ed.media_player.name_placeholder");
     return `
       <div class="player-editor-card">
         <div class="player-editor-card__header">
-          <div class="player-editor-card__title">${escapeHtml(this._editorLabel("Reproductor"))} ${index + 1}</div>
+          <div class="player-editor-card__title">${escapeHtml(this._editorLabel("ed.media_player.player_prefix"))} ${index + 1}</div>
           <div class="player-editor-card__actions">
-            <button type="button" data-action="move-player-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Subir"))}</button>
-            <button type="button" data-action="move-player-down" data-index="${index}" ${index === this._config.players.length - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("Bajar"))}</button>
-            <button type="button" data-action="remove-player" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("Eliminar"))}</button>
+            <button type="button" data-action="move-player-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>${escapeHtml(this._editorLabel("ed.notifications.move_up"))}</button>
+            <button type="button" data-action="move-player-down" data-index="${index}" ${index === this._config.players.length - 1 ? "disabled" : ""}>${escapeHtml(this._editorLabel("ed.notifications.move_down"))}</button>
+            <button type="button" data-action="remove-player" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("ed.notifications.remove"))}</button>
           </div>
         </div>
         <div class="player-editor-subgroup">
-          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("Principal"))}</div>
+          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("ed.media_player.primary_subgroup"))}</div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityField("Entidad", `players.${index}.entity`, player.entity, {
+            ${this._renderEntityField("ed.entity.quick_entity", `players.${index}.entity`, player.entity, {
               domains: ["media_player"],
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", `players.${index}.icon`, player.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", `players.${index}.icon`, player.icon, {
               placeholder: "mdi:speaker",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre corto", `players.${index}.label`, player.label, {
-              placeholder: "Salón",
+            ${this._renderTextField("ed.media_player.short_label", `players.${index}.label`, player.label, {
+              placeholder: phShort,
               fullWidth: true,
             })}
-            ${this._renderTextField("Título fijo", `players.${index}.title`, player.title, {
+            ${this._renderTextField("ed.media_player.title_fixed", `players.${index}.title`, player.title, {
               fullWidth: true,
             })}
-            ${this._renderTextField("Subtítulo fijo", `players.${index}.subtitle`, player.subtitle, {
+            ${this._renderTextField("ed.media_player.subtitle_fixed", `players.${index}.subtitle`, player.subtitle, {
               fullWidth: true,
             })}
           </div>
         </div>
         <div class="player-editor-subgroup">
-          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("Comportamiento"))}</div>
+          <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("ed.media_player.behavior_subgroup"))}</div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Modo TV / Apple TV", `players.${index}.tv_mode`, player.tv_mode === true)}
-            ${this._renderCheckboxField("Mostrar fuentes y apps", `players.${index}.show_source_controls`, player.show_source_controls !== false)}
+            ${this._renderCheckboxField("ed.media_player.tv_mode", `players.${index}.tv_mode`, player.tv_mode === true)}
+            ${this._renderCheckboxField("ed.media_player.show_sources", `players.${index}.show_source_controls`, player.show_source_controls !== false)}
             ${this._renderSelectField(
-              "Visibilidad",
+              "ed.media_player.visibility_subgroup",
               `players.${index}.show`,
               player.show,
               [
-                { value: undefined, label: "Automática" },
-                { value: true, label: "Siempre" },
-                { value: false, label: "Nunca" },
+                { value: undefined, label: "ed.media_player.tristate_auto" },
+                { value: true, label: "ed.media_player.tristate_always" },
+                { value: false, label: "ed.media_player.tristate_never" },
               ],
               "tristate",
             )}
-            ${this._renderTextField("Máximo de fuentes", `players.${index}.max_sources`, player.max_sources, {
+            ${this._renderTextField("ed.media_player.max_sources", `players.${index}.max_sources`, player.max_sources, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Ruta de medios", `players.${index}.browse_path`, player.browse_path, {
+            ${this._renderTextField("ed.media_player.browse_path", `players.${index}.browse_path`, player.browse_path, {
               placeholder: "/media-browser/browser",
             })}
-            ${this._renderTextField("Imagen personalizada", `players.${index}.image`, player.image, {
+            ${this._renderTextField("ed.media_player.custom_image", `players.${index}.image`, player.image, {
               placeholder: "/local/cover.png",
             })}
-            ${this._renderTextField("Estados visibles", `players.${index}.show_states`, Array.isArray(player.show_states) ? player.show_states.join(", ") : "", {
+            ${this._renderTextField("ed.media_player.show_states", `players.${index}.show_states`, Array.isArray(player.show_states) ? player.show_states.join(", ") : "", {
               placeholder: "playing, paused",
               valueType: "csv",
               fullWidth: true,
             })}
           </div>
         </div>
-        ${this._renderActionConfigFields("Acción al tocar", `players.${index}.tap_action`, player.tap_action)}
-        ${this._renderActionConfigFields("Botón de encendido cuando está apagado o en espera", `players.${index}.power_action_off`, player.power_action_off)}
-        ${this._renderActionConfigFields("Botón de encendido cuando está activo", `players.${index}.power_action_on`, player.power_action_on)}
-        ${this._renderActionConfigFields("Botón de encendido cuando no está disponible", `players.${index}.power_action_unavailable`, player.power_action_unavailable)}
+        ${this._renderActionConfigFields("ed.media_player.tap_on_card", `players.${index}.tap_action`, player.tap_action)}
+        ${this._renderActionConfigFields("ed.media_player.power_action_off", `players.${index}.power_action_off`, player.power_action_off)}
+        ${this._renderActionConfigFields("ed.media_player.power_action_active", `players.${index}.power_action_on`, player.power_action_on)}
+        ${this._renderActionConfigFields("ed.media_player.power_action_unavailable", `players.${index}.power_action_unavailable`, player.power_action_unavailable)}
       </div>
     `;
   }
@@ -6731,54 +6826,54 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Opciones generales del reproductor y cuándo debe mostrarse la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.general_section_hint"))}</div>
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "Mostrar tarjeta",
+              "ed.media_player.show_card",
               "show",
               config.show,
               [
-                { value: undefined, label: "Automático" },
-                { value: true, label: "Siempre" },
-                { value: false, label: "Nunca" },
+                { value: undefined, label: "ed.media_player.tristate_auto" },
+                { value: true, label: "ed.media_player.tristate_always" },
+                { value: false, label: "ed.media_player.tristate_never" },
               ],
               "tristate",
             )}
-            ${this._renderCheckboxField("Mostrar estado textual", "show_state", config.show_state === true)}
-            ${this._renderCheckboxField("Usar carátula como fondo", "album_cover_background", config.album_cover_background !== false)}
-            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
-            ${this._renderCheckboxField("Mostrar en escritorio", "layout.show_desktop", config.layout.show_desktop === true)}
+            ${this._renderCheckboxField("ed.media_player.show_state_text", "show_state", config.show_state === true)}
+            ${this._renderCheckboxField("ed.media_player.album_cover_background", "album_cover_background", config.album_cover_background !== false)}
+            ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.media_player.show_desktop", "layout.show_desktop", config.layout.show_desktop === true)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Layout"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ideal si quieres usarlo fijo arriba o abajo del dashboard."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.media_player.layout_section"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.layout_dashboard_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Tarjeta fija", "layout.fixed", config.layout.fixed === true)}
-            ${this._renderCheckboxField("Reservar espacio", "layout.reserve_space", config.layout.reserve_space === true)}
+            ${this._renderCheckboxField("ed.media_player.fixed_card", "layout.fixed", config.layout.fixed === true)}
+            ${this._renderCheckboxField("ed.media_player.reserve_space", "layout.reserve_space", config.layout.reserve_space === true)}
             ${this._renderSelectField(
-              "Posición",
+              "ed.media_player.layout_position",
               "layout.position",
               config.layout.position,
               [
-                { value: "bottom", label: "Abajo" },
-                { value: "top", label: "Arriba" },
+                { value: "bottom", label: "ed.media_player.position_bottom" },
+                { value: "top", label: "ed.media_player.position_top" },
               ],
             )}
-            ${this._renderTextField("Altura reservada", "layout.reserve_height", config.layout.reserve_height)}
-            ${this._renderTextField("Offset", "layout.offset", config.layout.offset)}
-            ${this._renderTextField("Margen lateral", "layout.side_margin", config.layout.side_margin)}
-            ${this._renderTextField("Ancho máximo", "layout.max_width", config.layout.max_width)}
-            ${this._renderTextField("Breakpoint móvil", "layout.mobile_breakpoint", config.layout.mobile_breakpoint, {
+            ${this._renderTextField("ed.media_player.reserve_height", "layout.reserve_height", config.layout.reserve_height)}
+            ${this._renderTextField("ed.media_player.layout_offset", "layout.offset", config.layout.offset)}
+            ${this._renderTextField("ed.media_player.side_margin", "layout.side_margin", config.layout.side_margin)}
+            ${this._renderTextField("ed.media_player.layout_max_width", "layout.max_width", config.layout.max_width)}
+            ${this._renderTextField("ed.media_player.mobile_breakpoint", "layout.mobile_breakpoint", config.layout.mobile_breakpoint, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("Z-index", "layout.z_index", config.layout.z_index, {
+            ${this._renderTextField("ed.media_player.layout_z_index", "layout.z_index", config.layout.z_index, {
               type: "number",
               valueType: "number",
             })}
@@ -6787,41 +6882,41 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Reproductores"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Añade, reordena y personaliza cada reproductor visible en la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.media_player.players_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.players_section_hint"))}</div>
           </div>
           <div class="player-editor-list">
             ${
               Array.isArray(config.players) && config.players.length
                 ? config.players.map((player, index) => this._renderPlayerCard(player, index)).join("")
-                : `<div class="empty-note">${escapeHtml(this._editorLabel("Todavía no has añadido ningún reproductor."))}</div>`
+                : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.media_player.players_empty"))}</div>`
             }
           </div>
           <div class="editor-actions">
-            <button type="button" data-action="add-player">${escapeHtml(this._editorLabel("Añadir reproductor"))}</button>
+            <button type="button" data-action="add-player">${escapeHtml(this._editorLabel("ed.media_player.add_player"))}</button>
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta háptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta táctil opcional para los controles del reproductor."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.vacuum.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Éxito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.weather.haptic_selection" },
+                { value: "light", label: "ed.weather.haptic_light" },
+                { value: "medium", label: "ed.weather.haptic_medium" },
+                { value: "heavy", label: "ed.weather.haptic_heavy" },
+                { value: "success", label: "ed.weather.haptic_success" },
+                { value: "warning", label: "ed.weather.haptic_warning" },
+                { value: "failure", label: "ed.weather.haptic_failure" },
               ],
             )}
           </div>
@@ -6829,8 +6924,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajusta la apertura de paneles, navegador y el rebote de los botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.animations_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -6839,7 +6934,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -6847,14 +6942,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("Paneles TV (ms)", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+                  ${this._renderTextField("ed.media_player.panel_tv_ms", "animations.panel_duration", config.animations.panel_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Navegador de medios (ms)", "animations.browser_duration", config.animations.browser_duration, {
+                  ${this._renderTextField("ed.media_player.browser_duration_ms", "animations.browser_duration", config.animations.browser_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote de botones (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.media_player.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -6865,8 +6960,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del reproductor principal y del navegador de medios."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -6875,7 +6970,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -6883,32 +6978,32 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo del reproductor", "styles.player.background", config.styles.player.background)}
-                  ${this._renderTextField("Borde del reproductor", "styles.player.border", config.styles.player.border)}
-                  ${this._renderTextField("Radio del borde", "styles.player.border_radius", config.styles.player.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.player.box_shadow", config.styles.player.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.player.padding", config.styles.player.padding)}
-                  ${this._renderTextField("Altura mínima", "styles.player.min_height", config.styles.player.min_height)}
-                  ${this._renderTextField("Tamaño de portada", "styles.player.artwork_size", config.styles.player.artwork_size)}
-                  ${this._renderTextField("Tamaño de portada TV", "styles.player.tv_artwork_size", config.styles.player.tv_artwork_size)}
-                  ${this._renderTextField("Tamaño de botones", "styles.player.control_size", config.styles.player.control_size)}
-                  ${this._renderTextField("Tamaño del título", "styles.player.title_size", config.styles.player.title_size)}
-                  ${this._renderTextField("Tamaño del subtítulo", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
-                  ${this._renderTextField("Alto del contenedor del slider", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
-                  ${this._renderTextField("Grosor del slider", "styles.player.slider_height", config.styles.player.slider_height)}
-                  ${this._renderTextField("Tamaño del thumb del slider", "styles.player.slider_thumb_size", config.styles.player.slider_thumb_size)}
-                  ${this._renderColorField("Color del progreso", "styles.player.progress_color", config.styles.player.progress_color)}
-                  ${this._renderColorField("Fondo del progreso", "styles.player.progress_background", config.styles.player.progress_background)}
-                  ${this._renderColorField("Overlay de portada", "styles.player.overlay_color", config.styles.player.overlay_color)}
-                  ${this._renderColorField("Tintado activo TV", "styles.player.active_tint_color", config.styles.player.active_tint_color)}
-                  ${this._renderTextField("Tamaño de indicadores", "styles.player.dot_size", config.styles.player.dot_size)}
-                  ${this._renderColorField("Color de acento", "styles.player.accent_color", config.styles.player.accent_color)}
-                  ${this._renderColorField("Fondo de acento", "styles.player.accent_background", config.styles.player.accent_background)}
-                  ${this._renderColorField("Fondo del navegador", "styles.browser.background", config.styles.browser.background)}
-                  ${this._renderTextField("Borde del navegador", "styles.browser.border", config.styles.browser.border)}
-                  ${this._renderTextField("Radio del navegador", "styles.browser.border_radius", config.styles.browser.border_radius)}
-                  ${this._renderTextField("Sombra del navegador", "styles.browser.box_shadow", config.styles.browser.box_shadow)}
-                  ${this._renderColorField("Veladura del navegador", "styles.browser.backdrop", config.styles.browser.backdrop)}
+                  ${this._renderColorField("ed.media_player.style_player_background", "styles.player.background", config.styles.player.background)}
+                  ${this._renderTextField("ed.media_player.style_player_border", "styles.player.border", config.styles.player.border)}
+                  ${this._renderTextField("ed.media_player.style_player_radius", "styles.player.border_radius", config.styles.player.border_radius)}
+                  ${this._renderTextField("ed.media_player.style_player_shadow", "styles.player.box_shadow", config.styles.player.box_shadow)}
+                  ${this._renderTextField("ed.media_player.style_player_padding", "styles.player.padding", config.styles.player.padding)}
+                  ${this._renderTextField("ed.media_player.style_player_min_height", "styles.player.min_height", config.styles.player.min_height)}
+                  ${this._renderTextField("ed.media_player.style_artwork_size", "styles.player.artwork_size", config.styles.player.artwork_size)}
+                  ${this._renderTextField("ed.media_player.style_tv_artwork_size", "styles.player.tv_artwork_size", config.styles.player.tv_artwork_size)}
+                  ${this._renderTextField("ed.media_player.style_control_size", "styles.player.control_size", config.styles.player.control_size)}
+                  ${this._renderTextField("ed.media_player.style_title_size", "styles.player.title_size", config.styles.player.title_size)}
+                  ${this._renderTextField("ed.media_player.style_subtitle_size", "styles.player.subtitle_size", config.styles.player.subtitle_size)}
+                  ${this._renderTextField("ed.media_player.style_slider_wrap_height", "styles.player.slider_wrap_height", config.styles.player.slider_wrap_height)}
+                  ${this._renderTextField("ed.media_player.style_slider_height", "styles.player.slider_height", config.styles.player.slider_height)}
+                  ${this._renderTextField("ed.media_player.style_slider_thumb", "styles.player.slider_thumb_size", config.styles.player.slider_thumb_size)}
+                  ${this._renderColorField("ed.media_player.style_progress_color", "styles.player.progress_color", config.styles.player.progress_color)}
+                  ${this._renderColorField("ed.media_player.style_progress_background", "styles.player.progress_background", config.styles.player.progress_background)}
+                  ${this._renderColorField("ed.media_player.style_overlay_color", "styles.player.overlay_color", config.styles.player.overlay_color)}
+                  ${this._renderColorField("ed.media_player.style_active_tint", "styles.player.active_tint_color", config.styles.player.active_tint_color)}
+                  ${this._renderTextField("ed.media_player.style_dot_size", "styles.player.dot_size", config.styles.player.dot_size)}
+                  ${this._renderColorField("ed.media_player.style_accent_color", "styles.player.accent_color", config.styles.player.accent_color)}
+                  ${this._renderColorField("ed.media_player.style_accent_background", "styles.player.accent_background", config.styles.player.accent_background)}
+                  ${this._renderColorField("ed.media_player.style_browser_background", "styles.browser.background", config.styles.browser.background)}
+                  ${this._renderTextField("ed.media_player.style_browser_border", "styles.browser.border", config.styles.browser.border)}
+                  ${this._renderTextField("ed.media_player.style_browser_radius", "styles.browser.border_radius", config.styles.browser.border_radius)}
+                  ${this._renderTextField("ed.media_player.style_browser_shadow", "styles.browser.box_shadow", config.styles.browser.box_shadow)}
+                  ${this._renderColorField("ed.media_player.style_browser_backdrop", "styles.browser.backdrop", config.styles.browser.backdrop)}
                 </div>
               `
               : ""

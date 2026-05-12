@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -393,7 +486,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "0.16.13";
+const CARD_VERSION = "0.16.14";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3541,20 +3634,20 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     `;
   }
 
-  _renderNodeSection(title, hint, prefix, values) {
+  _renderNodeSection(titleKey, hintKey, prefix, values) {
     return `
       <section class="editor-section">
         <div class="editor-section__header">
-          <div class="editor-section__title">${escapeHtml(title)}</div>
-          <div class="editor-section__hint">${escapeHtml(hint)}</div>
+          <div class="editor-section__title">${escapeHtml(this._editorLabel(titleKey))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel(hintKey))}</div>
         </div>
         <div class="editor-grid">
-          ${this._renderTextField("Entidad", `${prefix}.entity`, values.entity, { placeholder: "sensor.mi_sensor" })}
-          ${this._renderTextField("Nombre", `${prefix}.name`, values.name)}
-          ${this._renderTextField("Icono", `${prefix}.icon`, values.icon, { placeholder: "mdi:flash" })}
-          ${this._renderTextField("Color", `${prefix}.color`, values.color, { placeholder: "#f6b73c" })}
-          ${this._renderTextField("Entidad secundaria", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, { placeholder: "sensor.mi_secundaria" })}
-          ${this._renderTextField("Atributo secundario", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, { placeholder: "battery_level" })}
+          ${this._renderTextField("ed.entity.entity_main", `${prefix}.entity`, values.entity, { placeholder: "sensor.mi_sensor" })}
+          ${this._renderTextField("ed.entity.name", `${prefix}.name`, values.name)}
+          ${this._renderTextField("ed.entity.icon", `${prefix}.icon`, values.icon, { placeholder: "mdi:flash" })}
+          ${this._renderTextField("ed.power_flow.node_color", `${prefix}.color`, values.color, { placeholder: "#f6b73c" })}
+          ${this._renderTextField("ed.power_flow.node_secondary_entity", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, { placeholder: "sensor.mi_secundaria" })}
+          ${this._renderTextField("ed.power_flow.node_secondary_attribute", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, { placeholder: "battery_level" })}
         </div>
       </section>
     `;
@@ -3764,41 +3857,41 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo, enlace al panel de energia y comportamiento general de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.general_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia" })}
-            ${this._renderTextField("Enlace panel energia", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview" })}
-            ${this._renderTextField("Etiqueta boton energia", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia" })}
-            ${this._renderSelectField("Tap card", "tap_action", config.tap_action || "none", [
-              { value: "none", label: "Sin accion" },
-              { value: "more-info", label: "More info casa" },
+            ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energia" })}
+            ${this._renderTextField("ed.power_flow.energy_dashboard_url", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview" })}
+            ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia" })}
+            ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", config.tap_action || "none", [
+              { value: "none", label: "ed.power_flow.tap_none" },
+              { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
             ])}
-            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
-            ${this._renderCheckboxField("Mostrar boton energia", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
-            ${this._renderCheckboxField("Etiquetas", "show_labels", config.show_labels !== false)}
-            ${this._renderCheckboxField("Valores", "show_values", config.show_values !== false)}
-            ${this._renderCheckboxField("Info secundaria", "show_secondary_info", config.show_secondary_info !== false)}
-            ${this._renderCheckboxField("Click entidades", "clickable_entities", config.clickable_entities !== false)}
-            ${this._renderCheckboxField("Badge no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_header", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_dashboard_button", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_labels", "show_labels", config.show_labels !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_values", "show_values", config.show_values !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_secondary_info", "show_secondary_info", config.show_secondary_info !== false)}
+            ${this._renderCheckboxField("ed.power_flow.clickable_entities", "clickable_entities", config.clickable_entities !== false)}
+            ${this._renderCheckboxField("ed.power_flow.badge_unavailable", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Sensor de red: positivo importacion, negativo exportacion (split consumo/produccion permitido). Si exportas, el valor se muestra en positivo y el subtitulo indica entrega a la red.", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Opcional: si dejas la entidad vacia, el consumo se calcula como solar + red + bateria (mismos signos que en esos nodos). Si configuras entidad, se usa el sensor. More-info usa red/solar/bateria si no hay entidad casa.", "entities.home", home)}
-        ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
-        ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga hacia casa, negativa carga desde casa.", "entities.battery", battery)}
-        ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
-        ${this._renderNodeSection("Gas", "Caudal o consumo de gas hacia el hogar.", "entities.gas", gas)}
+        ${this._renderNodeSection("ed.power_flow.node_grid_title", "ed.power_flow.node_grid_hint_yaml", "entities.grid", grid)}
+        ${this._renderNodeSection("ed.power_flow.node_home_title", "ed.power_flow.node_home_hint_yaml", "entities.home", home)}
+        ${this._renderNodeSection("ed.power_flow.node_solar_title", "ed.power_flow.node_solar_hint", "entities.solar", solar)}
+        ${this._renderNodeSection("ed.power_flow.node_battery_title", "ed.power_flow.node_battery_hint_yaml", "entities.battery", battery)}
+        ${this._renderNodeSection("ed.power_flow.node_water_title", "ed.power_flow.node_water_hint", "entities.water", water)}
+        ${this._renderNodeSection("ed.power_flow.node_gas_title", "ed.power_flow.node_gas_hint", "entities.gas", gas)}
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Individuales"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Una linea por entidad: \\`entity|nombre|icono|color\\`."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.individuals_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.individuals_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
+            ${this._renderTextareaField("ed.power_flow.individuals_entities", "entities.individual", this._serializeIndividuals(), {
               valueType: "individuals",
               rows: 5,
               placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
@@ -3808,29 +3901,29 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Flujo"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla la visualizacion de lineas sin consumo y la velocidad de animacion."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.flow_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.flow_hint_yaml"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
-              { value: "show", label: "Mostrar" },
-              { value: "hide", label: "Ocultar" },
+            ${this._renderSelectField("ed.power_flow.zero_lines_mode", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
+              { value: "show", label: "ed.power_flow.zero_lines_show" },
+              { value: "hide", label: "ed.power_flow.zero_lines_hide" },
             ])}
-            ${this._renderTextField("Transparencia lineas cero", "display_zero_lines.transparency", config.display_zero_lines?.transparency, {
+            ${this._renderTextField("ed.power_flow.zero_lines_transparency", "display_zero_lines.transparency", config.display_zero_lines?.transparency, {
               type: "number",
               valueType: "number",
               placeholder: "50",
             })}
-            ${this._renderTextField("Color gris RGB", "display_zero_lines.grey_color", arrayFromMaybe(config.display_zero_lines?.grey_color).join(", "), {
+            ${this._renderTextField("ed.power_flow.grey_rgb", "display_zero_lines.grey_color", arrayFromMaybe(config.display_zero_lines?.grey_color).join(", "), {
               valueType: "rgb-array",
               placeholder: "189, 189, 189",
             })}
-            ${this._renderTextField("Flujo minimo (s)", "min_flow_rate", config.min_flow_rate, {
+            ${this._renderTextField("ed.power_flow.flow_min_s", "min_flow_rate", config.min_flow_rate, {
               type: "number",
               valueType: "number",
               placeholder: "1.4",
             })}
-            ${this._renderTextField("Flujo maximo (s)", "max_flow_rate", config.max_flow_rate, {
+            ${this._renderTextField("ed.power_flow.flow_max_s", "max_flow_rate", config.max_flow_rate, {
               type: "number",
               valueType: "number",
               placeholder: "5.8",
@@ -3840,45 +3933,45 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta y las burbujas."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.style_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.style_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
-            ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-            ${this._renderTextField("Gap", "styles.card.gap", config.styles?.card?.gap)}
-            ${this._renderTextField("Tamano nodo", "styles.icon.node_size", config.styles?.icon?.node_size)}
-            ${this._renderTextField("Tamano casa", "styles.icon.home_size", config.styles?.icon?.home_size)}
-            ${this._renderTextField("Tamano individual", "styles.icon.individual_size", config.styles?.icon?.individual_size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-            ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles?.chip_height)}
-            ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles?.chip_font_size)}
-            ${this._renderTextField("Valor casa", "styles.home_value_size", config.styles?.home_value_size)}
-            ${this._renderTextField("Unidad casa", "styles.home_unit_size", config.styles?.home_unit_size)}
-            ${this._renderTextField("Valor nodo", "styles.node_value_size", config.styles?.node_value_size)}
-            ${this._renderTextField("Grosor lineas", "styles.flow_width", config.styles?.flow_width)}
+            ${this._renderTextField("ed.person.style_card_bg", "styles.card.background", config.styles?.card?.background)}
+            ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles?.card?.border)}
+            ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+            ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+            ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding)}
+            ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap)}
+            ${this._renderTextField("ed.power_flow.icon_node_size", "styles.icon.node_size", config.styles?.icon?.node_size)}
+            ${this._renderTextField("ed.power_flow.icon_home_size", "styles.icon.home_size", config.styles?.icon?.home_size)}
+            ${this._renderTextField("ed.power_flow.icon_individual_size", "styles.icon.individual_size", config.styles?.icon?.individual_size)}
+            ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size)}
+            ${this._renderTextField("ed.person.style_chip_height", "styles.chip_height", config.styles?.chip_height)}
+            ${this._renderTextField("ed.person.style_chip_font", "styles.chip_font_size", config.styles?.chip_font_size)}
+            ${this._renderTextField("ed.power_flow.home_value_size", "styles.home_value_size", config.styles?.home_value_size)}
+            ${this._renderTextField("ed.power_flow.home_unit_size", "styles.home_unit_size", config.styles?.home_unit_size)}
+            ${this._renderTextField("ed.power_flow.node_value_size", "styles.node_value_size", config.styles?.node_value_size)}
+            ${this._renderTextField("ed.power_flow.flow_line_width", "styles.flow_width", config.styles?.flow_width)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar nodos o botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.haptics_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
-            ${this._renderSelectField("Estilo", "haptics.style", hapticStyle, [
-              { value: "selection", label: "Selection" },
-              { value: "light", label: "Light" },
-              { value: "medium", label: "Medium" },
-              { value: "heavy", label: "Heavy" },
-              { value: "success", label: "Success" },
-              { value: "warning", label: "Warning" },
-              { value: "failure", label: "Failure" },
+            ${this._renderCheckboxField("ed.power_flow.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("ed.nav.vibrate_fallback", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField("ed.vacuum.haptic_style", "haptics.style", hapticStyle, [
+              { value: "selection", label: "ed.weather.haptic_selection" },
+              { value: "light", label: "ed.weather.haptic_light" },
+              { value: "medium", label: "ed.weather.haptic_medium" },
+              { value: "heavy", label: "ed.weather.haptic_heavy" },
+              { value: "success", label: "ed.weather.haptic_success" },
+              { value: "warning", label: "ed.weather.haptic_warning" },
+              { value: "failure", label: "ed.weather.haptic_failure" },
             ])}
           </div>
         </section>
@@ -4259,7 +4352,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -4287,6 +4380,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _renderRgbArrayColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = arrayFromMaybe(options.fallbackValue || DEFAULT_CONFIG.display_zero_lines.grey_color);
     const sourceValue = arrayFromMaybe(value);
     const rgbValue = sourceValue.length >= 3 ? sourceValue : fallbackValue;
@@ -4295,15 +4390,15 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
-          <label class="editor-color-picker" title="Color personalizado">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
             <input
               type="color"
               data-field="${escapeHtml(field)}"
               data-value-type="rgb-array-color"
               value="${escapeHtml(hexValue)}"
-              aria-label="${escapeHtml(label)}"
+              aria-label="${escapeHtml(tLabel)}"
             />
             <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(swatchValue)};"></span>
           </label>
@@ -4419,7 +4514,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
       this._getPowerEntityOptions(field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -4443,34 +4538,34 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _renderNodeSection(title, hint, prefix, values) {
+  _renderNodeSection(titleKey, hintKey, prefix, values) {
     return `
       <section class="editor-section">
         <div class="editor-section__header">
-          <div class="editor-section__title">${escapeHtml(title)}</div>
-          <div class="editor-section__hint">${escapeHtml(hint)}</div>
+          <div class="editor-section__title">${escapeHtml(this._editorLabel(titleKey))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel(hintKey))}</div>
         </div>
         <div class="editor-grid editor-grid--stacked">
-          ${this._renderEntityPickerField("Entidad", `${prefix}.entity`, values.entity, {
+          ${this._renderEntityPickerField("ed.entity.entity_main", `${prefix}.entity`, values.entity, {
             placeholder: "sensor.mi_sensor",
             fullWidth: true,
           })}
-          ${this._renderTextField("Nombre", `${prefix}.name`, values.name)}
-          ${this._renderIconPickerField("Icono", `${prefix}.icon`, values.icon, {
+          ${this._renderTextField("ed.entity.name", `${prefix}.name`, values.name)}
+          ${this._renderIconPickerField("ed.entity.icon", `${prefix}.icon`, values.icon, {
             placeholder: "mdi:flash",
           })}
-          ${this._renderColorField("Color", `${prefix}.color`, values.color)}
-          ${this._renderEntityPickerField("Entidad secundaria", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, {
+          ${this._renderColorField("ed.power_flow.node_color", `${prefix}.color`, values.color)}
+          ${this._renderEntityPickerField("ed.power_flow.node_secondary_entity", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, {
             placeholder: "sensor.mi_secundaria",
             fullWidth: true,
           })}
-          ${this._renderTextField("Atributo secundario", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, {
+          ${this._renderTextField("ed.power_flow.node_secondary_attribute", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, {
             placeholder: "battery_level",
           })}
-          ${this._renderTextField("Unidad secundaria", `${prefix}.secondary_info.unit`, values.secondary_info?.unit, {
+          ${this._renderTextField("ed.power_flow.node_secondary_unit", `${prefix}.secondary_info.unit`, values.secondary_info?.unit, {
             placeholder: "kWh",
           })}
-          ${this._renderTextField("Decimales secundarios", `${prefix}.secondary_info.decimals`, values.secondary_info?.decimals, {
+          ${this._renderTextField("ed.power_flow.node_secondary_decimals", `${prefix}.secondary_info.decimals`, values.secondary_info?.decimals, {
             type: "number",
             valueType: "number",
             placeholder: "0",
@@ -4761,41 +4856,41 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Titulo, enlace al panel de energia y comportamiento general de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.general_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextField("Titulo", "title", config.title, { placeholder: "Energia", fullWidth: true })}
-            ${this._renderTextField("Enlace panel energia", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview", fullWidth: true })}
-            ${this._renderTextField("Etiqueta boton energia", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia", fullWidth: true })}
-            ${this._renderSelectField("Tap card", "tap_action", tapAction, [
-              { value: "none", label: "Sin accion" },
-              { value: "more-info", label: "More info casa" },
+            ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energia", fullWidth: true })}
+            ${this._renderTextField("ed.power_flow.energy_dashboard_url", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview", fullWidth: true })}
+            ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia", fullWidth: true })}
+            ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
+              { value: "none", label: "ed.power_flow.tap_none" },
+              { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
             ], { fullWidth: true })}
-            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
-            ${this._renderCheckboxField("Mostrar boton energia", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
-            ${this._renderCheckboxField("Etiquetas", "show_labels", config.show_labels !== false)}
-            ${this._renderCheckboxField("Valores", "show_values", config.show_values !== false)}
-            ${this._renderCheckboxField("Info secundaria", "show_secondary_info", config.show_secondary_info !== false)}
-            ${this._renderCheckboxField("Click entidades", "clickable_entities", config.clickable_entities !== false)}
-            ${this._renderCheckboxField("Badge no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_header", "show_header", config.show_header !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_dashboard_button", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_labels", "show_labels", config.show_labels !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_values", "show_values", config.show_values !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_secondary_info", "show_secondary_info", config.show_secondary_info !== false)}
+            ${this._renderCheckboxField("ed.power_flow.clickable_entities", "clickable_entities", config.clickable_entities !== false)}
+            ${this._renderCheckboxField("ed.power_flow.badge_unavailable", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
         </section>
 
-        ${this._renderNodeSection("Red", "Positivo importacion, negativo exportacion. Si exportas, valor en positivo y subtitulo «A la red» (o traduccion).", "entities.grid", grid)}
-        ${this._renderNodeSection("Casa", "Opcional: entidad vacia = consumo calculado (solar + red + bateria). Con entidad, valor del sensor.", "entities.home", home)}
-        ${this._renderNodeSection("Solar", "Produccion solar instantanea.", "entities.solar", solar)}
-        ${this._renderNodeSection("Bateria", "Potencia de bateria. Positiva descarga, negativa carga.", "entities.battery", battery)}
-        ${this._renderNodeSection("Agua", "Caudal o consumo de agua hacia el hogar.", "entities.water", water)}
-        ${this._renderNodeSection("Gas", "Caudal o consumo de gas hacia el hogar.", "entities.gas", gas)}
+        ${this._renderNodeSection("ed.power_flow.node_grid_title", "ed.power_flow.node_grid_hint_visual", "entities.grid", grid)}
+        ${this._renderNodeSection("ed.power_flow.node_home_title", "ed.power_flow.node_home_hint_visual", "entities.home", home)}
+        ${this._renderNodeSection("ed.power_flow.node_solar_title", "ed.power_flow.node_solar_hint", "entities.solar", solar)}
+        ${this._renderNodeSection("ed.power_flow.node_battery_title", "ed.power_flow.node_battery_hint_visual", "entities.battery", battery)}
+        ${this._renderNodeSection("ed.power_flow.node_water_title", "ed.power_flow.node_water_hint", "entities.water", water)}
+        ${this._renderNodeSection("ed.power_flow.node_gas_title", "ed.power_flow.node_gas_hint", "entities.gas", gas)}
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Individuales"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Una linea por entidad: \\`entity|nombre|icono|color\\`."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.individuals_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.individuals_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextareaField("Entidades individuales", "entities.individual", this._serializeIndividuals(), {
+            ${this._renderTextareaField("ed.power_flow.individuals_entities", "entities.individual", this._serializeIndividuals(), {
               valueType: "individuals",
               rows: 5,
               placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
@@ -4805,26 +4900,26 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Flujo"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Controla las lineas a cero y la velocidad del flujo."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.flow_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.flow_hint_visual"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderSelectField("Lineas a cero", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
-              { value: "show", label: "Mostrar" },
-              { value: "hide", label: "Ocultar" },
+            ${this._renderSelectField("ed.power_flow.zero_lines_mode", "display_zero_lines.mode", config.display_zero_lines?.mode || "show", [
+              { value: "show", label: "ed.power_flow.zero_lines_show" },
+              { value: "hide", label: "ed.power_flow.zero_lines_hide" },
             ])}
-            ${this._renderTextField("Transparencia lineas cero", "display_zero_lines.transparency", config.display_zero_lines?.transparency, {
+            ${this._renderTextField("ed.power_flow.zero_lines_transparency", "display_zero_lines.transparency", config.display_zero_lines?.transparency, {
               type: "number",
               valueType: "number",
               placeholder: "50",
             })}
-            ${this._renderRgbArrayColorField("Color lineas cero", "display_zero_lines.grey_color", config.display_zero_lines?.grey_color)}
-            ${this._renderTextField("Flujo minimo (s)", "min_flow_rate", config.min_flow_rate, {
+            ${this._renderRgbArrayColorField("ed.power_flow.zero_line_color", "display_zero_lines.grey_color", config.display_zero_lines?.grey_color)}
+            ${this._renderTextField("ed.power_flow.flow_min_s", "min_flow_rate", config.min_flow_rate, {
               type: "number",
               valueType: "number",
               placeholder: "1.4",
             })}
-            ${this._renderTextField("Flujo maximo (s)", "max_flow_rate", config.max_flow_rate, {
+            ${this._renderTextField("ed.power_flow.flow_max_s", "max_flow_rate", config.max_flow_rate, {
               type: "number",
               valueType: "number",
               placeholder: "5.8",
@@ -4834,28 +4929,28 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar nodos o botones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.haptics_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
-            ${this._renderSelectField("Estilo", "haptics.style", hapticStyle, [
-              { value: "selection", label: "Selection" },
-              { value: "light", label: "Light" },
-              { value: "medium", label: "Medium" },
-              { value: "heavy", label: "Heavy" },
-              { value: "success", label: "Success" },
-              { value: "warning", label: "Warning" },
-              { value: "failure", label: "Failure" },
+            ${this._renderCheckboxField("ed.power_flow.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
+            ${this._renderCheckboxField("ed.nav.vibrate_fallback", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderSelectField("ed.vacuum.haptic_style", "haptics.style", hapticStyle, [
+              { value: "selection", label: "ed.weather.haptic_selection" },
+              { value: "light", label: "ed.weather.haptic_light" },
+              { value: "medium", label: "ed.weather.haptic_medium" },
+              { value: "heavy", label: "ed.weather.haptic_heavy" },
+              { value: "success", label: "ed.weather.haptic_success" },
+              { value: "warning", label: "ed.weather.haptic_warning" },
+              { value: "failure", label: "ed.weather.haptic_failure" },
             ])}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del flujo y rebote al pulsar nodos o acciones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.animations_hint_visual"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4864,7 +4959,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4872,12 +4967,12 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderCheckboxField("ed.power_flow.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.power_flow.content_duration_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.power_flow.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                   })}
@@ -4889,8 +4984,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilo"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta y las burbujas."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.style_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.style_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -4899,7 +4994,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -4907,25 +5002,25 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderTextField("Background", "styles.card.background", config.styles?.card?.background)}
-                  ${this._renderTextField("Border", "styles.card.border", config.styles?.card?.border)}
-                  ${this._renderTextField("Radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
-                  ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
-                  ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
-                  ${this._renderTextField("Gap", "styles.card.gap", config.styles?.card?.gap)}
-                  ${this._renderTextField("Tamano nodo", "styles.icon.node_size", config.styles?.icon?.node_size)}
-                  ${this._renderTextField("Tamano casa", "styles.icon.home_size", config.styles?.icon?.home_size)}
-                  ${this._renderTextField("Tamano individual", "styles.icon.individual_size", config.styles?.icon?.individual_size)}
-                  ${this._renderTextField("Color iconos", "styles.icon.color", config.styles?.icon?.color)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles?.title_size)}
-                  ${this._renderTextField("Tamano chip", "styles.chip_height", config.styles?.chip_height)}
-                  ${this._renderTextField("Texto chip", "styles.chip_font_size", config.styles?.chip_font_size)}
-                  ${this._renderTextField("Padding chip", "styles.chip_padding", config.styles?.chip_padding)}
-                  ${this._renderTextField("Valor casa", "styles.home_value_size", config.styles?.home_value_size)}
-                  ${this._renderTextField("Unidad casa", "styles.home_unit_size", config.styles?.home_unit_size)}
-                  ${this._renderTextField("Valor nodo", "styles.node_value_size", config.styles?.node_value_size)}
-                  ${this._renderTextField("Texto secundario", "styles.secondary_size", config.styles?.secondary_size)}
-                  ${this._renderTextField("Grosor lineas", "styles.flow_width", config.styles?.flow_width)}
+                  ${this._renderTextField("ed.person.style_card_bg", "styles.card.background", config.styles?.card?.background)}
+                  ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles?.card?.border)}
+                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles?.card?.border_radius)}
+                  ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
+                  ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding)}
+                  ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap)}
+                  ${this._renderTextField("ed.power_flow.icon_node_size", "styles.icon.node_size", config.styles?.icon?.node_size)}
+                  ${this._renderTextField("ed.power_flow.icon_home_size", "styles.icon.home_size", config.styles?.icon?.home_size)}
+                  ${this._renderTextField("ed.power_flow.icon_individual_size", "styles.icon.individual_size", config.styles?.icon?.individual_size)}
+                  ${this._renderTextField("ed.power_flow.icons_color", "styles.icon.color", config.styles?.icon?.color)}
+                  ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size)}
+                  ${this._renderTextField("ed.person.style_chip_height", "styles.chip_height", config.styles?.chip_height)}
+                  ${this._renderTextField("ed.person.style_chip_font", "styles.chip_font_size", config.styles?.chip_font_size)}
+                  ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles?.chip_padding)}
+                  ${this._renderTextField("ed.power_flow.home_value_size", "styles.home_value_size", config.styles?.home_value_size)}
+                  ${this._renderTextField("ed.power_flow.home_unit_size", "styles.home_unit_size", config.styles?.home_unit_size)}
+                  ${this._renderTextField("ed.power_flow.node_value_size", "styles.node_value_size", config.styles?.node_value_size)}
+                  ${this._renderTextField("ed.power_flow.secondary_text_size", "styles.secondary_size", config.styles?.secondary_size)}
+                  ${this._renderTextField("ed.power_flow.flow_line_width", "styles.flow_width", config.styles?.flow_width)}
                 </div>
               `
               : ""

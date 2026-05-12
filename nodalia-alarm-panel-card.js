@@ -16,6 +16,8 @@
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
+    "postHomeAssistantWebhook",
+    "warnStrictServiceDenied",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -137,6 +139,95 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
+   */
+  function normalizeHomeAssistantWebhookId(webhookId) {
+    const raw = String(webhookId ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (_err) {
+        return "";
+      }
+    }
+    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
+    if (pathSeg) {
+      return decodeURIComponent(pathSeg[1]);
+    }
+    return raw;
+  }
+
+  /**
+   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
+   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
+   * an automation triggered by the webhook runs with normal HA privileges.
+   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
+   *
+   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
+   * often returns **401** in the HA frontend because API routes expect the bearer/session
+   * from `fetchWithAuth`, not cookies alone.
+   */
+  function postHomeAssistantWebhook(webhookId, body, hass) {
+    const id = normalizeHomeAssistantWebhookId(webhookId);
+    if (!id) {
+      return Promise.resolve(false);
+    }
+    const payload = body && typeof body === "object" ? body : {};
+    const path = `/api/webhook/${encodeURIComponent(id)}`;
+
+    const authFetch = hass?.auth?.fetchWithAuth;
+    if (typeof authFetch === "function") {
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    }
+
+    if (typeof fetch !== "function") {
+      return Promise.resolve(false);
+    }
+    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+    if (!origin) {
+      return Promise.resolve(false);
+    }
+    const url = `${origin}${path}`;
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    }    ).then(
+      res => res.ok,
+      () => false,
+    );
+  }
+
+  /**
+   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
+   */
+  function warnStrictServiceDenied(cardLabel, serviceValue) {
+    const service = String(serviceValue || "").trim();
+    if (!service) {
+      return;
+    }
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(
+      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
+    );
   }
 
   /**
@@ -382,6 +473,8 @@
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
+    postHomeAssistantWebhook,
+    warnStrictServiceDenied,
   };
 
   if (typeof window !== "undefined") {
@@ -2389,7 +2482,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
   _renderColorField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
+    const tColorCustom = this._editorLabel("ed.entity.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -2522,7 +2615,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("Selecciona una entidad");
+      emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
       this._getDomainEntityOptions(domains, field).forEach(option => {
         const optionElement = document.createElement("option");
@@ -2819,66 +2912,66 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       <div class="editor">
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entidad principal, helper opcional del codigo, icono y comportamiento base de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.alarm_panel.general_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("Entidad principal", "entity", config.entity, {
+            ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
               domains: ["alarm_control_panel"],
               placeholder: "alarm_control_panel.casa",
               fullWidth: true,
             })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon, {
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:shield-home",
               fullWidth: true,
             })}
-            ${this._renderTextField("Nombre", "name", config.name, {
+            ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: "Alarma",
               fullWidth: true,
             })}
-            ${this._renderTextField("PIN fijo", "code", config.code, {
+            ${this._renderTextField("ed.fav.alarm_pin", "code", config.code, {
               placeholder: "1234",
             })}
-            ${this._renderEntityPickerField("Helper codigo", "code_entity", config.code_entity, {
+            ${this._renderEntityPickerField("ed.fav.alarm_code_helper", "code_entity", config.code_entity, {
               domains: ["input_text"],
               placeholder: "input_text.codigo_alarma",
               fullWidth: true,
             })}
             ${this._renderSelectField(
-              "Layout estrecho",
+              "ed.entity.compact_mode",
               "compact_layout_mode",
               config.compact_layout_mode || "auto",
               [
-                { value: "auto", label: "Automatico (<4 columnas)" },
-                { value: "always", label: "Compacto siempre" },
-                { value: "never", label: "Nunca compactar" },
+                { value: "auto", label: "ed.entity.compact_auto" },
+                { value: "always", label: "ed.entity.compact_always" },
+                { value: "never", label: "ed.entity.compact_never" },
               ],
               { fullWidth: true },
             )}
-            ${this._renderCheckboxField("Mostrar estado en burbuja", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("Mostrar cuadro de texto del PIN", "show_code_input", config.show_code_input !== false)}
+            ${this._renderCheckboxField("ed.alarm_panel.show_state_bubble", "show_state", config.show_state !== false)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_pin", "show_code_input", config.show_code_input !== false)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Modos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Botones de armado y desarmado visibles en la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.alarm_panel.modes_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.alarm_panel.modes_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar desarmar", "show_disarm", config.show_disarm !== false)}
-            ${this._renderCheckboxField("Mostrar en casa", "show_arm_home", config.show_arm_home !== false)}
-            ${this._renderCheckboxField("Mostrar ausente", "show_arm_away", config.show_arm_away !== false)}
-            ${this._renderCheckboxField("Mostrar noche", "show_arm_night", config.show_arm_night !== false)}
-            ${this._renderCheckboxField("Mostrar vacaciones", "show_arm_vacation", config.show_arm_vacation === true)}
-            ${this._renderCheckboxField("Mostrar personalizado", "show_custom_bypass", config.show_custom_bypass === true)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_disarm", "show_disarm", config.show_disarm !== false)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_arm_home", "show_arm_home", config.show_arm_home !== false)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_arm_away", "show_arm_away", config.show_arm_away !== false)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_arm_night", "show_arm_night", config.show_arm_night !== false)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_arm_vacation", "show_arm_vacation", config.show_arm_vacation === true)}
+            ${this._renderCheckboxField("ed.fav.alarm_show_custom_bypass", "show_custom_bypass", config.show_custom_bypass === true)}
           </div>
         </section>
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Animaciones"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Entrada suave del contenido y pequeno rebote al pulsar acciones e icono."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.animations_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.alarm_panel.animations_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2887,7 +2980,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                 aria-expanded="${this._showAnimationSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("Ocultar ajustes de animación") : this._editorLabel("Mostrar ajustes de animación"))}</span>
+                <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
               </button>
             </div>
           </div>
@@ -2895,11 +2988,11 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
-                  ${this._renderTextField("Entrada contenido (ms)", "animations.content_duration", animations.content_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.power_flow.content_duration_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("Rebote pulsacion (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.power_flow.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -2910,24 +3003,24 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Respuesta haptica"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional al pulsar acciones."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.alarm_panel.haptics_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo haptico",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>
@@ -2935,8 +3028,8 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales base de la tarjeta."))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.alarm_panel.styles_section_hint"))}</div>
             <div class="editor-section__actions">
               <button
                 type="button"
@@ -2945,7 +3038,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
                 aria-expanded="${this._showStyleSection ? "true" : "false"}"
               >
                 <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
-                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("Ocultar ajustes de estilo") : this._editorLabel("Mostrar ajustes de estilo"))}</span>
+                <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
               </button>
             </div>
           </div>
@@ -2953,61 +3046,61 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("Radio borde", "styles.card.border_radius", config.styles.card.border_radius)}
-                  ${this._renderTextField("Sombra", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("Padding interior", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("Separacion interna", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("Fondo burbuja icono", "styles.icon.background", config.styles.icon.background, {
+                  ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
+                  ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+                  ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+                  ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+                  ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
                   })}
-                  ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles.icon.on_color, {
+                  ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles.icon.off_color, {
+                  ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color, {
                     fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
                   })}
-                  ${this._renderTextField("Tamano botones", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("Fondo acento", "styles.control.accent_background", config.styles.control.accent_background, {
+                  ${this._renderTextField("ed.entity.style_aux_button_size", "styles.control.size", config.styles.control.size)}
+                  ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
                     fallbackValue: "rgba(113, 192, 255, 0.18)",
                   })}
-                  ${this._renderColorField("Color acento", "styles.control.accent_color", config.styles.control.accent_color, {
+                  ${this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
                     fallbackValue: "var(--primary-text-color)",
                   })}
-                  ${this._renderColorField("Tinte desarmada", "styles.state_tints.disarmed", config.styles.state_tints?.disarmed, {
+                  ${this._renderColorField("ed.alarm_panel.tint_disarmed", "styles.state_tints.disarmed", config.styles.state_tints?.disarmed, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.disarmed,
                   })}
-                  ${this._renderColorField("Tinte en casa", "styles.state_tints.armed_home", config.styles.state_tints?.armed_home, {
+                  ${this._renderColorField("ed.alarm_panel.tint_armed_home", "styles.state_tints.armed_home", config.styles.state_tints?.armed_home, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_home,
                   })}
-                  ${this._renderColorField("Tinte ausente", "styles.state_tints.armed_away", config.styles.state_tints?.armed_away, {
+                  ${this._renderColorField("ed.alarm_panel.tint_armed_away", "styles.state_tints.armed_away", config.styles.state_tints?.armed_away, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_away,
                   })}
-                  ${this._renderColorField("Tinte noche", "styles.state_tints.armed_night", config.styles.state_tints?.armed_night, {
+                  ${this._renderColorField("ed.alarm_panel.tint_armed_night", "styles.state_tints.armed_night", config.styles.state_tints?.armed_night, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_night,
                   })}
-                  ${this._renderColorField("Tinte vacaciones", "styles.state_tints.armed_vacation", config.styles.state_tints?.armed_vacation, {
+                  ${this._renderColorField("ed.alarm_panel.tint_armed_vacation", "styles.state_tints.armed_vacation", config.styles.state_tints?.armed_vacation, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_vacation,
                   })}
-                  ${this._renderColorField("Tinte personalizado", "styles.state_tints.armed_custom_bypass", config.styles.state_tints?.armed_custom_bypass, {
+                  ${this._renderColorField("ed.alarm_panel.tint_armed_custom", "styles.state_tints.armed_custom_bypass", config.styles.state_tints?.armed_custom_bypass, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.armed_custom_bypass,
                   })}
-                  ${this._renderColorField("Tinte armando", "styles.state_tints.arming", config.styles.state_tints?.arming, {
+                  ${this._renderColorField("ed.alarm_panel.tint_arming", "styles.state_tints.arming", config.styles.state_tints?.arming, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.arming,
                   })}
-                  ${this._renderColorField("Tinte pendiente", "styles.state_tints.pending", config.styles.state_tints?.pending, {
+                  ${this._renderColorField("ed.alarm_panel.tint_pending", "styles.state_tints.pending", config.styles.state_tints?.pending, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.pending,
                   })}
-                  ${this._renderColorField("Tinte disparada", "styles.state_tints.triggered", config.styles.state_tints?.triggered, {
+                  ${this._renderColorField("ed.alarm_panel.tint_triggered", "styles.state_tints.triggered", config.styles.state_tints?.triggered, {
                     fallbackValue: ALARM_STATE_TINT_FALLBACKS.triggered,
                   })}
-                  ${this._renderTextField("Alto chips", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("Padding chips", "styles.chip_padding", config.styles.chip_padding)}
-                  ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("Alto input codigo", "styles.input_height", config.styles.input_height)}
+                  ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+                  ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+                  ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
+                  ${this._renderTextField("ed.alarm_panel.input_height", "styles.input_height", config.styles.input_height)}
                 </div>
               `
               : ""

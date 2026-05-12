@@ -1,0 +1,41 @@
+# Automation example for Calendar Card `native_event_webhook`.
+#
+# Use webhook_id `nodalia_calendar_create_event` in the card editor.
+# Important: do not map unused calendar fields to empty text. Home Assistant
+# counts empty date fields as present and then rejects timed events.
+
+alias: Nodalia Calendar - crear evento nativo
+mode: single
+trigger:
+  - platform: webhook
+    webhook_id: nodalia_calendar_create_event
+action:
+  - variables:
+      d: "{{ trigger.json.service_data | default(trigger.json.data, true) }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.event_kind == 'all_day' }}"
+        sequence:
+          - service: calendar.create_event
+            target:
+              entity_id: "{{ d.entity_id }}"
+            data:
+              summary: "{{ d.summary }}"
+              start_date: "{{ d.start_date }}"
+              end_date: "{{ d.end_date }}"
+              description: "{{ d.description | default(omit, true) }}"
+              location: "{{ d.location | default(omit, true) }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.event_kind == 'timed' }}"
+        sequence:
+          - service: calendar.create_event
+            target:
+              entity_id: "{{ d.entity_id }}"
+            data:
+              summary: "{{ d.summary }}"
+              start_date_time: "{{ d.start_date_time }}"
+              end_date_time: "{{ d.end_date_time }}"
+              description: "{{ d.description | default(omit, true) }}"
+              location: "{{ d.location | default(omit, true) }}"

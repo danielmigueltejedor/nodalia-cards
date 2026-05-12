@@ -5,6 +5,29 @@ import { SPANISH_TO_ENGLISH_EXACT } from "./spanish-nav-exact.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
+
+/** Per-locale flat maps for editor keys `ed.<card>.<slug>` (see i18n/editor/en.json). Missing locales fall back to English. */
+const EDITOR_CATALOG_LANGS = ["en", "es", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+
+function loadEditorCatalog() {
+  const catalogDir = path.join(root, "i18n", "editor");
+  const basePath = path.join(catalogDir, "en.json");
+  const empty = () => Object.fromEntries(EDITOR_CATALOG_LANGS.map(L => [L, {}]));
+  if (!fs.existsSync(basePath)) {
+    return empty();
+  }
+  const baseEn = JSON.parse(fs.readFileSync(basePath, "utf8"));
+  const out = {};
+  for (const L of EDITOR_CATALOG_LANGS) {
+    const p = path.join(catalogDir, `${L}.json`);
+    const overlay = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {};
+    out[L] = { ...baseEn, ...overlay };
+  }
+  return out;
+}
+
+const EDITOR_CATALOG = loadEditorCatalog();
+
 let keys = JSON.parse(fs.readFileSync(path.join(__dirname, "editor-source-strings.json"), "utf8"));
 
 const EDITOR_EXTRA_FULL_LOCALE_BY_EN = JSON.parse(
@@ -146,6 +169,14 @@ Acción
 Subir
 Bajar
 Eliminar
+Ocultar ajustes hápticos
+Mostrar ajustes hápticos
+Usar vibración si no hay háptica
+Intensidad
+Ligera
+Media
+Fuerte
+Error
 `
   .trim()
   .split("\n")
@@ -659,7 +690,13 @@ function translateEsToEnHint(s) {
 
 /** Only apply Show/Enable/Open shims to short field labels, not full English hint sentences. */
 function isCompactUiEnglish(s) {
-  return typeof s === "string" && !/,/.test(s) && s.length <= 72;
+  if (typeof s !== "string" || !s) {
+    return false;
+  }
+  if (/,/.test(s) || /\./.test(s)) {
+    return false;
+  }
+  return s.length <= 72;
 }
 
 function enToDe(s) {
@@ -667,6 +704,12 @@ function enToDe(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "URL in neuem Tab öffnen")
+    .replace(/^Open URL$/i, "URL öffnen")
+    .replace(/^Open in new tab$/i, "In neuem Tab öffnen")
+    .replace(/^Enable haptic feedback$/i, "Haptisches Feedback aktivieren")
+    .replace(/^Enable animations$/i, "Animationen aktivieren")
+    .replace(/^Enable haptics$/i, "Haptik aktivieren")
     .replace(/^Show /, "Anzeigen: ")
     .replace(/^Enable /, "Aktivieren: ")
     .replace(/^Open /, "Öffnen: ")
@@ -689,9 +732,7 @@ function enToDe(s) {
     .replace(/^Series$/i, "Serien")
     .replace(/^Modes$/i, "Modi")
     .replace(/^Individuals$/i, "Einzelwerte")
-    .replace(/^Haptic feedback$/i, "Haptisches Feedback")
-    .replace(/^Enable animations$/i, "Animationen aktivieren")
-    .replace(/^Enable haptics$/i, "Haptik aktivieren");
+    .replace(/^Haptic feedback$/i, "Haptisches Feedback");
 }
 
 function enToFr(s) {
@@ -699,6 +740,12 @@ function enToFr(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "Ouvrir l’URL dans un nouvel onglet")
+    .replace(/^Open URL$/i, "Ouvrir l’URL")
+    .replace(/^Open in new tab$/i, "Ouvrir dans un nouvel onglet")
+    .replace(/^Enable haptic feedback$/i, "Activer le retour haptique")
+    .replace(/^Enable animations$/i, "Activer les animations")
+    .replace(/^Enable haptics$/i, "Activer la haptique")
     .replace(/^Show /, "Afficher ")
     .replace(/^Enable /, "Activer ")
     .replace(/^Open /, "Ouvrir ")
@@ -720,9 +767,7 @@ function enToFr(s) {
     .replace(/^Series$/i, "Séries")
     .replace(/^Modes$/i, "Modes")
     .replace(/^Individuals$/i, "Individuels")
-    .replace(/^Haptic feedback$/i, "Retour haptique")
-    .replace(/^Enable animations$/i, "Activer les animations")
-    .replace(/^Enable haptics$/i, "Activer la haptique");
+    .replace(/^Haptic feedback$/i, "Retour haptique");
 }
 
 function enToIt(s) {
@@ -730,6 +775,12 @@ function enToIt(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "Apri URL in una nuova scheda")
+    .replace(/^Open URL$/i, "Apri URL")
+    .replace(/^Open in new tab$/i, "Apri in una nuova scheda")
+    .replace(/^Enable haptic feedback$/i, "Abilita feedback aptico")
+    .replace(/^Enable animations$/i, "Abilita animazioni")
+    .replace(/^Enable haptics$/i, "Abilita aptica")
     .replace(/^Show /, "Mostra ")
     .replace(/^Enable /, "Abilita ")
     .replace(/^Open /, "Apri ")
@@ -751,9 +802,7 @@ function enToIt(s) {
     .replace(/^Series$/i, "Serie")
     .replace(/^Modes$/i, "Modalità")
     .replace(/^Individuals$/i, "Singoli")
-    .replace(/^Haptic feedback$/i, "Feedback aptico")
-    .replace(/^Enable animations$/i, "Abilita animazioni")
-    .replace(/^Enable haptics$/i, "Abilita aptica");
+    .replace(/^Haptic feedback$/i, "Feedback aptico");
 }
 
 function enToNl(s) {
@@ -761,6 +810,12 @@ function enToNl(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "URL openen in nieuw tabblad")
+    .replace(/^Open URL$/i, "URL openen")
+    .replace(/^Open in new tab$/i, "Openen in nieuw tabblad")
+    .replace(/^Enable haptic feedback$/i, "Haptische feedback inschakelen")
+    .replace(/^Enable animations$/i, "Animaties inschakelen")
+    .replace(/^Enable haptics$/i, "Haptiek inschakelen")
     .replace(/^Show /, "Toon ")
     .replace(/^Enable /, "Schakel ")
     .replace(/^Open /, "Open ")
@@ -782,9 +837,7 @@ function enToNl(s) {
     .replace(/^Series$/i, "Reeksen")
     .replace(/^Modes$/i, "Modi")
     .replace(/^Individuals$/i, "Individueel")
-    .replace(/^Haptic feedback$/i, "Haptische feedback")
-    .replace(/^Enable animations$/i, "Animaties inschakelen")
-    .replace(/^Enable haptics$/i, "Haptiek inschakelen");
+    .replace(/^Haptic feedback$/i, "Haptische feedback");
 }
 
 function enToPt(s) {
@@ -792,6 +845,12 @@ function enToPt(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "Abrir URL num novo separador")
+    .replace(/^Open URL$/i, "Abrir URL")
+    .replace(/^Open in new tab$/i, "Abrir num novo separador")
+    .replace(/^Enable haptic feedback$/i, "Ativar feedback háptico")
+    .replace(/^Enable animations$/i, "Ativar animações")
+    .replace(/^Enable haptics$/i, "Ativar háptico")
     .replace(/^Show /, "Mostrar ")
     .replace(/^Enable /, "Ativar ")
     .replace(/^Open /, "Abrir ")
@@ -813,9 +872,7 @@ function enToPt(s) {
     .replace(/^Series$/i, "Séries")
     .replace(/^Modes$/i, "Modos")
     .replace(/^Individuals$/i, "Individuais")
-    .replace(/^Haptic feedback$/i, "Feedback háptico")
-    .replace(/^Enable animations$/i, "Ativar animações")
-    .replace(/^Enable haptics$/i, "Ativar háptico");
+    .replace(/^Haptic feedback$/i, "Feedback háptico");
 }
 
 function enToRu(s) {
@@ -823,6 +880,12 @@ function enToRu(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "Открыть URL в новой вкладке")
+    .replace(/^Open URL$/i, "Открыть URL")
+    .replace(/^Open in new tab$/i, "Открыть в новой вкладке")
+    .replace(/^Enable haptic feedback$/i, "Включить тактильную отдачу")
+    .replace(/^Enable animations$/i, "Включить анимации")
+    .replace(/^Enable haptics$/i, "Включить тактильную отдачу")
     .replace(/^Show /, "Показать: ")
     .replace(/^Enable /, "Включить ")
     .replace(/^Open /, "Открыть ")
@@ -844,9 +907,7 @@ function enToRu(s) {
     .replace(/^Series$/i, "Ряды")
     .replace(/^Modes$/i, "Режимы")
     .replace(/^Individuals$/i, "Отдельные")
-    .replace(/^Haptic feedback$/i, "Тактильная отдача")
-    .replace(/^Enable animations$/i, "Включить анимации")
-    .replace(/^Enable haptics$/i, "Включить тактильную отдачу");
+    .replace(/^Haptic feedback$/i, "Тактильная отдача");
 }
 
 function enToEl(s) {
@@ -854,6 +915,12 @@ function enToEl(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "Άνοιγμα URL σε νέα καρτέλα")
+    .replace(/^Open URL$/i, "Άνοιγμα URL")
+    .replace(/^Open in new tab$/i, "Άνοιγμα σε νέα καρτέλα")
+    .replace(/^Enable haptic feedback$/i, "Ενεργοποίηση απτικής ανάδρασης")
+    .replace(/^Enable animations$/i, "Ενεργοποίηση κινούμενων εικόνων")
+    .replace(/^Enable haptics$/i, "Ενεργοποίηση απτικής ανάδρασης")
     .replace(/^Show /, "Εμφάνιση ")
     .replace(/^Enable /, "Ενεργοποίηση ")
     .replace(/^Open /, "Άνοιγμα ")
@@ -875,9 +942,7 @@ function enToEl(s) {
     .replace(/^Series$/i, "Σειρές")
     .replace(/^Modes$/i, "Λειτουργίες")
     .replace(/^Individuals$/i, "Μεμονωμένα")
-    .replace(/^Haptic feedback$/i, "Απτική ανάδραση")
-    .replace(/^Enable animations$/i, "Ενεργοποίηση κινούμενων εικόνων")
-    .replace(/^Enable haptics$/i, "Ενεργοποίηση απτικής ανάδρασης");
+    .replace(/^Haptic feedback$/i, "Απτική ανάδραση");
 }
 
 function enToZh(s) {
@@ -885,6 +950,12 @@ function enToZh(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "在新标签页打开链接")
+    .replace(/^Open URL$/i, "打开链接")
+    .replace(/^Open in new tab$/i, "在新标签页打开")
+    .replace(/^Enable haptic feedback$/i, "启用触觉反馈")
+    .replace(/^Enable animations$/i, "启用动画")
+    .replace(/^Enable haptics$/i, "启用触觉反馈")
     .replace(/^Show /, "显示")
     .replace(/^Enable /, "启用")
     .replace(/^Open /, "打开")
@@ -906,9 +977,7 @@ function enToZh(s) {
     .replace(/^Series$/i, "系列")
     .replace(/^Modes$/i, "模式")
     .replace(/^Individuals$/i, "单项")
-    .replace(/^Haptic feedback$/i, "触觉反馈")
-    .replace(/^Enable animations$/i, "启用动画")
-    .replace(/^Enable haptics$/i, "启用触觉反馈");
+    .replace(/^Haptic feedback$/i, "触觉反馈");
 }
 
 function enToRo(s) {
@@ -916,6 +985,12 @@ function enToRo(s) {
     return s;
   }
   return s
+    .replace(/^Open URL in new tab$/i, "Deschide URL într-o filă nouă")
+    .replace(/^Open URL$/i, "Deschide URL")
+    .replace(/^Open in new tab$/i, "Deschide într-o filă nouă")
+    .replace(/^Enable haptic feedback$/i, "Activează feedback haptic")
+    .replace(/^Enable animations$/i, "Activează animațiile")
+    .replace(/^Enable haptics$/i, "Activează haptic")
     .replace(/^Show /, "Afișează ")
     .replace(/^Enable /, "Activează ")
     .replace(/^Open /, "Deschide ")
@@ -937,9 +1012,7 @@ function enToRo(s) {
     .replace(/^Series$/i, "Serii")
     .replace(/^Modes$/i, "Moduri")
     .replace(/^Individuals$/i, "Individuale")
-    .replace(/^Haptic feedback$/i, "Feedback haptic")
-    .replace(/^Enable animations$/i, "Activează animațiile")
-    .replace(/^Enable haptics$/i, "Activează haptic");
+    .replace(/^Haptic feedback$/i, "Feedback haptic");
 }
 
 /** Full-sentence / editor phrases where compact locale shims cannot apply (length, commas). Key = English seed (`row.en`). */
@@ -1433,6 +1506,237 @@ const FULL_LOCALE_BY_EN = {
     zh: "用电单位大小",
     ro: "Unitate casă",
   },
+  "Chip height": {
+    de: "Chip-Höhe",
+    fr: "Hauteur du chip",
+    it: "Altezza chip",
+    nl: "Chiphoogte",
+    pt: "Altura do chip",
+    ru: "Высота чипа",
+    el: "Ύψος chip",
+    zh: "芯片高度",
+    ro: "Înalțime chip",
+  },
+  "Chip heights": {
+    de: "Chip-Höhen",
+    fr: "Hauteurs des chips",
+    it: "Altezze chip",
+    nl: "Chiphoogtes",
+    pt: "Alturas dos chips",
+    ru: "Высоты чипов",
+    el: "Ύψη chip",
+    zh: "芯片高度",
+    ro: "Înălțimi chip",
+  },
+  "Slider container height": {
+    de: "Höhe des Schieberegler-Containers",
+    fr: "Hauteur du conteneur du curseur",
+    it: "Altezza contenitore slider",
+    nl: "Hoogte schuifregelaarcontainer",
+    pt: "Altura do contentor do controlo deslizante",
+    ru: "Высота контейнера ползунка",
+    el: "Ύψος δοχείου ρυθμιστή",
+    zh: "滑块容器高度",
+    ro: "Înălțime container cursor",
+  },
+  "Info bubble height": {
+    de: "Höhe der Info-Blase",
+    fr: "Hauteur de la bulle d’info",
+    it: "Altezza bolla informazioni",
+    nl: "Hoogte infobel",
+    pt: "Altura da bolha de informação",
+    ru: "Высота информационного пузыря",
+    el: "Ύψος φυσαλίδας πληροφοριών",
+    zh: "信息气泡高度",
+    ro: "Înălțime bulă informații",
+  },
+  "Chart height": {
+    de: "Diagrammhöhe",
+    fr: "Hauteur du graphique",
+    it: "Altezza grafico",
+    nl: "Grafiekhoogte",
+    pt: "Altura do gráfico",
+    ru: "Высота графика",
+    el: "Ύψος γραφήματος",
+    zh: "图表高度",
+    ro: "Înălțime grafic",
+  },
+  "Code input height": {
+    de: "Höhe des Codefelds",
+    fr: "Hauteur du champ de code",
+    it: "Altezza campo codice",
+    nl: "Hoogte code-invoer",
+    pt: "Altura do campo de código",
+    ru: "Высота поля кода",
+    el: "Ύψος πεδίου κωδικού",
+    zh: "密码输入框高度",
+    ro: "Înălțime câmp cod",
+  },
+  "Minimum height": {
+    de: "Mindesthöhe",
+    fr: "Hauteur minimale",
+    it: "Altezza minima",
+    nl: "Minimumhoogte",
+    pt: "Altura mínima",
+    ru: "Минимальная высота",
+    el: "Ελάχιστο ύψος",
+    zh: "最小高度",
+    ro: "Înălțime minimă",
+  },
+  "Reserved height": {
+    de: "Reservierte Höhe",
+    fr: "Hauteur réservée",
+    it: "Altezza riservata",
+    nl: "Gereserveerde hoogte",
+    pt: "Altura reservada",
+    ru: "Зарезервированная высота",
+    el: "Δεσμευμένο ύψος",
+    zh: "预留高度",
+    ro: "Înălțime rezervată",
+  },
+  "Slider bubble width": {
+    de: "Breite der Schieberegler-Blase",
+    fr: "Largeur de la bulle du curseur",
+    it: "Larghezza bolla slider",
+    nl: "Breedte schuifregelaarbel",
+    pt: "Largura da bolha do controlo deslizante",
+    ru: "Ширина пузыря ползунка",
+    el: "Πλάτος φυσαλίδας ρυθμιστή",
+    zh: "滑块气泡宽度",
+    ro: "Lățime bulă cursor",
+  },
+  "Maximum width": {
+    de: "Maximalbreite",
+    fr: "Largeur maximale",
+    it: "Larghezza massima",
+    nl: "Maximale breedte",
+    pt: "Largura máxima",
+    ru: "Максимальная ширина",
+    el: "Μέγιστο πλάτος",
+    zh: "最大宽度",
+    ro: "Lățime maximă",
+  },
+  "Icon fit (icon only)": {
+    de: "Symbol einpassen (nur Symbol)",
+    fr: "Adapter l’icône (icône seule)",
+    it: "Adatta icona (solo icona)",
+    nl: "Pictogram passend (alleen pictogram)",
+    pt: "Ajustar ícone (só ícone)",
+    ru: "Подгонка значка (только значок)",
+    el: "Προσαρμογή εικονιδίου (μόνο εικονίδιο)",
+    zh: "图标适配（仅图标）",
+    ro: "Potrivire pictogramă (doar pictogramă)",
+  },
+  "Slider switch (ms)": {
+    de: "Schiebereglerwechsel (ms)",
+    fr: "Changement de curseur (ms)",
+    it: "Cambio slider (ms)",
+    nl: "Schuifregelaarwissel (ms)",
+    pt: "Mudança de controlo deslizante (ms)",
+    ru: "Переключение ползунка (мс)",
+    el: "Εναλλαγή ρυθμιστή (ms)",
+    zh: "滑块切换（毫秒）",
+    ro: "Comutare cursor (ms)",
+  },
+  "Slider horizontal shrink": {
+    de: "Horizontale Schieberegler-Stauchung",
+    fr: "Rétrécissement horizontal du curseur",
+    it: "Compressione orizzontale slider",
+    nl: "Horizontaal krimpen schuifregelaar",
+    pt: "Encolhimento horizontal do controlo deslizante",
+    ru: "Горизонтальное сжатие ползунка",
+    el: "Οριζόντια σύσφιξη ρυθμιστή",
+    zh: "滑块水平收缩",
+    ro: "Micșorare orizontală cursor",
+  },
+  "Color controls": {
+    de: "Farbsteuerung",
+    fr: "Contrôles de couleur",
+    it: "Controlli colore",
+    nl: "Kleurinstellingen",
+    pt: "Controlos de cor",
+    ru: "Управление цветом",
+    el: "Χρωματικά στοιχεία ελέγχου",
+    zh: "颜色控件",
+    ro: "Comenzi culoare",
+  },
+  "More info": {
+    de: "Mehr Infos",
+    fr: "Plus d’infos",
+    it: "Altre informazioni",
+    nl: "Meer info",
+    pt: "Mais informações",
+    ru: "Подробнее",
+    el: "Περισσότερα",
+    zh: "更多信息",
+    ro: "Mai multe informații",
+  },
+  "Call service": {
+    de: "Dienst aufrufen",
+    fr: "Appeler le service",
+    it: "Chiama servizio",
+    nl: "Service aanroepen",
+    pt: "Chamar serviço",
+    ru: "Вызвать службу",
+    el: "Κλήση υπηρεσίας",
+    zh: "调用服务",
+    ro: "Apelează serviciul",
+  },
+  "Pin to screen": {
+    de: "Am Bildschirm fixieren",
+    fr: "Épingler à l’écran",
+    it: "Blocca sullo schermo",
+    nl: "Aan scherm vastmaken",
+    pt: "Fixar ao ecrã",
+    ru: "Закрепить на экране",
+    el: "Καρφίτσωμα στην οθόνη",
+    zh: "固定到屏幕",
+    ro: "Fixare pe ecran",
+  },
+  "Also show on desktop": {
+    de: "Auch auf dem Desktop anzeigen",
+    fr: "Afficher aussi sur le bureau",
+    it: "Mostra anche sul desktop",
+    nl: "Ook op desktop tonen",
+    pt: "Mostrar também no ambiente de trabalho",
+    ru: "Показывать и на компьютере",
+    el: "Εμφάνιση και στην επιφάνεια εργασίας",
+    zh: "在桌面端也显示",
+    ro: "Afișează și pe desktop",
+  },
+  "Card border": {
+    de: "Kartenrand",
+    fr: "Bordure de la carte",
+    it: "Bordo scheda",
+    nl: "Kaartrand",
+    pt: "Borda do cartão",
+    ru: "Граница карточки",
+    el: "Περίγραμμα κάρτας",
+    zh: "卡片边框",
+    ro: "Chenar card",
+  },
+  Label: {
+    de: "Beschriftung",
+    fr: "Étiquette",
+    it: "Etichetta",
+    nl: "Label",
+    pt: "Etiqueta",
+    ru: "Подпись",
+    el: "Ετικέτα",
+    zh: "标签",
+    ro: "Etichetă",
+  },
+  "Main entity": {
+    de: "Hauptentität",
+    fr: "Entité principale",
+    it: "Entità principale",
+    nl: "Hoofdentiteit",
+    pt: "Entidade principal",
+    ru: "Основной объект",
+    el: "Κύρια οντότητα",
+    zh: "主实体",
+    ro: "Entitate principală",
+  },
 };
 
 function pickNewLang(rowEn, mergedVal, compactFn) {
@@ -1471,12 +1775,12 @@ for (const es of keys) {
   const en = translateEsToEn(es);
   rows.push(
     applyFullLocaleByEn({
-      es,
-      en,
-      de: enToDe(en),
-      fr: enToFr(en),
-      it: enToIt(en),
-      nl: enToNl(en),
+    es,
+    en,
+    de: enToDe(en),
+    fr: enToFr(en),
+    it: enToIt(en),
+    nl: enToNl(en),
       pt: enToPt(en),
       ru: enToRu(en),
       el: enToEl(en),
@@ -1536,7 +1840,34 @@ const out = `/* eslint-disable max-len */
     MAP.es[r.es] = r.es;
   }
 
+  function foldEditorUiKey(s) {
+    try {
+      return String(s || "")
+        .normalize("NFD")
+        .replace(/\\p{M}/gu, "")
+        .trim()
+        .toLowerCase();
+    } catch (_e) {
+      return String(s || "")
+        .toLowerCase()
+        .trim();
+    }
+  }
+
+  const editorUiFoldToCanonicalEs = new Map();
+  for (const r of ROWS) {
+    const canon = r.es;
+    if (typeof canon !== "string" || !canon) {
+      continue;
+    }
+    const f = foldEditorUiKey(canon);
+    if (!editorUiFoldToCanonicalEs.has(f)) {
+      editorUiFoldToCanonicalEs.set(f, canon);
+    }
+  }
+
   window.NodaliaI18n.editorUiMaps = MAP;
+  window.NodaliaI18n.editorCatalog = ${JSON.stringify(EDITOR_CATALOG)};
 
   function normalizeSpanishEditorLabel(text) {
     let out = String(text || "");
@@ -1635,26 +1966,62 @@ const out = `/* eslint-disable max-len */
     if (spanishText == null || spanishText === "") {
       return "";
     }
+    const rawInput = String(spanishText);
     const lang = window.NodaliaI18n.resolveLanguage(hass, configLang);
-    const maps = window.NodaliaI18n.editorUiMaps;
-    if (maps.es[spanishText] === undefined && maps.en[spanishText] === undefined) {
-      return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
+    if (rawInput.startsWith("ed.")) {
+      const cat = window.NodaliaI18n.editorCatalog;
+      if (cat && typeof cat === "object") {
+        const order = [lang, "en", "es"];
+        const seen = new Set();
+        for (const L of order) {
+          if (!L || seen.has(L)) {
+            continue;
+          }
+          seen.add(L);
+          const pack = cat[L];
+          const v = pack && pack[rawInput];
+          if (typeof v === "string" && v !== "") {
+            return v;
+          }
+        }
+      }
+      return rawInput;
     }
-    const primary = maps[lang]?.[spanishText];
+    const maps = window.NodaliaI18n.editorUiMaps;
+    const resolveEditorUiKey = () => {
+      const candidates = [rawInput, normalizeSpanishEditorLabel(rawInput)];
+      for (const c of candidates) {
+        if (maps.es[c] !== undefined || maps.en[c] !== undefined) {
+          return c;
+        }
+      }
+      for (const c of candidates) {
+        const canon = editorUiFoldToCanonicalEs.get(foldEditorUiKey(c));
+        if (canon && (maps.es[canon] !== undefined || maps.en[canon] !== undefined)) {
+          return canon;
+        }
+      }
+      return rawInput;
+    };
+    const key = resolveEditorUiKey();
+    if (maps.es[key] === undefined && maps.en[key] === undefined) {
+      return lang === "es" ? normalizeSpanishEditorLabel(rawInput) : rawInput;
+    }
+    const primary = maps[lang]?.[key];
     if (primary !== undefined && primary !== "") {
       return lang === "es" ? normalizeSpanishEditorLabel(primary) : primary;
     }
     if (lang !== "es") {
-      const enVal = maps.en?.[spanishText];
+      const enVal = maps.en?.[key];
       if (enVal !== undefined && enVal !== "") {
         return enVal;
       }
     }
-    const esVal = maps.es?.[spanishText];
+    const esVal = maps.es?.[key];
     if (esVal !== undefined && esVal !== "") {
       return normalizeSpanishEditorLabel(esVal);
     }
-    return lang === "es" ? normalizeSpanishEditorLabel(spanishText) : spanishText;
+    return lang === "es" ? normalizeSpanishEditorLabel(rawInput) : rawInput;
   };
 })();
 `;
