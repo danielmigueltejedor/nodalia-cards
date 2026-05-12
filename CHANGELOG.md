@@ -23,6 +23,19 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 ---
 ## [1.0.2-alpha.12] - 2026-05-12
 
+Prerelease **`alpha.12`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.12`** (optional tag **`v1.0.2-alpha.12`**).
+
+### Changed
+
+- **`CARD_VERSION`** on all bundled card modules is **`1.0.2-alpha.12`**, matching **`package.json`** and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Added
+
+- **`nodalia-climate-card.js`:** **`heat_cool`** dual-range dial: **thumb focus** (`low` / `high` / none) for **`+` / `−`** (single bound vs whole-band shift), **tap** thumb to select or deselect, **drag** selects that thumb, **clear** focus when tapping the dial outside the thumbs or when changing HVAC mode / power; selection styling on the active thumb; range changes still call **`climate.set_temperature`** with both **`target_temp_low`** and **`target_temp_high`**.
+
+---
+## [1.0.2-alpha.11] - 2026-05-12
+
 Prerelease **`alpha.11`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.11`** (optional tag **`v1.0.2-alpha.11`**).
 
 ### Changed

@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "1.0.2-alpha.11",
+  "version": "1.0.2-alpha.12",
   "packageManager": "pnpm@11.1.1",
   "private": false,
   "type": "module",
