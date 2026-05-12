@@ -21,7 +21,6 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
-
 ## [1.0.1] - 2026-05-12
 
 ### Changed
