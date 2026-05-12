@@ -1975,6 +1975,11 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _getPlayerStateLabel(stateValue) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateMediaPlayerState) {
+      return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
+    }
     switch (stateValue) {
       case "on":
         return "Encendido";

@@ -1282,6 +1282,11 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _getStateLabel(state) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateHumidifierDeviceState) {
+      return window.NodaliaI18n.translateHumidifierDeviceState(hass, langCfg, state?.state);
+    }
     const normalized = normalizeTextKey(state?.state);
 
     switch (normalized) {

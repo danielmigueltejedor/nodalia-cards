@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.0.1-alpha.1";
+const CARD_VERSION = "1.0.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2261,6 +2261,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _getMediaPlayerStateLabel(stateValue) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateMediaPlayerState) {
+      return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
+    }
     switch (stateValue) {
       case "playing":
         return "Reproduciendo";

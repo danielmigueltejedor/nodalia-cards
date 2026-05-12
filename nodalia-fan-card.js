@@ -1168,7 +1168,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     return this._config?.entity || window.NodaliaI18n?.strings?.(lang)?.fan?.fallbackName || "Fan";
   }
 
@@ -1187,7 +1187,7 @@ class NodaliaFanCard extends HTMLElement {
   _getStateLabel(state) {
     const stateValue = normalizeTextKey(state?.state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const fanStrings = window.NodaliaI18n?.strings?.(lang)?.fan;
     if (fanStrings?.[stateValue]) {
       return fanStrings[stateValue];

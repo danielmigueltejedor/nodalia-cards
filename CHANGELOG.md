@@ -6,15 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Work toward **`1.0.1`** patch stable on **`main`** while **`1.0.0`** remains the last widely recommended stable tag; **`1.0.1-alpha.*`** validates on **`alpha`** before **`v1.0.1`**. Prerelease workflow: **CONTRIBUTING**.
-
----
-
-## [1.0.1-alpha.1] - 2026-05-12
-
-First **`alpha`** on the **`1.0.1`** patch line. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.1-alpha.1`** (Git tag **`v1.0.1-alpha.1`** optional on **`alpha`** / HACS pre-release).
-
-Same fixes as stable **[1.0.1]** (section below); this build is for validation before promoting **`v1.0.1`** on **`main`**.
+Work on **`1.0.x`** patches and the next feature line while **`1.0.1`** remains the stable baseline on **`main`**: fixes, performance, security, and compatibility. Prerelease workflow for future lines: **CONTRIBUTING**.
 
 ---
 
@@ -22,6 +14,11 @@ Same fixes as stable **[1.0.1]** (section below); this build is for validation b
 
 ### Fixed
 
+- Climate card state chip and HVAC mode button tooltips now follow the resolved Home Assistant language (new **`climateCard`** strings in **`nodalia-i18n.js`**) instead of hardcoded Spanish.
+- Media player state labels (including Navigation Bar media chips) use shared **`entityCard.states`** translations, including **`buffering`**, for all supported locales.
+- Humidifier card device-state chip uses **`humidifierCard.deviceStates`** per locale.
+- Favorites card falls back to **`translateEntityStateChip`** for generic entity states after alarm-specific **`translateFavState`** matches.
+- Alarm panel and fan card default language fallbacks align with English when **`resolveLanguage`** cannot resolve a locale.
 - Fixed transparent surfaces when using the default Home Assistant theme instead of Graphite.
 - Fixed Navigation Bar Card background fallback and layered glass surface.
 - Fixed Notifications Card surface opacity and stacked notification readability.

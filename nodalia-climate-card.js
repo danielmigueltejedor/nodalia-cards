@@ -1420,10 +1420,15 @@ class NodaliaClimateCard extends HTMLElement {
 
   _getStateLabel(state) {
     const action = this._getCurrentAction(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateClimateHvacLabel) {
+      const raw = action || this._getCurrentMode(state);
+      return window.NodaliaI18n.translateClimateHvacLabel(hass, langCfg, raw, Boolean(action));
+    }
     if (action) {
       return getActionMeta(action).label;
     }
-
     return getModeMeta(this._getCurrentMode(state)).label;
   }
 
@@ -2218,6 +2223,13 @@ class NodaliaClimateCard extends HTMLElement {
     const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isOff(state) || isUnavailableState(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const i18nLang = config.language ?? "auto";
+    const translateClimateMode = mode => (
+      window.NodaliaI18n?.translateClimateHvacLabel
+        ? window.NodaliaI18n.translateClimateHvacLabel(hass, i18nLang, mode, false)
+        : getModeMeta(mode).label
+    );
     const cardPaddingY = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
@@ -3131,14 +3143,15 @@ class NodaliaClimateCard extends HTMLElement {
                   ${visibleModeOptions
                     .map(mode => {
                       const meta = getModeMeta(mode);
+                      const modeLabel = translateClimateMode(mode);
                       return `
                         <button
                           type="button"
                           class="climate-card__mode-button"
                           data-climate-action="mode"
                           data-mode="${escapeHtml(mode)}"
-                          title="${escapeHtml(meta.label)}"
-                          aria-label="${escapeHtml(meta.label)}"
+                          title="${escapeHtml(modeLabel)}"
+                          aria-label="${escapeHtml(modeLabel)}"
                         >
                           <ha-icon icon="${escapeHtml(meta.icon)}"></ha-icon>
                         </button>

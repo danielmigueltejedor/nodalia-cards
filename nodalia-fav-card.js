@@ -1367,7 +1367,8 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const langCfg = this._config?.language ?? "auto";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     if (window.NodaliaI18n?.translateFavState) {
       const translated = window.NodaliaI18n.translateFavState(lang, key);
       if (translated) {
@@ -1375,62 +1376,14 @@ class NodaliaFavCard extends HTMLElement {
       }
     }
 
-    switch (key) {
-      case "on":
-        return "Encendido";
-      case "off":
-        return "Apagado";
-      case "open":
-        return "Abierto";
-      case "closed":
-        return "Cerrado";
-      case "playing":
-        return "Reproduciendo";
-      case "paused":
-        return "En pausa";
-      case "idle":
-        return "En espera";
-      case "standby":
-        return "Standby";
-      case "home":
-        return "En casa";
-      case "not_home":
-        return "Fuera";
-      case "disarmed":
-        return "Desarmada";
-      case "armed_home":
-        return "En casa";
-      case "armed_away":
-        return "Ausente";
-      case "armed_night":
-        return "Noche";
-      case "armed_vacation":
-        return "Vacaciones";
-      case "armed_custom_bypass":
-        return "Personalizada";
-      case "arming":
-        return "Armando";
-      case "disarming":
-        return "Desarmando";
-      case "pending":
-        return "Retardo";
-      case "triggered":
-        return "Disparada";
-      case "detected":
-        return "Detectado";
-      case "clear":
-        return "Libre";
-      case "locked":
-        return "Bloqueado";
-      case "unlocked":
-        return "Desbloqueado";
-      case "unavailable":
-        return "No disponible";
-      case "unknown":
-        return "Desconocido";
-      default:
-        return rawState || null;
+    if (window.NodaliaI18n?.translateEntityStateChip) {
+      const chip = window.NodaliaI18n.translateEntityStateChip(hass, langCfg, key);
+      if (chip) {
+        return chip;
+      }
     }
+
+    return rawState || null;
   }
 
   _formatAttributeValue(state, attributeName) {
