@@ -2,7 +2,7 @@
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 ![Package](https://img.shields.io/badge/package-1.0.2--alpha.12-df7138)
-![Latest stable on main](https://img.shields.io/badge/latest%20stable%20%28main%29-1.0.1-2ea043)
+![Latest stable on main](https://img.shields.io/badge/latest%20stable%20%28main%29-1.0.2-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
