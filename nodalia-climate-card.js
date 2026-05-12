@@ -1105,6 +1105,36 @@ function climateDialActionMeta(actionRaw, modeRaw) {
   return { icon: m.icon || "mdi:thermostat", label: m.label };
 }
 
+/**
+ * CSS `inset` for the dial center stack (mode buttons + readout), tuned by mode count and layout width.
+ * @param {number} modeDialButtonCount
+ * @param {boolean} tightLayout
+ * @param {boolean} compactLayout
+ * @returns {string}
+ */
+function getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactLayout) {
+  const pick = (tightStr, compactStr, regularStr) => (
+    tightLayout ? tightStr : compactLayout ? compactStr : regularStr
+  );
+
+  if (modeDialButtonCount === 6) {
+    return pick("22% 12.5% 16.5% 12.5%", "23% 14% 17% 14%", "24% 14% 17.5% 14%");
+  }
+  if (modeDialButtonCount >= 7) {
+    return pick("24% 12% 12% 12%", "25% 13.5% 13% 13.5%", "26% 14% 13.5% 14%");
+  }
+  if (modeDialButtonCount >= 5) {
+    return pick("23% 13% 14% 13%", "24% 14.5% 15.5% 14.5%", "25% 14.5% 16% 14.5%");
+  }
+  if (modeDialButtonCount === 4) {
+    return pick("24% 13.5% 15.5% 13.5%", "25% 15% 16.5% 15%", "26% 14.5% 17% 14.5%");
+  }
+  if (modeDialButtonCount === 3) {
+    return pick("24% 14% 16% 14%", "25% 15% 17% 15%", "26% 15% 17.5% 15%");
+  }
+  return pick("22% 14% 16% 14%", "22% 15.5% 17% 15.5%", "21% 15% 18% 15%");
+}
+
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
@@ -3193,18 +3223,7 @@ class NodaliaClimateCard extends HTMLElement {
         : modeDialButtonCount >= 3
           ? (tightLayout ? "8px" : compactLayout ? "9px" : "11px")
           : (tightLayout ? "10px" : compactLayout ? "12px" : "15px");
-    const dialCenterInsetCss =
-      modeDialButtonCount === 6
-        ? (tightLayout ? "22% 12.5% 16.5% 12.5%" : compactLayout ? "23% 14% 17% 14%" : "24% 14% 17.5% 14%")
-        : modeDialButtonCount >= 7
-          ? (tightLayout ? "24% 12% 12% 12%" : compactLayout ? "25% 13.5% 13% 13.5%" : "26% 14% 13.5% 14%")
-          : modeDialButtonCount >= 5
-            ? (tightLayout ? "23% 13% 14% 13%" : compactLayout ? "24% 14.5% 15.5% 14.5%" : "25% 14.5% 16% 14.5%")
-            : modeDialButtonCount === 4
-              ? (tightLayout ? "24% 13.5% 15.5% 13.5%" : compactLayout ? "25% 15% 16.5% 15%" : "26% 14.5% 17% 14.5%")
-              : modeDialButtonCount === 3
-                ? (tightLayout ? "24% 14% 16% 14%" : compactLayout ? "25% 15% 17% 15%" : "26% 15% 17.5% 15%")
-                : (tightLayout ? "22% 14% 16% 14%" : compactLayout ? "22% 15.5% 17% 15.5%" : "21% 15% 18% 15%");
+    const dialCenterInsetCss = getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactLayout);
     const dialCenterAlignContent = modeDialButtonCount >= 3 ? "start" : "center";
     const stackedModeControlsGap =
       modeDialButtonCount >= 6 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");

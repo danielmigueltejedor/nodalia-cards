@@ -352,6 +352,8 @@ Special thanks to the community members helping improve Nodalia Cards through te
 Special thanks to:
 
 - [@Sppedtech](https://github.com/Sppedtech)
+- [@flippedcracker](https://github.com/flippedcracker)
+- [@loicloiseau](https://github.com/loicloiseau)
 
 For contributing ideas and improvements to:
 - Person Card
