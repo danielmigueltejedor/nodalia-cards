@@ -468,7 +468,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "0.13.11";
+const CARD_VERSION = "0.13.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -7314,6 +7314,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           --advance-vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --advance-vacuum-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --advance-vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --av-surface: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          --av-surface-raised: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          --av-border: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          --av-border-strong: color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          --av-inset: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          --av-inset-soft: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          --av-float: 0 10px 24px rgba(0, 0, 0, 0.12);
+          --av-float-subtle: 0 6px 18px rgba(0, 0, 0, 0.1);
+          --av-accent-hover: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-accent-hover-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
+          --av-selected-bg: color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          --av-selected-border: color-mix(in srgb, ${accentColor} 38%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          --av-selected-inset: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          --av-selected-glow: 0 8px 20px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.12));
+          --av-selected-ring: 0 0 0 2px color-mix(in srgb, ${accentColor} 30%, transparent);
+          --av-cta-bg: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-cta-border: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          --av-cta-inset: color-mix(in srgb, ${accentColor} 28%, transparent);
+          --av-cta-float: 0 12px 28px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.12));
+          --av-cta-color: ${styles.control.accent_color};
+          --av-float-lift: 0 16px 30px rgba(0, 0, 0, 0.14);
+          --av-accent-tile-bg: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-accent-tile-border: color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          --av-accent-tile-inset: color-mix(in srgb, ${accentColor} 22%, transparent);
           display: block;
         }
 
@@ -7389,16 +7413,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__control {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           display: inline-flex;
+          flex-shrink: 0;
           height: ${controlSize}px;
           justify-content: center;
-          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
           width: ${controlSize}px;
         }
 
@@ -7411,7 +7436,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         :is(
-          .advance-vacuum-card__control,
+          .advance-vacuum-card__control--primary,
           .advance-vacuum-card__mode-button,
           .advance-vacuum-card__map-tool,
           .advance-vacuum-card__room-marker,
@@ -7422,6 +7447,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           .advance-vacuum-card__zone-handle
         ).is-pressing:not(.is-disabled):not(:disabled) {
           animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary) {
+          animation: advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
         .advance-vacuum-card__control ha-icon {
@@ -7440,15 +7469,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         .advance-vacuum-card__modes-bubble {
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           display: inline-flex;
           flex-wrap: wrap;
-          gap: 3px;
+          gap: 4px;
           justify-content: center;
           max-width: 100%;
-          padding: 3px;
+          padding: 4px;
         }
 
         .advance-vacuum-card__mode-button {
@@ -7464,18 +7496,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           gap: 8px;
           min-height: 30px;
           padding: 0 11px;
-          transition: background 160ms ease, border-color 160ms ease, box-shadow 180ms ease, color 160ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
         }
 
         .advance-vacuum-card__mode-button:hover {
-          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          box-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
+          background: var(--av-accent-hover);
+          box-shadow: var(--av-accent-hover-shadow);
         }
 
         .advance-vacuum-card__mode-button.is-active {
-          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 35%, transparent);
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
           color: var(--primary-text-color);
           font-weight: 700;
         }
@@ -7535,10 +7569,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__utility-option {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -7548,17 +7584,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           margin: 0;
           min-height: 34px;
           padding: 0 12px;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .advance-vacuum-card__utility-option.is-active {
-          background: color-mix(in srgb, var(--primary-color) 22%, color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)));
-          border-color: color-mix(in srgb, var(--primary-color) 52%, color-mix(in srgb, ${accentColor} 36%, var(--primary-text-color)));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-ring),
+            var(--av-selected-glow);
           color: var(--primary-text-color);
           font-weight: 700;
+        }
+
+        .advance-vacuum-card__utility-option:not(.is-active):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-color) 18%, transparent),
-            0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
-            0 10px 22px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.14));
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
         }
 
         .advance-vacuum-card__utility-option--menu ha-icon {
@@ -7575,10 +7620,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__utility-select {
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 16px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--primary-text-color);
           cursor: pointer;
           font: inherit;
@@ -7606,7 +7653,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%),
             color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border: 1px solid var(--av-border);
           border-radius: ${cardRadius}px;
           margin: -${mapTopBleed}px -${mapHorizontalBleed}px 0;
           overflow: hidden;
@@ -7777,12 +7824,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__zone-handle {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 16%, transparent);
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 22px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           color: var(--primary-text-color);
           display: inline-flex;
           height: 34px;
@@ -7869,12 +7916,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__map-tool {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           color: var(--primary-text-color);
           display: inline-flex;
           gap: 6px;
@@ -7883,11 +7930,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           min-width: 44px;
           padding: 0 14px;
           pointer-events: auto;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
         }
 
         .advance-vacuum-card__map-tool--add {
-          background: color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 36%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
           font-size: 12px;
           font-weight: 700;
         }
@@ -7900,15 +7951,28 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           opacity: 0.45;
         }
 
+        .advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__map-tool--add:not(.is-disabled):hover {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
+        }
+
         .advance-vacuum-card__room-marker,
         .advance-vacuum-card__goto-marker {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float);
           color: var(--primary-text-color);
           display: inline-flex;
           gap: var(--room-marker-gap, 8px);
@@ -7940,11 +8004,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__room-marker.is-selected,
         .advance-vacuum-card__goto-marker.is-selected {
-          background: color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 42%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, ${accentColor} 22%, transparent),
-            0 14px 28px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.12));
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
         }
 
         .advance-vacuum-card__room-marker ha-icon,
@@ -7972,10 +8036,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__room-chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--secondary-text-color);
           cursor: pointer;
           display: inline-flex;
@@ -7983,12 +8049,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           min-height: 36px;
           padding: 0 14px;
           touch-action: manipulation;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
         }
 
         .advance-vacuum-card__room-chip.is-selected {
-          background: color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 42%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
           color: var(--primary-text-color);
+        }
+
+        .advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
         }
 
         .advance-vacuum-card__room-chip ha-icon {
@@ -8010,48 +8088,68 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__controls-row {
           align-items: center;
-          column-gap: 10px;
+          column-gap: 14px;
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
           width: 100%;
         }
 
-        .advance-vacuum-card__controls-main,
-        .advance-vacuum-card__controls-side {
+        .advance-vacuum-card__controls-slot {
+          align-items: center;
           display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
+          min-height: ${Math.round(controlSize * 1.16)}px;
         }
 
-        .advance-vacuum-card__controls-main {
-          align-items: center;
-          grid-column: 2;
+        .advance-vacuum-card__controls-slot--left {
+          gap: 10px;
+          justify-content: flex-end;
+        }
+
+        .advance-vacuum-card__controls-slot--center {
+          flex: 0 0 auto;
           justify-content: center;
         }
 
-        .advance-vacuum-card__controls-side {
-          align-items: center;
-          grid-column: 3;
+        .advance-vacuum-card__controls-slot--right {
+          gap: 10px;
           justify-content: flex-start;
         }
 
-        .advance-vacuum-card__control.is-primary {
-          background: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+        .advance-vacuum-card__control.is-panel-open {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, ${accentColor} 28%, transparent),
-            0 12px 28px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.12));
-          color: ${styles.control.accent_color};
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          height: ${controlSize}px;
+          width: ${controlSize}px;
+        }
+
+        .advance-vacuum-card__control--primary {
+          background: var(--av-cta-bg);
+          border-color: var(--av-cta-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-cta-inset),
+            var(--av-cta-float);
+          color: var(--av-cta-color);
+          flex-shrink: 0;
           height: ${Math.round(controlSize * 1.16)}px;
           width: ${Math.round(controlSize * 1.16)}px;
         }
 
+        .advance-vacuum-card__control--primary ha-icon {
+          --mdc-icon-size: ${Math.round(controlSize * 1.16 * 0.48)}px;
+        }
+
         .advance-vacuum-card__selection-chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
           color: var(--secondary-text-color);
           display: inline-flex;
           font-size: 12px;
@@ -8065,6 +8163,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .advance-vacuum-card__selection-chip:hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
         .advance-vacuum-card__routines {
           display: grid;
           gap: 10px;
@@ -8075,12 +8181,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__routine-button {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
           border-radius: 18px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 12px 26px rgba(0, 0, 0, 0.1);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
           color: var(--primary-text-color);
           cursor: pointer;
           display: grid;
@@ -8096,8 +8202,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .advance-vacuum-card__routine-button:hover {
           transform: translateY(-1px);
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 16px 30px rgba(0, 0, 0, 0.14);
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float-lift);
         }
 
         .advance-vacuum-card__routine-button.is-disabled {
@@ -8107,10 +8213,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         .advance-vacuum-card__routine-icon {
           align-items: center;
-          background: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          background: var(--av-accent-tile-bg);
+          border: 1px solid var(--av-accent-tile-border);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, ${accentColor} 22%, transparent);
+          box-shadow: inset 0 1px 0 var(--av-accent-tile-inset);
           display: inline-flex;
           height: 46px;
           justify-content: center;
@@ -8177,6 +8283,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           0% { transform: scale(1); }
           38% { transform: scale(0.935); }
           72% { transform: scale(1.035); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes advance-vacuum-button-bounce-subtle {
+          0% { transform: scale(1); }
+          40% { transform: scale(0.965); }
+          72% { transform: scale(1.02); }
           100% { transform: scale(1); }
         }
 
@@ -8312,29 +8425,33 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         <div class="advance-vacuum-card__controls">
           <div class="advance-vacuum-card__controls-row">
-            <div class="advance-vacuum-card__controls-main">
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--left">
               ${
                 showModeMenuButton
                   ? `
-                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-primary" : ""}" data-control-action="toggle_modes" title="${escapeHtml((activeModePanelPresetConfig?.id ? advanceVacuumStrings?.panelModes?.[activeModePanelPresetConfig.id] : "") || advanceVacuumStrings?.utility?.modesFallbackTitle || "Modos de aspirado y fregado")}">
+                    <button type="button" class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-panel-open" : ""}" data-control-action="toggle_modes" title="${escapeHtml((activeModePanelPresetConfig?.id ? advanceVacuumStrings?.panelModes?.[activeModePanelPresetConfig.id] : "") || advanceVacuumStrings?.utility?.modesFallbackTitle || "Modos de aspirado y fregado")}">
                       <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
                     </button>
                   `
                   : ""
               }
+            </div>
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--center">
               ${
                 showPrimaryActionButton
                   ? `
-                    <button class="advance-vacuum-card__control is-primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
+                    <button type="button" class="advance-vacuum-card__control advance-vacuum-card__control--primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
                       <ha-icon icon="${primaryButtonIcon}"></ha-icon>
                     </button>
                   `
                   : ""
               }
+            </div>
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--right">
               ${
                 showDockMenuButton
                   ? `
-                    <button class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-primary" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml((activeDockPanelSectionConfig?.id ? advanceVacuumStrings?.dockSections?.[activeDockPanelSectionConfig.id] : "") || advanceVacuumStrings?.utility?.chargingStation || "Base de carga")}">
+                    <button type="button" class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-panel-open" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml((activeDockPanelSectionConfig?.id ? advanceVacuumStrings?.dockSections?.[activeDockPanelSectionConfig.id] : "") || advanceVacuumStrings?.utility?.chargingStation || "Base de carga")}">
                       <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
                     </button>
                 `

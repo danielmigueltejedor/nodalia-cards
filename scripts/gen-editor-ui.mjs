@@ -1775,12 +1775,12 @@ for (const es of keys) {
   const en = translateEsToEn(es);
   rows.push(
     applyFullLocaleByEn({
-      es,
-      en,
-      de: enToDe(en),
-      fr: enToFr(en),
-      it: enToIt(en),
-      nl: enToNl(en),
+    es,
+    en,
+    de: enToDe(en),
+    fr: enToFr(en),
+    it: enToIt(en),
+    nl: enToNl(en),
       pt: enToPt(en),
       ru: enToRu(en),
       el: enToEl(en),

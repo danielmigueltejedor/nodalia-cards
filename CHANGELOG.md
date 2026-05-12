@@ -10,6 +10,15 @@ Work toward **`1.0.0`** on **`alpha`** / **`beta`** while **`0.6.1`** remains th
 
 ---
 
+## [1.0.0-alpha.95] - 2026-05-12
+
+Ninety-fifth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.95`** (tag **`v1.0.0-alpha.95`** optional).
+
+- **Nodalia Advance Vacuum card (`0.13.12`):** footer **three-button** row uses **grid slots** (left / center / right); **modes** and **dock** toggles use **`is-panel-open`** (fixed **`controlSize`**) while only the **main action** uses **`advance-vacuum-card__control--primary`**, so side buttons no longer **grow to match the center** when a utility panel is open; **subtle** press bounce on non-primary controls. **`:host`** **`--av-*` design tokens** unify surfaces, borders, inset highlights, shadows, **accent hover**, and **selected** states across **circular controls**, the **modes** pill, **map** frame and tools, **zone handles**, **room / goto markers**, **room chips**, **utility** options and selects, **selection chips**, and **routine** tiles.
+- **Release metadata:** bump alpha channel references and bundle version metadata to **`1.0.0-alpha.95`**.
+
+---
+
 ## [1.0.0-alpha.94] - 2026-05-12
 
 Ninety-fourth **`alpha`** on **`1.0.0`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.0-alpha.94`** (tag **`v1.0.0-alpha.94`** optional).
