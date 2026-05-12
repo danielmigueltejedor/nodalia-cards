@@ -21,6 +21,25 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.2] - 2026-05-12
+
+Stable **`1.0.2`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.2`**).
+
+### Added
+
+- **`nodalia-climate-card.js`:** Style **`styles.dial.max_size`** (default **`480px`**) caps the rendered dial in the regular layout; visual editor field **`ed.climate.dial_max_size`**.
+
+### Changed
+
+- **Repository:** **`.pnpm-store/`** is listed in **`.gitignore`** and must not be committed (local pnpm content-addressed cache only).
+- **`nodalia-climate-card.js`:** **`getModeMeta`** / **`getActionMeta`** use **English** fallback labels (e.g. **Cool**, **Off**, **Heat**) instead of Spanish literals, consistent with editor i18n defaults.
+- **`nodalia-climate-card.js`:** **`_isDualSetpointRange`** no longer requires **`low <= high`**; inverted integration values still enable dual-range mode because **`_normalizeLowHighPair`** orders bounds before use.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Regular-layout dial maximum raised from a hardcoded **340px** to the configurable **`max_size`** default (**480px**); tight and compact layouts keep smaller caps.
+
+---
 ## [1.0.2-alpha.12] - 2026-05-12
 
 Prerelease **`alpha.12`** on **`1.0.2`**. Installs match **`package.json`** / **`__NODALIA_BUNDLE__.pkgVersion`** **`1.0.2-alpha.12`** (optional tag **`v1.0.2-alpha.12`**).

@@ -486,7 +486,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2-alpha.12";
+const CARD_VERSION = "1.0.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -555,6 +555,7 @@ const DEFAULT_CONFIG = {
     target_size: "50px",
     dial: {
       size: "280px",
+      max_size: "480px",
       stroke: "18px",
       thumb_size: "24px",
       track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
@@ -1049,22 +1050,22 @@ function getModeMeta(mode) {
 
   switch (normalized) {
     case "off":
-      return { label: "Apagado", icon: "mdi:power", accent: "off" };
+      return { label: "Off", icon: "mdi:power", accent: "off" };
     case "heat":
     case "heating":
-      return { label: "Calor", icon: "mdi:fire", accent: "heat" };
+      return { label: "Heat", icon: "mdi:fire", accent: "heat" };
     case "cool":
     case "cooling":
-      return { label: "Frio", icon: "mdi:snowflake", accent: "cool" };
+      return { label: "Cool", icon: "mdi:snowflake", accent: "cool" };
     case "heat_cool":
       return { label: "Auto", icon: "mdi:thermostat-auto", accent: "auto" };
     case "auto":
       return { label: "Auto", icon: "mdi:autorenew", accent: "auto" };
     case "dry":
     case "drying":
-      return { label: "Secado", icon: "mdi:water-percent", accent: "dry" };
+      return { label: "Dry", icon: "mdi:water-percent", accent: "dry" };
     case "fan_only":
-      return { label: "Ventilador", icon: "mdi:fan", accent: "fan" };
+      return { label: "Fan", icon: "mdi:fan", accent: "fan" };
     default:
       return { label: String(mode ?? ""), icon: "mdi:thermostat", accent: "auto" };
   }
@@ -1075,18 +1076,18 @@ function getActionMeta(action) {
 
   switch (normalized) {
     case "heating":
-      return { label: "Calentando", icon: "mdi:fire", accent: "heat" };
+      return { label: "Heating", icon: "mdi:fire", accent: "heat" };
     case "cooling":
-      return { label: "Enfriando", icon: "mdi:snowflake", accent: "cool" };
+      return { label: "Cooling", icon: "mdi:snowflake", accent: "cool" };
     case "drying":
-      return { label: "Secando", icon: "mdi:water-percent", accent: "dry" };
+      return { label: "Drying", icon: "mdi:water-percent", accent: "dry" };
     case "fan":
     case "fan_only":
-      return { label: "Ventilando", icon: "mdi:fan", accent: "fan" };
+      return { label: "Fan", icon: "mdi:fan", accent: "fan" };
     case "idle":
-      return { label: "En espera", icon: "mdi:pause-circle-outline", accent: "off" };
+      return { label: "Idle", icon: "mdi:pause-circle-outline", accent: "off" };
     case "off":
-      return { label: "Apagado", icon: "mdi:power", accent: "off" };
+      return { label: "Off", icon: "mdi:power", accent: "off" };
     default:
       return getModeMeta(action);
   }
@@ -1470,6 +1471,7 @@ class NodaliaClimateCard extends HTMLElement {
   /**
    * `heat_cool` with both range bounds and no single `temperature` (Ecobee-style): dual-handle dial.
    * If only one of low/high is finite, falls back to single-setpoint behaviour (`_isDualSetpointRange` false).
+   * Inverted low/high from an integration is still detected here; `_normalizeLowHighPair` swaps before commit.
    */
   _isDualSetpointRange(state) {
     if (!state?.attributes) {
@@ -1484,7 +1486,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const low = parseFiniteClimateNumber(attrs.target_temp_low);
     const high = parseFiniteClimateNumber(attrs.target_temp_high);
-    return Number.isFinite(low) && Number.isFinite(high) && low <= high;
+    return Number.isFinite(low) && Number.isFinite(high);
   }
 
   /** Minimum span between low and high (at least 1° in entity units, never below `target_temp_step`). */
@@ -3129,9 +3131,16 @@ class NodaliaClimateCard extends HTMLElement {
       Math.min(parseSizeToPixels(styles.chip_font_size, 11), tightLayout ? 10 : compactLayout ? 10.5 : 11),
     )}px`;
     const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
+    const dialMaxCapPx = Math.max(
+      220,
+      parseSizeToPixels(styles.dial?.max_size ?? DEFAULT_CONFIG.styles.dial.max_size, 480),
+    );
     const dialSizePx = Math.max(
       220,
-      Math.min(parseSizeToPixels(styles.dial.size, 280), tightLayout ? 236 : compactLayout ? 252 : 340),
+      Math.min(
+        parseSizeToPixels(styles.dial.size, 280),
+        tightLayout ? Math.min(dialMaxCapPx, 236) : compactLayout ? Math.min(dialMaxCapPx, 252) : dialMaxCapPx,
+      ),
     );
     const dialStrokePx = Math.max(
       15,
@@ -4863,6 +4872,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.climate.current_temp_size", "styles.current_size", config.styles.current_size)}
             ${this._renderTextField("ed.climate.target_size", "styles.target_size", config.styles.target_size)}
             ${this._renderTextField("ed.climate.dial_size", "styles.dial.size", config.styles.dial.size)}
+            ${this._renderTextField("ed.climate.dial_max_size", "styles.dial.max_size", config.styles.dial.max_size)}
             ${this._renderTextField("ed.climate.dial_stroke", "styles.dial.stroke", config.styles.dial.stroke)}
             ${this._renderTextField("ed.climate.thumb_size", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
             ${this._renderTextField("ed.climate.color_heat", "styles.dial.heat_color", config.styles.dial.heat_color)}
@@ -5857,6 +5867,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
                   ${this._renderTextField("ed.climate.dial_size", "styles.dial.size", config.styles.dial.size)}
+                  ${this._renderTextField("ed.climate.dial_max_size", "styles.dial.max_size", config.styles.dial.max_size)}
                   ${this._renderTextField("ed.climate.dial_stroke", "styles.dial.stroke", config.styles.dial.stroke)}
                   ${this._renderTextField("ed.climate.thumb_size", "styles.dial.thumb_size", config.styles.dial.thumb_size)}
                   ${this._renderColorField("ed.climate.dial_background", "styles.dial.background", config.styles.dial.background, {
