@@ -19,6 +19,7 @@
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
     "renderEditorChipBorderRadiusHtml",
+    "renderEditorCardBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -439,6 +440,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
+   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
+   */
+  function renderEditorCardBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
+    const field = fieldRaw || "styles.card.border_radius";
+    const current = String(options?.value ?? "").trim() || "28px";
+    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "28px", l: tPill },
+      { v: "20px", l: tSoft },
+      { v: "14px", l: tRound },
+      { v: "8px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -523,6 +570,7 @@
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
     renderEditorChipBorderRadiusHtml,
+    renderEditorCardBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -534,7 +582,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.0.3-alpha.2";
+const CARD_VERSION = "1.0.3-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -558,6 +606,21 @@ const DEFAULT_CONFIG = {
   show_preset_modes: true,
   hidden_preset_modes: [],
   compact_layout_mode: "auto",
+  tap_action: "toggle",
+  tap_service: "",
+  tap_service_data: "",
+  tap_url: "",
+  tap_new_tab: false,
+  icon_tap_action: "",
+  icon_tap_service: "",
+  icon_tap_service_data: "",
+  icon_tap_url: "",
+  icon_tap_new_tab: false,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -1163,6 +1226,7 @@ class NodaliaFanCard extends HTMLElement {
       direction: String(attrs.direction || ""),
       compact: Boolean(this._isCompactLayout),
       presetPanelOpen: Boolean(this._presetPanelOpen),
+      tap: `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
     });
   }
 
@@ -1416,6 +1480,132 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     this._setFanState("turn_on");
+  }
+
+  _isFanToggleableState(state) {
+    const key = String(state?.state || "").trim().toLowerCase();
+    return key === "on" || key === "off";
+  }
+
+  _resolveFanTapEffect(zone) {
+    const bodyRaw = this._config?.tap_action ?? "toggle";
+    const iconRaw = this._config?.icon_tap_action;
+    const raw =
+      zone === "icon"
+        ? (iconRaw === undefined || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw)
+        : bodyRaw;
+    let effect = String(raw || "toggle").trim().toLowerCase();
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    if (!allowed.has(effect)) {
+      effect = "toggle";
+    }
+    if (effect === "auto") {
+      const state = this._getState();
+      return this._isFanToggleableState(state) ? "toggle" : "more-info";
+    }
+    return effect;
+  }
+
+  _openMoreInfo(entityId = this._config?.entity) {
+    const id = String(entityId || "").trim();
+    if (!id) {
+      return;
+    }
+    fireEvent(this, "hass-more-info", {
+      entityId: id,
+    });
+  }
+
+  _parseServiceData(rawValue) {
+    if (!rawValue) {
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(rawValue);
+      return isObject(parsed) ? parsed : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions === false) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
+  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
+    if (!this._hass || !serviceValue) {
+      return;
+    }
+    if (!this._isServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fan Card", serviceValue);
+      return;
+    }
+    const [domain, service] = String(serviceValue).split(".");
+    if (!domain || !service) {
+      return;
+    }
+    const payload = this._parseServiceData(rawData);
+    if (entityId && payload.entity_id === undefined) {
+      payload.entity_id = entityId;
+    }
+    this._hass.callService(domain, service, payload);
+  }
+
+  _openConfiguredUrl(urlValue, newTab = false) {
+    const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
+    if (!url) {
+      return;
+    }
+    if (newTab) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    window.location.href = url;
+  }
+
+  _executeFanTapEffect(zone, effect) {
+    const isIcon = zone === "icon";
+    switch (effect) {
+      case "toggle":
+        this._toggleFan(this._getState());
+        break;
+      case "more-info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "service": {
+        const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
+        const data = isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+        this._callConfiguredService(service, this._config?.entity, data);
+        break;
+      }
+      case "url":
+        this._openConfiguredUrl(
+          isIcon ? this._config?.icon_tap_url : this._config?.tap_url,
+          isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true,
+        );
+        break;
+      case "none":
+      default:
+        break;
+    }
   }
 
   _commitPercentage(percent) {
@@ -1919,13 +2109,22 @@ class NodaliaFanCard extends HTMLElement {
     event.stopPropagation();
 
     const state = this._getState();
+    const fanAction = actionButton.dataset.fanAction;
+
+    if (fanAction === "body" || fanAction === "icon") {
+      const zone = fanAction;
+      const effect = this._resolveFanTapEffect(zone);
+      if (effect === "none") {
+        return;
+      }
+      this._triggerHaptic();
+      this._executeFanTapEffect(zone, effect);
+      return;
+    }
+
     this._triggerHaptic();
 
-    switch (actionButton.dataset.fanAction) {
-      case "toggle":
-        this._triggerButtonBounce(actionButton);
-        this._toggleFan(state);
-        break;
+    switch (fanAction) {
       case "oscillate":
         this._triggerButtonBounce(actionButton);
         this._toggleOscillation(state);
@@ -3076,14 +3275,14 @@ class NodaliaFanCard extends HTMLElement {
       <ha-card
         class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""} ${powerAnimationState ? `fan-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        data-fan-action="toggle"
+        data-fan-action="body"
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">
             <button
               type="button"
               class="fan-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "fan-card__icon--active-motion" : ""}"
-              data-fan-action="toggle"
+              data-fan-action="icon"
               aria-label="Encender o apagar"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
@@ -3677,6 +3876,12 @@ class NodaliaFanCardEditor extends HTMLElement {
     const hapticStyle = config.haptics?.style || "medium";
     const presetModeVisibilityOptions = this._getPresetModeVisibilityOptions();
     const phFanName = this._editorLabel("ed.light.name_placeholder");
+    const tapAction = config.tap_action || "toggle";
+    const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
+    const iconTapSelectValue = iconTapActionRaw;
+    const showIconTapService = iconTapSelectValue === "service";
+    const showCardTapService = tapAction === "service";
+    const showTapServiceSecurity = showIconTapService || showCardTapService;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4029,6 +4234,117 @@ class NodaliaFanCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField(
+              "ed.light.icon_tap_action",
+              "icon_tap_action",
+              iconTapSelectValue,
+              [
+                { value: "", label: "ed.entity.icon_tap_inherit" },
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_tap_action",
+              "tap_action",
+              tapAction,
+              [
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${
+              showIconTapService
+                ? `
+                  ${this._renderTextField("ed.entity.tap_service_field", "icon_tap_service", config.icon_tap_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.tap_service_data_json", "icon_tap_service_data", config.icon_tap_service_data, {
+                    placeholder: '{"brightness_pct": 50}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              showCardTapService
+                ? `
+                  ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
+                    placeholder: '{"brightness_pct": 70}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              showTapServiceSecurity
+                ? `
+                  ${this._renderCheckboxField(
+                    "ed.entity.security_strict",
+                    "security.strict_service_actions",
+                    config.security?.strict_service_actions !== false,
+                  )}
+                  ${
+                    config.security?.strict_service_actions !== false
+                      ? this._renderTextField(
+                          "ed.entity.allowed_services_csv",
+                          "security.allowed_services",
+                          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                          {
+                            placeholder: "browser_mod.javascript, light.turn_on",
+                            valueType: "csv",
+                            fullWidth: true,
+                          },
+                        )
+                      : ""
+                  }
+                `
+                : ""
+            }
+            ${
+              iconTapSelectValue === "url"
+                ? `
+                  ${this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "icon_tap_new_tab", config.icon_tap_new_tab === true)}
+                `
+                : ""
+            }
+            ${
+              tapAction === "url"
+                ? `
+                  ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
+                `
+                : ""
+            }
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.visibility_section_hint"))}</div>
           </div>
@@ -4168,7 +4484,19 @@ class NodaliaFanCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}

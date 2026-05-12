@@ -19,6 +19,7 @@
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
     "renderEditorChipBorderRadiusHtml",
+    "renderEditorCardBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -439,6 +440,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
+   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
+   */
+  function renderEditorCardBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
+    const field = fieldRaw || "styles.card.border_radius";
+    const current = String(options?.value ?? "").trim() || "28px";
+    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "28px", l: tPill },
+      { v: "20px", l: tSoft },
+      { v: "14px", l: tRound },
+      { v: "8px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -523,6 +570,7 @@
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
     renderEditorChipBorderRadiusHtml,
+    renderEditorCardBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -534,7 +582,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.0.3-alpha.2";
+const CARD_VERSION = "1.0.3-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -609,6 +657,7 @@ const DEFAULT_CONFIG = {
   icon: "",
   tap_action: "default",
   tap_navigation_path: "",
+  icon_tap_action: "",
   compact_layout_mode: "auto",
   show_state_chip: true,
   show_battery_chip: true,
@@ -1221,6 +1270,9 @@ class NodaliaVacuumCard extends HTMLElement {
       compact: Boolean(this._isCompactLayout),
       activeModePanel: String(this._activeModePanel || ""),
       roomPanelOpen: Boolean(this._roomPanelOpen),
+      tapAction: String(this._config?.tap_action || ""),
+      iconTapAction: String(this._config?.icon_tap_action ?? ""),
+      tapNav: String(this._config?.tap_navigation_path || ""),
     });
   }
 
@@ -1343,8 +1395,20 @@ class NodaliaVacuumCard extends HTMLElement {
     }));
   }
 
-  _runConfiguredCardTapAction(state = this._getState()) {
-    const action = normalizeTextKey(this._config?.tap_action || "default");
+  _effectiveVacuumTapAction(zone = "body") {
+    const body = normalizeTextKey(this._config?.tap_action || "default");
+    if (zone === "icon") {
+      const raw = String(this._config?.icon_tap_action ?? "").trim();
+      if (!raw) {
+        return body;
+      }
+      return normalizeTextKey(raw);
+    }
+    return body;
+  }
+
+  _runConfiguredCardTapAction(state = this._getState(), zone = "body") {
+    const action = this._effectiveVacuumTapAction(zone);
 
     switch (action) {
       case "none":
@@ -1362,8 +1426,8 @@ class NodaliaVacuumCard extends HTMLElement {
     }
   }
 
-  _canRunConfiguredCardTapAction() {
-    const action = normalizeTextKey(this._config?.tap_action || "default");
+  _canRunConfiguredCardTapAction(zone = "body") {
+    const action = this._effectiveVacuumTapAction(zone);
 
     if (action === "none") {
       return false;
@@ -2983,8 +3047,11 @@ class NodaliaVacuumCard extends HTMLElement {
     this._syncRememberedModeSelections(state);
 
     switch (button.dataset.vacuumAction) {
-      case "card_tap":
-        this._runConfiguredCardTapAction(state);
+      case "body_tap":
+        this._runConfiguredCardTapAction(state, "body");
+        break;
+      case "icon_tap":
+        this._runConfiguredCardTapAction(state, "icon");
         break;
       case "primary":
         this._runPrimaryAction(state);
@@ -3162,11 +3229,12 @@ class NodaliaVacuumCard extends HTMLElement {
       : "";
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
-    const cardTapAction = normalizeTextKey(config.tap_action || "default");
-    const canRunCardTapAction = this._canRunConfiguredCardTapAction();
-    const iconButtonLabel = cardTapAction === "navigate"
+    const canRunBodyCardTap = this._canRunConfiguredCardTapAction("body");
+    const canRunIconCardTap = this._canRunConfiguredCardTapAction("icon");
+    const iconTapEffective = this._effectiveVacuumTapAction("icon");
+    const iconButtonLabel = iconTapEffective === "navigate"
       ? "Abrir vista del robot"
-      : cardTapAction === "more_info"
+      : iconTapEffective === "more_info"
         ? "Mostrar mas informacion"
         : this._isCleaning(state)
           ? "Pausar limpieza"
@@ -3690,13 +3758,13 @@ class NodaliaVacuumCard extends HTMLElement {
         }
       </style>
 
-      <ha-card ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}>
+      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap"' : ""}>
         <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button
               class="vacuum-card__icon-button ${shouldAnimateActiveIcon ? "vacuum-card__icon-button--active-motion" : ""}"
               type="button"
-              ${canRunCardTapAction ? 'data-vacuum-action="card_tap"' : ""}
+              ${canRunIconCardTap ? 'data-vacuum-action="icon_tap"' : ""}
               aria-label="${escapeHtml(iconButtonLabel)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
@@ -4466,6 +4534,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
     const phVacName = this._editorLabel("ed.vacuum.name_placeholder");
     const phFanPresets = this._editorLabel("ed.vacuum.fan_presets_placeholder");
+    const tapActionVal = config.tap_action || "default";
+    const iconTapSelectValue = String(config.icon_tap_action ?? "").trim();
+    const showVacuumNavigatePath =
+      normalizeTextKey(tapActionVal) === "navigate" ||
+      (Boolean(iconTapSelectValue) && normalizeTextKey(iconTapSelectValue) === "navigate");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4809,8 +4882,40 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               placeholder: phVacName,
               fullWidth: true,
             })}
+            ${this._renderTextField(
+              "ed.vacuum.fan_presets",
+              "fan_presets",
+              Array.isArray(config.fan_presets) ? config.fan_presets.join(", ") : "",
+              {
+                valueType: "csv",
+                placeholder: phFanPresets,
+                fullWidth: true,
+              },
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-              "ed.entity.tap_action",
+              "ed.light.icon_tap_action",
+              "icon_tap_action",
+              iconTapSelectValue,
+              [
+                { value: "", label: "ed.entity.icon_tap_inherit" },
+                { value: "default", label: "ed.vacuum.tap_default" },
+                { value: "more-info", label: "ed.vacuum.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "none", label: "ed.vacuum.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_tap_action",
               "tap_action",
               config.tap_action || "default",
               [
@@ -4822,23 +4927,13 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               { fullWidth: true },
             )}
             ${
-              (config.tap_action || "default") === "navigate"
+              showVacuumNavigatePath
                 ? this._renderTextField("ed.vacuum.navigation_path", "tap_navigation_path", config.tap_navigation_path, {
                     placeholder: "/lovelace/robot",
                     fullWidth: true,
                   })
                 : ""
             }
-            ${this._renderTextField(
-              "ed.vacuum.fan_presets",
-              "fan_presets",
-              Array.isArray(config.fan_presets) ? config.fan_presets.join(", ") : "",
-              {
-                valueType: "csv",
-                placeholder: phFanPresets,
-                fullWidth: true,
-              },
-            )}
           </div>
         </section>
 
@@ -5008,7 +5103,19 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderColorField("ed.vacuum.style_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.vacuum.style_border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("ed.vacuum.style_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.vacuum.style_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.vacuum.style_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.vacuum.style_gap", "styles.card.gap", config.styles.card.gap)}

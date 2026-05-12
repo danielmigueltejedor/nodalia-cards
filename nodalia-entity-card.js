@@ -19,6 +19,7 @@
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
     "renderEditorChipBorderRadiusHtml",
+    "renderEditorCardBorderRadiusHtml",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -439,6 +440,52 @@
   }
 
   /**
+   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
+   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
+   */
+  function renderEditorCardBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
+    const field = fieldRaw || "styles.card.border_radius";
+    const current = String(options?.value ?? "").trim() || "28px";
+    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "28px", l: tPill },
+      { v: "20px", l: tSoft },
+      { v: "14px", l: tRound },
+      { v: "8px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
    * Mount or update ha-icon-picker / text input without recreating each render.
    */
   function mountIconPickerHost(host, options) {
@@ -523,6 +570,7 @@
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
     renderEditorChipBorderRadiusHtml,
+    renderEditorCardBorderRadiusHtml,
   };
 
   if (typeof window !== "undefined") {
@@ -534,7 +582,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.0.3-alpha.2";
+const CARD_VERSION = "1.0.3-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -559,6 +607,11 @@ const DEFAULT_CONFIG = {
   tap_service_data: "",
   tap_url: "",
   tap_new_tab: false,
+  icon_tap_action: "",
+  icon_tap_service: "",
+  icon_tap_service_data: "",
+  icon_tap_url: "",
+  icon_tap_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
   state_position: "below",
@@ -1227,6 +1280,12 @@ class NodaliaEntityCard extends HTMLElement {
       `ii:${String(this._config?.icon_inactive || "")}`,
       `c:${this._isCompactLayout ? 1 : 0}`,
       `qa:${Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0}`,
+      `tap:${String(this._config?.tap_action || "")}`,
+      `itap:${String(this._config?.icon_tap_action ?? "")}`,
+      `ts:${String(this._config?.tap_service || "")}`,
+      `its:${String(this._config?.icon_tap_service || "")}`,
+      `tu:${String(this._config?.tap_url || "")}`,
+      `itu:${String(this._config?.icon_tap_url || "")}`,
     ].join("|");
   }
 
@@ -1402,18 +1461,31 @@ class NodaliaEntityCard extends HTMLElement {
     return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
   }
 
-  _canRunTapAction(state) {
-    const tapAction = this._config?.tap_action || "auto";
+  _effectiveTapAction(zone) {
+    if (zone === "icon") {
+      const raw = this._config?.icon_tap_action;
+      if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return this._config?.tap_action || "auto";
+      }
+      return String(raw).trim() || "auto";
+    }
+    return String(this._config?.tap_action || "auto").trim() || "auto";
+  }
+
+  _canRunTapAction(state, zone = "body") {
+    const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     if (tapAction === "none") {
       return false;
     }
 
     if (tapAction === "service") {
-      return Boolean(this._config?.tap_service);
+      const service = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
+      return Boolean(service && String(service).trim());
     }
 
     if (tapAction === "url") {
-      return Boolean(this._config?.tap_url);
+      const url = zone === "icon" ? this._config?.icon_tap_url : this._config?.tap_url;
+      return Boolean(url && String(url).trim());
     }
 
     if (tapAction === "toggle") {
@@ -1525,8 +1597,12 @@ class NodaliaEntityCard extends HTMLElement {
     window.location.href = url;
   }
 
-  _performPrimaryAction(state) {
-    const tapAction = this._config?.tap_action || "auto";
+  _performTapAction(state, zone = "body") {
+    const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
+    const tapService = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
+    const tapServiceData = zone === "icon" ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+    const tapUrl = zone === "icon" ? this._config?.icon_tap_url : this._config?.tap_url;
+    const tapNewTab = zone === "icon" ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true;
 
     switch (tapAction) {
       case "toggle":
@@ -1536,10 +1612,10 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
+        this._callConfiguredService(tapService, this._config?.entity, tapServiceData);
         break;
       case "url":
-        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
+        this._openConfiguredUrl(tapUrl, tapNewTab);
         break;
       case "auto":
       default:
@@ -1659,15 +1735,15 @@ class NodaliaEntityCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
-    if (action === "primary") {
-      if (!this._canRunTapAction(state)) {
+    if (action === "body" || action === "icon") {
+      if (!this._canRunTapAction(state, action)) {
         return;
       }
 
       this._triggerHaptic();
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
-      this._performPrimaryAction(state);
+      this._performTapAction(state, action);
       return;
     }
 
@@ -1766,7 +1842,8 @@ class NodaliaEntityCard extends HTMLElement {
     ].filter(Boolean);
     const showCopyHeader = showTitle || placeStateChipOnTitleRow;
     const showCopyBlock = showCopyHeader || chips.length > 0;
-    const canRunPrimaryAction = this._canRunTapAction(state);
+    const canRunBodyTap = this._canRunTapAction(state, "body");
+    const canRunIconTap = this._canRunTapAction(state, "icon");
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
@@ -1831,6 +1908,10 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card--clickable {
+          cursor: pointer;
+        }
+
+        .entity-card__icon.entity-card__icon--clickable {
           cursor: pointer;
         }
 
@@ -2202,17 +2283,17 @@ class NodaliaEntityCard extends HTMLElement {
         `}
       </style>
       <ha-card
-        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunPrimaryAction ? "entity-card--clickable" : ""}"
+        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
+        ${canRunBodyTap ? 'data-entity-action="body"' : ""}
       >
         <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
           <div class="entity-card__hero ${shouldAnimateEntrance ? "entity-card__hero--entering" : ""}">
             <button
               type="button"
-              class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""}"
-              ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
-              aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
+              class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""} ${canRunIconTap ? "entity-card__icon--clickable" : ""}"
+              ${canRunIconTap ? 'data-entity-action="icon"' : ""}
+              aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? "Accion principal" : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="entity-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -2877,6 +2958,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "auto";
+    const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
+    const iconTapSelectValue = iconTapActionRaw;
+    const showIconTapService = iconTapSelectValue === "service";
+    const showCardTapService = tapAction === "service";
+    const showTapServiceSecurity = showIconTapService || showCardTapService;
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -3267,8 +3353,32 @@ class NodaliaEntityCardEditor extends HTMLElement {
             <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
               ${escapeHtml(this._editorLabel("ed.entity.icons_state_hint"))}
             </div>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-              "ed.entity.tap_action",
+              "ed.light.icon_tap_action",
+              "icon_tap_action",
+              iconTapSelectValue,
+              [
+                { value: "", label: "ed.entity.icon_tap_inherit" },
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_tap_action",
               "tap_action",
               tapAction,
               [
@@ -3282,7 +3392,20 @@ class NodaliaEntityCardEditor extends HTMLElement {
               { fullWidth: true },
             )}
             ${
-              tapAction === "service"
+              showIconTapService
+                ? `
+                  ${this._renderTextField("ed.entity.tap_service_field", "icon_tap_service", config.icon_tap_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.tap_service_data_json", "icon_tap_service_data", config.icon_tap_service_data, {
+                    placeholder: '{"brightness_pct": 50}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              showCardTapService
                 ? `
                   ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
                     placeholder: "light.turn_on",
@@ -3291,6 +3414,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 70}',
                   })}
+                `
+                : ""
+            }
+            ${
+              showTapServiceSecurity
+                ? `
                   ${this._renderCheckboxField(
                     "ed.entity.security_strict",
                     "security.strict_service_actions",
@@ -3310,6 +3439,17 @@ class NodaliaEntityCardEditor extends HTMLElement {
                         )
                       : ""
                   }
+                `
+                : ""
+            }
+            ${
+              iconTapSelectValue === "url"
+                ? `
+                  ${this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "icon_tap_new_tab", config.icon_tap_new_tab === true)}
                 `
                 : ""
             }
@@ -3462,7 +3602,19 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}
