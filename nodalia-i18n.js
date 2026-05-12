@@ -6619,13 +6619,12 @@
   function translateHumidifierDeviceState(hass, configLang, rawValue) {
     const lang = resolveLanguage(hass, configLang);
     const k = normalizeTextKey(rawValue);
-    const dict = strings(lang).humidifierCard?.deviceStates || strings("en").humidifierCard?.deviceStates || {};
-    const en = strings("en").humidifierCard?.deviceStates || {};
+    const dict = {
+      ...(strings("en").humidifierCard?.deviceStates || {}),
+      ...(strings(lang).humidifierCard?.deviceStates || {}),
+    };
     if (k && dict[k]) {
       return dict[k];
-    }
-    if (k && en[k]) {
-      return en[k];
     }
     return String(rawValue ?? "").trim();
   }
@@ -6789,7 +6788,14 @@
   }
 
   function translateEntityState(langCode, state, numberDecimals, formatNumericValueWithUnit, formatNumericValue, parseNumericValue) {
-    const dict = strings(langCode).entityCard;
+    const ecEn = strings("en").entityCard || {};
+    const ecLoc = strings(langCode).entityCard || {};
+    const dict = {
+      ...ecEn,
+      ...ecLoc,
+      states: { ...(ecEn.states || {}), ...(ecLoc.states || {}) },
+      binarySensor: { ...(ecEn.binarySensor || {}), ...(ecLoc.binarySensor || {}) },
+    };
     if (!state) {
       return null;
     }

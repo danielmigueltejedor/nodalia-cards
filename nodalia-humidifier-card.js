@@ -911,22 +911,22 @@ function translateModeLabel(value, hass = null, configLang = null) {
       return "Auto";
     case "smart":
     case "smart_mode":
-      return "Inteligente";
+      return "Smart";
     case "sleep":
     case "night":
-      return "Noche";
+      return "Night";
     case "eco":
       return "Eco";
     case "quiet":
     case "silent":
-      return "Silencioso";
+      return "Quiet";
     case "low":
-      return "Baja";
+      return "Low";
     case "medium":
     case "mid":
-      return "Media";
+      return "Medium";
     case "high":
-      return "Alta";
+      return "High";
     case "boost":
       return "Boost";
     case "turbo":
@@ -936,12 +936,12 @@ function translateModeLabel(value, hass = null, configLang = null) {
       return "Normal";
     case "dry":
     case "drying":
-      return "Secado";
+      return "Dry";
     case "continuous":
-      return "Continuo";
+      return "Continuous";
     case "clothes_dry":
     case "laundry":
-      return "Ropa";
+      return "Laundry";
     default:
       return String(value ?? "");
   }
@@ -1265,7 +1265,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     return this._config?.name
       || state?.attributes?.friendly_name
       || this._config?.entity
-      || "Humidificador";
+      || "Humidifier";
   }
 
   _getHumidifierIcon(state) {
@@ -1291,17 +1291,17 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     switch (normalized) {
       case "on":
-        return "Encendido";
+        return "On";
       case "off":
-        return "Apagado";
+        return "Off";
       case "humidifying":
-        return "Humidificando";
+        return "Humidifying";
       case "dehumidifying":
-        return "Deshumidificando";
+        return "Dehumidifying";
       case "drying":
-        return "Secando";
+        return "Drying";
       case "idle":
-        return "En espera";
+        return "Idle";
       default:
         return state?.state ? String(state.state) : "";
     }
