@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.4";
+const CARD_VERSION = "1.1.0-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1246,21 +1246,6 @@ function isEntitySourceConfigured(entity) {
   }
   return false;
 }
-
-/** Short UI line when grid power is negative (export); keyed by HA language code prefix. */
-const POWER_FLOW_LABELS_GRID_EXPORT = {
-  es: "A la red",
-  en: "To grid",
-  de: "Ins Netz",
-  fr: "Vers le réseau",
-  it: "In rete",
-  nl: "Naar net",
-  pt: "Para a rede",
-  ru: "В сеть",
-  el: "Προς δίκτυο",
-  zh: "馈网",
-  ro: "Către rețea",
-};
 
 function resolveIndividualConfigs(config) {
   return arrayFromMaybe(config?.entities?.individual)
@@ -2040,21 +2025,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
   }
 
-  _powerFlowStrGridExport() {
-    let lang = "es";
-    try {
-      lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || lang;
-    } catch (_e) {
-      // ignore
-    }
-    const two = String(lang || "es").slice(0, 2).toLowerCase();
-    return POWER_FLOW_LABELS_GRID_EXPORT[two] || POWER_FLOW_LABELS_GRID_EXPORT.en || POWER_FLOW_LABELS_GRID_EXPORT.es;
-  }
-
   /**
    * Sin entidad en "Casa": consumo instantáneo ≈ solar + red + batería (convenciones de la tarjeta:
    * red +import / -export, batería +descarga / -carga).
-   * Nodo red con exportación: número en positivo y subtítulo "A la red" si no hay secundario.
+   * Nodo red con exportación: número en positivo y flecha integrada en el chip de valor.
    */
   _applyDerivedHomeAndGridDisplay(nodes) {
     const homeCfg = resolveNodeConfig("home", this._config);
@@ -2111,9 +2085,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
       const display = formatDisplayValue(Math.abs(g.value), g.unit);
       g.valueText = display.value;
       g.unitText = display.unit;
-      if (!String(g.secondary || "").trim()) {
-        g.secondary = this._powerFlowStrGridExport();
-      }
     }
   }
 
@@ -2469,10 +2440,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
       .filter(Boolean)
       .join(" ");
 
+    const gridDirectionIcon = this._getGridDirectionIcon(node);
     const valueMarkup = this._config?.show_values === false
       ? ""
       : `
           <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(color)};">
+            ${gridDirectionIcon ? `<ha-icon class="power-flow-card__chip-direction" icon="${escapeHtml(gridDirectionIcon)}"></ha-icon>` : ""}
             <span>${escapeHtml(node.valueText)}</span>
             ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
           </span>
@@ -2561,13 +2534,22 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (this._config?.show_values === false) {
       return "";
     }
+    const gridDirectionIcon = this._getGridDirectionIcon(node);
 
     return `
       <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};">
+        ${gridDirectionIcon ? `<ha-icon class="power-flow-card__chip-direction" icon="${escapeHtml(gridDirectionIcon)}"></ha-icon>` : ""}
         <span>${escapeHtml(node.valueText)}</span>
         ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
       </span>
     `;
+  }
+
+  _getGridDirectionIcon(node) {
+    if (node?.kind !== "grid" || !Number.isFinite(Number(node.value)) || Math.abs(Number(node.value)) <= 0.001) {
+      return "";
+    }
+    return node.isExporting || Number(node.value) < -0.001 ? "mdi:arrow-right" : "mdi:arrow-left";
   }
 
   _renderSimpleLayout(nodes, lines, options = {}) {
@@ -3526,6 +3508,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__chip-unit {
           opacity: 0.82;
+        }
+
+        .power-flow-card__chip-direction {
+          --mdc-icon-size: calc(var(--chip-font-size, 10px) + 4px);
+          flex: 0 0 auto;
+          opacity: 0.9;
         }
 
         .power-flow-card__node-secondary {

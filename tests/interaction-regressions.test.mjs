@@ -405,6 +405,7 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(gridImport.grid.entityId, "sensor.home");
   assert.equal(gridImport.grid.value, 100);
   assert.equal(gridImport._flowValues.gridHome, 100);
+  assert.equal(buildCard({ home: 100, solar: 0, battery: 0 })._getGridDirectionIcon(gridImport.grid), "mdi:arrow-left");
 
   const solarCoversHome = buildCard({ home: 100, solar: 100, battery: 0 })._getNodes();
   assert.equal(solarCoversHome.grid.value, 0);
@@ -433,6 +434,8 @@ test("power flow derives grid import, export, and battery charge paths from home
   const exportNodes = buildCard({ home: 100, solar: 200, battery: 0 })._getNodes();
   assert.equal(exportNodes.grid.value, -100);
   assert.equal(exportNodes.grid.isExporting, true);
+  assert.equal(exportNodes.grid.secondary, "");
+  assert.equal(buildCard({ home: 100, solar: 200, battery: 0 })._getGridDirectionIcon(exportNodes.grid), "mdi:arrow-right");
   assert.equal(exportNodes._flowValues.gridHome, -100);
 });
 

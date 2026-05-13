@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.4";
+const CARD_VERSION = "1.1.0-alpha.6";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -973,6 +973,63 @@ function escapeSelectorValue(value) {
     : String(value).replaceAll('"', '\\"');
 }
 
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
 function normalizeTextKey(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -1060,17 +1117,6 @@ function getEditorColorFallbackValue(field) {
     return DEFAULT_CONFIG.styles.card.background;
   }
   return DEFAULT_CONFIG.styles.icon.on_color;
-}
-
-function colorToHex(value, fallback = "#71c0ff") {
-  const raw = String(value || "").trim();
-  if (/^#[0-9a-f]{6}$/i.test(raw)) {
-    return raw;
-  }
-  if (/^#[0-9a-f]{3}$/i.test(raw)) {
-    return `#${raw.slice(1).split("").map(char => char + char).join("")}`;
-  }
-  return fallback;
 }
 
 function coverDeviceIcon(state) {
@@ -1502,9 +1548,6 @@ class NodaliaCoverCard extends HTMLElement {
             />
           </div>
         </div>
-      </div>
-      <div class="fan-card__preset-panel">
-        <span class="fan-card__preset is-active">${escapeHtml(label)} ${percentage}%</span>
       </div>
     `;
   }
@@ -1966,7 +2009,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
       case "boolean": return Boolean(input.checked);
       case "number": return input.value === "" ? "" : Number(input.value);
       case "csv": return normalizeList(input.value);
-      case "color": return input.value;
+      case "color": return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default: return input.value;
     }
   }
@@ -2047,15 +2090,29 @@ class NodaliaCoverCardEditor extends HTMLElement {
   }
 
   _renderColorField(label, field, value, options = {}) {
-    const fallback = getEditorColorFallbackValue(field);
-    const current = value || fallback;
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("ed.weather.custom_color");
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(this._editorLabel(label))}</span>
-        <label class="editor-color-picker">
-          <input type="color" data-field="${escapeHtml(field)}" data-value-type="color" value="${escapeHtml(colorToHex(current, fallback))}" />
-          <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(current)};"></span>
-        </label>
+        <span>${escapeHtml(tLabel)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(tLabel)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
       </div>
     `;
   }
@@ -2197,9 +2254,50 @@ class NodaliaCoverCardEditor extends HTMLElement {
           border-color: var(--primary-color);
         }
         .editor-toggle input:checked + .editor-toggle__switch::before { transform: translateX(18px); }
-        .editor-color-picker { align-items: center; display: inline-flex; gap: 8px; }
-        .editor-color-picker input { height: 40px; padding: 4px; width: 58px; }
-        .editor-color-swatch { background: var(--editor-swatch); border-radius: 999px; height: 26px; width: 26px; }
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          min-height: 40px;
+        }
+        .editor-color-picker {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          position: absolute;
+        }
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        }
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
         @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
       </style>
       <div class="editor">

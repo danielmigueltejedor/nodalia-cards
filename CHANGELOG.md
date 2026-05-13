@@ -22,6 +22,29 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.6] - 2026-05-14
+
+Sixth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.6`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** grid import/export no longer adds a separate secondary text such as **“A la red”** under the grid node. The grid value chip now shows a compact direction icon instead: left arrow for grid consumption and right arrow for feed-in/export.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.6`**.
+
+---
+
+## [1.1.0-alpha.5] - 2026-05-14
+
+Fifth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.5`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** removed the redundant bottom **Position / Tilt** readout below cover sliders because the percentage is already exposed in the top chip, keeping the card shorter and closer to the Fan Card layout.
+- **`nodalia-cover-card.js`:** aligned visual-editor color controls with the mature Nodalia editors, including the round swatch button, hidden native color input, CSS variable resolution, and alpha-preserving color writes.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.5`**.
+
+---
+
 ## [1.1.0-alpha.4] - 2026-05-14
 
 Fourth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.4`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
