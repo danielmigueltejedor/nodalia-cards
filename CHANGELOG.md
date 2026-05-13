@@ -21,6 +21,18 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.4] - 2026-05-13
+
+Stable **`1.0.4`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.4`**).
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** restored single-setpoint climate support when integrations expose valid **`min_temp`** and **`max_temp`** but no current target value, so normal thermostat dial dragging and **`+` / `−`** controls remain enabled.
+- **`nodalia-climate-card.js`:** step controls now reject a missing target with an explicit **`null`** check instead of letting **`Number(null)`** become **`0`**.
+- **`nodalia-climate-card.js`:** queued setpoint commits that wake an HVAC mode now include **`hvac_mode`** in the follow-up **`climate.set_temperature`** call when available, matching the Ecobee/template climate setpoint creation path while still trying **`set_temperature`** directly if no wake mode exists.
+- **`nodalia-climate-card.js`:** queued temperature commits no longer treat an empty follow-up queue as numeric **`0`**, avoiding unnecessary retry loops after a successful setpoint update.
+
+---
 ## [1.0.3] - 2026-05-13
 
 Stable **`1.0.3`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.3`**).

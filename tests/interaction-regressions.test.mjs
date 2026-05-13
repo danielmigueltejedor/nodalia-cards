@@ -222,6 +222,106 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   ]);
 });
 
+test("climate single-setpoint support keeps min/max fallback and rejects null target", async () => {
+  const ClimateCard = loadClimateCardClass();
+  assert.ok(ClimateCard, "climate card custom element should register");
+
+  const calls = [];
+  const card = new ClimateCard();
+  card._config = {
+    entity: "climate.single",
+    haptics: { enabled: false },
+  };
+  card._hass = {
+    callService: async (...args) => {
+      calls.push(args);
+    },
+    states: {
+      "climate.single": {
+        state: "heat",
+        attributes: {
+          current_temperature: null,
+          hvac_modes: ["heat", "off"],
+          max_temp: 35,
+          min_temp: 7,
+          supported_features: 1,
+          target_temp_high: null,
+          target_temp_low: null,
+          target_temp_step: 0.5,
+          temperature: null,
+        },
+      },
+    },
+  };
+
+  const state = card._getState();
+  assert.equal(card._supportsTargetTemperature(state), true);
+
+  card._changeTemperatureBy(1);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(calls, []);
+});
+
+test("climate queued wake commits include hvac_mode in set_temperature", async () => {
+  const ClimateCard = loadClimateCardClass();
+  assert.ok(ClimateCard, "climate card custom element should register");
+
+  const calls = [];
+  const card = new ClimateCard();
+  card._config = {
+    entity: "climate.ecobee",
+    haptics: { enabled: false },
+  };
+  card._hass = {
+    callService: async (...args) => {
+      calls.push(args);
+    },
+    states: {
+      "climate.ecobee": {
+        state: "off",
+        attributes: {
+          current_temperature: 22.5,
+          hvac_modes: ["heat_cool", "heat", "cool", "off"],
+          max_temp: 35,
+          min_temp: 7,
+          supported_features: 411,
+          target_temp_high: null,
+          target_temp_low: null,
+          target_temp_step: 0.5,
+          temperature: null,
+        },
+      },
+    },
+  };
+
+  const queued = card._queueTemperatureCommit(23, {
+    hvacWake: true,
+    immediate: true,
+    render: false,
+  });
+  assert.equal(queued, 23);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23, hvac_mode: "heat" }],
+  ]);
+  card.disconnectedCallback();
+
+  calls.length = 0;
+  card._hass.states["climate.ecobee"].attributes.hvac_modes = ["off"];
+  const direct = card._queueTemperatureCommit(22, {
+    hvacWake: true,
+    immediate: true,
+    render: false,
+  });
+  assert.equal(direct, 22);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 22 }],
+  ]);
+  card.disconnectedCallback();
+});
+
 test("notifications entrance animation does not rearm on list refreshes", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);

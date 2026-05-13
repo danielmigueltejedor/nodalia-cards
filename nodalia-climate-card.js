@@ -684,7 +684,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3";
+const CARD_VERSION = "1.0.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1861,7 +1861,10 @@ class NodaliaClimateCard extends HTMLElement {
     if (this._isDualSetpointRange(state)) {
       return true;
     }
-    return false;
+    return (
+      Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
+      Number.isFinite(parseFiniteClimateNumber(attrs.max_temp))
+    );
   }
 
   _supportsTargetTemperatureControl(state) {
@@ -2197,21 +2200,23 @@ class NodaliaClimateCard extends HTMLElement {
 
     const hvacWake = this._temperatureCommitRequiresHvacWake;
     this._temperatureCommitRequiresHvacWake = false;
+    let wakeMode = null;
 
     try {
       if (hvacWake) {
-        const wakeMode = this._getSetpointWakeHvacMode(state);
-        if (!wakeMode) {
-          serviceFailed = true;
-        } else {
+        wakeMode = this._getSetpointWakeHvacMode(state);
+        if (wakeMode) {
           await Promise.resolve(this._setClimateService("set_hvac_mode", {
             hvac_mode: wakeMode,
           }));
+        } else if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug("Nodalia Climate Card: committing setpoint without HVAC wake mode.");
         }
       }
       if (!serviceFailed) {
         await Promise.resolve(this._setClimateService("set_temperature", {
           temperature: target,
+          ...(wakeMode ? { hvac_mode: wakeMode } : {}),
         }));
       }
     } catch (_error) {
@@ -2226,7 +2231,8 @@ class NodaliaClimateCard extends HTMLElement {
         return;
       }
 
-      const queuedValue = Number(this._temperatureCommitQueuedValue);
+      const queuedRaw = this._temperatureCommitQueuedValue;
+      const queuedValue = queuedRaw === null || queuedRaw === undefined ? NaN : Number(queuedRaw);
       if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) > 0.001) {
         this._flushQueuedTemperatureCommit();
         return;
@@ -2569,7 +2575,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const current = this._getTargetTemperature(state);
-    if (!Number.isFinite(Number(current))) {
+    if (current === null || !Number.isFinite(current)) {
       return;
     }
     const next = this._normalizeTemperatureValue(Number(current) + (Number(delta) * step), state);
