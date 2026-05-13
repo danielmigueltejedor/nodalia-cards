@@ -1,3 +1,3 @@
 type: custom:nodalia-vacuum-card
-entity: vacuum.salon
-name: Robot salon
+entity: vacuum.living_room_robot
+name: Living Room Robot

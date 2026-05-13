@@ -1,6 +1,6 @@
 type: custom:nodalia-person-card
-entity: person.rocio
-name: Rocio
+entity: person.john
+name: John
 show_state: true
 show_zone_badge: true
 use_entity_picture: true

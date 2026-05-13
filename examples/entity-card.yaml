@@ -1,19 +1,19 @@
 type: custom:nodalia-entity-card
-entity: switch.lampara
-name: Lampara
+entity: light.lamp
+name: Lamp
 tap_action: auto
 show_state: true
-primary_attribute: power
-secondary_attribute: temperature
+primary_attribute: brightness
+secondary_attribute: color_temp
 quick_actions:
   - icon: mdi:power
     type: toggle
     label: Toggle
   - icon: mdi:cog
     type: more-info
-    label: Detalles
-  - icon: mdi:flash
+    label: Details
+  - icon: mdi:brightness-6
     type: service
     label: 50%
     service: light.turn_on
-    service_data: '{"brightness_pct":50}'
+    service_data: '{"entity_id":"light.lamp","brightness_pct":50}'

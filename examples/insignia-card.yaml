@@ -1,6 +1,6 @@
 type: custom:nodalia-insignia-card
-entity: sensor.temperatura_salon
-name: Salon
+entity: sensor.living_room_temperature
+name: Living Room
 use_entity_icon: true
 show_name: true
 show_value: true

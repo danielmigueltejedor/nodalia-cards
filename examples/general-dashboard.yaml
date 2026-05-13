@@ -1,0 +1,709 @@
+kiosk_mode:
+  mobile_settings:
+    hide_sidebar: false
+    hide_header: true
+    custom_width: 1400
+    ignore_entity_settings: true
+
+views:
+  - path: principal
+    title: Home
+    icon: mdi:home-assistant
+    type: sections
+    max_columns: 3
+
+    badges:
+      - type: custom:nodalia-insignia-card
+        entity: person.my_user
+        name: Welcome
+        show_name: true
+        show_value: false
+        use_entity_picture: true
+
+      - type: custom:nodalia-insignia-card
+        entity: sensor.home_average_temperature
+        show_name: false
+        show_value: true
+        use_entity_icon: true
+        styles:
+          card:
+            background: >
+              radial-gradient(circle at 12% 10%, color-mix(in srgb, #ff6b6b 22%, transparent), transparent 55%),
+              linear-gradient(120deg, color-mix(in srgb, #ff6b6b 18%, transparent), transparent 70%),
+              var(--ha-card-background)
+          icon:
+            on_color: "#ff6b6b"
+
+      - type: custom:nodalia-insignia-card
+        entity: sensor.home_average_humidity
+        show_name: false
+        show_value: true
+        use_entity_icon: true
+        styles:
+          card:
+            background: >
+              radial-gradient(circle at 12% 10%, color-mix(in srgb, #4da3ff 22%, transparent), transparent 55%),
+              linear-gradient(120deg, color-mix(in srgb, #4da3ff 18%, transparent), transparent 70%),
+              var(--ha-card-background)
+          icon:
+            on_color: "#4da3ff"
+
+    sections:
+      - type: grid
+        cards:
+          - type: custom:nodalia-notifications-card
+            empty_message: No notifications
+            dismissed_entity: input_text.nodalia_notifications_dismissed
+
+            calendar_entities:
+              - calendar.home
+
+            vacuum_entities:
+              - vacuum.robot_vacuum
+
+            fan_entities:
+              - fan.living_room_fan
+
+            humidifier_entities:
+              - humidifier.bedroom_dehumidifier
+
+            media_player_entities:
+              - media_player.living_room_tv
+
+            weather_entities:
+              - weather.home
+
+            motion_entities:
+              - binary_sensor.hall_motion
+              - binary_sensor.living_room_presence
+
+            door_entities:
+              - binary_sensor.back_door
+
+            window_entities:
+              - binary_sensor.bedroom_window
+              - binary_sensor.kitchen_window
+              - binary_sensor.garage_window
+
+            temperature_entities:
+              - sensor.living_room_temperature
+              - sensor.bedroom_temperature
+              - sensor.home_average_temperature
+
+            humidity_entities:
+              - sensor.living_room_humidity
+              - sensor.bedroom_humidity
+              - sensor.home_average_humidity
+
+            battery_entities:
+              - sensor.back_door_battery
+              - sensor.motion_sensor_battery
+              - sensor.robot_vacuum_battery
+
+            ink_entities:
+              - sensor.printer_black_ink
+              - sensor.printer_color_ink
+
+            thresholds:
+              humidity_high: 65
+
+            smart_notifications:
+              hot:
+                tint_color: "#ff6a00"
+              cold:
+                tint_color: "#006d8f"
+              humidity_high:
+                tint_color: "#00a3d7"
+              humidity_low:
+                tint_color: "#fff76b"
+              rain:
+                tint_color: "#008cb4"
+
+            smart_entity_overrides:
+              - entity: sensor.living_room_temperature
+                message: Living room is {value}. You may want to turn on the fan.
+                mobile: inherit
+
+              - entity: binary_sensor.back_door
+                message: The back door is open.
+                mobile: inherit
+
+              - entity: binary_sensor.bedroom_window
+                message: The bedroom window is open.
+                mobile: inherit
+
+              - entity: sensor.printer_black_ink
+                message: Black ink is at {value}.
+                tint_color: "#11053b"
+                mobile: inherit
+
+            mobile_notifications:
+              enabled: true
+              entities:
+                - notify.mobile_app_my_phone
+
+            grid_options:
+              rows: auto
+
+          - type: heading
+            icon: mdi:star
+            heading: Favorites
+            heading_style: title
+
+          - type: custom:nodalia-fav-card
+            entity: light.living_room_lamp
+            name: Sofa
+            icon: mdi:floor-lamp
+            show_name: false
+            show_state: false
+            styles:
+              card:
+                border: 1px solid rgba(255, 255, 255, 0.06)
+              icon:
+                background: rgba(255, 255, 255, 0.05)
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.55))
+            grid_options:
+              columns: 2
+              rows: auto
+
+          - type: custom:nodalia-fav-card
+            entity: fan.living_room_fan
+            icon: mdi:fan
+            show_state: false
+            styles:
+              card:
+                border: 1px solid rgba(255, 255, 255, 0.06)
+              icon:
+                background: rgba(255, 255, 255, 0.05)
+            grid_options:
+              columns: 2
+              rows: auto
+
+          - type: heading
+            icon: mdi:weather-partly-cloudy
+            heading: Weather
+            heading_style: title
+
+          - type: custom:nodalia-weather-card
+            entity: weather.home
+            name: Weather
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 12
+              rows: auto
+
+          - type: custom:nodalia-calendar-card
+            calendars:
+              - entity: calendar.home
+                tint: "#942192"
+            time_range: 1m
+            days_to_show: 31
+            max_visible_events: 1
+            weather_entity: weather.home
+            shared_completed_events_entity: input_text.nodalia_calendar_completed
+            shared_completed_events_webhook: nodalia_calendar_completed
+            quick_reminder_webhook: nodalia_calendar_quick_reminder_create
+            native_event_webhook: nodalia_calendar_create_event
+            styles:
+              card:
+                background: >
+                  linear-gradient(180deg, rgba(255,255,255,0.028) 0%, rgba(0,0,0,0.03) 100%),
+                  var(--ha-card-background, var(--card-background-color))
+                border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent)
+                border_radius: 22px
+                padding: 16px
+              tint:
+                color: "#d58400"
+
+          - type: heading
+            icon: mdi:account
+            heading: People
+            heading_style: title
+
+          - type: custom:nodalia-person-card
+            entity: person.person_1
+            show_state: false
+            styles:
+              avatar:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 4
+              rows: 1
+
+          - type: custom:nodalia-person-card
+            entity: person.person_2
+            show_state: false
+            styles:
+              avatar:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 4
+              rows: 1
+
+      - type: grid
+        cards:
+          - type: heading
+            icon: mdi:sofa
+            heading: Living Room
+            heading_style: title
+            badges:
+              - type: entity
+                entity: binary_sensor.living_room_presence
+              - type: entity
+                entity: sensor.living_room_humidity
+              - type: entity
+                entity: sensor.living_room_temperature
+
+          - type: custom:nodalia-media-player
+            players:
+              - entity: media_player.apple_tv
+                label: Apple TV
+            show: true
+            show_state: false
+            album_cover_background: false
+            show_unavailable_badge: true
+            haptics:
+              enabled: true
+              style: medium
+              fallback_vibrate: false
+            layout:
+              fixed: false
+              reserve_space: false
+              position: bottom
+              show_desktop: true
+              mobile_breakpoint: 1279
+              max_width: min(100%, 560px)
+            styles:
+              player:
+                background: var(--ha-card-background)
+                border: 1px solid var(--divider-color)
+                border_radius: 30px
+                box_shadow: var(--ha-card-box-shadow)
+                padding: 16px
+                artwork_size: 62px
+                control_size: 30px
+                title_size: 12px
+                subtitle_size: 10px
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-media-player
+            players:
+              - entity: media_player.living_room_tv
+                label: TV
+                tv_mode: true
+            show: true
+            show_state: false
+            album_cover_background: false
+            show_unavailable_badge: true
+            styles:
+              player:
+                background: var(--ha-card-background)
+                border: 1px solid var(--divider-color)
+                border_radius: 30px
+                padding: 16px
+                tv_artwork_size: 68px
+                control_size: 30px
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-light-card
+            entity: light.dining_light
+            name: Dining
+            icon: mdi:ceiling-light
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.5))
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-light-card
+            entity: light.sofa_light
+            name: Sofa
+            icon: mdi:ceiling-light
+            auto_expand: false
+            show_quick_brightness: false
+            show_color_controls: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.5))
+              slider_color: "#ff9300"
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-vacuum-card
+            entity: vacuum.robot_vacuum
+            tap_action: navigate
+            tap_navigation_path: /lovelace/vacuum
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                active_color: "#96d35f"
+                docked_color: var(--state-inactive-color, rgba(255, 255, 255, 0.55))
+            grid_options:
+              columns: 12
+              rows: auto
+
+          - type: custom:nodalia-fan-card
+            entity: fan.living_room_fan
+            name: Fan
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.5))
+            grid_options:
+              columns: 12
+              rows: auto
+
+      - type: grid
+        cards:
+          - type: heading
+            icon: mdi:bed-double
+            heading: Bedroom
+            heading_style: title
+            badges:
+              - type: entity
+                entity: sensor.bedroom_humidity
+              - type: entity
+                entity: sensor.bedroom_temperature
+
+          - type: custom:nodalia-humidifier-card
+            entity: humidifier.bedroom_dehumidifier
+            name: Dehumidifier
+            hidden_modes:
+              - Clothes-Dry
+              - Shoes-Dry
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                on_color: "#be38f3"
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.5))
+              slider_color: "#be38f3"
+            grid_options:
+              columns: 12
+              rows: auto
+
+          - type: custom:nodalia-entity-card
+            entity: switch.3d_printer
+            name: 3D Printer
+            icon: mdi:printer-3d
+            show_state: false
+            show_primary_chip: false
+            show_secondary_chip: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 12
+              rows: auto
+
+          - type: custom:nodalia-navigation-bar
+            styles:
+              bar:
+                border_radius: 32px
+              button:
+                size: 60px
+                label_size: 8px
+              popup:
+                max_width: 320px
+                item_size: 32px
+              media_player:
+                border_radius: 24px
+                padding: 10px
+                artwork_size: 92px
+            media_player:
+              players:
+                - entity: media_player.living_room_speaker
+                  label: Living Room
+                - entity: media_player.kitchen_speaker
+                  label: Kitchen
+            routes:
+              - icon: mdi:view-dashboard
+                path: /lovelace/principal
+                label: Dashboards
+                popup:
+                  - icon: mdi:home-assistant
+                    path: /lovelace/principal
+                  - icon: mdi:flash
+                    path: /lovelace/energy
+                  - icon: mdi:thermostat
+                    path: /lovelace/climate
+                  - icon: mdi:security
+                    path: /lovelace/security
+
+              - icon: mdi:devices
+                path: /config/devices/dashboard
+                label: Devices
+
+              - icon: mdi:creation
+                path: /config/automation/dashboard
+                label: Automations
+
+              - icon: mdi:cog
+                path: /config/dashboard
+                label: Settings
+
+              - icon: mdi:account
+                path: /profile
+                label: Profile
+
+  - path: climate
+    title: Climate
+    icon: mdi:thermostat
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            icon: mdi:thermometer
+            heading: Main thermostat
+            heading_style: title
+
+          - type: custom:nodalia-climate-card
+            entity: climate.main_thermostat
+            name: Main thermostat
+            show_state_chip: false
+            show_current_temperature_chip: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.5))
+              dial:
+                thumb_size: 20px
+                track_color: rgba(255, 255, 255, 0.08)
+                background: rgba(255, 255, 255, 0.02)
+                max_size: 480px
+              step_control:
+                size: 44px
+            grid_options:
+              columns: 12
+              rows: auto
+
+          - type: custom:nodalia-entity-card
+            entity: sensor.room_humidex
+            name: Comfort
+            show_primary_chip: false
+            show_secondary_chip: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-entity-card
+            entity: sensor.room_mold_index
+            name: Mold index
+            icon: mdi:water-percent
+            show_primary_chip: false
+            show_secondary_chip: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                on_color: brown
+                off_color: brown
+            grid_options:
+              columns: 6
+              rows: auto
+
+      - type: grid
+        cards:
+          - type: heading
+            icon: mdi:chart-areaspline
+            heading: Statistics
+            heading_style: title
+
+          - type: custom:nodalia-graph-card
+            name: Humidity
+            icon: mdi:water-percent
+            max: 75
+            points: "480"
+            entities:
+              - entity: sensor.living_room_humidity
+                name: Living Room
+                color: "#94e3fe"
+              - entity: sensor.bedroom_humidity
+                name: Bedroom
+                color: "#42a5f5"
+            styles:
+              card:
+                padding: 18px
+                gap: 20px
+              icon:
+                size: 20px
+            grid_options:
+              columns: 12
+              rows: 4
+
+          - type: custom:nodalia-graph-card
+            name: Temperature
+            icon: mdi:thermometer
+            min: 15
+            max: 25
+            points: "100"
+            entities:
+              - entity: sensor.living_room_temperature
+                name: Living Room
+                color: "#ffaa00"
+              - entity: sensor.bedroom_temperature
+                name: Bedroom
+                color: "#ffc677"
+            styles:
+              card:
+                padding: 18px
+                gap: 20px
+              icon:
+                size: 20px
+            grid_options:
+              columns: 12
+              rows: 4
+
+  - path: energy
+    title: Energy
+    icon: mdi:flash
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Energy meter
+            heading_style: title
+            icon: mdi:transmission-tower
+
+          - type: custom:nodalia-power-flow-card
+            entities:
+              grid:
+                entity: sensor.grid_power
+              home:
+                color: "#96d35f"
+            dashboard_link: /energy/overview
+            show_energy_button: true
+            grid_options:
+              columns: 12
+
+          - type: custom:nodalia-entity-card
+            entity: sensor.grid_current
+            name: Current
+            icon: mdi:current-ac
+            show_primary_chip: false
+            show_secondary_chip: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-entity-card
+            entity: sensor.grid_voltage
+            name: Voltage
+            icon: mdi:sine-wave
+            show_primary_chip: false
+            show_secondary_chip: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 6
+              rows: auto
+
+  - path: security
+    title: Security
+    icon: mdi:security
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Alarm
+            heading_style: title
+            icon: mdi:alarm-light
+
+          - type: custom:nodalia-alarm-panel-card
+            entity: alarm_control_panel.home
+            name: Alarm
+            show_code_input: false
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                off_color: var(--state-inactive-color, rgba(255, 255, 255, 0.5))
+              state_tints:
+                armed_home: "#ed719e"
+                armed_away: "#aa7942"
+                armed_vacation: "#fecb3e"
+            grid_options:
+              columns: 12
+              rows: auto
+
+          - type: heading
+            heading: Sensors
+            heading_style: title
+            icon: mdi:door
+
+          - type: custom:nodalia-entity-card
+            entity: binary_sensor.back_door
+            name: Back door
+            use_entity_icon: true
+            tap_action: more-info
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+            grid_options:
+              columns: 6
+              rows: auto
+
+          - type: custom:nodalia-entity-card
+            entity: binary_sensor.bedroom_window
+            name: Bedroom window
+            icon_active: mdi:window-open-variant
+            icon_inactive: mdi:window-closed-variant
+            tap_action: more-info
+            styles:
+              icon:
+                background: rgba(255, 255, 255, 0.06)
+                on_color: blue
+                off_color: var(--disabled-text-color)
+            grid_options:
+              columns: 6
+              rows: auto
+
+  - path: vacuum
+    title: Vacuum
+    icon: mdi:robot-vacuum
+    type: panel
+    subview: true
+    cards:
+      - type: custom:nodalia-advance-vacuum-card
+        entity: vacuum.robot_vacuum
+        name: Robot Vacuum
+        map_source:
+          camera: image.robot_vacuum_map
+        shared_cleaning_session_entity: input_text.robot_vacuum_cleaning_session
+        shared_cleaning_session_webhook: nodalia_advance_vacuum_session
+        routines:
+          - label: Full clean
+            icon: mdi:broom
+            entity: button.robot_full_clean
+            visible_when: always
+          - label: Deep clean
+            icon: mdi:layers-triple
+            entity: button.robot_deep_clean
+            visible_when: always
+        icons:
+          - icon: mdi:arrow-left
+            tooltip: Back
+            order: 1
+            tap_action:
+              action: navigate
+              navigation_path: /lovelace/principal
