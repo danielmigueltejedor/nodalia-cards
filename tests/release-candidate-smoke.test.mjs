@@ -64,6 +64,15 @@ test("high-frequency cards share render signature runtime", () => {
   });
 });
 
+test("editor entity signatures sort ids before formatting rows", () => {
+  const source = read("nodalia-utils.js");
+  assert.match(source, /const ids = \[\];/);
+  assert.match(source, /ids\.sort\(\);/);
+  assert.match(source, /const rows = new Array\(ids\.length\);/);
+  assert.doesNotMatch(source, /rows\.sort\(\(left, right\)/);
+  assert.doesNotMatch(source, /\.split\(":\"\)\[0\]/);
+});
+
 test("drag listeners stay attach-on-drag only", () => {
   const files = [
     "nodalia-light-card.js",
@@ -240,22 +249,30 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
 });
 
+test("Norwegian language aliases resolve to official no locale", () => {
+  const source = read("nodalia-i18n.js");
+  assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
+  assert.match(source, /no: "nb-NO"/);
+  assert.match(source, /\n    no: \{\},/);
+});
+
 test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
-  assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"\]/);
-  assert.match(source, /const ROWS = \[/);
+  assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"\]/);
+  assert.match(source, /const ROWS_JSON = /);
+  assert.match(source, /function getEditorUiMaps\(\)/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDES = \{/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
-  assert.match(source, /window\.NodaliaI18n\.editorUiMaps = MAP/);
+  assert.match(source, /window\.NodaliaI18n\.editorUiMaps = map/);
   assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
-  ["es", "en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
-    assert.match(source, new RegExp(`"${lang}":`), `${lang} column should appear in ROWS`);
+  ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
+    assert.match(source, new RegExp(`\\\\"${lang}\\\\":`), `${lang} column should appear in ROWS`);
   });
-  assert.match(source, /"en": "Enable animations"[\s\S]*"de": "Animationen aktivieren"/);
-  assert.match(source, /"en": "Chip height"[\s\S]*"de": "Chip-Höhe"/);
-  assert.match(source, /"es": "Mostrar ausente"[\s\S]*"de": "„Abwesend“ anzeigen"/);
-  assert.match(source, /"es": "Fijar a pantalla"[\s\S]*"de": "Am Bildschirm fixieren"/);
-  assert.match(source, /"es": "Entidad principal"[\s\S]*"zh": "主实体"/);
+  assert.match(source, /\\"en\\":\\"Enable animations\\"[\s\S]*\\"de\\":\\"Animationen aktivieren\\"/);
+  assert.match(source, /\\"en\\":\\"Chip height\\"[\s\S]*\\"de\\":\\"Chip-Höhe\\"/);
+  assert.match(source, /\\"es\\":\\"Mostrar ausente\\"[\s\S]*\\"de\\":\\"„Abwesend“ anzeigen\\"/);
+  assert.match(source, /\\"es\\":\\"Fijar a pantalla\\"[\s\S]*\\"de\\":\\"Am Bildschirm fixieren\\"/);
+  assert.match(source, /\\"es\\":\\"Entidad principal\\"[\s\S]*\\"zh\\":\\"主实体\\"/);
 });
 
 test("editor field helpers route visible labels through shared i18n", () => {
@@ -510,9 +527,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);
   const editorUi = read("nodalia-editor-ui.js");
-  assert.match(editorUi, /"es": "Borde tarjeta"[\s\S]*"de": "Kartenrand"/);
-  assert.match(editorUi, /"es": "Etiqueta"[\s\S]*"de": "Beschriftung"/);
-  assert.match(editorUi, /"es": "Mostrar tambien en escritorio"[\s\S]*"de": "Auch auf dem Desktop anzeigen"/);
+  assert.match(editorUi, /\\"es\\":\\"Borde tarjeta\\"[\s\S]*\\"de\\":\\"Kartenrand\\"/);
+  assert.match(editorUi, /\\"es\\":\\"Etiqueta\\"[\s\S]*\\"de\\":\\"Beschriftung\\"/);
+  assert.match(editorUi, /\\"es\\":\\"Mostrar tambien en escritorio\\"[\s\S]*\\"de\\":\\"Auch auf dem Desktop anzeigen\\"/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

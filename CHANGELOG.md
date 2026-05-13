@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Maintenance work continues on the stable `1.0.x` line while the next feature cycle is prepared.
+Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ### Planned / In progress
 
@@ -21,7 +21,162 @@ Maintenance work continues on the stable `1.0.x` line while the next feature cyc
 - Home Assistant frontend compatibility updates.
 
 ---
+
+## [1.0.3] - 2026-05-13
+
+First stable **`1.0.3`** release focused on refining the overall dashboard experience: major improvements to the **Climate Card**, expanded **hold actions**, visual polish across multiple cards, translation updates, editor improvements, and several rendering/runtime fixes discovered during the early alpha cycle.
+
+This version stabilizes the entire **`1.0.3-alpha.*`** line into a polished production-ready release for HACS and manual installs.
+
+Installs match:
+- **`package.json`**
+- **`nodalia-cards.manifest.js`**
+- **`__NODALIA_BUNDLE__.pkgVersion`**
+- bundled **`CARD_VERSION`**
+all aligned to **`1.0.3`**.
+
+---
+
+### Added
+
+- **Hold (long-press) actions** support for:
+  - **`nodalia-humidifier-card.js`**
+  - **`nodalia-vacuum-card.js`**
+  - **`nodalia-insignia-card.js`**
+
+- Separate hold handling for:
+  - card body
+  - icon
+  - badge areas (where applicable)
+
+- Optional:
+  - **`hold_navigation_path`**
+  - **`icon_hold_navigation_path`**
+  for direct Lovelace navigation from hold gestures.
+
+- Shared host-level gesture handling using:
+  - **`NodaliaUtils.bindHostPointerHoldGesture`**
+  improving reliability during shadow DOM re-renders.
+
+- New visual editor controls and translations for:
+  - hold actions
+  - vacuum navigation options
+  - chip radius presets
+
+- New configurable:
+  - **`styles.chip_border_radius`**
+  available across most Nodalia cards.
+
+- Visual editor presets:
+  - Capsule
+  - Soft
+  - Rounded
+  - Square
+
+---
+
+### Improved
+
+- Significant **Climate Card** improvements:
+  - better Ecobee compatibility
+  - improved handling of `hvac_mode: off`
+  - improved support for entities exposing null setpoints
+  - cleaner dial rendering logic
+  - better off-state visuals
+  - more consistent mode icon behavior
+  - improved interaction handling for edge-case thermostats
+
+- Improved:
+  - translations
+  - editor consistency
+  - rendering stability
+  - dashboard responsiveness
+  - animation behavior
+  - icon visibility
+  - contrast handling
+
+- Better visual consistency across:
+  - light
+  - fan
+  - humidifier
+  - entity
+  - climate
+  - calendar
+  cards.
+
+- Improved inactive/off-state icon readability in both:
+  - dark themes
+  - light themes
+
+- Improved dial track readability and thumb visibility on:
+  - tinted backgrounds
+  - heat/cool accent surfaces
+
+- Improved automatic migration of legacy YAML defaults through:
+  - `normalizeConfig`
+
+---
+
+### Fixed
+
+- Fixed multiple Climate Card edge cases:
+  - duplicated temperature display
+  - invalid center thumb rendering
+  - incorrect off-state visuals
+  - incorrect `auto` HVAC icon
+  - inconsistent off-state accent handling
+
+- Fixed:
+  - `ReferenceError` on `nodalia-entity-card.js`
+  that could blank entire dashboard sections.
+
+- Fixed:
+  - collapsed controls animation regression on `nodalia-light-card.js`
+
+- Fixed:
+  - calendar icon contrast on accent-tinted surfaces
+
+- Fixed:
+  - legacy inactive icon colors causing washed-out visuals
+
+- Fixed:
+  - inactive dial tracks becoming unreadable on tinted climate surfaces
+
+---
+
+### Changed
+
+- Climate Card:
+  - `auto` HVAC mode now uses:
+    - **`mdi:thermostat-auto`**
+    instead of refresh-style icons.
+
+- Off-state Climate Card visuals now use:
+  - proper power glyphs
+  - dedicated off accent styling
+
+- Dial inactive track blending adjusted for improved readability.
+
+- Bundle diagnostics and release metadata updated for stable `1.0.3`.
+
+---
+
+### Notes
+
+This release also includes many smaller:
+- rendering optimizations
+- internal cleanup changes
+- editor refinements
+- translation updates
+- animation tuning
+- compatibility fixes
+
+that were iterated throughout the alpha cycle but are not individually listed here.
+
+---
+
 ## [1.0.2] - 2026-05-13  — Stability, Climate & UX Refinement
+
 
 Stable **`1.0.2`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled module **`CARD_VERSION`** values (**`1.0.2`**).
 
@@ -590,4 +745,3 @@ First stable multilingual release.
 ## [0.1.0]
 
 Initial public development line.
-

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -67,9 +67,22 @@ const DEFAULT_CONFIG = {
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 9px",
+    chip_border_radius: "999px",
     chip_size: "11px",
   },
 };
+
+function shouldDarkenCalendarBubbleIconGlyph(state, accentColor) {
+  const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
+  if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
+    return true;
+  }
+  const hue = contrast?.parseCssColorHue?.(accentColor);
+  if (hue === null || hue === undefined || Number.isNaN(hue)) {
+    return false;
+  }
+  return (hue >= 35 && hue <= 165) || (hue >= 300 || hue <= 20);
+}
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -279,6 +292,8 @@ function normalizeConfig(config) {
     sanitizeCssRuntimeValue(normalized.styles.chip_font_size) || DEFAULT_CONFIG.styles.chip_font_size;
   normalized.styles.chip_padding =
     sanitizeCssRuntimeValue(normalized.styles.chip_padding) || DEFAULT_CONFIG.styles.chip_padding;
+  normalized.styles.chip_border_radius =
+    sanitizeCssRuntimeValue(normalized.styles.chip_border_radius) || DEFAULT_CONFIG.styles.chip_border_radius;
   normalized.styles.icon.background =
     sanitizeCssRuntimeValue(normalized.styles.icon.background) || DEFAULT_CONFIG.styles.icon.background;
   normalized.styles.icon.on_color =
@@ -2729,11 +2744,23 @@ class NodaliaCalendarCard extends HTMLElement {
     const cardBorder = `1px solid ${onCardBorder}`;
     const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
     const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
-    const iconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color);
+    const calendarsForIcon = Array.isArray(config.calendars) ? config.calendars : [];
+    const firstCalendarEntityId = calendarsForIcon.map(c => String(c?.entity || "").trim()).find(Boolean);
+    const stateForBubbleIcon = firstCalendarEntityId && this._hass?.states?.[firstCalendarEntityId]
+      ? this._hass.states[firstCalendarEntityId]
+      : undefined;
+    const darkenBubbleIconGlyph = shouldDarkenCalendarBubbleIconGlyph(stateForBubbleIcon, accentColor);
+    const baseIconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color);
+    const iconBubbleGlyph = darkenBubbleIconGlyph
+      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+      : baseIconBubbleGlyph;
     const iconSize = styles.icon?.size || DEFAULT_CONFIG.styles.icon.size;
     const chipHeight = styles.chip_height || DEFAULT_CONFIG.styles.chip_height;
     const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG.styles.chip_font_size;
     const chipPadding = styles.chip_padding || DEFAULT_CONFIG.styles.chip_padding;
+    const chipBorderRadius = escapeHtml(
+      String(styles.chip_border_radius || DEFAULT_CONFIG.styles.chip_border_radius || "").trim() || "999px",
+    );
     const animationDuration = Math.min(
       1600,
       Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG.animations.content_duration),
@@ -2884,7 +2911,7 @@ class NodaliaCalendarCard extends HTMLElement {
           align-items:center;
           background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius:999px;
+          border-radius:${chipBorderRadius};
           color:var(--secondary-text-color);
           display:inline-flex;
           flex:0 0 auto;
@@ -5050,6 +5077,36 @@ class NodaliaCalendarCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
         .editor-field input,
         .editor-field select,
         .editor-field textarea,
@@ -5458,7 +5515,19 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                     fallbackValue: DEFAULT_CONFIG.styles.card.background,
                   })}
                   ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
-                  ${this._renderTextField("Radio tarjeta", "styles.card.border_radius", config.styles?.card?.border_radius)}
+                  ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
                   ${this._renderTextField("Separación", "styles.card.gap", config.styles?.card?.gap)}
@@ -5467,6 +5536,18 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                   ${this._renderTextField("Alto chips", "styles.chip_height", config.styles?.chip_height)}
                   ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
                   ${this._renderTextField("Relleno chips", "styles.chip_padding", config.styles?.chip_padding)}
+                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.chip_border_radius",
+                    value: config.styles?.chip_border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
                   ${this._renderColorField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, {
                     fullWidth: true,
                     fallbackValue: DEFAULT_CONFIG.styles.icon.background,

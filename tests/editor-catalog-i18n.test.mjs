@@ -16,6 +16,7 @@ test("editor catalog locale files stay in sync (run scripts/validate-editor-i18n
 test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   const src = fs.readFileSync(path.join(root, "nodalia-editor-ui.js"), "utf8");
   assert.match(src, /window\.NodaliaI18n\.editorCatalog\s*=/);
+  assert.match(src, /EDITOR_CATALOG_JSON/);
   assert.match(src, /rawInput\.startsWith\("ed\."\)/);
-  assert.match(src, /"ed\.calendar\.visible_range"/);
+  assert.match(src, /\\"ed\.calendar\.visible_range\\"/);
 });

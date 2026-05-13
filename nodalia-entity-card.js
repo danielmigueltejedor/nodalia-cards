@@ -18,6 +18,9 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
+    "renderEditorCardBorderRadiusHtml",
+    "bindHostPointerHoldGesture",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -110,21 +113,22 @@
    */
   function editorFilteredStatesSignature(hass, language, predicate) {
     const states = hass?.states || {};
-    const rows = [];
+    const ids = [];
     for (const id of Object.keys(states)) {
       if (!predicate(id)) {
         continue;
       }
-      const state = states[id];
-      rows.push(
-        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
-      );
+      ids.push(id);
     }
-    rows.sort((left, right) => {
-      const idLeft = left.split(":")[0];
-      const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
-    });
+    ids.sort();
+
+    const rows = new Array(ids.length);
+    for (let index = 0; index < ids.length; index += 1) {
+      const id = ids[index];
+      const state = states[id];
+      rows[index] = `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`;
+    }
+
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
@@ -392,8 +396,199 @@
   }
 
   /**
-   * Mount or update ha-icon-picker / text input without recreating each render.
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
    */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
+   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
+   */
+  function renderEditorCardBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
+    const field = fieldRaw || "styles.card.border_radius";
+    const current = String(options?.value ?? "").trim() || "28px";
+    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "28px", l: tPill },
+      { v: "20px", l: tSoft },
+      { v: "14px", l: tRound },
+      { v: "8px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
+   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
+   * card's click handler can ignore the following click (synthetic after pointerup).
+   */
+  function bindHostPointerHoldGesture(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return () => {};
+    }
+    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
+      return () => {};
+    }
+    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
+      ? Math.round(Number(options.holdMs))
+      : 500;
+    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
+      ? Number(options.moveTolerancePx)
+      : 12;
+    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
+    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
+      ? options.markHoldConsumedClick
+      : () => {};
+
+    let timer = null;
+    let active = null;
+
+    function clearWindowListeners() {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+      window.removeEventListener("pointermove", onWindowPointerMove);
+    }
+
+    function resetTracking() {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      clearWindowListeners();
+      active = null;
+    }
+
+    function onWindowPointerMove(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      const dx = ev.clientX - active.x;
+      const dy = ev.clientY - active.y;
+      if (Math.hypot(dx, dy) > moveTol) {
+        resetTracking();
+      }
+    }
+
+    function onWindowPointerUp(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      resetTracking();
+    }
+
+    function onPointerDownCapture(ev) {
+      if (!(ev instanceof PointerEvent)) {
+        return;
+      }
+      if (typeof ev.button === "number" && ev.button !== 0) {
+        return;
+      }
+      const zone = options.resolveZone(ev);
+      if (!zone) {
+        return;
+      }
+      if (shouldBeginHold(zone, ev) !== true) {
+        return;
+      }
+      resetTracking();
+      active = {
+        pointerId: ev.pointerId,
+        x: ev.clientX,
+        y: ev.clientY,
+        zone,
+      };
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (!active || active.pointerId !== ev.pointerId) {
+          return;
+        }
+        const z = active.zone;
+        resetTracking();
+        options.onHold(z);
+        markHoldConsumedClick();
+      }, holdMs);
+      window.addEventListener("pointerup", onWindowPointerUp);
+      window.addEventListener("pointercancel", onWindowPointerUp);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+    }
+
+    host.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+      resetTracking();
+    };
+  }
+
   function mountIconPickerHost(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -475,6 +670,9 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
+    renderEditorCardBorderRadiusHtml,
+    bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +684,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -511,6 +709,21 @@ const DEFAULT_CONFIG = {
   tap_service_data: "",
   tap_url: "",
   tap_new_tab: false,
+  icon_tap_action: "",
+  icon_tap_service: "",
+  icon_tap_service_data: "",
+  icon_tap_url: "",
+  icon_tap_new_tab: false,
+  hold_action: "none",
+  hold_service: "",
+  hold_service_data: "",
+  hold_url: "",
+  hold_new_tab: false,
+  icon_hold_action: "",
+  icon_hold_service: "",
+  icon_hold_service_data: "",
+  icon_hold_url: "",
+  icon_hold_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
   state_position: "below",
@@ -544,7 +757,7 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
-      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+      off_color: "var(--primary-text-color)",
     },
     control: {
       size: "40px",
@@ -554,6 +767,7 @@ const DEFAULT_CONFIG = {
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 9px",
+    chip_border_radius: "999px",
     title_size: "12px",
   },
 };
@@ -579,6 +793,29 @@ const STUB_CONFIG = {
     },
   ],
 };
+
+/** Older defaults / editor-saved YAML used `--state-inactive-color`, which stays merged over new defaults. */
+const LEGACY_ICON_OFF_COLOR_VALUES = [
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+];
+
+function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
+  if (!iconStyles) {
+    return;
+  }
+  const raw = String(iconStyles.off_color ?? "").trim();
+  if (!raw) {
+    return;
+  }
+  if (LEGACY_ICON_OFF_COLOR_VALUES.includes(raw)) {
+    iconStyles.off_color = canonicalOffColor;
+    return;
+  }
+  if (/^var\(\s*--state-inactive-color/i.test(raw)) {
+    iconStyles.off_color = canonicalOffColor;
+  }
+}
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -849,7 +1086,7 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+    return "var(--primary-text-color)";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -1029,6 +1266,29 @@ function normalizeConfig(rawConfig) {
       }))
     : [];
 
+  migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
+
+  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+  const normHold = String(config.hold_action ?? "none").trim().toLowerCase();
+  config.hold_action = TAP_ACTIONS.has(normHold) ? normHold : "none";
+  const iconHoldStr = config.icon_hold_action === undefined || config.icon_hold_action === null
+    ? ""
+    : String(config.icon_hold_action).trim();
+  if (!iconHoldStr) {
+    config.icon_hold_action = "";
+  } else {
+    const n = iconHoldStr.toLowerCase();
+    config.icon_hold_action = TAP_ACTIONS.has(n) ? n : "";
+  }
+  config.hold_service = String(config.hold_service ?? "").trim();
+  config.hold_service_data = String(config.hold_service_data ?? "").trim();
+  config.hold_url = String(config.hold_url ?? "").trim();
+  config.hold_new_tab = config.hold_new_tab === true;
+  config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
+  config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
+  config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
+  config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+
   return config;
 }
 
@@ -1051,6 +1311,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._suppressNextEntityTap = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -1070,6 +1331,36 @@ class NodaliaEntityCard extends HTMLElement {
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const path = event.composedPath();
+              const actionTarget = path.find(
+                node => node instanceof HTMLElement && node.dataset?.entityAction,
+              );
+              const action = actionTarget?.dataset?.entityAction;
+              return action === "body" || action === "icon" ? action : null;
+            },
+            shouldBeginHold: zone => {
+              const state = this._getState();
+              return Boolean(state && this._canRunHoldAction(state, zone));
+            },
+            onHold: zone => {
+              const state = this._getState();
+              if (!state) {
+                return;
+              }
+              this._triggerHaptic();
+              this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+              this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+              this._performHoldAction(state, zone);
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextEntityTap = true;
+            },
+          })
+        : () => {};
   }
 
   connectedCallback() {
@@ -1082,6 +1373,7 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._detachHostHold?.();
     this._resizeObserver?.disconnect();
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
@@ -1153,6 +1445,18 @@ class NodaliaEntityCard extends HTMLElement {
       `ii:${String(this._config?.icon_inactive || "")}`,
       `c:${this._isCompactLayout ? 1 : 0}`,
       `qa:${Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0}`,
+      `tap:${String(this._config?.tap_action || "")}`,
+      `itap:${String(this._config?.icon_tap_action ?? "")}`,
+      `ts:${String(this._config?.tap_service || "")}`,
+      `its:${String(this._config?.icon_tap_service || "")}`,
+      `tu:${String(this._config?.tap_url || "")}`,
+      `itu:${String(this._config?.icon_tap_url || "")}`,
+      `hold:${String(this._config?.hold_action || "")}`,
+      `ihold:${String(this._config?.icon_hold_action ?? "")}`,
+      `hs:${String(this._config?.hold_service || "")}`,
+      `ihs:${String(this._config?.icon_hold_service || "")}`,
+      `hu:${String(this._config?.hold_url || "")}`,
+      `ihu:${String(this._config?.icon_hold_url || "")}`,
     ].join("|");
   }
 
@@ -1328,18 +1632,42 @@ class NodaliaEntityCard extends HTMLElement {
     return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
   }
 
-  _canRunTapAction(state) {
-    const tapAction = this._config?.tap_action || "auto";
+  _effectiveTapAction(zone) {
+    if (zone === "icon") {
+      const raw = this._config?.icon_tap_action;
+      if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return this._config?.tap_action || "auto";
+      }
+      return String(raw).trim() || "auto";
+    }
+    return String(this._config?.tap_action || "auto").trim() || "auto";
+  }
+
+  _effectiveHoldAction(zone) {
+    if (zone === "icon") {
+      const raw = this._config?.icon_hold_action;
+      if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return this._config?.hold_action || "none";
+      }
+      return String(raw).trim() || "none";
+    }
+    return String(this._config?.hold_action || "none").trim() || "none";
+  }
+
+  _canRunTapAction(state, zone = "body") {
+    const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     if (tapAction === "none") {
       return false;
     }
 
     if (tapAction === "service") {
-      return Boolean(this._config?.tap_service);
+      const service = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
+      return Boolean(service && String(service).trim());
     }
 
     if (tapAction === "url") {
-      return Boolean(this._config?.tap_url);
+      const url = zone === "icon" ? this._config?.icon_tap_url : this._config?.tap_url;
+      return Boolean(url && String(url).trim());
     }
 
     if (tapAction === "toggle") {
@@ -1351,6 +1679,43 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     if (tapAction === "auto") {
+      return Boolean(this._config?.entity);
+    }
+
+    return false;
+  }
+
+  _canRunHoldAction(state, zone = "body") {
+    const holdAction = String(this._effectiveHoldAction(zone) || "none").trim().toLowerCase();
+    if (holdAction === "none") {
+      return false;
+    }
+
+    if (holdAction === "service") {
+      let service = zone === "icon" ? this._config?.icon_hold_service : this._config?.hold_service;
+      if (zone === "icon" && !String(service || "").trim()) {
+        service = this._config?.hold_service;
+      }
+      return Boolean(service && String(service).trim());
+    }
+
+    if (holdAction === "url") {
+      let url = zone === "icon" ? this._config?.icon_hold_url : this._config?.hold_url;
+      if (zone === "icon" && !String(url || "").trim()) {
+        url = this._config?.hold_url;
+      }
+      return Boolean(url && String(url).trim());
+    }
+
+    if (holdAction === "toggle") {
+      return this._isBinaryOnOff(state);
+    }
+
+    if (holdAction === "more-info") {
+      return Boolean(this._config?.entity);
+    }
+
+    if (holdAction === "auto") {
       return Boolean(this._config?.entity);
     }
 
@@ -1451,8 +1816,12 @@ class NodaliaEntityCard extends HTMLElement {
     window.location.href = url;
   }
 
-  _performPrimaryAction(state) {
-    const tapAction = this._config?.tap_action || "auto";
+  _performTapAction(state, zone = "body") {
+    const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
+    const tapService = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
+    const tapServiceData = zone === "icon" ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+    const tapUrl = zone === "icon" ? this._config?.icon_tap_url : this._config?.tap_url;
+    const tapNewTab = zone === "icon" ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true;
 
     switch (tapAction) {
       case "toggle":
@@ -1462,10 +1831,52 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
+        this._callConfiguredService(tapService, this._config?.entity, tapServiceData);
         break;
       case "url":
-        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
+        this._openConfiguredUrl(tapUrl, tapNewTab);
+        break;
+      case "auto":
+      default:
+        if (this._isBinaryOnOff(state)) {
+          this._toggleEntity(this._config?.entity);
+          return;
+        }
+
+        this._openMoreInfo(this._config?.entity);
+        break;
+    }
+  }
+
+  _performHoldAction(state, zone = "body") {
+    const holdAction = String(this._effectiveHoldAction(zone) || "none").trim().toLowerCase();
+    let holdService = zone === "icon" ? this._config?.icon_hold_service : this._config?.hold_service;
+    let holdServiceData = zone === "icon" ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
+    let holdUrl = zone === "icon" ? this._config?.icon_hold_url : this._config?.hold_url;
+    let holdNewTab = zone === "icon" ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true;
+    if (zone === "icon") {
+      if (!String(holdService || "").trim()) {
+        holdService = this._config?.hold_service;
+        holdServiceData = this._config?.hold_service_data;
+      }
+      if (!String(holdUrl || "").trim()) {
+        holdUrl = this._config?.hold_url;
+        holdNewTab = this._config?.hold_new_tab === true;
+      }
+    }
+
+    switch (holdAction) {
+      case "toggle":
+        this._toggleEntity(this._config?.entity);
+        break;
+      case "more-info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "service":
+        this._callConfiguredService(holdService, this._config?.entity, holdServiceData);
+        break;
+      case "url":
+        this._openConfiguredUrl(holdUrl, holdNewTab);
         break;
       case "auto":
       default:
@@ -1585,15 +1996,19 @@ class NodaliaEntityCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
-    if (action === "primary") {
-      if (!this._canRunTapAction(state)) {
+    if (action === "body" || action === "icon") {
+      if (this._suppressNextEntityTap) {
+        this._suppressNextEntityTap = false;
+        return;
+      }
+      if (!this._canRunTapAction(state, action)) {
         return;
       }
 
       this._triggerHaptic();
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
-      this._performPrimaryAction(state);
+      this._performTapAction(state, action);
       return;
     }
 
@@ -1665,6 +2080,7 @@ class NodaliaEntityCard extends HTMLElement {
     const effectiveChipHeight = `${Math.max(15, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 16 : compactMetrics ? 22 : 24))}px`;
     const effectiveChipFontSize = `${Math.max(8, Math.min(parseSizeToPixels(styles.chip_font_size, 11), singleRowLayout ? 8.5 : compactMetrics ? 10 : 11))}px`;
     const effectiveChipPadding = singleRowLayout ? "0 6px" : compactMetrics ? "0 8px" : styles.chip_padding;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const effectiveCardHeightPx = singleRowLayout ? Math.max(54, effectiveIconSizePx + (singleRowPaddingY * 2)) : 0;
     const effectiveCardMinHeight = singleRowLayout ? `${effectiveCardHeightPx}px` : "0px";
     const effectiveContentMinHeight = singleRowLayout ? `${Math.max(effectiveIconSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px` : "0px";
@@ -1691,7 +2107,8 @@ class NodaliaEntityCard extends HTMLElement {
     ].filter(Boolean);
     const showCopyHeader = showTitle || placeStateChipOnTitleRow;
     const showCopyBlock = showCopyHeader || chips.length > 0;
-    const canRunPrimaryAction = this._canRunTapAction(state);
+    const canRunBodyTap = this._canRunTapAction(state, "body");
+    const canRunIconTap = this._canRunTapAction(state, "icon");
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
@@ -1759,6 +2176,10 @@ class NodaliaEntityCard extends HTMLElement {
           cursor: pointer;
         }
 
+        .entity-card__icon.entity-card__icon--clickable {
+          cursor: pointer;
+        }
+
         .entity-card__content {
           display: grid;
           gap: ${effectiveGap};
@@ -1810,7 +2231,7 @@ class NodaliaEntityCard extends HTMLElement {
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
+          cursor: ${canRunIconTap || canRunBodyTap ? "pointer" : "default"};
           display: inline-flex;
           flex: 0 0 auto;
           height: ${effectiveIconSize};
@@ -1957,7 +2378,7 @@ class NodaliaEntityCard extends HTMLElement {
           align-items: center;
           background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
+          border-radius: ${chipBorderRadius};
           color: var(--secondary-text-color);
           display: inline-flex;
           flex: 0 0 auto;
@@ -2127,17 +2548,17 @@ class NodaliaEntityCard extends HTMLElement {
         `}
       </style>
       <ha-card
-        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunPrimaryAction ? "entity-card--clickable" : ""}"
+        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
+        ${canRunBodyTap ? 'data-entity-action="body"' : ""}
       >
         <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
           <div class="entity-card__hero ${shouldAnimateEntrance ? "entity-card__hero--entering" : ""}">
             <button
               type="button"
-              class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""}"
-              ${canRunPrimaryAction ? 'data-entity-action="primary"' : ""}
-              aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
+              class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""} ${canRunIconTap ? "entity-card__icon--clickable" : ""}"
+              ${canRunIconTap ? 'data-entity-action="icon"' : ""}
+              aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? "Accion principal" : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="entity-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -2802,6 +3223,15 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "auto";
+    const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
+    const iconTapSelectValue = iconTapActionRaw;
+    const showIconTapService = iconTapSelectValue === "service";
+    const showCardTapService = tapAction === "service";
+    const holdAction = config.hold_action || "none";
+    const iconHoldSelect = String(config.icon_hold_action ?? "").trim();
+    const showCardHoldService = holdAction === "service";
+    const showIconHoldService = iconHoldSelect === "service" || (iconHoldSelect === "" && holdAction === "service");
+    const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -2864,6 +3294,36 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
         .editor-field--full {
           grid-column: 1 / -1;
+        }
+
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
         }
 
 
@@ -3162,8 +3622,32 @@ class NodaliaEntityCardEditor extends HTMLElement {
             <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
               ${escapeHtml(this._editorLabel("ed.entity.icons_state_hint"))}
             </div>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-              "ed.entity.tap_action",
+              "ed.light.icon_tap_action",
+              "icon_tap_action",
+              iconTapSelectValue,
+              [
+                { value: "", label: "ed.entity.icon_tap_inherit" },
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_tap_action",
               "tap_action",
               tapAction,
               [
@@ -3177,7 +3661,20 @@ class NodaliaEntityCardEditor extends HTMLElement {
               { fullWidth: true },
             )}
             ${
-              tapAction === "service"
+              showIconTapService
+                ? `
+                  ${this._renderTextField("ed.entity.tap_service_field", "icon_tap_service", config.icon_tap_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.tap_service_data_json", "icon_tap_service_data", config.icon_tap_service_data, {
+                    placeholder: '{"brightness_pct": 50}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              showCardTapService
                 ? `
                   ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
                     placeholder: "light.turn_on",
@@ -3186,6 +3683,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 70}',
                   })}
+                `
+                : ""
+            }
+            ${
+              showTapServiceSecurity
+                ? `
                   ${this._renderCheckboxField(
                     "ed.entity.security_strict",
                     "security.strict_service_actions",
@@ -3209,6 +3712,17 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 : ""
             }
             ${
+              iconTapSelectValue === "url"
+                ? `
+                  ${this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "icon_tap_new_tab", config.icon_tap_new_tab === true)}
+                `
+                : ""
+            }
+            ${
               tapAction === "url"
                 ? `
                   ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
@@ -3216,6 +3730,84 @@ class NodaliaEntityCardEditor extends HTMLElement {
                     fullWidth: true,
                   })}
                   ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
+                `
+                : ""
+            }
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
+            ${this._renderSelectField(
+              "ed.light.icon_hold_action",
+              "icon_hold_action",
+              iconHoldSelect,
+              [
+                { value: "", label: "ed.entity.icon_hold_inherit" },
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_hold_action",
+              "hold_action",
+              holdAction,
+              [
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${
+              showIconHoldService
+                ? `
+                  ${this._renderTextField("ed.entity.hold_service_field", "icon_hold_service", config.icon_hold_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.hold_service_data_json", "icon_hold_service_data", config.icon_hold_service_data, {
+                    placeholder: '{"brightness_pct": 50}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              showCardHoldService
+                ? `
+                  ${this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, {
+                    placeholder: '{"brightness_pct": 70}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              iconHoldSelect === "url" || (iconHoldSelect === "" && holdAction === "url")
+                ? `
+                  ${this._renderTextField("ed.entity.hold_url_field", "icon_hold_url", config.icon_hold_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.hold_new_tab", "icon_hold_new_tab", config.icon_hold_new_tab === true)}
+                `
+                : ""
+            }
+            ${
+              holdAction === "url"
+                ? `
+                  ${this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true)}
                 `
                 : ""
             }
@@ -3357,7 +3949,19 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("ed.entity.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}
@@ -3381,6 +3985,18 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.chip_border_radius",
+                    value: config.styles?.chip_border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
                   ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
                 </div>
               `

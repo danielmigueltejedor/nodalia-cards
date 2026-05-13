@@ -9,7 +9,8 @@
       return null;
     }
     const two = lower.slice(0, 2);
-    return PACK[two] ? two : null;
+    const alias = { nb: "no", nn: "no" }[two];
+    return PACK[two] ? two : (alias && PACK[alias] ? alias : null);
   }
 
   /**
@@ -109,6 +110,7 @@
       fr: "fr",
       it: "it",
       nl: "nl",
+      no: "nb-NO",
       pt: "pt",
       ru: "ru",
       el: "el",
@@ -705,7 +707,9 @@
         aria: {
           dialRangeGroup: "Temperatura interior y consigna",
           dialTargetSlider: "Temperatura objetivo",
+          dialNoSetpoint: "Temperatura interior; el termostato no tiene consigna activa",
         },
+        dialNoSetpointHint: "Sin consigna activa",
       },
       graphCard: {
         emptyHistory: "Sin historial disponible",
@@ -1233,7 +1237,9 @@
         aria: {
           dialRangeGroup: "Comfort range and indoor temperature",
           dialTargetSlider: "Target temperature",
+          dialNoSetpoint: "Indoor temperature; thermostat has no active target yet",
         },
+        dialNoSetpointHint: "No active setpoint",
       },
       graphCard: {
         emptyHistory: "No history available",
@@ -1765,7 +1771,9 @@
         aria: {
           dialRangeGroup: "Komfortbereich und Raumtemperatur",
           dialTargetSlider: "Solltemperatur",
+          dialNoSetpoint: "Raumtemperatur; kein aktives Soll am Thermostat",
         },
+        dialNoSetpointHint: "Kein aktives Soll",
       },
       graphCard: {
         emptyHistory: "Kein Verlauf verfügbar",
@@ -2234,7 +2242,9 @@
         aria: {
           dialRangeGroup: "Plage de confort et température intérieure",
           dialTargetSlider: "Température cible",
+          dialNoSetpoint: "Température intérieure ; pas de consigne active sur le thermostat",
         },
+        dialNoSetpointHint: "Pas de consigne active",
       },
       graphCard: {
         emptyHistory: "Aucun historique disponible",
@@ -2703,7 +2713,9 @@
         aria: {
           dialRangeGroup: "Fascia di comfort e temperatura interna",
           dialTargetSlider: "Temperatura target",
+          dialNoSetpoint: "Temperatura interna; nessun setpoint attivo sul termostato",
         },
+        dialNoSetpointHint: "Nessun setpoint attivo",
       },
       graphCard: {
         emptyHistory: "Nessuno storico disponibile",
@@ -3172,7 +3184,9 @@
         aria: {
           dialRangeGroup: "Comfortbereik en binnentemperatuur",
           dialTargetSlider: "Doeltemperatuur",
+          dialNoSetpoint: "Kamertemperatuur; thermostaat heeft geen actieve setpoint",
         },
+        dialNoSetpointHint: "Geen actieve setpoint",
       },
       graphCard: {
         emptyHistory: "Geen geschiedenis beschikbaar",
@@ -3190,6 +3204,7 @@
         triggered: "Getriggerd",
       },
     },
+    no: {},
     pt: {
       advanceVacuum: {
         modeLabels: {
@@ -3529,7 +3544,9 @@
         aria: {
           dialRangeGroup: "Faixa de conforto e temperatura interior",
           dialTargetSlider: "Temperatura alvo",
+          dialNoSetpoint: "Temperatura interior; o termostato não tem setpoint ativo",
         },
+        dialNoSetpointHint: "Sem setpoint ativo",
       },
       graphCard: {
         emptyHistory: "Sem histórico disponível"
@@ -4007,7 +4024,9 @@
         aria: {
           dialRangeGroup: "Диапазон комфорта и температура в помещении",
           dialTargetSlider: "Заданная температура",
+          dialNoSetpoint: "Комнатная температура; на термостате нет активной уставки",
         },
+        dialNoSetpointHint: "Нет активной уставки",
       },
       graphCard: {
         emptyHistory: "История недоступна"
@@ -4485,7 +4504,9 @@
         aria: {
           dialRangeGroup: "Εύρος άνεσης και εσωτερική θερμοκρασία",
           dialTargetSlider: "Θερμοκρασία στόχος",
+          dialNoSetpoint: "Εσωτερική θερμοκρασία· ο θερμοστάτης δεν έχει ενεργό στόχο",
         },
+        dialNoSetpointHint: "Χωρίς ενεργό στόχο",
       },
       graphCard: {
         emptyHistory: "Δεν υπάρχει διαθέσιμο ιστορικό"
@@ -4963,7 +4984,9 @@
         aria: {
           dialRangeGroup: "舒适区间与室内温度",
           dialTargetSlider: "目标温度",
+          dialNoSetpoint: "室内温度；恒温器尚无生效目标温度",
         },
+        dialNoSetpointHint: "尚无生效设定",
       },
       graphCard: {
         emptyHistory: "暂无历史数据"
@@ -5441,7 +5464,9 @@
         aria: {
           dialRangeGroup: "Interval de confort și temperatura interioară",
           dialTargetSlider: "Temperatura țintă",
+          dialNoSetpoint: "Temperatură interioară; termostatul nu are țintă activă",
         },
+        dialNoSetpointHint: "Fără țintă activă",
       },
       graphCard: {
         emptyHistory: "Nu există istoric disponibil"
@@ -6688,10 +6713,28 @@
 
   function translateClimateDialAria(hass, configLang, variant) {
     const lang = resolveLanguage(hass, configLang);
-    const key = variant === "rangeGroup" ? "dialRangeGroup" : "dialTargetSlider";
+    let key = "dialTargetSlider";
+    if (variant === "rangeGroup") {
+      key = "dialRangeGroup";
+    } else if (variant === "noSetpoint") {
+      key = "dialNoSetpoint";
+    }
     const ccLoc = strings(lang).climateCard?.aria || {};
     const ccEn = strings("en").climateCard?.aria || {};
-    return ccLoc[key] ?? ccEn[key] ?? (variant === "rangeGroup" ? "Comfort range and indoor temperature" : "Target temperature");
+    const fallback =
+      variant === "rangeGroup"
+        ? "Comfort range and indoor temperature"
+        : variant === "noSetpoint"
+          ? "Indoor temperature; thermostat has no active target yet"
+          : "Target temperature";
+    return ccLoc[key] ?? ccEn[key] ?? fallback;
+  }
+
+  function translateClimateDialNoSetpointHint(hass, configLang) {
+    const lang = resolveLanguage(hass, configLang);
+    const ccLoc = strings(lang).climateCard || {};
+    const ccEn = strings("en").climateCard || {};
+    return ccLoc.dialNoSetpointHint ?? ccEn.dialNoSetpointHint ?? "No active setpoint";
   }
 
   function translateHumidifierDeviceState(hass, configLang, rawValue) {
@@ -7061,6 +7104,7 @@
     translateMediaPlayerState,
     translateClimateHvacLabel,
     translateClimateDialAria,
+    translateClimateDialNoSetpointHint,
     translateHumidifierDeviceState,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,

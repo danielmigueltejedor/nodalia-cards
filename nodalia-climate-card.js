@@ -18,6 +18,9 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "renderEditorChipBorderRadiusHtml",
+    "renderEditorCardBorderRadiusHtml",
+    "bindHostPointerHoldGesture",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -110,21 +113,22 @@
    */
   function editorFilteredStatesSignature(hass, language, predicate) {
     const states = hass?.states || {};
-    const rows = [];
+    const ids = [];
     for (const id of Object.keys(states)) {
       if (!predicate(id)) {
         continue;
       }
-      const state = states[id];
-      rows.push(
-        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
-      );
+      ids.push(id);
     }
-    rows.sort((left, right) => {
-      const idLeft = left.split(":")[0];
-      const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
-    });
+    ids.sort();
+
+    const rows = new Array(ids.length);
+    for (let index = 0; index < ids.length; index += 1) {
+      const id = ids[index];
+      const state = states[id];
+      rows[index] = `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`;
+    }
+
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
@@ -392,8 +396,199 @@
   }
 
   /**
-   * Mount or update ha-icon-picker / text input without recreating each render.
+   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
+   * Callers pass translated labels and their `escapeHtml` (card-local).
    */
+  function renderEditorChipBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
+    const field = fieldRaw || "styles.chip_border_radius";
+    const current = String(options?.value ?? "").trim() || "999px";
+    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "999px", l: tPill },
+      { v: "12px", l: tSoft },
+      { v: "8px", l: tRound },
+      { v: "4px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
+   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
+   */
+  function renderEditorCardBorderRadiusHtml(options) {
+    const esc = options?.escapeHtml;
+    if (typeof esc !== "function") {
+      return "";
+    }
+    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
+    const field = fieldRaw || "styles.card.border_radius";
+    const current = String(options?.value ?? "").trim() || "28px";
+    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
+    const labels = options?.labels ?? {};
+    const tPill = esc(String(labels.pill ?? "Capsule"));
+    const tSoft = esc(String(labels.soft ?? "Soft"));
+    const tRound = esc(String(labels.round ?? "Rounded"));
+    const tSquare = esc(String(labels.square ?? "Square"));
+    const STANDARD = [
+      { v: "28px", l: tPill },
+      { v: "20px", l: tSoft },
+      { v: "14px", l: tRound },
+      { v: "8px", l: tSquare },
+    ];
+    const inStandard = STANDARD.some(p => p.v === current);
+    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
+    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
+    const optionsHtml = presets
+      .map(p => {
+        const checked = current === p.v ? " checked" : "";
+        return `
+      <label class="editor-chip-radius__option">
+        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
+        <span>${p.l}</span>
+      </label>`;
+      })
+      .join("");
+    return `
+    <div class="editor-field editor-field--full editor-chip-radius">
+      <span>${tHeading}</span>
+      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
+        ${optionsHtml}
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
+   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
+   * card's click handler can ignore the following click (synthetic after pointerup).
+   */
+  function bindHostPointerHoldGesture(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return () => {};
+    }
+    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
+      return () => {};
+    }
+    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
+      ? Math.round(Number(options.holdMs))
+      : 500;
+    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
+      ? Number(options.moveTolerancePx)
+      : 12;
+    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
+    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
+      ? options.markHoldConsumedClick
+      : () => {};
+
+    let timer = null;
+    let active = null;
+
+    function clearWindowListeners() {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+      window.removeEventListener("pointermove", onWindowPointerMove);
+    }
+
+    function resetTracking() {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      clearWindowListeners();
+      active = null;
+    }
+
+    function onWindowPointerMove(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      const dx = ev.clientX - active.x;
+      const dy = ev.clientY - active.y;
+      if (Math.hypot(dx, dy) > moveTol) {
+        resetTracking();
+      }
+    }
+
+    function onWindowPointerUp(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      resetTracking();
+    }
+
+    function onPointerDownCapture(ev) {
+      if (!(ev instanceof PointerEvent)) {
+        return;
+      }
+      if (typeof ev.button === "number" && ev.button !== 0) {
+        return;
+      }
+      const zone = options.resolveZone(ev);
+      if (!zone) {
+        return;
+      }
+      if (shouldBeginHold(zone, ev) !== true) {
+        return;
+      }
+      resetTracking();
+      active = {
+        pointerId: ev.pointerId,
+        x: ev.clientX,
+        y: ev.clientY,
+        zone,
+      };
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (!active || active.pointerId !== ev.pointerId) {
+          return;
+        }
+        const z = active.zone;
+        resetTracking();
+        options.onHold(z);
+        markHoldConsumedClick();
+      }, holdMs);
+      window.addEventListener("pointerup", onWindowPointerUp);
+      window.addEventListener("pointercancel", onWindowPointerUp);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+    }
+
+    host.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+      resetTracking();
+    };
+  }
+
   function mountIconPickerHost(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -475,6 +670,9 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    renderEditorChipBorderRadiusHtml,
+    renderEditorCardBorderRadiusHtml,
+    bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
@@ -486,7 +684,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.2";
+const CARD_VERSION = "1.0.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -520,6 +718,10 @@ const DEFAULT_CONFIG = {
   show_mode_buttons: true,
   show_step_controls: true,
   show_unavailable_badge: true,
+  display: {
+    /** `"target"` (default): large dial = setpoint; secondary = current when a target exists. `"current"`: swap. */
+    main_temperature: "target",
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -545,11 +747,12 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--primary-text-color)",
-      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+      off_color: "var(--primary-text-color)",
     },
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 10px",
+    chip_border_radius: "999px",
     title_size: "16px",
     current_size: "16px",
     target_size: "50px",
@@ -558,14 +761,15 @@ const DEFAULT_CONFIG = {
       max_size: "480px",
       stroke: "18px",
       thumb_size: "24px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
-      background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
+      /** Inactive arc: must read on warm accent-tinted dial surfaces (not only flat `ha-card-background`). */
+      track_color: "color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color))",
+      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       heat_color: "#f59f42",
       cool_color: "#71c0ff",
       dry_color: "#7fd0c8",
       auto_color: "#c5a66f",
       fan_color: "#83d39c",
-      off_color: "rgba(255, 255, 255, 0.28)",
+      off_color: "var(--primary-text-color)",
     },
     control: {
       size: "42px",
@@ -807,11 +1011,11 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("dial.background")) {
-    return "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
+    return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
+    return "color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -827,7 +1031,7 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+    return "var(--primary-text-color)";
   }
 
   if (normalizedField.endsWith("background")) {
@@ -1058,9 +1262,8 @@ function getModeMeta(mode) {
     case "cooling":
       return { label: "Cool", icon: "mdi:snowflake", accent: "cool" };
     case "heat_cool":
-      return { label: "Auto", icon: "mdi:thermostat-auto", accent: "auto" };
     case "auto":
-      return { label: "Auto", icon: "mdi:autorenew", accent: "auto" };
+      return { label: "Auto", icon: "mdi:thermostat-auto", accent: "auto" };
     case "dry":
     case "drying":
       return { label: "Dry", icon: "mdi:water-percent", accent: "dry" };
@@ -1093,16 +1296,22 @@ function getActionMeta(action) {
   }
 }
 
-/** Dial icon/label: prefer `hvac_action`; never pass a bogus icon when action is empty (fan_mode / preset_mode may be null). */
+/** Dial icon/label: prefer `hvac_action` unless HVAC is off (`hvac_action` is often `idle` while mode is `off`). */
 function climateDialActionMeta(actionRaw, modeRaw) {
+  const modeKey = normalizeTextKey(String(modeRaw || "").trim());
+  if (modeKey === "off") {
+    const m = getModeMeta("off");
+    return { icon: m.icon, label: m.label, accent: m.accent };
+  }
   const action = String(actionRaw || "").trim();
   if (action) {
     const m = getActionMeta(action);
-    return { icon: m.icon || "mdi:thermostat", label: m.label };
+    const accent = m.accent != null ? m.accent : getModeMeta(action).accent;
+    return { icon: m.icon || "mdi:thermostat", label: m.label, accent };
   }
   const mode = String(modeRaw || "").trim();
   const m = getModeMeta(mode);
-  return { icon: m.icon || "mdi:thermostat", label: m.label };
+  return { icon: m.icon || "mdi:thermostat", label: m.label, accent: m.accent };
 }
 
 /**
@@ -1135,8 +1344,43 @@ function getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactL
   return pick("22% 14% 16% 14%", "22% 15.5% 17% 15.5%", "21% 15% 18% 15%");
 }
 
+const LEGACY_CLIMATE_ICON_OFF_COLORS = [
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
+  "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+];
+const LEGACY_CLIMATE_DIAL_OFF_COLOR = "rgba(255, 255, 255, 0.28)";
+/** Older default: arc matched flat card bg and disappeared on accent-tinted dial. */
+const LEGACY_CLIMATE_DIAL_TRACK_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
+const LEGACY_CLIMATE_DIAL_BACKGROUND = "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
+
+function migrateLegacyClimateOffColors(styles) {
+  if (!styles?.icon) {
+    return;
+  }
+  const iconOff = String(styles.icon.off_color ?? "").trim();
+  if (iconOff && (LEGACY_CLIMATE_ICON_OFF_COLORS.includes(iconOff) || /^var\(\s*--state-inactive-color/i.test(iconOff))) {
+    styles.icon.off_color = DEFAULT_CONFIG.styles.icon.off_color;
+  }
+  if (styles.dial) {
+    const dialOff = String(styles.dial.off_color ?? "").trim();
+    if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) {
+      styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
+    }
+    const track = String(styles.dial.track_color ?? "").trim().replace(/\s+/g, " ");
+    if (track === LEGACY_CLIMATE_DIAL_TRACK_COLOR.replace(/\s+/g, " ")) {
+      styles.dial.track_color = DEFAULT_CONFIG.styles.dial.track_color;
+    }
+    const dialBg = String(styles.dial.background ?? "").trim().replace(/\s+/g, " ");
+    if (dialBg === LEGACY_CLIMATE_DIAL_BACKGROUND.replace(/\s+/g, " ")) {
+      styles.dial.background = DEFAULT_CONFIG.styles.dial.background;
+    }
+  }
+}
+
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  migrateLegacyClimateOffColors(config.styles);
+  return config;
 }
 
 function getDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
@@ -1207,6 +1451,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitDebounceTimer = 0;
     this._temperatureCommitQueuedValue = null;
     this._temperatureCommitInFlight = false;
+    this._temperatureCommitRequiresHvacWake = false;
     this._temperatureCommitRetryCount = 0;
     this._rangeCommitDebounceTimer = 0;
     this._rangeCommitQueuedValue = null;
@@ -1297,6 +1542,7 @@ class NodaliaClimateCard extends HTMLElement {
       }
       this._selectedRangeThumb = null;
       this._lastDualRangeModeKey = null;
+      this._temperatureCommitRequiresHvacWake = false;
     }
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -1447,6 +1693,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._rangeCommitQueuedValue = null;
     this._temperatureCommitRetryCount = 0;
     this._rangeCommitRetryCount = 0;
+    this._temperatureCommitRequiresHvacWake = false;
 
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -1614,12 +1861,22 @@ class NodaliaClimateCard extends HTMLElement {
     if (this._isDualSetpointRange(state)) {
       return true;
     }
-    return (
-      Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
-      Number.isFinite(parseFiniteClimateNumber(attrs.max_temp))
-    );
+    return false;
   }
 
+  _supportsTargetTemperatureControl(state) {
+    const features = Number(state?.attributes?.supported_features);
+    if (Number.isFinite(features)) {
+      return Boolean((features & 1) || (features & 2));
+    }
+    return this._supportsTargetTemperature(state);
+  }
+
+  /**
+   * Reported target temperature for single-setpoint modes, or mid-point while dragging dual range.
+   * Returns `null` when the integration exposes no active setpoint (e.g. Ecobee `heat_cool` with
+   * `temperature` / `target_temp_low` / `target_temp_high` all unset) — callers must not invent a fallback.
+   */
   _getTargetTemperature(state) {
     const entityId = this._config?.entity;
     if (entityId && this._draftTemperature.has(entityId)) {
@@ -1645,8 +1902,7 @@ class NodaliaClimateCard extends HTMLElement {
       return Number(((high + low) / 2).toFixed(1));
     }
 
-    const range = this._getTemperatureRange(state);
-    return Number((((range.min + range.max) / 2)).toFixed(1));
+    return null;
   }
 
   _getCurrentTemperature(state) {
@@ -1717,6 +1973,77 @@ class NodaliaClimateCard extends HTMLElement {
     return normalizeTextKey(this._getCurrentMode(state)) === "off";
   }
 
+  /**
+   * Some integrations leave `attributes.hvac_mode` non-off while `state` is already `off`.
+   * Off-null setpoint wake and similar paths must still treat the entity as shut off.
+   */
+  _isEffectiveClimateOff(state) {
+    if (!state) {
+      return false;
+    }
+    if (normalizeTextKey(String(state.state ?? "").trim()) === "off") {
+      return true;
+    }
+    return this._isOff(state);
+  }
+
+  /**
+   * Ecobee-style: indoor temp known, but no published single or dual setpoints yet.
+   * Used by step buttons without treating `current_temperature` as a visible target.
+   */
+  _isNullSetpointFromCurrentState(state) {
+    if (!state?.attributes || isUnavailableState(state)) {
+      return false;
+    }
+    const attrs = state.attributes;
+    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+      return false;
+    }
+    const low = parseFiniteClimateNumber(attrs.target_temp_low);
+    const high = parseFiniteClimateNumber(attrs.target_temp_high);
+    if (Number.isFinite(low) || Number.isFinite(high)) {
+      return false;
+    }
+    return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
+  }
+
+  _isOffNullSetpointState(state) {
+    return this._isEffectiveClimateOff(state) && this._isNullSetpointFromCurrentState(state);
+  }
+
+  /**
+   * HVAC mode to enable before `set_temperature` when creating a setpoint from current temperature.
+   * Order: heat → cool → heat_cool (Better Thermostat / Ecobee-friendly; differs from `_getPreferredOnMode` toggle order).
+   */
+  _getSetpointWakeHvacMode(state) {
+    const modeSet = new Set(
+      (Array.isArray(state?.attributes?.hvac_modes) ? state.attributes.hvac_modes : [])
+        .map(item => normalizeTextKey(String(item || "").trim()))
+        .filter(Boolean),
+    );
+    for (const candidate of ["heat", "cool", "heat_cool"]) {
+      if (modeSet.has(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  _supportsNullSetpointCreation(state) {
+    if (!this._isNullSetpointFromCurrentState(state)) {
+      return false;
+    }
+    if (!this._supportsTargetTemperatureControl(state)) {
+      return false;
+    }
+    const { min, max } = this._getTemperatureRange(state);
+    return Number.isFinite(min) && Number.isFinite(max) && min < max;
+  }
+
+  _supportsOffNullSetpointWake(state) {
+    return this._isOffNullSetpointState(state) && this._supportsNullSetpointCreation(state);
+  }
+
   _getStateLabel(state) {
     const action = this._getCurrentAction(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
@@ -1734,11 +2061,9 @@ class NodaliaClimateCard extends HTMLElement {
   _getAccentColor(state) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const dialStyles = styles.dial || DEFAULT_CONFIG.styles.dial;
-    const action = this._getCurrentAction(state);
-    const mode = action || this._getCurrentMode(state);
-    const accentKey = getModeMeta(mode).accent;
+    const { accent } = climateDialActionMeta(this._getCurrentAction(state), this._getCurrentMode(state));
 
-    switch (accentKey) {
+    switch (accent) {
       case "heat":
         return dialStyles.heat_color;
       case "cool":
@@ -1786,9 +2111,20 @@ class NodaliaClimateCard extends HTMLElement {
 
   _queueTemperatureCommit(value, options = {}) {
     const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
+    if (!state || this._isDualSetpointRange(state)) {
       return null;
     }
+
+    const offNullWake =
+      options.hvacWake === true &&
+      this._isOffNullSetpointState(state) &&
+      this._supportsOffNullSetpointWake(state);
+
+    if (!this._supportsTargetTemperature(state) && !offNullWake) {
+      return null;
+    }
+
+    this._temperatureCommitRequiresHvacWake = Boolean(offNullWake);
 
     const normalized = this._normalizeTemperatureValue(value, state);
     const entityId = this._config?.entity;
@@ -1859,10 +2195,25 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitInFlight = true;
     let serviceFailed = false;
 
+    const hvacWake = this._temperatureCommitRequiresHvacWake;
+    this._temperatureCommitRequiresHvacWake = false;
+
     try {
-      await Promise.resolve(this._setClimateService("set_temperature", {
-        temperature: target,
-      }));
+      if (hvacWake) {
+        const wakeMode = this._getSetpointWakeHvacMode(state);
+        if (!wakeMode) {
+          serviceFailed = true;
+        } else {
+          await Promise.resolve(this._setClimateService("set_hvac_mode", {
+            hvac_mode: wakeMode,
+          }));
+        }
+      }
+      if (!serviceFailed) {
+        await Promise.resolve(this._setClimateService("set_temperature", {
+          temperature: target,
+        }));
+      }
     } catch (_error) {
       serviceFailed = true;
       this._temperatureCommitQueuedValue = target;
@@ -1870,6 +2221,7 @@ class NodaliaClimateCard extends HTMLElement {
       this._temperatureCommitInFlight = false;
 
       if (serviceFailed) {
+        this._temperatureCommitRequiresHvacWake = Boolean(hvacWake);
         this._scheduleDraftReset();
         return;
       }
@@ -2023,6 +2375,48 @@ class NodaliaClimateCard extends HTMLElement {
     return normalized;
   }
 
+  async _createSetpointFromCurrentBy(delta) {
+    const state = this._getState();
+    if (!state || !this._supportsNullSetpointCreation(state)) {
+      return false;
+    }
+
+    const baseline = this._getCurrentTemperature(state);
+    if (!Number.isFinite(baseline)) {
+      return false;
+    }
+
+    const step = this._getTemperatureStep(state);
+    const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
+    if (!Number.isFinite(next)) {
+      return false;
+    }
+
+    this._triggerHaptic("selection");
+
+    const wakeMode = this._getSetpointWakeHvacMode(state);
+    try {
+      if (wakeMode) {
+        await Promise.resolve(this._setClimateService("set_hvac_mode", {
+          hvac_mode: wakeMode,
+        }));
+      } else if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("Nodalia Climate Card: creating setpoint without HVAC wake mode.");
+      }
+
+      await Promise.resolve(this._setClimateService("set_temperature", {
+        temperature: next,
+        ...(wakeMode ? { hvac_mode: wakeMode } : {}),
+      }));
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("Nodalia Climate Card: failed to create setpoint from current temperature.", error);
+      }
+    }
+
+    return true;
+  }
+
   _scheduleDraftReset() {
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -2106,13 +2500,21 @@ class NodaliaClimateCard extends HTMLElement {
 
   _changeTemperatureBy(delta) {
     const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state)) {
+    if (!state) {
+      return;
+    }
+
+    if (this._supportsNullSetpointCreation(state)) {
+      this._createSetpointFromCurrentBy(delta);
       return;
     }
 
     const step = this._getTemperatureStep(state);
 
     if (this._isDualSetpointRange(state)) {
+      if (!this._supportsTargetTemperature(state)) {
+        return;
+      }
       const { low, high } = this._getEffectiveTargetLowHigh(state);
       if (!Number.isFinite(low) || !Number.isFinite(high)) {
         return;
@@ -2162,7 +2564,14 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if (!this._supportsTargetTemperature(state)) {
+      return;
+    }
+
     const current = this._getTargetTemperature(state);
+    if (!Number.isFinite(Number(current))) {
+      return;
+    }
     const next = this._normalizeTemperatureValue(Number(current) + (Number(delta) * step), state);
     this._triggerHaptic("selection");
     this._queueTemperatureCommit(next, {
@@ -2340,7 +2749,7 @@ class NodaliaClimateCard extends HTMLElement {
 
   _updateDialPreview(value) {
     const state = this._getState();
-    if (this._isDualSetpointRange(state)) {
+    if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
       return;
     }
     const dial = this.shadowRoot?.querySelector(".climate-card__dial");
@@ -2416,7 +2825,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    if (this._isDualSetpointRange(state)) {
+    if (!this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
       this._setDialDraggingState(false, dial);
       this._activeDialDrag = null;
       this._setDragWindowListeners(false);
@@ -3100,7 +3509,7 @@ class NodaliaClimateCard extends HTMLElement {
     const modeOptions = config.show_mode_buttons !== false ? this._getOrderedModeOptions(state) : [];
     const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
-    const isOff = this._isOff(state) || isUnavailableState(state);
+    const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
     const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const isRangeMode = !isOff && this._isDualSetpointRange(state);
     if (!isRangeMode) {
@@ -3114,12 +3523,34 @@ class NodaliaClimateCard extends HTMLElement {
       this._lastDualRangeModeKey = modeKey;
     }
     const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
-    const dialThumbValue = isRangeMode ? NaN : targetTemperature;
-    const dialPrimaryReadoutValue = isRangeMode
-      ? (currentTemperature !== null ? currentTemperature : NaN)
-      : targetTemperature;
+    const hasNumericTarget =
+      targetTemperature !== null && targetTemperature !== undefined && Number.isFinite(Number(targetTemperature));
+    const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
+    const mainTemperaturePref =
+      normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
+    const currentFin =
+      currentTemperature !== null && Number.isFinite(Number(currentTemperature))
+        ? Number(currentTemperature)
+        : NaN;
+    const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
+    const dialThumbValue = isRangeMode ? NaN : (supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN);
+    let dialPrimaryReadoutValue;
+    if (isRangeMode) {
+      dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
+    } else if (mainTemperaturePref === "current") {
+      dialPrimaryReadoutValue = Number.isFinite(currentFin)
+        ? currentFin
+        : (Number.isFinite(targetFin) ? targetFin : NaN);
+    } else if (Number.isFinite(targetFin)) {
+      dialPrimaryReadoutValue = targetFin;
+    } else if (Number.isFinite(currentFin)) {
+      dialPrimaryReadoutValue = currentFin;
+    } else {
+      dialPrimaryReadoutValue = NaN;
+    }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
+    const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
     const tempScale = getClimateTemperatureScaleLetter(hass);
     const translateClimateMode = mode => (
       window.NodaliaI18n?.translateClimateHvacLabel
@@ -3131,7 +3562,10 @@ class NodaliaClimateCard extends HTMLElement {
     const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
     const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
-    const showStepControls = config.show_step_controls !== false && supportsTargetTemperature;
+    const supportsNullSetpointCreation = this._supportsNullSetpointCreation(state);
+    const showStepControls =
+      config.show_step_controls !== false &&
+      (supportsTargetTemperature || supportsNullSetpointCreation);
     const contentColumnGap = showStepControls
       ? (tightLayout ? "8px" : compactLayout ? "9px" : "10px")
       : effectiveCardGap;
@@ -3161,6 +3595,7 @@ class NodaliaClimateCard extends HTMLElement {
       Math.min(parseSizeToPixels(styles.chip_font_size, 11), tightLayout ? 10 : compactLayout ? 10.5 : 11),
     )}px`;
     const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const dialMaxCapPx = Math.max(
       220,
       parseSizeToPixels(styles.dial?.max_size ?? DEFAULT_CONFIG.styles.dial.max_size, 480),
@@ -3339,18 +3774,41 @@ class NodaliaClimateCard extends HTMLElement {
           : formatTemperature(null, temperatureStep, false, hass),
       )
       : escapeHtml(formatTemperature(dialPrimaryReadoutValue, temperatureStep, false, hass));
+    const dialNoSetpointHint =
+      window.NodaliaI18n?.translateClimateDialNoSetpointHint != null
+        ? window.NodaliaI18n.translateClimateDialNoSetpointHint(hass, i18nLang)
+        : "No active setpoint";
     const dialMetaHtml = isRangeMode
       ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>`
-      : (currentTemperature !== null
-        ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
-        : "");
-    const ariaDialValue = Number.isFinite(dialPrimaryReadoutValue) ? dialPrimaryReadoutValue : temperatureRange.min;
+      : noSetpointDial
+        ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>`
+        : mainTemperaturePref === "current" && hasPublishedSingleTarget && Number.isFinite(targetFin)
+          ? `<span>${escapeHtml(formatTemperature(targetFin, temperatureStep, true, hass))}</span>`
+          : (currentTemperature !== null
+            ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
+            : "");
+    const dialActionHtml =
+      noSetpointDial && isOff
+        ? ""
+        : `<span class="climate-card__dial-action">
+                    <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
+                  </span>`;
+    const dialAriaLabelVariant = isRangeMode ? "rangeGroup" : noSetpointDial ? "noSetpoint" : "targetSlider";
+    const dialAriaFallback =
+      dialAriaLabelVariant === "rangeGroup"
+        ? "Comfort range and indoor temperature"
+        : dialAriaLabelVariant === "noSetpoint"
+          ? "Indoor temperature; thermostat has no active target yet"
+          : "Target temperature";
     const dialAriaLabel =
       window.NodaliaI18n?.translateClimateDialAria != null
-        ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, isRangeMode ? "rangeGroup" : "targetSlider")
-        : isRangeMode
-          ? "Comfort range and indoor temperature"
-          : "Target temperature";
+        ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, dialAriaLabelVariant)
+        : dialAriaFallback;
+    const ariaDialSemanticValue = Number.isFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
+    const ariaDialValue =
+      !isRangeMode && !noSetpointDial && Number.isFinite(ariaDialSemanticValue)
+        ? ariaDialSemanticValue
+        : null;
     const cardBackground = isOff
       ? styles.card.background
       : `
@@ -3367,7 +3825,7 @@ class NodaliaClimateCard extends HTMLElement {
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
     `.trim();
-    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 68%, var(--primary-text-color) 32%)`;
+    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 52%, var(--primary-text-color) 48%)`;
     const dialHeatStroke = String(styles.dial.heat_color || "#f59f42").trim();
     const dialCoolStroke = String(styles.dial.cool_color || "#71c0ff").trim();
     const animations = this._getAnimationSettings();
@@ -3625,7 +4083,7 @@ class NodaliaClimateCard extends HTMLElement {
           backdrop-filter: blur(18px);
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
+          border-radius: ${chipBorderRadius};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
@@ -3697,6 +4155,33 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial--dual-range {
           cursor: default;
+        }
+
+        .climate-card__dial--no-setpoint {
+          cursor: default;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-hit {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-thumb:not(.climate-card__dial-current-marker) {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-progress {
+          opacity: 0.2;
+        }
+
+        .climate-card__dial-no-setpoint {
+          color: var(--secondary-text-color);
+          font-size: 0.9em;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+          line-height: 1.25;
+          text-align: center;
         }
 
         .climate-card__dial--dual-range .climate-card__dial-thumb--heat,
@@ -4313,13 +4798,12 @@ class NodaliaClimateCard extends HTMLElement {
 
           <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
             <div
-              class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}"
+              class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}${noSetpointDial ? " climate-card__dial--no-setpoint" : ""}"
               data-climate-control="dial"
-              role="${isRangeMode ? "group" : "slider"}"
+              role="${isRangeMode || noSetpointDial ? "group" : "slider"}"
               aria-label="${escapeHtml(dialAriaLabel)}"
-              ${!isRangeMode ? `aria-valuemin="${temperatureRange.min}"` : ""}
-              ${!isRangeMode ? `aria-valuemax="${temperatureRange.max}"` : ""}
-              ${!isRangeMode ? `aria-valuenow="${ariaDialValue}"` : ""}
+              ${!isRangeMode && !noSetpointDial && ariaDialValue !== null ? `aria-valuemin="${temperatureRange.min}" aria-valuemax="${temperatureRange.max}" aria-valuenow="${ariaDialValue}"` : ""}
+              ${noSetpointDial ? "aria-disabled=\"true\"" : ""}
               style="${dialInlineVars}"
             >
               <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">
@@ -4334,9 +4818,7 @@ class NodaliaClimateCard extends HTMLElement {
                 <div class="climate-card__divider"></div>
                 <div class="climate-card__dial-meta">
                   ${dialMetaHtml}
-                  <span class="climate-card__dial-action">
-                    <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
-                  </span>
+                  ${dialActionHtml}
                 </div>
                 ${dialControlsMarkup}
               </div>
@@ -4344,7 +4826,7 @@ class NodaliaClimateCard extends HTMLElement {
           </div>
 
           ${
-            config.show_step_controls !== false && supportsTargetTemperature
+            showStepControls
               ? `
                 <div class="climate-card__steps ${shouldAnimateEntrance ? "climate-card__steps--entering" : ""}">
                   <button
@@ -4692,6 +5174,36 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -4836,6 +5348,24 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.display_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.display_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField(
+              "ed.climate.main_temperature",
+              "display.main_temperature",
+              config.display?.main_temperature === "current" ? "current" : "target",
+              [
+                { value: "target", label: "ed.climate.main_temperature_target" },
+                { value: "current", label: "ed.climate.main_temperature_current" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.visibility_hint_legacy"))}</div>
           </div>
@@ -4882,7 +5412,19 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           <div class="editor-grid">
             ${this._renderTextField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
             ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
-            ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+            ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+              escapeHtml,
+              field: "styles.card.border_radius",
+              value: config.styles?.card?.border_radius,
+              tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+              labels: {
+                pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                round: this._editorLabel("ed.entity.chip_radius_round"),
+                square: this._editorLabel("ed.entity.chip_radius_square"),
+              },
+            })}
+            <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
             ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
             ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
             ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
@@ -4903,6 +5445,18 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.climate.chip_height", "styles.chip_height", config.styles.chip_height)}
             ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
             ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+            ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+              escapeHtml,
+              field: "styles.chip_border_radius",
+              value: config.styles?.chip_border_radius,
+              tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+              labels: {
+                pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                round: this._editorLabel("ed.entity.chip_radius_round"),
+                square: this._editorLabel("ed.entity.chip_radius_square"),
+              },
+            })}
             ${this._renderTextField("ed.climate.mode_button_size", "styles.control.size", config.styles.control.size)}
             ${this._renderTextField("ed.climate.step_button_size", "styles.step_control.size", config.styles.step_control.size)}
           </div>
@@ -5552,6 +6106,36 @@ class NodaliaClimateCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
+
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
@@ -5749,18 +6333,19 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.layout_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.layout_hint"))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.display_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.display_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
-              type: "number",
-              valueType: "number",
-            })}
-            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
-              type: "number",
-              valueType: "number",
-            })}
+            ${this._renderSelectField(
+              "ed.climate.main_temperature",
+              "display.main_temperature",
+              config.display?.main_temperature === "current" ? "current" : "target",
+              [
+                { value: "target", label: "ed.climate.main_temperature_target" },
+                { value: "current", label: "ed.climate.main_temperature_current" },
+              ],
+            )}
           </div>
         </section>
 
@@ -5865,7 +6450,19 @@ class NodaliaClimateCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("ed.person.style_card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
@@ -5885,6 +6482,18 @@ class NodaliaClimateCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.climate.chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.climate.chip_text", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.climate.chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                    escapeHtml,
+                    field: "styles.chip_border_radius",
+                    value: config.styles?.chip_border_radius,
+                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  })}
                   ${this._renderTextField("ed.climate.dial_size", "styles.dial.size", config.styles.dial.size)}
                   ${this._renderTextField("ed.climate.dial_max_size", "styles.dial.max_size", config.styles.dial.max_size)}
                   ${this._renderTextField("ed.climate.dial_stroke", "styles.dial.stroke", config.styles.dial.stroke)}
