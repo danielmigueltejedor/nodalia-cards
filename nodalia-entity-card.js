@@ -582,7 +582,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.0.3-alpha.4";
+const CARD_VERSION = "1.0.3-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1966,7 +1966,7 @@ class NodaliaEntityCard extends HTMLElement {
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
-          cursor: ${canRunPrimaryAction ? "pointer" : "default"};
+          cursor: ${canRunIconTap || canRunBodyTap ? "pointer" : "default"};
           display: inline-flex;
           flex: 0 0 auto;
           height: ${effectiveIconSize};

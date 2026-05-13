@@ -21,6 +21,19 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.5] - 2026-05-12
+
+Fifth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.5`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.
+
+### Fixed
+
+- **`nodalia-entity-card.js`:** **`_render()`** no longer throws a **`ReferenceError`** from an undefined **`canRunPrimaryAction`** left in the icon **`cursor`** CSS after the body / icon tap split; that runtime error could blank entire dashboard columns that used the entity card.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.5`**.
+
+---
 ## [1.0.3-alpha.4] - 2026-05-12
 
 Fourth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.4`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.
