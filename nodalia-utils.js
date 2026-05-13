@@ -110,21 +110,22 @@
    */
   function editorFilteredStatesSignature(hass, language, predicate) {
     const states = hass?.states || {};
-    const rows = [];
+    const ids = [];
     for (const id of Object.keys(states)) {
       if (!predicate(id)) {
         continue;
       }
-      const state = states[id];
-      rows.push(
-        `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`,
-      );
+      ids.push(id);
     }
-    rows.sort((left, right) => {
-      const idLeft = left.split(":")[0];
-      const idRight = right.split(":")[0];
-      return idLeft.localeCompare(idRight, undefined, { sensitivity: "base" });
-    });
+    ids.sort();
+
+    const rows = new Array(ids.length);
+    for (let index = 0; index < ids.length; index += 1) {
+      const id = ids[index];
+      const state = states[id];
+      rows[index] = `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`;
+    }
+
     const tag =
       typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
         ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))

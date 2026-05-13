@@ -64,6 +64,15 @@ test("high-frequency cards share render signature runtime", () => {
   });
 });
 
+test("editor entity signatures sort ids before formatting rows", () => {
+  const source = read("nodalia-utils.js");
+  assert.match(source, /const ids = \[\];/);
+  assert.match(source, /ids\.sort\(\);/);
+  assert.match(source, /const rows = new Array\(ids\.length\);/);
+  assert.doesNotMatch(source, /rows\.sort\(\(left, right\)/);
+  assert.doesNotMatch(source, /\.split\(":\"\)\[0\]/);
+});
+
 test("drag listeners stay attach-on-drag only", () => {
   const files = [
     "nodalia-light-card.js",

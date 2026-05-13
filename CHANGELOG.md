@@ -21,6 +21,16 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.15] - 2026-05-13
+
+Fifteenth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.15`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **Editor performance:** optimized the shared entity-picker signature helper used by visual editors. Editors now sort matching entity IDs before formatting rows, avoiding per-comparison string splitting and locale comparison overhead when Home Assistant has many entities.
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.15`**.
+
+---
 ## [1.0.3-alpha.14] - 2026-05-13
 
 Fourteenth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.14`** on **`package.json`**, **`nodalia-cards.manifest.js`**, and **`__NODALIA_BUNDLE__.pkgVersion`**.
