@@ -20,6 +20,7 @@
     "warnStrictServiceDenied",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
+    "bindHostPointerHoldGesture",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -486,8 +487,107 @@
   }
 
   /**
-   * Mount or update ha-icon-picker / text input without recreating each render.
+   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
+   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
+   * card's click handler can ignore the following click (synthetic after pointerup).
    */
+  function bindHostPointerHoldGesture(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return () => {};
+    }
+    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
+      return () => {};
+    }
+    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
+      ? Math.round(Number(options.holdMs))
+      : 500;
+    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
+      ? Number(options.moveTolerancePx)
+      : 12;
+    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
+    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
+      ? options.markHoldConsumedClick
+      : () => {};
+
+    let timer = null;
+    let active = null;
+
+    function clearWindowListeners() {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+      window.removeEventListener("pointermove", onWindowPointerMove);
+    }
+
+    function resetTracking() {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      clearWindowListeners();
+      active = null;
+    }
+
+    function onWindowPointerMove(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      const dx = ev.clientX - active.x;
+      const dy = ev.clientY - active.y;
+      if (Math.hypot(dx, dy) > moveTol) {
+        resetTracking();
+      }
+    }
+
+    function onWindowPointerUp(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      resetTracking();
+    }
+
+    function onPointerDownCapture(ev) {
+      if (!(ev instanceof PointerEvent)) {
+        return;
+      }
+      if (typeof ev.button === "number" && ev.button !== 0) {
+        return;
+      }
+      const zone = options.resolveZone(ev);
+      if (!zone) {
+        return;
+      }
+      if (shouldBeginHold(zone, ev) !== true) {
+        return;
+      }
+      resetTracking();
+      active = {
+        pointerId: ev.pointerId,
+        x: ev.clientX,
+        y: ev.clientY,
+        zone,
+      };
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (!active || active.pointerId !== ev.pointerId) {
+          return;
+        }
+        const z = active.zone;
+        resetTracking();
+        options.onHold(z);
+        markHoldConsumedClick();
+      }, holdMs);
+      window.addEventListener("pointerup", onWindowPointerUp);
+      window.addEventListener("pointercancel", onWindowPointerUp);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+    }
+
+    host.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+      resetTracking();
+    };
+  }
+
   function mountIconPickerHost(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -571,6 +671,7 @@
     warnStrictServiceDenied,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
+    bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
@@ -582,7 +683,7 @@
 
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "1.0.3-alpha.6";
+const CARD_VERSION = "1.0.3-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -607,6 +708,11 @@ const DEFAULT_CONFIG = {
   tap_service_data: "",
   tap_url: "",
   tap_new_tab: false,
+  hold_action: "none",
+  hold_service: "",
+  hold_service_data: "",
+  hold_url: "",
+  hold_new_tab: false,
   show_name: true,
   show_value: true,
   haptics: {
@@ -1054,6 +1160,13 @@ function normalizeConfig(rawConfig) {
       merged.styles.tint.color = getTintPresetColor(legacyPreset);
     }
   }
+  const HOLD_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+  const h = String(merged.hold_action ?? "none").trim().toLowerCase();
+  merged.hold_action = HOLD_ACTIONS.has(h) ? h : "none";
+  merged.hold_service = String(merged.hold_service ?? "").trim();
+  merged.hold_service_data = String(merged.hold_service_data ?? "").trim();
+  merged.hold_url = String(merged.hold_url ?? "").trim();
+  merged.hold_new_tab = merged.hold_new_tab === true;
   return merged;
 }
 
@@ -1072,14 +1185,34 @@ class NodaliaInsigniaCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
+    this._suppressNextInsigniaTap = false;
     this._onClick = this._onClick.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onClick);
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const trigger = event
+                .composedPath()
+                .find(node => node instanceof HTMLElement && node.dataset?.insigniaAction === "primary");
+              return trigger ? "primary" : null;
+            },
+            shouldBeginHold: () => this._resolveInsigniaHoldAction() !== "none",
+            onHold: () => {
+              this._handlePrimaryHoldAction();
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextInsigniaTap = true;
+            },
+          })
+        : () => {};
   }
 
   disconnectedCallback() {
+    this._detachHostHold?.();
     this.shadowRoot.removeEventListener("click", this._onClick);
   }
 
@@ -1369,9 +1502,112 @@ class NodaliaInsigniaCard extends HTMLElement {
       return;
     }
 
+    if (this._suppressNextInsigniaTap) {
+      this._suppressNextInsigniaTap = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     this._handlePrimaryAction();
+  }
+
+  _resolveInsigniaHoldAction() {
+    const state = this._getState();
+    const action = String(this._config?.hold_action || "none").trim().toLowerCase();
+    if (action === "none") {
+      return "none";
+    }
+    if (action === "auto") {
+      return state && this._config?.entity ? "more-info" : "none";
+    }
+    if (action === "more-info") {
+      return this._config?.entity ? "more-info" : "none";
+    }
+    if (action === "toggle") {
+      return this._config?.entity ? "toggle" : "none";
+    }
+    if (action === "service") {
+      return String(this._config?.hold_service || "").trim() ? "service" : "none";
+    }
+    if (action === "navigate") {
+      return String(this._config?.hold_url || "").trim() ? "navigate" : "none";
+    }
+    if (action === "url") {
+      return String(this._config?.hold_url || "").trim() ? "url" : "none";
+    }
+    return "none";
+  }
+
+  _handlePrimaryHoldAction() {
+    const state = this._getState();
+    const action = String(this._config?.hold_action || "none").trim().toLowerCase();
+    const navigationPath = this._config.hold_url;
+
+    if (action === "none") {
+      return;
+    }
+
+    this._triggerHaptic();
+
+    if (action === "more-info" || (action === "auto" && state)) {
+      fireEvent(this, "hass-more-info", { entityId: this._config.entity });
+      return;
+    }
+
+    if (action === "toggle") {
+      this._hass?.callService("homeassistant", "toggle", { entity_id: this._config.entity });
+      return;
+    }
+
+    if (action === "service" && this._config.hold_service) {
+      if (!this._isServiceAllowed(this._config.hold_service)) {
+        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Insignia Card", this._config.hold_service);
+        return;
+      }
+      const [domain, service] = this._config.hold_service.split(".");
+      if (domain && service) {
+        let serviceData = {};
+        if (this._config.hold_service_data) {
+          try {
+            serviceData = JSON.parse(this._config.hold_service_data);
+          } catch (_error) {
+            serviceData = {};
+          }
+        }
+        this._hass?.callService(domain, service, serviceData);
+      }
+      return;
+    }
+
+    if (action === "navigate" && navigationPath) {
+      const path = navigationPath;
+      if (this._hass?.navigate) {
+        this._hass.navigate(path);
+        return;
+      }
+      if (window?.history?.pushState) {
+        window.history.pushState(null, "", path);
+        fireEvent(this, "location-changed", { replace: false });
+        return;
+      }
+      fireEvent(this, "hass-navigate", { path });
+      return;
+    }
+
+    if (action === "url" && this._config.hold_url) {
+      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl(this._config.hold_url, { allowRelative: true });
+      if (!safeUrl) {
+        return;
+      }
+      if (this._config.hold_new_tab) {
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.href = safeUrl;
+      }
+    }
   }
 
   _handlePrimaryAction() {
@@ -2186,6 +2422,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const rawTap = config.tap_action;
     const tapAction = typeof rawTap === "string" ? rawTap : isObject(rawTap) ? String(rawTap.action || "auto") : "auto";
+    const holdActionStr = typeof config.hold_action === "string" ? config.hold_action : "none";
     const hapticStyle = config.haptics?.style || "medium";
 
     this.shadowRoot.innerHTML = `
@@ -2531,6 +2768,31 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
                   ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
                     placeholder: '{"brightness_pct": 50}',
                   })}
+                `
+                : ""
+            }
+            ${
+              tapAction === "navigate"
+                ? this._renderTextField("ed.insignia.panel_path", "tap_url", config.tap_url, {
+                    placeholder: "/lovelace/0",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
+              tapAction === "url"
+                ? `
+                  ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
+                    placeholder: "https://example.com",
+                    fullWidth: true,
+                  })}
+                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
+                `
+                : ""
+            }
+            ${
+              tapAction === "service" || holdActionStr === "service"
+                ? `
                   ${this._renderCheckboxField(
                     "ed.entity.security_strict",
                     "security.strict_service_actions",
@@ -2553,22 +2815,59 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
                 `
                 : ""
             }
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.insignia.hold_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.hold_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField(
+              "ed.insignia.card_hold_action",
+              "hold_action",
+              holdActionStr,
+              [
+                { value: "auto", label: "ed.entity.tap_auto" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "service", label: "ed.entity.tap_service" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
             ${
-              tapAction === "navigate"
-                ? this._renderTextField("ed.insignia.panel_path", "tap_url", config.tap_url, {
+              holdActionStr === "service"
+                ? `
+                  ${this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, {
+                    placeholder: "light.turn_on",
+                    fullWidth: true,
+                  })}
+                  ${this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, {
+                    placeholder: '{"brightness_pct": 50}',
+                  })}
+                `
+                : ""
+            }
+            ${
+              holdActionStr === "navigate"
+                ? this._renderTextField("ed.insignia.panel_path", "hold_url", config.hold_url, {
                     placeholder: "/lovelace/0",
                     fullWidth: true,
                   })
                 : ""
             }
             ${
-              tapAction === "url"
+              holdActionStr === "url"
                 ? `
-                  ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
+                  ${this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, {
                     placeholder: "https://example.com",
                     fullWidth: true,
                   })}
-                  ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
+                  ${this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true)}
                 `
                 : ""
             }

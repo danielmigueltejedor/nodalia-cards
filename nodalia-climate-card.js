@@ -20,6 +20,7 @@
     "warnStrictServiceDenied",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
+    "bindHostPointerHoldGesture",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -486,8 +487,107 @@
   }
 
   /**
-   * Mount or update ha-icon-picker / text input without recreating each render.
+   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
+   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
+   * card's click handler can ignore the following click (synthetic after pointerup).
    */
+  function bindHostPointerHoldGesture(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return () => {};
+    }
+    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
+      return () => {};
+    }
+    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
+      ? Math.round(Number(options.holdMs))
+      : 500;
+    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
+      ? Number(options.moveTolerancePx)
+      : 12;
+    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
+    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
+      ? options.markHoldConsumedClick
+      : () => {};
+
+    let timer = null;
+    let active = null;
+
+    function clearWindowListeners() {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+      window.removeEventListener("pointermove", onWindowPointerMove);
+    }
+
+    function resetTracking() {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      clearWindowListeners();
+      active = null;
+    }
+
+    function onWindowPointerMove(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      const dx = ev.clientX - active.x;
+      const dy = ev.clientY - active.y;
+      if (Math.hypot(dx, dy) > moveTol) {
+        resetTracking();
+      }
+    }
+
+    function onWindowPointerUp(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      resetTracking();
+    }
+
+    function onPointerDownCapture(ev) {
+      if (!(ev instanceof PointerEvent)) {
+        return;
+      }
+      if (typeof ev.button === "number" && ev.button !== 0) {
+        return;
+      }
+      const zone = options.resolveZone(ev);
+      if (!zone) {
+        return;
+      }
+      if (shouldBeginHold(zone, ev) !== true) {
+        return;
+      }
+      resetTracking();
+      active = {
+        pointerId: ev.pointerId,
+        x: ev.clientX,
+        y: ev.clientY,
+        zone,
+      };
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (!active || active.pointerId !== ev.pointerId) {
+          return;
+        }
+        const z = active.zone;
+        resetTracking();
+        options.onHold(z);
+        markHoldConsumedClick();
+      }, holdMs);
+      window.addEventListener("pointerup", onWindowPointerUp);
+      window.addEventListener("pointercancel", onWindowPointerUp);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+    }
+
+    host.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+      resetTracking();
+    };
+  }
+
   function mountIconPickerHost(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -571,6 +671,7 @@
     warnStrictServiceDenied,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
+    bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
@@ -6013,23 +6114,6 @@ class NodaliaClimateCardEditor extends HTMLElement {
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:thermostat",
               fullWidth: true,
-            })}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.layout_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.layout_hint"))}</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
-              type: "number",
-              valueType: "number",
-            })}
-            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
-              type: "number",
-              valueType: "number",
             })}
           </div>
         </section>

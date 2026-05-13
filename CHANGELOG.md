@@ -21,6 +21,20 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.7] - 2026-05-12
+
+Seventh **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.7`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on updated card modules.
+
+### Added
+
+- **Long-press (hold) actions** in the **visual editor** and runtime for **`nodalia-humidifier-card.js`** (body vs icon, same action set as tap), **`nodalia-vacuum-card.js`** (body vs icon; optional **`hold_navigation_path`** / **`icon_hold_navigation_path`** for navigate), and **`nodalia-insignia-card.js`** (badge). Uses **`NodaliaUtils.bindHostPointerHoldGesture`** on the card host so holds survive shadow DOM re-renders.
+- **Editor / i18n:** **`ed.light.hold_actions_section_title`**, vacuum hold navigation labels, and insignia hold section strings; editor locales synced to the English catalog.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.7`**.
+
+---
 ## [1.0.3-alpha.6] - 2026-05-13
 
 Sixth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.6`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.

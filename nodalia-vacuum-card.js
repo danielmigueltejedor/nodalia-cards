@@ -20,6 +20,7 @@
     "warnStrictServiceDenied",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
+    "bindHostPointerHoldGesture",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -486,8 +487,107 @@
   }
 
   /**
-   * Mount or update ha-icon-picker / text input without recreating each render.
+   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
+   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
+   * card's click handler can ignore the following click (synthetic after pointerup).
    */
+  function bindHostPointerHoldGesture(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return () => {};
+    }
+    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
+      return () => {};
+    }
+    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
+      ? Math.round(Number(options.holdMs))
+      : 500;
+    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
+      ? Number(options.moveTolerancePx)
+      : 12;
+    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
+    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
+      ? options.markHoldConsumedClick
+      : () => {};
+
+    let timer = null;
+    let active = null;
+
+    function clearWindowListeners() {
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerUp);
+      window.removeEventListener("pointermove", onWindowPointerMove);
+    }
+
+    function resetTracking() {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      clearWindowListeners();
+      active = null;
+    }
+
+    function onWindowPointerMove(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      const dx = ev.clientX - active.x;
+      const dy = ev.clientY - active.y;
+      if (Math.hypot(dx, dy) > moveTol) {
+        resetTracking();
+      }
+    }
+
+    function onWindowPointerUp(ev) {
+      if (!active || ev.pointerId !== active.pointerId) {
+        return;
+      }
+      resetTracking();
+    }
+
+    function onPointerDownCapture(ev) {
+      if (!(ev instanceof PointerEvent)) {
+        return;
+      }
+      if (typeof ev.button === "number" && ev.button !== 0) {
+        return;
+      }
+      const zone = options.resolveZone(ev);
+      if (!zone) {
+        return;
+      }
+      if (shouldBeginHold(zone, ev) !== true) {
+        return;
+      }
+      resetTracking();
+      active = {
+        pointerId: ev.pointerId,
+        x: ev.clientX,
+        y: ev.clientY,
+        zone,
+      };
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (!active || active.pointerId !== ev.pointerId) {
+          return;
+        }
+        const z = active.zone;
+        resetTracking();
+        options.onHold(z);
+        markHoldConsumedClick();
+      }, holdMs);
+      window.addEventListener("pointerup", onWindowPointerUp);
+      window.addEventListener("pointercancel", onWindowPointerUp);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+    }
+
+    host.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+      resetTracking();
+    };
+  }
+
   function mountIconPickerHost(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -571,6 +671,7 @@
     warnStrictServiceDenied,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
+    bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
@@ -582,7 +683,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.0.3-alpha.6";
+const CARD_VERSION = "1.0.3-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -658,6 +759,10 @@ const DEFAULT_CONFIG = {
   tap_action: "default",
   tap_navigation_path: "",
   icon_tap_action: "",
+  hold_action: "none",
+  icon_hold_action: "",
+  hold_navigation_path: "",
+  icon_hold_navigation_path: "",
   compact_layout_mode: "auto",
   show_state_chip: true,
   show_battery_chip: true,
@@ -1067,6 +1172,23 @@ function normalizeConfig(rawConfig) {
   config.hidden_suction_modes = normalizeList(config.hidden_suction_modes);
   config.hidden_mop_modes = normalizeList(config.hidden_mop_modes);
 
+  const VACUUM_CARD_ACTION_KEYS = new Set(["default", "more_info", "navigate", "none"]);
+  const normVacuumCardActionKey = raw => {
+    const key = normalizeTextKey(String(raw ?? "").trim());
+    return VACUUM_CARD_ACTION_KEYS.has(key) ? key : null;
+  };
+  const holdKey = normVacuumCardActionKey(config.hold_action);
+  config.hold_action = holdKey || "none";
+  const iconHoldRaw = String(config.icon_hold_action ?? "").trim();
+  if (!iconHoldRaw) {
+    config.icon_hold_action = "";
+  } else {
+    const iconHoldKey = normVacuumCardActionKey(iconHoldRaw);
+    config.icon_hold_action = iconHoldKey || "";
+  }
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
+
   return config;
 }
 
@@ -1104,6 +1226,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._suppressNextVacuumTap = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -1123,6 +1246,34 @@ class NodaliaVacuumCard extends HTMLElement {
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const node = event
+                .composedPath()
+                .find(n => n instanceof HTMLElement && n.dataset?.vacuumAction);
+              const action = node?.dataset?.vacuumAction;
+              if (action === "body_tap") {
+                return "body";
+              }
+              if (action === "icon_tap") {
+                return "icon";
+              }
+              return null;
+            },
+            shouldBeginHold: zone => this._canRunConfiguredCardHoldAction(zone),
+            onHold: zone => {
+              const state = this._getState();
+              this._syncRememberedModeSelections(state);
+              this._triggerHaptic();
+              this._runConfiguredCardHoldAction(state, zone);
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextVacuumTap = true;
+            },
+          })
+        : () => {};
   }
 
   connectedCallback() {
@@ -1135,6 +1286,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._detachHostHold?.();
     this._resizeObserver?.disconnect();
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
@@ -1273,6 +1425,10 @@ class NodaliaVacuumCard extends HTMLElement {
       tapAction: String(this._config?.tap_action || ""),
       iconTapAction: String(this._config?.icon_tap_action ?? ""),
       tapNav: String(this._config?.tap_navigation_path || ""),
+      holdAction: String(this._config?.hold_action || ""),
+      iconHoldAction: String(this._config?.icon_hold_action ?? ""),
+      holdNav: String(this._config?.hold_navigation_path || ""),
+      iconHoldNav: String(this._config?.icon_hold_navigation_path || ""),
     });
   }
 
@@ -1435,6 +1591,65 @@ class NodaliaVacuumCard extends HTMLElement {
 
     if (action === "navigate") {
       return Boolean(String(this._config?.tap_navigation_path || "").trim());
+    }
+
+    if (action === "more_info") {
+      return Boolean(this._config?.entity);
+    }
+
+    return true;
+  }
+
+  _effectiveVacuumHoldAction(zone = "body") {
+    const body = normalizeTextKey(this._config?.hold_action || "none");
+    if (zone === "icon") {
+      const raw = String(this._config?.icon_hold_action ?? "").trim();
+      if (!raw) {
+        return body;
+      }
+      return normalizeTextKey(raw);
+    }
+    return body;
+  }
+
+  _resolveVacuumHoldNavigationPath(zone = "body") {
+    const tapPath = String(this._config?.tap_navigation_path ?? "").trim();
+    const holdPath = String(this._config?.hold_navigation_path ?? "").trim();
+    const iconHoldPath = String(this._config?.icon_hold_navigation_path ?? "").trim();
+    if (zone === "icon") {
+      return iconHoldPath || holdPath || tapPath;
+    }
+    return holdPath || tapPath;
+  }
+
+  _runConfiguredCardHoldAction(state = this._getState(), zone = "body") {
+    const action = this._effectiveVacuumHoldAction(zone);
+
+    switch (action) {
+      case "none":
+        break;
+      case "more_info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "navigate":
+        this._navigate(this._resolveVacuumHoldNavigationPath(zone));
+        break;
+      case "default":
+      default:
+        this._runPrimaryAction(state);
+        break;
+    }
+  }
+
+  _canRunConfiguredCardHoldAction(zone = "body") {
+    const action = this._effectiveVacuumHoldAction(zone);
+
+    if (action === "none") {
+      return false;
+    }
+
+    if (action === "navigate") {
+      return Boolean(this._resolveVacuumHoldNavigationPath(zone));
     }
 
     if (action === "more_info") {
@@ -3038,6 +3253,13 @@ class NodaliaVacuumCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
+
+    const vacuumAction = button.dataset.vacuumAction;
+    if ((vacuumAction === "body_tap" || vacuumAction === "icon_tap") && this._suppressNextVacuumTap) {
+      this._suppressNextVacuumTap = false;
+      return;
+    }
+
     this._triggerHaptic();
     if (button instanceof HTMLButtonElement) {
       this._triggerButtonBounce(button);
@@ -3046,7 +3268,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const state = this._getState();
     this._syncRememberedModeSelections(state);
 
-    switch (button.dataset.vacuumAction) {
+    switch (vacuumAction) {
       case "body_tap":
         this._runConfiguredCardTapAction(state, "body");
         break;
@@ -3229,8 +3451,10 @@ class NodaliaVacuumCard extends HTMLElement {
       : "";
 
     const showCopyBlock = !isCompactLayout || chips.length > 0;
-    const canRunBodyCardTap = this._canRunConfiguredCardTapAction("body");
-    const canRunIconCardTap = this._canRunConfiguredCardTapAction("icon");
+    const canRunBodyCardTap =
+      this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
+    const canRunIconCardTap =
+      this._canRunConfiguredCardTapAction("icon") || this._canRunConfiguredCardHoldAction("icon");
     const iconTapEffective = this._effectiveVacuumTapAction("icon");
     const iconButtonLabel = iconTapEffective === "navigate"
       ? "Abrir vista del robot"
@@ -4539,6 +4763,13 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     const showVacuumNavigatePath =
       normalizeTextKey(tapActionVal) === "navigate" ||
       (Boolean(iconTapSelectValue) && normalizeTextKey(iconTapSelectValue) === "navigate");
+    const holdActionVal = config.hold_action || "none";
+    const iconHoldSelectValue = String(config.icon_hold_action ?? "").trim();
+    const holdBodyKey = normalizeTextKey(holdActionVal);
+    const holdIconEffectiveRaw = iconHoldSelectValue || holdActionVal;
+    const holdIconKey = normalizeTextKey(holdIconEffectiveRaw);
+    const showVacuumHoldNavigateFields = holdBodyKey === "navigate" || holdIconKey === "navigate";
+    const showVacuumIconHoldNavField = Boolean(iconHoldSelectValue) && holdIconKey === "navigate";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -4932,6 +5163,63 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                     placeholder: "/lovelace/robot",
                     fullWidth: true,
                   })
+                : ""
+            }
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.hold_actions_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField(
+              "ed.vacuum.icon_hold_action",
+              "icon_hold_action",
+              iconHoldSelectValue,
+              [
+                { value: "", label: "ed.entity.icon_hold_inherit" },
+                { value: "default", label: "ed.vacuum.tap_default" },
+                { value: "more-info", label: "ed.vacuum.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "none", label: "ed.vacuum.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.vacuum.card_hold_action",
+              "hold_action",
+              holdActionVal,
+              [
+                { value: "default", label: "ed.vacuum.tap_default" },
+                { value: "more-info", label: "ed.vacuum.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "none", label: "ed.vacuum.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${
+              showVacuumHoldNavigateFields
+                ? `
+                  ${this._renderTextField("ed.vacuum.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
+                    placeholder: "/lovelace/robot",
+                    fullWidth: true,
+                  })}
+                  ${
+                    showVacuumIconHoldNavField
+                      ? this._renderTextField(
+                          "ed.vacuum.icon_hold_navigation_path",
+                          "icon_hold_navigation_path",
+                          config.icon_hold_navigation_path,
+                          {
+                            placeholder: "/lovelace/robot",
+                            fullWidth: true,
+                          },
+                        )
+                      : ""
+                  }
+                `
                 : ""
             }
           </div>
