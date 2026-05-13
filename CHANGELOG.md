@@ -21,6 +21,19 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.12] - 2026-05-13
+
+Twelfth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.12`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Ecobee-style climates with **no published setpoint** now allow **`+` / `−`** to create a setpoint from **`current_temperature`** even when the entity state is still **`heat_cool`** instead of **`off`**. This covers integrations that expose **`temperature: null`**, **`target_temp_low: null`**, and **`target_temp_high: null`** while still reporting an active HVAC mode.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.12`**.
+
+---
 ## [1.0.3-alpha.11] - 2026-05-13
 
 Eleventh **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.11`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.

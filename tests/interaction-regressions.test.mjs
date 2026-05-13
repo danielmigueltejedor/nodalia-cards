@@ -165,7 +165,7 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   const ClimateCard = loadClimateCardClass();
   assert.ok(ClimateCard, "climate card custom element should register");
 
-  const buildCard = () => {
+  const buildCard = (stateValue = "off") => {
     const calls = [];
     const card = new ClimateCard();
     card._config = {
@@ -178,7 +178,7 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
       },
       states: {
         "climate.ecobee": {
-          state: "off",
+          state: stateValue,
           attributes: {
             current_temperature: 22.5,
             hvac_action: "idle",
@@ -211,6 +211,14 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   assert.deepEqual(JSON.parse(JSON.stringify(minus.calls)), [
     ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
     ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 22 }],
+  ]);
+
+  const heatCool = buildCard("heat_cool");
+  heatCool.card._changeTemperatureBy(1);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(heatCool.calls)), [
+    ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23 }],
   ]);
 });
 

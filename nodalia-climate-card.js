@@ -683,7 +683,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.11";
+const CARD_VERSION = "1.0.3-alpha.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1987,14 +1987,11 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   /**
-   * Ecobee-style: `hvac_mode` off, indoor temp known, but no published single or dual setpoints yet.
-   * Used for “wake from off” step-button flow without treating `current_temperature` as a target.
+   * Ecobee-style: indoor temp known, but no published single or dual setpoints yet.
+   * Used by step buttons without treating `current_temperature` as a visible target.
    */
-  _isOffNullSetpointState(state) {
+  _isNullSetpointFromCurrentState(state) {
     if (!state?.attributes || isUnavailableState(state)) {
-      return false;
-    }
-    if (!this._isEffectiveClimateOff(state)) {
       return false;
     }
     const attrs = state.attributes;
@@ -2009,8 +2006,12 @@ class NodaliaClimateCard extends HTMLElement {
     return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
   }
 
+  _isOffNullSetpointState(state) {
+    return this._isEffectiveClimateOff(state) && this._isNullSetpointFromCurrentState(state);
+  }
+
   /**
-   * HVAC mode to enable before `set_temperature` when waking from `_isOffNullSetpointState`.
+   * HVAC mode to enable before `set_temperature` when creating a setpoint from current temperature.
    * Order: heat → cool → heat_cool (Better Thermostat / Ecobee-friendly; differs from `_getPreferredOnMode` toggle order).
    */
   _getSetpointWakeHvacMode(state) {
@@ -2027,8 +2028,8 @@ class NodaliaClimateCard extends HTMLElement {
     return null;
   }
 
-  _supportsOffNullSetpointWake(state) {
-    if (!this._isOffNullSetpointState(state)) {
+  _supportsNullSetpointCreation(state) {
+    if (!this._isNullSetpointFromCurrentState(state)) {
       return false;
     }
     if (!this._supportsTargetTemperatureControl(state)) {
@@ -2036,6 +2037,10 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const { min, max } = this._getTemperatureRange(state);
     return Number.isFinite(min) && Number.isFinite(max) && min < max;
+  }
+
+  _supportsOffNullSetpointWake(state) {
+    return this._isOffNullSetpointState(state) && this._supportsNullSetpointCreation(state);
   }
 
   _getStateLabel(state) {
@@ -2371,7 +2376,7 @@ class NodaliaClimateCard extends HTMLElement {
 
   async _createSetpointFromCurrentBy(delta) {
     const state = this._getState();
-    if (!state || !this._isOffNullSetpointState(state) || !this._supportsOffNullSetpointWake(state)) {
+    if (!state || !this._supportsNullSetpointCreation(state)) {
       return false;
     }
 
@@ -2497,7 +2502,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    if (this._isOffNullSetpointState(state) && this._supportsOffNullSetpointWake(state)) {
+    if (this._supportsNullSetpointCreation(state)) {
       this._createSetpointFromCurrentBy(delta);
       return;
     }
@@ -3555,10 +3560,10 @@ class NodaliaClimateCard extends HTMLElement {
     const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
     const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
-    const supportsOffNullSetpointWake = this._supportsOffNullSetpointWake(state);
+    const supportsNullSetpointCreation = this._supportsNullSetpointCreation(state);
     const showStepControls =
       config.show_step_controls !== false &&
-      (supportsTargetTemperature || supportsOffNullSetpointWake);
+      (supportsTargetTemperature || supportsNullSetpointCreation);
     const contentColumnGap = showStepControls
       ? (tightLayout ? "8px" : compactLayout ? "9px" : "10px")
       : effectiveCardGap;
