@@ -22,6 +22,21 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.7] - 2026-05-14
+
+Seventh **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.7`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** visual editor now follows the Fan Card editor structure more closely, including matching section actions, native **`ha-icon-picker`** mounting, Fan-style control hosts, haptic style selection, accent-color styling, card-radius helper hint, and consistent field/switch/color styling.
+- **`nodalia-cover-card.js`:** cover entity picker now mounts with a real **`cover`** domain filter instead of going through the generic picker path, avoiding heavy all-entity picker setup when adding the card on large Home Assistant installs.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.7`**.
+
+---
+
 ## [1.1.0-alpha.6] - 2026-05-14
 
 Sixth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.6`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

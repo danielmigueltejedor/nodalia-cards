@@ -439,6 +439,17 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(exportNodes._flowValues.gridHome, -100);
 });
 
+test("cover editor uses domain-filtered pickers and fan-style editor controls", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /control\.includeDomains = \["cover"\]/);
+  assert.match(source, /control\.entityFilter = stateObj => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
+  assert.match(source, /class="editor-control-host"[\s\S]*data-mounted-control="cover-entity"/);
+  assert.match(source, /<ha-icon-picker[\s\S]*data-field="\$\{escapeHtml\(field\)\}"/);
+  assert.match(source, /editor-section__actions/);
+  assert.match(source, /ed\.vacuum\.haptic_style/);
+  assert.match(source, /styles\.control\.accent_color/);
+});
+
 test("notifications entrance animation does not rearm on list refreshes", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);

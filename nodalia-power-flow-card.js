@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.6";
+const CARD_VERSION = "1.1.0-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
