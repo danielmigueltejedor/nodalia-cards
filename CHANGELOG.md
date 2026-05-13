@@ -22,6 +22,20 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.8] - 2026-05-14
+
+Eighth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.8`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** pointer/touch interactions on cover controls no longer let buttons take browser focus, preventing dashboard scroll jumps when the card sits near the bottom of a view and re-renders after a service call.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.8`**.
+
+---
+
 ## [1.1.0-alpha.7] - 2026-05-14
 
 Seventh **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.7`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

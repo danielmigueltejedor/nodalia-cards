@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.7";
+const CARD_VERSION = "1.1.0-alpha.8";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1466,6 +1466,9 @@ class NodaliaCoverCard extends HTMLElement {
     event.stopPropagation();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
+    if (button instanceof HTMLElement && typeof button.blur === "function") {
+      button.blur();
+    }
     switch (button.dataset.coverAction) {
       case "body":
       case "icon":
@@ -1490,8 +1493,16 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _onPointerDown(event) {
-    const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
-    if (slider) this._activeSliderDrag = { slider };
+    const path = event.composedPath();
+    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (slider) {
+      this._activeSliderDrag = { slider };
+      return;
+    }
+    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (actionControl) {
+      event.preventDefault();
+    }
   }
 
   _onShadowInput(event) {

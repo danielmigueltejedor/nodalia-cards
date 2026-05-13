@@ -450,6 +450,13 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
   assert.match(source, /styles\.control\.accent_color/);
 });
 
+test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
+  assert.match(source, /if \(actionControl\) \{\s*event\.preventDefault\(\);\s*\}/);
+  assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
+});
+
 test("notifications entrance animation does not rearm on list refreshes", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
