@@ -1,3 +1,3 @@
 type: custom:nodalia-fan-card
-entity: fan.salon
-name: Salon
+entity: fan.living_room
+name: Living Room

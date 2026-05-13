@@ -1,11 +1,15 @@
 type: custom:nodalia-navigation-bar
 show_labels: false
+
 routes:
   - icon: mdi:home-assistant
-    path: /lovelace/principal
+    path: /lovelace/main
+
   - icon: mdi:flash
-    path: /lovelace/energia
+    path: /lovelace/energy
+
   - icon: mdi:thermostat
-    path: /lovelace/termostatos
+    path: /lovelace/climate
+
   - icon: mdi:security
-    path: /lovelace/seguridad
+    path: /lovelace/security

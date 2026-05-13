@@ -1,6 +1,6 @@
 type: custom:nodalia-climate-card
-entity: climate.salon
-name: Salon
+entity: climate.living_room
+name: Living Room
 show_state_chip: true
 show_current_temperature_chip: true
 show_humidity_chip: true
