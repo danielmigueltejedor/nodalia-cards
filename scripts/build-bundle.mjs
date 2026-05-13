@@ -39,6 +39,7 @@ const parts = [
   "nodalia-circular-gauge-card.js",
   "nodalia-graph-card.js",
   "nodalia-power-flow-card.js",
+  "nodalia-cover-card.js",
   "nodalia-climate-card.js",
   "nodalia-alarm-panel-card.js",
   "nodalia-advance-vacuum-card.js",

@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "1.0.5",
+  "version": "1.1.0-alpha.1",
   "packageManager": "pnpm@11.1.1",
   "private": false,
   "type": "module",
@@ -29,6 +29,7 @@
     "nodalia-circular-gauge-card.js",
     "nodalia-graph-card.js",
     "nodalia-power-flow-card.js",
+    "nodalia-cover-card.js",
     "nodalia-climate-card.js",
     "nodalia-alarm-panel-card.js",
     "nodalia-advance-vacuum-card.js",

@@ -179,6 +179,7 @@ Major internal improvements:
 - `custom:nodalia-circular-gauge-card`
 - `custom:nodalia-graph-card`
 - `custom:nodalia-power-flow-card`
+- `custom:nodalia-cover-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-advance-vacuum-card`

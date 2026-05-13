@@ -346,6 +346,31 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   assert.match(readme, /custom:nodalia-climate-card/);
 });
 
+test("cover card is registered and shipped in the HACS bundle", () => {
+  const source = read("nodalia-cover-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const sync = read("scripts/sync-standalone-embed.mjs");
+  const pkg = read("package.json");
+  const readme = read("README.md");
+  assert.match(source, /const CARD_TAG = "nodalia-cover-card"/);
+  assert.match(source, /set_cover_position/);
+  assert.match(source, /set_cover_tilt_position/);
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCoverCard\)/);
+  assert.match(build, /nodalia-cover-card\.js/);
+  assert.match(sync, /nodalia-cover-card\.js/);
+  assert.match(pkg, /"nodalia-cover-card\.js"/);
+  assert.match(readme, /custom:nodalia-cover-card/);
+});
+
+test("power flow supports grid feed-in export sensors", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /export_entity/);
+  assert.match(source, /export_color/);
+  assert.match(source, /export_when_negative/);
+  assert.match(source, /_resolveGridExportSource/);
+  assert.match(source, /value: -Math\.abs\(magnitude\)/);
+});
+
 test("notifications card is bundled and supports smart dismissible notifications", () => {
   const source = read("nodalia-notifications-card.js");
   const i18n = read("nodalia-i18n.js");

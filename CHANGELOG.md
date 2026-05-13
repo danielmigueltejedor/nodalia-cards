@@ -22,6 +22,21 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.1] - 2026-05-14
+
+First **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.1`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Added
+
+- **`nodalia-cover-card.js`:** new **`custom:nodalia-cover-card`** for Home Assistant **`cover`** entities, with open/stop/close controls, current state and position chips, optional position and tilt sliders, compact layout handling, icon animation for moving covers, visual editor support, and Nodalia-style tokens.
+- **`nodalia-power-flow-card.js`:** grid feed-in visual state for solar/export setups. The grid node now supports a dedicated **`entities.grid.export_entity`** sensor, **`entities.grid.export_color`**, and **`entities.grid.export_when_negative`** for net-power sensors. When export is active, the grid line reverses direction, uses the feed-in color, and shows the exported value as a positive amount.
+
+### Changed
+
+- **Release metadata:** start the **`1.1.0`** feature line as **`1.1.0-alpha.1`**.
+
+---
+
 ## [1.0.5] - 2026-05-13
 
 Stable **`1.0.5`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.5`**).

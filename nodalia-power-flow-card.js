@@ -684,7 +684,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.0.5";
+const CARD_VERSION = "1.1.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -700,6 +700,9 @@ const NODE_DEFAULTS = {
     name: "Red",
     icon: "mdi:transmission-tower",
     color: "#6da8ff",
+    export_color: "#44d07b",
+    export_entity: "",
+    export_when_negative: true,
     entity: "",
     secondary_info: {},
   },
@@ -1061,6 +1064,10 @@ function getEditorColorModel(value, fallbackValue = "#71c0ff") {
 
 function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
+  if (normalizedField.endsWith("entities.grid.export_color")) {
+    return NODE_DEFAULTS.grid.export_color;
+  }
+
   const nodeColorMatch = normalizedField.match(/entities\.(grid|home|solar|battery|water|gas)\.color$/);
 
   if (nodeColorMatch) {
@@ -1719,6 +1726,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return null;
   }
 
+  _getSourceUnit(state) {
+    return String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim();
+  }
+
   _resolveSourceValue(source) {
     if (!this._hass?.states || !source) {
       return { value: null, unit: "", state: null, entityId: "" };
@@ -1728,7 +1739,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       const state = this._hass.states[source] || null;
       return {
         value: parseNumber(state?.state),
-        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim(),
+        unit: this._getSourceUnit(state),
         state,
         entityId: source,
       };
@@ -1740,7 +1751,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         const state = this._hass.states[directEntity] || null;
         return {
           value: parseNumber(state?.state),
-          unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim(),
+          unit: this._getSourceUnit(state),
           state,
           entityId: directEntity,
         };
@@ -1769,6 +1780,31 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     return { value: null, unit: "", state: null, entityId: "" };
+  }
+
+  _resolveGridExportSource(nodeConfig, sourceResult) {
+    const exportEntityId = String(nodeConfig?.export_entity || "").trim();
+    const exportState = exportEntityId ? this._hass?.states?.[exportEntityId] || null : null;
+    const exportValue = parseNumber(exportState?.state);
+    const splitExportActive = Number.isFinite(exportValue) && exportValue > 0.001;
+    const negativeExportActive =
+      nodeConfig?.export_when_negative !== false &&
+      Number.isFinite(sourceResult?.value) &&
+      sourceResult.value < -0.001;
+
+    if (!splitExportActive && !negativeExportActive) {
+      return null;
+    }
+
+    const magnitude = splitExportActive ? exportValue : Math.abs(sourceResult.value);
+    const unit = splitExportActive ? this._getSourceUnit(exportState) : sourceResult.unit;
+    return {
+      value: -Math.abs(magnitude),
+      unit,
+      state: splitExportActive ? exportState : sourceResult.state,
+      entityId: splitExportActive ? exportEntityId : sourceResult.entityId,
+      active: true,
+    };
   }
 
   _getSecondaryInfoText(nodeConfig, baseState) {
@@ -1809,12 +1845,38 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
-    const sourceResult = this._resolveSourceValue(nodeConfig.entity);
+    let sourceResult = this._resolveSourceValue(nodeConfig.entity);
+    if (
+      kind === "grid" &&
+      !sourceResult.entityId &&
+      String(nodeConfig?.export_entity || "").trim()
+    ) {
+      const exportEntityId = String(nodeConfig.export_entity).trim();
+      const exportState = this._hass?.states?.[exportEntityId] || null;
+      sourceResult = {
+        value: 0,
+        unit: this._getSourceUnit(exportState),
+        state: exportState,
+        entityId: exportEntityId,
+      };
+    }
+    const gridExport = kind === "grid" ? this._resolveGridExportSource(nodeConfig, sourceResult) : null;
+    if (gridExport) {
+      sourceResult = {
+        ...sourceResult,
+        value: gridExport.value,
+        unit: gridExport.unit,
+        state: gridExport.state,
+        entityId: gridExport.entityId,
+      };
+    }
     const state = sourceResult.state;
-    const unavailable = Boolean(nodeConfig.entity) && (!state || isUnavailableState(state));
+    const unavailable = Boolean(nodeConfig.entity || nodeConfig.export_entity) && (!state || isUnavailableState(state));
     const label = nodeConfig.name || state?.attributes?.friendly_name || NODE_DEFAULTS[kind]?.name || kind;
     const icon = nodeConfig.icon || state?.attributes?.icon || NODE_DEFAULTS[kind]?.icon || "mdi:flash";
-    const color = nodeConfig.color || NODE_DEFAULTS[kind]?.color || "#ffffff";
+    const color = gridExport
+      ? (nodeConfig.export_color || NODE_DEFAULTS.grid.export_color)
+      : (nodeConfig.color || NODE_DEFAULTS[kind]?.color || "#ffffff");
     const secondary = this._getSecondaryInfoText(nodeConfig, state);
     const display = formatDisplayValue(sourceResult.value, sourceResult.unit);
     const nodeKind = kind === "individual" ? "individual" : kind;
@@ -1830,6 +1892,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       unit: sourceResult.unit,
       valueText: display.value,
       unitText: display.unit,
+      isExporting: Boolean(gridExport),
       state,
       secondary,
       unavailable,
@@ -1860,6 +1923,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         if (String(source.production || "").trim()) {
           entityIds.add(String(source.production).trim());
         }
+      }
+
+      const exportEntity = String(nodeConfig.export_entity || "").trim();
+      if (exportEntity) {
+        entityIds.add(exportEntity);
       }
 
       const secondaryEntity = String(nodeConfig.secondary_info?.entity || "").trim();
@@ -1963,7 +2031,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     const g = nodes.grid;
-    if (g.entityId && !g.unavailable && Number.isFinite(g.value) && g.value < -0.001) {
+    if (g.entityId && !g.unavailable && Number.isFinite(g.value) && (g.value < -0.001 || g.isExporting)) {
       const display = formatDisplayValue(Math.abs(g.value), g.unit);
       g.valueText = display.value;
       g.unitText = display.unit;
@@ -3835,6 +3903,12 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 
   _renderNodeSection(titleKey, hintKey, prefix, values) {
+    const isGrid = prefix === "entities.grid";
+    const gridExportFields = isGrid ? `
+          ${this._renderTextField("Grid feed-in entity", `${prefix}.export_entity`, values.export_entity, { placeholder: "sensor.grid_feed_in" })}
+          ${this._renderTextField("Grid feed-in color", `${prefix}.export_color`, values.export_color || NODE_DEFAULTS.grid.export_color, { placeholder: NODE_DEFAULTS.grid.export_color })}
+          ${this._renderCheckboxField("Use negative grid values as feed-in", `${prefix}.export_when_negative`, values.export_when_negative !== false)}
+    ` : "";
     return `
       <section class="editor-section">
         <div class="editor-section__header">
@@ -3846,6 +3920,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
           ${this._renderTextField("ed.entity.name", `${prefix}.name`, values.name)}
           ${this._renderTextField("ed.entity.icon", `${prefix}.icon`, values.icon, { placeholder: "mdi:flash" })}
           ${this._renderTextField("ed.power_flow.node_color", `${prefix}.color`, values.color, { placeholder: "#f6b73c" })}
+          ${gridExportFields}
           ${this._renderTextField("ed.power_flow.node_secondary_entity", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, { placeholder: "sensor.mi_secundaria" })}
           ${this._renderTextField("ed.power_flow.node_secondary_attribute", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, { placeholder: "battery_level" })}
         </div>
