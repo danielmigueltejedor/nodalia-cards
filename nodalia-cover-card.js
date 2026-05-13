@@ -750,7 +750,17 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.2";
+const CARD_VERSION = "1.1.0-alpha.4";
+
+const HAPTIC_PATTERNS = {
+  selection: 8,
+  light: 10,
+  medium: 16,
+  heavy: 24,
+  success: [10, 40, 10],
+  warning: [20, 50, 12],
+  failure: [12, 40, 12, 40, 18],
+};
 
 const COVER_FEATURES = {
   OPEN: 1,
@@ -767,22 +777,49 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
-  show_state_chip: true,
-  show_position: true,
-  show_tilt: true,
+  show_state: false,
+  show_position_chip: true,
+  show_tilt_chip: true,
+  show_position_slider: true,
+  show_tilt_slider: true,
   show_stop: true,
   compact_layout_mode: "auto",
-  animate_icon: true,
+  tap_action: "toggle",
+  tap_service: "",
+  tap_service_data: "",
+  tap_url: "",
+  tap_new_tab: false,
+  icon_tap_action: "",
+  icon_tap_service: "",
+  icon_tap_service_data: "",
+  icon_tap_url: "",
+  icon_tap_new_tab: false,
+  hold_action: "none",
+  hold_service: "",
+  hold_service_data: "",
+  hold_url: "",
+  hold_new_tab: false,
+  icon_hold_action: "",
+  icon_hold_service: "",
+  icon_hold_service_data: "",
+  icon_hold_url: "",
+  icon_hold_new_tab: false,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
   },
-  grid_options: {
-    rows: "auto",
-    columns: "full",
-    min_rows: 2,
-    min_columns: 3,
+  animations: {
+    enabled: true,
+    icon_animation: true,
+    power_duration: 600,
+    controls_duration: 600,
+    button_bounce_duration: 320,
   },
   styles: {
     card: {
@@ -794,38 +831,32 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "42px",
+      size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
-      active_color: "var(--info-color, #71c0ff)",
-      closed_color: "var(--primary-text-color)",
+      on_color: "var(--info-color, #71c0ff)",
+      off_color: "var(--primary-text-color)",
     },
     control: {
-      size: "42px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
-      accent_background: "color-mix(in srgb, var(--primary-text-color) 7%, transparent)",
+      accent_background: "rgba(113, 192, 255, 0.2)",
     },
     chip_height: "24px",
-    chip_font_size: "11px",
+    chip_font_size: "9px",
     chip_padding: "0 9px",
     chip_border_radius: "999px",
-    title_size: "14px",
+    title_size: "12px",
+    slider_wrap_height: "44px",
+    slider_height: "22px",
+    slider_thumb_size: "22px",
+    slider_color: "var(--info-color, #71c0ff)",
   },
 };
 
 const STUB_CONFIG = {
-  entity: "cover.living_room_blinds",
-  name: "Blinds",
-};
-
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
+  entity: "cover.salon",
+  name: "Salon",
 };
 
 function isObject(value) {
@@ -853,17 +884,13 @@ function mergeConfig(base, override) {
     const overrideValue = override ? override[key] : undefined;
     if (overrideValue === undefined) {
       result[key] = deepClone(baseValue);
-      return;
-    }
-    if (Array.isArray(overrideValue)) {
+    } else if (Array.isArray(overrideValue)) {
       result[key] = deepClone(overrideValue);
-      return;
-    }
-    if (isObject(baseValue) && isObject(overrideValue)) {
+    } else if (isObject(baseValue) && isObject(overrideValue)) {
       result[key] = mergeConfig(baseValue, overrideValue);
-      return;
+    } else {
+      result[key] = overrideValue;
     }
-    result[key] = overrideValue;
   });
   return result;
 }
@@ -873,58 +900,62 @@ function compactConfig(value) {
     return value.map(item => compactConfig(item)).filter(item => item !== undefined);
   }
   if (isObject(value)) {
-    const compacted = {};
+    const result = {};
     Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
+      const compact = compactConfig(item);
+      if (compact !== undefined && !(isObject(compact) && Object.keys(compact).length === 0)) {
+        result[key] = compact;
       }
     });
-    return compacted;
+    return result;
   }
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
+  if (value !== "" && value !== null && value !== undefined) {
+    return value;
   }
-  return value;
+  return undefined;
 }
 
-function setByPath(target, path, value) {
+function normalizeList(value) {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item).trim()).filter(Boolean);
+  }
+  return String(value || "").split(",").map(item => item.trim()).filter(Boolean);
+}
+
+function normalizeConfig(rawConfig) {
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode)
+    ? config.compact_layout_mode
+    : "auto";
+  config.security.allowed_services = normalizeList(config.security?.allowed_services);
+  config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
+  return config;
+}
+
+function setByPath(obj, path, value) {
   const parts = String(path || "").split(".");
-  let cursor = target;
+  let target = obj;
   for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+    const part = parts[index];
+    if (!isObject(target[part]) && !Array.isArray(target[part])) {
+      target[part] = {};
     }
-    cursor = cursor[key];
+    target = target[part];
   }
-  cursor[parts[parts.length - 1]] = value;
+  target[parts[parts.length - 1]] = value;
 }
 
-function deleteByPath(target, path) {
+function deleteByPath(obj, path) {
   const parts = String(path || "").split(".");
-  let cursor = target;
+  let target = obj;
   for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+    const part = parts[index];
+    if (!isObject(target[part]) && !Array.isArray(target[part])) {
       return;
     }
-    cursor = cursor[key];
+    target = target[part];
   }
-  delete cursor[parts[parts.length - 1]];
-}
-
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key || (!isObject(cursor) && !Array.isArray(cursor))) {
-      return undefined;
-    }
-    cursor = cursor[key];
-  }
-  return cursor;
+  delete target[parts[parts.length - 1]];
 }
 
 function escapeHtml(value) {
@@ -936,19 +967,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function parseFiniteNumber(value) {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value === "string" && value.trim() === "") {
-    return null;
-  }
-  const numeric = Number(String(value).replace(",", "."));
-  return Number.isFinite(numeric) ? numeric : null;
+function escapeSelectorValue(value) {
+  return typeof CSS !== "undefined" && typeof CSS.escape === "function"
+    ? CSS.escape(String(value))
+    : String(value).replaceAll('"', '\\"');
 }
 
 function normalizeTextKey(value) {
@@ -960,78 +982,112 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
-function fireEvent(node, type, detail, options) {
+function parseNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const numeric = Number(String(value).replace(",", "."));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function fireEvent(node, type, detail, options = {}) {
   const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
+    bubbles: options.bubbles ?? true,
+    cancelable: Boolean(options.cancelable),
+    composed: options.composed ?? true,
     detail,
   });
   node.dispatchEvent(event);
   return event;
 }
 
-function getStubEntityId(hass) {
-  return Object.keys(hass?.states || {}).find(entityId => entityId.startsWith("cover.")) || "";
+function getStubEntityId(hass, domains = []) {
+  const states = hass?.states || {};
+  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+  return Object.keys(states).find(entityId => (
+    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
+  )) || "";
 }
 
-function normalizeConfig(config) {
-  const merged = mergeConfig(DEFAULT_CONFIG, config || {});
-  const compact = String(merged.compact_layout_mode || "auto").trim().toLowerCase();
-  merged.compact_layout_mode = ["auto", "always", "never"].includes(compact) ? compact : "auto";
-  merged.show_state_chip = merged.show_state_chip !== false;
-  merged.show_position = merged.show_position !== false;
-  merged.show_tilt = merged.show_tilt !== false;
-  merged.show_stop = merged.show_stop !== false;
-  merged.animate_icon = merged.animate_icon !== false;
-  return merged;
+function applyStubEntity(config, hass, domains) {
+  const entityId = getStubEntityId(hass, domains);
+  if (!entityId) {
+    return config;
+  }
+  config.entity = entityId;
+  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+  return config;
 }
 
-function coverDeviceIcon(state) {
-  const attrs = state?.attributes || {};
-  const deviceClass = normalizeTextKey(attrs.device_class || "");
-  const stateKey = normalizeTextKey(state?.state || "");
-  const open = stateKey === "open" || stateKey === "opening";
-  switch (deviceClass) {
-    case "awning":
-      return open ? "mdi:awning" : "mdi:awning-outline";
-    case "blind":
-    case "shade":
-      return open ? "mdi:blinds-open" : "mdi:blinds";
-    case "curtain":
-      return open ? "mdi:curtains" : "mdi:curtains-closed";
-    case "door":
-      return open ? "mdi:door-open" : "mdi:door-closed";
-    case "garage":
-      return open ? "mdi:garage-open-variant" : "mdi:garage-variant";
-    case "gate":
-      return open ? "mdi:gate-open" : "mdi:gate";
-    case "shutter":
-      return open ? "mdi:window-shutter-open" : "mdi:window-shutter";
-    case "window":
-      return open ? "mdi:window-open-variant" : "mdi:window-closed-variant";
-    default:
-      return open ? "mdi:window-open" : "mdi:window-closed";
+function isUnavailableState(state) {
+  const key = normalizeTextKey(state?.state);
+  return key === "unavailable" || key === "unknown";
+}
+
+function parseServiceData(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return isObject(parsed) ? parsed : {};
+  } catch (_error) {
+    return {};
   }
 }
 
-function stateLabel(state) {
-  const key = normalizeTextKey(state?.state || "");
-  const labels = {
-    open: "Open",
-    closed: "Closed",
-    opening: "Opening",
-    closing: "Closing",
-    stopped: "Stopped",
-    unavailable: "Unavailable",
-    unknown: "Unknown",
-  };
-  return labels[key] || String(state?.state || "Unknown");
+function shouldOpenNewTab(value) {
+  return value === true;
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalized = String(field || "");
+  if (normalized.endsWith("icon.on_color") || normalized.endsWith("slider_color")) {
+    return DEFAULT_CONFIG.styles.icon.on_color;
+  }
+  if (normalized.endsWith("icon.off_color") || normalized.endsWith("control.accent_color") || normalized.endsWith("icon.color")) {
+    return DEFAULT_CONFIG.styles.icon.off_color;
+  }
+  if (normalized.endsWith("control.accent_background")) {
+    return DEFAULT_CONFIG.styles.control.accent_background;
+  }
+  if (normalized.endsWith("background")) {
+    return DEFAULT_CONFIG.styles.card.background;
+  }
+  return DEFAULT_CONFIG.styles.icon.on_color;
+}
+
+function colorToHex(value, fallback = "#71c0ff") {
+  const raw = String(value || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(raw)) {
+    return raw;
+  }
+  if (/^#[0-9a-f]{3}$/i.test(raw)) {
+    return `#${raw.slice(1).split("").map(char => char + char).join("")}`;
+  }
+  return fallback;
+}
+
+function coverDeviceIcon(state) {
+  const deviceClass = normalizeTextKey(state?.attributes?.device_class || "");
+  const isOpen = ["open", "opening"].includes(normalizeTextKey(state?.state || ""));
+  switch (deviceClass) {
+    case "awning": return isOpen ? "mdi:awning" : "mdi:awning-outline";
+    case "blind":
+    case "shade": return isOpen ? "mdi:blinds-open" : "mdi:blinds";
+    case "curtain": return isOpen ? "mdi:curtains" : "mdi:curtains-closed";
+    case "door": return isOpen ? "mdi:door-open" : "mdi:door-closed";
+    case "garage": return isOpen ? "mdi:garage-open-variant" : "mdi:garage-variant";
+    case "gate": return isOpen ? "mdi:gate-open" : "mdi:gate";
+    case "shutter": return isOpen ? "mdi:window-shutter-open" : "mdi:window-shutter";
+    case "window": return isOpen ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+    default: return isOpen ? "mdi:window-open" : "mdi:window-closed";
+  }
 }
 
 class NodaliaCoverCard extends HTMLElement {
@@ -1040,13 +1096,7 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    const config = deepClone(STUB_CONFIG);
-    const entityId = getStubEntityId(hass);
-    if (entityId) {
-      config.entity = entityId;
-      config.name = hass?.states?.[entityId]?.attributes?.friendly_name || "";
-    }
-    return config;
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["cover"]);
   }
 
   constructor() {
@@ -1055,10 +1105,59 @@ class NodaliaCoverCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
-    this._onClick = this._onClick.bind(this);
-    this._onInput = this._onInput.bind(this);
-    this.shadowRoot.addEventListener("click", this._onClick);
-    this.shadowRoot.addEventListener("change", this._onInput);
+    this._lastRenderedIsActive = null;
+    this._controlsTransition = null;
+    this._powerTransition = null;
+    this._animationCleanupTimer = 0;
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
+    this._suppressNextCoverTap = false;
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowChange = this._onShadowChange.bind(this);
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const path = event.composedPath();
+              if (path.some(node => node instanceof HTMLInputElement && node.dataset?.coverControl)) {
+                return null;
+              }
+              const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+              const zone = actionButton?.dataset?.coverAction;
+              return zone === "body" || zone === "icon" ? zone : null;
+            },
+            shouldBeginHold: zone => this._resolveHoldAction(zone) !== "none",
+            onHold: zone => {
+              const action = this._resolveHoldAction(zone);
+              if (action === "none") {
+                return;
+              }
+              this._triggerHaptic();
+              this._runAction(zone, "hold", action);
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextCoverTap = true;
+            },
+          })
+        : () => {};
+  }
+
+  connectedCallback() {
+    this._render();
+  }
+
+  disconnectedCallback() {
+    this._detachHostHold?.();
+    if (this._animationCleanupTimer) {
+      window.clearTimeout(this._animationCleanupTimer);
+      this._animationCleanupTimer = 0;
+    }
   }
 
   setConfig(config) {
@@ -1082,13 +1181,7 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   getGridOptions() {
-    const base = mergeConfig(DEFAULT_CONFIG.grid_options, this._config?.grid_options || {});
-    return {
-      rows: base.rows === undefined || base.rows === "" ? "auto" : base.rows,
-      columns: base.columns === undefined || base.columns === "" ? "full" : base.columns,
-      min_rows: Math.max(1, Number(base.min_rows) || 2),
-      min_columns: Math.max(1, Number(base.min_columns) || 3),
-    };
+    return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
   }
 
   _getState(hass = this._hass) {
@@ -1098,21 +1191,18 @@ class NodaliaCoverCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const state = this._getState(hass);
     const attrs = state?.attributes || {};
-    return [
-      this._config?.entity || "",
-      this._config?.name || "",
-      this._config?.icon || "",
-      state?.state || "",
-      attrs.friendly_name || "",
-      attrs.icon || "",
-      attrs.device_class || "",
-      attrs.current_position ?? "",
-      attrs.current_tilt_position ?? "",
-      attrs.supported_features ?? "",
-      this._config?.show_position !== false ? 1 : 0,
-      this._config?.show_tilt !== false ? 1 : 0,
-      this._config?.show_stop !== false ? 1 : 0,
-    ].join("|");
+    return JSON.stringify({
+      config: this._config,
+      state: state?.state || "",
+      attrs: {
+        friendly_name: attrs.friendly_name || "",
+        icon: attrs.icon || "",
+        device_class: attrs.device_class || "",
+        current_position: attrs.current_position ?? "",
+        current_tilt_position: attrs.current_tilt_position ?? "",
+        supported_features: attrs.supported_features ?? "",
+      },
+    });
   }
 
   _features(state = this._getState()) {
@@ -1123,21 +1213,60 @@ class NodaliaCoverCard extends HTMLElement {
     return Boolean(this._features(state) & feature);
   }
 
-  _call(service, data = {}) {
-    if (!this._hass || !this._config?.entity) {
-      return;
-    }
-    this._hass.callService("cover", service, {
-      entity_id: this._config.entity,
-      ...data,
-    });
+  _isActive(state = this._getState()) {
+    const key = normalizeTextKey(state?.state);
+    return ["open", "opening", "closing"].includes(key);
+  }
+
+  _stateLabel(state = this._getState()) {
+    const key = normalizeTextKey(state?.state);
+    return {
+      open: "Open",
+      closed: "Closed",
+      opening: "Opening",
+      closing: "Closing",
+      stopped: "Stopped",
+      unavailable: "Unavailable",
+      unknown: "Unknown",
+    }[key] || String(state?.state || "Unknown");
+  }
+
+  _getName(state = this._getState()) {
+    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Cover";
+  }
+
+  _getIcon(state = this._getState()) {
+    return this._config?.icon || state?.attributes?.icon || coverDeviceIcon(state);
+  }
+
+  _getAccentColor(state = this._getState()) {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    return this._isActive(state)
+      ? styles.icon.on_color || DEFAULT_CONFIG.styles.icon.on_color
+      : styles.icon.off_color || DEFAULT_CONFIG.styles.icon.off_color;
+  }
+
+  _getAnimationSettings() {
+    const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+    return {
+      enabled: animations.enabled !== false,
+      iconAnimation: animations.icon_animation !== false,
+      powerDuration: clamp(Number(animations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
+      controlsDuration: clamp(Number(animations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
+    };
+  }
+
+  _isCompactLayout() {
+    const mode = this._config?.compact_layout_mode || "auto";
+    if (mode === "always") return true;
+    if (mode === "never") return false;
+    return false;
   }
 
   _triggerHaptic(styleOverride = null) {
     const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
-    }
+    if (haptics.enabled !== true) return;
     const style = styleOverride || haptics.style || "medium";
     fireEvent(this, "haptic", style);
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
@@ -1145,288 +1274,589 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _onClick(event) {
-    const action = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.coverAction)
-      ?.dataset?.coverAction;
-    if (!action) {
+  _triggerButtonBounce(element) {
+    if (!(element instanceof HTMLElement)) return;
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) return;
+    element.classList.remove("is-pressing");
+    element.getBoundingClientRect();
+    element.classList.add("is-pressing");
+    window.setTimeout(() => element.classList.remove("is-pressing"), animations.buttonBounceDuration + 40);
+  }
+
+  _isServiceAllowed(service) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) return true;
+    const value = String(service || "").trim().toLowerCase();
+    if (!value || !value.includes(".")) return false;
+    const [domain] = value.split(".");
+    const allowedServices = Array.isArray(security.allowed_services) ? security.allowed_services : [];
+    const allowedDomains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains : [];
+    return allowedServices.includes(value) || allowedDomains.includes(domain);
+  }
+
+  _callNamedService(service, data = {}) {
+    if (!this._hass || typeof this._hass.callService !== "function") return;
+    if (!this._isServiceAllowed(service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Cover Card", service);
       return;
     }
+    const [domain, serviceName] = String(service || "").split(".");
+    if (!domain || !serviceName) return;
+    this._hass.callService(domain, serviceName, data);
+  }
+
+  _callCover(service, data = {}) {
+    if (!this._hass || !this._config?.entity) return;
+    this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
+  }
+
+  _openMoreInfo(entityId = this._config?.entity) {
+    if (entityId) fireEvent(this, "hass-more-info", { entityId });
+  }
+
+  _navigate(url, newTab = false) {
+    const safeUrl = window.NodaliaUtils?.sanitizeActionUrl?.(url, { allowRelative: true }) || "";
+    if (!safeUrl) return;
+    if (newTab) {
+      window.open(safeUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (/^(?:https?:)?\/\//i.test(safeUrl)) {
+      window.open(safeUrl, "_self", "noopener,noreferrer");
+      return;
+    }
+    window.history.pushState(null, "", safeUrl);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+
+  _toggleCover(state = this._getState()) {
+    const key = normalizeTextKey(state?.state);
+    if (["open", "opening"].includes(key)) {
+      this._callCover("close_cover");
+      return;
+    }
+    this._callCover("open_cover");
+  }
+
+  _resolveTapAction(zone) {
+    const bodyRaw = this._config?.tap_action ?? "toggle";
+    const iconRaw = this._config?.icon_tap_action;
+    const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
+    let action = String(raw || "toggle").trim().toLowerCase();
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    if (!allowed.has(action)) {
+      action = "toggle";
+    }
+    if (action === "auto") {
+      return "toggle";
+    }
+    return action;
+  }
+
+  _resolveHoldAction(zone) {
+    const bodyRaw = this._config?.hold_action ?? "none";
+    const iconRaw = this._config?.icon_hold_action;
+    const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
+    let action = String(raw || "none").trim().toLowerCase();
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    if (!allowed.has(action)) {
+      action = "none";
+    }
+    if (action === "auto") {
+      return "more-info";
+    }
+    return action;
+  }
+
+  _runAction(zone, interaction = "tap", resolvedAction = null) {
+    const isIcon = zone === "icon";
+    const isHold = interaction === "hold";
+    const action = resolvedAction || (isHold ? this._resolveHoldAction(zone) : this._resolveTapAction(zone));
+    if (action === "none") return;
+    if (action === "more_info" || action === "more-info") {
+      this._openMoreInfo();
+      return;
+    }
+    if (action === "url") {
+      let url = isHold
+        ? (isIcon ? this._config?.icon_hold_url : this._config?.hold_url)
+        : (isIcon ? this._config?.icon_tap_url : this._config?.tap_url);
+      let newTab = isHold
+        ? (isIcon ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true)
+        : (isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true);
+      if (isHold && isIcon && !String(url || "").trim()) {
+        url = this._config?.hold_url;
+        newTab = this._config?.hold_new_tab === true;
+      }
+      this._navigate(url, newTab);
+      return;
+    }
+    if (action === "service") {
+      let service = isHold
+        ? (isIcon ? this._config?.icon_hold_service : this._config?.hold_service)
+        : (isIcon ? this._config?.icon_tap_service : this._config?.tap_service);
+      let dataRaw = isHold
+        ? (isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data)
+        : (isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data);
+      if (isHold && isIcon && !String(service || "").trim()) {
+        service = this._config?.hold_service;
+        dataRaw = this._config?.hold_service_data;
+      }
+      const data = parseServiceData(dataRaw);
+      this._callNamedService(service, data);
+      return;
+    }
+    this._toggleCover();
+  }
+
+  _onShadowClick(event) {
+    const path = event.composedPath();
+    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (slider) return;
+    const button = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (!button) return;
     event.preventDefault();
     event.stopPropagation();
-    this._triggerHaptic("selection");
-    switch (action) {
+    this._triggerHaptic();
+    this._triggerButtonBounce(button);
+    switch (button.dataset.coverAction) {
+      case "body":
+      case "icon":
+        if (this._suppressNextCoverTap) {
+          this._suppressNextCoverTap = false;
+          break;
+        }
+        this._runAction(button.dataset.coverAction);
+        break;
       case "open":
-        this._call("open_cover");
+        this._callCover("open_cover");
         break;
       case "close":
-        this._call("close_cover");
+        this._callCover("close_cover");
         break;
       case "stop":
-        this._call("stop_cover");
-        break;
-      case "more-info":
-        fireEvent(this, "hass-more-info", { entityId: this._config?.entity });
+        this._callCover("stop_cover");
         break;
       default:
         break;
     }
   }
 
-  _onInput(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverSlider);
-    if (!input) {
-      return;
-    }
+  _onPointerDown(event) {
+    const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (slider) this._activeSliderDrag = { slider };
+  }
+
+  _onShadowInput(event) {
+    const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (!slider) return;
     event.stopPropagation();
-    const value = clamp(Math.round(Number(input.value)), 0, 100);
-    if (!Number.isFinite(value)) {
+    this._applySliderValue(slider, slider.value, { commit: false });
+  }
+
+  _onShadowChange(event) {
+    const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (!slider) return;
+    event.stopPropagation();
+    if (this._skipNextSliderChange === slider) {
+      this._skipNextSliderChange = null;
       return;
     }
+    this._applySliderValue(slider, slider.value, { commit: true });
+    this._activeSliderDrag = null;
+  }
+
+  _applySliderValue(slider, rawValue, options = {}) {
+    const nextValue = clamp(Math.round(Number(rawValue)), 0, 100);
+    if (!Number.isFinite(nextValue)) return;
+    slider.style.setProperty("--percentage", String(nextValue));
+    slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+    if (options.commit !== true) return;
     this._triggerHaptic("selection");
-    if (input.dataset.coverSlider === "position") {
-      this._call("set_cover_position", { position: value });
-    } else if (input.dataset.coverSlider === "tilt") {
-      this._call("set_cover_tilt_position", { tilt_position: value });
+    if (slider.dataset.coverControl === "position") {
+      this._callCover("set_cover_position", { position: nextValue });
+    } else if (slider.dataset.coverControl === "tilt") {
+      this._callCover("set_cover_tilt_position", { tilt_position: nextValue });
     }
   }
 
-  _isCompact() {
-    const mode = this._config?.compact_layout_mode || "auto";
-    if (mode === "always") {
-      return true;
-    }
-    if (mode === "never") {
-      return false;
-    }
-    const columns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(columns) && columns < 4;
-  }
-
-  _accentColor(state) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const key = normalizeTextKey(state?.state || "");
-    if (key === "closed") {
-      return styles.icon?.closed_color || DEFAULT_CONFIG.styles.icon.closed_color;
-    }
-    if (["open", "opening", "closing"].includes(key)) {
-      return styles.icon?.active_color || DEFAULT_CONFIG.styles.icon.active_color;
-    }
-    return styles.icon?.color || DEFAULT_CONFIG.styles.icon.color;
-  }
-
-  _renderSlider(kind, label, value, supported) {
-    if (!supported || value === null) {
-      return "";
-    }
+  _renderSlider(kind, label, value) {
+    const styles = this._config.styles;
+    const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
     return `
-      <label class="cover-card__slider">
-        <span>${escapeHtml(label)}</span>
-        <input type="range" min="0" max="100" step="1" value="${escapeHtml(String(value))}" data-cover-slider="${escapeHtml(kind)}" />
-        <span class="cover-card__slider-value">${escapeHtml(String(Math.round(value)))}%</span>
-      </label>
+      <div class="fan-card__slider-row fan-card__slider-row--solo">
+        <div class="fan-card__slider-wrap">
+          <div class="fan-card__slider-shell" style="--percentage:${percentage};">
+            <div class="fan-card__slider-track"></div>
+            <input
+              type="range"
+              class="fan-card__slider"
+              data-cover-control="${escapeHtml(kind)}"
+              min="0"
+              max="100"
+              step="1"
+              value="${percentage}"
+              style="--percentage:${percentage};"
+              aria-label="${escapeHtml(label)}"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="fan-card__preset-panel">
+        <span class="fan-card__preset is-active">${escapeHtml(label)} ${percentage}%</span>
+      </div>
     `;
   }
 
   _render() {
-    if (!this.shadowRoot) {
+    if (!this.shadowRoot) return;
+    const config = this._config || normalizeConfig({});
+    const state = this._getState();
+    const styles = config.styles;
+    if (!state) {
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host { display: block; }
+          * { box-sizing: border-box; }
+          .fan-card--empty {
+            background: ${styles.card.background};
+            border: ${styles.card.border};
+            border-radius: ${styles.card.border_radius};
+            box-shadow: ${styles.card.box_shadow};
+            display: grid;
+            gap: 6px;
+            padding: ${styles.card.padding};
+          }
+          .fan-card__empty-title { color: var(--primary-text-color); font-size: 15px; font-weight: 700; }
+          .fan-card__empty-text { color: var(--secondary-text-color); font-size: 13px; line-height: 1.5; }
+        </style>
+        <ha-card class="fan-card fan-card--empty">
+          <div class="fan-card__empty-title">Nodalia Cover Card</div>
+          <div class="fan-card__empty-text">Configura \`entity\` con una entidad \`cover.*\` para mostrar la tarjeta.</div>
+        </ha-card>
+      `;
       return;
     }
-    const state = this._getState();
-    const attrs = state?.attributes || {};
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const iconStyles = styles.icon || DEFAULT_CONFIG.styles.icon;
-    const controlStyles = styles.control || DEFAULT_CONFIG.styles.control;
-    const iconGlyphSize = `${Math.round(parseSizeToPixels(iconStyles.size, 42) * 0.56)}px`;
-    const accent = this._accentColor(state);
-    const title = this._config?.name || attrs.friendly_name || this._config?.entity || "Cover";
-    const icon = this._config?.icon || attrs.icon || coverDeviceIcon(state);
-    const stateText = state ? stateLabel(state) : "Not configured";
-    const position = parseFiniteNumber(attrs.current_position);
-    const tilt = parseFiniteNumber(attrs.current_tilt_position);
-    const compact = this._isCompact();
-    const showPosition = this._config?.show_position !== false;
-    const showTilt = this._config?.show_tilt !== false;
-    const showStop = this._config?.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
-    const animate = this._config?.animate_icon !== false && ["opening", "closing"].includes(normalizeTextKey(state?.state));
+
+    const isActive = this._isActive(state);
+    const isMoving = ["opening", "closing"].includes(normalizeTextKey(state.state));
+    const title = this._getName(state);
+    const icon = this._getIcon(state);
+    const accentColor = this._getAccentColor(state);
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+    const animations = this._getAnimationSettings();
+    const position = parseNumber(state.attributes?.current_position);
+    const tilt = parseNumber(state.attributes?.current_tilt_position);
+    const supportsPosition = config.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state) && position !== null;
+    const supportsTilt = config.show_tilt_slider !== false && this._supports(COVER_FEATURES.SET_TILT_POSITION, state) && tilt !== null;
+    const supportsStop = config.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
+    const showCopyBlock = !this._isCompactLayout() || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
+    const chips = [];
+    if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
+    if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip">${Math.round(position)}%</span>`);
+    if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">Tilt ${Math.round(tilt)}%</span>`);
+    const controlsMarkup = `
+      <div class="fan-card__controls">
+        <button type="button" class="fan-card__control" data-cover-action="open" aria-label="Open"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
+        ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="Stop"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
+        <button type="button" class="fan-card__control" data-cover-action="close" aria-label="Close"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+      </div>
+      ${supportsPosition ? this._renderSlider("position", "Position", position) : ""}
+      ${supportsTilt ? this._renderSlider("tilt", "Tilt", tilt) : ""}
+    `;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
 
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
         * { box-sizing: border-box; }
-        ha-card {
-          --cover-accent: ${accent};
-          background: ${styles.card?.background || DEFAULT_CONFIG.styles.card.background};
-          border: ${styles.card?.border || DEFAULT_CONFIG.styles.card.border};
-          border-radius: ${styles.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius};
-          box-shadow: ${styles.card?.box_shadow || DEFAULT_CONFIG.styles.card.box_shadow};
+        ha-card.fan-card {
+          --fan-card-controls-gap: calc(${styles.card.gap} + 4px);
+          --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          background: ${isActive ? onCardBackground : styles.card.background};
+          border: ${isActive ? `1px solid ${onCardBorder}` : styles.card.border};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow};
           color: var(--primary-text-color);
-          display: grid;
-          gap: ${styles.card?.gap || DEFAULT_CONFIG.styles.card.gap};
+          min-width: 0;
           overflow: hidden;
-          padding: ${styles.card?.padding || DEFAULT_CONFIG.styles.card.padding};
+          padding: ${styles.card.padding};
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
-        .cover-card {
-          display: grid;
-          gap: 14px;
+        ha-card::before {
+          background: ${isActive
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
-        .cover-card--compact {
-          gap: 12px;
-        }
-        .cover-card__header {
+        .fan-card { display: grid; min-width: 0; position: relative; z-index: 1; }
+        .fan-card__content { display: grid; gap: 0; }
+        .fan-card__hero {
           align-items: center;
           display: grid;
-          gap: 12px;
-          grid-template-columns: auto minmax(0, 1fr) auto;
-        }
-        .cover-card__icon {
-          align-items: center;
-          background: ${iconStyles.background || DEFAULT_CONFIG.styles.icon.background};
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border-radius: 999px;
-          color: var(--cover-accent);
-          display: inline-flex;
-          height: ${iconStyles.size || DEFAULT_CONFIG.styles.icon.size};
-          justify-content: center;
-          width: ${iconStyles.size || DEFAULT_CONFIG.styles.icon.size};
-        }
-        .cover-card__icon ha-icon {
-          --mdc-icon-size: ${iconGlyphSize};
-        }
-        .cover-card__icon.is-moving ha-icon {
-          animation: cover-card-breathe 1.2s ease-in-out infinite;
-        }
-        .cover-card__title {
-          display: grid;
-          gap: 4px;
+          gap: ${styles.card.gap};
+          grid-template-columns: auto minmax(0, 1fr);
           min-width: 0;
         }
-        .cover-card__name {
-          font-size: ${styles.title_size || DEFAULT_CONFIG.styles.title_size};
-          font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .cover-card__subtitle {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .cover-card__chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          justify-content: flex-end;
-        }
-        .cover-card__chip {
+        .fan-card__icon {
+          -webkit-tap-highlight-color: transparent;
           align-items: center;
-          background: color-mix(in srgb, var(--cover-accent) 12%, transparent);
-          border: 1px solid color-mix(in srgb, var(--cover-accent) 22%, transparent);
-          border-radius: ${styles.chip_border_radius || DEFAULT_CONFIG.styles.chip_border_radius};
-          color: var(--primary-text-color);
-          display: inline-flex;
-          font-size: ${styles.chip_font_size || DEFAULT_CONFIG.styles.chip_font_size};
-          font-weight: 700;
-          height: ${styles.chip_height || DEFAULT_CONFIG.styles.chip_height};
-          padding: ${styles.chip_padding || DEFAULT_CONFIG.styles.chip_padding};
-          white-space: nowrap;
-        }
-        .cover-card__controls {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(${showStop ? 3 : 2}, minmax(0, 1fr));
-        }
-        .cover-card__button {
-          align-items: center;
-          background: ${controlStyles.accent_background || DEFAULT_CONFIG.styles.control.accent_background};
+          appearance: none;
+          background: ${isActive ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))` : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 18px;
-          color: ${controlStyles.accent_color || DEFAULT_CONFIG.styles.control.accent_color};
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
+          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
           cursor: pointer;
           display: inline-flex;
-          height: ${controlStyles.size || DEFAULT_CONFIG.styles.control.size};
+          height: ${styles.icon.size};
           justify-content: center;
-          min-width: 0;
-          transition: transform 160ms ease, background 160ms ease;
+          line-height: 0;
+          margin: 0;
+          outline: none;
+          padding: 0;
+          position: relative;
+          width: ${styles.icon.size};
         }
-        .cover-card__button:hover {
-          background: color-mix(in srgb, var(--cover-accent) 12%, transparent);
+        .fan-card__icon ha-icon {
+          --mdc-icon-size: calc(${styles.icon.size} * 0.46);
+          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
         }
-        .cover-card__button:active {
-          transform: scale(.97);
+        .fan-card__icon--active-motion ha-icon { animation: cover-card-icon-breathe 1.15s ease-in-out infinite; }
+        .fan-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          color: #fff;
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
         }
-        .cover-card__button ha-icon {
-          --mdc-icon-size: 24px;
-        }
-        .cover-card__sliders {
+        .fan-card__unavailable-badge ha-icon { --mdc-icon-size: 11px; }
+        .fan-card__copy { display: grid; gap: 10px; min-width: 0; }
+        .fan-card__headline {
+          align-items: start;
           display: grid;
           gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
         }
-        .cover-card__slider {
+        .fan-card__title {
+          font-size: ${styles.title_size};
+          font-weight: 700;
+          line-height: 1.15;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .fan-card__chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: flex-end;
+          min-width: 0;
+        }
+        .fan-card__chip {
+          align-items: center;
+          backdrop-filter: blur(18px);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: ${chipBorderRadius};
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: ${styles.chip_font_size};
+          font-weight: 700;
+          height: ${styles.chip_height};
+          overflow: hidden;
+          padding: ${styles.chip_padding};
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .fan-card__chip--state { color: var(--primary-text-color); }
+        .fan-card__controls-shell {
+          margin-top: var(--fan-card-controls-gap);
+          overflow: visible;
+        }
+        .fan-card__controls-inner { display: grid; gap: 10px; }
+        .fan-card__controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+          padding-inline: 4px;
+        }
+        .fan-card__control,
+        .fan-card__preset {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: ${styles.chip_font_size};
+          font-weight: 700;
+          height: ${styles.control.size};
+          justify-content: center;
+          line-height: 0;
+          margin: 0;
+          min-width: ${styles.control.size};
+          outline: none;
+          padding: 0 14px;
+          transform-origin: center;
+          white-space: nowrap;
+        }
+        .fan-card__control { padding: 0; width: ${styles.control.size}; }
+        .fan-card__control ha-icon { --mdc-icon-size: calc(${styles.control.size} * 0.46); }
+        .fan-card__preset.is-active {
+          background: ${styles.control.accent_background};
+          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          color: ${styles.control.accent_color};
+        }
+        .fan-card__slider-row {
           align-items: center;
           display: grid;
-          gap: 10px;
-          grid-template-columns: 58px minmax(0, 1fr) 44px;
+          gap: 14px;
+          grid-template-columns: minmax(0, 1fr);
+          padding-inline: 4px;
         }
-        .cover-card__slider span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 700;
+        .fan-card__slider-wrap {
+          --fan-card-slider-input-height: max(44px, calc(${styles.slider_thumb_size} + 12px));
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          display: flex;
+          min-height: ${styles.slider_wrap_height};
+          padding: 0 14px;
         }
-        .cover-card__slider input {
-          accent-color: var(--cover-accent);
-          min-width: 0;
+        .fan-card__slider-shell { flex: 1; min-width: 0; position: relative; }
+        .fan-card__slider-track {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          height: ${styles.slider_height};
+          left: 0;
+          overflow: hidden;
+          pointer-events: none;
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+        }
+        .fan-card__slider-track::before {
+          background: ${styles.slider_color};
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          position: absolute;
+          transform: scaleX(calc(var(--percentage, 0) / 100));
+          transform-origin: left center;
+        }
+        .fan-card__slider {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          border: 0;
+          cursor: pointer;
+          height: var(--fan-card-slider-input-height);
+          margin: 0;
+          padding: 0;
+          position: relative;
+          touch-action: pan-y;
           width: 100%;
+          z-index: 1;
         }
-        .cover-card__slider-value {
-          color: var(--primary-text-color) !important;
-          text-align: right;
+        .fan-card__slider::-webkit-slider-runnable-track { background: transparent; height: ${styles.slider_height}; }
+        .fan-card__slider::-moz-range-track { background: transparent; border: 0; height: ${styles.slider_height}; }
+        .fan-card__slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          border: 0;
+          height: ${styles.slider_thumb_size};
+          margin-top: calc((${styles.slider_height} - ${styles.slider_thumb_size}) / 2);
+          width: ${styles.slider_thumb_size};
         }
-        .cover-card--compact .cover-card__header {
-          grid-template-columns: auto minmax(0, 1fr);
+        .fan-card__slider::-moz-range-thumb {
+          background: transparent;
+          border: 0;
+          height: ${styles.slider_thumb_size};
+          width: ${styles.slider_thumb_size};
         }
-        .cover-card--compact .cover-card__chips {
-          grid-column: 1 / -1;
-          justify-content: flex-start;
+        .fan-card__preset-panel {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+          margin-top: 8px;
+          min-width: 0;
         }
-        @keyframes cover-card-breathe {
-          0%, 100% { transform: translateY(0); opacity: .82; }
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled),
+        :is(.fan-card__icon, .fan-card__control, .fan-card__preset).is-pressing:not(:disabled) {
+          animation: fan-card-button-bounce var(--fan-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+        @keyframes fan-card-button-bounce {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+        @keyframes cover-card-icon-breathe {
+          0%, 100% { transform: translateY(0); opacity: .86; }
           50% { transform: translateY(-2px); opacity: 1; }
         }
+        ${animations.enabled ? "" : `.fan-card, .fan-card * { animation: none !important; transition: none !important; }`}
       </style>
-      <ha-card>
-        <div class="cover-card ${compact ? "cover-card--compact" : ""}">
-          <div class="cover-card__header">
-            <button class="cover-card__icon ${animate ? "is-moving" : ""}" data-cover-action="more-info" title="${escapeHtml(title)}">
+      <ha-card
+        class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        data-cover-action="body"
+      >
+        <div class="fan-card__content">
+          <div class="fan-card__hero">
+            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
-            <div class="cover-card__title">
-              <div class="cover-card__name">${escapeHtml(title)}</div>
-              <div class="cover-card__subtitle">${escapeHtml(this._config?.entity || "Select a cover entity")}</div>
-            </div>
-            <div class="cover-card__chips">
-              ${this._config?.show_state_chip !== false ? `<span class="cover-card__chip">${escapeHtml(stateText)}</span>` : ""}
-              ${showPosition && position !== null ? `<span class="cover-card__chip">${Math.round(position)}%</span>` : ""}
-              ${showTilt && tilt !== null ? `<span class="cover-card__chip">Tilt ${Math.round(tilt)}%</span>` : ""}
-            </div>
+            ${showCopyBlock ? `
+              <div class="fan-card__copy">
+                <div class="fan-card__headline">
+                  ${this._isCompactLayout() ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                  ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
+                </div>
+              </div>
+            ` : ""}
           </div>
-          <div class="cover-card__controls">
-            <button class="cover-card__button" data-cover-action="open" title="Open"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
-            ${showStop ? `<button class="cover-card__button" data-cover-action="stop" title="Stop"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
-            <button class="cover-card__button" data-cover-action="close" title="Close"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
-          </div>
-          <div class="cover-card__sliders">
-            ${showPosition ? this._renderSlider("position", "Position", position, this._supports(COVER_FEATURES.SET_POSITION, state)) : ""}
-            ${showTilt ? this._renderSlider("tilt", "Tilt", tilt, this._supports(COVER_FEATURES.SET_TILT_POSITION, state)) : ""}
+          <div class="fan-card__controls-shell">
+            <div class="fan-card__controls-inner">
+              ${controlsMarkup}
+            </div>
           </div>
         </div>
       </ha-card>
     `;
+    this._lastRenderedIsActive = isActive;
   }
+}
+
+if (!customElements.get(CARD_TAG)) {
+  customElements.define(CARD_TAG, NodaliaCoverCard);
 }
 
 class NodaliaCoverCardEditor extends HTMLElement {
@@ -1435,132 +1865,313 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
-    this._onInput = this._onInput.bind(this);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._render();
+    this._entityOptionsSignature = "";
+    this._showStyleSection = false;
+    this._showAnimationSection = false;
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
     this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+    if (!shouldRender) return;
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = normalizeConfig(config || {});
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) return;
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) return;
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName).then(() => {
+      this._pendingEditorControlTags.delete(tagName);
+      if (!this._hass || !this.shadowRoot) return;
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
+    }).catch(() => this._pendingEditorControlTags.delete(tagName));
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("cover."));
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement)) return null;
+    const selector = activeElement.dataset?.field ? `[data-field="${escapeSelectorValue(activeElement.dataset.field)}"]` : null;
+    if (!selector) return null;
+    return {
+      selector,
+      selectionEnd: typeof activeElement.selectionEnd === "number" ? activeElement.selectionEnd : null,
+      selectionStart: typeof activeElement.selectionStart === "number" ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) return;
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) return;
+    try { target.focus({ preventScroll: true }); } catch (_error) { target.focus(); }
+    if (focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof target.setSelectionRange === "function") {
+      try { target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd); } catch (_error) {}
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+    });
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    switch (input.dataset.valueType || "string") {
+      case "boolean": return Boolean(input.checked);
+      case "number": return input.value === "" ? "" : Number(input.value);
+      case "csv": return normalizeList(input.value);
+      case "color": return input.value;
+      default: return input.value;
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event.composedPath().find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+    if (!input?.dataset?.field) return;
+    event.stopPropagation();
+    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
+    this._config = normalizeConfig(compactConfig(this._config));
+    if (event.type === "change") this._emitConfig();
+  }
+
+  _onShadowValueChanged(event) {
+    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+    if (!control?.dataset?.field) return;
+    event.stopPropagation();
+    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+    if (typeof control.dataset?.value === "string") control.dataset.value = String(nextValue || "");
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._config = normalizeConfig(compactConfig(this._config));
+    this._emitConfig();
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+    if (!toggleButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (toggleButton.dataset.editorToggle === "styles") this._showStyleSection = !this._showStyleSection;
+    if (toggleButton.dataset.editorToggle === "animations") this._showAnimationSection = !this._showAnimationSection;
     this._render();
   }
 
-  _readValue(input) {
-    if (input.type === "checkbox") {
-      return input.checked;
-    }
-    if (input.dataset.valueType === "number") {
-      const value = Number(input.value);
-      return Number.isFinite(value) ? value : undefined;
-    }
-    return input.value;
+  _editorLabel(value) {
+    if (typeof value !== "string" || !window.NodaliaI18n?.editorStr) return value;
+    return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", value);
   }
 
-  _setValue(path, value) {
-    const next = mergeConfig(DEFAULT_CONFIG, this._config || {});
-    if (value === "" || value === undefined || value === null) {
-      deleteByPath(next, path);
-    } else {
-      setByPath(next, path, value);
-    }
-    this._config = normalizeConfig(next);
-    fireEvent(this, "config-changed", { config: compactConfig(this._config) });
-  }
-
-  _onInput(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement);
-    if (!input?.dataset?.field) {
-      return;
-    }
-    this._setValue(input.dataset.field, this._readValue(input));
-  }
-
-  _field(label, field, value, options = {}) {
+  _renderTextField(label, field, value, options = {}) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
     return `
-      <label class="editor-field ${options.full ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
-        <input type="${escapeHtml(options.type || "text")}" data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(options.valueType || "string")}" value="${escapeHtml(value ?? "")}" placeholder="${escapeHtml(options.placeholder || "")}" />
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <input type="${escapeHtml(options.type || "text")}" data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(options.valueType || "string")}" value="${escapeHtml(inputValue)}" ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""} />
       </label>
     `;
   }
 
-  _checkbox(label, field, checked) {
+  _renderTextareaField(label, field, value, options = {}) {
     return `
-      <label class="editor-toggle">
-        <input type="checkbox" data-field="${escapeHtml(field)}" ${checked ? "checked" : ""} />
-        <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span>${escapeHtml(label)}</span>
+      <label class="editor-field editor-field--full">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <textarea data-field="${escapeHtml(field)}" ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""}>${escapeHtml(value || "")}</textarea>
       </label>
     `;
   }
 
-  _select(label, field, value, options) {
+  _renderSelectField(label, field, value, options, fieldOptions = {}) {
     return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+      <label class="editor-field ${fieldOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
         <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `<option value="${escapeHtml(option.value)}" ${String(value) === option.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          ${(options || []).map(option => `<option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>${escapeHtml(this._editorLabel(option.label))}</option>`).join("")}
         </select>
       </label>
     `;
   }
 
-  _entityDatalist() {
-    const ids = Object.keys(this._hass?.states || {}).filter(id => id.startsWith("cover.")).sort();
-    return `<datalist id="cover-card-entities">${ids.map(id => `<option value="${escapeHtml(id)}"></option>`).join("")}</datalist>`;
+  _renderCheckboxField(label, field, checked) {
+    return `
+      <label class="editor-toggle">
+        <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(this._editorLabel(label))}</span>
+      </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallback = getEditorColorFallbackValue(field);
+    const current = value || fallback;
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <label class="editor-color-picker">
+          <input type="color" data-field="${escapeHtml(field)}" data-value-type="color" value="${escapeHtml(colorToHex(current, fallback))}" />
+          <span class="editor-color-swatch" style="--editor-swatch:${escapeHtml(current)};"></span>
+        </label>
+      </div>
+    `;
+  }
+
+  _renderCoverEntityField(label, field, value, options = {}) {
+    const usingHaPicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <div
+          data-mounted-control="cover-entity"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(value || "")}"
+          data-placeholder="${escapeHtml(options.placeholder || "cover.salon")}"
+        >${usingHaPicker ? "" : `<input type="text" data-field="${escapeHtml(field)}" value="${escapeHtml(value || "")}" placeholder="${escapeHtml(options.placeholder || "cover.salon")}" />`}</div>
+      </div>
+    `;
+  }
+
+  _renderIconPickerField(label, field, value, options = {}) {
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <div data-mounted-control="icon-picker" data-field="${escapeHtml(field)}" data-value="${escapeHtml(value || "")}" data-placeholder="${escapeHtml(options.placeholder || "mdi:blinds")}"></div>
+      </div>
+    `;
+  }
+
+  _mountCoverEntityPicker(host) {
+    window.NodaliaUtils.mountEntityPickerHost(host, {
+      hass: this._hass,
+      value: host.dataset.value || "",
+      includeDomains: ["cover"],
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+    });
+  }
+
+  _mountIconPicker(host) {
+    window.NodaliaUtils.mountIconPickerHost(host, {
+      hass: this._hass,
+      value: host.dataset.value || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+    });
   }
 
   _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-    const c = this._config || normalizeConfig(STUB_CONFIG);
+    if (!this.shadowRoot) return;
+    const config = normalizeConfig(this._config || {});
+    const iconTap = String(config.icon_tap_action || "");
+    const tapAction = String(config.tap_action || "toggle");
+    const iconHold = String(config.icon_hold_action || "");
+    const holdAction = String(config.hold_action || "none");
+    const showTapServiceSecurity = iconTap === "service" || tapAction === "service" || iconHold === "service" || holdAction === "service";
+    const showIconHoldService = iconHold === "service" || (iconHold === "" && holdAction === "service");
+    const showIconHoldUrl = iconHold === "url" || (iconHold === "" && holdAction === "url");
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
         * { box-sizing: border-box; }
-        .editor { color: var(--primary-text-color); display: grid; gap: 16px; }
+        .editor { display: grid; gap: 14px; }
         .editor-section {
-          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
           border-radius: 18px;
           display: grid;
-          gap: 14px;
-          padding: 16px;
+          gap: 12px;
+          padding: 14px;
         }
-        .editor-section__title { font-size: 15px; font-weight: 700; }
+        .editor-section__header {
+          align-items: start;
+          display: grid;
+          gap: 6px;
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .editor-section__title { color: var(--primary-text-color); font-size: 14px; font-weight: 700; }
+        .editor-section__hint { color: var(--secondary-text-color); font-size: 12px; line-height: 1.45; }
+        .editor-section__toggle-button {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          gap: 6px;
+          padding: 6px 10px;
+        }
+        .editor-section__toggle-button ha-icon { --mdc-icon-size: 16px; }
         .editor-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .editor-grid--stacked { grid-template-columns: 1fr; }
         .editor-field { display: grid; gap: 6px; min-width: 0; }
         .editor-field--full { grid-column: 1 / -1; }
-        .editor-field span, .editor-toggle span { font-size: 12px; font-weight: 600; }
-        input, select {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        .editor-field span, .editor-toggle__label { color: var(--secondary-text-color); font-size: 12px; font-weight: 700; }
+        input, select, textarea {
+          background: color-mix(in srgb, var(--card-background-color, #111827) 92%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
           min-height: 40px;
-          padding: 10px 12px;
+          padding: 8px 10px;
           width: 100%;
         }
+        textarea { min-height: 76px; resize: vertical; }
         .editor-toggle {
           align-items: center;
-          cursor: pointer;
           display: grid;
           gap: 10px;
           grid-template-columns: auto minmax(0, 1fr);
-          min-height: 40px;
         }
-        .editor-toggle input {
-          block-size: 1px;
-          inline-size: 1px;
-          opacity: 0;
-          position: absolute;
-        }
+        .editor-toggle input { opacity: 0; pointer-events: none; position: absolute; }
         .editor-toggle__switch {
           background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
@@ -1586,55 +2197,197 @@ class NodaliaCoverCardEditor extends HTMLElement {
           border-color: var(--primary-color);
         }
         .editor-toggle input:checked + .editor-toggle__switch::before { transform: translateX(18px); }
+        .editor-color-picker { align-items: center; display: inline-flex; gap: 8px; }
+        .editor-color-picker input { height: 40px; padding: 4px; width: 58px; }
+        .editor-color-swatch { background: var(--editor-swatch); border-radius: 999px; height: 26px; width: 26px; }
         @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
       </style>
-      ${this._entityDatalist()}
       <div class="editor">
         <section class="editor-section">
-          <div class="editor-section__title">Cover</div>
-          <div class="editor-grid">
-            ${this._field("Entity", "entity", c.entity, { placeholder: "cover.living_room_blinds", full: true })}
-            ${this._field("Name", "name", c.name)}
-            ${this._field("Icon", "icon", c.icon, { placeholder: "mdi:blinds" })}
-            ${this._select("Layout", "compact_layout_mode", c.compact_layout_mode, [
-              { value: "auto", label: "Auto" },
-              { value: "always", label: "Compact" },
-              { value: "never", label: "Regular" },
-            ])}
-            ${this._checkbox("Show state chip", "show_state_chip", c.show_state_chip !== false)}
-            ${this._checkbox("Show position", "show_position", c.show_position !== false)}
-            ${this._checkbox("Show tilt", "show_tilt", c.show_tilt !== false)}
-            ${this._checkbox("Show stop button", "show_stop", c.show_stop !== false)}
-            ${this._checkbox("Animate icon", "animate_icon", c.animate_icon !== false)}
+          <div class="editor-section__header">
+            <div>
+              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
+              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.general_section_hint"))}</div>
+            </div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderCoverEntityField("Cover entity", "entity", config.entity, { placeholder: "cover.salon", fullWidth: true })}
+            ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:blinds", fullWidth: true })}
+            ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Salon", fullWidth: true })}
           </div>
         </section>
         <section class="editor-section">
-          <div class="editor-section__title">Style</div>
-          <div class="editor-grid">
-            ${this._field("Card background", "styles.card.background", c.styles?.card?.background)}
-            ${this._field("Card border", "styles.card.border", c.styles?.card?.border)}
-            ${this._field("Card radius", "styles.card.border_radius", c.styles?.card?.border_radius)}
-            ${this._field("Card padding", "styles.card.padding", c.styles?.card?.padding)}
-            ${this._field("Active color", "styles.icon.active_color", c.styles?.icon?.active_color)}
-            ${this._field("Closed color", "styles.icon.closed_color", c.styles?.icon?.closed_color)}
-            ${this._field("Icon size", "styles.icon.size", c.styles?.icon?.size)}
-            ${this._field("Control size", "styles.control.size", c.styles?.control?.size)}
+          <div class="editor-section__header">
+            <div>
+              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
+              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+            </div>
           </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField("ed.light.icon_tap_action", "icon_tap_action", iconTap, [
+              { value: "", label: "ed.entity.icon_tap_inherit" },
+              { value: "auto", label: "ed.entity.tap_auto" },
+              { value: "toggle", label: "ed.entity.tap_toggle" },
+              { value: "more-info", label: "ed.entity.tap_more_info" },
+              { value: "url", label: "ed.entity.tap_open_url" },
+              { value: "service", label: "ed.entity.tap_service" },
+              { value: "none", label: "ed.entity.tap_none" },
+            ], { fullWidth: true })}
+            ${this._renderSelectField("ed.light.card_tap_action", "tap_action", tapAction, [
+              { value: "auto", label: "ed.entity.tap_auto" },
+              { value: "toggle", label: "ed.entity.tap_toggle" },
+              { value: "more-info", label: "ed.entity.tap_more_info" },
+              { value: "url", label: "ed.entity.tap_open_url" },
+              { value: "service", label: "ed.entity.tap_service" },
+              { value: "none", label: "ed.entity.tap_none" },
+            ], { fullWidth: true })}
+            ${showTapServiceSecurity ? this._renderCheckboxField("ed.entity.security_strict", "security.strict_service_actions", config.security?.strict_service_actions !== false) : ""}
+            ${config.security?.strict_service_actions !== false && showTapServiceSecurity ? this._renderTextField("ed.entity.allowed_services_csv", "security.allowed_services", Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "", { placeholder: "cover.open_cover, cover.close_cover", valueType: "csv", fullWidth: true }) : ""}
+            ${iconTap === "service" ? this._renderTextField("ed.entity.tap_service_field", "icon_tap_service", config.icon_tap_service, { placeholder: "cover.open_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.tap_service_data_json", "icon_tap_service_data", config.icon_tap_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
+            ${tapAction === "service" ? this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, { placeholder: "cover.open_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
+            ${iconTap === "url" ? this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.tap_new_tab", "icon_tap_new_tab", config.icon_tap_new_tab === true) : ""}
+            ${tapAction === "url" ? this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true) : ""}
+            <div class="editor-section__hint editor-field--full">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
+            ${this._renderSelectField("ed.light.icon_hold_action", "icon_hold_action", iconHold, [
+              { value: "", label: "ed.entity.icon_hold_inherit" },
+              { value: "auto", label: "ed.entity.tap_auto" },
+              { value: "toggle", label: "ed.entity.tap_toggle" },
+              { value: "more-info", label: "ed.entity.tap_more_info" },
+              { value: "url", label: "ed.entity.tap_open_url" },
+              { value: "service", label: "ed.entity.tap_service" },
+              { value: "none", label: "ed.entity.tap_none" },
+            ], { fullWidth: true })}
+            ${this._renderSelectField("ed.light.card_hold_action", "hold_action", holdAction, [
+              { value: "auto", label: "ed.entity.tap_auto" },
+              { value: "toggle", label: "ed.entity.tap_toggle" },
+              { value: "more-info", label: "ed.entity.tap_more_info" },
+              { value: "url", label: "ed.entity.tap_open_url" },
+              { value: "service", label: "ed.entity.tap_service" },
+              { value: "none", label: "ed.entity.tap_none" },
+            ], { fullWidth: true })}
+            ${showIconHoldService ? this._renderTextField("ed.entity.hold_service_field", "icon_hold_service", config.icon_hold_service, { placeholder: "cover.stop_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.hold_service_data_json", "icon_hold_service_data", config.icon_hold_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
+            ${holdAction === "service" ? this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, { placeholder: "cover.stop_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
+            ${showIconHoldUrl ? this._renderTextField("ed.entity.hold_url_field", "icon_hold_url", config.icon_hold_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.hold_new_tab", "icon_hold_new_tab", config.icon_hold_new_tab === true) : ""}
+            ${holdAction === "url" ? this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true) : ""}
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div>
+              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
+              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.visibility_section_hint"))}</div>
+            </div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField("ed.vacuum.layout_narrow", "compact_layout_mode", config.compact_layout_mode || "auto", [
+              { value: "auto", label: "ed.vacuum.layout_auto" },
+              { value: "always", label: "ed.vacuum.layout_always" },
+              { value: "never", label: "ed.vacuum.layout_never" },
+            ])}
+            ${this._renderCheckboxField("ed.fan.show_state_bubble", "show_state", config.show_state === true)}
+            ${this._renderCheckboxField("Show position chip", "show_position_chip", config.show_position_chip !== false)}
+            ${this._renderCheckboxField("Show tilt chip", "show_tilt_chip", config.show_tilt_chip !== false)}
+            ${this._renderCheckboxField("Show position slider", "show_position_slider", config.show_position_slider !== false)}
+            ${this._renderCheckboxField("Show tilt slider", "show_tilt_slider", config.show_tilt_slider !== false)}
+            ${this._renderCheckboxField("Show stop button", "show_stop", config.show_stop !== false)}
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div>
+              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_title"))}</div>
+              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_hint"))}</div>
+            </div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div>
+              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.animations_section_title"))}</div>
+              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.fan.animations_section_hint"))}</div>
+            </div>
+            <button type="button" class="editor-section__toggle-button" data-editor-toggle="animations">
+              <ha-icon icon="${this._showAnimationSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+              <span>${escapeHtml(this._showAnimationSection ? this._editorLabel("ed.weather.hide_animation_settings") : this._editorLabel("ed.weather.show_animation_settings"))}</span>
+            </button>
+          </div>
+          ${this._showAnimationSection ? `
+            <div class="editor-grid">
+              ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
+              ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
+              ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, { type: "number", valueType: "number" })}
+              ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, { type: "number", valueType: "number" })}
+              ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, { type: "number", valueType: "number" })}
+            </div>
+          ` : ""}
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div>
+              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.styles_section_hint"))}</div>
+            </div>
+            <button type="button" class="editor-section__toggle-button" data-editor-toggle="styles">
+              <ha-icon icon="${this._showStyleSection ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
+              <span>${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}</span>
+            </button>
+          </div>
+          ${this._showStyleSection ? `
+            <div class="editor-grid">
+              ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
+              ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
+              ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                escapeHtml,
+                field: "styles.card.border_radius",
+                value: config.styles?.card?.border_radius,
+                tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                labels: {
+                  pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                  soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                  round: this._editorLabel("ed.entity.chip_radius_round"),
+                  square: this._editorLabel("ed.entity.chip_radius_square"),
+                },
+              })}
+              ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
+              ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
+              ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
+              ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size)}
+              ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color)}
+              ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color)}
+              ${this._renderTextField("ed.fan.style_control_size", "styles.control.size", config.styles.control.size)}
+              ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background)}
+              ${this._renderTextField("ed.fan.style_slider_wrap_height", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
+              ${this._renderTextField("ed.fan.style_slider_height", "styles.slider_height", config.styles.slider_height)}
+              ${this._renderColorField("ed.fan.style_slider_color", "styles.slider_color", config.styles.slider_color)}
+              ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
+              ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
+              ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
+              ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                escapeHtml,
+                field: "styles.chip_border_radius",
+                value: config.styles?.chip_border_radius,
+                tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                labels: {
+                  pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                  soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                  round: this._editorLabel("ed.entity.chip_radius_round"),
+                  square: this._editorLabel("ed.entity.chip_radius_square"),
+                },
+              })}
+              ${this._renderTextField("ed.vacuum.style_title_size", "styles.title_size", config.styles.title_size)}
+            </div>
+          ` : ""}
         </section>
       </div>
     `;
-    this.shadowRoot.querySelectorAll("input, select").forEach(input => {
-      input.addEventListener("change", this._onInput);
-      if (input instanceof HTMLInputElement && input.type !== "checkbox") {
-        input.addEventListener("input", this._onInput);
-      }
-    });
-    this.shadowRoot.querySelector('input[data-field="entity"]')?.setAttribute("list", "cover-card-entities");
+    this.shadowRoot.querySelectorAll('[data-mounted-control="cover-entity"]').forEach(host => this._mountCoverEntityPicker(host));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
+    this._ensureEditorControlsReady();
   }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCoverCard);
 }
 
 if (!customElements.get(EDITOR_TAG)) {
@@ -1645,6 +2398,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Cover Card",
-  description: "Nodalia-style controls for Home Assistant cover entities.",
+  description: "Fan-card style controls for Home Assistant cover entities.",
   preview: true,
 });

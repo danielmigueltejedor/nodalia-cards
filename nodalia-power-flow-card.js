@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.2";
+const CARD_VERSION = "1.1.0-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1289,7 +1289,14 @@ function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false)
 /** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
 function getFlowLayoutFlagsFromConfig(config) {
   const c = config || {};
-  const activeTopKinds = ["grid", "solar", "battery"].filter(kind => Boolean(resolveNodeConfig(kind, c)?.entity));
+  const homeConfigured = isEntitySourceConfigured(resolveNodeConfig("home", c)?.entity);
+  const activeTopKinds = ["grid", "solar", "battery"].filter(kind => {
+    const node = resolveNodeConfig(kind, c);
+    if (kind === "grid" && homeConfigured) {
+      return true;
+    }
+    return isEntitySourceConfigured(node?.entity) || Boolean(String(node?.export_entity || "").trim());
+  });
   const topCount = activeTopKinds.length;
   const hasGrid = activeTopKinds.includes("grid");
   const hasSolar = activeTopKinds.includes("solar");
@@ -2051,7 +2058,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
    */
   _applyDerivedHomeAndGridDisplay(nodes) {
     const homeCfg = resolveNodeConfig("home", this._config);
-    if (!isEntitySourceConfigured(homeCfg.entity)) {
+    const homeConfigured = isEntitySourceConfigured(homeCfg.entity);
+    if (!homeConfigured) {
       const grid = nodes.grid;
       const solar = nodes.solar;
       const battery = nodes.battery;
@@ -2094,6 +2102,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
           nodes.home.state = grid.state || solar.state || battery.state;
         }
       }
+    } else {
+      this._applyHomeDemandDerivedFlows(nodes);
     }
 
     const g = nodes.grid;
@@ -2105,6 +2115,68 @@ class NodaliaPowerFlowCard extends HTMLElement {
         g.secondary = this._powerFlowStrGridExport();
       }
     }
+  }
+
+  _applyHomeDemandDerivedFlows(nodes) {
+    const home = nodes.home;
+    const grid = nodes.grid;
+    const solar = nodes.solar;
+    const battery = nodes.battery;
+    if (!home?.entityId || home.unavailable || !Number.isFinite(home.value)) {
+      return;
+    }
+
+    const hasGridSensor = Boolean(isEntitySourceConfigured(resolveNodeConfig("grid", this._config).entity) || String(resolveNodeConfig("grid", this._config).export_entity || "").trim());
+    const hasSolar = Boolean(solar?.entityId && !solar.unavailable && Number.isFinite(solar.value));
+    const hasBattery = Boolean(battery?.entityId && !battery.unavailable && Number.isFinite(battery.value));
+    if (!hasSolar && !hasBattery && hasGridSensor) {
+      return;
+    }
+
+    const homeDemand = Math.max(0, Number(home.value));
+    const solarProduction = hasSolar ? Math.max(0, Number(solar.value)) : 0;
+    const batteryPower = hasBattery ? Number(battery.value) : 0;
+    const batteryDischarge = Math.max(0, batteryPower);
+    const batteryCharge = Math.max(0, -batteryPower);
+
+    const solarToHome = Math.min(solarProduction, homeDemand);
+    let remainingHomeDemand = Math.max(0, homeDemand - solarToHome);
+    const batteryToHome = Math.min(batteryDischarge, remainingHomeDemand);
+    remainingHomeDemand = Math.max(0, remainingHomeDemand - batteryToHome);
+    const gridToHome = remainingHomeDemand;
+
+    let remainingSolar = Math.max(0, solarProduction - solarToHome);
+    const solarToBattery = Math.min(remainingSolar, batteryCharge);
+    remainingSolar = Math.max(0, remainingSolar - solarToBattery);
+    const gridToBattery = Math.max(0, batteryCharge - solarToBattery);
+    const batteryToGrid = Math.max(0, batteryDischarge - batteryToHome);
+    const gridExport = Math.max(0, remainingSolar + batteryToGrid);
+    const gridImport = Math.max(0, gridToHome + gridToBattery);
+    const gridNet = gridImport > 0.001 ? gridImport : gridExport > 0.001 ? -gridExport : 0;
+    const unit = String(home.unit || solar?.unit || battery?.unit || grid?.unit || "").trim();
+
+    grid.entityId = grid.entityId || home.entityId;
+    grid.state = grid.state || home.state;
+    grid.unavailable = false;
+    grid.value = gridNet;
+    grid.unit = unit;
+    grid.isDerived = true;
+    grid.isExporting = gridExport > 0.001;
+    if (grid.isExporting) {
+      const gridCfg = resolveNodeConfig("grid", this._config);
+      grid.color = gridCfg.export_color || NODE_DEFAULTS.grid.export_color;
+    }
+    const gridDisplay = formatDisplayValue(Math.abs(gridNet), unit);
+    grid.valueText = gridDisplay.value;
+    grid.unitText = gridDisplay.unit;
+
+    nodes._flowValues = {
+      gridHome: gridImport > 0.001 ? gridToHome : gridExport > 0.001 ? -gridExport : 0,
+      solarHome: solarToHome,
+      batteryHome: batteryToHome,
+      solarBattery: solarToBattery,
+      gridBattery: gridToBattery,
+    };
   }
 
   _getNodes() {
@@ -2182,6 +2254,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nodeRadius = layoutPreset === "simple" ? 4.8 : layoutPreset === "compact" ? 5.5 : 6.1;
     const individualRadius = layoutPreset === "simple" ? 4.2 : layoutPreset === "compact" ? 4.6 : 5;
     const lineCandidates = [];
+    const flowValues = nodes._flowValues || {};
 
     const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true) => {
       const magnitude = this._toFlowMagnitude(value, unit);
@@ -2236,13 +2309,22 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
 
     if (nodes.grid.entityId) {
-      pushLine("grid", nodes.grid, home, nodes.grid.value, nodes.grid.unit, nodes.grid.color, true);
+      const value = Number.isFinite(flowValues.gridHome) ? flowValues.gridHome : nodes.grid.value;
+      pushLine("grid", nodes.grid, home, value, nodes.grid.unit, nodes.grid.color, true);
     }
     if (nodes.solar.entityId) {
-      pushLine("solar", nodes.solar, home, nodes.solar.value, nodes.solar.unit, nodes.solar.color, true);
+      const value = Number.isFinite(flowValues.solarHome) ? flowValues.solarHome : nodes.solar.value;
+      pushLine("solar", nodes.solar, home, value, nodes.solar.unit, nodes.solar.color, true);
     }
     if (nodes.battery.entityId) {
-      pushLine("battery", nodes.battery, home, nodes.battery.value, nodes.battery.unit, nodes.battery.color, true);
+      const value = Number.isFinite(flowValues.batteryHome) ? flowValues.batteryHome : nodes.battery.value;
+      pushLine("battery", nodes.battery, home, value, nodes.battery.unit, nodes.battery.color, true);
+    }
+    if (nodes.solar.entityId && nodes.battery.entityId && Number(flowValues.solarBattery) > 0.001) {
+      pushLine("solar-battery", nodes.solar, nodes.battery, flowValues.solarBattery, nodes.solar.unit || nodes.battery.unit, nodes.battery.color, false);
+    }
+    if (nodes.grid.entityId && nodes.battery.entityId && Number(flowValues.gridBattery) > 0.001) {
+      pushLine("grid-battery", nodes.grid, nodes.battery, flowValues.gridBattery, nodes.grid.unit || nodes.battery.unit, nodes.battery.color, false);
     }
     if (nodes.water.entityId) {
       pushLine("water", nodes.water, home, nodes.water.value, nodes.water.unit, nodes.water.color, false);
@@ -2268,6 +2350,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       }
       if (id === "battery") {
         return 25;
+      }
+      if (id === "solar-battery" || id === "grid-battery") {
+        return 30;
       }
       if (id === "grid") {
         return 15;

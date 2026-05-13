@@ -22,6 +22,28 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.4] - 2026-05-14
+
+Fourth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.4`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** rebuilt the new Cover Card around the same visual structure and editor conventions as **`nodalia-fan-card.js`**, with Nodalia-style hero, chips, controls, sliders, haptics, animations, tap/hold action sections, collapsible style/animation sections, entity/icon picker mounts, and cover-native open/close/stop/position/tilt services.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.4`**.
+
+---
+
+## [1.1.0-alpha.3] - 2026-05-14
+
+Third **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.3`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** when a **home consumption** entity is configured, the card now derives the grid flow from home demand, solar production, and battery charge/discharge. The grid node appears automatically from the home entity, solar and battery can cover home demand before grid import is shown, solar surplus can charge the battery, grid charging of the battery is drawn as a dedicated grid → battery flow, and remaining surplus is shown as grid export.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.3`**.
+
+---
+
 ## [1.1.0-alpha.2] - 2026-05-14
 
 Second **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.2`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

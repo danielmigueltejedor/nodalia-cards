@@ -56,6 +56,54 @@ function loadClimateCardClass() {
   return registry.get("nodalia-climate-card");
 }
 
+function loadPowerFlowCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-power-flow-card.js"), sandbox);
+  return registry.get("nodalia-power-flow-card");
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -320,6 +368,72 @@ test("climate queued wake commits include hvac_mode in set_temperature", async (
     ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 22 }],
   ]);
   card.disconnectedCallback();
+});
+
+test("power flow derives grid import, export, and battery charge paths from home demand", () => {
+  const PowerFlowCard = loadPowerFlowCardClass();
+  assert.ok(PowerFlowCard, "power flow card custom element should register");
+
+  const buildCard = ({ home = 100, solar = 0, battery = 0 }) => {
+    const card = new PowerFlowCard();
+    card._config = {
+      entities: {
+        home: { entity: "sensor.home", color: "#ffffff" },
+        grid: { color: "#6da8ff", export_color: "#44d07b" },
+        solar: { entity: "sensor.solar", color: "#f6b73c" },
+        battery: { entity: "sensor.battery", color: "#61c97a" },
+        water: {},
+        gas: {},
+        individual: [],
+      },
+      display_zero_lines: { mode: "hide", transparency: 50, grey_color: [189, 189, 189] },
+      show_secondary_info: true,
+      show_values: true,
+      show_labels: true,
+    };
+    card._hass = {
+      states: {
+        "sensor.home": { state: String(home), attributes: { unit_of_measurement: "W", friendly_name: "Home" } },
+        "sensor.solar": { state: String(solar), attributes: { unit_of_measurement: "W", friendly_name: "Solar" } },
+        "sensor.battery": { state: String(battery), attributes: { unit_of_measurement: "W", friendly_name: "Battery" } },
+      },
+    };
+    return card;
+  };
+
+  const gridImport = buildCard({ home: 100, solar: 0, battery: 0 })._getNodes();
+  assert.equal(gridImport.grid.entityId, "sensor.home");
+  assert.equal(gridImport.grid.value, 100);
+  assert.equal(gridImport._flowValues.gridHome, 100);
+
+  const solarCoversHome = buildCard({ home: 100, solar: 100, battery: 0 })._getNodes();
+  assert.equal(solarCoversHome.grid.value, 0);
+  assert.equal(solarCoversHome._flowValues.solarHome, 100);
+  assert.equal(solarCoversHome._flowValues.gridHome, 0);
+
+  const batteryCoversHome = buildCard({ home: 100, solar: 0, battery: 100 })._getNodes();
+  assert.equal(batteryCoversHome.grid.value, 0);
+  assert.equal(batteryCoversHome._flowValues.batteryHome, 100);
+
+  const solarChargesBattery = buildCard({ home: 100, solar: 200, battery: -100 });
+  const solarChargeNodes = solarChargesBattery._getNodes();
+  const solarChargeLines = solarChargesBattery._buildLines(solarChargeNodes).filter(line => line.active).map(line => line.id).sort();
+  assert.equal(solarChargeNodes.grid.value, 0);
+  assert.equal(solarChargeNodes._flowValues.solarBattery, 100);
+  assert.ok(solarChargeLines.includes("solar-battery"));
+
+  const gridChargesBattery = buildCard({ home: 100, solar: 0, battery: -100 });
+  const gridChargeNodes = gridChargesBattery._getNodes();
+  const gridChargeLines = gridChargesBattery._buildLines(gridChargeNodes).filter(line => line.active).map(line => line.id).sort();
+  assert.equal(gridChargeNodes.grid.value, 200);
+  assert.equal(gridChargeNodes._flowValues.gridHome, 100);
+  assert.equal(gridChargeNodes._flowValues.gridBattery, 100);
+  assert.ok(gridChargeLines.includes("grid-battery"));
+
+  const exportNodes = buildCard({ home: 100, solar: 200, battery: 0 })._getNodes();
+  assert.equal(exportNodes.grid.value, -100);
+  assert.equal(exportNodes.grid.isExporting, true);
+  assert.equal(exportNodes._flowValues.gridHome, -100);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {
