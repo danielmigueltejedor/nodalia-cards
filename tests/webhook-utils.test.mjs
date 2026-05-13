@@ -99,3 +99,28 @@ test("postHomeAssistantWebhook strips pasted webhook URL to id", async () => {
   );
   assert.strictEqual(url, "https://ha.test/api/webhook/my_calendar_hook");
 });
+
+test("NodaliaUtils deduplicates repeated customCards registrations", () => {
+  const code = fs.readFileSync(new URL("../nodalia-utils.js", import.meta.url), "utf8");
+  const sandbox = {
+    window: {
+      customCards: [
+        { type: "nodalia-light-card", name: "Old light" },
+        { type: "nodalia-light-card", name: "Older light" },
+      ],
+      location: { origin: "https://ha.test" },
+    },
+    console,
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(code, sandbox);
+
+  sandbox.window.customCards.push({ type: "nodalia-cover-card", name: "Cover 1" });
+  sandbox.window.customCards.push({ type: "nodalia-cover-card", name: "Cover 2" });
+  sandbox.window.NodaliaUtils.registerCustomCard({ type: "nodalia-light-card", name: "Fresh light" });
+
+  assert.deepStrictEqual(
+    sandbox.window.customCards.map(card => `${card.type}:${card.name}`),
+    ["nodalia-cover-card:Cover 2", "nodalia-light-card:Fresh light"],
+  );
+});

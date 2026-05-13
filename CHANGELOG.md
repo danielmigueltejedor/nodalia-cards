@@ -22,6 +22,20 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.2] - 2026-05-14
+
+Second **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.2`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **Card picker registration:** repeated Lovelace resource loads now deduplicate **`window.customCards`** entries by card type, preventing Nodalia cards from appearing duplicated or triplicated in Home Assistant's “Add card” picker while keeping the new **`custom:nodalia-cover-card`** discoverable.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.2`**.
+
+---
+
 ## [1.1.0-alpha.1] - 2026-05-14
 
 First **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.1`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

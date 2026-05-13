@@ -15,6 +15,7 @@
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "registerCustomCard",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
@@ -229,6 +230,69 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function dedupeCustomCardsArray(cards) {
+    if (!Array.isArray(cards)) {
+      return [];
+    }
+    const seen = new Set();
+    for (let index = cards.length - 1; index >= 0; index -= 1) {
+      const type = String(cards[index]?.type || "").trim();
+      if (!type) {
+        continue;
+      }
+      if (seen.has(type)) {
+        cards.splice(index, 1);
+        continue;
+      }
+      seen.add(type);
+    }
+    return cards;
+  }
+
+  function installCustomCardsDedupe() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    window.customCards = dedupeCustomCardsArray(window.customCards || []);
+    const cards = window.customCards;
+    if (cards.__nodaliaDedupePushInstalled === true) {
+      return cards;
+    }
+    Object.defineProperty(cards, "__nodaliaDedupePushInstalled", {
+      configurable: true,
+      enumerable: false,
+      value: true,
+    });
+    Object.defineProperty(cards, "push", {
+      configurable: true,
+      enumerable: false,
+      value(...items) {
+        let length = this.length;
+        items.forEach(item => {
+          const type = String(item?.type || "").trim();
+          if (type) {
+            for (let index = this.length - 1; index >= 0; index -= 1) {
+              if (String(this[index]?.type || "").trim() === type) {
+                this.splice(index, 1);
+              }
+            }
+          }
+          length = Array.prototype.push.call(this, item);
+        });
+        return length;
+      },
+    });
+    return cards;
+  }
+
+  function registerCustomCard(metadata) {
+    const cards = installCustomCardsDedupe();
+    if (!cards || !metadata || typeof metadata !== "object") {
+      return;
+    }
+    cards.push(metadata);
   }
 
   /**
@@ -667,12 +731,14 @@
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    registerCustomCard,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
+    installCustomCardsDedupe();
     window.NodaliaUtils = api;
   }
 })();
