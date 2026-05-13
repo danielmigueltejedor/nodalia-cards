@@ -21,6 +21,19 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.9] - 2026-05-12
+
+Ninth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.9`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Added
+
+- **`nodalia-climate-card.js`:** when the thermostat is **`off`** with a valid **`current_temperature`** but no published **`temperature`** / range setpoints (Ecobee-style), **`+` / `−`** step controls are shown when **`hvac_modes`** includes **`heat`**, **`cool`**, or **`heat_cool`**. The first adjustment uses **`current_temperature`** (or the in-flight draft) only as an internal baseline, clamps and rounds with **`min_temp`**, **`max_temp`**, and **`target_temp_step`**, then calls **`climate.set_hvac_mode`** (preferred order **`heat`** → **`cool`** → **`heat_cool`**) followed by **`climate.set_temperature`**. The alpha.8 **no-setpoint** dial visuals stay until Home Assistant reports a real **`temperature`** attribute; dial dragging remains disabled in that state.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.9`**.
+
+---
 ## [1.0.3-alpha.8] - 2026-05-12
 
 Eighth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.8`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.

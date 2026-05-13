@@ -683,7 +683,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.8";
+const CARD_VERSION = "1.0.3-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1446,6 +1446,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitDebounceTimer = 0;
     this._temperatureCommitQueuedValue = null;
     this._temperatureCommitInFlight = false;
+    this._temperatureCommitRequiresHvacWake = false;
     this._temperatureCommitRetryCount = 0;
     this._rangeCommitDebounceTimer = 0;
     this._rangeCommitQueuedValue = null;
@@ -1536,6 +1537,7 @@ class NodaliaClimateCard extends HTMLElement {
       }
       this._selectedRangeThumb = null;
       this._lastDualRangeModeKey = null;
+      this._temperatureCommitRequiresHvacWake = false;
     }
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -1686,6 +1688,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._rangeCommitQueuedValue = null;
     this._temperatureCommitRetryCount = 0;
     this._rangeCommitRetryCount = 0;
+    this._temperatureCommitRequiresHvacWake = false;
 
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -1957,6 +1960,58 @@ class NodaliaClimateCard extends HTMLElement {
     return normalizeTextKey(this._getCurrentMode(state)) === "off";
   }
 
+  /**
+   * Ecobee-style: `hvac_mode` off, indoor temp known, but no published single or dual setpoints yet.
+   * Used for “wake from off” step-button flow without treating `current_temperature` as a target.
+   */
+  _isOffNullSetpointState(state) {
+    if (!state?.attributes || isUnavailableState(state)) {
+      return false;
+    }
+    if (!this._isOff(state)) {
+      return false;
+    }
+    const attrs = state.attributes;
+    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+      return false;
+    }
+    const low = parseFiniteClimateNumber(attrs.target_temp_low);
+    const high = parseFiniteClimateNumber(attrs.target_temp_high);
+    if (Number.isFinite(low) && Number.isFinite(high)) {
+      return false;
+    }
+    return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
+  }
+
+  /**
+   * HVAC mode to enable before `set_temperature` when waking from `_isOffNullSetpointState`.
+   * Order: heat → cool → heat_cool (Better Thermostat / Ecobee-friendly; differs from `_getPreferredOnMode` toggle order).
+   */
+  _getSetpointWakeHvacMode(state) {
+    const modeSet = new Set(
+      (Array.isArray(state?.attributes?.hvac_modes) ? state.attributes.hvac_modes : [])
+        .map(item => normalizeTextKey(String(item || "").trim()))
+        .filter(Boolean),
+    );
+    for (const candidate of ["heat", "cool", "heat_cool"]) {
+      if (modeSet.has(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  _supportsOffNullSetpointWake(state) {
+    if (!this._isOffNullSetpointState(state)) {
+      return false;
+    }
+    if (!this._getSetpointWakeHvacMode(state)) {
+      return false;
+    }
+    const { min, max } = this._getTemperatureRange(state);
+    return Number.isFinite(min) && Number.isFinite(max) && min < max;
+  }
+
   _getStateLabel(state) {
     const action = this._getCurrentAction(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
@@ -2024,9 +2079,20 @@ class NodaliaClimateCard extends HTMLElement {
 
   _queueTemperatureCommit(value, options = {}) {
     const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
+    if (!state || this._isDualSetpointRange(state)) {
       return null;
     }
+
+    const offNullWake =
+      options.hvacWake === true &&
+      this._isOffNullSetpointState(state) &&
+      this._supportsOffNullSetpointWake(state);
+
+    if (!this._supportsTargetTemperature(state) && !offNullWake) {
+      return null;
+    }
+
+    this._temperatureCommitRequiresHvacWake = Boolean(offNullWake);
 
     const normalized = this._normalizeTemperatureValue(value, state);
     const entityId = this._config?.entity;
@@ -2097,10 +2163,25 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitInFlight = true;
     let serviceFailed = false;
 
+    const hvacWake = this._temperatureCommitRequiresHvacWake;
+    this._temperatureCommitRequiresHvacWake = false;
+
     try {
-      await Promise.resolve(this._setClimateService("set_temperature", {
-        temperature: target,
-      }));
+      if (hvacWake) {
+        const wakeMode = this._getSetpointWakeHvacMode(state);
+        if (!wakeMode) {
+          serviceFailed = true;
+        } else {
+          await Promise.resolve(this._setClimateService("set_hvac_mode", {
+            hvac_mode: wakeMode,
+          }));
+        }
+      }
+      if (!serviceFailed) {
+        await Promise.resolve(this._setClimateService("set_temperature", {
+          temperature: target,
+        }));
+      }
     } catch (_error) {
       serviceFailed = true;
       this._temperatureCommitQueuedValue = target;
@@ -2108,6 +2189,7 @@ class NodaliaClimateCard extends HTMLElement {
       this._temperatureCommitInFlight = false;
 
       if (serviceFailed) {
+        this._temperatureCommitRequiresHvacWake = Boolean(hvacWake);
         this._scheduleDraftReset();
         return;
       }
@@ -2344,13 +2426,16 @@ class NodaliaClimateCard extends HTMLElement {
 
   _changeTemperatureBy(delta) {
     const state = this._getState();
-    if (!state || !this._supportsTargetTemperature(state)) {
+    if (!state) {
       return;
     }
 
     const step = this._getTemperatureStep(state);
 
     if (this._isDualSetpointRange(state)) {
+      if (!this._supportsTargetTemperature(state)) {
+        return;
+      }
       const { low, high } = this._getEffectiveTargetLowHigh(state);
       if (!Number.isFinite(low) || !Number.isFinite(high)) {
         return;
@@ -2397,6 +2482,36 @@ class NodaliaClimateCard extends HTMLElement {
         immediate: false,
         render: true,
       });
+      return;
+    }
+
+    if (this._isOffNullSetpointState(state) && this._supportsOffNullSetpointWake(state)) {
+      const entityId = this._config?.entity;
+      const attrs = state.attributes;
+      const published = parseFiniteClimateNumber(attrs.temperature);
+      let baseline = null;
+      if (Number.isFinite(published)) {
+        baseline = published;
+      } else if (entityId && this._draftTemperature.has(entityId)) {
+        const draftVal = Number(this._draftTemperature.get(entityId));
+        baseline = Number.isFinite(draftVal) ? draftVal : null;
+      } else {
+        baseline = this._getCurrentTemperature(state);
+      }
+      if (!Number.isFinite(baseline)) {
+        return;
+      }
+      const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
+      this._triggerHaptic("selection");
+      this._queueTemperatureCommit(next, {
+        immediate: false,
+        render: true,
+        hvacWake: true,
+      });
+      return;
+    }
+
+    if (!this._supportsTargetTemperature(state)) {
       return;
     }
 
@@ -3377,7 +3492,10 @@ class NodaliaClimateCard extends HTMLElement {
     const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
     const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
-    const showStepControls = config.show_step_controls !== false && supportsTargetTemperature;
+    const supportsOffNullSetpointWake = this._supportsOffNullSetpointWake(state);
+    const showStepControls =
+      config.show_step_controls !== false &&
+      (supportsTargetTemperature || supportsOffNullSetpointWake);
     const contentColumnGap = showStepControls
       ? (tightLayout ? "8px" : compactLayout ? "9px" : "10px")
       : effectiveCardGap;
@@ -4635,7 +4753,7 @@ class NodaliaClimateCard extends HTMLElement {
           </div>
 
           ${
-            config.show_step_controls !== false && supportsTargetTemperature
+            showStepControls
               ? `
                 <div class="climate-card__steps ${shouldAnimateEntrance ? "climate-card__steps--entering" : ""}">
                   <button
