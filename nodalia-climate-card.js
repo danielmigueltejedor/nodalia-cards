@@ -683,7 +683,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.9";
+const CARD_VERSION = "1.0.3-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -717,6 +717,10 @@ const DEFAULT_CONFIG = {
   show_mode_buttons: true,
   show_step_controls: true,
   show_unavailable_badge: true,
+  display: {
+    /** `"target"` (default): large dial = setpoint; secondary = current when a target exists. `"current"`: swap. */
+    main_temperature: "target",
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -1961,6 +1965,20 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   /**
+   * Some integrations leave `attributes.hvac_mode` non-off while `state` is already `off`.
+   * Off-null setpoint wake and similar paths must still treat the entity as shut off.
+   */
+  _isEffectiveClimateOff(state) {
+    if (!state) {
+      return false;
+    }
+    if (normalizeTextKey(String(state.state ?? "").trim()) === "off") {
+      return true;
+    }
+    return this._isOff(state);
+  }
+
+  /**
    * Ecobee-style: `hvac_mode` off, indoor temp known, but no published single or dual setpoints yet.
    * Used for “wake from off” step-button flow without treating `current_temperature` as a target.
    */
@@ -1968,7 +1986,7 @@ class NodaliaClimateCard extends HTMLElement {
     if (!state?.attributes || isUnavailableState(state)) {
       return false;
     }
-    if (!this._isOff(state)) {
+    if (!this._isEffectiveClimateOff(state)) {
       return false;
     }
     const attrs = state.attributes;
@@ -2504,7 +2522,7 @@ class NodaliaClimateCard extends HTMLElement {
       const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
       this._triggerHaptic("selection");
       this._queueTemperatureCommit(next, {
-        immediate: false,
+        immediate: true,
         render: true,
         hvacWake: true,
       });
@@ -3456,7 +3474,7 @@ class NodaliaClimateCard extends HTMLElement {
     const modeOptions = config.show_mode_buttons !== false ? this._getOrderedModeOptions(state) : [];
     const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
-    const isOff = this._isOff(state) || isUnavailableState(state);
+    const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
     const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const isRangeMode = !isOff && this._isDualSetpointRange(state);
     if (!isRangeMode) {
@@ -3472,12 +3490,29 @@ class NodaliaClimateCard extends HTMLElement {
     const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
     const hasNumericTarget =
       targetTemperature !== null && targetTemperature !== undefined && Number.isFinite(Number(targetTemperature));
+    const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
+    const mainTemperaturePref =
+      normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
+    const currentFin =
+      currentTemperature !== null && Number.isFinite(Number(currentTemperature))
+        ? Number(currentTemperature)
+        : NaN;
+    const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
     const dialThumbValue = isRangeMode ? NaN : (supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN);
-    const dialPrimaryReadoutValue = isRangeMode
-      ? (currentTemperature !== null ? currentTemperature : NaN)
-      : (supportsTargetTemperature && hasNumericTarget
-        ? Number(targetTemperature)
-        : (currentTemperature !== null ? currentTemperature : NaN));
+    let dialPrimaryReadoutValue;
+    if (isRangeMode) {
+      dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
+    } else if (mainTemperaturePref === "current") {
+      dialPrimaryReadoutValue = Number.isFinite(currentFin)
+        ? currentFin
+        : (Number.isFinite(targetFin) ? targetFin : NaN);
+    } else if (Number.isFinite(targetFin)) {
+      dialPrimaryReadoutValue = targetFin;
+    } else if (Number.isFinite(currentFin)) {
+      dialPrimaryReadoutValue = currentFin;
+    } else {
+      dialPrimaryReadoutValue = NaN;
+    }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
     const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
@@ -3712,9 +3747,11 @@ class NodaliaClimateCard extends HTMLElement {
       ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>`
       : noSetpointDial
         ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>`
-        : (currentTemperature !== null
-          ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
-          : "");
+        : mainTemperaturePref === "current" && hasPublishedSingleTarget && Number.isFinite(targetFin)
+          ? `<span>${escapeHtml(formatTemperature(targetFin, temperatureStep, true, hass))}</span>`
+          : (currentTemperature !== null
+            ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
+            : "");
     const dialActionHtml =
       noSetpointDial && isOff
         ? ""
@@ -3732,9 +3769,10 @@ class NodaliaClimateCard extends HTMLElement {
       window.NodaliaI18n?.translateClimateDialAria != null
         ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, dialAriaLabelVariant)
         : dialAriaFallback;
+    const ariaDialSemanticValue = Number.isFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
     const ariaDialValue =
-      !isRangeMode && !noSetpointDial && Number.isFinite(dialPrimaryReadoutValue)
-        ? dialPrimaryReadoutValue
+      !isRangeMode && !noSetpointDial && Number.isFinite(ariaDialSemanticValue)
+        ? ariaDialSemanticValue
         : null;
     const cardBackground = isOff
       ? styles.card.background
@@ -5275,6 +5313,24 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.display_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.display_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField(
+              "ed.climate.main_temperature",
+              "display.main_temperature",
+              config.display?.main_temperature === "current" ? "current" : "target",
+              [
+                { value: "target", label: "ed.climate.main_temperature_target" },
+                { value: "current", label: "ed.climate.main_temperature_current" },
+              ],
+            )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.vacuum.visibility_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.visibility_hint_legacy"))}</div>
           </div>
@@ -6237,6 +6293,24 @@ class NodaliaClimateCardEditor extends HTMLElement {
               placeholder: "mdi:thermostat",
               fullWidth: true,
             })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.display_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.display_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField(
+              "ed.climate.main_temperature",
+              "display.main_temperature",
+              config.display?.main_temperature === "current" ? "current" : "target",
+              [
+                { value: "target", label: "ed.climate.main_temperature_target" },
+                { value: "current", label: "ed.climate.main_temperature_current" },
+              ],
+            )}
           </div>
         </section>
 

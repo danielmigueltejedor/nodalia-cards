@@ -21,6 +21,24 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.10] - 2026-05-12
+
+Tenth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.10`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Ecobee-style **off + null setpoint** wake (`+` / `−`) now treats the entity as off when **`state`** is **`off`** even if **`attributes.hvac_mode`** is still a non-off value (integrations that lag or mirror mode separately). Off-null temperature commits run **immediately** (no debounce) so **`climate.set_hvac_mode`** + **`climate.set_temperature`** are not dropped by rapid re-renders.
+
+### Added
+
+- **`display.main_temperature`:** **`target`** (default) or **`current`** — visual editor + runtime; the large dial center shows setpoint vs measured room temperature, and the secondary row swaps when a published target exists. Dual-range (**`heat_cool`**) layout unchanged.
+- **Editor / i18n:** **`ed.climate.display_*`** and **`ed.climate.main_temperature_*`** keys in all editor locale catalogs.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.10`**.
+
+---
 ## [1.0.3-alpha.9] - 2026-05-12
 
 Ninth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.9`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
