@@ -243,19 +243,20 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
 test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
   assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"\]/);
-  assert.match(source, /const ROWS = \[/);
+  assert.match(source, /const ROWS_JSON = /);
+  assert.match(source, /function getEditorUiMaps\(\)/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDES = \{/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
-  assert.match(source, /window\.NodaliaI18n\.editorUiMaps = MAP/);
+  assert.match(source, /window\.NodaliaI18n\.editorUiMaps = map/);
   assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
   ["es", "en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
-    assert.match(source, new RegExp(`"${lang}":`), `${lang} column should appear in ROWS`);
+    assert.match(source, new RegExp(`\\\\"${lang}\\\\":`), `${lang} column should appear in ROWS`);
   });
-  assert.match(source, /"en": "Enable animations"[\s\S]*"de": "Animationen aktivieren"/);
-  assert.match(source, /"en": "Chip height"[\s\S]*"de": "Chip-Höhe"/);
-  assert.match(source, /"es": "Mostrar ausente"[\s\S]*"de": "„Abwesend“ anzeigen"/);
-  assert.match(source, /"es": "Fijar a pantalla"[\s\S]*"de": "Am Bildschirm fixieren"/);
-  assert.match(source, /"es": "Entidad principal"[\s\S]*"zh": "主实体"/);
+  assert.match(source, /\\"en\\":\\"Enable animations\\"[\s\S]*\\"de\\":\\"Animationen aktivieren\\"/);
+  assert.match(source, /\\"en\\":\\"Chip height\\"[\s\S]*\\"de\\":\\"Chip-Höhe\\"/);
+  assert.match(source, /\\"es\\":\\"Mostrar ausente\\"[\s\S]*\\"de\\":\\"„Abwesend“ anzeigen\\"/);
+  assert.match(source, /\\"es\\":\\"Fijar a pantalla\\"[\s\S]*\\"de\\":\\"Am Bildschirm fixieren\\"/);
+  assert.match(source, /\\"es\\":\\"Entidad principal\\"[\s\S]*\\"zh\\":\\"主实体\\"/);
 });
 
 test("editor field helpers route visible labels through shared i18n", () => {
@@ -510,9 +511,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);
   const editorUi = read("nodalia-editor-ui.js");
-  assert.match(editorUi, /"es": "Borde tarjeta"[\s\S]*"de": "Kartenrand"/);
-  assert.match(editorUi, /"es": "Etiqueta"[\s\S]*"de": "Beschriftung"/);
-  assert.match(editorUi, /"es": "Mostrar tambien en escritorio"[\s\S]*"de": "Auch auf dem Desktop anzeigen"/);
+  assert.match(editorUi, /\\"es\\":\\"Borde tarjeta\\"[\s\S]*\\"de\\":\\"Kartenrand\\"/);
+  assert.match(editorUi, /\\"es\\":\\"Etiqueta\\"[\s\S]*\\"de\\":\\"Beschriftung\\"/);
+  assert.match(editorUi, /\\"es\\":\\"Mostrar tambien en escritorio\\"[\s\S]*\\"de\\":\\"Auch auf dem Desktop anzeigen\\"/);
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

@@ -683,7 +683,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.10";
+const CARD_VERSION = "1.0.3-alpha.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1863,6 +1863,14 @@ class NodaliaClimateCard extends HTMLElement {
     return false;
   }
 
+  _supportsTargetTemperatureControl(state) {
+    const features = Number(state?.attributes?.supported_features);
+    if (Number.isFinite(features)) {
+      return Boolean((features & 1) || (features & 2));
+    }
+    return this._supportsTargetTemperature(state);
+  }
+
   /**
    * Reported target temperature for single-setpoint modes, or mid-point while dragging dual range.
    * Returns `null` when the integration exposes no active setpoint (e.g. Ecobee `heat_cool` with
@@ -1995,7 +2003,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const low = parseFiniteClimateNumber(attrs.target_temp_low);
     const high = parseFiniteClimateNumber(attrs.target_temp_high);
-    if (Number.isFinite(low) && Number.isFinite(high)) {
+    if (Number.isFinite(low) || Number.isFinite(high)) {
       return false;
     }
     return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
@@ -2023,7 +2031,7 @@ class NodaliaClimateCard extends HTMLElement {
     if (!this._isOffNullSetpointState(state)) {
       return false;
     }
-    if (!this._getSetpointWakeHvacMode(state)) {
+    if (!this._supportsTargetTemperatureControl(state)) {
       return false;
     }
     const { min, max } = this._getTemperatureRange(state);
@@ -2361,6 +2369,47 @@ class NodaliaClimateCard extends HTMLElement {
     return normalized;
   }
 
+  async _createSetpointFromCurrentBy(delta) {
+    const state = this._getState();
+    if (!state || !this._isOffNullSetpointState(state) || !this._supportsOffNullSetpointWake(state)) {
+      return false;
+    }
+
+    const baseline = this._getCurrentTemperature(state);
+    if (!Number.isFinite(baseline)) {
+      return false;
+    }
+
+    const step = this._getTemperatureStep(state);
+    const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
+    if (!Number.isFinite(next)) {
+      return false;
+    }
+
+    this._triggerHaptic("selection");
+
+    const wakeMode = this._getSetpointWakeHvacMode(state);
+    try {
+      if (wakeMode) {
+        await Promise.resolve(this._setClimateService("set_hvac_mode", {
+          hvac_mode: wakeMode,
+        }));
+      } else if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("Nodalia Climate Card: creating setpoint without HVAC wake mode.");
+      }
+
+      await Promise.resolve(this._setClimateService("set_temperature", {
+        temperature: next,
+      }));
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("Nodalia Climate Card: failed to create setpoint from current temperature.", error);
+      }
+    }
+
+    return true;
+  }
+
   _scheduleDraftReset() {
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -2448,6 +2497,11 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if (this._isOffNullSetpointState(state) && this._supportsOffNullSetpointWake(state)) {
+      this._createSetpointFromCurrentBy(delta);
+      return;
+    }
+
     const step = this._getTemperatureStep(state);
 
     if (this._isDualSetpointRange(state)) {
@@ -2499,32 +2553,6 @@ class NodaliaClimateCard extends HTMLElement {
       this._queueRangeCommit(pair, {
         immediate: false,
         render: true,
-      });
-      return;
-    }
-
-    if (this._isOffNullSetpointState(state) && this._supportsOffNullSetpointWake(state)) {
-      const entityId = this._config?.entity;
-      const attrs = state.attributes;
-      const published = parseFiniteClimateNumber(attrs.temperature);
-      let baseline = null;
-      if (Number.isFinite(published)) {
-        baseline = published;
-      } else if (entityId && this._draftTemperature.has(entityId)) {
-        const draftVal = Number(this._draftTemperature.get(entityId));
-        baseline = Number.isFinite(draftVal) ? draftVal : null;
-      } else {
-        baseline = this._getCurrentTemperature(state);
-      }
-      if (!Number.isFinite(baseline)) {
-        return;
-      }
-      const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
-      this._triggerHaptic("selection");
-      this._queueTemperatureCommit(next, {
-        immediate: true,
-        render: true,
-        hvacWake: true,
       });
       return;
     }

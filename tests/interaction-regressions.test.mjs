@@ -2,10 +2,59 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
+
+function loadClimateCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-climate-card.js"), sandbox);
+  return registry.get("nodalia-climate-card");
+}
 
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
@@ -110,6 +159,59 @@ test("climate dial drag attaches window listeners only while dragging", () => {
   assert.match(source, /_setDragWindowListeners\(enabled\)/);
   assert.match(source, /this\._setDragWindowListeners\(true\)/);
   assert.match(source, /this\._setDragWindowListeners\(false\)/);
+});
+
+test("climate off null setpoint step buttons wake and create a setpoint from current temperature", async () => {
+  const ClimateCard = loadClimateCardClass();
+  assert.ok(ClimateCard, "climate card custom element should register");
+
+  const buildCard = () => {
+    const calls = [];
+    const card = new ClimateCard();
+    card._config = {
+      entity: "climate.ecobee",
+      haptics: { enabled: false },
+    };
+    card._hass = {
+      callService: async (...args) => {
+        calls.push(args);
+      },
+      states: {
+        "climate.ecobee": {
+          state: "off",
+          attributes: {
+            current_temperature: 22.5,
+            hvac_action: "idle",
+            hvac_modes: ["heat_cool", "heat", "cool", "off"],
+            max_temp: 35,
+            min_temp: 7,
+            supported_features: 411,
+            target_temp_high: null,
+            target_temp_low: null,
+            target_temp_step: 0.5,
+            temperature: null,
+          },
+        },
+      },
+    };
+    return { calls, card };
+  };
+
+  const plus = buildCard();
+  plus.card._changeTemperatureBy(1);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(plus.calls)), [
+    ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23 }],
+  ]);
+
+  const minus = buildCard();
+  minus.card._changeTemperatureBy(-1);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(minus.calls)), [
+    ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 22 }],
+  ]);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

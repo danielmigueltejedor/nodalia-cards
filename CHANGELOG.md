@@ -21,6 +21,19 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.11] - 2026-05-13
+
+Eleventh **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.11`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Ecobee-style climates that are **`off`** with **`temperature`**, **`target_temp_low`**, and **`target_temp_high`** all unset now let **`+` / `−`** create a setpoint directly from **`current_temperature`** before any dual-range or dial guards can return early. The card wakes the entity with **`climate.set_hvac_mode`** using **`heat`** → **`cool`** → **`heat_cool`**, then calls **`climate.set_temperature`** with the clamped/rounded value, while keeping the no-active-setpoint visual state until Home Assistant reports a real setpoint.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.11`**.
+
+---
 ## [1.0.3-alpha.10] - 2026-05-12
 
 Tenth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.10`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
@@ -703,4 +716,3 @@ First stable multilingual release.
 ## [0.1.0]
 
 Initial public development line.
-
