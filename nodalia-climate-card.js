@@ -683,7 +683,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.6";
+const CARD_VERSION = "1.0.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3365,7 +3365,7 @@ class NodaliaClimateCard extends HTMLElement {
         : (currentTemperature !== null ? currentTemperature : NaN));
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
-    const noSetpointDial = !isRangeMode && !supportsTargetTemperature && !isOff;
+    const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
     const tempScale = getClimateTemperatureScaleLetter(hass);
     const translateClimateMode = mode => (
       window.NodaliaI18n?.translateClimateHvacLabel
@@ -3597,6 +3597,12 @@ class NodaliaClimateCard extends HTMLElement {
         : (currentTemperature !== null
           ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
           : "");
+    const dialActionHtml =
+      noSetpointDial && isOff
+        ? ""
+        : `<span class="climate-card__dial-action">
+                    <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
+                  </span>`;
     const dialAriaLabelVariant = isRangeMode ? "rangeGroup" : noSetpointDial ? "noSetpoint" : "targetSlider";
     const dialAriaFallback =
       dialAriaLabelVariant === "rangeGroup"
@@ -4621,9 +4627,7 @@ class NodaliaClimateCard extends HTMLElement {
                 <div class="climate-card__divider"></div>
                 <div class="climate-card__dial-meta">
                   ${dialMetaHtml}
-                  <span class="climate-card__dial-action">
-                    <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
-                  </span>
+                  ${dialActionHtml}
                 </div>
                 ${dialControlsMarkup}
               </div>

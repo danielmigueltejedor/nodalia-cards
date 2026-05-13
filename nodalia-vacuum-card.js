@@ -5129,7 +5129,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.tap_actions_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
@@ -5165,17 +5165,9 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                   })
                 : ""
             }
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.hold_actions_section_hint"))}</div>
-          </div>
-          <div class="editor-grid editor-grid--stacked">
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.vacuum.hold_actions_section_hint"))}</div>
             ${this._renderSelectField(
-              "ed.vacuum.icon_hold_action",
+              "ed.light.icon_hold_action",
               "icon_hold_action",
               iconHoldSelectValue,
               [
@@ -5188,7 +5180,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               { fullWidth: true },
             )}
             ${this._renderSelectField(
-              "ed.vacuum.card_hold_action",
+              "ed.light.card_hold_action",
               "hold_action",
               holdActionVal,
               [

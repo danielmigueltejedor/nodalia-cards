@@ -4901,7 +4901,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.tap_actions_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
@@ -5006,15 +5006,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
                 `
                 : ""
             }
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
-          </div>
-          <div class="editor-grid editor-grid--stacked">
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
             ${this._renderSelectField(
               "ed.light.icon_hold_action",
               "icon_hold_action",

@@ -2739,8 +2739,8 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.insignia.tap_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.tap_section_hint"))}</div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.tap_actions_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
@@ -2815,17 +2815,9 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
                 `
                 : ""
             }
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.insignia.hold_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.hold_section_hint"))}</div>
-          </div>
-          <div class="editor-grid editor-grid--stacked">
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.insignia.hold_section_hint"))}</div>
             ${this._renderSelectField(
-              "ed.insignia.card_hold_action",
+              "ed.insignia.hold_action",
               "hold_action",
               holdActionStr,
               [

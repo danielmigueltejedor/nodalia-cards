@@ -21,6 +21,19 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.8] - 2026-05-12
+
+Eighth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.8`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** when **`hvac_mode`** is **`off`** (or the entity is unavailable) with a valid **`current_temperature`** but **`temperature`**, **`target_temp_low`**, and **`target_temp_high`** all unset (Ecobee-like integrations), the dial no longer treats **`off`** as if a setpoint row were active: the secondary row shows the **no setpoint** hint instead of repeating the current temperature, the **target thumb** is hidden via **`climate-card__dial--no-setpoint`**, and the dial meta **power** icon is omitted in that row so it does not sit beside a duplicate readout.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.8`**.
+
+---
 ## [1.0.3-alpha.7] - 2026-05-12
 
 Seventh **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.7`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on updated card modules.
