@@ -22,6 +22,16 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.0.5] - 2026-05-13
+
+Stable **`1.0.5`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.5`**).
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** temperature step controls now validate the current target through the climate number parser, keeping the explicit **`null`** guard against **`Number(null) === 0`** while still accepting numeric-string setpoints if an integration exposes them.
+
+---
+
 ## [1.0.4] - 2026-05-13
 
 Stable **`1.0.4`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.4`**).

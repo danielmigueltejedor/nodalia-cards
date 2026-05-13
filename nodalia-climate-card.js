@@ -684,7 +684,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.4";
+const CARD_VERSION = "1.0.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2574,11 +2574,11 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    const current = this._getTargetTemperature(state);
-    if (current === null || !Number.isFinite(current)) {
+    const current = parseFiniteClimateNumber(this._getTargetTemperature(state));
+    if (!Number.isFinite(current)) {
       return;
     }
-    const next = this._normalizeTemperatureValue(Number(current) + (Number(delta) * step), state);
+    const next = this._normalizeTemperatureValue(current + (Number(delta) * step), state);
     this._triggerHaptic("selection");
     this._queueTemperatureCommit(next, {
       immediate: false,
