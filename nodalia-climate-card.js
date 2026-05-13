@@ -582,7 +582,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.5";
+const CARD_VERSION = "1.0.3-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -655,8 +655,9 @@ const DEFAULT_CONFIG = {
       max_size: "480px",
       stroke: "18px",
       thumb_size: "24px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
-      background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
+      /** Inactive arc: must read on warm accent-tinted dial surfaces (not only flat `ha-card-background`). */
+      track_color: "color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color))",
+      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
       heat_color: "#f59f42",
       cool_color: "#71c0ff",
       dry_color: "#7fd0c8",
@@ -904,11 +905,11 @@ function getEditorColorFallbackValue(field) {
   }
 
   if (normalizedField.endsWith("dial.background")) {
-    return "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
+    return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
   }
 
   if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
+    return "color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color))";
   }
 
   if (normalizedField.endsWith("accent_background")) {
@@ -1242,6 +1243,9 @@ const LEGACY_CLIMATE_ICON_OFF_COLORS = [
   "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
 ];
 const LEGACY_CLIMATE_DIAL_OFF_COLOR = "rgba(255, 255, 255, 0.28)";
+/** Pre-1.0.3-alpha.6 default: arc matched flat card bg and disappeared on accent-tinted dial. */
+const LEGACY_CLIMATE_DIAL_TRACK_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
+const LEGACY_CLIMATE_DIAL_BACKGROUND = "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
 
 function migrateLegacyClimateOffColors(styles) {
   if (!styles?.icon) {
@@ -1255,6 +1259,14 @@ function migrateLegacyClimateOffColors(styles) {
     const dialOff = String(styles.dial.off_color ?? "").trim();
     if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) {
       styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
+    }
+    const track = String(styles.dial.track_color ?? "").trim().replace(/\s+/g, " ");
+    if (track === LEGACY_CLIMATE_DIAL_TRACK_COLOR.replace(/\s+/g, " ")) {
+      styles.dial.track_color = DEFAULT_CONFIG.styles.dial.track_color;
+    }
+    const dialBg = String(styles.dial.background ?? "").trim().replace(/\s+/g, " ");
+    if (dialBg === LEGACY_CLIMATE_DIAL_BACKGROUND.replace(/\s+/g, " ")) {
+      styles.dial.background = DEFAULT_CONFIG.styles.dial.background;
     }
   }
 }
@@ -1740,12 +1752,14 @@ class NodaliaClimateCard extends HTMLElement {
     if (this._isDualSetpointRange(state)) {
       return true;
     }
-    return (
-      Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
-      Number.isFinite(parseFiniteClimateNumber(attrs.max_temp))
-    );
+    return false;
   }
 
+  /**
+   * Reported target temperature for single-setpoint modes, or mid-point while dragging dual range.
+   * Returns `null` when the integration exposes no active setpoint (e.g. Ecobee `heat_cool` with
+   * `temperature` / `target_temp_low` / `target_temp_high` all unset) — callers must not invent a fallback.
+   */
   _getTargetTemperature(state) {
     const entityId = this._config?.entity;
     if (entityId && this._draftTemperature.has(entityId)) {
@@ -1771,8 +1785,7 @@ class NodaliaClimateCard extends HTMLElement {
       return Number(((high + low) / 2).toFixed(1));
     }
 
-    const range = this._getTemperatureRange(state);
-    return Number((((range.min + range.max) / 2)).toFixed(1));
+    return null;
   }
 
   _getCurrentTemperature(state) {
@@ -2287,6 +2300,9 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const current = this._getTargetTemperature(state);
+    if (!Number.isFinite(Number(current))) {
+      return;
+    }
     const next = this._normalizeTemperatureValue(Number(current) + (Number(delta) * step), state);
     this._triggerHaptic("selection");
     this._queueTemperatureCommit(next, {
@@ -2464,7 +2480,7 @@ class NodaliaClimateCard extends HTMLElement {
 
   _updateDialPreview(value) {
     const state = this._getState();
-    if (this._isDualSetpointRange(state)) {
+    if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
       return;
     }
     const dial = this.shadowRoot?.querySelector(".climate-card__dial");
@@ -2540,7 +2556,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    if (this._isDualSetpointRange(state)) {
+    if (!this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
       this._setDialDraggingState(false, dial);
       this._activeDialDrag = null;
       this._setDragWindowListeners(false);
@@ -3238,12 +3254,17 @@ class NodaliaClimateCard extends HTMLElement {
       this._lastDualRangeModeKey = modeKey;
     }
     const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
-    const dialThumbValue = isRangeMode ? NaN : targetTemperature;
+    const hasNumericTarget =
+      targetTemperature !== null && targetTemperature !== undefined && Number.isFinite(Number(targetTemperature));
+    const dialThumbValue = isRangeMode ? NaN : (supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN);
     const dialPrimaryReadoutValue = isRangeMode
       ? (currentTemperature !== null ? currentTemperature : NaN)
-      : targetTemperature;
+      : (supportsTargetTemperature && hasNumericTarget
+        ? Number(targetTemperature)
+        : (currentTemperature !== null ? currentTemperature : NaN));
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
+    const noSetpointDial = !isRangeMode && !supportsTargetTemperature && !isOff;
     const tempScale = getClimateTemperatureScaleLetter(hass);
     const translateClimateMode = mode => (
       window.NodaliaI18n?.translateClimateHvacLabel
@@ -3464,18 +3485,32 @@ class NodaliaClimateCard extends HTMLElement {
           : formatTemperature(null, temperatureStep, false, hass),
       )
       : escapeHtml(formatTemperature(dialPrimaryReadoutValue, temperatureStep, false, hass));
+    const dialNoSetpointHint =
+      window.NodaliaI18n?.translateClimateDialNoSetpointHint != null
+        ? window.NodaliaI18n.translateClimateDialNoSetpointHint(hass, i18nLang)
+        : "No active setpoint";
     const dialMetaHtml = isRangeMode
       ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>`
-      : (currentTemperature !== null
-        ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
-        : "");
-    const ariaDialValue = Number.isFinite(dialPrimaryReadoutValue) ? dialPrimaryReadoutValue : temperatureRange.min;
+      : noSetpointDial
+        ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>`
+        : (currentTemperature !== null
+          ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
+          : "");
+    const dialAriaLabelVariant = isRangeMode ? "rangeGroup" : noSetpointDial ? "noSetpoint" : "targetSlider";
+    const dialAriaFallback =
+      dialAriaLabelVariant === "rangeGroup"
+        ? "Comfort range and indoor temperature"
+        : dialAriaLabelVariant === "noSetpoint"
+          ? "Indoor temperature; thermostat has no active target yet"
+          : "Target temperature";
     const dialAriaLabel =
       window.NodaliaI18n?.translateClimateDialAria != null
-        ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, isRangeMode ? "rangeGroup" : "targetSlider")
-        : isRangeMode
-          ? "Comfort range and indoor temperature"
-          : "Target temperature";
+        ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, dialAriaLabelVariant)
+        : dialAriaFallback;
+    const ariaDialValue =
+      !isRangeMode && !noSetpointDial && Number.isFinite(dialPrimaryReadoutValue)
+        ? dialPrimaryReadoutValue
+        : null;
     const cardBackground = isOff
       ? styles.card.background
       : `
@@ -3492,7 +3527,7 @@ class NodaliaClimateCard extends HTMLElement {
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
     `.trim();
-    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 68%, var(--primary-text-color) 32%)`;
+    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 52%, var(--primary-text-color) 48%)`;
     const dialHeatStroke = String(styles.dial.heat_color || "#f59f42").trim();
     const dialCoolStroke = String(styles.dial.cool_color || "#71c0ff").trim();
     const animations = this._getAnimationSettings();
@@ -3822,6 +3857,33 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__dial--dual-range {
           cursor: default;
+        }
+
+        .climate-card__dial--no-setpoint {
+          cursor: default;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-hit {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-thumb:not(.climate-card__dial-current-marker) {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-progress {
+          opacity: 0.2;
+        }
+
+        .climate-card__dial-no-setpoint {
+          color: var(--secondary-text-color);
+          font-size: 0.9em;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+          line-height: 1.25;
+          text-align: center;
         }
 
         .climate-card__dial--dual-range .climate-card__dial-thumb--heat,
@@ -4438,13 +4500,12 @@ class NodaliaClimateCard extends HTMLElement {
 
           <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
             <div
-              class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}"
+              class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}${noSetpointDial ? " climate-card__dial--no-setpoint" : ""}"
               data-climate-control="dial"
-              role="${isRangeMode ? "group" : "slider"}"
+              role="${isRangeMode || noSetpointDial ? "group" : "slider"}"
               aria-label="${escapeHtml(dialAriaLabel)}"
-              ${!isRangeMode ? `aria-valuemin="${temperatureRange.min}"` : ""}
-              ${!isRangeMode ? `aria-valuemax="${temperatureRange.max}"` : ""}
-              ${!isRangeMode ? `aria-valuenow="${ariaDialValue}"` : ""}
+              ${!isRangeMode && !noSetpointDial && ariaDialValue !== null ? `aria-valuemin="${temperatureRange.min}" aria-valuemax="${temperatureRange.max}" aria-valuenow="${ariaDialValue}"` : ""}
+              ${noSetpointDial ? "aria-disabled=\"true\"" : ""}
               style="${dialInlineVars}"
             >
               <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">

@@ -21,6 +21,20 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.6] - 2026-05-13
+
+Sixth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.6`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** default **dial inactive arc** (**`styles.dial.track_color`**) and **surface** (**`styles.dial.background`**) are tuned so the **slider track and thumb read clearly** on the **accent-tinted dial** (warm heat / cool tints), without requiring custom YAML like semi-transparent white. **`normalizeConfig`** upgrades saved configs that still store the old **`24%` + `ha-card-background`** track and **`2%`** dial background strings.
+
+### Changed
+
+- **Dial chrome:** inactive track stroke now blends **`styles.dial.track_color`** with **`var(--primary-text-color)`** at **`52%` / `48%`** (was **`68%` / `32%`**) so user-defined track colors stay legible after the mix.
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.6`**.
+
+---
 ## [1.0.3-alpha.5] - 2026-05-12
 
 Fifth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.5`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`**.
