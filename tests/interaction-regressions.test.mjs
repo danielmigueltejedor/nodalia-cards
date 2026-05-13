@@ -202,7 +202,7 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(JSON.parse(JSON.stringify(plus.calls)), [
     ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
-    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23 }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23, hvac_mode: "heat" }],
   ]);
 
   const minus = buildCard();
@@ -210,7 +210,7 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(JSON.parse(JSON.stringify(minus.calls)), [
     ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
-    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 22 }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 22, hvac_mode: "heat" }],
   ]);
 
   const heatCool = buildCard("heat_cool");
@@ -218,7 +218,7 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(JSON.parse(JSON.stringify(heatCool.calls)), [
     ["climate", "set_hvac_mode", { entity_id: "climate.ecobee", hvac_mode: "heat" }],
-    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23 }],
+    ["climate", "set_temperature", { entity_id: "climate.ecobee", temperature: 23, hvac_mode: "heat" }],
   ]);
 });
 

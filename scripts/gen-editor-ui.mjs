@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 
 /** Per-locale flat maps for editor keys `ed.<card>.<slug>` (see i18n/editor/en.json). Missing locales fall back to English. */
-const EDITOR_CATALOG_LANGS = ["en", "es", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+const EDITOR_CATALOG_LANGS = ["en", "es", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"];
 
 function loadEditorCatalog() {
   const catalogDir = path.join(root, "i18n", "editor");
@@ -838,6 +838,10 @@ function enToNl(s) {
     .replace(/^Modes$/i, "Modi")
     .replace(/^Individuals$/i, "Individueel")
     .replace(/^Haptic feedback$/i, "Haptische feedback");
+}
+
+function enToNo(s) {
+  return s;
 }
 
 function enToPt(s) {
@@ -1761,6 +1765,7 @@ function applyFullLocaleByEn(row) {
     fr: merged.fr !== undefined ? merged.fr : row.fr,
     it: merged.it !== undefined ? merged.it : row.it,
     nl: merged.nl !== undefined ? merged.nl : row.nl,
+    no: pickNewLang(row.en, merged.no, enToNo),
     pt: pickNewLang(row.en, merged.pt, enToPt),
     ru: pickNewLang(row.en, merged.ru, enToRu),
     el: pickNewLang(row.en, merged.el, enToEl),
@@ -1781,11 +1786,12 @@ for (const es of keys) {
     fr: enToFr(en),
     it: enToIt(en),
     nl: enToNl(en),
-      pt: enToPt(en),
-      ru: enToRu(en),
-      el: enToEl(en),
-      zh: enToZh(en),
-      ro: enToRo(en),
+    no: enToNo(en),
+    pt: enToPt(en),
+    ru: enToRu(en),
+    el: enToEl(en),
+    zh: enToZh(en),
+    ro: enToRo(en),
     }),
   );
   seenEs.add(es);
@@ -1802,6 +1808,7 @@ for (const r of [...rows]) {
         fr: r.fr,
         it: r.it,
         nl: r.nl,
+        no: r.no,
         pt: r.pt,
         ru: r.ru,
         el: r.el,
@@ -1843,7 +1850,7 @@ const out = `/* eslint-disable max-len */
     return m;
   }
 
-  const EDITOR_LANGS = ["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"];
+  const EDITOR_LANGS = ["en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"];
   function getEditorUiMaps() {
     if (MAP_CACHE) {
       return MAP_CACHE;

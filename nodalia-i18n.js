@@ -9,7 +9,8 @@
       return null;
     }
     const two = lower.slice(0, 2);
-    return PACK[two] ? two : null;
+    const alias = { nb: "no", nn: "no" }[two];
+    return PACK[two] ? two : (alias && PACK[alias] ? alias : null);
   }
 
   /**
@@ -109,6 +110,7 @@
       fr: "fr",
       it: "it",
       nl: "nl",
+      no: "nb-NO",
       pt: "pt",
       ru: "ru",
       el: "el",
@@ -3202,6 +3204,7 @@
         triggered: "Getriggerd",
       },
     },
+    no: {},
     pt: {
       advanceVacuum: {
         modeLabels: {

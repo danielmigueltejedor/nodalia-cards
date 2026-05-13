@@ -240,16 +240,23 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
 });
 
+test("Norwegian language aliases resolve to official no locale", () => {
+  const source = read("nodalia-i18n.js");
+  assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
+  assert.match(source, /no: "nb-NO"/);
+  assert.match(source, /\n    no: \{\},/);
+});
+
 test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
-  assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"\]/);
+  assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"\]/);
   assert.match(source, /const ROWS_JSON = /);
   assert.match(source, /function getEditorUiMaps\(\)/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDES = \{/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
   assert.match(source, /window\.NodaliaI18n\.editorUiMaps = map/);
   assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
-  ["es", "en", "de", "fr", "it", "nl", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
+  ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
     assert.match(source, new RegExp(`\\\\"${lang}\\\\":`), `${lang} column should appear in ROWS`);
   });
   assert.match(source, /\\"en\\":\\"Enable animations\\"[\s\S]*\\"de\\":\\"Animationen aktivieren\\"/);

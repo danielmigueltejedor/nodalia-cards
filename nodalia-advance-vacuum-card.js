@@ -9529,6 +9529,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "fr", label: "Français" },
               { value: "it", label: "Italiano" },
               { value: "nl", label: "Nederlands" },
+              { value: "no", label: "Norsk" },
             ], { fullWidth: true })}
             ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, { domains: ["vacuum"] })}
             ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}

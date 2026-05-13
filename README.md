@@ -311,6 +311,7 @@ Supported languages:
 - French
 - Italian
 - Dutch
+- Norwegian
 - Portuguese
 - Russian
 - Greek

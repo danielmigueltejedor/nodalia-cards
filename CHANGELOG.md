@@ -21,6 +21,32 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Home Assistant frontend compatibility updates.
 
 ---
+## [1.0.3-alpha.14] - 2026-05-13
+
+Fourteenth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.14`** on **`package.json`**, **`nodalia-cards.manifest.js`**, and **`__NODALIA_BUNDLE__.pkgVersion`**.
+
+### Added
+
+- **Norwegian language support:** added **`no`** as an official runtime/editor language, including **`nb`** and **`nn`** aliases for Home Assistant/browser locale detection and a seeded **`i18n/editor/no.json`** catalog ready for community translation.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.14`**.
+
+---
+## [1.0.3-alpha.13] - 2026-05-13
+
+Thirteenth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.13`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** when creating the first Ecobee-style setpoint from **`current_temperature`**, the follow-up **`climate.set_temperature`** call now also carries the selected **`hvac_mode`**. This helps Home Assistant/template climates apply the new single setpoint even if the preceding **`set_hvac_mode`** has not propagated yet.
+
+### Changed
+
+- **Release metadata:** bump prerelease channel and bundle diagnostics to **`1.0.3-alpha.13`**.
+
+---
 ## [1.0.3-alpha.12] - 2026-05-13
 
 Twelfth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.12`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
@@ -28,6 +54,7 @@ Twelfth **`1.0.3`** **`alpha`**: release channel **`1.0.3-alpha.12`** on **`pack
 ### Fixed
 
 - **`nodalia-climate-card.js`:** Ecobee-style climates with **no published setpoint** now allow **`+` / `−`** to create a setpoint from **`current_temperature`** even when the entity state is still **`heat_cool`** instead of **`off`**. This covers integrations that expose **`temperature: null`**, **`target_temp_low: null`**, and **`target_temp_high: null`** while still reporting an active HVAC mode.
+- **Editor translations:** reviewed the German and Dutch visual-editor catalogs, replacing awkward machine translations and English leftovers across calendar, climate, circular gauge, entity, media player, navigation, notifications, power flow, vacuum, and weather editor labels.
 
 ### Changed
 

@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "1.0.3-alpha.12",
+  "version": "1.0.3-alpha.14",
   "packageManager": "pnpm@11.1.1",
   "private": false,
   "type": "module",
@@ -47,6 +47,7 @@
     "i18n/editor/fr.json",
     "i18n/editor/it.json",
     "i18n/editor/nl.json",
+    "i18n/editor/no.json",
     "i18n/editor/pt.json",
     "i18n/editor/ro.json",
     "i18n/editor/ru.json",

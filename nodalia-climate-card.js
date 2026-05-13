@@ -683,7 +683,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.12";
+const CARD_VERSION = "1.0.3-alpha.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2405,6 +2405,7 @@ class NodaliaClimateCard extends HTMLElement {
 
       await Promise.resolve(this._setClimateService("set_temperature", {
         temperature: next,
+        ...(wakeMode ? { hvac_mode: wakeMode } : {}),
       }));
     } catch (error) {
       if (typeof console !== "undefined" && typeof console.debug === "function") {
