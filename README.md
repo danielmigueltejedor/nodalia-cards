@@ -356,6 +356,7 @@ Special thanks to:
 - [@Sppedtech](https://github.com/Sppedtech)
 - [@flippedcracker](https://github.com/flippedcracker)
 - [@loicloiseau](https://github.com/loicloiseau)
+- [@pqpxo](https://github.com/pqpxo)
 
 For contributing ideas and improvements to:
 - Person Card
