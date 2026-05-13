@@ -684,7 +684,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.3-alpha.15";
+const CARD_VERSION = "1.0.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1349,7 +1349,7 @@ const LEGACY_CLIMATE_ICON_OFF_COLORS = [
   "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
 ];
 const LEGACY_CLIMATE_DIAL_OFF_COLOR = "rgba(255, 255, 255, 0.28)";
-/** Pre-1.0.3-alpha.6 default: arc matched flat card bg and disappeared on accent-tinted dial. */
+/** Older default: arc matched flat card bg and disappeared on accent-tinted dial. */
 const LEGACY_CLIMATE_DIAL_TRACK_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
 const LEGACY_CLIMATE_DIAL_BACKGROUND = "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
 

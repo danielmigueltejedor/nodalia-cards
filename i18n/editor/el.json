@@ -824,7 +824,7 @@
   "ed.power_flow.icons_color": "Χρώμα εικονιδίου",
   "ed.power_flow.individuals_entities": "Ατομικές οντότητες",
   "ed.power_flow.individuals_hint": "Μία γραμμή ανά οντότητα: `οντότητα|όνομα|εικονίδιο|χρώμα`.",
-  "ed.power_flow.individuals_title": "Ιδιώτες",
+  "ed.power_flow.individuals_title": "Μεμονωμένες οντότητες",
   "ed.power_flow.node_battery_hint_visual": "Ισχύς μπαταρίας. Θετική εκφόρτιση, αρνητικό φορτίο.",
   "ed.power_flow.node_battery_hint_yaml": "Ισχύς μπαταρίας. Θετική προς το σπίτι, αρνητική φόρτιση από το σπίτι.",
   "ed.power_flow.node_battery_title": "Μπαταρία",

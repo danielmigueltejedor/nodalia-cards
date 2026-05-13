@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, translations, small fixes) toward the next stable **`1.0.x`** cut.
+Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ### Planned / In progress
 
@@ -19,6 +19,25 @@ Maintenance work continues on the **`1.0.3`** prerelease line (visual polish, tr
 - Security and service-action hardening.
 - Editor/i18n refinements.
 - Home Assistant frontend compatibility updates.
+
+---
+## [1.0.3] - 2026-05-13
+
+Stable **`1.0.3`**. Installs match **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules (**`1.0.3`**).
+
+### Added
+
+- **Norwegian language support:** added **`no`** as an official runtime/editor language, including **`nb`** and **`nn`** aliases for Home Assistant/browser locale detection and a seeded **`i18n/editor/no.json`** catalog ready for community translation.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** Ecobee-style climates with **no active setpoint** can now create a setpoint from **`current_temperature`** via **`+` / `−`**, including template climates that need the selected **`hvac_mode`** sent with **`climate.set_temperature`**.
+- **Editor translations:** reviewed and corrected German, Dutch, French, Romanian, Spanish, Italian, Portuguese, Greek, and Russian editor labels where previous strings were awkward, literal, or misleading.
+
+### Changed
+
+- **Editor performance:** optimized the shared entity-picker signature helper used by visual editors by sorting entity IDs before formatting rows, reducing work on Home Assistant installs with many entities.
+- **Release metadata:** promote the **`1.0.3`** line from **`alpha`** to stable.
 
 ---
 ## [1.0.3-alpha.15] - 2026-05-13

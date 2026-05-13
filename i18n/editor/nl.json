@@ -824,7 +824,7 @@
   "ed.power_flow.icons_color": "Pictogramkleur",
   "ed.power_flow.individuals_entities": "Individuele entiteiten",
   "ed.power_flow.individuals_hint": "Eén regel per entiteit: `entiteit|naam|pictogram|kleur`.",
-  "ed.power_flow.individuals_title": "Individuen",
+  "ed.power_flow.individuals_title": "Individuele entiteiten",
   "ed.power_flow.node_battery_hint_visual": "Batterijvermogen. Positieve ontlading, negatieve lading.",
   "ed.power_flow.node_battery_hint_yaml": "Batterijvermogen. Positief richting huis, negatief laden vanuit huis.",
   "ed.power_flow.node_battery_title": "Batterij",
