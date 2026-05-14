@@ -482,7 +482,7 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(gridImport.grid.entityId, "sensor.home");
   assert.equal(gridImport.grid.value, 100);
   assert.equal(gridImport._flowValues.gridHome, 100);
-  assert.equal(buildCard({ home: 100, solar: 0, battery: 0 })._getGridDirectionIcon(gridImport.grid), "mdi:transmission-tower-import");
+  assert.equal(buildCard({ home: 100, solar: 0, battery: 0 })._getGridDirectionIcon(gridImport.grid), "mdi:transmission-tower-export");
 
   const solarCoversHome = buildCard({ home: 100, solar: 100, battery: 0 })._getNodes();
   assert.equal(solarCoversHome.grid.value, 0);
@@ -514,7 +514,7 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(exportNodes.grid.value, -100);
   assert.equal(exportNodes.grid.isExporting, true);
   assert.equal(exportNodes.grid.secondary, "");
-  assert.equal(buildCard({ home: 100, solar: 200, battery: 0 })._getGridDirectionIcon(exportNodes.grid), "mdi:transmission-tower-export");
+  assert.equal(buildCard({ home: 100, solar: 200, battery: 0 })._getGridDirectionIcon(exportNodes.grid), "mdi:transmission-tower-import");
   assert.equal(exportNodes.battery.icon, "mdi:battery-check");
   assert.equal(exportNodes._flowValues.gridHome, -100);
 });
@@ -560,6 +560,7 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /tabindex="-1"/);
   assert.doesNotMatch(source, /data-cover-action="body"[\s\S]{0,80}tabindex="-1"/);
   assert.doesNotMatch(source, /data-cover-action="icon"[^>]*tabindex="-1"/);
+  assert.match(source, /if \(coverAction === "body" \|\| coverAction === "icon"\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*this\._runAction\(coverAction\);/);
 });
 
 test("cover card renders position slider above open stop close controls", () => {
@@ -589,6 +590,8 @@ test("device cards support entity pictures in the main icon bubble", () => {
     ["nodalia-light-card.js", "light-card__picture"],
     ["nodalia-vacuum-card.js", "vacuum-card__picture"],
     ["nodalia-humidifier-card.js", "humidifier-card__picture"],
+    ["nodalia-alarm-panel-card.js", "alarm-card__picture"],
+    ["nodalia-climate-card.js", "climate-card__picture"],
   ].forEach(([file, pictureClass]) => {
     const source = read(file);
     assert.match(source, /show_entity_picture: false/);
@@ -599,6 +602,15 @@ test("device cards support entity pictures in the main icon bubble", () => {
     assert.match(source, /ed\.entity\.show_entity_picture/);
     assert.match(source, /ed\.entity\.entity_picture/);
   });
+});
+
+test("alarm panel PIN input keeps masked text visible across themes", () => {
+  const source = read("nodalia-alarm-panel-card.js");
+  assert.match(source, /type="password"/);
+  assert.match(source, /color: var\(--primary-text-color\);[\s\S]*-webkit-text-fill-color: var\(--primary-text-color\);/);
+  assert.match(source, /caret-color: var\(--primary-text-color\);/);
+  assert.match(source, /opacity: 1;/);
+  assert.match(source, /placeholder="Code"/);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

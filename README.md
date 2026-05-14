@@ -2,7 +2,7 @@
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 
-![Package](https://img.shields.io/badge/package-1.1.0--alpha.9-df7138)
+![Package](https://img.shields.io/badge/package-1.1.0--alpha.18-df7138)
 ![Latest stable on main](https://img.shields.io/badge/latest%20stable%20%28main%29-1.0.3-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -50,7 +50,7 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.1.x
 
-**This branch tracks prerelease `1.1.0-alpha.17`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone and newer cards; current prerelease notes are in [`CHANGELOG.md`](./CHANGELOG.md).
+**This branch tracks prerelease `1.1.0-alpha.18`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone and newer cards; current prerelease notes are in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🧠 Notifications Card
 
@@ -266,7 +266,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.1.0-alpha.17.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.1.0-alpha.18.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.
@@ -305,7 +305,7 @@ JavaScript module
 
 # 🌍 Translations
 
-**1.0.x** includes multi-language runtime and visual editor support.
+**1.1.0** continues improving the multi-language runtime and visual editor support introduced in **1.0.x**.
 
 Supported languages:
 
@@ -323,6 +323,8 @@ Supported languages:
 - Romanian
 
 Translation improvements are ongoing.
+
+Translation PRs are welcome. See the step-by-step contributor guide in [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
 
 ---
 

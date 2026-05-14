@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.0-alpha.17";
+const CARD_VERSION = "1.1.0-alpha.18";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4902,7 +4902,7 @@ class NodaliaLightCard extends HTMLElement {
               type="button"
               class="light-card__icon"
               data-light-action="icon"
-              aria-label="Encender o apagar"
+              aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"
             >
               ${entityPicture
                 ? `<img class="light-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`

@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.1.0-alpha.17";
+const CARD_VERSION = "1.1.0-alpha.18";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -778,6 +778,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   show_state_chip: true,
   show_current_temperature_chip: true,
   show_humidity_chip: true,
@@ -1442,6 +1444,8 @@ function migrateLegacyClimateOffColors(styles) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
   migrateLegacyClimateOffColors(config.styles);
   return config;
 }
@@ -1644,6 +1648,8 @@ class NodaliaClimateCard extends HTMLElement {
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
+      showEntityPicture: this._config?.show_entity_picture === true,
+      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
       temperature: parseFiniteClimateNumber(attrs.temperature),
       currentTemperature: parseFiniteClimateNumber(attrs.current_temperature),
       targetTempHigh: parseFiniteClimateNumber(attrs.target_temp_high),
@@ -1784,6 +1790,18 @@ class NodaliaClimateCard extends HTMLElement {
     return this._config?.icon
       || state?.attributes?.icon
       || "mdi:thermostat";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _getTemperatureRange(state) {
@@ -3563,6 +3581,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     const title = this._getClimateName(state);
     const icon = this._getClimateIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const accentColor = this._getAccentColor(state);
     const currentMode = this._getCurrentMode(state);
     const currentTemperature = this._getCurrentTemperature(state);
@@ -3619,6 +3638,9 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
+    const toggleAriaLabel = window.NodaliaI18n?.translateClimateAria
+      ? window.NodaliaI18n.translateClimateAria(hass, i18nLang, "togglePower", "Turn on or off")
+      : "Turn on or off";
     const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
     const tempScale = getClimateTemperatureScaleLetter(hass);
     const translateClimateMode = mode => (
@@ -4080,6 +4102,15 @@ class NodaliaClimateCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${effectiveIconSize} * 0.44);
+        }
+
+        .climate-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          position: absolute;
+          width: 100%;
         }
 
         .climate-card__unavailable-badge {
@@ -4850,9 +4881,11 @@ class NodaliaClimateCard extends HTMLElement {
               type="button"
               class="climate-card__icon"
               data-climate-action="toggle"
-              aria-label="Encender o apagar"
+              aria-label="${escapeHtml(toggleAriaLabel)}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="climate-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="climate-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             <div class="climate-card__copy">
@@ -5409,6 +5442,10 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             })}
             ${this._renderTextField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:thermostat",
+            })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/climate.png",
             })}
           </div>
         </section>
@@ -6393,6 +6430,11 @@ class NodaliaClimateCardEditor extends HTMLElement {
             })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:thermostat",
+              fullWidth: true,
+            })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/climate.png",
               fullWidth: true,
             })}
           </div>

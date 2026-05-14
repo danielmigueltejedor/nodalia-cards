@@ -223,6 +223,7 @@ Current supported languages:
 - French
 - Italian
 - Dutch
+- Norwegian
 - Portuguese
 - Russian
 - Greek
@@ -240,6 +241,8 @@ If helping with translations:
 - Keep UI text compact
 - Preserve consistency between cards
 - Match Home Assistant terminology when possible
+
+For the full step-by-step workflow, including adding a new language to the bundle, see [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
 
 ---
 

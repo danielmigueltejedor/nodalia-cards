@@ -22,6 +22,28 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.18] - 2026-05-14
+
+Eighteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.18`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Added
+
+- **`nodalia-alarm-panel-card.js` / `nodalia-climate-card.js`:** add `show_entity_picture` and optional `entity_picture` support for custom `/local/...`, `/media/local/...`, and frontend image paths in the main visual bubble.
+- **Translations:** add [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md), a step-by-step guide for editing existing languages, adding new languages to the bundle, validating editor catalogs, testing in Home Assistant, and submitting translation PRs.
+
+### Fixed
+
+- **`nodalia-alarm-panel-card.js`:** make typed PIN/code feedback visible in masked inputs across light/dark themes by forcing theme-safe text fill, caret color, opacity, and input layering.
+- **`nodalia-power-flow-card.js`:** correct grid-side import/export icon semantics so house import uses the grid export icon and house export uses the grid import icon.
+- **`nodalia-cover-card.js`:** preserve dashboard scroll for body/icon taps as well as control taps, preventing the bottom-of-page cover-card jump after a tap-triggered re-render.
+- **Localization:** route shared power-toggle accessibility labels through i18n instead of hardcoded Spanish strings.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.18`**.
+
+---
+
 ## [1.1.0-alpha.17] - 2026-05-14
 
 Seventeenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.17`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

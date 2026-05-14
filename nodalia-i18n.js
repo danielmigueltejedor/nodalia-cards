@@ -473,6 +473,11 @@
         noState: "Sin estado",
         fallbackName: "Ventilador",
       },
+      common: {
+        aria: {
+          togglePower: "Encender o apagar",
+        },
+      },
       alarmPanel: {
         defaultTitle: "Alarma",
         noState: "Sin estado",
@@ -723,6 +728,7 @@
           dialRangeGroup: "Temperatura interior y consigna",
           dialTargetSlider: "Temperatura objetivo",
           dialNoSetpoint: "Temperatura interior; el termostato no tiene consigna activa",
+          togglePower: "Encender o apagar",
         },
         dialNoSetpointHint: "Sin consigna activa",
       },
@@ -1003,6 +1009,11 @@
         noState: "No state",
         fallbackName: "Fan",
       },
+      common: {
+        aria: {
+          togglePower: "Turn on or off",
+        },
+      },
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "No state",
@@ -1253,6 +1264,7 @@
           dialRangeGroup: "Comfort range and indoor temperature",
           dialTargetSlider: "Target temperature",
           dialNoSetpoint: "Indoor temperature; thermostat has no active target yet",
+          togglePower: "Turn on or off",
         },
         dialNoSetpointHint: "No active setpoint",
       },
@@ -6745,6 +6757,20 @@
     return ccLoc[key] ?? ccEn[key] ?? fallback;
   }
 
+  function translateClimateAria(hass, configLang, key, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const ccLoc = strings(lang).climateCard?.aria || {};
+    const ccEn = strings("en").climateCard?.aria || {};
+    return ccLoc[key] ?? ccEn[key] ?? fallback;
+  }
+
+  function translateCommonAria(hass, configLang, key, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const commonLoc = strings(lang).common?.aria || {};
+    const commonEn = strings("en").common?.aria || {};
+    return commonLoc[key] ?? commonEn[key] ?? fallback;
+  }
+
   function translateClimateDialNoSetpointHint(hass, configLang) {
     const lang = resolveLanguage(hass, configLang);
     const ccLoc = strings(lang).climateCard || {};
@@ -7118,6 +7144,8 @@
     translateEntityStateChip,
     translateMediaPlayerState,
     translateClimateHvacLabel,
+    translateClimateAria,
+    translateCommonAria,
     translateClimateDialAria,
     translateClimateDialNoSetpointHint,
     translateHumidifierDeviceState,

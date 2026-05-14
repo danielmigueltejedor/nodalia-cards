@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.1.0-alpha.17";
+const CARD_VERSION = "1.1.0-alpha.18";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -785,6 +785,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   code: "",
   code_entity: "",
   show_state: true,
@@ -1123,7 +1125,10 @@ function isUnavailableState(state) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
+  return config;
 }
 
 class NodaliaAlarmPanelCard extends HTMLElement {
@@ -1341,6 +1346,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       state: String(state?.state || ""),
       supportedFeatures: Number(attrs.supported_features ?? 0),
       codeFormat: String(attrs.code_format || ""),
+      showEntityPicture: this._config?.show_entity_picture === true,
+      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
       delay: Number(attrs.delay ?? -1),
       nextState: String(attrs.next_state || ""),
       postPendingState: String(attrs.post_pending_state || ""),
@@ -1368,6 +1375,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _getIcon() {
     return this._config?.icon || "mdi:shield-home";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _translateState(state) {
@@ -1820,6 +1839,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const title = this._getTitle(state);
     const icon = this._getIcon();
+    const entityPicture = this._getEntityPicture(state);
     const accentColor = this._getAccentColor(state);
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const showUnavailableBadge = isUnavailableState(state);
@@ -1960,6 +1980,15 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           width: calc(${styles.icon.size} * 0.44);
         }
 
+        .alarm-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          position: absolute;
+          width: 100%;
+        }
+
         .alarm-card__unavailable-badge {
           align-items: center;
           background: #ff9b4a;
@@ -2064,16 +2093,25 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           background: transparent;
           border: 0;
           color: var(--primary-text-color);
+          -webkit-text-fill-color: var(--primary-text-color);
+          caret-color: var(--primary-text-color);
           font: inherit;
+          font-variant-numeric: tabular-nums;
           height: ${styles.input_height};
           letter-spacing: 0.18em;
+          line-height: ${styles.input_height};
           outline: none;
+          opacity: 1;
+          position: relative;
+          z-index: 1;
           width: 100%;
         }
 
         .alarm-card__code-input::placeholder {
           color: var(--secondary-text-color);
+          -webkit-text-fill-color: var(--secondary-text-color);
           letter-spacing: normal;
+          opacity: 1;
         }
 
         .alarm-card__actions {
@@ -2254,7 +2292,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
               data-alarm-action="more-info"
               aria-label="${escapeHtml(title)}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="alarm-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="alarm-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             <div class="alarm-card__copy ${shouldAnimateEntrance ? "alarm-card__copy--entering" : ""}">
@@ -2272,7 +2312,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
                     type="password"
                     inputmode="numeric"
                     autocomplete="one-time-code"
-                    placeholder="Codigo"
+                    placeholder="Code"
                     data-alarm-field="code"
                     value="${escapeHtml(this._codeInput)}"
                   />
@@ -3192,6 +3232,11 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
             })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:shield-home",
+              fullWidth: true,
+            })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/alarm.png",
               fullWidth: true,
             })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
