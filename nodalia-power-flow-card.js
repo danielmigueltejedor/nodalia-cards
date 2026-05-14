@@ -1448,6 +1448,68 @@ function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
+/** Midpoint of the grid–home rail; solar/battery/grid branches meet here so trunks overlap visually. */
+function getDiamondFlowHub(nodes) {
+  const grid = nodes?.grid;
+  const home = nodes?.home;
+  if (!grid?.entityId || !home?.entityId || !grid.position || !home.position) {
+    return null;
+  }
+  return {
+    x: (grid.position.x + home.position.x) / 2,
+    y: (grid.position.y + home.position.y) / 2,
+  };
+}
+
+function axisManhattanSegments(from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.hypot(dx, dy) < 0.06) {
+    return [];
+  }
+  if (Math.abs(dx) < 0.06) {
+    return [`L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`];
+  }
+  if (Math.abs(dy) < 0.06) {
+    return [`L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`];
+  }
+  const horizFirst = Math.abs(dx) >= Math.abs(dy);
+  if (horizFirst) {
+    return [
+      `L ${to.x.toFixed(2)} ${from.y.toFixed(2)}`,
+      `L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`,
+    ];
+  }
+  return [
+    `L ${from.x.toFixed(2)} ${to.y.toFixed(2)}`,
+    `L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`,
+  ];
+}
+
+/** Axis-aligned path A → hub → B so all flows share the same junction on the grid–home cross. */
+function buildThroughHubConnector(posA, posB, hub, rA, rB) {
+  const pA = offsetPoint(posA, hub, rA);
+  const pB = offsetPoint(posB, hub, rB);
+  const leg1 = axisManhattanSegments(pA, hub);
+  const leg2 = axisManhattanSegments(hub, pB);
+  return [`M ${pA.x.toFixed(2)} ${pA.y.toFixed(2)}`, ...leg1, ...leg2].join(" ");
+}
+
+const HUB_ROUTED_LINE_IDS = new Set(["solar", "solar-grid", "battery", "battery-grid", "grid-battery"]);
+
+function buildHubRoutedLinePath(line, hub) {
+  if (!hub || !HUB_ROUTED_LINE_IDS.has(line.id)) {
+    return null;
+  }
+  return buildThroughHubConnector(
+    line.fromNode.position,
+    line.toNode.position,
+    hub,
+    line.fromRadius,
+    line.toRadius,
+  );
+}
+
 class NodaliaPowerFlowCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -2365,13 +2427,19 @@ class NodaliaPowerFlowCard extends HTMLElement {
       1,
     );
 
-    return lineCandidates.map(line => ({
-      ...line,
-      path: line.straight
+    const hub = getDiamondFlowHub(nodes);
+
+    return lineCandidates.map(line => {
+      const hubPath = hub ? buildHubRoutedLinePath(line, hub) : null;
+      const path = line.straight
         ? buildStraightFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius)
-        : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
-      duration: this._flowDuration(line.magnitude, maxMagnitude),
-    }));
+        : hubPath || buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius);
+      return {
+        ...line,
+        path,
+        duration: this._flowDuration(line.magnitude, maxMagnitude),
+      };
+    });
   }
 
   _getDominantColor(lines) {
@@ -2395,13 +2463,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     /** With preserveAspectRatio none, user Y is squeezed vs X on wide surfaces; taller ry in viewBox renders round on screen. */
     const glowRy = glowR * viewAspect;
     const coreRy = coreR * viewAspect;
+    const motionPhase = ((String(line.id || "").split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 19) / 19) * 0.92;
+    const beginAttr = motionPhase > 0.02 ? ` begin="${motionPhase.toFixed(3)}s"` : "";
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
         <ellipse class="power-flow-card__dot-glow" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
-          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
+          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
         </ellipse>
         <ellipse class="power-flow-card__dot-core" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
-          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"></animateMotion>
+          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
         </ellipse>
       </g>
     `;
@@ -2449,7 +2519,24 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const chipPadding = styles.chip_padding || "0 10px";
     const secondarySize = Math.max(10, parseSizeToPixels(styles.secondary_size, 11));
     const isBottom = node.position.y >= 74;
-    const infoClass = node.kind === "home" ? "power-flow-card__node-info--home" : isBottom ? "power-flow-card__node-info--above" : "power-flow-card__node-info--below";
+    let infoClass;
+    if (layoutPreset === "simple") {
+      infoClass = node.kind === "home"
+        ? "power-flow-card__node-info--home"
+        : isBottom
+          ? "power-flow-card__node-info--above"
+          : "power-flow-card__node-info--below";
+    } else if (node.kind === "home") {
+      infoClass = "power-flow-card__node-info--home";
+    } else if (node.kind === "solar" || node.kind === "gas") {
+      infoClass = "power-flow-card__node-info--above";
+    } else if (node.kind === "grid") {
+      infoClass = "power-flow-card__node-info--left";
+    } else if (node.kind === "battery" || node.kind === "water" || node.kind === "individual") {
+      infoClass = "power-flow-card__node-info--below";
+    } else {
+      infoClass = isBottom ? "power-flow-card__node-info--above" : "power-flow-card__node-info--below";
+    }
     const color = node.color;
     const unavailableBadge = this._config?.show_unavailable_badge !== false && node.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
@@ -2773,9 +2860,19 @@ class NodaliaPowerFlowCard extends HTMLElement {
     })();
     const topEnergyConfigured = [nodes.grid.entityId, nodes.solar.entityId, nodes.battery.entityId].filter(Boolean).length;
     const minimalFlowDiagram = layoutPreset !== "simple" && topEnergyConfigured <= 1 && !hasLowerNodes;
+    const stripOnlyGridHome =
+      layoutPreset !== "simple"
+      && Boolean(nodes.grid.entityId && nodes.home.entityId)
+      && !nodes.solar.entityId
+      && !nodes.battery.entityId
+      && !hasLowerNodes
+      && !nodes.individual?.length;
     const baseSurfaceDiagram = (() => {
       if (layoutPreset === "simple") {
         return 162;
+      }
+      if (stripOnlyGridHome) {
+        return layoutPreset === "compact" ? 154 : 168;
       }
       if (minimalFlowDiagram) {
         return layoutPreset === "compact" ? 200 : 222;
@@ -2785,6 +2882,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const surfaceFloor = (() => {
       if (layoutPreset === "simple") {
         return 148;
+      }
+      if (stripOnlyGridHome) {
+        return layoutPreset === "compact" ? 140 : 146;
       }
       if (minimalFlowDiagram) {
         return layoutPreset === "compact" ? 158 : 168;
@@ -2802,6 +2902,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (layoutPreset === "simple") {
         return 144;
       }
+      if (stripOnlyGridHome) {
+        return layoutPreset === "compact" ? 146 : 156;
+      }
       if (minimalFlowDiagram) {
         return layoutPreset === "compact" ? 186 : 200;
       }
@@ -2810,7 +2913,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const surfaceMinHeightMobile = Math.min(
       Math.max(
         baseSurfaceMobile + surfaceLayoutExtras,
-        layoutPreset === "simple" ? 132 : minimalFlowDiagram ? (layoutPreset === "compact" ? 150 : 158) : 236,
+        layoutPreset === "simple"
+          ? 132
+          : stripOnlyGridHome
+            ? (layoutPreset === "compact" ? 134 : 140)
+            : minimalFlowDiagram
+              ? (layoutPreset === "compact" ? 150 : 158)
+              : 236,
       ),
       520,
     );
@@ -3088,6 +3197,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__node-info--home {
           bottom: calc(100% + 8px);
+        }
+
+        .power-flow-card__node-info--left {
+          align-items: flex-end;
+          bottom: auto;
+          left: auto;
+          right: calc(100% + 7px);
+          top: 50%;
+          transform: translateY(-50%);
         }
 
         .power-flow-card--simple .power-flow-card__header {
