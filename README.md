@@ -357,7 +357,10 @@ Special thanks to:
 - [@flippedcracker](https://github.com/flippedcracker)
 - [@loicloiseau](https://github.com/loicloiseau)
 - [@pqpxo](https://github.com/pqpxo)
-
+- [@jjanssen95](https://github.com/jjanssen95)
+- [@alfonsoluna](https://github.com/alfonsoluna)
+- [@Scraft08YT](https://github.com/Scraft08YT)
+  
 For contributing ideas and improvements to:
 - Person Card
 - Light Card
