@@ -22,6 +22,20 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.11] - 2026-05-14
+
+Eleventh **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.11`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** cover buttons and sliders now preserve the current dashboard scroll position during Safari/Home Assistant focus and re-render cycles, preventing the view from jumping when the card is near the bottom of the dashboard.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.11`**.
+
+---
+
 ## [1.1.0-alpha.10] - 2026-05-14
 
 Tenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.10`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

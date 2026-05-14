@@ -467,12 +467,17 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
   const source = read("nodalia-cover-card.js");
   assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
-  assert.match(source, /if \(actionControl\) \{\s*event\.preventDefault\(\);\s*\}/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
+  assert.match(source, /if \(actionControl\) \{\s*this\._scheduleInteractionScrollRestore\(\);\s*event\.preventDefault\(\);\s*\}/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
+  assert.match(source, /_scheduleInteractionScrollRestore\(duration = 1200\)/);
+  assert.match(source, /_restoreInteractionScrollSnapshot\(\)/);
+  assert.match(source, /this\._scheduleInteractionScrollRestore\(\);\s*event\.preventDefault\(\);/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
+  assert.match(source, /tabindex="-1"/);
 });
 
 test("cover card renders position slider above open stop close controls", () => {
