@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.22";
+const CARD_VERSION = "1.1.0-alpha.23";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1355,10 +1355,22 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
     return { x: 82, y: 52 };
   }
   if (kind === "solar") {
-    return { x: 50, y: 17 };
+    const upperBandSolo =
+      flags.hasSolar &&
+      flags.hasGrid &&
+      !flags.hasBattery &&
+      bottomN === 0 &&
+      individualCount === 0;
+    return { x: 50, y: upperBandSolo ? 20.5 : 17 };
   }
   if (kind === "grid") {
-    return { x: 18, y: 52 };
+    const upperBandSolo =
+      flags.hasSolar &&
+      flags.hasGrid &&
+      !flags.hasBattery &&
+      bottomN === 0 &&
+      individualCount === 0;
+    return { x: upperBandSolo ? 20 : 18, y: 52 };
   }
   if (kind === "battery") {
     return { x: 50, y: 84 };
@@ -1486,13 +1498,57 @@ function axisManhattanSegments(from, to) {
   ];
 }
 
-/** Axis-aligned path A → hub → B so all flows share the same junction on the grid–home cross. */
+/**
+ * Axis-aligned path A → hub → B with a **quarter-circle fillet** at the hub when the two legs meet at ~90°
+ * (similar to Home Assistant’s energy flow routing; avoids sharp “T” corners).
+ */
 function buildThroughHubConnector(posA, posB, hub, rA, rB) {
   const pA = offsetPoint(posA, hub, rA);
   const pB = offsetPoint(posB, hub, rB);
-  const leg1 = axisManhattanSegments(pA, hub);
-  const leg2 = axisManhattanSegments(hub, pB);
-  return [`M ${pA.x.toFixed(2)} ${pA.y.toFixed(2)}`, ...leg1, ...leg2].join(" ");
+  const hix = hub.x;
+  const hiy = hub.y;
+  const vA = { x: hix - pA.x, y: hiy - pA.y };
+  const vB = { x: pB.x - hix, y: pB.y - hiy };
+  const lenA = Math.hypot(vA.x, vA.y);
+  const lenB = Math.hypot(vB.x, vB.y);
+  if (lenA < 0.05) {
+    return `M ${pB.x.toFixed(3)} ${pB.y.toFixed(3)}`;
+  }
+  if (lenB < 0.05) {
+    return `M ${pA.x.toFixed(3)} ${pA.y.toFixed(3)} L ${hix.toFixed(3)} ${hiy.toFixed(3)}`;
+  }
+  const inUx = vA.x / lenA;
+  const inUy = vA.y / lenA;
+  const outUx = vB.x / lenB;
+  const outUy = vB.y / lenB;
+  const dot = inUx * outUx + inUy * outUy;
+  let fr = Math.min(3.65, lenA * 0.4, lenB * 0.4, lenA - 0.14, lenB - 0.14, 5.35);
+
+  if (fr < 1.08 || Math.abs(dot) > 0.22) {
+    return [`M ${pA.x.toFixed(3)} ${pA.y.toFixed(3)}`, ...axisManhattanSegments(pA, hub), ...axisManhattanSegments(hub, pB)].join(" ");
+  }
+
+  const cut1 = { x: hix - inUx * fr, y: hiy - inUy * fr };
+  const cut2 = { x: hix + outUx * fr, y: hiy + outUy * fr };
+
+  const parts = [`M ${pA.x.toFixed(3)} ${pA.y.toFixed(3)}`];
+  if (Math.hypot(cut1.x - pA.x, cut1.y - pA.y) > 0.05) {
+    parts.push(`L ${cut1.x.toFixed(3)} ${cut1.y.toFixed(3)}`);
+  }
+  if (Math.abs(dot) < 0.12 && Math.hypot(cut2.x - cut1.x, cut2.y - cut1.y) > 0.1) {
+    const cross = inUx * outUy - inUy * outUx;
+    const sweep = cross > 0 ? 1 : 0;
+    parts.push(`A ${fr.toFixed(3)} ${fr.toFixed(3)} 0 0 ${sweep} ${cut2.x.toFixed(3)} ${cut2.y.toFixed(3)}`);
+  } else {
+    parts.push(`L ${hix.toFixed(3)} ${hiy.toFixed(3)}`);
+    if (Math.hypot(cut2.x - hix, cut2.y - hiy) > 0.05) {
+      parts.push(`L ${cut2.x.toFixed(3)} ${cut2.y.toFixed(3)}`);
+    }
+  }
+  if (Math.hypot(pB.x - cut2.x, pB.y - cut2.y) > 0.05) {
+    parts.push(`L ${pB.x.toFixed(3)} ${pB.y.toFixed(3)}`);
+  }
+  return parts.join(" ");
 }
 
 const HUB_ROUTED_LINE_IDS = new Set(["solar", "solar-grid", "battery", "battery-grid", "grid-battery"]);
@@ -2530,9 +2586,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       infoClass = "power-flow-card__node-info--home";
     } else if (node.kind === "solar" || node.kind === "gas") {
       infoClass = "power-flow-card__node-info--above";
-    } else if (node.kind === "grid") {
-      infoClass = "power-flow-card__node-info--left";
-    } else if (node.kind === "battery" || node.kind === "water" || node.kind === "individual") {
+    } else if (node.kind === "battery" || node.kind === "water" || node.kind === "individual" || node.kind === "grid") {
       infoClass = "power-flow-card__node-info--below";
     } else {
       infoClass = isBottom ? "power-flow-card__node-info--above" : "power-flow-card__node-info--below";
@@ -2867,12 +2921,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
       && !nodes.battery.entityId
       && !hasLowerNodes
       && !nodes.individual?.length;
+    const upperBandHubOnly =
+      layoutPreset !== "simple"
+      && Boolean(nodes.solar.entityId && nodes.grid.entityId && nodes.home.entityId)
+      && !nodes.battery.entityId
+      && !hasLowerNodes;
     const baseSurfaceDiagram = (() => {
       if (layoutPreset === "simple") {
         return 162;
       }
       if (stripOnlyGridHome) {
         return layoutPreset === "compact" ? 154 : 168;
+      }
+      if (upperBandHubOnly) {
+        return layoutPreset === "compact" ? 188 : 202;
       }
       if (minimalFlowDiagram) {
         return layoutPreset === "compact" ? 200 : 222;
@@ -2885,6 +2947,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       }
       if (stripOnlyGridHome) {
         return layoutPreset === "compact" ? 140 : 146;
+      }
+      if (upperBandHubOnly) {
+        return layoutPreset === "compact" ? 152 : 160;
       }
       if (minimalFlowDiagram) {
         return layoutPreset === "compact" ? 158 : 168;
@@ -2905,6 +2970,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (stripOnlyGridHome) {
         return layoutPreset === "compact" ? 146 : 156;
       }
+      if (upperBandHubOnly) {
+        return layoutPreset === "compact" ? 172 : 184;
+      }
       if (minimalFlowDiagram) {
         return layoutPreset === "compact" ? 186 : 200;
       }
@@ -2917,13 +2985,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
           ? 132
           : stripOnlyGridHome
             ? (layoutPreset === "compact" ? 134 : 140)
-            : minimalFlowDiagram
+            : upperBandHubOnly
+              ? (layoutPreset === "compact" ? 146 : 152)
+              : minimalFlowDiagram
               ? (layoutPreset === "compact" ? 150 : 158)
               : 236,
       ),
       520,
     );
-    const surfaceAspectCss = "1 / 1.04";
+    const surfaceAspectCss = upperBandHubOnly
+      ? (layoutPreset === "compact" ? "1 / 0.64" : "1 / 0.58")
+      : "1 / 1.04";
     const flowDotViewAspect = (() => {
       const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
       if (!m) {
@@ -3089,6 +3161,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface {
           background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
           border-radius: calc(${styles.card.border_radius} - 6px);
+          box-sizing: border-box;
           height: auto;
           min-height: ${surfaceMinHeight}px;
           position: relative;
@@ -3100,6 +3173,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card--full .power-flow-card__surface {
           aspect-ratio: ${surfaceAspectCss};
           max-height: none;
+          padding: 9px 11px 11px;
         }
 
         .power-flow-card__surface--entering {
@@ -3197,15 +3271,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__node-info--home {
           bottom: calc(100% + 8px);
-        }
-
-        .power-flow-card__node-info--left {
-          align-items: flex-end;
-          bottom: auto;
-          left: auto;
-          right: calc(100% + 7px);
-          top: 50%;
-          transform: translateY(-50%);
         }
 
         .power-flow-card--simple .power-flow-card__header {

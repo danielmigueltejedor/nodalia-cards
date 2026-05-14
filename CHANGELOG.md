@@ -30,6 +30,23 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.23] - 2026-05-12
+
+Twenty-third **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.23`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** restore a valid **`buildThroughHubConnector`** path (broken arc branch) so hub-routed lines render again.
+- **`nodalia-power-flow-card.js`:** **grid** value/label chips back **below** the grid node; drop unused left-chip layout.
+- **`nodalia-power-flow-card.js`:** **tighter vertical canvas** when solar + grid + home are active without battery or lower utilities (**`upperBandHubOnly`**: flatter aspect ratio, lower min-heights, slight solar/grid position nudge).
+- **`nodalia-power-flow-card.js`:** **surface padding** on full/compact diagrams to reduce chip clipping at card edges.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.23`**.
+
+---
+
 ## [1.1.0-alpha.22] - 2026-05-12
 
 Twenty-second **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.22`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
