@@ -1682,7 +1682,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim();
   }
 
-  _resolveSourceValue(source) {
+  /**
+   * Resolves a numeric `value` from a string entity id or a `{ entity | consumption | production }` object.
+   * Split **grid** entities follow import/export semantics: `consumption − production` (positive = net import).
+   * Split **battery** entities follow HA energy semantics: `production − consumption` (positive = discharge,
+   * negative = charge), matching the single-sensor convention documented on `_applyDerivedHomeAndGridDisplay`.
+   */
+  _resolveSourceValue(source, kind = null) {
     if (!this._hass?.states || !source) {
       return { value: null, unit: "", state: null, entityId: "" };
     }
@@ -1723,8 +1729,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
         || "",
       ).trim();
 
+      const net =
+        kind === "battery"
+          ? productionValue - consumptionValue
+          : consumptionValue - productionValue;
+
       return {
-        value: consumptionValue - productionValue,
+        value: net,
         unit,
         state: consumptionState || productionState,
         entityId: consumptionEntity || productionEntity,
@@ -1797,7 +1808,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
-    let sourceResult = this._resolveSourceValue(nodeConfig.entity);
+    let sourceResult = this._resolveSourceValue(nodeConfig.entity, kind);
     if (
       kind === "grid" &&
       !sourceResult.entityId &&

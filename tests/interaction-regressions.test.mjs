@@ -515,6 +515,42 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(gridChargeNodes.battery.icon, "mdi:battery-charging");
   assert.ok(gridChargeLines.includes("grid-battery"));
 
+  const splitBatteryDischargeMatchesSingle = () => {
+    const card = new PowerFlowCard();
+    card._config = {
+      entities: {
+        home: { entity: "sensor.home", color: "#ffffff" },
+        grid: { color: "#6da8ff", export_color: "#44d07b" },
+        solar: { entity: "sensor.solar", color: "#f6b73c" },
+        battery: {
+          entity: { consumption: "sensor.battery_in", production: "sensor.battery_out" },
+          color: "#61c97a",
+        },
+        water: {},
+        gas: {},
+        individual: [],
+      },
+      display_zero_lines: { mode: "hide", transparency: 50, grey_color: [189, 189, 189] },
+      show_secondary_info: true,
+      show_values: true,
+      show_labels: true,
+    };
+    card._hass = {
+      states: {
+        "sensor.home": { state: "176", attributes: { unit_of_measurement: "W", friendly_name: "Home" } },
+        "sensor.solar": { state: "4200", attributes: { unit_of_measurement: "W", friendly_name: "Solar" } },
+        "sensor.battery_in": { state: "0", attributes: { unit_of_measurement: "W", friendly_name: "Battery in" } },
+        "sensor.battery_out": { state: "1200", attributes: { unit_of_measurement: "W", friendly_name: "Battery out" } },
+      },
+    };
+    return card;
+  };
+  const splitNodes = splitBatteryDischargeMatchesSingle()._getNodes();
+  assert.equal(splitNodes.battery.value, 1200, "split battery: production minus consumption = discharge (positive)");
+  assert.equal(splitNodes._flowValues.gridBattery, 0);
+  assert.equal(splitNodes._flowValues.batteryGrid, 1200);
+  assert.ok(splitBatteryDischargeMatchesSingle()._buildLines(splitNodes).some(line => line.id === "battery-grid" && line.active));
+
   const exportNodes = buildCard({ home: 100, solar: 200, battery: 0, batteryLevel: 100 })._getNodes();
   const exportLines = buildCard({ home: 100, solar: 200, battery: 0, batteryLevel: 100 })
     ._buildLines(exportNodes)
