@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -924,7 +924,9 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   _getLocale() {
-    return this._hass?.locale?.language || "es-ES";
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto");
+    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
   }
 
   _getCalendarEntityLabel(entityId) {

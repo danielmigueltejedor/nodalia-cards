@@ -22,6 +22,21 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.17] - 2026-05-14
+
+Seventeenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.17`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **Localization:** prefer Home Assistant profile language fields (**`selectedLanguage`** / **`locale.language`**) over stale legacy **`hass.language`**, preventing English dashboards from falling back to Spanish when `language: auto` is used.
+- **Runtime fallbacks:** replace remaining Spanish hardcoded fallback labels, accessibility labels, and card-picker descriptions across device, media, weather, notification, graph, navigation, and editor-adjacent paths with English/i18n-aware fallbacks.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.17`**.
+
+---
+
 ## [1.1.0-alpha.16] - 2026-05-14
 
 Sixteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.16`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

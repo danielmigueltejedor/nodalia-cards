@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2246,23 +2246,23 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
     switch (stateValue) {
       case "on":
-        return "Encendido";
+        return "On";
       case "playing":
-        return "Reproduciendo";
+        return "Playing";
       case "paused":
-        return "En pausa";
+        return "Paused";
       case "buffering":
-        return "Cargando";
+        return "Buffering";
       case "idle":
-        return "En espera";
+        return "Idle";
       case "off":
-        return "Apagado";
+        return "Off";
       case "standby":
         return "Standby";
       case "unavailable":
-        return "No disponible";
+        return "Unavailable";
       default:
-        return stateValue || "Desconocido";
+        return stateValue || "Unknown";
     }
   }
 
@@ -3305,7 +3305,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     return {
       ...normalized,
-      title: normalized.title || "Medios",
+      title: normalized.title || "Media",
     };
   }
 
@@ -3514,7 +3514,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
     const lang =
-      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "es";
+      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
     const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
 
@@ -3823,11 +3823,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     );
 
     const bodyMarkup = this._mediaBrowserState.loading
-      ? `<div class="media-browser__empty">Cargando medios...</div>`
+      ? `<div class="media-browser__empty">Loading media...</div>`
       : this._mediaBrowserState.error
         ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>`
         : items.length === 0
-          ? `<div class="media-browser__empty">No hay elementos disponibles aqui.</div>`
+          ? `<div class="media-browser__empty">No items available here.</div>`
           : `
             <div class="media-browser__list">
               ${items
@@ -3903,25 +3903,25 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     return `
       <div class="${mediaBrowserBackdropClasses}" data-media-browser-close="true"></div>
-      <div class="${mediaBrowserPanelClasses}" role="dialog" aria-modal="true" aria-label="Navegador de medios">
+      <div class="${mediaBrowserPanelClasses}" role="dialog" aria-modal="true" aria-label="Media browser">
         <div class="media-browser__header">
           <button
             type="button"
             class="media-browser__header-button"
             data-media-browser-back="true"
-            aria-label="Volver"
+            aria-label="Back"
           >
             <ha-icon icon="mdi:chevron-left"></ha-icon>
           </button>
           <div class="media-browser__header-copy">
             <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || "Media Browser")}</div>
-            <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Medios"))}</div>
+            <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Media"))}</div>
           </div>
           <button
             type="button"
             class="media-browser__header-button"
             data-media-browser-close="true"
-            aria-label="Cerrar"
+            aria-label="Close"
           >
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
@@ -4039,7 +4039,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="volume-down"
           data-entity="${escapeHtml(player.entity)}"
           data-media-volume="${volumeLevel}"
-          aria-label="Bajar volumen"
+          aria-label="Volume down"
         >
           <ha-icon icon="mdi:minus"></ha-icon>
         </button>
@@ -4053,7 +4053,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="volume-up"
           data-entity="${escapeHtml(player.entity)}"
           data-media-volume="${volumeLevel}"
-          aria-label="Subir volumen"
+          aria-label="Volume up"
         >
           <ha-icon icon="mdi:plus"></ha-icon>
         </button>
@@ -4068,7 +4068,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             data-media-control="browse-media"
             data-entity="${escapeHtml(player.entity)}"
             data-media-path="${escapeHtml(browsePath)}"
-            aria-label="Abrir medios"
+            aria-label="Open media"
           >
             <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
           </button>
@@ -4083,7 +4083,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="browse-media"
           data-entity="${escapeHtml(player.entity)}"
           data-media-path="${escapeHtml(browsePath)}"
-          aria-label="Abrir medios"
+          aria-label="Open media"
         >
           <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
         </button>
@@ -4121,7 +4121,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           class="media-player__control ${this._tvVolumePickerEntity === player.entity ? "media-player__control--active" : ""}"
           data-media-control="toggle-volume-panel"
           data-entity="${escapeHtml(player.entity)}"
-          aria-label="Mostrar volumen"
+          aria-label="Show volume"
         >
           <ha-icon icon="mdi:volume-high"></ha-icon>
         </button>
@@ -4136,7 +4136,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="browse-media"
           data-entity="${escapeHtml(player.entity)}"
           data-media-path="${escapeHtml(browsePath)}"
-          aria-label="Abrir medios"
+          aria-label="Open media"
         >
           <ha-icon icon="mdi:apps"></ha-icon>
         </button>
@@ -4445,7 +4445,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                             class="media-player__control"
                             data-media-control="previous"
                             data-entity="${escapeHtml(player.entity)}"
-                            aria-label="Anterior"
+                            aria-label="Previous"
                           >
                             <ha-icon icon="mdi:skip-previous"></ha-icon>
                           </button>
@@ -4454,7 +4454,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                             class="media-player__control media-player__control--primary"
                             data-media-control="play-pause"
                             data-entity="${escapeHtml(player.entity)}"
-                            aria-label="Play o pausa"
+                            aria-label="Play or pause"
                           >
                             <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
                           </button>
@@ -4463,7 +4463,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                             class="media-player__control"
                             data-media-control="next"
                             data-entity="${escapeHtml(player.entity)}"
-                            aria-label="Siguiente"
+                            aria-label="Next"
                           >
                             <ha-icon icon="mdi:skip-next"></ha-icon>
                           </button>
@@ -7301,6 +7301,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Media Player",
-  description: "Media player fijo con estetica Nodalia y editor visual.",
+  description: "Fixed media player with the Nodalia look and visual editor.",
   preview: true,
 });

@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -3414,7 +3414,7 @@ class NodaliaNotificationsCard extends HTMLElement {
             ${chips.length ? `<div class="notification-item__chips notification-item__chips--top">
               ${chips.map(chip => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
             </div>` : ""}
-            <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Borrar notificación"))}">
+            <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Dismiss notification"))}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
@@ -4020,7 +4020,7 @@ class NodaliaNotificationsCard extends HTMLElement {
                     shouldStack
                       ? `
                         <div class="notifications-footer">
-                          <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}" aria-label="${escapeHtml(this._expanded ? this._text("aria.showLess", "Mostrar menos") : this._text("aria.showAll", "Mostrar todas las notificaciones"))}">
+                          <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}" aria-label="${escapeHtml(this._expanded ? this._text("aria.showLess", "Show less") : this._text("aria.showAll", "Show all notifications"))}">
                             <ha-icon icon="${this._expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
                             <span>${this._expanded ? escapeHtml(this._text("actions.less", "Menos")) : hiddenCount}</span>
                           </button>

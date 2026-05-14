@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -822,7 +822,7 @@ const DEFAULT_CONFIG = {
 
 const STUB_CONFIG = {
   entity: "weather.casa",
-  name: "Tiempo",
+  name: "Weather",
 };
 
 function isObject(value) {
@@ -1286,7 +1286,7 @@ function formatMeteoalarmDate(value, hass, configLang) {
     return String(value || "").trim();
   }
 
-  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "es";
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "en";
   const tag = window.NodaliaI18n?.localeTag?.(lang) || lang;
   return date.toLocaleString(tag, {
     day: "2-digit",
@@ -1303,45 +1303,45 @@ function translateMeteoalarmValue(value, hass, configLang) {
   const text = String(value || "").trim();
   switch (normalizeTextKey(text)) {
     case "moderate":
-      return "Moderado";
+      return "Moderate";
     case "severe":
-      return "Severo";
+      return "Severe";
     case "high":
-      return "Alto";
+      return "High";
     case "extreme":
-      return "Extremo";
+      return "Extreme";
     case "minor":
-      return "Menor";
+      return "Minor";
     case "yellow":
-      return "Amarillo";
+      return "Yellow";
     case "orange":
-      return "Naranja";
+      return "Orange";
     case "red":
-      return "Rojo";
+      return "Red";
     case "green":
-      return "Verde";
+      return "Green";
     case "future":
-      return "Futuro";
+      return "Future";
     case "immediate":
-      return "Inmediato";
+      return "Immediate";
     case "expected":
-      return "Esperado";
+      return "Expected";
     case "past":
-      return "Pasado";
+      return "Past";
     case "likely":
-      return "Probable";
+      return "Likely";
     case "observed":
-      return "Observado";
+      return "Observed";
     case "possible":
-      return "Posible";
+      return "Possible";
     case "unlikely":
-      return "Improbable";
+      return "Unlikely";
     case "unknown":
-      return "Desconocido";
+      return "Unknown";
     case "met":
-      return "Meteorologico";
+      return "Meteorological";
     case "monitor":
-      return "Monitorizar";
+      return "Monitor";
     default:
       return text;
   }
@@ -1354,37 +1354,37 @@ function translateCondition(value, hass = null, configLang = null) {
   }
   switch (normalizeTextKey(value)) {
     case "clear_night":
-      return "Despejado";
+      return "Clear";
     case "cloudy":
-      return "Nublado";
+      return "Cloudy";
     case "exceptional":
-      return "Excepcional";
+      return "Exceptional";
     case "fog":
-      return "Niebla";
+      return "Fog";
     case "hail":
-      return "Granizo";
+      return "Hail";
     case "lightning":
-      return "Tormenta";
+      return "Thunderstorm";
     case "lightning_rainy":
-      return "Tormenta con lluvia";
+      return "Thunderstorm with rain";
     case "partlycloudy":
-      return "Parcialmente nublado";
+      return "Partly cloudy";
     case "pouring":
-      return "Lluvia intensa";
+      return "Pouring";
     case "rainy":
-      return "Lluvia";
+      return "Rainy";
     case "snowy":
-      return "Nieve";
+      return "Snowy";
     case "snowy_rainy":
-      return "Aguanieve";
+      return "Snowy rainy";
     case "sunny":
-      return "Soleado";
+      return "Sunny";
     case "windy":
-      return "Ventoso";
+      return "Windy";
     case "windy_variant":
-      return "Viento variable";
+      return "Windy";
     default:
-      return String(value || "").trim() || "Tiempo";
+      return String(value || "").trim() || "Weather";
   }
 }
 
@@ -1770,7 +1770,7 @@ class NodaliaWeatherCard extends HTMLElement {
     }
 
     const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-    return friendlyName || "Tiempo";
+    return friendlyName || "Weather";
   }
 
   _getIcon(state) {
@@ -2220,14 +2220,14 @@ class NodaliaWeatherCard extends HTMLElement {
     const awareness = getMeteoalarmAwarenessParts(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const ev = String(attrs.event || "").trim();
     const headline = String(attrs.headline || "").trim();
     const awareLabel = String(awareness.label || "").trim();
     const label = !isActive
       ? state?.state === "off"
-        ? (wm?.noAlerts || "Sin alertas")
+        ? (wm?.noAlerts || "No alerts")
         : (wm?.name || "Meteoalarm")
       : ev
         ? ev
@@ -2235,7 +2235,7 @@ class NodaliaWeatherCard extends HTMLElement {
           ? headline
           : awareLabel
             ? translateMeteoalarmValue(awareLabel, hass, langCfg)
-            : (wm?.alertFallback || "Alerta");
+            : (wm?.alertFallback || "Alert");
 
     return `
       <button
@@ -2271,21 +2271,21 @@ class NodaliaWeatherCard extends HTMLElement {
     const awareness = getMeteoalarmAwarenessParts(state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
     const title = state?.state === "on"
-      ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Alerta meteorologica").trim()
+      ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Weather alert").trim()
       : state?.state === "off"
-        ? (wm?.noWeatherAlerts || "Sin alertas meteorologicas")
+        ? (wm?.noWeatherAlerts || "No weather alerts")
         : (wm?.name || "Meteoalarm");
     const rows = [
-      [wm?.level || "Nivel", translateMeteoalarmValue(awareness.label || attrs.severity || "", hass, langCfg)],
-      [wm?.type || "Tipo", attrs.event || attrs.awareness_type || ""],
-      [wm?.start || "Inicio", formatMeteoalarmDate(attrs.onset || attrs.effective, hass, langCfg)],
-      [wm?.end || "Fin", formatMeteoalarmDate(attrs.expires, hass, langCfg)],
-      [wm?.severity || "Severidad", translateMeteoalarmValue(attrs.severity || "", hass, langCfg)],
-      [wm?.urgency || "Urgencia", translateMeteoalarmValue(attrs.urgency || "", hass, langCfg)],
-      [wm?.certainty || "Certeza", translateMeteoalarmValue(attrs.certainty || "", hass, langCfg)],
+      [wm?.level || "Level", translateMeteoalarmValue(awareness.label || attrs.severity || "", hass, langCfg)],
+      [wm?.type || "Type", attrs.event || attrs.awareness_type || ""],
+      [wm?.start || "Start", formatMeteoalarmDate(attrs.onset || attrs.effective, hass, langCfg)],
+      [wm?.end || "End", formatMeteoalarmDate(attrs.expires, hass, langCfg)],
+      [wm?.severity || "Severity", translateMeteoalarmValue(attrs.severity || "", hass, langCfg)],
+      [wm?.urgency || "Urgency", translateMeteoalarmValue(attrs.urgency || "", hass, langCfg)],
+      [wm?.certainty || "Certainty", translateMeteoalarmValue(attrs.certainty || "", hass, langCfg)],
     ].filter(([, value]) => String(value || "").trim());
     const description = String(attrs.description || "").trim();
     const instruction = String(attrs.instruction || "").trim();
@@ -2301,7 +2301,7 @@ class NodaliaWeatherCard extends HTMLElement {
               <div class="weather-alert-panel__eyebrow">${escapeHtml(wm?.name || "Meteoalarm")}</div>
               <div class="weather-alert-panel__title">${escapeHtml(title)}</div>
             </div>
-            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="${escapeHtml(wm?.close || "Cerrar")}">
+            <button type="button" class="weather-alert-panel__close" data-weather-action="close-meteoalarm" aria-label="${escapeHtml(wm?.close || "Close")}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
@@ -2344,7 +2344,7 @@ class NodaliaWeatherCard extends HTMLElement {
       .filter(point => Number.isFinite(getForecastTemperatureValue(point.item, type)));
 
     if (sourcePoints.length < 2) {
-      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      const emptyChart = wf("chartInsufficientData") || "Not enough data to display the chart.";
       return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
@@ -2363,7 +2363,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
 
     if (highPoints.length < 2) {
-      const emptyChart = wf("chartInsufficientData") || "No hay suficientes datos para mostrar el gráfico.";
+      const emptyChart = wf("chartInsufficientData") || "Not enough data to display the chart.";
       return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
@@ -2471,14 +2471,14 @@ class NodaliaWeatherCard extends HTMLElement {
       ));
       const windUnit = this._windUnitLabel(prefs.targetWindUnit);
       const popupRows = [
-        type === "daily" && highLabel ? [wf("maxLabel") || "Máxima", `${highLabel}${unitLabel}`] : null,
-        type === "daily" && lowLabel ? [wf("minLabel") || "Mínima", `${lowLabel}${unitLabel}`] : null,
+        type === "daily" && highLabel ? [wf("maxLabel") || "High", `${highLabel}${unitLabel}`] : null,
+        type === "daily" && lowLabel ? [wf("minLabel") || "Low", `${lowLabel}${unitLabel}`] : null,
         type !== "daily"
-          ? [wf("temperatureLabel") || "Temperatura", `${formatNumber(this._convertTemperatureValue(popupPoint.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit))}${unitLabel}`]
+          ? [wf("temperatureLabel") || "Temperature", `${formatNumber(this._convertTemperatureValue(popupPoint.value, prefs.sourceTemperatureUnit, prefs.targetTemperatureUnit))}${unitLabel}`]
           : null,
-        precipitationLabel ? [wf("rainLabel") || "Lluvia", precipitationLabel] : null,
-        humidityLabel ? [wf("humidityLabel") || "Humedad", `${humidityLabel}%`] : null,
-        windLabel ? [wf("windLabel") || "Viento", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
+        precipitationLabel ? [wf("rainLabel") || "Rain", precipitationLabel] : null,
+        humidityLabel ? [wf("humidityLabel") || "Humidity", `${humidityLabel}%`] : null,
+        windLabel ? [wf("windLabel") || "Wind", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
       ].filter(Boolean);
       const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
       const popupLeft = this._forecastPopup?.left || "50%";
@@ -2490,7 +2490,7 @@ class NodaliaWeatherCard extends HTMLElement {
           style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
           data-weather-action="noop"
         >
-          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Cerrar detalle")}">
+          <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Close detail")}">
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
           <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</div>
@@ -2538,7 +2538,7 @@ class NodaliaWeatherCard extends HTMLElement {
     })() : "";
 
     return `
-      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="${escapeHtml(type === "hourly" ? (wf("chartAriaHourly") || "Gráfico de previsión por horas") : (wf("chartAriaDaily") || "Gráfico de previsión semanal"))}">
+      <div class="weather-card__forecast-chart" style="--forecast-chart-height:${height + 8}px; --forecast-chart-svg-height:${height}px;" role="img" aria-label="${escapeHtml(type === "hourly" ? (wf("chartAriaHourly") || "Hourly forecast chart") : (wf("chartAriaDaily") || "Weekly forecast chart"))}">
         <svg viewBox="0 0 ${width} ${height}">
           <defs>
             ${
@@ -2633,11 +2633,11 @@ class NodaliaWeatherCard extends HTMLElement {
     const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
       ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
       : "");
-    const langFc = window.NodaliaI18n?.resolveLanguage?.(hassFc, cfgLangFc) ?? "es";
+    const langFc = window.NodaliaI18n?.resolveLanguage?.(hassFc, cfgLangFc) ?? "en";
     const forecastLocale = window.NodaliaI18n?.localeTag?.(langFc) || langFc;
     const emptyForecastMsg = activeType === "hourly"
-      ? (wfFc("emptyHourly") || "Sin previsión por horas disponible.")
-      : (wfFc("emptyDaily") || "Sin previsión semanal disponible.");
+      ? (wfFc("emptyHourly") || "No hourly forecast available.")
+      : (wfFc("emptyDaily") || "No weekly forecast available.");
     const unitPrefs = this._getUnitPreferences(state);
 
     return `
@@ -2647,14 +2647,14 @@ class NodaliaWeatherCard extends HTMLElement {
             this._config.show_forecast_toggle === false
               ? ""
               : `
-                <div class="weather-card__forecast-tabs" role="tablist" aria-label="${escapeHtml(wfFc("tabsAria") || "Vista de la previsión")}">
+                <div class="weather-card__forecast-tabs" role="tablist" aria-label="${escapeHtml(wfFc("tabsAria") || "Forecast view")}">
                   <button type="button" class="weather-card__forecast-tab ${activeView === "cards" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="cards" role="tab" aria-selected="${activeView === "cards" ? "true" : "false"}">
                     <ha-icon icon="mdi:view-grid-outline"></ha-icon>
-                    <span>${escapeHtml(wfFc("tabCards") || "Tarjetas")}</span>
+                    <span>${escapeHtml(wfFc("tabCards") || "Cards")}</span>
                   </button>
                   <button type="button" class="weather-card__forecast-tab ${activeView === "chart" ? "weather-card__forecast-tab--active" : ""}" data-weather-action="set-forecast-view" data-forecast-view="chart" role="tab" aria-selected="${activeView === "chart" ? "true" : "false"}">
                     <ha-icon icon="mdi:chart-line"></ha-icon>
-                    <span>${escapeHtml(wfFc("tabChart") || "Gráfico")}</span>
+                    <span>${escapeHtml(wfFc("tabChart") || "Chart")}</span>
                   </button>
                 </div>
               `

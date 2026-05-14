@@ -8,6 +8,26 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
+function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "es-ES", includeEditor = false } = {}) {
+  const sandbox = {
+    document: {
+      documentElement: { getAttribute(name) { return name === "lang" ? docLang : ""; } },
+      querySelector(selector) {
+        return selector === "home-assistant" && rootHass ? { hass: rootHass } : null;
+      },
+    },
+    navigator: { language: navigatorLanguage },
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-i18n.js"), sandbox);
+  if (includeEditor) {
+    vm.runInContext(read("nodalia-editor-ui.js"), sandbox);
+  }
+  return sandbox.window.NodaliaI18n;
+}
+
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -199,6 +219,48 @@ test("notifications mobile sent state only marks successful deliveries", () => {
 test("calendar native webhook failures show composer errors", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
+});
+
+test("i18n automatic language prefers HA profile locale over stale legacy language", () => {
+  const i18n = loadI18nRuntime({
+    rootHass: {
+      language: "es",
+      locale: { language: "en-US" },
+      selectedLanguage: "en",
+    },
+    navigatorLanguage: "es-ES",
+  });
+
+  assert.equal(i18n.resolveLanguage(null, "auto"), "en");
+  assert.equal(i18n.resolveLanguage({ language: "es", locale: { language: "en-US" } }, "auto"), "en");
+  assert.equal(i18n.resolveLanguage({ language: "es", selectedLanguage: "en" }, "auto"), "en");
+  assert.equal(i18n.resolveLanguage({ language: "es", user: { language: "en" } }, "auto"), "en");
+  assert.equal(i18n.resolveLanguage({ language: "es" }, "English"), "en");
+});
+
+test("i18n automatic language does not use browser Spanish inside Home Assistant", () => {
+  const i18n = loadI18nRuntime({
+    rootHass: { states: {} },
+    navigatorLanguage: "es-ES",
+  });
+
+  assert.equal(i18n.resolveLanguage(null, "auto"), "en");
+});
+
+test("editor labels follow HA profile language before stale legacy language", () => {
+  const i18n = loadI18nRuntime({
+    rootHass: {
+      selectedLanguage: "en",
+      language: "es",
+    },
+    navigatorLanguage: "es-ES",
+    includeEditor: true,
+  });
+
+  const hass = { selectedLanguage: "en", language: "es" };
+  assert.equal(i18n.editorStr(hass, "auto", "Subir"), "Move up");
+  assert.equal(i18n.editorStr(hass, "auto", "Nombre"), "Name");
+  assert.equal(i18n.editorStr(hass, "auto", "Horas a mostrar"), "Hours to show");
 });
 
 test("climate dial drag attaches window listeners only while dragging", () => {

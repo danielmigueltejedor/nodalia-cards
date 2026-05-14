@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1752,7 +1752,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     return `
       <ha-card class="insignia-card insignia-card--empty">
         <div class="insignia-card__empty-title">Nodalia Insignia Card</div>
-        <div class="insignia-card__empty-text">Configura \`entity\` o un contenido básico para mostrar la insignia.</div>
+        <div class="insignia-card__empty-text">Configure \`entity\` or basic content to show the badge.</div>
       </ha-card>
     `;
   }

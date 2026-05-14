@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1791,7 +1791,7 @@ class NodaliaFavCard extends HTMLElement {
 
   _getAlarmActionLabel(modeKey) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "es";
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const actions = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions;
     const map = {
       disarm: "disarm",
@@ -1806,12 +1806,12 @@ class NodaliaFavCard extends HTMLElement {
       return actions[actionKey];
     }
     const fallbacks = {
-      disarm: "Desarmar",
-      home: "Casa",
-      away: "Ausente",
-      night: "Noche",
-      vacation: "Vacaciones",
-      custom_bypass: "Personalizada",
+      disarm: "Disarm",
+      home: "Home",
+      away: "Away",
+      night: "Night",
+      vacation: "Vacation",
+      custom_bypass: "Custom",
     };
     return fallbacks[modeKey] || modeKey;
   }

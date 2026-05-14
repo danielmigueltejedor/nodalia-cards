@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -775,7 +775,7 @@ const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 const DEFAULT_CONFIG = {
   entity: "",
   entities: [],
-  name: "Temperatura",
+  name: "Temperature",
   icon: "mdi:thermometer",
   min: 15,
   max: 25,
@@ -822,19 +822,19 @@ const DEFAULT_CONFIG = {
 };
 
 const STUB_CONFIG = {
-  name: "Temperatura",
+  name: "Temperature",
   icon: "mdi:thermometer",
   min: 15,
   max: 25,
   entities: [
     {
       entity: "sensor.termostato_dormitorios_temperatura",
-      name: "Dormitorio de Rocío",
+      name: "Bedroom",
       color: "#ffaa00",
     },
     {
       entity: "sensor.termostato_habitaciones_comunes_temperatura",
-      name: "Pasillo",
+      name: "Hallway",
       color: "#ffc677",
     },
   ],
@@ -3589,7 +3589,7 @@ class NodaliaGraphCard extends HTMLElement {
                 `
                 : ""
             }
-            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "Sin historial disponible")}</div>`}
+            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "No history available")}</div>`}
           </div>
         </div>
       </ha-card>
@@ -4100,7 +4100,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Temperatura",
+              placeholder: "Temperature",
             })}
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:water-percent",
@@ -4142,12 +4142,12 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
             ${this._renderCheckboxField("Mostrar relleno", "show_fill", config.show_fill !== false)}
             ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
             ${this._renderSelectField(
-              "Tap action",
+              "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
             )}
           </div>
@@ -4159,20 +4159,20 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>
@@ -4767,7 +4767,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderTextField("Nombre visible", `entities.${index}.name`, series.name, {
-              placeholder: "Dormitorio",
+              placeholder: "Bedroom",
               fullWidth: true,
             })}
             ${this._renderColorField("Color de la linea", `entities.${index}.color`, series.color, {
@@ -5295,18 +5295,18 @@ class NodaliaGraphCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Estadisticas",
+              placeholder: "Statistics",
             })}
             ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:chart-line",
             })}
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "Más información" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
             )}
             ${this._renderTextField("Horas a mostrar", "hours_to_show", config.hours_to_show, {
@@ -5366,20 +5366,20 @@ class NodaliaGraphCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional para taps, hover y cambios de serie."))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Exito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>

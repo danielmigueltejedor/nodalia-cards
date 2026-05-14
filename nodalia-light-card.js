@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -766,12 +766,12 @@ const OPTIMISTIC_TURN_OFF_TIMEOUT = 3200;
 const OPTIMISTIC_VISUAL_SETTLE_MS = 420;
 const LIGHT_MEMORY_STORAGE_KEY = "nodalia-light-card:last-visual-state:v1";
 const COLOR_PRESETS = [
-  { color: "#ffd166", hs: [42, 60], label: "Calida" },
-  { color: "#fff1c1", hs: [48, 18], label: "Suave" },
-  { color: "#ff7f50", hs: [16, 72], label: "Atardecer" },
-  { color: "#ff4d6d", hs: [348, 70], label: "Rosa" },
-  { color: "#4dabf7", hs: [210, 70], label: "Azul" },
-  { color: "#38d9a9", hs: [160, 68], label: "Menta" },
+  { color: "#ffd166", hs: [42, 60], label: "Warm" },
+  { color: "#fff1c1", hs: [48, 18], label: "Soft" },
+  { color: "#ff7f50", hs: [16, 72], label: "Sunset" },
+  { color: "#ff4d6d", hs: [348, 70], label: "Pink" },
+  { color: "#4dabf7", hs: [210, 70], label: "Blue" },
+  { color: "#38d9a9", hs: [160, 68], label: "Mint" },
 ];
 
 const DEFAULT_CONFIG = {
@@ -2410,20 +2410,20 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     if (state?.attributes?._nodalia_optimistic_on === true) {
-      return entityStates?.opening || "Encendiendo";
+      return entityStates?.opening || "Turning on";
     }
 
     switch (state?.state) {
       case "on":
-        return entityStates?.on || "Encendida";
+        return entityStates?.on || "On";
       case "off":
-        return entityStates?.off || "Apagada";
+        return entityStates?.off || "Off";
       case "unavailable":
-        return entityStates?.unavailable || "No disponible";
+        return entityStates?.unavailable || "Unavailable";
       case "unknown":
-        return entityStates?.unknown || "Desconocida";
+        return entityStates?.unknown || "Unknown";
       default:
-        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "Sin estado");
+        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "No state");
     }
   }
 
@@ -3663,7 +3663,7 @@ class NodaliaLightCard extends HTMLElement {
                     step="any"
                     value="${currentTemperatureSliderValue}"
                     style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
-                    aria-label="Temperatura"
+                    aria-label="Temperature"
                   />
                   <div class="light-card__slider-thumb" data-light-control="temperature"></div>
                 </div>
@@ -3738,7 +3738,7 @@ class NodaliaLightCard extends HTMLElement {
                             data-light-action="mode"
                             data-mode="${mode}"
                             ${modeTransition ? "disabled" : ""}
-                            aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
+                            aria-label="${mode === "brightness" ? "Show brightness" : mode === "temperature" ? "Show temperature" : "Show color"}"
                           >
                             <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
                           </button>

@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1777,7 +1777,7 @@ class NodaliaClimateCard extends HTMLElement {
     return this._config?.name
       || state?.attributes?.friendly_name
       || this._config?.entity
-      || "Clima";
+      || "Climate";
   }
 
   _getClimateIcon(state) {
@@ -4900,7 +4900,7 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__step-button"
                     data-climate-action="decrease"
-                    aria-label="Bajar temperatura"
+                    aria-label="Decrease temperature"
                   >
                     <span>&minus;</span>
                   </button>
@@ -4908,7 +4908,7 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__step-button"
                     data-climate-action="increase"
-                    aria-label="Subir temperatura"
+                    aria-label="Increase temperature"
                   >
                     <span>+</span>
                   </button>

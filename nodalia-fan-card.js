@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1175,14 +1175,14 @@ function translatePresetLabel(value) {
       return "Auto";
     case "smart":
     case "smart_mode":
-      return "Inteligente";
+      return "Smart";
     case "sleep":
     case "night":
-      return "Noche";
+      return "Night";
     case "breeze":
     case "natural":
     case "nature":
-      return "Brisa";
+      return "Breeze";
     case "eco":
       return "Eco";
     case "turbo":
@@ -1190,15 +1190,15 @@ function translatePresetLabel(value) {
     case "boost":
       return "Boost";
     case "low":
-      return "Baja";
+      return "Low";
     case "medium":
     case "mid":
-      return "Media";
+      return "Medium";
     case "high":
-      return "Alta";
+      return "High";
     case "quiet":
     case "silent":
-      return "Silencioso";
+      return "Quiet";
     case "normal":
     case "balanced":
       return "Normal";
@@ -1579,15 +1579,15 @@ class NodaliaFanCard extends HTMLElement {
 
     switch (stateValue) {
       case "off":
-        return fanStrings?.off || "Apagado";
+        return fanStrings?.off || "Off";
       case "on":
-        return fanStrings?.on || "Encendido";
+        return fanStrings?.on || "On";
       case "unavailable":
-        return fanStrings?.unavailable || "No disponible";
+        return fanStrings?.unavailable || "Unavailable";
       case "unknown":
-        return fanStrings?.unknown || "Desconocido";
+        return fanStrings?.unknown || "Unknown";
       default:
-        return state?.state ? String(state.state) : (fanStrings?.noState || "Sin estado");
+        return state?.state ? String(state.state) : (fanStrings?.noState || "No state");
     }
   }
 
@@ -2642,7 +2642,7 @@ class NodaliaFanCard extends HTMLElement {
                           type="button"
                           class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
                           data-fan-action="oscillate"
-                          aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                          aria-label="${this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"}"
                         >
                           <ha-icon icon="mdi:rotate-360"></ha-icon>
                         </button>
@@ -2656,7 +2656,7 @@ class NodaliaFanCard extends HTMLElement {
                           type="button"
                           class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                           data-fan-action="toggle-preset-panel"
-                          aria-label="Mostrar modos"
+                          aria-label="Show modes"
                         >
                           <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
@@ -2679,7 +2679,7 @@ class NodaliaFanCard extends HTMLElement {
                     type="button"
                     class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
                     data-fan-action="oscillate"
-                    aria-label="${this._isOscillating(state) ? "Desactivar oscilacion" : "Activar oscilacion"}"
+                    aria-label="${this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"}"
                   >
                     <ha-icon icon="mdi:rotate-360"></ha-icon>
                   </button>
@@ -2693,7 +2693,7 @@ class NodaliaFanCard extends HTMLElement {
                     type="button"
                     class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                     data-fan-action="toggle-preset-panel"
-                    aria-label="Mostrar modos"
+                    aria-label="Show modes"
                   >
                     <ha-icon icon="mdi:tune-variant"></ha-icon>
                   </button>

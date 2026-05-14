@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2880,7 +2880,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                           type="button"
                           class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-mode-panel"
-                          aria-label="Mostrar modos"
+                          aria-label="Show modes"
                         >
                           <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
@@ -2894,7 +2894,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                           type="button"
                           class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-fan-mode-panel"
-                          aria-label="Mostrar velocidades"
+                          aria-label="Show speeds"
                         >
                           <ha-icon icon="mdi:fan"></ha-icon>
                         </button>
@@ -2917,7 +2917,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                     type="button"
                     class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-mode-panel"
-                    aria-label="Mostrar modos"
+                    aria-label="Show modes"
                   >
                     <ha-icon icon="mdi:tune-variant"></ha-icon>
                   </button>
@@ -2931,7 +2931,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                     type="button"
                     class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-fan-mode-panel"
-                    aria-label="Mostrar velocidades"
+                    aria-label="Show speeds"
                   >
                     <ha-icon icon="mdi:fan"></ha-icon>
                   </button>

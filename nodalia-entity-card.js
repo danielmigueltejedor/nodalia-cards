@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1678,7 +1678,7 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getTitle(state) {
-    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Entidad";
+    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Entity";
   }
 
   _getIcon(state) {
@@ -4131,6 +4131,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TAG,
   name: "Nodalia Entity Card",
-  description: "Tarjeta todoterreno para entidades, información y botones rápidos.",
+  description: "Flexible entity card for state, details, and quick actions.",
   preview: true,
 });

@@ -50,14 +50,22 @@
    * to `document.querySelector("home-assistant")?.hass` so `language: auto` matches the profile.
    */
   function effectiveHaLanguageCode(hass) {
-    const fromObject = h => {
+    const fromProfileObject = h => {
       if (!h || typeof h !== "object") {
         return null;
       }
       const raw =
-        (typeof h.language === "string" && h.language.trim() && h.language) ||
         (typeof h.selectedLanguage === "string" && h.selectedLanguage.trim() && h.selectedLanguage) ||
-        (h.locale && typeof h.locale === "object" && typeof h.locale.language === "string" && h.locale.language.trim() && h.locale.language);
+        (h.locale && typeof h.locale === "object" && typeof h.locale.language === "string" && h.locale.language.trim() && h.locale.language) ||
+        (h.user && typeof h.user === "object" && typeof h.user.language === "string" && h.user.language.trim() && h.user.language) ||
+        (h.user && typeof h.user === "object" && h.user.locale && typeof h.user.locale === "object" && typeof h.user.locale.language === "string" && h.user.locale.language.trim() && h.user.locale.language);
+      return raw ? baseLang(raw) : null;
+    };
+    const fromLegacyObject = h => {
+      if (!h || typeof h !== "object") {
+        return null;
+      }
+      const raw = typeof h.language === "string" && h.language.trim() && h.language;
       return raw ? baseLang(raw) : null;
     };
     const rootHass =
@@ -65,8 +73,15 @@
     /**
      * Prefer the app-root hass first: Lovelace sometimes passes a hass-shaped object that has
      * entity state but omits `language`; the canonical UI language lives on `home-assistant.hass`.
+     * Within a hass object, `selectedLanguage` / `locale.language` are more reliable than the older
+     * generic `language` field, which can lag behind the profile and leak Spanish labels into English UIs.
      */
-    return fromObject(rootHass) || fromObject(resolveHass(hass));
+    return (
+      fromProfileObject(rootHass)
+      || fromProfileObject(resolveHass(hass))
+      || fromLegacyObject(rootHass)
+      || fromLegacyObject(resolveHass(hass))
+    );
   }
 
   function resolveLanguage(hass, configLang) {

@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.16";
+const CARD_VERSION = "1.1.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -763,7 +763,7 @@ const HAPTIC_PATTERNS = {
 
 const NODE_DEFAULTS = {
   grid: {
-    name: "Red",
+    name: "Grid",
     icon: "mdi:transmission-tower",
     color: "#6da8ff",
     export_color: "#44d07b",
@@ -773,7 +773,7 @@ const NODE_DEFAULTS = {
     secondary_info: {},
   },
   home: {
-    name: "Casa",
+    name: "Home",
     icon: "mdi:home",
     color: "#ffffff",
     entity: "",
@@ -787,14 +787,14 @@ const NODE_DEFAULTS = {
     secondary_info: {},
   },
   battery: {
-    name: "Bateria",
+    name: "Battery",
     icon: "mdi:battery",
     color: "#61c97a",
     entity: "",
     secondary_info: {},
   },
   water: {
-    name: "Agua",
+    name: "Water",
     icon: "mdi:water",
     color: "#55b7ff",
     entity: "",
@@ -827,7 +827,7 @@ const DEFAULT_CONFIG = {
     grey_color: [189, 189, 189],
   },
   dashboard_link: "",
-  dashboard_link_label: "Energia",
+  dashboard_link_label: "Energy",
   show_header: true,
   show_dashboard_link_button: true,
   show_labels: true,
@@ -883,7 +883,7 @@ const DEFAULT_CONFIG = {
 };
 
 const STUB_CONFIG = {
-  title: "Energia",
+  title: "Energy",
   entities: {
     grid: {
       entity: "sensor.shelly_pro_3em_puerto_c_potencia",
@@ -2093,7 +2093,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   /**
-   * Sin entidad en "Casa": consumo instantáneo ≈ solar + red + batería (convenciones de la tarjeta:
+   * No "Home" entity: instantaneous consumption is roughly solar + grid + battery (card conventions:
    * red +import / -export, batería +descarga / -carga).
    * Nodo red con exportación: número en positivo y flecha integrada en el chip de valor.
    */
@@ -2644,7 +2644,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
-    const dashboardLabel = this._config?.dashboard_link_label || "Energia";
+    const dashboardLabel = this._config?.dashboard_link_label || "Energy";
 
     return `
       <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""} ${animateEntrance ? "power-flow-card__simple-layout--entering" : ""}">
@@ -3749,9 +3749,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
                 ${
                   showDashboardButton && layoutPreset !== "simple"
                     ? `
-                      <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energia")}">
+                      <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energy")}">
                         <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
-                        <span>${escapeHtml(this._config?.dashboard_link_label || "Energia")}</span>
+                        <span>${escapeHtml(this._config?.dashboard_link_label || "Energy")}</span>
                       </button>
                     `
                     : ""
@@ -4374,9 +4374,9 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.general_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energia" })}
+            ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energy" })}
             ${this._renderTextField("ed.power_flow.energy_dashboard_url", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview" })}
-            ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia" })}
+            ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energy" })}
             ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", config.tap_action || "none", [
               { value: "none", label: "ed.power_flow.tap_none" },
               { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
@@ -5427,9 +5427,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.general_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energia", fullWidth: true })}
+            ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energy", fullWidth: true })}
             ${this._renderTextField("ed.power_flow.energy_dashboard_url", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview", fullWidth: true })}
-            ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energia", fullWidth: true })}
+            ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energy", fullWidth: true })}
             ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
               { value: "none", label: "ed.power_flow.tap_none" },
               { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
