@@ -765,7 +765,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.26";
+const CARD_VERSION = "1.1.0-alpha.27";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1509,6 +1509,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._flowViewportObserver = null;
     this._onFlowViewport = this._onFlowViewport.bind(this);
     this._onFlowVisibility = this._onFlowVisibility.bind(this);
+    this._flowUnpauseRaf = 0;
   }
 
   _onFlowViewport(entries) {
@@ -1548,6 +1549,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
       this._flowViewportObserver = null;
     }
     this._flowViewportVisible = true;
+    this._clearFlowUnpauseRaf();
+  }
+
+  _clearFlowUnpauseRaf() {
+    if (this._flowUnpauseRaf && typeof window !== "undefined") {
+      window.cancelAnimationFrame(this._flowUnpauseRaf);
+      this._flowUnpauseRaf = 0;
+    }
   }
 
   _syncFlowMotionPause() {
@@ -1558,20 +1567,47 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const shouldPause = docHidden || !this._flowViewportVisible;
     const haCard = this.shadowRoot.querySelector("ha-card");
     if (shouldPause) {
+      this._clearFlowUnpauseRaf();
       haCard?.classList.add("power-flow-card--motion-paused");
-    } else {
-      haCard?.classList.remove("power-flow-card--motion-paused");
-    }
-    for (const svg of this.shadowRoot.querySelectorAll("svg")) {
-      try {
-        if (shouldPause && typeof svg.pauseAnimations === "function") {
-          svg.pauseAnimations();
-        } else if (!shouldPause && typeof svg.unpauseAnimations === "function") {
-          svg.unpauseAnimations();
+      for (const svg of this.shadowRoot.querySelectorAll("svg")) {
+        try {
+          if (typeof svg.pauseAnimations === "function") {
+            svg.pauseAnimations();
+          }
+        } catch (_err) {
+          // Ignore SVG animation control failures in older engines.
         }
-      } catch (_err) {
-        // Ignore SVG animation control failures in older engines.
       }
+      return;
+    }
+    haCard?.classList.remove("power-flow-card--motion-paused");
+    this._clearFlowUnpauseRaf();
+    const runUnpause = () => {
+      this._flowUnpauseRaf = 0;
+      if (!this.isConnected || !this.shadowRoot) {
+        return;
+      }
+      const stillHidden = typeof document !== "undefined" && document.hidden;
+      if (stillHidden || !this._flowViewportVisible) {
+        return;
+      }
+      for (const svg of this.shadowRoot.querySelectorAll("svg")) {
+        try {
+          if (typeof svg.unpauseAnimations === "function") {
+            svg.unpauseAnimations();
+          }
+        } catch (_err) {
+          // Ignore SVG animation control failures in older engines.
+        }
+      }
+    };
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      this._flowUnpauseRaf = window.requestAnimationFrame(() => {
+        this._flowUnpauseRaf = 0;
+        runUnpause();
+      });
+    } else {
+      runUnpause();
     }
   }
 
@@ -1586,6 +1622,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._clearFlowUnpauseRaf();
     this._detachFlowViewportTracking();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     if (this._entranceAnimationResetTimer) {
@@ -1607,7 +1644,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      this._syncFlowMotionPause();
       return;
     }
     this._lastRenderSignature = nextSignature;
@@ -3185,6 +3221,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__svg {
           height: 100%;
           inset: 0;
+          overflow: hidden;
           position: absolute;
           width: 100%;
           pointer-events: none;
@@ -3208,6 +3245,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         .power-flow-card__surface--entering .power-flow-card__svg--dots {
           animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           animation-delay: 124ms;
+          transform: none;
           transform-origin: center;
         }
 
@@ -3476,6 +3514,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           border-radius: 999px;
           height: ${Math.max(flowWidth, 2)}px;
           opacity: var(--line-opacity);
+          overflow: hidden;
           position: relative;
           width: 100%;
         }
@@ -3808,11 +3847,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
         @keyframes power-flow-card-dots-in {
           0% {
             opacity: 0;
-            transform: scale(0.94);
           }
           100% {
             opacity: 1;
-            transform: scale(1);
           }
         }
 

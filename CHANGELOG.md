@@ -30,6 +30,18 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.27] - 2026-05-12
+
+Twenty-seventh **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.27`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.0-alpha.27.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** do not call **`_restoreInteractionScrollSnapshot()`** after every **`hass`-driven** **`_render()`**; restore only after control taps and slider flows (matches fan card), avoiding scroll jumps that depended on dashboard scroll position.
+- **`nodalia-power-flow-card.js`:** avoid redundant **`_syncFlowMotionPause()`** when the render signature is unchanged on high-frequency **`hass`** updates.
+- **`nodalia-power-flow-card.js`:** clip flow layers (**`overflow: hidden`** on SVG and simple rail), use **opacity-only** dots entrance (no CSS scale on the dots SVG), and **defer `unpauseAnimations`** one frame so flow dots do not flash toward a corner after layout.
+
+---
+
 ## [1.1.0-alpha.26] - 2026-05-12
 
 Twenty-sixth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.26`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.0-alpha.26.js`**.

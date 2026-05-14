@@ -765,7 +765,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.26";
+const CARD_VERSION = "1.1.0-alpha.27";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -849,7 +849,7 @@ const DEFAULT_CONFIG = {
       size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
-      on_color: "var(--info-color, #71c0ff)",
+      on_color: "#fec700",
       off_color: "var(--primary-text-color)",
     },
     control: {
@@ -865,7 +865,7 @@ const DEFAULT_CONFIG = {
     slider_wrap_height: "44px",
     slider_height: "22px",
     slider_thumb_size: "22px",
-    slider_color: "var(--info-color, #71c0ff)",
+    slider_color: "#fec700",
   },
 };
 
@@ -1284,7 +1284,6 @@ class NodaliaCoverCard extends HTMLElement {
     }
     this._lastRenderSignature = signature;
     this._render();
-    this._restoreInteractionScrollSnapshot();
   }
 
   getCardSize() {

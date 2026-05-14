@@ -726,6 +726,9 @@ test("alarm panel PIN input keeps masked text visible across themes", () => {
   assert.match(source, /caret-color: var\(--primary-text-color\);/);
   assert.match(source, /opacity: 1;/);
   assert.match(source, /placeholder="Code"/);
+  assert.match(source, /alarm-card__chip--pin-error/);
+  assert.match(source, /_showNativePinErrorChip/);
+  assert.match(source, /_nativePinErrorLabel/);
 });
 
 test("calendar card reuses date/time formatters during render", () => {

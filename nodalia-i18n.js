@@ -481,6 +481,7 @@
       alarmPanel: {
         defaultTitle: "Alarma",
         noState: "Sin estado",
+        wrongCode: "Código incorrecto",
         actions: {
           disarm: "Desarmar",
           arm_home: "Casa",
@@ -1017,6 +1018,7 @@
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "No state",
+        wrongCode: "Wrong code",
         actions: {
           disarm: "Disarm",
           arm_home: "Home",
@@ -1552,6 +1554,7 @@
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "Kein Status",
+        wrongCode: "Falscher Code",
         actions: {
           disarm: "Unscharf",
           arm_home: "Zuhause",
@@ -2023,6 +2026,7 @@
       alarmPanel: {
         defaultTitle: "Alarme",
         noState: "Pas d'état",
+        wrongCode: "Code incorrect",
         actions: {
           disarm: "Désarmer",
           arm_home: "Maison",
@@ -2494,6 +2498,7 @@
       alarmPanel: {
         defaultTitle: "Allarme",
         noState: "Nessuno stato",
+        wrongCode: "Codice errato",
         actions: {
           disarm: "Disarma",
           arm_home: "Casa",
@@ -2965,6 +2970,7 @@
       alarmPanel: {
         defaultTitle: "Alarm",
         noState: "Geen status",
+        wrongCode: "Verkeerde code",
         actions: {
           disarm: "Uitschakelen",
           arm_home: "Thuis",
@@ -3589,6 +3595,7 @@
       alarmPanel: {
         defaultTitle: "Alarme",
         noState: "Sem estado",
+        wrongCode: "Código incorreto",
         actions: {
           disarm: "Desarmar",
           arm_home: "Casa",
@@ -4069,6 +4076,7 @@
       alarmPanel: {
         defaultTitle: "Сигнализация",
         noState: "Нет состояния",
+        wrongCode: "Неверный код",
         actions: {
           disarm: "Снять",
           arm_home: "Дома",
@@ -4549,6 +4557,7 @@
       alarmPanel: {
         defaultTitle: "Συναγερμός",
         noState: "Χωρίς κατάσταση",
+        wrongCode: "Λάθος κωδικός",
         actions: {
           disarm: "Αφόπλιση",
           arm_home: "Σπίτι",
@@ -5029,6 +5038,7 @@
       alarmPanel: {
         defaultTitle: "报警",
         noState: "无状态",
+        wrongCode: "密码错误",
         actions: {
           disarm: "撤防",
           arm_home: "在家",
@@ -5509,6 +5519,7 @@
       alarmPanel: {
         defaultTitle: "Alarmă",
         noState: "Fără stare",
+        wrongCode: "Cod greșit",
         actions: {
           disarm: "Dezarmare",
           arm_home: "Acasă",
