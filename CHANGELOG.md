@@ -30,6 +30,22 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.22] - 2026-05-12
+
+Twenty-second **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.22`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** route solar, battery, and grid↔battery flows through the **shared grid–home hub** so trunks overlap instead of parallel curves; stagger flow-dot motion when paths coincide.
+- **`nodalia-power-flow-card.js`:** reposition node chips (**solar/gas** above, **grid** left, **battery/water/individual** below) so labels no longer sit on top of flow lines.
+- **`nodalia-power-flow-card.js`:** **tighter diagram min-height** when only grid + home are shown (no solar/battery and no lower utilities).
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.22`**.
+
+---
+
 ## [1.1.0-alpha.21] - 2026-05-12
 
 Twenty-first **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.21`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
