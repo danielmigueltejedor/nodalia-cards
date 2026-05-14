@@ -209,6 +209,14 @@ test("climate dial drag attaches window listeners only while dragging", () => {
   assert.match(source, /this\._setDragWindowListeners\(false\)/);
 });
 
+test("climate five-mode dial controls use dense two-row sizing", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /if \(n === 5 \|\| n === 6\) \{\s*return \[fragments\.slice\(0, 3\), fragments\.slice\(3\)\];/);
+  assert.match(source, /modeDialButtonCount === 5 \|\| modeDialButtonCount === 6/);
+  assert.match(source, /modeDialButtonCount >= 5\s*\?\s*Math\.max\(28, Math\.round\(modeControlSize - 6\)\)/);
+  assert.match(source, /modeDialButtonCount >= 5\s*\?\s*\(tightLayout \? "4px" : "5px"\)/);
+});
+
 test("climate off null setpoint step buttons wake and create a setpoint from current temperature", async () => {
   const ClimateCard = loadClimateCardClass();
   assert.ok(ClimateCard, "climate card custom element should register");
@@ -467,12 +475,14 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
   const source = read("nodalia-cover-card.js");
   assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
-  assert.match(source, /if \(actionControl\) \{\s*this\._rememberInteractionScroll\(\);\s*this\._preventNonTouchFocus\(event\);\s*\}/);
+  assert.match(source, /_isCardTapAction\(action\) \{\s*return action === "body" \|\| action === "icon";\s*\}/);
+  assert.match(source, /if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*return;\s*\}/);
+  assert.match(source, /if \(actionControl\) \{\s*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) return;\s*this\._rememberInteractionScroll\(\);\s*this\._preventNonTouchFocus\(event\);\s*\}/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
   assert.match(source, /String\(event\.pointerType \|\| ""\)\.toLowerCase\(\) === "touch"/);
-  assert.match(source, /_onTouchStart\(event\)[\s\S]*if \(actionControl\) \{\s*this\._rememberInteractionScroll\(\);\s*\}/);
+  assert.match(source, /_onTouchStart\(event\)[\s\S]*if \(actionControl\) \{\s*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) return;\s*this\._rememberInteractionScroll\(\);\s*\}/);
   assert.doesNotMatch(source, /_scheduleInteractionScrollRestore/);
   assert.doesNotMatch(source, /requestAnimationFrame\(this\._restoreInteractionScroll/);
   assert.doesNotMatch(source, /_restoreInteractionScroll\(\)/);
@@ -486,6 +496,8 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
   assert.match(source, /tabindex="-1"/);
+  assert.doesNotMatch(source, /data-cover-action="body"[\s\S]{0,80}tabindex="-1"/);
+  assert.doesNotMatch(source, /data-cover-action="icon"[^>]*tabindex="-1"/);
 });
 
 test("cover card renders position slider above open stop close controls", () => {

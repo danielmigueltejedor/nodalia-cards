@@ -22,6 +22,48 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.16] - 2026-05-14
+
+Sixteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.16`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** compact the five-button HVAC mode layout into a denser **3+2** stack with smaller controls and tighter dial spacing, so six-mode climate entities no longer spill below the card on narrow/mobile stacks.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.16`**.
+
+---
+
+## [1.1.0-alpha.15] - 2026-05-14
+
+Fifteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.15`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Added
+
+- **`nodalia-notifications-card.js`:** add Home Assistant-style `tap_action` support for smart notification rules, per-entity smart overrides, and custom notifications, including **more info**, **navigate** (`navigation_path`, including `#popup` hashes), **URL**, and **toggle** actions while preserving the existing label/URL and custom service fallbacks.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.15`**.
+
+---
+
+## [1.1.0-alpha.14] - 2026-05-14
+
+Fourteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.14`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** make taps on the card body and main icon follow the fan card interaction path, avoiding scroll anchoring/focus handling on those tap zones while keeping the smoother controls and slider behavior.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.14`**.
+
+---
+
 ## [1.1.0-alpha.13] - 2026-05-14
 
 Thirteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.13`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

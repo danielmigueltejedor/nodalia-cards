@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.13";
+const CARD_VERSION = "1.1.0-alpha.16";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1513,21 +1513,25 @@ class NodaliaCoverCard extends HTMLElement {
     if (!button) return;
     event.preventDefault();
     event.stopPropagation();
+    const coverAction = button.dataset.coverAction;
+    if (this._isCardTapAction(coverAction)) {
+      if (coverAction === "body" || coverAction === "icon") {
+        if (this._suppressNextCoverTap) {
+          this._suppressNextCoverTap = false;
+          return;
+        }
+        this._triggerHaptic();
+        this._runAction(coverAction);
+      }
+      return;
+    }
     this._rememberInteractionScroll();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
     if (button instanceof HTMLElement && typeof button.blur === "function") {
       button.blur();
     }
-    switch (button.dataset.coverAction) {
-      case "body":
-      case "icon":
-        if (this._suppressNextCoverTap) {
-          this._suppressNextCoverTap = false;
-          break;
-        }
-        this._runAction(button.dataset.coverAction);
-        break;
+    switch (coverAction) {
       case "open":
         this._callCover("open_cover");
         break;
@@ -1542,11 +1546,16 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
+  _isCardTapAction(action) {
+    return action === "body" || action === "icon";
+  }
+
   _onFocusIn(event) {
     const control = event.composedPath().find(
       node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
     );
     if (!control) return;
+    if (this._isCardTapAction(control.dataset?.coverAction)) return;
     this._rememberInteractionScroll();
     if (typeof control.blur === "function") {
       control.blur();
@@ -1570,6 +1579,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) return;
       this._rememberInteractionScroll();
       this._preventNonTouchFocus(event);
     }
@@ -1586,6 +1596,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) return;
       this._rememberInteractionScroll();
       this._preventNonTouchFocus(event);
     }
@@ -1602,6 +1613,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) return;
       this._rememberInteractionScroll();
     }
   }
@@ -2198,11 +2210,10 @@ class NodaliaCoverCard extends HTMLElement {
       <ha-card
         class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
         data-cover-action="body"
-        tabindex="-1"
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">
-            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover" tabindex="-1">
+            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>

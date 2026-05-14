@@ -393,6 +393,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /normalizeSmartEntityOverrides/);
   assert.match(source, /_renderSmartEntityOverrides\(config\)/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.url/);
+  assert.match(source, /smart_entity_overrides\.\$\{index\}\.tap_action/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
   assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
@@ -439,6 +440,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /humidifier_full_entities/);
   assert.match(source, /ink_entities/);
   assert.match(source, /smart_notifications/);
+  assert.match(source, /smart_notifications\.\$\{key\}\.tap_action/);
+  assert.match(source, /custom_notifications\.\$\{index\}\.tap_action/);
+  assert.match(source, /normalizeNotificationTapAction/);
+  assert.match(source, /hasNotificationTapAction/);
+  assert.match(source, /_buildNativeNotificationAction/);
   assert.match(source, /battery_low/);
   assert.match(source, /humidifier_fill_low/);
   assert.match(source, /humidifier_fill_full/);
@@ -470,6 +476,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_smartAction/);
   assert.match(source, /_notificationChips\(item\)/);
   assert.doesNotMatch(source, /chips\.push\(\{ kind: "value", label: source \}\)/);
+  assert.match(source, /action\.type === "navigate"/);
+  assert.match(source, /window\.history\.pushState\(null, "", path\)/);
+  assert.match(source, /allowHash: true/);
   assert.match(source, /window\.open\(url, "_blank", "noopener,noreferrer"\)/);
   assert.match(source, /orientationchange/);
   assert.match(source, /IntersectionObserver/);

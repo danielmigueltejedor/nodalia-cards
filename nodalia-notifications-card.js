@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.1.0-alpha.13";
+const CARD_VERSION = "1.1.0-alpha.16";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -806,16 +806,16 @@ const DEFAULT_CONFIG = {
   },
   smart_recommendations: true,
   smart_notifications: {
-    hot: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    cold: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    humidity_high: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    humidity_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    rain: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    media_left_on: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    humidifier_fill_full: { title: "", message: "", tint_color: "", url: "", action_label: "" },
-    ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    hot: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    cold: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    humidity_high: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    humidity_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    rain: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    media_left_on: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    humidifier_fill_full: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+    ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
   },
   mobile_notifications: {
     enabled: false,
@@ -970,6 +970,67 @@ function normalizeNotifyServices(value) {
     .filter(item => item.startsWith("notify.") && item.length > "notify.".length);
 }
 
+function normalizeBoolean(value) {
+  if (value === true || value === false) {
+    return value;
+  }
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (["true", "on", "yes", "1"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "off", "no", "0"].includes(normalized)) {
+    return false;
+  }
+  return false;
+}
+
+function normalizeNotificationTapAction(value) {
+  const row = isObject(value) ? value : {};
+  let action = String(row.action || "none").trim().toLowerCase().replaceAll("_", "-");
+  if (action === "more-info-dialog") {
+    action = "more-info";
+  }
+  if (action === "open-url") {
+    action = "url";
+  }
+  const allowed = new Set(["none", "more-info", "navigate", "url", "toggle"]);
+  if (!allowed.has(action)) {
+    action = "none";
+  }
+  const out = { action };
+  const entity = String(row.entity || row.entity_id || "").trim();
+  const navigationPath = String(row.navigation_path || row.path || "").trim();
+  const urlPath = String(row.url_path || row.url || "").trim();
+  if ((action === "more-info" || action === "toggle") && entity) {
+    out.entity = entity;
+  }
+  if (action === "navigate" && navigationPath) {
+    out.navigation_path = navigationPath;
+  }
+  if (action === "url" && urlPath) {
+    out.url_path = urlPath;
+  }
+  if (action === "url" && row.new_tab !== undefined) {
+    out.new_tab = normalizeBoolean(row.new_tab);
+  }
+  return out;
+}
+
+function hasNotificationTapAction(value) {
+  const action = normalizeNotificationTapAction(value);
+  switch (action.action) {
+    case "more-info":
+    case "toggle":
+      return true;
+    case "navigate":
+      return Boolean(action.navigation_path);
+    case "url":
+      return Boolean(action.url_path);
+    default:
+      return false;
+  }
+}
+
 function normalizeSmartNotificationOptions(value) {
   const row = isObject(value) ? value : {};
   return {
@@ -978,6 +1039,7 @@ function normalizeSmartNotificationOptions(value) {
     tint_color: String(row.tint_color || "").trim(),
     url: String(row.url || "").trim(),
     action_label: String(row.action_label || "").trim(),
+    tap_action: normalizeNotificationTapAction(row.tap_action),
   };
 }
 
@@ -1009,6 +1071,7 @@ function normalizeSmartEntityOverrides(value) {
         tint_color: String(row.tint_color || "").trim(),
         url: String(row.url || "").trim(),
         action_label: String(row.action_label || "").trim(),
+        tap_action: normalizeNotificationTapAction(row.tap_action),
         mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
       };
     })
@@ -1017,7 +1080,7 @@ function normalizeSmartEntityOverrides(value) {
         return false;
       }
       seen.add(item.entity);
-      return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || item.mobile !== "inherit");
+      return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || hasNotificationTapAction(item.tap_action) || item.mobile !== "inherit");
     });
 }
 
@@ -1054,6 +1117,7 @@ function normalizeCustomNotifications(value, options = {}) {
             ? JSON.stringify(row.service_data)
             : "",
         url: String(row.url || "").trim(),
+        tap_action: normalizeNotificationTapAction(row.tap_action),
       };
       if (keepDrafts && row._draft === true) {
         normalized._draft = true;
@@ -2602,6 +2666,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           .map(key => [key, override[key]])
           .filter(([, value]) => String(value || "").trim()),
       ),
+      ...(hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {}),
       mobile: override.mobile || "inherit",
     };
   }
@@ -2622,15 +2687,56 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "", entityId = "") {
     const config = this._smartConfig(kind, entityId);
+    const tapAction = this._buildNativeNotificationAction(config.tap_action, {
+      entityId,
+      label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"),
+    });
+    if (tapAction) {
+      return tapAction;
+    }
     const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
     if (url) {
       return {
         label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"),
         type: "url",
         url,
+        newTab: true,
       };
     }
     return fallbackAction;
+  }
+
+  _buildNativeNotificationAction(tapAction, options = {}) {
+    const action = normalizeNotificationTapAction(tapAction);
+    const label = options.label || this._text("actions.open", "Open");
+    const fallbackEntity = String(options.entityId || "").trim();
+    if (!hasNotificationTapAction(action)) {
+      return null;
+    }
+    if (action.action === "more-info") {
+      const entity = action.entity || fallbackEntity;
+      return entity ? { label, type: "more-info", entity } : null;
+    }
+    if (action.action === "toggle") {
+      const entity = action.entity || fallbackEntity;
+      return entity ? { label: options.label || this._text("actions.toggle", "Toggle"), type: "toggle", entity } : null;
+    }
+    if (action.action === "navigate") {
+      return {
+        label,
+        type: "navigate",
+        navigationPath: action.navigation_path,
+      };
+    }
+    if (action.action === "url") {
+      return {
+        label,
+        type: "url",
+        url: action.url_path,
+        newTab: action.new_tab === true,
+      };
+    }
+    return null;
   }
 
   _smartMobilePolicy(entityId) {
@@ -2780,7 +2886,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
       add({
-        id: `custom:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}`)}`,
+        id: `custom:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}|${JSON.stringify(item.tap_action || {})}`)}`,
         title: item.title || entityName || this._text("titles.customFallback", "Notification"),
         message: item.message || entityName,
         icon: item.icon || "mdi:bell-outline",
@@ -2828,6 +2934,13 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _buildCustomAction(item) {
+    const nativeAction = this._buildNativeNotificationAction(item.tap_action, {
+      entityId: item.entity,
+      label: item.action_label || this._text("actions.open", "Open"),
+    });
+    if (nativeAction) {
+      return nativeAction;
+    }
     const type = String(item.action_type || "none").trim();
     if (type === "none") {
       return null;
@@ -2839,6 +2952,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       service: item.service,
       serviceData: parseServiceData(item.service_data),
       url: item.url,
+      newTab: true,
     };
   }
 
@@ -3171,10 +3285,22 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       return;
     }
+    if (action.type === "navigate" && action.navigationPath) {
+      const path = window.NodaliaUtils?.sanitizeActionUrl?.(action.navigationPath, { allowRelative: true, allowHash: true }) || "";
+      if (path && typeof window !== "undefined" && !/^(?:https?:)?\/\//i.test(path)) {
+        window.history.pushState(null, "", path);
+        window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+      }
+      return;
+    }
     if (action.type === "url" && action.url) {
-      const url = window.NodaliaUtils?.sanitizeActionUrl?.(action.url, { allowRelative: true }) || "";
+      const url = window.NodaliaUtils?.sanitizeActionUrl?.(action.url, { allowRelative: true, allowHash: true }) || "";
       if (url && typeof window !== "undefined") {
-        window.open(url, "_blank", "noopener,noreferrer");
+        if (action.newTab === false) {
+          window.location.assign(url);
+        } else {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
       }
       return;
     }
@@ -4123,8 +4249,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     if (smartEntityMatch) {
       const index = Number(smartEntityMatch[1]);
       const entity = this._smartEntityEditorEntities?.[index] || "";
-      const key = String(path || "").split(".").pop();
-      if (!entity || !key) {
+      const relativePath = String(path || "").split(".").slice(2).join(".");
+      if (!entity || !relativePath) {
         return;
       }
       if (!Array.isArray(this._config.smart_entity_overrides)) {
@@ -4136,9 +4262,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         this._config.smart_entity_overrides.push({ entity });
       }
       if (value === "" || value === undefined || value === null) {
-        delete this._config.smart_entity_overrides[overrideIndex][key];
+        deleteByPath(this._config.smart_entity_overrides[overrideIndex], relativePath);
       } else {
-        this._config.smart_entity_overrides[overrideIndex][key] = value;
+        setByPath(this._config.smart_entity_overrides[overrideIndex], relativePath, value);
       }
       return;
     }
@@ -4569,8 +4695,50 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       tint_color: item.tint_color || "",
       url: item.url || "",
       action_label: item.action_label || "",
+      tap_action: normalizeNotificationTapAction(item.tap_action),
       mobile: normalizeSmartEntityMobile(item.mobile),
     }));
+  }
+
+  _renderNotificationTapActionFields(fieldBase, tapAction, options = {}) {
+    const action = normalizeNotificationTapAction(tapAction);
+    const actionOptions = [
+      { value: "none", label: "ed.notifications.action_none" },
+      { value: "more-info", label: "ed.notifications.action_more_info" },
+      { value: "navigate", label: "ed.notifications.action_navigate" },
+      { value: "url", label: "ed.notifications.action_url" },
+      { value: "toggle", label: "ed.notifications.action_toggle" },
+    ];
+    return `
+      ${this._renderSelectField(options.label || "ed.notifications.field_tap_action", `${fieldBase}.action`, action.action, actionOptions, { fullWidth: true })}
+      ${
+        action.action === "navigate"
+          ? this._renderTextField("ed.notifications.field_navigation_path", `${fieldBase}.navigation_path`, action.navigation_path, {
+              placeholder: "#camera",
+              fullWidth: true,
+            })
+          : ""
+      }
+      ${
+        action.action === "url"
+          ? `
+            ${this._renderTextField("ed.notifications.field_url_path", `${fieldBase}.url_path`, action.url_path, {
+              placeholder: "https://...",
+              fullWidth: true,
+            })}
+            ${this._renderCheckboxField("ed.notifications.field_new_tab", `${fieldBase}.new_tab`, action.new_tab === true)}
+          `
+          : ""
+      }
+      ${
+        action.action === "more-info" || action.action === "toggle"
+          ? this._renderEntityPickerField("ed.notifications.field_action_entity", `${fieldBase}.entity`, action.entity, {
+              placeholder: options.entityPlaceholder || "ed.notifications.placeholder_action_entity",
+              fullWidth: true,
+            })
+          : ""
+      }
+    `;
   }
 
   _renderSmartNotificationOptions(config) {
@@ -4597,8 +4765,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderTextField("ed.notifications.field_custom_title", `smart_notifications.${key}.title`, item.title, { placeholder: titlePlaceholder })}
             ${this._renderColorField("ed.notifications.field_tint_color", `smart_notifications.${key}.tint_color`, item.tint_color)}
             ${this._renderTextareaField("ed.notifications.field_custom_message", `smart_notifications.${key}.message`, item.message, { placeholder: messagePlaceholder })}
-            ${this._renderTextField("ed.notifications.field_optional_url", `smart_notifications.${key}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
             ${this._renderTextField("ed.notifications.field_url_label", `smart_notifications.${key}.action_label`, item.action_label, { placeholder: "ed.notifications.url_label_placeholder", fullWidth: true })}
+            ${this._renderNotificationTapActionFields(`smart_notifications.${key}.tap_action`, item.tap_action)}
+            ${this._renderTextField("ed.notifications.field_optional_url", `smart_notifications.${key}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
           </div>
         </div>
       `;
@@ -4623,8 +4792,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           ${this._renderTextField("ed.notifications.field_title_entity_only", `smart_entity_overrides.${index}.title`, item.title, { placeholder: "ed.notifications.placeholder_use_global_title" })}
           ${this._renderColorField("ed.notifications.field_color_entity_only", `smart_entity_overrides.${index}.tint_color`, item.tint_color)}
           ${this._renderTextareaField("ed.notifications.field_message_entity_only", `smart_entity_overrides.${index}.message`, item.message, { placeholder: "ed.notifications.placeholder_use_global_message" })}
-          ${this._renderTextField("ed.notifications.field_url_entity_only", `smart_entity_overrides.${index}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
           ${this._renderTextField("ed.notifications.field_url_label", `smart_entity_overrides.${index}.action_label`, item.action_label, { placeholder: "ed.notifications.url_label_placeholder" })}
+          ${this._renderNotificationTapActionFields(`smart_entity_overrides.${index}.tap_action`, item.tap_action)}
+          ${this._renderTextField("ed.notifications.field_url_entity_only", `smart_entity_overrides.${index}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
           ${this._renderSelectField("ed.notifications.field_mobile", `smart_entity_overrides.${index}.mobile`, item.mobile, [
             { value: "inherit", label: "ed.notifications.mobile_inherit" },
             { value: "on", label: "ed.notifications.mobile_on" },
@@ -4682,6 +4852,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             { value: "service", label: "ed.notifications.action_service" },
           ])}
           ${this._renderTextField("ed.notifications.field_action_label", `custom_notifications.${index}.action_label`, item.action_label, { placeholder: "ed.notifications.placeholder_run" })}
+          ${this._renderNotificationTapActionFields(`custom_notifications.${index}.tap_action`, item.tap_action)}
           ${
             item.action_type === "url"
               ? this._renderTextField("ed.notifications.field_url_plain", `custom_notifications.${index}.url`, item.url, {
