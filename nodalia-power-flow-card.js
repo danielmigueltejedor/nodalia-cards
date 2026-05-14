@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.18";
+const CARD_VERSION = "1.1.0-alpha.19";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1318,46 +1318,9 @@ function getLayoutPreset(nodeCounts = {}) {
 function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
   const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
   const topN = Number(flags.topCount) || 0;
-  const crowdedTop = topN >= 2;
-  const packedTop = topN >= 3;
   const bottomN = Number(flags.bottomUtilities) || 0;
   const bottomSpread = bottomN >= 2 ? 6 : 0;
-  const topSpread = crowdedTop ? 10 : 0;
-  const packSpread = packedTop ? 6 : 0;
-  const activeTop = Array.isArray(flags.activeTopKinds) ? flags.activeTopKinds : [];
-  const hasIndividuals = Number(flags.individualCount) > 0;
-  const useTopStrip = activeTop.length >= 1
-    && activeTop.length <= 2
-    && !hasIndividuals
-    && layoutPreset !== "simple"
-    && (layoutPreset === "compact" || layoutPreset === "full");
-
-  /**
-   * 1 fuente: fuente a la izquierda, casa a la derecha (misma fila).
-   * 2 fuentes: primera (orden grid→solar→batería) a la derecha, segunda a la izquierda, casa al centro.
-   * 3+ fuentes: layout triangular clásico más abajo.
-   */
-  if (useTopStrip && (kind === "home" || kind === "grid" || kind === "solar" || kind === "battery")) {
-    const rowY = hasBottomUtilities ? 42 : 51;
-    if (activeTop.length === 1) {
-      if (kind === "home") {
-        return { x: 86, y: rowY };
-      }
-      if (kind === activeTop[0]) {
-        return { x: 14, y: rowY };
-      }
-    } else if (activeTop.length === 2) {
-      if (kind === "home") {
-        return { x: 50, y: rowY };
-      }
-      if (kind === activeTop[0]) {
-        return { x: 86, y: rowY };
-      }
-      if (kind === activeTop[1]) {
-        return { x: 14, y: rowY };
-      }
-    }
-  }
+  const individualCount = Number(flags.individualCount) || 0;
 
   if (layoutPreset === "simple") {
     if (kind === "home") {
@@ -1383,129 +1346,27 @@ function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities
     }
   }
 
-  if (layoutPreset === "compact") {
-    if (kind === "home") {
-      let y = 54;
-      if (crowdedTop) {
-        y += 6;
-      }
-      if (packedTop) {
-        y += 4;
-      }
-      return { x: 50, y: Math.min(y, 66) };
-    }
-    if (kind === "solar") {
-      let y = 20;
-      if (topN >= 2) {
-        y = 12;
-      }
-      if (packedTop) {
-        y = 9;
-      }
-      return { x: 50, y };
-    }
-    if (kind === "grid") {
-      let y = 54;
-      if (crowdedTop) {
-        y -= 8;
-      }
-      if (packedTop) {
-        y -= 4;
-      }
-      return { x: 20, y: Math.max(y, 38) };
-    }
-    if (kind === "battery") {
-      let y = 54;
-      if (crowdedTop) {
-        y -= 8;
-      }
-      if (packedTop) {
-        y -= 4;
-      }
-      return { x: 80, y: Math.max(y, 38) };
-    }
-    if (kind === "water") {
-      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
-      return total > 1 ? { x: 33, y } : { x: 41, y };
-    }
-    if (kind === "gas") {
-      const y = (total > 1 ? 80 : 80) + topSpread + bottomSpread;
-      return total > 1 ? { x: 67, y } : { x: 59, y };
-    }
-    if (kind === "individual") {
-      let y = hasBottomUtilities ? 88 : 80;
-      y += topSpread + bottomSpread + packSpread;
-      if (total <= 1) {
-        let yHome = 54;
-        if (crowdedTop) {
-          yHome += 6;
-        }
-        if (packedTop) {
-          yHome += 4;
-        }
-        return { x: 79, y: Math.min(yHome, 66) };
-      }
-      const start = 28;
-      const end = 72;
-      const step = (end - start) / Math.max(total - 1, 1);
-      return {
-        x: start + (step * index),
-        y: Math.min(y, 96),
-      };
-    }
-  }
-
   if (kind === "home") {
-    let y = hasBottomUtilities ? 48 : 54;
-    if (crowdedTop) {
-      y += 8;
-    }
-    if (packedTop) {
-      y += 6;
-    }
-    return { x: 50, y: Math.min(y, 68) };
+    return { x: 82, y: 52 };
   }
   if (kind === "solar") {
-    let y = 20;
-    if (topN >= 2) {
-      y = 11;
-    }
-    if (packedTop) {
-      y = 8;
-    }
-    return { x: 50, y };
+    return { x: 50, y: 17 };
   }
   if (kind === "grid") {
-    let y = hasBottomUtilities ? 46 : 52;
-    if (crowdedTop) {
-      y -= 8;
-    }
-    if (packedTop) {
-      y -= 4;
-    }
-    return { x: 19, y: Math.max(y, 34) };
+    return { x: 18, y: 52 };
   }
   if (kind === "battery") {
-    let y = hasBottomUtilities ? 46 : 52;
-    if (crowdedTop) {
-      y -= 8;
-    }
-    if (packedTop) {
-      y -= 4;
-    }
-    return { x: 81, y: Math.max(y, 34) };
+    return { x: 50, y: 84 };
   }
   if (kind === "water") {
-    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
-    return total > 1 ? { x: 32, y: Math.min(y, 94) } : { x: 40, y: Math.min(y, 94) };
+    return { x: 82, y: 84 };
   }
   if (kind === "gas") {
-    const y = (total > 1 ? 81 : 81) + topSpread + bottomSpread + packSpread;
-    return total > 1 ? { x: 68, y: Math.min(y, 94) } : { x: 60, y: Math.min(y, 94) };
+    return { x: 82, y: 17 };
   }
   if (kind === "individual") {
-    let y = hasBottomUtilities ? 90 : 81;
-    y += topSpread + bottomSpread + packSpread;
+    let y = hasBottomUtilities || topN >= 2 ? 96 : 84;
+    y += bottomSpread + Math.min(Math.max(0, individualCount - 1), 4) * 1.5;
     if (total <= 1) {
       return { x: 50, y: Math.min(y, 96) };
     }
@@ -2188,7 +2049,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     remainingSolar = Math.max(0, remainingSolar - solarToBattery);
     const gridToBattery = Math.max(0, batteryCharge - solarToBattery);
     const batteryToGrid = Math.max(0, batteryDischarge - batteryToHome);
-    const gridExport = Math.max(0, remainingSolar + batteryToGrid);
+    const solarToGrid = Math.max(0, remainingSolar);
+    const gridExport = Math.max(0, solarToGrid + batteryToGrid);
     const gridImport = Math.max(0, gridToHome + gridToBattery);
     const gridNet = gridImport > 0.001 ? gridImport : gridExport > 0.001 ? -gridExport : 0;
     const unit = String(home.unit || solar?.unit || battery?.unit || grid?.unit || "").trim();
@@ -2209,11 +2071,82 @@ class NodaliaPowerFlowCard extends HTMLElement {
     grid.unitText = gridDisplay.unit;
 
     nodes._flowValues = {
-      gridHome: gridImport > 0.001 ? gridToHome : gridExport > 0.001 ? -gridExport : 0,
+      gridHome: gridToHome,
       solarHome: solarToHome,
       batteryHome: batteryToHome,
       solarBattery: solarToBattery,
       gridBattery: gridToBattery,
+      solarGrid: solarToGrid,
+      batteryGrid: batteryToGrid,
+      gridImport,
+      gridExport,
+    };
+  }
+
+  _applyMeasuredFlowValues(nodes) {
+    if (nodes._flowValues) {
+      return;
+    }
+
+    const home = nodes.home;
+    const grid = nodes.grid;
+    const solar = nodes.solar;
+    const battery = nodes.battery;
+    const hasGrid = Boolean(grid?.entityId && !grid.unavailable && Number.isFinite(grid.value));
+    const hasSolar = Boolean(solar?.entityId && !solar.unavailable && Number.isFinite(solar.value));
+    const hasBattery = Boolean(battery?.entityId && !battery.unavailable && Number.isFinite(battery.value));
+    if (!hasGrid && !hasSolar && !hasBattery) {
+      return;
+    }
+
+    const homeDemand = home && !home.unavailable && Number.isFinite(home.value) ? Math.max(0, Number(home.value)) : 0;
+    const gridNet = hasGrid ? Number(grid.value) : 0;
+    const gridImport = gridNet > 0.001 ? gridNet : 0;
+    const gridExport = gridNet < -0.001 || grid?.isExporting ? Math.abs(gridNet) : 0;
+    const solarProduction = hasSolar ? Math.max(0, Number(solar.value)) : 0;
+    const batteryPower = hasBattery ? Number(battery.value) : 0;
+    const batteryDischarge = Math.max(0, batteryPower);
+    const batteryCharge = Math.max(0, -batteryPower);
+
+    const solarToHome = Math.min(solarProduction, homeDemand);
+    let remainingHomeDemand = Math.max(0, homeDemand - solarToHome);
+    const batteryToHome = Math.min(batteryDischarge, remainingHomeDemand);
+    remainingHomeDemand = Math.max(0, remainingHomeDemand - batteryToHome);
+    const gridToHome = Math.min(gridImport, remainingHomeDemand);
+    let remainingGridImport = Math.max(0, gridImport - gridToHome);
+
+    let remainingSolar = Math.max(0, solarProduction - solarToHome);
+    const solarToBattery = Math.min(remainingSolar, batteryCharge);
+    remainingSolar = Math.max(0, remainingSolar - solarToBattery);
+    const remainingBatteryCharge = Math.max(0, batteryCharge - solarToBattery);
+    const gridToBattery = Math.min(remainingGridImport, remainingBatteryCharge);
+    remainingGridImport = Math.max(0, remainingGridImport - gridToBattery);
+
+    let remainingGridExport = gridExport;
+    let solarToGrid = Math.min(remainingSolar, remainingGridExport);
+    remainingGridExport = Math.max(0, remainingGridExport - solarToGrid);
+    const batteryExportCapacity = Math.max(0, batteryDischarge - batteryToHome);
+    let batteryToGrid = Math.min(batteryExportCapacity, remainingGridExport);
+    remainingGridExport = Math.max(0, remainingGridExport - batteryToGrid);
+
+    if (remainingGridExport > 0.001) {
+      if (hasSolar) {
+        solarToGrid += remainingGridExport;
+      } else if (hasBattery) {
+        batteryToGrid += remainingGridExport;
+      }
+    }
+
+    nodes._flowValues = {
+      gridHome: gridToHome,
+      solarHome: solarToHome,
+      batteryHome: batteryToHome,
+      solarBattery: solarToBattery,
+      gridBattery: gridToBattery,
+      solarGrid: solarToGrid,
+      batteryGrid: batteryToGrid,
+      gridImport,
+      gridExport,
     };
   }
 
@@ -2245,6 +2178,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     this._applyDerivedHomeAndGridDisplay(nodes);
+    this._applyMeasuredFlowValues(nodes);
 
     nodes._layoutPreset = this._layoutPreset;
     nodes._flowFlags = flowFlags;
@@ -2294,7 +2228,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const lineCandidates = [];
     const flowValues = nodes._flowValues || {};
 
-    const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true) => {
+    const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true, straight = false) => {
       const magnitude = this._toFlowMagnitude(value, unit);
       const active = magnitude > 0.001;
       if (!active && !zeroLineVisible) {
@@ -2342,26 +2276,33 @@ class NodaliaPowerFlowCard extends HTMLElement {
         color: active ? color : neutralStyle.color,
         opacity: active ? 0.9 : neutralStyle.opacity,
         fromRadius,
+        straight,
         toRadius,
       });
     };
 
     if (nodes.grid.entityId) {
       const value = Number.isFinite(flowValues.gridHome) ? flowValues.gridHome : nodes.grid.value;
-      pushLine("grid", nodes.grid, home, value, nodes.grid.unit, nodes.grid.color, true);
+      pushLine("grid", nodes.grid, home, value, nodes.grid.unit, nodes.grid.color, true, true);
     }
     if (nodes.solar.entityId) {
       const value = Number.isFinite(flowValues.solarHome) ? flowValues.solarHome : nodes.solar.value;
       pushLine("solar", nodes.solar, home, value, nodes.solar.unit, nodes.solar.color, true);
     }
+    if (nodes.solar.entityId && nodes.grid.entityId && Number.isFinite(flowValues.solarGrid)) {
+      pushLine("solar-grid", nodes.solar, nodes.grid, flowValues.solarGrid, nodes.solar.unit || nodes.grid.unit, nodes.solar.color, false);
+    }
     if (nodes.battery.entityId) {
       const value = Number.isFinite(flowValues.batteryHome) ? flowValues.batteryHome : nodes.battery.value;
       pushLine("battery", nodes.battery, home, value, nodes.battery.unit, nodes.battery.color, true);
     }
-    if (nodes.solar.entityId && nodes.battery.entityId && Number(flowValues.solarBattery) > 0.001) {
-      pushLine("solar-battery", nodes.solar, nodes.battery, flowValues.solarBattery, nodes.solar.unit || nodes.battery.unit, nodes.battery.color, false);
+    if (nodes.battery.entityId && nodes.grid.entityId && Number.isFinite(flowValues.batteryGrid)) {
+      pushLine("battery-grid", nodes.battery, nodes.grid, flowValues.batteryGrid, nodes.battery.unit || nodes.grid.unit, nodes.battery.color, false);
     }
-    if (nodes.grid.entityId && nodes.battery.entityId && Number(flowValues.gridBattery) > 0.001) {
+    if (nodes.solar.entityId && nodes.battery.entityId && Number.isFinite(flowValues.solarBattery)) {
+      pushLine("solar-battery", nodes.solar, nodes.battery, flowValues.solarBattery, nodes.solar.unit || nodes.battery.unit, nodes.battery.color, false, true);
+    }
+    if (nodes.grid.entityId && nodes.battery.entityId && Number.isFinite(flowValues.gridBattery)) {
       pushLine("grid-battery", nodes.grid, nodes.battery, flowValues.gridBattery, nodes.grid.unit || nodes.battery.unit, nodes.battery.color, false);
     }
     if (nodes.water.entityId) {
@@ -2380,6 +2321,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (id === "solar") {
         return 50;
       }
+      if (id === "solar-grid") {
+        return 48;
+      }
       if (id === "gas") {
         return 40;
       }
@@ -2389,7 +2333,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (id === "battery") {
         return 25;
       }
-      if (id === "solar-battery" || id === "grid-battery") {
+      if (id === "solar-battery" || id === "grid-battery" || id === "battery-grid") {
         return 30;
       }
       if (id === "grid") {
@@ -2404,14 +2348,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       1,
     );
 
-    const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config || {});
-    const straightStripLines = flowFlags.topCount >= 1
-      && flowFlags.topCount <= 2
-      && !(flowFlags.individualCount > 0);
-
     return lineCandidates.map(line => ({
       ...line,
-      path: straightStripLines
+      path: line.straight
         ? buildStraightFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius)
         : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius),
       duration: this._flowDuration(line.magnitude, maxMagnitude),
@@ -2803,39 +2742,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
-    const horizontalStripDiagram = flowFlags.topCount >= 1 && flowFlags.topCount <= 2 && !(flowFlags.individualCount > 0);
+    const horizontalStripDiagram = false;
     const flowDotBoost = 1 + Math.max(0, flowWidth - 1) * 0.065;
-    // In 1–2 source strip layouts, oversized dots can feel too dominant.
-    // Keep them slightly emphasized, but scale down as source count decreases.
-    const stripTopCount = horizontalStripDiagram ? clamp(Number(flowFlags.topCount) || 0, 1, 2) : 0;
-    const stripDotScale = horizontalStripDiagram
-      ? (stripTopCount === 1 ? 0.82 : 0.9)
-      : 1;
-    const flowDotGlowR = (horizontalStripDiagram ? 2.58 : 2.1) * flowDotBoost * stripDotScale;
-    const flowDotCoreR = (horizontalStripDiagram ? 1.48 : 1.12) * flowDotBoost * stripDotScale;
-    const flowDotCoreStroke = (horizontalStripDiagram ? 0.33 : 0.26) * stripDotScale;
+    const flowDotGlowR = 2.1 * flowDotBoost;
+    const flowDotCoreR = 1.12 * flowDotBoost;
+    const flowDotCoreStroke = 0.26;
     const surfaceLayoutExtras = (() => {
       let add = 0;
       if (layoutPreset !== "simple") {
-        if (flowFlags.topCount >= 3) {
-          add += 92;
-        }
-        if (flowFlags.bottomUtilities >= 2 && flowFlags.topCount >= 3) {
-          add += 28;
-        }
         add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
       }
       return add;
     })();
-    const stripNoLower = horizontalStripDiagram && !hasLowerNodes;
-    const stripWithLower = horizontalStripDiagram && hasLowerNodes;
-    let baseSurfaceDiagram = layoutPreset === "compact" ? (hasLowerNodes ? 296 : 228) : (hasLowerNodes ? 328 : 248);
-    if (stripNoLower) {
-      baseSurfaceDiagram = layoutPreset === "compact" ? 150 : 158;
-    } else if (stripWithLower) {
-      baseSurfaceDiagram = layoutPreset === "compact" ? Math.min(baseSurfaceDiagram, 236) : Math.min(baseSurfaceDiagram, 256);
-    }
-    const surfaceFloor = layoutPreset === "simple" ? 148 : (stripNoLower ? 132 : 200);
+    const baseSurfaceDiagram = layoutPreset === "compact" ? (hasLowerNodes ? 306 : 264) : (hasLowerNodes ? 336 : 286);
+    const surfaceFloor = layoutPreset === "simple" ? 148 : 236;
     const surfaceMinHeight = Math.min(
       Math.max(
         (layoutPreset === "simple" ? 162 : baseSurfaceDiagram) + surfaceLayoutExtras,
@@ -2843,24 +2763,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ),
       540,
     );
-    let baseSurfaceMobile = layoutPreset === "simple" ? 144 : (hasLowerNodes ? 304 : 230);
-    if (stripNoLower) {
-      baseSurfaceMobile = layoutPreset === "compact" ? 140 : 146;
-    } else if (stripWithLower) {
-      baseSurfaceMobile = Math.min(baseSurfaceMobile, layoutPreset === "compact" ? 220 : 236);
-    }
+    const baseSurfaceMobile = layoutPreset === "simple" ? 144 : (hasLowerNodes ? 308 : 268);
     const surfaceMinHeightMobile = Math.min(
       Math.max(
         baseSurfaceMobile + surfaceLayoutExtras,
-        layoutPreset === "simple" ? 132 : (stripNoLower ? 124 : 208),
+        layoutPreset === "simple" ? 132 : 236,
       ),
       520,
     );
-    const surfaceAspectCss = stripNoLower
-      ? "1.52 / 1"
-      : stripWithLower
-        ? "1.2 / 1"
-        : "1 / 1.02";
+    const surfaceAspectCss = "1 / 1.04";
     const flowDotViewAspect = (() => {
       const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
       if (!m) {

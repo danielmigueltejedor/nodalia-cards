@@ -22,6 +22,22 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.19] - 2026-05-14
+
+Nineteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.19`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-alarm-panel-card.js`:** make `show_code_input: true` force the PIN field even when the alarm entity does not expose `code_format`, while the default `auto` mode still follows Home Assistant's code metadata.
+- **`nodalia-alarm-panel-card.js` editor:** mount icon pickers through the shared lazy host path so the visual editor loads more reliably as Home Assistant editor elements become available.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** restructure the main energy graph into a Home Assistant-style diamond layout with grid left, home right, solar above, battery below, gas/water aligned on the home column, and direct animated solar/grid plus battery/grid paths for export and charging flows.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.19`**.
+
+---
+
 ## [1.1.0-alpha.18] - 2026-05-14
 
 Eighteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.18`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

@@ -482,6 +482,10 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(gridImport.grid.entityId, "sensor.home");
   assert.equal(gridImport.grid.value, 100);
   assert.equal(gridImport._flowValues.gridHome, 100);
+  assert.equal(gridImport.grid.position.x, 18);
+  assert.equal(gridImport.grid.position.y, 52);
+  assert.equal(gridImport.home.position.x, 82);
+  assert.equal(gridImport.home.position.y, 52);
   assert.equal(buildCard({ home: 100, solar: 0, battery: 0 })._getGridDirectionIcon(gridImport.grid), "mdi:transmission-tower-export");
 
   const solarCoversHome = buildCard({ home: 100, solar: 100, battery: 0 })._getNodes();
@@ -500,6 +504,7 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(solarChargeNodes.grid.value, 0);
   assert.equal(solarChargeNodes._flowValues.solarBattery, 100);
   assert.ok(solarChargeLines.includes("solar-battery"));
+  assert.ok(solarChargeNodes._flowValues.solarGrid === 0);
 
   const gridChargesBattery = buildCard({ home: 100, solar: 0, battery: -100 });
   const gridChargeNodes = gridChargesBattery._getNodes();
@@ -511,12 +516,72 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.ok(gridChargeLines.includes("grid-battery"));
 
   const exportNodes = buildCard({ home: 100, solar: 200, battery: 0, batteryLevel: 100 })._getNodes();
+  const exportLines = buildCard({ home: 100, solar: 200, battery: 0, batteryLevel: 100 })
+    ._buildLines(exportNodes)
+    .filter(line => line.active)
+    .map(line => line.id)
+    .sort();
   assert.equal(exportNodes.grid.value, -100);
   assert.equal(exportNodes.grid.isExporting, true);
   assert.equal(exportNodes.grid.secondary, "");
   assert.equal(buildCard({ home: 100, solar: 200, battery: 0 })._getGridDirectionIcon(exportNodes.grid), "mdi:transmission-tower-import");
   assert.equal(exportNodes.battery.icon, "mdi:battery-check");
-  assert.equal(exportNodes._flowValues.gridHome, -100);
+  assert.equal(exportNodes._flowValues.gridHome, 0);
+  assert.equal(exportNodes._flowValues.solarGrid, 100);
+  assert.ok(exportLines.includes("solar-grid"));
+  assert.ok(!exportLines.includes("grid"));
+
+  const buildMeasuredCard = ({ grid = 0, solar = 0, battery = 0 }) => {
+    const card = new PowerFlowCard();
+    card._config = {
+      entities: {
+        home: {},
+        grid: { entity: "sensor.grid", color: "#6da8ff", export_color: "#44d07b" },
+        solar: { entity: "sensor.solar", color: "#f6b73c" },
+        battery: { entity: "sensor.battery", color: "#61c97a" },
+        water: {},
+        gas: {},
+        individual: [],
+      },
+      display_zero_lines: { mode: "hide", transparency: 50, grey_color: [189, 189, 189] },
+      show_secondary_info: true,
+      show_values: true,
+      show_labels: true,
+    };
+    card._hass = {
+      states: {
+        "sensor.grid": { state: String(grid), attributes: { unit_of_measurement: "W", friendly_name: "Grid" } },
+        "sensor.solar": { state: String(solar), attributes: { unit_of_measurement: "W", friendly_name: "Solar" } },
+        "sensor.battery": { state: String(battery), attributes: { unit_of_measurement: "W", friendly_name: "Battery" } },
+      },
+    };
+    return card;
+  };
+
+  const measuredSolarExportCard = buildMeasuredCard({ grid: -100, solar: 200, battery: 0 });
+  const measuredSolarExport = measuredSolarExportCard._getNodes();
+  const measuredSolarExportLines = measuredSolarExportCard._buildLines(measuredSolarExport)
+    .filter(line => line.active)
+    .map(line => line.id)
+    .sort();
+  assert.equal(measuredSolarExport.home.value, 100);
+  assert.equal(measuredSolarExport._flowValues.gridHome, 0);
+  assert.equal(measuredSolarExport._flowValues.solarHome, 100);
+  assert.equal(measuredSolarExport._flowValues.solarGrid, 100);
+  assert.ok(measuredSolarExportLines.includes("solar-grid"));
+  assert.ok(!measuredSolarExportLines.includes("grid"));
+
+  const measuredBatteryExportCard = buildMeasuredCard({ grid: -50, solar: 0, battery: 100 });
+  const measuredBatteryExport = measuredBatteryExportCard._getNodes();
+  const measuredBatteryExportLines = measuredBatteryExportCard._buildLines(measuredBatteryExport)
+    .filter(line => line.active)
+    .map(line => line.id)
+    .sort();
+  assert.equal(measuredBatteryExport.home.value, 50);
+  assert.equal(measuredBatteryExport._flowValues.batteryHome, 50);
+  assert.equal(measuredBatteryExport._flowValues.batteryGrid, 50);
+  assert.ok(measuredBatteryExportLines.includes("battery-grid"));
+  assert.ok(!measuredBatteryExportLines.includes("grid"));
 });
 
 test("cover editor uses domain-filtered pickers and fan-style editor controls", () => {
@@ -606,6 +671,10 @@ test("device cards support entity pictures in the main icon bubble", () => {
 
 test("alarm panel PIN input keeps masked text visible across themes", () => {
   const source = read("nodalia-alarm-panel-card.js");
+  assert.match(source, /show_code_input: "auto"/);
+  assert.match(source, /if \(this\._config\?\.show_code_input === true\) \{[\s\S]*return true;/);
+  assert.match(source, /_getCodeInputEditorMode\(value = this\._config\?\.show_code_input\)/);
+  assert.match(source, /ed\.media_player\.tristate_auto/);
   assert.match(source, /type="password"/);
   assert.match(source, /color: var\(--primary-text-color\);[\s\S]*-webkit-text-fill-color: var\(--primary-text-color\);/);
   assert.match(source, /caret-color: var\(--primary-text-color\);/);

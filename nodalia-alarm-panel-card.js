@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.1.0-alpha.18";
+const CARD_VERSION = "1.1.0-alpha.19";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -790,7 +790,7 @@ const DEFAULT_CONFIG = {
   code: "",
   code_entity: "",
   show_state: true,
-  show_code_input: true,
+  show_code_input: "auto",
   show_disarm: true,
   show_arm_home: true,
   show_arm_away: true,
@@ -1128,6 +1128,16 @@ function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  const rawShowCodeInput = rawConfig && Object.prototype.hasOwnProperty.call(rawConfig, "show_code_input")
+    ? rawConfig.show_code_input
+    : config.show_code_input;
+  if (rawShowCodeInput === true || normalizeTextKey(rawShowCodeInput) === "true" || normalizeTextKey(rawShowCodeInput) === "always") {
+    config.show_code_input = true;
+  } else if (rawShowCodeInput === false || normalizeTextKey(rawShowCodeInput) === "false" || normalizeTextKey(rawShowCodeInput) === "never") {
+    config.show_code_input = false;
+  } else {
+    config.show_code_input = "auto";
+  }
   return config;
 }
 
@@ -1625,6 +1635,10 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   _shouldShowCodeInput(state) {
     if (this._config?.show_code_input === false) {
       return false;
+    }
+
+    if (this._config?.show_code_input === true) {
+      return true;
     }
 
     const codeFormat = String(state?.attributes?.code_format || "").trim();
@@ -2845,20 +2859,31 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
   _renderIconPickerField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
+    const placeholder = options.placeholder || "";
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
-        <ha-icon-picker
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        ></ha-icon-picker>
+          data-placeholder="${escapeHtml(placeholder)}"
+        ></div>
       </div>
     `;
+  }
+
+  _getCodeInputEditorMode(value = this._config?.show_code_input) {
+    if (value === true) {
+      return "always";
+    }
+    if (value === false) {
+      return "never";
+    }
+    return "auto";
   }
 
   _mountEntityPicker(host) {
@@ -3263,7 +3288,17 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
               { fullWidth: true },
             )}
             ${this._renderCheckboxField("ed.alarm_panel.show_state_bubble", "show_state", config.show_state !== false)}
-            ${this._renderCheckboxField("ed.fav.alarm_show_pin", "show_code_input", config.show_code_input !== false)}
+            ${this._renderSelectField(
+              "ed.fav.alarm_show_pin",
+              "show_code_input",
+              this._getCodeInputEditorMode(config.show_code_input),
+              [
+                { value: "auto", label: "ed.media_player.tristate_auto" },
+                { value: "always", label: "ed.media_player.tristate_always" },
+                { value: "never", label: "ed.media_player.tristate_never" },
+              ],
+              { fullWidth: true },
+            )}
           </div>
         </section>
 
@@ -3450,6 +3485,13 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this.shadowRoot
       .querySelectorAll('.editor-control-host[data-mounted-control="entity"]')
       .forEach(host => this._mountEntityPicker(host));
+    this.shadowRoot
+      .querySelectorAll('.editor-control-host[data-mounted-control="icon-picker"]')
+      .forEach(host => window.NodaliaUtils.mountIconPickerHost(host, {
+        hass: this._hass,
+        onShadowInput: this._onShadowInput,
+        onShadowValueChanged: this._onShadowValueChanged,
+      }));
 
     this._ensureEditorControlsReady();
   }
