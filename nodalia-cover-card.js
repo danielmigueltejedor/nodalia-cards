@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.23";
+const CARD_VERSION = "1.1.0-alpha.24";
 
 const HAPTIC_PATTERNS = {
   selection: 8,

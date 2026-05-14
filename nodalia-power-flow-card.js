@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.23";
+const CARD_VERSION = "1.1.0-alpha.24";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1425,14 +1425,14 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   if (adx < 0.3 && ady < 0.3) {
     return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
   }
-  if (ady < 1.35 || adx < 1.35) {
+  if (ady < 1.05 || adx < 1.05) {
     return buildStraightFlowPath(from, to, fromRadius, toRadius);
   }
 
   const horizFirst = adx >= ady;
-  let r = Math.min(adx, ady) * 0.48;
-  r = Math.min(Math.max(r, 2.2), 13.8, adx - 0.4, ady - 0.4);
-  if (r < 1.85) {
+  let r = Math.min(adx, ady) * 0.54;
+  r = Math.min(Math.max(r, 2.55), 14.5, adx - 0.32, ady - 0.32);
+  if (r < 1.62) {
     return buildStraightFlowPath(from, to, fromRadius, toRadius);
   }
 
@@ -1458,112 +1458,6 @@ function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const start = offsetPoint(from, to, fromRadius);
   const end = offsetPoint(to, from, toRadius);
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
-}
-
-/** Midpoint of the grid–home rail; solar/battery/grid branches meet here so trunks overlap visually. */
-function getDiamondFlowHub(nodes) {
-  const grid = nodes?.grid;
-  const home = nodes?.home;
-  if (!grid?.entityId || !home?.entityId || !grid.position || !home.position) {
-    return null;
-  }
-  return {
-    x: (grid.position.x + home.position.x) / 2,
-    y: (grid.position.y + home.position.y) / 2,
-  };
-}
-
-function axisManhattanSegments(from, to) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  if (Math.hypot(dx, dy) < 0.06) {
-    return [];
-  }
-  if (Math.abs(dx) < 0.06) {
-    return [`L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`];
-  }
-  if (Math.abs(dy) < 0.06) {
-    return [`L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`];
-  }
-  const horizFirst = Math.abs(dx) >= Math.abs(dy);
-  if (horizFirst) {
-    return [
-      `L ${to.x.toFixed(2)} ${from.y.toFixed(2)}`,
-      `L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`,
-    ];
-  }
-  return [
-    `L ${from.x.toFixed(2)} ${to.y.toFixed(2)}`,
-    `L ${to.x.toFixed(2)} ${to.y.toFixed(2)}`,
-  ];
-}
-
-/**
- * Axis-aligned path A → hub → B with a **quarter-circle fillet** at the hub when the two legs meet at ~90°
- * (similar to Home Assistant’s energy flow routing; avoids sharp “T” corners).
- */
-function buildThroughHubConnector(posA, posB, hub, rA, rB) {
-  const pA = offsetPoint(posA, hub, rA);
-  const pB = offsetPoint(posB, hub, rB);
-  const hix = hub.x;
-  const hiy = hub.y;
-  const vA = { x: hix - pA.x, y: hiy - pA.y };
-  const vB = { x: pB.x - hix, y: pB.y - hiy };
-  const lenA = Math.hypot(vA.x, vA.y);
-  const lenB = Math.hypot(vB.x, vB.y);
-  if (lenA < 0.05) {
-    return `M ${pB.x.toFixed(3)} ${pB.y.toFixed(3)}`;
-  }
-  if (lenB < 0.05) {
-    return `M ${pA.x.toFixed(3)} ${pA.y.toFixed(3)} L ${hix.toFixed(3)} ${hiy.toFixed(3)}`;
-  }
-  const inUx = vA.x / lenA;
-  const inUy = vA.y / lenA;
-  const outUx = vB.x / lenB;
-  const outUy = vB.y / lenB;
-  const dot = inUx * outUx + inUy * outUy;
-  let fr = Math.min(3.65, lenA * 0.4, lenB * 0.4, lenA - 0.14, lenB - 0.14, 5.35);
-
-  if (fr < 1.08 || Math.abs(dot) > 0.22) {
-    return [`M ${pA.x.toFixed(3)} ${pA.y.toFixed(3)}`, ...axisManhattanSegments(pA, hub), ...axisManhattanSegments(hub, pB)].join(" ");
-  }
-
-  const cut1 = { x: hix - inUx * fr, y: hiy - inUy * fr };
-  const cut2 = { x: hix + outUx * fr, y: hiy + outUy * fr };
-
-  const parts = [`M ${pA.x.toFixed(3)} ${pA.y.toFixed(3)}`];
-  if (Math.hypot(cut1.x - pA.x, cut1.y - pA.y) > 0.05) {
-    parts.push(`L ${cut1.x.toFixed(3)} ${cut1.y.toFixed(3)}`);
-  }
-  if (Math.abs(dot) < 0.12 && Math.hypot(cut2.x - cut1.x, cut2.y - cut1.y) > 0.1) {
-    const cross = inUx * outUy - inUy * outUx;
-    const sweep = cross > 0 ? 1 : 0;
-    parts.push(`A ${fr.toFixed(3)} ${fr.toFixed(3)} 0 0 ${sweep} ${cut2.x.toFixed(3)} ${cut2.y.toFixed(3)}`);
-  } else {
-    parts.push(`L ${hix.toFixed(3)} ${hiy.toFixed(3)}`);
-    if (Math.hypot(cut2.x - hix, cut2.y - hiy) > 0.05) {
-      parts.push(`L ${cut2.x.toFixed(3)} ${cut2.y.toFixed(3)}`);
-    }
-  }
-  if (Math.hypot(pB.x - cut2.x, pB.y - cut2.y) > 0.05) {
-    parts.push(`L ${pB.x.toFixed(3)} ${pB.y.toFixed(3)}`);
-  }
-  return parts.join(" ");
-}
-
-const HUB_ROUTED_LINE_IDS = new Set(["solar", "solar-grid", "battery", "battery-grid", "grid-battery"]);
-
-function buildHubRoutedLinePath(line, hub) {
-  if (!hub || !HUB_ROUTED_LINE_IDS.has(line.id)) {
-    return null;
-  }
-  return buildThroughHubConnector(
-    line.fromNode.position,
-    line.toNode.position,
-    hub,
-    line.fromRadius,
-    line.toRadius,
-  );
 }
 
 class NodaliaPowerFlowCard extends HTMLElement {
@@ -2451,7 +2345,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       pushLine(node.id, home, node, node.value, node.unit, node.color, true);
     });
 
-    /** Solar often shares the vertical with home; paint it last so it is not covered by other strokes at the hub. */
+    /** Solar often shares the vertical with home; paint it last so it is not covered where paths cross. */
     const lineStackOrder = (id) => {
       if (id === "solar") {
         return 50;
@@ -2483,13 +2377,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
       1,
     );
 
-    const hub = getDiamondFlowHub(nodes);
-
     return lineCandidates.map(line => {
-      const hubPath = hub ? buildHubRoutedLinePath(line, hub) : null;
       const path = line.straight
         ? buildStraightFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius)
-        : hubPath || buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius);
+        : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius);
       return {
         ...line,
         path,
@@ -2931,7 +2822,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         return 162;
       }
       if (stripOnlyGridHome) {
-        return layoutPreset === "compact" ? 154 : 168;
+        return layoutPreset === "compact" ? 132 : 146;
       }
       if (upperBandHubOnly) {
         return layoutPreset === "compact" ? 188 : 202;
@@ -2946,7 +2837,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         return 148;
       }
       if (stripOnlyGridHome) {
-        return layoutPreset === "compact" ? 140 : 146;
+        return layoutPreset === "compact" ? 122 : 128;
       }
       if (upperBandHubOnly) {
         return layoutPreset === "compact" ? 152 : 160;
@@ -2968,7 +2859,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         return 144;
       }
       if (stripOnlyGridHome) {
-        return layoutPreset === "compact" ? 146 : 156;
+        return layoutPreset === "compact" ? 126 : 136;
       }
       if (upperBandHubOnly) {
         return layoutPreset === "compact" ? 172 : 184;
@@ -2984,7 +2875,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         layoutPreset === "simple"
           ? 132
           : stripOnlyGridHome
-            ? (layoutPreset === "compact" ? 134 : 140)
+            ? (layoutPreset === "compact" ? 118 : 124)
             : upperBandHubOnly
               ? (layoutPreset === "compact" ? 146 : 152)
               : minimalFlowDiagram
@@ -2995,7 +2886,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     );
     const surfaceAspectCss = upperBandHubOnly
       ? (layoutPreset === "compact" ? "1 / 0.64" : "1 / 0.58")
-      : "1 / 1.04";
+      : stripOnlyGridHome
+        ? (layoutPreset === "compact" ? "1 / 0.40" : "1 / 0.36")
+        : "1 / 1.04";
     const flowDotViewAspect = (() => {
       const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
       if (!m) {

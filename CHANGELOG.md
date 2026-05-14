@@ -30,6 +30,22 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.24] - 2026-05-12
+
+Twenty-fourth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.24`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** drop **shared grid–home hub** routing so each flow uses its own **`buildFlowPath`** again (clearer **90° arcs**, lines no longer merged on the trunk).
+- **`nodalia-power-flow-card.js`:** slightly **stronger arc** geometry in **`buildFlowPath`** (closer to alpha.21 visibility).
+- **`nodalia-power-flow-card.js`:** **shorter strip** when only **grid + home** (lower min-heights / mobile floors and a **flatter `aspect-ratio`** for that layout).
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.24`**.
+
+---
+
 ## [1.1.0-alpha.23] - 2026-05-12
 
 Twenty-third **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.23`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
