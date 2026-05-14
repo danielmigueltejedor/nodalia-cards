@@ -22,6 +22,21 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.20] - 2026-05-14
+
+Twentieth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.20`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** capture scroll state from the first pointer/touch event on body and icon taps, then restore it once after the tap and after re-render, preventing bottom-of-dashboard scroll jumps without locking normal scrolling.
+- **`nodalia-cover-card.js`:** hide the native range input rendering on the custom slider so mobile Safari no longer shows a transparent square thumb edge over the styled track.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.20`**.
+
+---
+
 ## [1.1.0-alpha.19] - 2026-05-14
 
 Nineteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.19`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

@@ -603,18 +603,18 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   const source = read("nodalia-cover-card.js");
   assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
   assert.match(source, /_isCardTapAction\(action\) \{\s*return action === "body" \|\| action === "icon";\s*\}/);
-  assert.match(source, /if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*return;\s*\}/);
-  assert.match(source, /if \(actionControl\) \{\s*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) return;\s*this\._rememberInteractionScroll\(\);\s*this\._preventNonTouchFocus\(event\);\s*\}/);
+  assert.match(source, /const coverAction = button\.dataset\.coverAction;\s*this\._rememberInteractionScroll\(\);[\s\S]*if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*this\._scheduleInteractionScrollRestore\(\);[\s\S]*return;\s*\}/);
+  assert.match(source, /if \(actionControl\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._scheduleInteractionScrollRestore\(\);[\s\S]*\} else \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*\}/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
   assert.match(source, /String\(event\.pointerType \|\| ""\)\.toLowerCase\(\) === "touch"/);
-  assert.match(source, /_onTouchStart\(event\)[\s\S]*if \(actionControl\) \{\s*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) return;\s*this\._rememberInteractionScroll\(\);\s*\}/);
-  assert.doesNotMatch(source, /_scheduleInteractionScrollRestore/);
-  assert.doesNotMatch(source, /requestAnimationFrame\(this\._restoreInteractionScroll/);
+  assert.match(source, /_onTouchStart\(event\)[\s\S]*if \(actionControl\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._scheduleInteractionScrollRestore\(\);[\s\S]*\}/);
+  assert.match(source, /_scheduleInteractionScrollRestore\(\) \{[\s\S]*window\.requestAnimationFrame/);
   assert.doesNotMatch(source, /_restoreInteractionScroll\(\)/);
   assert.match(source, /_rememberInteractionScroll\(\)/);
-  assert.match(source, /_restoreInteractionScrollSnapshot\(\)/);
+  assert.match(source, /_restoreInteractionScrollSnapshot\(options = \{\}\)/);
+  assert.match(source, /this\._restoreInteractionScrollSnapshot\(\{ preserve: true \}\)/);
   assert.match(source, /window\.addEventListener\("wheel", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
   assert.match(source, /window\.addEventListener\("touchmove", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
   assert.match(source, /_cancelInteractionScrollRestore\(\)/);
@@ -624,8 +624,8 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
   assert.match(source, /tabindex="-1"/);
   assert.doesNotMatch(source, /data-cover-action="body"[\s\S]{0,80}tabindex="-1"/);
-  assert.doesNotMatch(source, /data-cover-action="icon"[^>]*tabindex="-1"/);
-  assert.match(source, /if \(coverAction === "body" \|\| coverAction === "icon"\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*this\._runAction\(coverAction\);/);
+  assert.match(source, /data-cover-action="icon"[^>]*tabindex="-1"/);
+  assert.match(source, /opacity: 0;[\s\S]*outline: none;[\s\S]*touch-action: pan-y;/);
 });
 
 test("cover card renders position slider above open stop close controls", () => {

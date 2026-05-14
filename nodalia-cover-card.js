@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.19";
+const CARD_VERSION = "1.1.0-alpha.20";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1186,6 +1186,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._interactionScrollSnapshot = [];
     this._interactionScrollCancelTimer = 0;
     this._interactionScrollCancelWatchAttached = false;
+    this._interactionScrollRestoreFrame = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -1514,19 +1515,19 @@ class NodaliaCoverCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     const coverAction = button.dataset.coverAction;
+    this._rememberInteractionScroll();
     if (this._isCardTapAction(coverAction)) {
       if (coverAction === "body" || coverAction === "icon") {
         if (this._suppressNextCoverTap) {
           this._suppressNextCoverTap = false;
           return;
         }
-        this._rememberInteractionScroll();
         this._triggerHaptic();
         this._runAction(coverAction);
+        this._scheduleInteractionScrollRestore();
       }
       return;
     }
-    this._rememberInteractionScroll();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
     if (button instanceof HTMLElement && typeof button.blur === "function") {
@@ -1545,6 +1546,7 @@ class NodaliaCoverCard extends HTMLElement {
       default:
         break;
     }
+    this._scheduleInteractionScrollRestore();
   }
 
   _isCardTapAction(action) {
@@ -1556,11 +1558,11 @@ class NodaliaCoverCard extends HTMLElement {
       node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
     );
     if (!control) return;
-    if (this._isCardTapAction(control.dataset?.coverAction)) return;
     this._rememberInteractionScroll();
     if (typeof control.blur === "function") {
       control.blur();
     }
+    this._scheduleInteractionScrollRestore();
   }
 
   _preventNonTouchFocus(event) {
@@ -1580,9 +1582,12 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) return;
       this._rememberInteractionScroll();
-      this._preventNonTouchFocus(event);
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
+        this._scheduleInteractionScrollRestore();
+      } else {
+        this._preventNonTouchFocus(event);
+      }
     }
   }
 
@@ -1597,9 +1602,11 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) return;
       this._rememberInteractionScroll();
       this._preventNonTouchFocus(event);
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
+        this._scheduleInteractionScrollRestore();
+      }
     }
   }
 
@@ -1614,8 +1621,10 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) return;
       this._rememberInteractionScroll();
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
+        this._scheduleInteractionScrollRestore();
+      }
     }
   }
 
@@ -1810,10 +1819,12 @@ class NodaliaCoverCard extends HTMLElement {
     return snapshot;
   }
 
-  _restoreInteractionScrollSnapshot() {
+  _restoreInteractionScrollSnapshot(options = {}) {
     const snapshot = Array.isArray(this._interactionScrollSnapshot) ? this._interactionScrollSnapshot : [];
     if (!snapshot.length) return;
-    this._stopInteractionScrollCancelWatch();
+    if (options.preserve !== true) {
+      this._stopInteractionScrollCancelWatch();
+    }
     snapshot.forEach(item => {
       if (item.kind === "window" && item.win) {
         try {
@@ -1826,7 +1837,20 @@ class NodaliaCoverCard extends HTMLElement {
         item.element.scrollTop = item.top;
       }
     });
-    this._interactionScrollSnapshot = [];
+    if (options.preserve !== true) {
+      this._interactionScrollSnapshot = [];
+    }
+  }
+
+  _scheduleInteractionScrollRestore() {
+    if (!this._interactionScrollSnapshot.length || typeof window === "undefined") return;
+    if (this._interactionScrollRestoreFrame) {
+      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
+    }
+    this._interactionScrollRestoreFrame = window.requestAnimationFrame(() => {
+      this._interactionScrollRestoreFrame = 0;
+      this._restoreInteractionScrollSnapshot({ preserve: true });
+    });
   }
 
   _rememberInteractionScroll() {
@@ -1862,6 +1886,10 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _cancelInteractionScrollRestore() {
+    if (typeof window !== "undefined" && this._interactionScrollRestoreFrame) {
+      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
+      this._interactionScrollRestoreFrame = 0;
+    }
     this._interactionScrollSnapshot = [];
     this._stopInteractionScrollCancelWatch();
   }
@@ -2156,12 +2184,15 @@ class NodaliaCoverCard extends HTMLElement {
         }
         .fan-card__slider {
           -webkit-appearance: none;
+          -webkit-tap-highlight-color: transparent;
           appearance: none;
           background: transparent;
           border: 0;
           cursor: pointer;
           height: var(--fan-card-slider-input-height);
           margin: 0;
+          opacity: 0;
+          outline: none;
           padding: 0;
           position: relative;
           touch-action: pan-y;
@@ -2214,7 +2245,7 @@ class NodaliaCoverCard extends HTMLElement {
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">
-            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
+            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover" tabindex="-1">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
