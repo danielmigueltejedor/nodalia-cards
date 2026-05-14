@@ -9,12 +9,17 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 test("published package files and bundle manifest stay coherent", () => {
   const pkg = JSON.parse(read("package.json"));
+  const hacs = JSON.parse(read("hacs.json"));
   const manifest = read("nodalia-cards.manifest.js");
+  const expectedHacsFile = `nodalia-cards-${pkg.version}.js`;
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
   assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
+  assert.ok(manifest.includes(`"hacsFile": "${expectedHacsFile}"`));
   assert.doesNotMatch(manifest, /contentSha256_12": ""/);
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
+  assert.equal(hacs.filename, expectedHacsFile);
+  assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
 
   pkg.files.forEach(file => {
     assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
@@ -431,10 +436,12 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /humidity_entities/);
   assert.match(source, /battery_entities/);
   assert.match(source, /humidifier_fill_entities/);
+  assert.match(source, /humidifier_full_entities/);
   assert.match(source, /ink_entities/);
   assert.match(source, /smart_notifications/);
   assert.match(source, /battery_low/);
   assert.match(source, /humidifier_fill_low/);
+  assert.match(source, /humidifier_fill_full/);
   assert.match(source, /ink_low/);
   assert.match(source, /dismissed_entity/);
   assert.match(source, /mobile_notifications/);
@@ -572,6 +579,8 @@ test("HACS bundle entrypoint is self-contained and still emits diagnostics", () 
   const source = read("scripts/build-bundle.mjs");
   assert.match(source, /nodalia-cards\.bundle\.js/);
   assert.match(source, /nodalia-cards\.manifest\.js/);
+  assert.match(source, /versionedLoaderFile = `nodalia-cards-\$\{pkg\.version\}\.js`/);
+  assert.match(source, /fs\.writeFileSync\(versionedLoaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{versionedInlineLoaderFooter\}\\n`\)/);
   assert.match(source, /fs\.writeFileSync\(loaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{inlineLoaderFooter\}\\n`\)/);
   assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);

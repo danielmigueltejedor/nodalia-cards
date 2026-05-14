@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.1.0-alpha.9";
+const CARD_VERSION = "1.1.0-alpha.10";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -787,6 +787,7 @@ const DEFAULT_CONFIG = {
   humidity_entities: [],
   battery_entities: [],
   humidifier_fill_entities: [],
+  humidifier_full_entities: [],
   ink_entities: [],
   custom_notifications: [],
   smart_entity_overrides: [],
@@ -800,6 +801,7 @@ const DEFAULT_CONFIG = {
     media_absence_minutes: 10,
     battery_low: 20,
     humidifier_fill_low: 20,
+    humidifier_fill_full: 90,
     ink_low: 15,
   },
   smart_recommendations: true,
@@ -812,6 +814,7 @@ const DEFAULT_CONFIG = {
     media_left_on: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
+    humidifier_fill_full: { title: "", message: "", tint_color: "", url: "", action_label: "" },
     ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "" },
   },
   mobile_notifications: {
@@ -1082,6 +1085,7 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
   config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
   config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
+  config.humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
   config.ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
   config.custom_notifications = normalizeCustomNotifications(config.custom_notifications, {
     keepDrafts: options.keepDrafts === true,
@@ -1102,6 +1106,7 @@ function normalizeConfig(rawConfig = {}, options = {}) {
     media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(config.thresholds?.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
     battery_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
     humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
+    humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
     ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low))),
   };
   config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
@@ -2704,6 +2709,18 @@ class NodaliaNotificationsCard extends HTMLElement {
         urlLabel: this._text("actions.open", "Open"),
       },
       {
+        entities: this._config.humidifier_full_entities,
+        icon: "mdi:cup-water",
+        kind: "humidifier_fill_full",
+        titleKey: "titles.humidifierFillFull",
+        titleFallback: "Tank full",
+        messageKey: "messages.highLevel",
+        messageFallback: "{source} is at {value}.",
+        threshold: this._config.thresholds.humidifier_fill_full,
+        mode: "above",
+        urlLabel: this._text("actions.open", "Open"),
+      },
+      {
         entities: this._config.ink_entities,
         icon: "mdi:printer-alert",
         kind: "ink_low",
@@ -2719,7 +2736,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       group.entities.forEach(entityId => {
         const state = this._hass.states?.[entityId];
         const value = numericState(state);
-        if (!state || value === null || value > group.threshold) {
+        const matchesThreshold = group.mode === "above"
+          ? value >= group.threshold
+          : value <= group.threshold;
+        if (!state || value === null || !matchesThreshold) {
           return;
         }
         const sourceName = friendlyName(this._hass, entityId);
@@ -2957,6 +2977,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.humidity_entities,
       ...this._config.battery_entities,
       ...this._config.humidifier_fill_entities,
+      ...this._config.humidifier_full_entities,
       ...this._config.ink_entities,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
     ];
@@ -4087,6 +4108,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       case "humidity_entities":
       case "battery_entities":
       case "humidifier_fill_entities":
+      case "humidifier_full_entities":
       case "ink_entities":
         return ["sensor"];
       case "mobile_notifications.entities":
@@ -4561,6 +4583,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       ["media_left_on", "ed.notifications.smart_media_left_on", "ed.notifications.smart_ph_media_title", "ed.notifications.smart_ph_media_message"],
       ["battery_low", "ed.notifications.smart_battery_low", "ed.notifications.smart_ph_battery_title", "ed.notifications.smart_ph_battery_message"],
       ["humidifier_fill_low", "ed.notifications.smart_tank_low", "ed.notifications.smart_ph_tank_title", "ed.notifications.smart_ph_tank_message"],
+      ["humidifier_fill_full", "ed.notifications.smart_tank_full", "ed.notifications.smart_ph_tank_full_title", "ed.notifications.smart_ph_tank_full_message"],
       ["ink_low", "ed.notifications.smart_ink_low", "ed.notifications.smart_ph_ink_title", "ed.notifications.smart_ph_ink_message"],
     ];
     return rows.map(([key, label, titlePlaceholder, messagePlaceholder]) => {
@@ -4994,6 +5017,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderEntityListField("ed.notifications.entity_humidity", "humidity_entities", config.humidity_entities, { placeholder: "sensor.humedad" })}
                   ${this._renderEntityListField("ed.notifications.entity_battery", "battery_entities", config.battery_entities, { placeholder: "sensor.pila_mando" })}
                   ${this._renderEntityListField("ed.notifications.entity_humidifier_tank", "humidifier_fill_entities", config.humidifier_fill_entities, { placeholder: "sensor.humidificador_deposito" })}
+                  ${this._renderEntityListField("ed.notifications.entity_tank_full", "humidifier_full_entities", config.humidifier_full_entities, { placeholder: "sensor.deposito_sucio" })}
                   ${this._renderEntityListField("ed.notifications.entity_ink", "ink_entities", config.ink_entities, { placeholder: "sensor.impresora_tinta_negra" })}
                 </div>
               `
@@ -5015,6 +5039,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             ${this._renderTextField("ed.notifications.thresh_media_absence_min", "thresholds.media_absence_minutes", config.thresholds.media_absence_minutes, { type: "number", valueType: "number" })}
             ${this._renderTextField("ed.notifications.thresh_battery_low", "thresholds.battery_low", config.thresholds.battery_low, { type: "number", valueType: "number" })}
             ${this._renderTextField("ed.notifications.thresh_tank_low", "thresholds.humidifier_fill_low", config.thresholds.humidifier_fill_low, { type: "number", valueType: "number" })}
+            ${this._renderTextField("ed.notifications.thresh_tank_full", "thresholds.humidifier_fill_full", config.thresholds.humidifier_fill_full, { type: "number", valueType: "number" })}
             ${this._renderTextField("ed.notifications.thresh_ink_low", "thresholds.ink_low", config.thresholds.ink_low, { type: "number", valueType: "number" })}
           </div>
         </section>

@@ -451,6 +451,7 @@ test("power flow derives grid import, export, and battery charge paths from home
 
 test("cover editor uses domain-filtered pickers and fan-style editor controls", () => {
   const source = read("nodalia-cover-card.js");
+  const editorLabels = JSON.parse(read("i18n/editor/en.json"));
   assert.match(source, /control\.includeDomains = \["cover"\]/);
   assert.match(source, /control\.entityFilter = stateObj => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
   assert.match(source, /class="editor-control-host"[\s\S]*data-mounted-control="cover-entity"/);
@@ -458,6 +459,9 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
   assert.match(source, /editor-section__actions/);
   assert.match(source, /ed\.vacuum\.haptic_style/);
   assert.match(source, /styles\.control\.accent_color/);
+  assert.equal(editorLabels["ed.fan.style_slider_color"], "Slider color");
+  assert.equal(editorLabels["ed.fan.style_slider_height"], "Slider thickness");
+  assert.equal(editorLabels["ed.fan.style_slider_wrap_height"], "Slider container height");
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
@@ -480,6 +484,15 @@ test("cover card renders position slider above open stop close controls", () => 
   assert.ok(positionSliderIndex > controlsMarkupStart);
   assert.ok(controlsRowIndex > controlsMarkupStart);
   assert.ok(positionSliderIndex < controlsRowIndex);
+});
+
+test("entity card supports entity pictures in the main icon bubble", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /show_entity_picture: false/);
+  assert.match(source, /entity_picture: ""/);
+  assert.match(source, /_getEntityPicture\(state\)/);
+  assert.match(source, /<img class="entity-card__picture"/);
+  assert.match(source, /ed\.entity\.show_entity_picture/);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

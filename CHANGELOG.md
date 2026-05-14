@@ -22,12 +22,29 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.10] - 2026-05-14
+
+Tenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.10`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js` editor i18n:** add the missing slider style labels so the visual editor no longer shows raw keys such as **`ed.fan.style_slider_color`**.
+- **HACS resource loading:** publish a versioned, self-contained HACS entrypoint (**`nodalia-cards-1.1.0-alpha.10.js`**) so each alpha/stable update uses a fresh resource URL while **`nodalia-cards.js`** remains available as the direct fallback.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.10`**.
+
+---
+
 ## [1.1.0-alpha.9] - 2026-05-14
 
 Ninth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.9`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
 
 ### Changed
 
+- **`nodalia-entity-card.js`:** add `show_entity_picture` and optional `entity_picture` support so the main bubble can render an image/entity picture instead of an icon.
+- **`nodalia-notifications-card.js`:** add full-tank smart notifications with a separate entity list and `thresholds.humidifier_fill_full`, allowing low clean-water tank alerts and full dirty-water/dehumidifier tank alerts to coexist.
 - **`README.md`:** add the Buy Me a Coffee support link and update prerelease references to **`1.1.0-alpha.9`**.
 - **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.9`**.
 

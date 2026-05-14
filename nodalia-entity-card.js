@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.0-alpha.9";
+const CARD_VERSION = "1.1.0-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -769,6 +769,8 @@ const DEFAULT_CONFIG = {
   icon_active: "",
   icon_inactive: "",
   use_entity_icon: false,
+  entity_picture: "",
+  show_entity_picture: false,
   number_decimals: 2,
   tap_action: "auto",
   tap_service: "",
@@ -1354,6 +1356,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
 
   return config;
 }
@@ -1506,6 +1510,8 @@ class NodaliaEntityCard extends HTMLElement {
       `xa:${configuredSecondaryAttribute}`,
       `xv:${configuredSecondaryAttribute ? getValueSignature(attrs[configuredSecondaryAttribute]) : ""}`,
       `uei:${this._config?.use_entity_icon ? 1 : 0}`,
+      `sep:${this._config?.show_entity_picture ? 1 : 0}`,
+      `ep:${String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "")}`,
       `ci:${String(this._config?.icon || "")}`,
       `ia:${String(this._config?.icon_active || "")}`,
       `ii:${String(this._config?.icon_inactive || "")}`,
@@ -1696,6 +1702,18 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _effectiveTapAction(zone) {
@@ -2152,6 +2170,7 @@ class NodaliaEntityCard extends HTMLElement {
     const effectiveContentMinHeight = singleRowLayout ? `${Math.max(effectiveIconSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px` : "0px";
     const title = this._getTitle(state);
     const icon = this._getIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const isCompactLayout = this._isCompactLayout;
     const accentColor = this._getAccentColor(state);
     const showUnavailableBadge = isUnavailableState(state);
@@ -2340,6 +2359,15 @@ class NodaliaEntityCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${effectiveIconSize} * 0.44);
+        }
+
+        .entity-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          position: absolute;
+          width: 100%;
         }
 
         .entity-card__unavailable-badge {
@@ -2626,7 +2654,9 @@ class NodaliaEntityCard extends HTMLElement {
               ${canRunIconTap ? 'data-entity-action="icon"' : ""}
               aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? "Accion principal" : title)}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="entity-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="entity-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
@@ -3677,6 +3707,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true)}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/ikea_gu10_bulb.png",
+              fullWidth: true,
+            })}
             ${this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
               placeholder: "mdi:door-open",
               fullWidth: true,
