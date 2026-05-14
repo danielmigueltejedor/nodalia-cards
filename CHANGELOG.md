@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Maintenance work continues toward the next stable **`1.0.x`** cut.
+Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ### Planned / In progress
 
@@ -22,6 +22,17 @@ Maintenance work continues toward the next stable **`1.0.x`** cut.
 
 ---
 
+## [1.1.0-alpha.9] - 2026-05-14
+
+Ninth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.9`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`README.md`:** add the Buy Me a Coffee support link and update prerelease references to **`1.1.0-alpha.9`**.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.9`**.
+
+---
+
 ## [1.1.0-alpha.8] - 2026-05-14
 
 Eighth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.8`** on **`package.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
@@ -29,9 +40,12 @@ Eighth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.8`** on **`packag
 ### Fixed
 
 - **`nodalia-cover-card.js`:** pointer/touch interactions on cover controls no longer let buttons take browser focus, preventing dashboard scroll jumps when the card sits near the bottom of a view and re-renders after a service call.
+- **`nodalia-cover-card.js`:** card-wide taps and position/tilt slider drags now suppress native focus/scroll behavior across pointer, mouse, and touch input so interacting with the card does not jump the dashboard scroll position.
 
 ### Changed
 
+- **`nodalia-cover-card.js`:** position slider and open/stop/close controls swap rows, placing the position slider where the button row was and moving the buttons below it.
+- **`nodalia-power-flow-card.js`:** grid import/export chips now use semantic transmission-tower import/export icons instead of position-dependent arrows, and the battery node switches between charging, discharging, and full-charge icons when those states can be inferred.
 - **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.8`**.
 
 ---

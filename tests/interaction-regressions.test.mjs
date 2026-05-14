@@ -374,14 +374,14 @@ test("power flow derives grid import, export, and battery charge paths from home
   const PowerFlowCard = loadPowerFlowCardClass();
   assert.ok(PowerFlowCard, "power flow card custom element should register");
 
-  const buildCard = ({ home = 100, solar = 0, battery = 0 }) => {
+  const buildCard = ({ home = 100, solar = 0, battery = 0, batteryLevel = null }) => {
     const card = new PowerFlowCard();
     card._config = {
       entities: {
         home: { entity: "sensor.home", color: "#ffffff" },
         grid: { color: "#6da8ff", export_color: "#44d07b" },
         solar: { entity: "sensor.solar", color: "#f6b73c" },
-        battery: { entity: "sensor.battery", color: "#61c97a" },
+        battery: { entity: "sensor.battery", color: "#61c97a", secondary_info: { attribute: "battery_level" } },
         water: {},
         gas: {},
         individual: [],
@@ -395,7 +395,14 @@ test("power flow derives grid import, export, and battery charge paths from home
       states: {
         "sensor.home": { state: String(home), attributes: { unit_of_measurement: "W", friendly_name: "Home" } },
         "sensor.solar": { state: String(solar), attributes: { unit_of_measurement: "W", friendly_name: "Solar" } },
-        "sensor.battery": { state: String(battery), attributes: { unit_of_measurement: "W", friendly_name: "Battery" } },
+        "sensor.battery": {
+          state: String(battery),
+          attributes: {
+            unit_of_measurement: "W",
+            friendly_name: "Battery",
+            ...(batteryLevel === null ? {} : { battery_level: batteryLevel }),
+          },
+        },
       },
     };
     return card;
@@ -405,7 +412,7 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(gridImport.grid.entityId, "sensor.home");
   assert.equal(gridImport.grid.value, 100);
   assert.equal(gridImport._flowValues.gridHome, 100);
-  assert.equal(buildCard({ home: 100, solar: 0, battery: 0 })._getGridDirectionIcon(gridImport.grid), "mdi:arrow-left");
+  assert.equal(buildCard({ home: 100, solar: 0, battery: 0 })._getGridDirectionIcon(gridImport.grid), "mdi:transmission-tower-import");
 
   const solarCoversHome = buildCard({ home: 100, solar: 100, battery: 0 })._getNodes();
   assert.equal(solarCoversHome.grid.value, 0);
@@ -415,6 +422,7 @@ test("power flow derives grid import, export, and battery charge paths from home
   const batteryCoversHome = buildCard({ home: 100, solar: 0, battery: 100 })._getNodes();
   assert.equal(batteryCoversHome.grid.value, 0);
   assert.equal(batteryCoversHome._flowValues.batteryHome, 100);
+  assert.equal(batteryCoversHome.battery.icon, "mdi:battery-arrow-down");
 
   const solarChargesBattery = buildCard({ home: 100, solar: 200, battery: -100 });
   const solarChargeNodes = solarChargesBattery._getNodes();
@@ -429,13 +437,15 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.equal(gridChargeNodes.grid.value, 200);
   assert.equal(gridChargeNodes._flowValues.gridHome, 100);
   assert.equal(gridChargeNodes._flowValues.gridBattery, 100);
+  assert.equal(gridChargeNodes.battery.icon, "mdi:battery-charging");
   assert.ok(gridChargeLines.includes("grid-battery"));
 
-  const exportNodes = buildCard({ home: 100, solar: 200, battery: 0 })._getNodes();
+  const exportNodes = buildCard({ home: 100, solar: 200, battery: 0, batteryLevel: 100 })._getNodes();
   assert.equal(exportNodes.grid.value, -100);
   assert.equal(exportNodes.grid.isExporting, true);
   assert.equal(exportNodes.grid.secondary, "");
-  assert.equal(buildCard({ home: 100, solar: 200, battery: 0 })._getGridDirectionIcon(exportNodes.grid), "mdi:arrow-right");
+  assert.equal(buildCard({ home: 100, solar: 200, battery: 0 })._getGridDirectionIcon(exportNodes.grid), "mdi:transmission-tower-export");
+  assert.equal(exportNodes.battery.icon, "mdi:battery-check");
   assert.equal(exportNodes._flowValues.gridHome, -100);
 });
 
@@ -454,7 +464,22 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   const source = read("nodalia-cover-card.js");
   assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
   assert.match(source, /if \(actionControl\) \{\s*event\.preventDefault\(\);\s*\}/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
+  assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
+  assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
+});
+
+test("cover card renders position slider above open stop close controls", () => {
+  const source = read("nodalia-cover-card.js");
+  const controlsMarkupStart = source.indexOf("const controlsMarkup = `");
+  const positionSliderIndex = source.indexOf('this._renderSlider("position"', controlsMarkupStart);
+  const controlsRowIndex = source.indexOf('<div class="fan-card__controls">', controlsMarkupStart);
+  assert.ok(controlsMarkupStart > 0);
+  assert.ok(positionSliderIndex > controlsMarkupStart);
+  assert.ok(controlsRowIndex > controlsMarkupStart);
+  assert.ok(positionSliderIndex < controlsRowIndex);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

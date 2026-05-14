@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.8";
+const CARD_VERSION = "1.1.0-alpha.9";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1085,6 +1085,29 @@ function isUnavailableState(state) {
   return key === "unavailable" || key === "unknown";
 }
 
+function getSliderDragGeometry(slider) {
+  const rect = slider.getBoundingClientRect();
+  return {
+    left: rect.left,
+    width: rect.width,
+    min: Number(slider.min || 0),
+    max: Number(slider.max || 100),
+    step: slider.step === "any" ? 0 : Number(slider.step || 1),
+  };
+}
+
+function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+    return Number(currentValue || 0);
+  }
+  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
+  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
+  if (Number.isFinite(geometry.step) && geometry.step > 0) {
+    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
+  }
+  return clamp(nextValue, geometry.min, geometry.max);
+}
+
 function parseServiceData(value) {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -1157,15 +1180,27 @@ class NodaliaCoverCard extends HTMLElement {
     this._animationCleanupTimer = 0;
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
+    this._dragWindowListenersAttached = false;
+    this._pendingRenderAfterDrag = false;
     this._suppressNextCoverTap = false;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
     this._onPointerDown = this._onPointerDown.bind(this);
+    this._onMouseDown = this._onMouseDown.bind(this);
+    this._onTouchStart = this._onTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
     this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
+    this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -1200,6 +1235,7 @@ class NodaliaCoverCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
+    this._detachWindowDragListeners();
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -1215,6 +1251,11 @@ class NodaliaCoverCard extends HTMLElement {
   set hass(hass) {
     const signature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (this._activeSliderDrag) {
+      this._lastRenderSignature = signature;
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
     if (this.shadowRoot?.innerHTML && signature === this._lastRenderSignature) {
       return;
     }
@@ -1496,7 +1537,9 @@ class NodaliaCoverCard extends HTMLElement {
     const path = event.composedPath();
     const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
     if (slider) {
-      this._activeSliderDrag = { slider };
+      if (!this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
+        this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+      }
       return;
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
@@ -1505,10 +1548,158 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
+  _onMouseDown(event) {
+    const path = event.composedPath();
+    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (slider) {
+      if (!this._activeSliderDrag && event.button === 0) {
+        this._startSliderDrag(slider, event.clientX, event);
+      }
+      return;
+    }
+    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (actionControl) {
+      event.preventDefault();
+    }
+  }
+
+  _onTouchStart(event) {
+    const path = event.composedPath();
+    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    if (slider) {
+      if (!this._activeSliderDrag && event.touches?.length) {
+        this._startSliderDrag(slider, event.touches[0].clientX, event);
+      }
+      return;
+    }
+    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (actionControl) {
+      event.preventDefault();
+    }
+  }
+
+  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+    if (!slider) return;
+    this._activeSliderDrag = {
+      pointerId,
+      slider,
+      geometry: getSliderDragGeometry(slider),
+    };
+    this._attachWindowDragListeners();
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _queueSliderDragUpdate(slider, clientX) {
+    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
+    slider.value = String(nextValue);
+    this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _commitSliderDrag(clientX, event = null, pointerId = null) {
+    const drag = this._activeSliderDrag;
+    if (!drag || (pointerId !== null && drag.pointerId !== pointerId)) return;
+    if (event) {
+      event.preventDefault();
+    }
+    const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
+    drag.slider.value = String(nextValue);
+    this._skipNextSliderChange = drag.slider;
+    this._applySliderValue(drag.slider, nextValue, { commit: true });
+    if (typeof drag.slider.blur === "function") {
+      drag.slider.blur();
+    }
+    this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    this._queueSliderDragUpdate(drag.slider, event.clientX);
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    this._commitSliderDrag(event.clientX, event, event.pointerId);
+  }
+
+  _onWindowMouseMove(event) {
+    if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) return;
+    event.preventDefault();
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
+  }
+
+  _onWindowMouseUp(event) {
+    if (!this._activeSliderDrag) return;
+    this._commitSliderDrag(event.clientX, event);
+  }
+
+  _onWindowTouchMove(event) {
+    if (!this._activeSliderDrag || !event.touches?.length) return;
+    event.preventDefault();
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+  }
+
+  _onWindowTouchEnd(event) {
+    if (!this._activeSliderDrag) return;
+    const clientX = event.changedTouches?.[0]?.clientX;
+    if (!Number.isFinite(clientX)) {
+      this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
+      return;
+    }
+    this._commitSliderDrag(clientX, event);
+  }
+
+  _attachWindowDragListeners() {
+    if (this._dragWindowListenersAttached) return;
+    this._dragWindowListenersAttached = true;
+    window.addEventListener("pointermove", this._onWindowPointerMove);
+    window.addEventListener("pointerup", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+  }
+
+  _detachWindowDragListeners() {
+    if (!this._dragWindowListenersAttached) return;
+    this._dragWindowListenersAttached = false;
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("touchmove", this._onWindowTouchMove);
+    window.removeEventListener("touchend", this._onWindowTouchEnd);
+    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+  }
+
   _onShadowInput(event) {
     const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
     if (!slider) return;
     event.stopPropagation();
+    if (this._activeSliderDrag?.slider === slider) {
+      return;
+    }
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
@@ -1611,12 +1802,12 @@ class NodaliaCoverCard extends HTMLElement {
     if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip">${Math.round(position)}%</span>`);
     if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">Tilt ${Math.round(tilt)}%</span>`);
     const controlsMarkup = `
+      ${supportsPosition ? this._renderSlider("position", "Position", position) : ""}
       <div class="fan-card__controls">
         <button type="button" class="fan-card__control" data-cover-action="open" aria-label="Open"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
         ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="Stop"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
         <button type="button" class="fan-card__control" data-cover-action="close" aria-label="Close"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
       </div>
-      ${supportsPosition ? this._renderSlider("position", "Position", position) : ""}
       ${supportsTilt ? this._renderSlider("tilt", "Tilt", tilt) : ""}
     `;
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;

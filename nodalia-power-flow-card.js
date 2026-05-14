@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.8";
+const CARD_VERSION = "1.1.0-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1931,7 +1931,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const state = sourceResult.state;
     const unavailable = Boolean(nodeConfig.entity || nodeConfig.export_entity) && (!state || isUnavailableState(state));
     const label = nodeConfig.name || state?.attributes?.friendly_name || NODE_DEFAULTS[kind]?.name || kind;
-    const icon = nodeConfig.icon || state?.attributes?.icon || NODE_DEFAULTS[kind]?.icon || "mdi:flash";
+    let icon = nodeConfig.icon || state?.attributes?.icon || NODE_DEFAULTS[kind]?.icon || "mdi:flash";
     const color = gridExport
       ? (nodeConfig.export_color || NODE_DEFAULTS.grid.export_color)
       : (nodeConfig.color || NODE_DEFAULTS[kind]?.color || "#ffffff");
@@ -1939,7 +1939,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const display = formatDisplayValue(sourceResult.value, sourceResult.unit);
     const nodeKind = kind === "individual" ? "individual" : kind;
 
-    return {
+    const descriptor = {
       id: kind === "individual" ? `${kind}-${index}` : kind,
       kind: nodeKind,
       entityId: sourceResult.entityId || String(nodeConfig.entity || ""),
@@ -1957,6 +1957,73 @@ class NodaliaPowerFlowCard extends HTMLElement {
       position: getNodePositionForLayout(nodeKind, index, total, hasBottomUtilities, this._layoutPreset || "full", flowFlags),
       sourceConfig: nodeConfig,
     };
+
+    if (nodeKind === "battery") {
+      descriptor.icon = this._getBatteryStatusIcon(descriptor, icon);
+    }
+
+    return descriptor;
+  }
+
+  _getBatteryLevel(node) {
+    const values = [];
+    const addCandidate = value => {
+      const parsed = parseNumber(value);
+      if (parsed !== null) {
+        values.push(parsed);
+      }
+    };
+
+    addCandidate(node?.state?.attributes?.battery_level);
+    addCandidate(node?.state?.attributes?.battery);
+    addCandidate(node?.state?.attributes?.battery_remaining);
+    addCandidate(node?.state?.attributes?.battery_state_of_charge);
+    addCandidate(node?.state?.attributes?.state_of_charge);
+    addCandidate(node?.state?.attributes?.soc);
+
+    const info = node?.sourceConfig?.secondary_info;
+    if (isObject(info)) {
+      const infoEntity = String(info.entity || "").trim();
+      const infoState = infoEntity ? this._hass?.states?.[infoEntity] : node?.state;
+      if (infoState) {
+        const attribute = String(info.attribute || "").trim();
+        if (attribute) {
+          addCandidate(infoState.attributes?.[attribute]);
+        } else {
+          const unit = String(info.unit || infoState.attributes?.unit_of_measurement || infoState.attributes?.native_unit_of_measurement || "").trim();
+          if (unit === "%") {
+            addCandidate(infoState.state);
+          }
+        }
+      }
+    }
+
+    const level = values.find(value => Number.isFinite(value) && value >= 0 && value <= 100);
+    return Number.isFinite(level) ? clamp(level, 0, 100) : null;
+  }
+
+  _getBatteryStatusIcon(node, fallbackIcon = NODE_DEFAULTS.battery.icon) {
+    const configuredIcon = String(this._config?.entities?.battery?.icon ?? "").trim();
+    if (configuredIcon && configuredIcon !== NODE_DEFAULTS.battery.icon) {
+      return configuredIcon;
+    }
+
+    const value = Number(node?.value);
+    if (Number.isFinite(value)) {
+      if (value < -0.001) {
+        return "mdi:battery-charging";
+      }
+      if (value > 0.001) {
+        return "mdi:battery-arrow-down";
+      }
+    }
+
+    const level = this._getBatteryLevel(node);
+    if (level !== null && level >= 99.5) {
+      return "mdi:battery-check";
+    }
+
+    return fallbackIcon || NODE_DEFAULTS.battery.icon;
   }
 
   _getTrackedEntityIds() {
@@ -2549,7 +2616,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (node?.kind !== "grid" || !Number.isFinite(Number(node.value)) || Math.abs(Number(node.value)) <= 0.001) {
       return "";
     }
-    return node.isExporting || Number(node.value) < -0.001 ? "mdi:arrow-right" : "mdi:arrow-left";
+    return node.isExporting || Number(node.value) < -0.001
+      ? "mdi:transmission-tower-export"
+      : "mdi:transmission-tower-import";
   }
 
   _renderSimpleLayout(nodes, lines, options = {}) {
