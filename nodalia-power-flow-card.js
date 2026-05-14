@@ -1176,24 +1176,29 @@ function parseNumber(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function getHassLocaleTag(hass, language = "auto") {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
+  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+}
+
 function isUnavailableState(state) {
   const key = normalizeTextKey(state?.state);
   return key === "unavailable" || key === "unknown";
 }
 
-function formatRawValue(value, decimals = 0) {
+function formatRawValue(value, decimals = 0, locale = undefined) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return "--";
   }
 
-  return numeric.toLocaleString("es-ES", {
+  return numeric.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
-function formatDisplayValue(value, unit = "") {
+function formatDisplayValue(value, unit = "", locale = undefined) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return { value: "--", unit: unit || "" };
@@ -1203,14 +1208,14 @@ function formatDisplayValue(value, unit = "") {
   const key = normalizeTextKey(normalizedUnit);
   if (["w", "watt", "watts"].includes(key) && Math.abs(numeric) >= 1000) {
     return {
-      value: formatRawValue(numeric / 1000, 2).replace(/,00$/, "").replace(/0$/, ""),
+      value: formatRawValue(numeric / 1000, 2, locale).replace(/[.,]00$/, "").replace(/0$/, ""),
       unit: "kW",
     };
   }
 
   const decimals = Math.abs(numeric - Math.round(numeric)) < 0.01 ? 0 : Math.abs(numeric) >= 100 ? 0 : Math.abs(numeric) >= 10 ? 1 : 2;
   return {
-    value: formatRawValue(numeric, decimals),
+    value: formatRawValue(numeric, decimals, locale),
     unit: normalizedUnit,
   };
 }
@@ -1546,6 +1551,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
   }
 
+  _getLocaleTag() {
+    return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
+  }
+
   _triggerHaptic(styleOverride = null) {
     const haptics = this._config?.haptics || {};
     if (haptics.enabled !== true) {
@@ -1759,7 +1768,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     const decimals = Number.isFinite(Number(info.decimals)) ? Number(info.decimals) : 0;
-    return `${formatRawValue(rawValue, decimals)}${unit ? ` ${unit}` : ""}`;
+    return `${formatRawValue(rawValue, decimals, this._getLocaleTag())}${unit ? ` ${unit}` : ""}`;
   }
 
   _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
@@ -1797,7 +1806,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ? (nodeConfig.export_color || NODE_DEFAULTS.grid.export_color)
       : (nodeConfig.color || NODE_DEFAULTS[kind]?.color || "#ffffff");
     const secondary = this._getSecondaryInfoText(nodeConfig, state);
-    const display = formatDisplayValue(sourceResult.value, sourceResult.unit);
+    const display = formatDisplayValue(sourceResult.value, sourceResult.unit, this._getLocaleTag());
     const nodeKind = kind === "individual" ? "individual" : kind;
 
     const descriptor = {
@@ -1998,7 +2007,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           nodes.home.unavailable = false;
           nodes.home.value = sum;
           const unit = String(grid.unit || solar.unit || battery.unit || "").trim();
-          const display = formatDisplayValue(sum, unit);
+          const display = formatDisplayValue(sum, unit, this._getLocaleTag());
           nodes.home.valueText = display.value;
           nodes.home.unitText = display.unit;
           nodes.home.state = grid.state || solar.state || battery.state;
@@ -2010,7 +2019,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     const g = nodes.grid;
     if (g.entityId && !g.unavailable && Number.isFinite(g.value) && (g.value < -0.001 || g.isExporting)) {
-      const display = formatDisplayValue(Math.abs(g.value), g.unit);
+      const display = formatDisplayValue(Math.abs(g.value), g.unit, this._getLocaleTag());
       g.valueText = display.value;
       g.unitText = display.unit;
     }
@@ -2066,7 +2075,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       const gridCfg = resolveNodeConfig("grid", this._config);
       grid.color = gridCfg.export_color || NODE_DEFAULTS.grid.export_color;
     }
-    const gridDisplay = formatDisplayValue(Math.abs(gridNet), unit);
+    const gridDisplay = formatDisplayValue(Math.abs(gridNet), unit, this._getLocaleTag());
     grid.valueText = gridDisplay.value;
     grid.unitText = gridDisplay.unit;
 

@@ -17,6 +17,8 @@ const CALENDAR_DELETE_RECURRENCE_THIS = "";
 const CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE = "THISANDFUTURE";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
+const DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
+const dateTimeFormatterCache = new Map();
 
 const DEFAULT_CONFIG = {
   title: "Calendar",
@@ -596,8 +598,21 @@ function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
+function getDateTimeFormatter(locale, options) {
+  const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
+  let formatter = dateTimeFormatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateTimeFormatterCache.set(key, formatter);
+    if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
+      dateTimeFormatterCache.delete(dateTimeFormatterCache.keys().next().value);
+    }
+  }
+  return formatter;
+}
+
 function formatDateLabel(date, locale) {
-  return new Intl.DateTimeFormat(locale, {
+  return getDateTimeFormatter(locale, {
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -605,7 +620,7 @@ function formatDateLabel(date, locale) {
 }
 
 function formatTimeLabel(date, locale) {
-  return new Intl.DateTimeFormat(locale, {
+  return getDateTimeFormatter(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
@@ -1038,7 +1053,7 @@ class NodaliaCalendarCard extends HTMLElement {
       return a - b;
     });
     const longTitle = this._capitalizeFirst(
-      new Intl.DateTimeFormat(locale, {
+      getDateTimeFormatter(locale, {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -1098,7 +1113,7 @@ class NodaliaCalendarCard extends HTMLElement {
           : "";
     const dayLabel = start
       ? this._capitalizeFirst(
-        new Intl.DateTimeFormat(locale, {
+        getDateTimeFormatter(locale, {
           weekday: "long",
           day: "numeric",
           month: "long",
@@ -1220,7 +1235,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const refMonday = new Date(2024, 0, 1);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(refMonday.getTime() + i * 86400000);
-      return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
+      return getDateTimeFormatter(locale, { weekday: "short" }).format(d);
     });
   }
 
@@ -1286,7 +1301,7 @@ class NodaliaCalendarCard extends HTMLElement {
       const daysInMonth = last.getDate();
       const leading = (first.getDay() + 6) % 7;
       const map = this._groupsByDayKey(groups);
-      const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(first);
+      const title = getDateTimeFormatter(locale, { month: "long", year: "numeric" }).format(first);
       const headers = this._weekdayHeadersMondayFirst(locale);
       const cells = [];
       for (let i = 0; i < leading; i += 1) {

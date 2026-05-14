@@ -682,6 +682,28 @@ test("alarm panel PIN input keeps masked text visible across themes", () => {
   assert.match(source, /placeholder="Code"/);
 });
 
+test("calendar card reuses date/time formatters during render", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /DATE_TIME_FORMATTER_CACHE_LIMIT/);
+  assert.match(source, /function getDateTimeFormatter\(locale, options\)/);
+  assert.equal((source.match(/new Intl\.DateTimeFormat/g) || []).length, 1);
+  assert.match(source, /formatDateLabel\(date, locale\)[\s\S]*getDateTimeFormatter\(locale/);
+  assert.match(source, /formatTimeLabel\(date, locale\)[\s\S]*getDateTimeFormatter\(locale/);
+});
+
+test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
+  [
+    "nodalia-power-flow-card.js",
+    "nodalia-circular-gauge-card.js",
+    "nodalia-graph-card.js",
+  ].forEach(file => {
+    const source = read(file);
+    assert.doesNotMatch(source, /toLocaleString\(["']es-ES["']/);
+    assert.match(source, /getHassLocaleTag\(hass, language = "auto"\)/);
+    assert.match(source, /window\.NodaliaI18n\?\.localeTag/);
+  });
+});
+
 test("notifications entrance animation does not rearm on list refreshes", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);

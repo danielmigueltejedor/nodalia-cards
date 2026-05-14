@@ -1013,13 +1013,18 @@ function parseHistoryTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formatNumberValue(value, decimals = 0) {
+function getHassLocaleTag(hass, language = "auto") {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
+  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+}
+
+function formatNumberValue(value, decimals = 0, locale = undefined) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return "--";
   }
 
-  return numeric.toLocaleString("es-ES", {
+  return numeric.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -1212,13 +1217,13 @@ function moveItem(array, fromIndex, toIndex) {
   return array;
 }
 
-function formatHoverTimestamp(value) {
+function formatHoverTimestamp(value, locale = undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -1540,6 +1545,10 @@ class NodaliaGraphCard extends HTMLElement {
     return resolveEntityEntries(this._config);
   }
 
+  _getLocaleTag() {
+    return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
+  }
+
   _getRenderSignature(hass = this._hass) {
     const runtime = getRenderSignatureRuntime();
     const trackedStates = this._getTrackedStateSignatureRows(hass, runtime);
@@ -1642,6 +1651,8 @@ class NodaliaGraphCard extends HTMLElement {
       return { value: "--", unit: this._getUnit() };
     }
 
+    const locale = this._getLocaleTag();
+
     // When multiple active series share the same unit, show the mean value.
     if (!selectedEntry && currentSeries.length > 1) {
       const unit = currentSeries[0].unit;
@@ -1654,7 +1665,7 @@ class NodaliaGraphCard extends HTMLElement {
           3,
         );
         return {
-          value: formatNumberValue(avg, decimals),
+          value: formatNumberValue(avg, decimals, locale),
           unit,
         };
       }
@@ -1662,7 +1673,7 @@ class NodaliaGraphCard extends HTMLElement {
 
     const primary = currentSeries[0];
     return {
-      value: formatNumberValue(primary.value, primary.decimals),
+      value: formatNumberValue(primary.value, primary.decimals, locale),
       unit: primary.unit || this._getUnit(),
     };
   }
@@ -2538,9 +2549,10 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     const decimals = this._getDecimals();
+    const locale = this._getLocaleTag();
     return {
       index: boundedIndex,
-      label: formatHoverTimestamp(primarySample.ts),
+      label: formatHoverTimestamp(primarySample.ts, locale),
       x: anchorPoint.x,
       values: chart.entries
         .map(entry => {
@@ -2552,7 +2564,7 @@ class NodaliaGraphCard extends HTMLElement {
           return {
             color: entry.color,
             name: entry.name,
-            value: formatNumberValue(sample.value, decimals),
+            value: formatNumberValue(sample.value, decimals, locale),
             unit: entry.unit || this._getUnit(),
             point: entry.points?.[boundedIndex] || null,
           };

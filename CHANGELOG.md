@@ -12,6 +12,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 Maintenance work continues toward the next stable **`1.1.x`** cut.
 
+### Fixed
+
+- **Locale formatting:** remove remaining hardcoded Spanish numeric/date formatting in power flow, circular gauge, and graph cards so values follow the active Home Assistant locale.
+
+### Changed
+
+- **`nodalia-calendar-card.js`:** reuse cached date/time formatters during renders to reduce repeated `Intl.DateTimeFormat` allocations in event-heavy calendars.
+
 ### Planned / In progress
 
 - Bug fixes and compatibility patches.

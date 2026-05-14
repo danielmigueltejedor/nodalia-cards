@@ -1280,12 +1280,17 @@ function inferDecimals(rawValue) {
   return Math.min(3, normalized.split(".")[1].length);
 }
 
-function formatNumberValue(value, decimals = 0) {
+function getHassLocaleTag(hass, language = "auto") {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
+  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+}
+
+function formatNumberValue(value, decimals = 0, locale = undefined) {
   if (!Number.isFinite(Number(value))) {
     return "--";
   }
 
-  return Number(value).toLocaleString("es-ES", {
+  return Number(value).toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -1628,7 +1633,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       return configuredLabel;
     }
 
-    return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state));
+    return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state), this._getLocaleTag());
   }
 
   _getGaugeTintScale() {
@@ -1668,13 +1673,17 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
   _formatValue(value, state, withUnit = false) {
     const decimals = this._getDecimals(state);
-    const formatted = formatNumberValue(value, decimals);
+    const formatted = formatNumberValue(value, decimals, this._getLocaleTag());
     if (!withUnit) {
       return formatted;
     }
 
     const unit = this._getUnit(state);
     return unit ? `${formatted} ${unit}` : formatted;
+  }
+
+  _getLocaleTag() {
+    return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
   }
 
   _getAnimationSettings() {
