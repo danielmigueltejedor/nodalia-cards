@@ -1411,7 +1411,7 @@ function offsetPoint(from, to, distance) {
 /**
  * Orthogonal connector: straight leg + single 90° circular arc + straight leg (no S-shaped cubic).
  * Chooses horizontal-first vs vertical-first from the trimmed chord unless `hints.preferVerticalFirst`
- * forces vertical-first (keeps solar→grid and solar→home symmetric when |dx|≈|dy|).
+ * forces vertical-first (solar→home / solar→grid, and battery→home / battery↔grid when |dx|≈|dy|).
  */
 function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}) {
   const start = offsetPoint(from, to, fromRadius);
@@ -2395,6 +2395,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return lineCandidates.map(line => {
       const pathHints = {};
       if (line.id === "solar" || line.id === "solar-grid") {
+        pathHints.preferVerticalFirst = true;
+      }
+      /** Battery sits on the bottom spine: vertical-first keeps arcs consistent with solar (avoid horizontal-first 90° when |dx|≈|dy|). */
+      if (line.id === "battery" || line.id === "battery-grid" || line.id === "grid-battery") {
         pathHints.preferVerticalFirst = true;
       }
       const path = line.straight
