@@ -603,18 +603,28 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   const source = read("nodalia-cover-card.js");
   assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
   assert.match(source, /_isCardTapAction\(action\) \{\s*return action === "body" \|\| action === "icon";\s*\}/);
-  assert.match(source, /const coverAction = button\.dataset\.coverAction;\s*this\._rememberInteractionScroll\(\);[\s\S]*if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*this\._scheduleInteractionScrollRestore\(\);[\s\S]*return;\s*\}/);
-  assert.match(source, /if \(actionControl\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._scheduleInteractionScrollRestore\(\);[\s\S]*\} else \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*\}/);
+  assert.match(
+    source,
+    /const coverAction = button\.dataset\.coverAction;\s*if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*return;\s*\}\s*this\._rememberInteractionScroll\(\)/,
+  );
+  assert.match(
+    source,
+    /if \(actionControl\) \{[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*return;[\s\S]*\}[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*this\._preventNonTouchFocus\(event\);/,
+  );
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
   assert.match(source, /String\(event\.pointerType \|\| ""\)\.toLowerCase\(\) === "touch"/);
-  assert.match(source, /_onTouchStart\(event\)[\s\S]*if \(actionControl\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._scheduleInteractionScrollRestore\(\);[\s\S]*\}/);
+  assert.match(
+    source,
+    /_onTouchStart\(event\)[\s\S]*if \(actionControl && !this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*\}/,
+  );
   assert.match(source, /_scheduleInteractionScrollRestore\(\) \{[\s\S]*window\.requestAnimationFrame/);
   assert.doesNotMatch(source, /_restoreInteractionScroll\(\)/);
   assert.match(source, /_rememberInteractionScroll\(\)/);
   assert.match(source, /_restoreInteractionScrollSnapshot\(options = \{\}\)/);
   assert.match(source, /this\._restoreInteractionScrollSnapshot\(\{ preserve: true \}\)/);
+  assert.doesNotMatch(source, /this\._lastRenderedIsActive = isActive;\s*\n\s*this\._restoreInteractionScrollSnapshot/);
   assert.match(source, /window\.addEventListener\("wheel", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
   assert.match(source, /window\.addEventListener\("touchmove", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
   assert.match(source, /_cancelInteractionScrollRestore\(\)/);

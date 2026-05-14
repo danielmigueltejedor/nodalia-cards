@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.20";
+const CARD_VERSION = "1.1.0-alpha.21";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1396,6 +1396,10 @@ function offsetPoint(from, to, distance) {
   };
 }
 
+/**
+ * Orthogonal connector: straight leg + single 90° circular arc + straight leg (no S-shaped cubic).
+ * Chooses horizontal-first vs vertical-first from the dominant axis of the trimmed chord.
+ */
 function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const start = offsetPoint(from, to, fromRadius);
   const end = offsetPoint(to, from, toRadius);
@@ -1403,34 +1407,38 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const dy = end.y - start.y;
   const adx = Math.abs(dx);
   const ady = Math.abs(dy);
-  /** Pure vertical/horizontal cubics collapse to a hairline and sit under wide nodes; pull control points sideways. */
-  const nearlyVertical = adx < 5.5 && ady > adx * 1.35;
-  const nearlyHorizontal = ady < 5.5 && adx > ady * 1.35;
-  let cp1;
-  let cp2;
-  if (nearlyVertical) {
-    const pull = Math.min(20, Math.max(9, ady * 0.24));
-    const side = adx < 0.35 ? 1 : Math.sign(dx || 1);
-    cp1 = { x: start.x + (side * pull), y: start.y + (dy * 0.4) };
-    cp2 = { x: end.x + (side * pull), y: end.y - (dy * 0.4) };
-  } else if (nearlyHorizontal) {
-    /** Long mostly-horizontal spans: small vertical pull + controls near endpoints so the stroke spans almost the full chord. */
-    const pull = Math.min(4, Math.max(0.65, adx * 0.022));
-    const side = ady < 0.35 ? 1 : Math.sign(dy || 1);
-    const hx = Math.min(0.14, Math.max(0.06, adx * 0.0018));
-    cp1 = { x: start.x + (dx * hx), y: start.y + (side * pull) };
-    cp2 = { x: end.x - (dx * hx), y: end.y - (side * pull) };
-  } else {
-    const horizontalBias = adx >= ady;
-    cp1 = horizontalBias
-      ? { x: start.x + (dx * 0.42), y: start.y }
-      : { x: start.x, y: start.y + (dy * 0.42) };
-    cp2 = horizontalBias
-      ? { x: end.x - (dx * 0.42), y: end.y }
-      : { x: end.x, y: end.y - (dy * 0.42) };
+  const sx = dx >= 0 ? 1 : -1;
+  const sy = dy >= 0 ? 1 : -1;
+
+  if (adx < 0.3 && ady < 0.3) {
+    return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+  }
+  if (ady < 1.35 || adx < 1.35) {
+    return buildStraightFlowPath(from, to, fromRadius, toRadius);
   }
 
-  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} C ${cp1.x.toFixed(2)} ${cp1.y.toFixed(2)}, ${cp2.x.toFixed(2)} ${cp2.y.toFixed(2)}, ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+  const horizFirst = adx >= ady;
+  let r = Math.min(adx, ady) * 0.48;
+  r = Math.min(Math.max(r, 2.2), 13.8, adx - 0.4, ady - 0.4);
+  if (r < 1.85) {
+    return buildStraightFlowPath(from, to, fromRadius, toRadius);
+  }
+
+  if (horizFirst) {
+    const paX = end.x - sx * r;
+    const paY = start.y;
+    const pbX = end.x;
+    const pbY = start.y + sy * r;
+    const sweep = sx * sy > 0 ? 1 : 0;
+    return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${paX.toFixed(2)} ${paY.toFixed(2)} A ${r.toFixed(2)} ${r.toFixed(2)} 0 0 ${sweep} ${pbX.toFixed(2)} ${pbY.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+  }
+
+  const paX = start.x;
+  const paY = end.y - sy * r;
+  const pbX = start.x + sx * r;
+  const pbY = end.y;
+  const sweep = sx * sy > 0 ? 0 : 1;
+  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${paX.toFixed(2)} ${paY.toFixed(2)} A ${r.toFixed(2)} ${r.toFixed(2)} 0 0 ${sweep} ${pbX.toFixed(2)} ${pbY.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
 /** Straight segment between trimmed endpoints (1–2 top sources / strip layout). */
@@ -2763,8 +2771,26 @@ class NodaliaPowerFlowCard extends HTMLElement {
       }
       return add;
     })();
-    const baseSurfaceDiagram = layoutPreset === "compact" ? (hasLowerNodes ? 306 : 264) : (hasLowerNodes ? 336 : 286);
-    const surfaceFloor = layoutPreset === "simple" ? 148 : 236;
+    const topEnergyConfigured = [nodes.grid.entityId, nodes.solar.entityId, nodes.battery.entityId].filter(Boolean).length;
+    const minimalFlowDiagram = layoutPreset !== "simple" && topEnergyConfigured <= 1 && !hasLowerNodes;
+    const baseSurfaceDiagram = (() => {
+      if (layoutPreset === "simple") {
+        return 162;
+      }
+      if (minimalFlowDiagram) {
+        return layoutPreset === "compact" ? 200 : 222;
+      }
+      return layoutPreset === "compact" ? (hasLowerNodes ? 306 : 264) : (hasLowerNodes ? 336 : 286);
+    })();
+    const surfaceFloor = (() => {
+      if (layoutPreset === "simple") {
+        return 148;
+      }
+      if (minimalFlowDiagram) {
+        return layoutPreset === "compact" ? 158 : 168;
+      }
+      return 236;
+    })();
     const surfaceMinHeight = Math.min(
       Math.max(
         (layoutPreset === "simple" ? 162 : baseSurfaceDiagram) + surfaceLayoutExtras,
@@ -2772,11 +2798,19 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ),
       540,
     );
-    const baseSurfaceMobile = layoutPreset === "simple" ? 144 : (hasLowerNodes ? 308 : 268);
+    const baseSurfaceMobile = (() => {
+      if (layoutPreset === "simple") {
+        return 144;
+      }
+      if (minimalFlowDiagram) {
+        return layoutPreset === "compact" ? 186 : 200;
+      }
+      return hasLowerNodes ? 308 : 268;
+    })();
     const surfaceMinHeightMobile = Math.min(
       Math.max(
         baseSurfaceMobile + surfaceLayoutExtras,
-        layoutPreset === "simple" ? 132 : 236,
+        layoutPreset === "simple" ? 132 : minimalFlowDiagram ? (layoutPreset === "compact" ? 150 : 158) : 236,
       ),
       520,
     );

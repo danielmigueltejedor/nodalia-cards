@@ -30,6 +30,22 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.21] - 2026-05-12
+
+Twenty-first **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.21`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** flow lines between nodes use a straight leg plus a single **90° arc** (orthogonal routing) instead of S-shaped cubics; grid–home stays a straight segment.
+- **`nodalia-power-flow-card.js`:** when only one of **grid / solar / battery** is configured and there are no lower-row utilities, the diagram surface uses a **shorter min-height** so a grid+house-only layout does not reserve the full diamond canvas height.
+- **`nodalia-cover-card.js`:** stop scroll snapshot/restore on **body/icon** taps and after every render so dashboard scroll no longer fights Home Assistant’s own scroll anchoring.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.21`**.
+
+---
+
 ## [1.1.0-alpha.20] - 2026-05-14
 
 Twentieth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.20`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

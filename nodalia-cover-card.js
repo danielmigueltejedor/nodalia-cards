@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.20";
+const CARD_VERSION = "1.1.0-alpha.21";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1515,7 +1515,6 @@ class NodaliaCoverCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     const coverAction = button.dataset.coverAction;
-    this._rememberInteractionScroll();
     if (this._isCardTapAction(coverAction)) {
       if (coverAction === "body" || coverAction === "icon") {
         if (this._suppressNextCoverTap) {
@@ -1524,10 +1523,10 @@ class NodaliaCoverCard extends HTMLElement {
         }
         this._triggerHaptic();
         this._runAction(coverAction);
-        this._scheduleInteractionScrollRestore();
       }
       return;
     }
+    this._rememberInteractionScroll();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
     if (button instanceof HTMLElement && typeof button.blur === "function") {
@@ -1558,6 +1557,12 @@ class NodaliaCoverCard extends HTMLElement {
       node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
     );
     if (!control) return;
+    if (this._isCardTapAction(control.dataset?.coverAction)) {
+      if (typeof control.blur === "function") {
+        control.blur();
+      }
+      return;
+    }
     this._rememberInteractionScroll();
     if (typeof control.blur === "function") {
       control.blur();
@@ -1582,12 +1587,11 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      this._rememberInteractionScroll();
       if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
-        this._scheduleInteractionScrollRestore();
-      } else {
-        this._preventNonTouchFocus(event);
+        return;
       }
+      this._rememberInteractionScroll();
+      this._preventNonTouchFocus(event);
     }
   }
 
@@ -1602,11 +1606,11 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
+      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
+        return;
+      }
       this._rememberInteractionScroll();
       this._preventNonTouchFocus(event);
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
-        this._scheduleInteractionScrollRestore();
-      }
     }
   }
 
@@ -1620,11 +1624,8 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl) {
+    if (actionControl && !this._isCardTapAction(actionControl.dataset?.coverAction)) {
       this._rememberInteractionScroll();
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
-        this._scheduleInteractionScrollRestore();
-      }
     }
   }
 
@@ -2267,7 +2268,6 @@ class NodaliaCoverCard extends HTMLElement {
       </ha-card>
     `;
     this._lastRenderedIsActive = isActive;
-    this._restoreInteractionScrollSnapshot();
   }
 }
 
