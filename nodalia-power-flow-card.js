@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.24";
+const CARD_VERSION = "1.1.0-alpha.25";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1410,9 +1410,10 @@ function offsetPoint(from, to, distance) {
 
 /**
  * Orthogonal connector: straight leg + single 90° circular arc + straight leg (no S-shaped cubic).
- * Chooses horizontal-first vs vertical-first from the dominant axis of the trimmed chord.
+ * Chooses horizontal-first vs vertical-first from the trimmed chord unless `hints.preferVerticalFirst`
+ * forces vertical-first (keeps solar→grid and solar→home symmetric when |dx|≈|dy|).
  */
-function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
+function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}) {
   const start = offsetPoint(from, to, fromRadius);
   const end = offsetPoint(to, from, toRadius);
   const dx = end.x - start.x;
@@ -1429,7 +1430,10 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0) {
     return buildStraightFlowPath(from, to, fromRadius, toRadius);
   }
 
-  const horizFirst = adx >= ady;
+  let horizFirst = adx >= ady;
+  if (hints.preferVerticalFirst === true) {
+    horizFirst = false;
+  }
   let r = Math.min(adx, ady) * 0.54;
   r = Math.min(Math.max(r, 2.55), 14.5, adx - 0.32, ady - 0.32);
   if (r < 1.62) {
@@ -2325,13 +2329,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
       const value = Number.isFinite(flowValues.batteryHome) ? flowValues.batteryHome : nodes.battery.value;
       pushLine("battery", nodes.battery, home, value, nodes.battery.unit, nodes.battery.color, true);
     }
-    if (nodes.battery.entityId && nodes.grid.entityId && Number.isFinite(flowValues.batteryGrid)) {
+    if (nodes.battery.entityId && nodes.grid.entityId && Number.isFinite(flowValues.batteryGrid) && flowValues.batteryGrid > 0.001) {
       pushLine("battery-grid", nodes.battery, nodes.grid, flowValues.batteryGrid, nodes.battery.unit || nodes.grid.unit, nodes.battery.color, false);
     }
     if (nodes.solar.entityId && nodes.battery.entityId && Number.isFinite(flowValues.solarBattery)) {
       pushLine("solar-battery", nodes.solar, nodes.battery, flowValues.solarBattery, nodes.solar.unit || nodes.battery.unit, nodes.battery.color, false, true);
     }
-    if (nodes.grid.entityId && nodes.battery.entityId && Number.isFinite(flowValues.gridBattery)) {
+    if (nodes.grid.entityId && nodes.battery.entityId && Number.isFinite(flowValues.gridBattery) && flowValues.gridBattery > 0.001) {
       pushLine("grid-battery", nodes.grid, nodes.battery, flowValues.gridBattery, nodes.grid.unit || nodes.battery.unit, nodes.battery.color, false);
     }
     if (nodes.water.entityId) {
@@ -2378,9 +2382,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
     );
 
     return lineCandidates.map(line => {
+      const pathHints = {};
+      if (line.id === "solar" || line.id === "solar-grid") {
+        pathHints.preferVerticalFirst = true;
+      }
       const path = line.straight
         ? buildStraightFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius)
-        : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius);
+        : buildFlowPath(line.fromNode.position, line.toNode.position, line.fromRadius, line.toRadius, pathHints);
       return {
         ...line,
         path,
@@ -4143,9 +4151,9 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   _renderNodeSection(titleKey, hintKey, prefix, values) {
     const isGrid = prefix === "entities.grid";
     const gridExportFields = isGrid ? `
-          ${this._renderTextField("Grid feed-in entity", `${prefix}.export_entity`, values.export_entity, { placeholder: "sensor.grid_feed_in" })}
-          ${this._renderTextField("Grid feed-in color", `${prefix}.export_color`, values.export_color || NODE_DEFAULTS.grid.export_color, { placeholder: NODE_DEFAULTS.grid.export_color })}
-          ${this._renderCheckboxField("Use negative grid values as feed-in", `${prefix}.export_when_negative`, values.export_when_negative !== false)}
+          ${this._renderTextField("ed.power_flow.node_grid_export_entity", `${prefix}.export_entity`, values.export_entity, { placeholder: "sensor.grid_feed_in" })}
+          ${this._renderTextField("ed.power_flow.node_grid_export_color", `${prefix}.export_color`, values.export_color || NODE_DEFAULTS.grid.export_color, { placeholder: NODE_DEFAULTS.grid.export_color })}
+          ${this._renderCheckboxField("ed.power_flow.node_grid_export_when_negative", `${prefix}.export_when_negative`, values.export_when_negative !== false)}
     ` : "";
     return `
       <section class="editor-section">

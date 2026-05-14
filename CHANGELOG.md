@@ -30,6 +30,18 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.25] - 2026-05-12
+
+Twenty-fifth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.25`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** YAML editor grid node uses **`ed.power_flow.node_grid_export_*`** strings for feed-in entity, color, and negative-value behavior instead of hardcoded English.
+- **`i18n/editor/*`:** translate editor catalog values that were still English in **`de`**, **`el`**, **`es`**, **`fr`**, **`it`**, **`nl`**, **`no`**, **`pt`**, **`ru`**, **`ro`**, and **`zh`** (entity picture, notifications tap/navigate/tank-full, Norwegian fan slider labels).
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.25`**.
+
+---
+
 ## [1.1.0-alpha.24] - 2026-05-12
 
 Twenty-fourth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.24`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
