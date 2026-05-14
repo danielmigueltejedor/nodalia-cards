@@ -30,6 +30,26 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.26] - 2026-05-12
+
+Twenty-sixth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.26`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.0-alpha.26.js`**.
+
+### Added
+
+- **`docs/STYLING.md`:** consolidated styling reference (Home Assistant theme variables, default radii, chips, sliders, climate/gauge accents, and **card-mod** examples) for matching Nodalia’s look on other Lovelace cards without editing card sources.
+
+### Fixed
+
+- **`nodalia-graph-card.js`:** remove host **`pointerleave`** / **`mouseleave`** listeners on disconnect so dashboard navigation does not retain stale handlers.
+- **Render signatures:** cheaper fingerprints on **`nodalia-notifications-card.js`** (calendar rows + tracked entities), **`nodalia-power-flow-card.js`**, and **`nodalia-entity-card.js`**; avoid a duplicate **`parseCalibrationPoints`** read in **`nodalia-advance-vacuum-card.js`** signatures.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** pause SVG / simple-rail flow motion when the card leaves the viewport or the document is hidden (**`IntersectionObserver`** + **`visibilitychange`**).
+- **`nodalia-notifications-card.js`:** when disconnected from the DOM, skip heavy **`hass`** signature and refresh scheduling work.
+
+---
+
 ## [1.1.0-alpha.25] - 2026-05-12
 
 Twenty-fifth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.25`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

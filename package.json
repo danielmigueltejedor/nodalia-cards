@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "1.1.0-alpha.25",
+  "version": "1.1.0-alpha.26",
   "packageManager": "pnpm@11.1.1",
   "private": false,
   "type": "module",
@@ -19,7 +19,7 @@
     "nodalia-render-signature.js",
     "nodalia-bubble-contrast.js",
     "nodalia-cards.js",
-    "nodalia-cards-1.1.0-alpha.25.js",
+    "nodalia-cards-1.1.0-alpha.26.js",
     "nodalia-cards.bundle.js",
     "nodalia-cards.manifest.js",
     "nodalia-navigation-bar.js",

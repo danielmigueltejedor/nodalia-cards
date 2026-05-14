@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
@@ -144,6 +145,19 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
   }
 
   /**
@@ -729,6 +743,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
@@ -750,7 +765,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -3780,6 +3795,43 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return "";
   }
 
+  /**
+   * Cheap calibration fingerprint for render signatures (avoids a second
+   * `parseCalibrationPoints` pass; `_updateCalibration` already parses once per render).
+   */
+  _getCalibrationSignatureFragment(hass = this._hass) {
+    const config = this._config;
+    const directPoints = arrayFromMaybe(config?.calibration_source?.calibration_points);
+    if (directPoints.length) {
+      return { kind: "direct", len: directPoints.length };
+    }
+    const calibrationEntityId = config?.calibration_source?.entity;
+    if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
+      const st = hass.states[calibrationEntityId];
+      const pts = st.attributes?.calibration_points;
+      const len = Array.isArray(pts) ? pts.length : 0;
+      return {
+        kind: "entity",
+        id: String(calibrationEntityId || ""),
+        len,
+        lu: String(st.last_updated || st.last_changed || ""),
+      };
+    }
+    if (config?.calibration_source?.camera === true) {
+      const mapEntityId = String(config?.map_source?.camera || config?.map_camera || "");
+      const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
+      const pts = st?.attributes?.calibration_points;
+      const len = Array.isArray(pts) ? pts.length : 0;
+      return {
+        kind: "camera",
+        id: mapEntityId,
+        len,
+        lu: String(st?.last_updated || st?.last_changed || ""),
+      };
+    }
+    return { kind: "none", len: 0 };
+  }
+
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
@@ -3822,11 +3874,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         state: String(sharedSessionState?.state || ""),
         lastUpdated: String(sharedSessionState?.last_updated || ""),
       },
-      calibration: {
-        camera: this._config?.calibration_source?.camera === true,
-        entity: String(this._config?.calibration_source?.entity || ""),
-        points: parseCalibrationPoints(this._config, this._hass).length,
-      },
+      calibration: this._getCalibrationSignatureFragment(hass),
       activeMode: String(this._activeMode || ""),
       activeCleaningSessionMode: String(this._activeCleaningSessionMode || ""),
       transientZoneReturnMode: String(this._transientZoneReturnMode || ""),
@@ -4001,6 +4049,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith(`${domain}.`))
       .filter(entityId => entityId.includes(objectId))
@@ -4010,7 +4059,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         score: this._getEntityMatchScore(entityId, patterns),
       }))
       .filter(candidate => candidate.score > 0)
-      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, "es"));
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc));
 
     return candidates[0]?.entityId || "";
   }
@@ -4033,6 +4082,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => domainList.some(domain => entityId.startsWith(`${domain}.`)))
       .filter(entityId => !excludedEntities.includes(entityId))
@@ -4041,7 +4091,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         score: this._getEntityMatchScore(entityId, patterns),
       }))
       .filter(candidate => candidate.score > 0)
-      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, "es"));
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc));
 
     return candidates[0]?.entityId || "";
   }
@@ -8994,7 +9044,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -9173,6 +9223,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
   _getEntityOptions(field = "entity", domains = []) {
     const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`)))
       .map(([entityId, state]) => {
@@ -9186,8 +9237,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(getByPath(this._config, field) || "").trim();

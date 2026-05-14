@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
@@ -144,6 +145,19 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
   }
 
   /**
@@ -729,6 +743,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
@@ -750,7 +765,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1750,11 +1765,12 @@ class NodaliaVacuumCard extends HTMLElement {
       return "";
     }
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("sensor."))
       .filter(entityId => entityId.includes(objectId))
       .filter(entityId => ["estado", "status", "state"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return candidates[0] || "";
   }
@@ -1772,11 +1788,12 @@ class NodaliaVacuumCard extends HTMLElement {
     if (!objectId) {
       return "";
     }
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("sensor."))
       .filter(entityId => entityId.includes(objectId) || entityId.includes("roborock"))
       .filter(entityId => ["error", "fault", "fallo", "erro"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
     return candidates[0] || "";
   }
 
@@ -1809,11 +1826,12 @@ class NodaliaVacuumCard extends HTMLElement {
       return "";
     }
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("sensor."))
       .filter(entityId => entityId.includes(objectId))
       .filter(entityId => ["battery", "bateria"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return candidates[0] || "";
   }
@@ -1833,11 +1851,12 @@ class NodaliaVacuumCard extends HTMLElement {
       return "";
     }
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("sensor."))
       .filter(entityId => entityId.includes(objectId))
       .filter(entityId => ["room_mapping", "rooms", "segments", "habitaciones"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return candidates[0] || "";
   }
@@ -2471,11 +2490,12 @@ class NodaliaVacuumCard extends HTMLElement {
       ? ["mop", "water", "water_level", "water_volume", "scrub"]
       : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("select."))
       .filter(entityId => entityId.includes(objectId))
       .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return candidates[0] || "";
   }
@@ -4229,7 +4249,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -4258,6 +4278,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _buildEntityOptions(filterFn, currentValue = "") {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId, state]) => filterFn(entityId, state))
       .map(([entityId, state]) => {
@@ -4271,8 +4292,8 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     if (currentValue && !options.some(option => option.value === currentValue)) {
@@ -4599,11 +4620,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       ? ["mop", "water", "water_level", "water_volume", "scrub"]
       : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
 
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("select."))
       .filter(entityId => entityId.includes(objectId))
       .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return candidates[0] || "";
   }

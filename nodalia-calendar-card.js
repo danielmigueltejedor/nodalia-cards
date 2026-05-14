@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -195,7 +195,14 @@ function sanitizeCssRuntimeValue(value) {
   if (!raw) {
     return "";
   }
-  if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /<\/style/i.test(raw)) {
+  if (
+    /[<>{};"']/.test(raw)
+    || raw.includes("/*")
+    || raw.includes("*/")
+    || /<\/style/i.test(raw)
+    || /\burl\s*\(/i.test(raw)
+    || /\b@import\b/i.test(raw)
+  ) {
     return "";
   }
   return raw;
@@ -2405,7 +2412,7 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   async _submitNativeEventComposer() {
-    if (!this._hass || !this.shadowRoot) {
+    if (!this.isConnected || !this._hass || !this.shadowRoot) {
       return;
     }
     this._setComposerError("native", "");
@@ -4461,7 +4468,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     customElements.whenDefined(tagName)
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
         const focusState = this._captureFocusState();

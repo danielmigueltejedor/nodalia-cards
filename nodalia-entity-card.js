@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
@@ -144,6 +145,19 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
   }
 
   /**
@@ -729,6 +743,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
@@ -750,7 +765,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1499,10 +1514,7 @@ class NodaliaEntityCard extends HTMLElement {
       `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
       `e:${entityId}`,
       `s:${String(state?.state || "")}`,
-      `n:${String(attrs.friendly_name || "")}`,
-      `i:${String(attrs.icon || "")}`,
-      `dc:${String(attrs.device_class || "")}`,
-      `u:${String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || "")}`,
+      `lu:${String(state?.last_updated || state?.last_changed || "")}`,
       `sa:${configuredStateAttribute}`,
       `sv:${configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : ""}`,
       `pa:${configuredPrimaryAttribute}`,
@@ -2775,7 +2787,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -2795,7 +2807,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _getEntityOptions(path = "entity") {
-    const sortTag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
+    const sortTag = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .map(([entityId, state]) => {
         const friendlyName = String(state?.attributes?.friendly_name || "").trim();

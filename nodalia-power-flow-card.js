@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
@@ -144,6 +145,19 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
   }
 
   /**
@@ -729,6 +743,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
@@ -750,7 +765,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1490,10 +1505,79 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._flowViewportVisible = true;
+    this._flowViewportObserver = null;
+    this._onFlowViewport = this._onFlowViewport.bind(this);
+    this._onFlowVisibility = this._onFlowVisibility.bind(this);
+  }
+
+  _onFlowViewport(entries) {
+    const hit = entries.some(entry => entry.isIntersecting);
+    this._flowViewportVisible = hit;
+    this._syncFlowMotionPause();
+  }
+
+  _onFlowVisibility() {
+    this._syncFlowMotionPause();
+  }
+
+  _attachFlowViewportTracking() {
+    this._detachFlowViewportTracking();
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this._onFlowVisibility);
+    }
+    if (typeof IntersectionObserver === "function") {
+      this._flowViewportObserver = new IntersectionObserver(this._onFlowViewport, {
+        root: null,
+        rootMargin: "0px",
+        threshold: 0,
+      });
+      this._flowViewportObserver.observe(this);
+    } else {
+      this._flowViewportVisible = true;
+    }
+    this._syncFlowMotionPause();
+  }
+
+  _detachFlowViewportTracking() {
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this._onFlowVisibility);
+    }
+    if (this._flowViewportObserver) {
+      this._flowViewportObserver.disconnect();
+      this._flowViewportObserver = null;
+    }
+    this._flowViewportVisible = true;
+  }
+
+  _syncFlowMotionPause() {
+    if (!this.shadowRoot) {
+      return;
+    }
+    const docHidden = typeof document !== "undefined" && document.hidden;
+    const shouldPause = docHidden || !this._flowViewportVisible;
+    const haCard = this.shadowRoot.querySelector("ha-card");
+    if (shouldPause) {
+      haCard?.classList.add("power-flow-card--motion-paused");
+    } else {
+      haCard?.classList.remove("power-flow-card--motion-paused");
+    }
+    for (const svg of this.shadowRoot.querySelectorAll("svg")) {
+      try {
+        if (shouldPause && typeof svg.pauseAnimations === "function") {
+          svg.pauseAnimations();
+        } else if (!shouldPause && typeof svg.unpauseAnimations === "function") {
+          svg.unpauseAnimations();
+        }
+      } catch (_err) {
+        // Ignore SVG animation control failures in older engines.
+      }
+    }
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this._attachFlowViewportTracking();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -1502,6 +1586,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._detachFlowViewportTracking();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
@@ -1522,6 +1607,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      this._syncFlowMotionPause();
       return;
     }
     this._lastRenderSignature = nextSignature;
@@ -1972,7 +2058,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     resolveIndividualConfigs(config).forEach(registerNodeEntity);
 
-    return [...entityIds].sort((left, right) => left.localeCompare(right, "es"));
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+    return [...entityIds].sort((left, right) => left.localeCompare(right, sortLoc));
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -1981,9 +2068,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return {
         entityId,
         state: String(state?.state || ""),
-        friendly_name: String(state?.attributes?.friendly_name || ""),
-        icon: String(state?.attributes?.icon || ""),
-        unit: String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""),
+        lu: String(state?.last_updated || state?.last_changed || ""),
       };
     });
 
@@ -3415,6 +3500,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
           animation: power-flow-card-simple-dot linear infinite;
         }
 
+        .power-flow-card--motion-paused .power-flow-card__simple-dot {
+          animation-play-state: paused !important;
+        }
+
         .power-flow-card--strip .power-flow-card__simple-dot {
           box-shadow:
             0 0 0 4px color-mix(in srgb, var(--line-color) 15%, transparent),
@@ -3880,6 +3969,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       </ha-card>
     `;
 
+    this._syncFlowMotionPause();
     this._lastRenderSignature = this._getRenderSignature();
 
     if (shouldAnimateEntrance) {
@@ -4152,9 +4242,10 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsMarkup() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const allEntities = Object.keys(this._hass?.states || {})
       .filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return `
       <datalist id="power-flow-card-entity-options">
@@ -4647,7 +4738,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -4667,6 +4758,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   }
 
   _getPowerEntityOptions(path = "entity") {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
       .map(([entityId, state]) => {
@@ -4680,8 +4772,8 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(getByPath(this._config, path) || "").trim();

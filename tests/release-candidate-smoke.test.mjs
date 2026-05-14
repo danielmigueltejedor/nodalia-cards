@@ -95,12 +95,15 @@ test("drag listeners stay attach-on-drag only", () => {
 test("navigation runtime css sanitizer guard is present in source", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);
-  assert.match(source, /if \(\/\[<>\{\};"'\]\/\.test\(raw\) \|\| raw\.includes\("\/\*"\) \|\| raw\.includes\("\*\/"\)\)/);
+  assert.ok(source.includes("\\burl\\s*\\("));
+  assert.ok(source.includes("\\b@import\\b"));
 });
 
 test("calendar runtime css sanitizer and webhook admin guard are present", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);
+  assert.ok(source.includes("\\burl\\s*\\("));
+  assert.ok(source.includes("\\b@import\\b"));
   assert.match(source, /security\.allow_webhooks_for_non_admin/);
   assert.match(source, /webhook bloqueado para usuario no administrador/);
 });

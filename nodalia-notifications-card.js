@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
@@ -144,6 +145,19 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
   }
 
   /**
@@ -729,6 +743,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
@@ -750,7 +765,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1242,7 +1257,13 @@ function sanitizeCssRuntimeValue(value, fallback) {
   if (!raw) {
     return fallback;
   }
-  if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw)) {
+  if (
+    /[<>{};"']/.test(raw)
+    || raw.includes("/*")
+    || raw.includes("*/")
+    || /\burl\s*\(/i.test(raw)
+    || /\b@import\b/i.test(raw)
+  ) {
     return fallback;
   }
   return raw;
@@ -1856,6 +1877,9 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (!this.isConnected) {
+      return;
+    }
     const nextRouteKey = this._getRouteKey();
     if (nextRouteKey && nextRouteKey !== this._lastRouteKey) {
       this._lastRouteKey = nextRouteKey;
@@ -2550,11 +2574,12 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!vacuumObject || !this._hass?.states) {
       return null;
     }
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates = Object.keys(this._hass.states)
       .filter(entityId => entityId.startsWith("sensor."))
       .filter(entityId => entityId.includes(vacuumObject) || entityId.includes("roborock"))
       .filter(entityId => ["error", "fault", "fallo", "erro"].some(token => entityId.includes(token)))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
     return candidates.map(entityId => this._hass.states[entityId]).find(stateObj => this._getVacuumErrorValue(stateObj)) || null;
   }
 
@@ -3073,7 +3098,15 @@ class NodaliaNotificationsCard extends HTMLElement {
       [...this._dismissed].join(","),
       this._calendarLoading ? "loading" : "",
       this._calendarError,
-      this._calendarEvents.map(event => `${event._entity}:${event.summary || event.title}:${JSON.stringify(event.start)}`).join("|"),
+      this._calendarEvents
+        .map(event => {
+          const start = calendarEventDate(event.start);
+          const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
+          const uid = String(event.uid ?? event.id ?? "");
+          const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
+          return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
+        })
+        .join("|"),
       Object.entries(this._weatherForecasts || {}).map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`).join("|"),
     ];
     const tracked = [
@@ -3101,27 +3134,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     );
     tracked.forEach(entityId => {
       const state = hass?.states?.[entityId];
-      const attrs = state?.attributes || {};
-      const attrSignature = [
-        attrs.friendly_name || "",
-        attrs.icon || "",
-        attrs.device_class || "",
-        attrs.unit_of_measurement || "",
-        attrs.temperature ?? "",
-        attrs.current_temperature ?? "",
-        attrs.humidity ?? "",
-        attrs.current_humidity ?? "",
-        attrs.hvac_action || "",
-        attrs.hvac_mode || "",
-        attrs.fan_mode || "",
-        attrs.preset_mode || "",
-        attrs.percentage ?? "",
-        attrs.battery_level ?? "",
-        attrs.source || "",
-        attrs.media_title || "",
-        attrs.media_artist || "",
-      ].join("~");
-      parts.push(`${entityId}:${state?.state || ""}:${state?.last_changed || ""}:${attrSignature}`);
+      const stamp = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+      parts.push(`${entityId}:${stamp}`);
     });
     this._config.vacuum_entities.forEach(entityId => {
       const errorState = this._getVacuumErrorState(entityId);
@@ -4118,7 +4132,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     customElements.whenDefined(tagName)
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
-        if (this._hass && this.shadowRoot) {
+        if (this.isConnected && this._hass && this.shadowRoot) {
           const focus = this._captureFocusState();
           this._render();
           this._restoreFocusState(focus);

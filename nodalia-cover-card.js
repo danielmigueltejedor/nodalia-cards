@@ -13,6 +13,7 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
@@ -144,6 +145,19 @@
    */
   function editorStatesSignature(hass, language) {
     return editorFilteredStatesSignature(hass, language, () => true);
+  }
+
+  /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
   }
 
   /**
@@ -729,6 +743,7 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
@@ -750,7 +765,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.25";
+const CARD_VERSION = "1.1.0-alpha.26";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1380,15 +1395,26 @@ class NodaliaCoverCard extends HTMLElement {
     window.setTimeout(() => element.classList.remove("is-pressing"), animations.buttonBounceDuration + 40);
   }
 
-  _isServiceAllowed(service) {
+  _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) return true;
-    const value = String(service || "").trim().toLowerCase();
-    if (!value || !value.includes(".")) return false;
-    const [domain] = value.split(".");
-    const allowedServices = Array.isArray(security.allowed_services) ? security.allowed_services : [];
-    const allowedDomains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains : [];
-    return allowedServices.includes(value) || allowedDomains.includes(domain);
+    if (security.strict_service_actions === false) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
   }
 
   _callNamedService(service, data = {}) {
@@ -2318,7 +2344,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._pendingEditorControlTags.add(tagName);
     customElements.whenDefined(tagName).then(() => {
       this._pendingEditorControlTags.delete(tagName);
-      if (!this._hass || !this.shadowRoot) return;
+      if (!this.isConnected || !this._hass || !this.shadowRoot) return;
       const focusState = this._captureFocusState();
       this._render();
       this._restoreFocusState(focusState);
@@ -2336,6 +2362,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
   }
 
   _getCoverEntityOptions() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => entityId.startsWith("cover."))
       .map(([entityId, state]) => {
@@ -2349,8 +2376,8 @@ class NodaliaCoverCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(this._config?.entity || "").trim();
