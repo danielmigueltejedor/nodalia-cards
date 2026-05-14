@@ -765,7 +765,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.27";
+const CARD_VERSION = "1.1.0";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -799,6 +799,7 @@ const DEFAULT_CONFIG = {
   show_tilt_slider: true,
   show_stop: true,
   compact_layout_mode: "auto",
+  open_close_icons: "auto",
   tap_action: "toggle",
   tap_service: "",
   tap_service_data: "",
@@ -942,6 +943,8 @@ function normalizeConfig(rawConfig) {
   config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode)
     ? config.compact_layout_mode
     : "auto";
+  const openCloseIcons = normalizeTextKey(config.open_close_icons) || "auto";
+  config.open_close_icons = ["auto", "vertical", "horizontal"].includes(openCloseIcons) ? openCloseIcons : "auto";
   config.security.allowed_services = normalizeList(config.security?.allowed_services);
   config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
   return config;
@@ -1052,6 +1055,24 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function coverDeviceClassPrefersHorizontalOpenClose(deviceClass) {
+  const key = normalizeTextKey(deviceClass);
+  return key === "door" || key === "gate" || key === "garage";
+}
+
+function resolveOpenCloseControlIcons(mode, deviceClass) {
+  const vertical = { open: "mdi:arrow-up", close: "mdi:arrow-down" };
+  const horizontal = { open: "mdi:arrow-right", close: "mdi:arrow-left" };
+  const layout = normalizeTextKey(mode) || "auto";
+  if (layout === "vertical") {
+    return vertical;
+  }
+  if (layout === "horizontal") {
+    return horizontal;
+  }
+  return coverDeviceClassPrefersHorizontalOpenClose(deviceClass) ? horizontal : vertical;
 }
 
 function clamp(value, min, max) {
@@ -1328,17 +1349,29 @@ class NodaliaCoverCard extends HTMLElement {
     return ["open", "opening", "closing"].includes(key);
   }
 
+  _coverCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.coverCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.coverCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _coverTiltChipText(tiltValue) {
+    const tpl = this._coverCardUi("tiltChip", "Tilt {value}%");
+    return tpl.replace(/\{value\}/g, String(Math.round(Number(tiltValue) || 0)));
+  }
+
   _stateLabel(state = this._getState()) {
     const key = normalizeTextKey(state?.state);
-    return {
-      open: "Open",
-      closed: "Closed",
-      opening: "Opening",
-      closing: "Closing",
-      stopped: "Stopped",
-      unavailable: "Unavailable",
-      unknown: "Unknown",
-    }[key] || String(state?.state || "Unknown");
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = this._config?.language ?? "auto";
+    const translated = window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, key);
+    if (translated) {
+      return translated;
+    }
+    return String(state?.state || window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, "unknown") || "Unknown");
   }
 
   _getName(state = this._getState()) {
@@ -1952,6 +1985,8 @@ class NodaliaCoverCard extends HTMLElement {
     const state = this._getState();
     const styles = config.styles;
     if (!state) {
+      const emptyTitle = escapeHtml(this._coverCardUi("emptyTitle", "Nodalia Cover Card"));
+      const emptyBody = escapeHtml(this._coverCardUi("emptyBody", "Set `entity` to a `cover.*` entity to show this card."));
       this.shadowRoot.innerHTML = `
         <style>
           :host { display: block; overflow-anchor: none; }
@@ -1969,8 +2004,8 @@ class NodaliaCoverCard extends HTMLElement {
           .fan-card__empty-text { color: var(--secondary-text-color); font-size: 13px; line-height: 1.5; }
         </style>
         <ha-card class="fan-card fan-card--empty">
-          <div class="fan-card__empty-title">Nodalia Cover Card</div>
-          <div class="fan-card__empty-text">Configura \`entity\` con una entidad \`cover.*\` para mostrar la tarjeta.</div>
+          <div class="fan-card__empty-title">${emptyTitle}</div>
+          <div class="fan-card__empty-text">${emptyBody}</div>
         </ha-card>
       `;
       return;
@@ -1989,18 +2024,24 @@ class NodaliaCoverCard extends HTMLElement {
     const supportsTilt = config.show_tilt_slider !== false && this._supports(COVER_FEATURES.SET_TILT_POSITION, state) && tilt !== null;
     const supportsStop = config.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
     const showCopyBlock = !this._isCompactLayout() || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
+    const tOpen = this._coverCardUi("open", "Open");
+    const tClose = this._coverCardUi("close", "Close");
+    const tStop = this._coverCardUi("stop", "Stop");
+    const tPosSlider = this._coverCardUi("positionSlider", "Position");
+    const tTiltSlider = this._coverCardUi("tiltSlider", "Tilt");
+    const openCloseIcons = resolveOpenCloseControlIcons(config.open_close_icons, state.attributes?.device_class);
     const chips = [];
     if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
     if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip">${Math.round(position)}%</span>`);
-    if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">Tilt ${Math.round(tilt)}%</span>`);
+    if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
     const controlsMarkup = `
-      ${supportsPosition ? this._renderSlider("position", "Position", position) : ""}
+      ${supportsPosition ? this._renderSlider("position", tPosSlider, position) : ""}
       <div class="fan-card__controls">
-        <button type="button" class="fan-card__control" data-cover-action="open" aria-label="Open" tabindex="-1"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
-        ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="Stop" tabindex="-1"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
-        <button type="button" class="fan-card__control" data-cover-action="close" aria-label="Close" tabindex="-1"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+        <button type="button" class="fan-card__control" data-cover-action="open" aria-label="${escapeHtml(tOpen)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
+        ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="${escapeHtml(tStop)}" tabindex="-1"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
+        <button type="button" class="fan-card__control" data-cover-action="close" aria-label="${escapeHtml(tClose)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
       </div>
-      ${supportsTilt ? this._renderSlider("tilt", "Tilt", tilt) : ""}
+      ${supportsTilt ? this._renderSlider("tilt", tTiltSlider, tilt) : ""}
     `;
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
@@ -3031,6 +3072,11 @@ class NodaliaCoverCardEditor extends HTMLElement {
               { value: "always", label: "ed.vacuum.layout_always" },
               { value: "never", label: "ed.vacuum.layout_never" },
             ])}
+            ${this._renderSelectField("ed.cover.open_close_icons", "open_close_icons", config.open_close_icons || "auto", [
+              { value: "auto", label: "ed.cover.open_close_icons_auto" },
+              { value: "vertical", label: "ed.cover.open_close_icons_vertical" },
+              { value: "horizontal", label: "ed.cover.open_close_icons_horizontal" },
+            ])}
             ${this._renderCheckboxField("ed.fan.show_state_bubble", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("Show position chip", "show_position_chip", config.show_position_chip !== false)}
             ${this._renderCheckboxField("Show tilt chip", "show_tilt_chip", config.show_tilt_chip !== false)}
@@ -3157,9 +3203,17 @@ if (!customElements.get(EDITOR_TAG)) {
 }
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: CARD_TAG,
-  name: "Nodalia Cover Card",
-  description: "Fan-card style controls for Home Assistant cover entities.",
-  preview: true,
-});
+(function registerNodaliaCoverCardPicker() {
+  const hass = window.NodaliaI18n?.resolveHass?.(null);
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";
+  const pack = window.NodaliaI18n?.strings?.(lang)?.coverCard || window.NodaliaI18n?.strings?.("en")?.coverCard || {};
+  const description = String(
+    pack.cardDescription || "Fan-style controls for Home Assistant cover entities.",
+  );
+  window.customCards.push({
+    type: CARD_TAG,
+    name: "Nodalia Cover Card",
+    description,
+    preview: true,
+  });
+})();

@@ -685,6 +685,15 @@ test("cover card renders position slider above open stop close controls", () => 
   assert.ok(positionSliderIndex < controlsRowIndex);
 });
 
+test("cover card switches open/close arrow orientation by device class and open_close_icons", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /open_close_icons:\s*"auto"/);
+  assert.match(source, /function resolveOpenCloseControlIcons/);
+  assert.match(source, /coverDeviceClassPrefersHorizontalOpenClose/);
+  assert.match(source, /"ed\.cover\.open_close_icons"/);
+  assert.match(source, /escapeHtml\(openCloseIcons\.open\)/);
+});
+
 test("entity card supports entity pictures in the main icon bubble", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /show_entity_picture: false/);
@@ -725,7 +734,7 @@ test("alarm panel PIN input keeps masked text visible across themes", () => {
   assert.match(source, /color: var\(--primary-text-color\);[\s\S]*-webkit-text-fill-color: var\(--primary-text-color\);/);
   assert.match(source, /caret-color: var\(--primary-text-color\);/);
   assert.match(source, /opacity: 1;/);
-  assert.match(source, /placeholder="Code"/);
+  assert.match(source, /_alarmPanelUi\("codePlaceholder"/);
   assert.match(source, /alarm-card__chip--pin-error/);
   assert.match(source, /_showNativePinErrorChip/);
   assert.match(source, /_nativePinErrorLabel/);

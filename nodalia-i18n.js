@@ -482,6 +482,9 @@
         defaultTitle: "Alarma",
         noState: "Sin estado",
         wrongCode: "Código incorrecto",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        codePlaceholder: "Código",
         actions: {
           disarm: "Desarmar",
           arm_home: "Casa",
@@ -505,6 +508,17 @@
           unavailable: "No disponible",
           unknown: "Desconocida",
         },
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Configura `entity` con una entidad `cover.*` para mostrar la tarjeta.",
+        cardDescription: "Controles estilo ventilador para persianas y toldos de Home Assistant.",
+        open: "Abrir",
+        close: "Cerrar",
+        stop: "Parar",
+        positionSlider: "Posición",
+        tiltSlider: "Inclinación",
+        tiltChip: "Inclinación {value}%",
       },
       person: {
         home: "En casa",
@@ -1019,6 +1033,9 @@
         defaultTitle: "Alarm",
         noState: "No state",
         wrongCode: "Wrong code",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Set `entity` to show this card.",
+        codePlaceholder: "Code",
         actions: {
           disarm: "Disarm",
           arm_home: "Home",
@@ -1042,6 +1059,17 @@
           unavailable: "Unavailable",
           unknown: "Unknown",
         },
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Set `entity` to a `cover.*` entity to show this card.",
+        cardDescription: "Fan-style controls for Home Assistant cover entities.",
+        open: "Open",
+        close: "Close",
+        stop: "Stop",
+        positionSlider: "Position",
+        tiltSlider: "Tilt",
+        tiltChip: "Tilt {value}%",
       },
       person: {
         home: "Home",
@@ -1555,6 +1583,9 @@
         defaultTitle: "Alarm",
         noState: "Kein Status",
         wrongCode: "Falscher Code",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Legen Sie `entity` fest, um diese Karte anzuzeigen.",
+        codePlaceholder: "Code",
         actions: {
           disarm: "Unscharf",
           arm_home: "Zuhause",
@@ -1578,6 +1609,17 @@
           unavailable: "Nicht verfügbar",
           unknown: "Unbekannt",
         },
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Legen Sie `entity` auf eine `cover.*`-Entität fest, um diese Karte anzuzeigen.",
+        cardDescription: "Steuerung im Fan-Karten-Stil für Rollläden und Markisen in Home Assistant.",
+        open: "Öffnen",
+        close: "Schließen",
+        stop: "Stopp",
+        positionSlider: "Position",
+        tiltSlider: "Neigung",
+        tiltChip: "Neigung {value} %",
       },
       person: {
         home: "Zuhause",
@@ -2027,6 +2069,9 @@
         defaultTitle: "Alarme",
         noState: "Pas d'état",
         wrongCode: "Code incorrect",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Configurez `entity` pour afficher cette carte.",
+        codePlaceholder: "Code",
         actions: {
           disarm: "Désarmer",
           arm_home: "Maison",
@@ -2050,6 +2095,17 @@
           unavailable: "Indisponible",
           unknown: "Inconnue",
         },
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Définissez `entity` sur une entité `cover.*` pour afficher cette carte.",
+        cardDescription: "Commandes façon carte ventilateur pour volets et stores Home Assistant.",
+        open: "Ouvrir",
+        close: "Fermer",
+        stop: "Arrêt",
+        positionSlider: "Position",
+        tiltSlider: "Inclinaison",
+        tiltChip: "Inclinaison {value} %",
       },
       person: {
         home: "À la maison",
@@ -2499,6 +2555,9 @@
         defaultTitle: "Allarme",
         noState: "Nessuno stato",
         wrongCode: "Codice errato",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Imposta `entity` per mostrare questa scheda.",
+        codePlaceholder: "Codice",
         actions: {
           disarm: "Disarma",
           arm_home: "Casa",
@@ -2522,6 +2581,17 @@
           unavailable: "Non disponibile",
           unknown: "Sconosciuto",
         },
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Imposta `entity` su un'entità `cover.*` per mostrare questa scheda.",
+        cardDescription: "Controlli in stile scheda ventilatore per tapparelle e tende in Home Assistant.",
+        open: "Apri",
+        close: "Chiudi",
+        stop: "Stop",
+        positionSlider: "Posizione",
+        tiltSlider: "Inclinazione",
+        tiltChip: "Inclinazione {value}%",
       },
       person: {
         home: "A casa",
@@ -2971,6 +3041,9 @@
         defaultTitle: "Alarm",
         noState: "Geen status",
         wrongCode: "Verkeerde code",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Stel `entity` in om deze kaart te tonen.",
+        codePlaceholder: "Code",
         actions: {
           disarm: "Uitschakelen",
           arm_home: "Thuis",
@@ -2994,6 +3067,17 @@
           unavailable: "Niet beschikbaar",
           unknown: "Onbekend",
         },
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Stel `entity` in op een `cover.*`-entiteit om deze kaart te tonen.",
+        cardDescription: "Bediening in ventilatorkaart-stijl voor zonwering en rolluiken in Home Assistant.",
+        open: "Openen",
+        close: "Sluiten",
+        stop: "Stop",
+        positionSlider: "Positie",
+        tiltSlider: "Kantelen",
+        tiltChip: "Kanteling {value}%",
       },
       person: {
         home: "Thuis",
@@ -3596,6 +3680,9 @@
         defaultTitle: "Alarme",
         noState: "Sem estado",
         wrongCode: "Código incorreto",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Defina `entity` para mostrar este cartão.",
+        codePlaceholder: "Código",
         actions: {
           disarm: "Desarmar",
           arm_home: "Casa",
@@ -3619,6 +3706,17 @@
           unavailable: "Indisponível",
           unknown: "Desconhecido"
         }
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Defina `entity` para uma entidade `cover.*` para mostrar este cartão.",
+        cardDescription: "Controlos ao estilo do cartão de ventoinha para estores e toldos no Home Assistant.",
+        open: "Abrir",
+        close: "Fechar",
+        stop: "Parar",
+        positionSlider: "Posição",
+        tiltSlider: "Inclinação",
+        tiltChip: "Inclinação {value}%",
       },
       person: {
         home: "Em casa",
@@ -4077,6 +4175,9 @@
         defaultTitle: "Сигнализация",
         noState: "Нет состояния",
         wrongCode: "Неверный код",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Укажите `entity`, чтобы показать эту карточку.",
+        codePlaceholder: "Код",
         actions: {
           disarm: "Снять",
           arm_home: "Дома",
@@ -4100,6 +4201,17 @@
           unavailable: "Недоступно",
           unknown: "Неизвестно"
         }
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Задайте `entity` как сущность `cover.*`, чтобы показать карточку.",
+        cardDescription: "Элементы управления в стиле карточки вентилятора для штор Home Assistant.",
+        open: "Открыть",
+        close: "Закрыть",
+        stop: "Стоп",
+        positionSlider: "Положение",
+        tiltSlider: "Наклон",
+        tiltChip: "Наклон {value}%",
       },
       person: {
         home: "Дома",
@@ -4558,6 +4670,9 @@
         defaultTitle: "Συναγερμός",
         noState: "Χωρίς κατάσταση",
         wrongCode: "Λάθος κωδικός",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Ορίστε `entity` για να εμφανιστεί αυτή η κάρτα.",
+        codePlaceholder: "Κωδικός",
         actions: {
           disarm: "Αφόπλιση",
           arm_home: "Σπίτι",
@@ -4581,6 +4696,17 @@
           unavailable: "Μη διαθέσιμο",
           unknown: "Άγνωστο"
         }
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Ορίστε το `entity` σε οντότητα `cover.*` για να εμφανιστεί αυτή η κάρτα.",
+        cardDescription: "Χειρισμοί στυλ κάρτας ανεμιστήρα για ρολά Home Assistant.",
+        open: "Άνοιγμα",
+        close: "Κλείσιμο",
+        stop: "Διακοπή",
+        positionSlider: "Θέση",
+        tiltSlider: "Κλίση",
+        tiltChip: "Κλίση {value}%",
       },
       person: {
         home: "Σπίτι",
@@ -5039,6 +5165,9 @@
         defaultTitle: "报警",
         noState: "无状态",
         wrongCode: "密码错误",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "设置 `entity` 以显示此卡片。",
+        codePlaceholder: "密码",
         actions: {
           disarm: "撤防",
           arm_home: "在家",
@@ -5062,6 +5191,17 @@
           unavailable: "不可用",
           unknown: "未知"
         }
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "将 `entity` 设为 `cover.*` 实体以显示此卡片。",
+        cardDescription: "类似风扇卡的控件，用于 Home Assistant 窗帘类实体。",
+        open: "打开",
+        close: "关闭",
+        stop: "停止",
+        positionSlider: "位置",
+        tiltSlider: "倾斜",
+        tiltChip: "倾斜 {value}%",
       },
       person: {
         home: "在家",
@@ -5520,6 +5660,9 @@
         defaultTitle: "Alarmă",
         noState: "Fără stare",
         wrongCode: "Cod greșit",
+        emptyTitle: "Nodalia Alarm Panel Card",
+        emptyBody: "Setați `entity` pentru a afișa acest card.",
+        codePlaceholder: "Cod",
         actions: {
           disarm: "Dezarmare",
           arm_home: "Acasă",
@@ -5543,6 +5686,17 @@
           unavailable: "Indisponibil",
           unknown: "Necunoscut"
         }
+      },
+      coverCard: {
+        emptyTitle: "Nodalia Cover Card",
+        emptyBody: "Setați `entity` la o entitate `cover.*` pentru a afișa acest card.",
+        cardDescription: "Comenzi în stilul cardului de ventilator pentru jaluzele Home Assistant.",
+        open: "Deschide",
+        close: "Închide",
+        stop: "Stop",
+        positionSlider: "Poziție",
+        tiltSlider: "Înclinare",
+        tiltChip: "Înclinare {value}%",
       },
       person: {
         home: "Acasă",

@@ -765,7 +765,7 @@
 
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.1.0-alpha.27";
+const CARD_VERSION = "1.1.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1803,12 +1803,17 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._requestRender();
   }
 
-  _nativePinErrorLabel() {
+  _alarmPanelUi(key, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
     const enPack = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
-    return String(pack?.wrongCode || enPack?.wrongCode || "Wrong code");
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _nativePinErrorLabel() {
+    return this._alarmPanelUi("wrongCode", "Wrong code");
   }
 
   _runAlarmAction(service) {
@@ -1947,10 +1952,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _renderEmptyState() {
+    const title = escapeHtml(this._alarmPanelUi("emptyTitle", "Nodalia Alarm Panel Card"));
+    const body = escapeHtml(this._alarmPanelUi("emptyBody", "Set `entity` to show this card."));
     return `
       <ha-card class="alarm-card alarm-card--empty">
-        <div class="alarm-card__empty-title">Nodalia Alarm Panel Card</div>
-        <div class="alarm-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
+        <div class="alarm-card__empty-title">${title}</div>
+        <div class="alarm-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
@@ -2456,7 +2463,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
                     type="password"
                     inputmode="numeric"
                     autocomplete="one-time-code"
-                    placeholder="Code"
+                    placeholder="${escapeHtml(this._alarmPanelUi("codePlaceholder", "Code"))}"
                     data-alarm-field="code"
                     value="${escapeHtml(this._codeInput)}"
                   />
