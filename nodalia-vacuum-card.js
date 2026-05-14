@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.1.0-alpha.11";
+const CARD_VERSION = "1.1.0-alpha.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -823,6 +823,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   tap_action: "default",
   tap_navigation_path: "",
   icon_tap_action: "",
@@ -1255,6 +1257,8 @@ function normalizeConfig(rawConfig) {
   }
   config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
 
   return config;
 }
@@ -1479,6 +1483,8 @@ class NodaliaVacuumCard extends HTMLElement {
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
+      showEntityPicture: this._config?.show_entity_picture === true,
+      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
       batteryLevel: Number(attrs.battery_level ?? -1),
       status: String(attrs.status || ""),
       fanSpeed: String(attrs.fan_speed || ""),
@@ -1993,6 +1999,18 @@ class NodaliaVacuumCard extends HTMLElement {
       default:
         return "mdi:robot-vacuum";
     }
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _getStateLabel(state) {
@@ -3452,6 +3470,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
     const title = this._getVacuumName(state);
     const icon = this._getVacuumIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const stateLabel = this._getStateLabel(state);
     const showUnavailableBadge = isUnavailableState(state);
     const batteryLevel = this._getBatteryLevel(state);
@@ -3660,6 +3679,16 @@ class NodaliaVacuumCard extends HTMLElement {
         .vacuum-card__icon-button--active-motion ha-icon {
           animation: vacuum-card-icon-sweep 1.45s ease-in-out infinite;
           transform-origin: 50% 70%;
+        }
+
+        .vacuum-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          pointer-events: none;
+          position: absolute;
+          width: 100%;
         }
 
         .vacuum-card__unavailable-badge {
@@ -4058,7 +4087,9 @@ class NodaliaVacuumCard extends HTMLElement {
               ${canRunIconCardTap ? 'data-vacuum-action="icon_tap"' : ""}
               aria-label="${escapeHtml(iconButtonLabel)}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="vacuum-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="vacuum-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${
@@ -5178,6 +5209,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: phVacName,
+              fullWidth: true,
+            })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/vacuum.png",
               fullWidth: true,
             })}
             ${this._renderTextField(

@@ -22,6 +22,31 @@ Maintenance work continues toward the next stable **`1.1.x`** cut.
 
 ---
 
+## [1.1.0-alpha.13] - 2026-05-14
+
+Thirteenth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.13`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** replace the continuous post-click scroll restore with a one-shot render anchor that is cancelled as soon as the user scrolls, keeping Safari/Home Assistant focus jumps away without freezing dashboard navigation after pressing cover controls.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.13`**.
+
+---
+
+## [1.1.0-alpha.12] - 2026-05-14
+
+Twelfth **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.12`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Changed
+
+- **`nodalia-fan-card.js`, `nodalia-light-card.js`, `nodalia-vacuum-card.js`, `nodalia-humidifier-card.js`:** add `show_entity_picture` and optional `entity_picture` support so the main bubble can render an image/entity picture instead of an icon.
+- **Release metadata:** bump the **`1.1.0`** feature line to **`1.1.0-alpha.12`**.
+
+---
+
 ## [1.1.0-alpha.11] - 2026-05-14
 
 Eleventh **`1.1.0`** **`alpha`**: release channel **`1.1.0-alpha.11`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on bundled card modules.

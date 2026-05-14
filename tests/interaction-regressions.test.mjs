@@ -467,13 +467,21 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
   const source = read("nodalia-cover-card.js");
   assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
-  assert.match(source, /if \(actionControl\) \{\s*this\._scheduleInteractionScrollRestore\(\);\s*event\.preventDefault\(\);\s*\}/);
+  assert.match(source, /if \(actionControl\) \{\s*this\._rememberInteractionScroll\(\);\s*this\._preventNonTouchFocus\(event\);\s*\}/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
-  assert.match(source, /_scheduleInteractionScrollRestore\(duration = 1200\)/);
+  assert.match(source, /String\(event\.pointerType \|\| ""\)\.toLowerCase\(\) === "touch"/);
+  assert.match(source, /_onTouchStart\(event\)[\s\S]*if \(actionControl\) \{\s*this\._rememberInteractionScroll\(\);\s*\}/);
+  assert.doesNotMatch(source, /_scheduleInteractionScrollRestore/);
+  assert.doesNotMatch(source, /requestAnimationFrame\(this\._restoreInteractionScroll/);
+  assert.doesNotMatch(source, /_restoreInteractionScroll\(\)/);
+  assert.match(source, /_rememberInteractionScroll\(\)/);
   assert.match(source, /_restoreInteractionScrollSnapshot\(\)/);
-  assert.match(source, /this\._scheduleInteractionScrollRestore\(\);\s*event\.preventDefault\(\);/);
+  assert.match(source, /window\.addEventListener\("wheel", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
+  assert.match(source, /window\.addEventListener\("touchmove", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
+  assert.match(source, /_cancelInteractionScrollRestore\(\)/);
+  assert.match(source, /overflow-anchor: none/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
@@ -498,6 +506,25 @@ test("entity card supports entity pictures in the main icon bubble", () => {
   assert.match(source, /_getEntityPicture\(state\)/);
   assert.match(source, /<img class="entity-card__picture"/);
   assert.match(source, /ed\.entity\.show_entity_picture/);
+  assert.match(source, /ed\.entity\.entity_picture/);
+});
+
+test("device cards support entity pictures in the main icon bubble", () => {
+  [
+    ["nodalia-fan-card.js", "fan-card__picture"],
+    ["nodalia-light-card.js", "light-card__picture"],
+    ["nodalia-vacuum-card.js", "vacuum-card__picture"],
+    ["nodalia-humidifier-card.js", "humidifier-card__picture"],
+  ].forEach(([file, pictureClass]) => {
+    const source = read(file);
+    assert.match(source, /show_entity_picture: false/);
+    assert.match(source, /entity_picture: ""/);
+    assert.match(source, /_getEntityPicture\(state\)/);
+    assert.match(source, /attrs\.entity_picture_local \|\| attrs\.entity_picture/);
+    assert.match(source, new RegExp(`<img class="${pictureClass}"`));
+    assert.match(source, /ed\.entity\.show_entity_picture/);
+    assert.match(source, /ed\.entity\.entity_picture/);
+  });
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

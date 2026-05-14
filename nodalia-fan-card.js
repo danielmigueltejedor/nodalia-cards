@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.0-alpha.11";
+const CARD_VERSION = "1.1.0-alpha.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -766,6 +766,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   show_state: false,
   show_percentage_chip: true,
   show_mode_chip: true,
@@ -1264,6 +1266,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
 
   return config;
 }
@@ -1445,6 +1449,8 @@ class NodaliaFanCard extends HTMLElement {
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
+      showEntityPicture: this._config?.show_entity_picture === true,
+      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
       percentage: Number(attrs.percentage ?? -1),
       percentageStep: Number(attrs.percentage_step ?? -1),
       presetMode: String(attrs.preset_mode || ""),
@@ -1548,6 +1554,18 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     return "mdi:fan";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _getStateLabel(state) {
@@ -2489,6 +2507,7 @@ class NodaliaFanCard extends HTMLElement {
     const isOn = this._isOn(state);
     const title = this._getFanName(state);
     const icon = this._getFanIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const accentColor = this._getAccentColor(state);
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const darkenBubbleIconGlyph =
@@ -2916,6 +2935,16 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__icon--active-motion ha-icon {
           animation: fan-card-icon-spin 1.35s linear infinite;
           transform: translate3d(-50%, -50%, 0);
+        }
+
+        .fan-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          pointer-events: none;
+          position: absolute;
+          width: 100%;
         }
 
         .fan-card__unavailable-badge {
@@ -3571,7 +3600,9 @@ class NodaliaFanCard extends HTMLElement {
               data-fan-action="icon"
               aria-label="Encender o apagar"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="fan-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
@@ -4517,6 +4548,11 @@ class NodaliaFanCardEditor extends HTMLElement {
             })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: phFanName,
+              fullWidth: true,
+            })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/fan.png",
               fullWidth: true,
             })}
           </div>

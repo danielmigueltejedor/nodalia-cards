@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0-alpha.11";
+const CARD_VERSION = "1.1.0-alpha.13";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1184,8 +1184,8 @@ class NodaliaCoverCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._suppressNextCoverTap = false;
     this._interactionScrollSnapshot = [];
-    this._interactionScrollRestoreFrame = 0;
-    this._interactionScrollRestoreUntil = 0;
+    this._interactionScrollCancelTimer = 0;
+    this._interactionScrollCancelWatchAttached = false;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -1193,7 +1193,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onTouchStart = this._onTouchStart.bind(this);
-    this._restoreInteractionScroll = this._restoreInteractionScroll.bind(this);
+    this._cancelInteractionScrollRestore = this._cancelInteractionScrollRestore.bind(this);
     this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
     this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
@@ -1242,10 +1242,7 @@ class NodaliaCoverCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     this._detachWindowDragListeners();
-    if (this._interactionScrollRestoreFrame) {
-      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
-      this._interactionScrollRestoreFrame = 0;
-    }
+    this._cancelInteractionScrollRestore();
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -1401,13 +1398,11 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const [domain, serviceName] = String(service || "").split(".");
     if (!domain || !serviceName) return;
-    this._scheduleInteractionScrollRestore();
     this._hass.callService(domain, serviceName, data);
   }
 
   _callCover(service, data = {}) {
     if (!this._hass || !this._config?.entity) return;
-    this._scheduleInteractionScrollRestore();
     this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
   }
 
@@ -1518,7 +1513,7 @@ class NodaliaCoverCard extends HTMLElement {
     if (!button) return;
     event.preventDefault();
     event.stopPropagation();
-    this._scheduleInteractionScrollRestore();
+    this._rememberInteractionScroll();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
     if (button instanceof HTMLElement && typeof button.blur === "function") {
@@ -1552,10 +1547,16 @@ class NodaliaCoverCard extends HTMLElement {
       node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
     );
     if (!control) return;
-    this._scheduleInteractionScrollRestore();
+    this._rememberInteractionScroll();
     if (typeof control.blur === "function") {
       control.blur();
     }
+  }
+
+  _preventNonTouchFocus(event) {
+    if (!event || event.cancelable === false) return;
+    if (String(event.pointerType || "").toLowerCase() === "touch") return;
+    event.preventDefault();
   }
 
   _onPointerDown(event) {
@@ -1569,8 +1570,8 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      this._scheduleInteractionScrollRestore();
-      event.preventDefault();
+      this._rememberInteractionScroll();
+      this._preventNonTouchFocus(event);
     }
   }
 
@@ -1585,8 +1586,8 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      this._scheduleInteractionScrollRestore();
-      event.preventDefault();
+      this._rememberInteractionScroll();
+      this._preventNonTouchFocus(event);
     }
   }
 
@@ -1601,14 +1602,13 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
-      this._scheduleInteractionScrollRestore();
-      event.preventDefault();
+      this._rememberInteractionScroll();
     }
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
     if (!slider) return;
-    this._scheduleInteractionScrollRestore();
+    this._rememberInteractionScroll();
     this._activeSliderDrag = {
       pointerId,
       slider,
@@ -1800,6 +1800,7 @@ class NodaliaCoverCard extends HTMLElement {
   _restoreInteractionScrollSnapshot() {
     const snapshot = Array.isArray(this._interactionScrollSnapshot) ? this._interactionScrollSnapshot : [];
     if (!snapshot.length) return;
+    this._stopInteractionScrollCancelWatch();
     snapshot.forEach(item => {
       if (item.kind === "window" && item.win) {
         try {
@@ -1812,33 +1813,44 @@ class NodaliaCoverCard extends HTMLElement {
         item.element.scrollTop = item.top;
       }
     });
-  }
-
-  _scheduleInteractionScrollRestore(duration = 1200) {
-    const restoreUntil = Date.now() + duration;
-    if (this._interactionScrollSnapshot.length && Date.now() <= this._interactionScrollRestoreUntil) {
-      this._interactionScrollRestoreUntil = Math.max(this._interactionScrollRestoreUntil, restoreUntil);
-      this._restoreInteractionScrollSnapshot();
-      if (!this._interactionScrollRestoreFrame && typeof window !== "undefined") {
-        this._interactionScrollRestoreFrame = window.requestAnimationFrame(this._restoreInteractionScroll);
-      }
-      return;
-    }
-    this._interactionScrollSnapshot = this._captureInteractionScrollSnapshot();
-    this._interactionScrollRestoreUntil = restoreUntil;
-    this._restoreInteractionScrollSnapshot();
-    if (this._interactionScrollRestoreFrame || typeof window === "undefined") return;
-    this._interactionScrollRestoreFrame = window.requestAnimationFrame(this._restoreInteractionScroll);
-  }
-
-  _restoreInteractionScroll() {
-    this._interactionScrollRestoreFrame = 0;
-    this._restoreInteractionScrollSnapshot();
-    if (Date.now() <= this._interactionScrollRestoreUntil && typeof window !== "undefined") {
-      this._interactionScrollRestoreFrame = window.requestAnimationFrame(this._restoreInteractionScroll);
-      return;
-    }
     this._interactionScrollSnapshot = [];
+  }
+
+  _rememberInteractionScroll() {
+    if (!this._interactionScrollSnapshot.length) {
+      this._interactionScrollSnapshot = this._captureInteractionScrollSnapshot();
+    }
+    if (!this._interactionScrollSnapshot.length || typeof window === "undefined") return;
+    this._startInteractionScrollCancelWatch();
+    if (this._interactionScrollCancelTimer) {
+      window.clearTimeout(this._interactionScrollCancelTimer);
+    }
+    this._interactionScrollCancelTimer = window.setTimeout(this._cancelInteractionScrollRestore, 1600);
+  }
+
+  _startInteractionScrollCancelWatch() {
+    if (this._interactionScrollCancelWatchAttached || typeof window === "undefined") return;
+    this._interactionScrollCancelWatchAttached = true;
+    window.addEventListener("wheel", this._cancelInteractionScrollRestore, { passive: true, capture: true });
+    window.addEventListener("touchmove", this._cancelInteractionScrollRestore, { passive: true, capture: true });
+    window.addEventListener("keydown", this._cancelInteractionScrollRestore, { capture: true });
+  }
+
+  _stopInteractionScrollCancelWatch() {
+    if (typeof window !== "undefined" && this._interactionScrollCancelTimer) {
+      window.clearTimeout(this._interactionScrollCancelTimer);
+      this._interactionScrollCancelTimer = 0;
+    }
+    if (!this._interactionScrollCancelWatchAttached || typeof window === "undefined") return;
+    this._interactionScrollCancelWatchAttached = false;
+    window.removeEventListener("wheel", this._cancelInteractionScrollRestore, true);
+    window.removeEventListener("touchmove", this._cancelInteractionScrollRestore, true);
+    window.removeEventListener("keydown", this._cancelInteractionScrollRestore, true);
+  }
+
+  _cancelInteractionScrollRestore() {
+    this._interactionScrollSnapshot = [];
+    this._stopInteractionScrollCancelWatch();
   }
 
   _renderSlider(kind, label, value) {
@@ -1875,7 +1887,7 @@ class NodaliaCoverCard extends HTMLElement {
     if (!state) {
       this.shadowRoot.innerHTML = `
         <style>
-          :host { display: block; }
+          :host { display: block; overflow-anchor: none; }
           * { box-sizing: border-box; }
           .fan-card--empty {
             background: ${styles.card.background};
@@ -1929,7 +1941,7 @@ class NodaliaCoverCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; }
+        :host { display: block; overflow-anchor: none; }
         * { box-sizing: border-box; }
         ha-card.fan-card {
           --fan-card-controls-gap: calc(${styles.card.gap} + 4px);
@@ -1941,6 +1953,7 @@ class NodaliaCoverCard extends HTMLElement {
           color: var(--primary-text-color);
           min-width: 0;
           overflow: hidden;
+          overflow-anchor: none;
           padding: ${styles.card.padding};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;

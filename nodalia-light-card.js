@@ -750,7 +750,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.0-alpha.11";
+const CARD_VERSION = "1.1.0-alpha.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -778,6 +778,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   show_state: false,
   state_position: "right",
   compact_layout_mode: "auto",
@@ -1298,6 +1300,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
 
   return config;
 }
@@ -1548,6 +1552,8 @@ class NodaliaLightCard extends HTMLElement {
       `s:${String(state?.state || "")}`,
       `n:${String(attrs.friendly_name || "")}`,
       `i:${String(attrs.icon || "")}`,
+      `sep:${this._config?.show_entity_picture ? 1 : 0}`,
+      `ep:${String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "")}`,
       `b:${Number(attrs.brightness ?? -1)}`,
       `ct:${Number(attrs.color_temp ?? -1)}`,
       `ctk:${Number(attrs.color_temp_kelvin ?? -1)}`,
@@ -2435,6 +2441,18 @@ class NodaliaLightCard extends HTMLElement {
 
   _getLightIcon(state) {
     return this._config?.icon || state?.attributes?.icon || "mdi:lightbulb";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _getAccentColor(state) {
@@ -3446,6 +3464,7 @@ class NodaliaLightCard extends HTMLElement {
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = this._getStateLabel(state);
     const isCompactLayout = this._isCompactLayout;
@@ -4051,6 +4070,16 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__icon ha-icon {
           color: ${isOn ? styles.icon.color : styles.icon.off_color};
           font-size: 26px;
+        }
+
+        .light-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          pointer-events: none;
+          position: absolute;
+          width: 100%;
         }
 
         .light-card__unavailable-badge {
@@ -4875,7 +4904,9 @@ class NodaliaLightCard extends HTMLElement {
               data-light-action="icon"
               aria-label="Encender o apagar"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="light-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="light-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
@@ -5785,6 +5816,11 @@ class NodaliaLightCardEditor extends HTMLElement {
             })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: phLightName,
+              fullWidth: true,
+            })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/light.png",
               fullWidth: true,
             })}
             ${this._renderTextField(
