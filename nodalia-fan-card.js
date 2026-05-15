@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.1";
+const CARD_VERSION = "1.1.2-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -767,6 +767,7 @@ const HAPTIC_PATTERNS = {
   failure: [12, 40, 12, 40, 18],
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
+const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -1292,6 +1293,8 @@ class NodaliaFanCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
+    this._optimisticToggle = null;
+    this._optimisticToggleTimer = 0;
     this._draftPercentage = new Map();
     this._presetPanelOpen = false;
     this._cardWidth = 0;
@@ -1386,6 +1389,7 @@ class NodaliaFanCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._scheduleOptimisticToggleTimeout();
   }
 
   disconnectedCallback() {
@@ -1404,10 +1408,16 @@ class NodaliaFanCard extends HTMLElement {
     this._controlsTransition = null;
     this._presetPanelTransition = null;
     this._pendingDragUpdate = null;
+    this._clearOptimisticToggleTimer();
   }
 
   setConfig(config) {
+    const previousEntity = this._config?.entity || "";
     this._config = normalizeConfig(config || {});
+    if (previousEntity && previousEntity !== this._config.entity) {
+      this._draftPercentage.delete(previousEntity);
+      this._clearOptimisticToggleState();
+    }
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
@@ -1416,8 +1426,9 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    this._syncOptimisticToggleState(this._getActualState());
+    const nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -1448,11 +1459,13 @@ class NodaliaFanCard extends HTMLElement {
 
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const actualState = entityId ? hass?.states?.[entityId] || null : null;
+    const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
     const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
+      optimistic: String(attrs._nodalia_optimistic_toggle || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
       showEntityPicture: this._config?.show_entity_picture === true,
@@ -1528,7 +1541,122 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
+    return this._buildOptimisticToggleState(this._getActualState());
+  }
+
+  _getActualState(hass = this._hass) {
+    return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _createStateSnapshot(state) {
+    if (!state) {
+      return null;
+    }
+    return {
+      ...state,
+      attributes: { ...(state.attributes || {}) },
+    };
+  }
+
+  _clearOptimisticToggleTimer() {
+    if (this._optimisticToggleTimer) {
+      window.clearTimeout(this._optimisticToggleTimer);
+      this._optimisticToggleTimer = 0;
+    }
+  }
+
+  _clearOptimisticToggleState() {
+    this._clearOptimisticToggleTimer();
+    this._optimisticToggle = null;
+  }
+
+  _isOptimisticTogglePending(actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._optimisticToggle || this._optimisticToggle.entityId !== entityId) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    const actualKey = normalizeTextKey(actualState?.state);
+    const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
+    if (!this._isFanToggleableState(actualState) || actualKey === expectedKey) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    if (Date.now() >= this._optimisticToggle.expiresAt) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  _scheduleOptimisticToggleTimeout() {
+    this._clearOptimisticToggleTimer();
+    if (!this._optimisticToggle || !this.isConnected || typeof window === "undefined") {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
+    this._optimisticToggleTimer = window.setTimeout(() => {
+      this._optimisticToggleTimer = 0;
+      if (!this._isOptimisticTogglePending(this._getActualState())) {
+        this._lastRenderSignature = "";
+        this._render();
+        return;
+      }
+      this._scheduleOptimisticToggleTimeout();
+    }, remaining);
+  }
+
+  _startOptimisticToggle(expectedState, actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._isFanToggleableState(actualState)) {
+      return;
+    }
+
+    this._clearOptimisticToggleState();
+    this._optimisticToggle = {
+      entityId,
+      expectedState,
+      expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
+      stateSnapshot: this._createStateSnapshot(actualState),
+    };
+    this._scheduleOptimisticToggleTimeout();
+  }
+
+  _buildOptimisticToggleState(actualState = this._getActualState()) {
+    if (!this._isOptimisticTogglePending(actualState)) {
+      return actualState;
+    }
+
+    const snapshot = this._optimisticToggle?.stateSnapshot || actualState;
+    if (!snapshot) {
+      return actualState;
+    }
+
+    return {
+      ...snapshot,
+      entity_id: snapshot.entity_id || actualState?.entity_id || this._config?.entity,
+      state: this._optimisticToggle.expectedState,
+      attributes: {
+        ...(snapshot.attributes || {}),
+        ...(actualState?.attributes || {}),
+        _nodalia_optimistic_toggle: this._optimisticToggle.expectedState,
+      },
+    };
+  }
+
+  _syncOptimisticToggleState(actualState = this._getActualState()) {
+    if (!this._optimisticToggle) {
+      return;
+    }
+    if (!this._isOptimisticTogglePending(actualState)) {
+      this._clearOptimisticToggleTimer();
+      return;
+    }
+    this._scheduleOptimisticToggleTimeout();
   }
 
   _isOn(state = this._getState()) {
@@ -1726,12 +1854,19 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _toggleFan(state) {
-    if (this._isOn(state)) {
+    const actualState = this._getActualState();
+    const effectiveState = state || this._getState();
+    const turnOff = this._isOn(effectiveState);
+    this._startOptimisticToggle(turnOff ? "off" : "on", actualState);
+
+    if (turnOff) {
       this._setFanState("turn_off");
+      this._render();
       return;
     }
 
     this._setFanState("turn_on");
+    this._render();
   }
 
   _isFanToggleableState(state) {

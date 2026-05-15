@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, and completed **`1.1.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, and current **`1.1.2-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
@@ -20,13 +20,6 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Security and service-action hardening.
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
-
-### Fixed
-
-- **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
-- **`nodalia-light-card.js`:** quick color-temperature preset labels and related control text now use runtime i18n instead of hardcoded English/Spanish strings.
-
----
 
 ## [1.1.1] - 2026-05-15
 

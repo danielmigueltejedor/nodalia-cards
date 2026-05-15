@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.1";
+const CARD_VERSION = "1.1.2-alpha.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -1240,6 +1240,9 @@ class NodaliaCoverCard extends HTMLElement {
         : null;
     /** `"slider"` = sliders in main cell; `"arrows"` = open/stop/close in main cell (toggle on the right). */
     this._coverControlsViewMode = "slider";
+    this._coverInteractionScrollSnapshot = null;
+    this._coverInteractionScrollClearTimer = 0;
+    this._coverInteractionScrollCancelers = [];
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -1299,6 +1302,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._resizeObserver?.disconnect();
     this._detachHostHold?.();
     this._detachWindowDragListeners();
+    this._clearCoverInteractionScrollSnapshot();
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -1325,6 +1329,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     this._lastRenderSignature = signature;
     this._render();
+    this._scheduleCoverInteractionScrollRestore();
   }
 
   getCardSize() {
@@ -1606,6 +1611,10 @@ class NodaliaCoverCard extends HTMLElement {
     if (!button) return;
     event.preventDefault();
     event.stopPropagation();
+    this._rememberCoverInteractionScroll(event);
+    if (typeof button.blur === "function") {
+      button.blur();
+    }
     const coverAction = button.dataset.coverAction;
     if (this._isCardTapAction(coverAction)) {
       if (coverAction === "body" || coverAction === "icon") {
@@ -1615,6 +1624,7 @@ class NodaliaCoverCard extends HTMLElement {
         }
         this._triggerHaptic();
         this._runAction(coverAction);
+        this._scheduleCoverInteractionScrollRestore();
       }
       return;
     }
@@ -1627,12 +1637,15 @@ class NodaliaCoverCard extends HTMLElement {
         break;
       case "open":
         this._callCover("open_cover");
+        this._scheduleCoverInteractionScrollRestore();
         break;
       case "close":
         this._callCover("close_cover");
+        this._scheduleCoverInteractionScrollRestore();
         break;
       case "stop":
         this._callCover("stop_cover");
+        this._scheduleCoverInteractionScrollRestore();
         break;
       default:
         break;
@@ -1705,6 +1718,140 @@ class NodaliaCoverCard extends HTMLElement {
     );
   }
 
+  _getCoverActionTarget(path) {
+    return path.find(node => node instanceof HTMLElement && node.dataset?.coverAction) || null;
+  }
+
+  _captureCoverInteractionScrollSnapshot(event = null) {
+    if (typeof document === "undefined") {
+      return null;
+    }
+
+    const items = [];
+    const seen = new Set();
+    const addScrollable = element => {
+      if (!(element instanceof Element) || seen.has(element)) {
+        return;
+      }
+      seen.add(element);
+      const maxTop = element.scrollHeight - element.clientHeight;
+      const maxLeft = element.scrollWidth - element.clientWidth;
+      if (maxTop <= 1 && maxLeft <= 1) {
+        return;
+      }
+      items.push({
+        element,
+        scrollTop: element.scrollTop,
+        scrollLeft: element.scrollLeft,
+        bottomOffset: Math.max(0, maxTop - element.scrollTop),
+        rightOffset: Math.max(0, maxLeft - element.scrollLeft),
+      });
+    };
+
+    for (const node of event?.composedPath?.() || []) {
+      addScrollable(node);
+    }
+
+    for (let node = this; node; node = node.parentElement) {
+      addScrollable(node);
+    }
+
+    addScrollable(document.scrollingElement || document.documentElement);
+
+    return items.length
+      ? {
+          items,
+          expiresAt: Date.now() + 2500,
+        }
+      : null;
+  }
+
+  _clearCoverInteractionScrollSnapshot() {
+    this._coverInteractionScrollSnapshot = null;
+    if (this._coverInteractionScrollClearTimer) {
+      window.clearTimeout(this._coverInteractionScrollClearTimer);
+      this._coverInteractionScrollClearTimer = 0;
+    }
+    for (const detach of this._coverInteractionScrollCancelers || []) {
+      detach();
+    }
+    this._coverInteractionScrollCancelers = [];
+  }
+
+  _attachCoverInteractionScrollCancelers() {
+    for (const detach of this._coverInteractionScrollCancelers || []) {
+      detach();
+    }
+    this._coverInteractionScrollCancelers = [];
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const cancel = () => {
+      if (!this._activeSliderDrag) {
+        this._clearCoverInteractionScrollSnapshot();
+      }
+    };
+    const options = { passive: true, capture: true, once: true };
+    for (const type of ["wheel", "touchmove", "keydown"]) {
+      window.addEventListener(type, cancel, options);
+      this._coverInteractionScrollCancelers.push(() => window.removeEventListener(type, cancel, options));
+    }
+  }
+
+  _rememberCoverInteractionScroll(event = null) {
+    const snapshot = this._captureCoverInteractionScrollSnapshot(event);
+    if (!snapshot) {
+      return;
+    }
+
+    this._clearCoverInteractionScrollSnapshot();
+    this._coverInteractionScrollSnapshot = snapshot;
+    this._attachCoverInteractionScrollCancelers();
+    this._coverInteractionScrollClearTimer = window.setTimeout(() => {
+      this._clearCoverInteractionScrollSnapshot();
+    }, 2800);
+  }
+
+  _restoreCoverInteractionScroll(snapshot = this._coverInteractionScrollSnapshot) {
+    if (!snapshot || Date.now() > snapshot.expiresAt) {
+      this._clearCoverInteractionScrollSnapshot();
+      return;
+    }
+
+    for (const item of snapshot.items) {
+      const element = item.element;
+      if (!(element instanceof Element)) {
+        continue;
+      }
+      const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
+      const maxLeft = Math.max(0, element.scrollWidth - element.clientWidth);
+      element.scrollTop = clamp(maxTop - item.bottomOffset, 0, maxTop);
+      element.scrollLeft = clamp(maxLeft - item.rightOffset, 0, maxLeft);
+    }
+  }
+
+  _scheduleCoverInteractionScrollRestore() {
+    const snapshot = this._coverInteractionScrollSnapshot;
+    if (!snapshot || typeof window === "undefined") {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (this._coverInteractionScrollSnapshot === snapshot) {
+          this._restoreCoverInteractionScroll(snapshot);
+        }
+      });
+    });
+  }
+
+  _preventCoverPointerFocus(event, actionTarget) {
+    if (!actionTarget || !event || event.cancelable === false) {
+      return;
+    }
+    event.preventDefault();
+  }
+
   _onPointerDown(event) {
     const path = event.composedPath();
     const slider = path.find(node =>
@@ -1714,12 +1861,20 @@ class NodaliaCoverCard extends HTMLElement {
       );
 
     if (slider) {
+      this._rememberCoverInteractionScroll(event);
       if (!this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
         this._startSliderDrag(slider, event.clientX, event, event.pointerId);
       }
       return;
     }
 
+    if (typeof event.button !== "number" || event.button === 0) {
+      const actionTarget = this._getCoverActionTarget(path);
+      if (actionTarget) {
+        this._rememberCoverInteractionScroll(event);
+        this._preventCoverPointerFocus(event, actionTarget);
+      }
+    }
   }
 
   _onMouseDown(event) {
@@ -1731,12 +1886,20 @@ class NodaliaCoverCard extends HTMLElement {
       );
 
     if (slider) {
+      this._rememberCoverInteractionScroll(event);
       if (!this._activeSliderDrag && event.button === 0) {
         this._startSliderDrag(slider, event.clientX, event);
       }
       return;
     }
 
+    if (event.button === 0) {
+      const actionTarget = this._getCoverActionTarget(path);
+      if (actionTarget) {
+        this._rememberCoverInteractionScroll(event);
+        this._preventCoverPointerFocus(event, actionTarget);
+      }
+    }
   }
 
   _onTouchStart(event) {
@@ -1748,12 +1911,17 @@ class NodaliaCoverCard extends HTMLElement {
       );
 
     if (slider) {
+      this._rememberCoverInteractionScroll(event);
       if (!this._activeSliderDrag && event.touches?.length) {
         this._startSliderDrag(slider, event.touches[0].clientX, event);
       }
       return;
     }
 
+    const actionTarget = this._getCoverActionTarget(path);
+    if (actionTarget) {
+      this._rememberCoverInteractionScroll(event);
+    }
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
@@ -1794,6 +1962,7 @@ class NodaliaCoverCard extends HTMLElement {
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
       this._render();
+      this._scheduleCoverInteractionScrollRestore();
     }
   }
 
@@ -1844,6 +2013,7 @@ class NodaliaCoverCard extends HTMLElement {
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
       this._render();
+      this._scheduleCoverInteractionScrollRestore();
     }
   }
 
@@ -1856,6 +2026,7 @@ class NodaliaCoverCard extends HTMLElement {
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();
+        this._scheduleCoverInteractionScrollRestore();
       }
       return;
     }
@@ -1925,8 +2096,10 @@ class NodaliaCoverCard extends HTMLElement {
     this._triggerHaptic("selection");
     if (slider.dataset.coverControl === "position") {
       this._callCover("set_cover_position", { position: nextValue });
+      this._scheduleCoverInteractionScrollRestore();
     } else if (slider.dataset.coverControl === "tilt") {
       this._callCover("set_cover_tilt_position", { tilt_position: nextValue });
+      this._scheduleCoverInteractionScrollRestore();
     }
   }
 

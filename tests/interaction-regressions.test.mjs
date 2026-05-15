@@ -676,18 +676,46 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
+  assert.match(source, /_captureCoverInteractionScrollSnapshot\(event = null\)/);
+  assert.match(source, /_rememberCoverInteractionScroll\(event\)/);
+  assert.match(source, /_scheduleCoverInteractionScrollRestore\(\)/);
+  assert.match(source, /_preventCoverPointerFocus\(event, actionTarget\)/);
   assert.doesNotMatch(source, /_captureInteractionScrollSnapshot/);
   assert.doesNotMatch(source, /_prepareInteractionScrollAnchor/);
   assert.doesNotMatch(source, /getComputedStyle\(element\)/);
   assert.doesNotMatch(source, /_rememberInteractionScroll/);
   assert.doesNotMatch(source, /_cancelInteractionScrollRestore/);
-  assert.doesNotMatch(source, /const coverAction = button\.dataset\.coverAction;[\s\S]*button\.blur\(\)/);
+  assert.match(source, /button\.blur\(\)/);
   assert.doesNotMatch(source, /overflow-anchor: none/);
   assert.doesNotMatch(source, /touch-action: manipulation/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.doesNotMatch(source, /tabindex="-1"/);
   assert.match(source, /opacity: 0;[\s\S]*outline: none;[\s\S]*touch-action: pan-y;/);
+});
+
+test("fan humidifier and entity cards use light-style optimistic toggle state", () => {
+  const files = [
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-entity-card.js",
+  ];
+
+  files.forEach(file => {
+    const source = read(file);
+    assert.match(source, /const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;/);
+    assert.match(source, /this\._optimisticToggle = null;/);
+    assert.match(source, /this\._optimisticToggleTimer = 0;/);
+    assert.match(source, /_getActualState\(hass = this\._hass\)/);
+    assert.match(source, /_buildOptimisticToggleState\(actualState = this\._getActualState\(\)\)/);
+    assert.match(source, /_syncOptimisticToggleState\(this\._getActualState\(\)\)/);
+    assert.match(source, /_nodalia_optimistic_toggle/);
+    assert.match(source, /_scheduleOptimisticToggleTimeout\(\)/);
+  });
+
+  assert.match(read("nodalia-fan-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
+  assert.match(read("nodalia-humidifier-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
+  assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
 });
 
 test("cover card enforces six-column minimum and reserves toggle lane on narrow grids", () => {
