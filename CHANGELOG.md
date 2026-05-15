@@ -23,6 +23,20 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 
 ---
 
+## [1.1.1-alpha.9] - 2026-05-15
+
+Ninth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.9`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.9.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** add a one-shot scroll anchor around cover services, action taps, and slider commits so bottom-of-dashboard focus/re-render nudges are restored without blocking normal wheel/touch scrolling.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.9`**.
+
+---
+
 ## [1.1.1-alpha.8] - 2026-05-15
 
 Eighth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.8`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.8.js`**.

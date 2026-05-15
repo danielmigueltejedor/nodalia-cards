@@ -668,7 +668,10 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
   assert.doesNotMatch(source, /addEventListener\("focusin"/);
   assert.doesNotMatch(source, /_preventNonTouchFocus/);
-  assert.doesNotMatch(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
+  assert.match(
+    source,
+    /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\);[\s\S]*this\._prepareInteractionScrollAnchor\(\)/,
+  );
   assert.match(
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
@@ -677,9 +680,15 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
+  assert.match(source, /_captureInteractionScrollSnapshot\(\)/);
+  assert.match(source, /_prepareInteractionScrollAnchor\(options = \{\}\)/);
+  assert.match(source, /_cancelInteractionScrollAnchor\(\)/);
+  assert.match(source, /this\._render\(\);\s*this\._scheduleInteractionScrollRestore\(2\);/);
+  assert.match(source, /this\._prepareInteractionScrollAnchor\(\);\s*this\._hass\.callService\("cover"/);
+  assert.match(source, /this\._prepareInteractionScrollAnchor\(\{ watch: false \}\);/);
+  assert.match(source, /window\.addEventListener\("wheel", this\._cancelInteractionScrollAnchor, \{ passive: true, capture: true \}\)/);
+  assert.match(source, /window\.addEventListener\("touchmove", this\._cancelInteractionScrollAnchor, \{ passive: true, capture: true \}\)/);
   assert.doesNotMatch(source, /_rememberInteractionScroll/);
-  assert.doesNotMatch(source, /_restoreInteractionScrollSnapshot/);
-  assert.doesNotMatch(source, /_scheduleInteractionScrollRestore/);
   assert.doesNotMatch(source, /_cancelInteractionScrollRestore/);
   assert.doesNotMatch(source, /const coverAction = button\.dataset\.coverAction;[\s\S]*button\.blur\(\)/);
   assert.match(source, /overflow-anchor: none/);

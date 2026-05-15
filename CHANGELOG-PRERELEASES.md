@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.9] - 2026-05-15
+
+Ninth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.9`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** one-shot scroll anchoring for cover service actions and slider commits, cancelled by real user scrolling.
+
+---
+
 ## [1.1.1-alpha.8] - 2026-05-15
 
 Eighth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.8`**.

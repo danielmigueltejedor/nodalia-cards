@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.1-alpha.8";
+const CARD_VERSION = "1.1.1-alpha.9";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -1212,6 +1212,10 @@ class NodaliaCoverCard extends HTMLElement {
     this._dragWindowListenersAttached = false;
     this._pendingRenderAfterDrag = false;
     this._suppressNextCoverTap = false;
+    this._interactionScrollSnapshot = [];
+    this._interactionScrollCancelTimer = 0;
+    this._interactionScrollCancelWatchAttached = false;
+    this._interactionScrollRestoreFrame = 0;
     this._cardWidth = 0;
     this._resizeObserver =
       typeof ResizeObserver === "function"
@@ -1246,6 +1250,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onTouchStart = this._onTouchStart.bind(this);
+    this._cancelInteractionScrollAnchor = this._cancelInteractionScrollAnchor.bind(this);
     this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
     this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
@@ -1299,6 +1304,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._resizeObserver?.disconnect();
     this._detachHostHold?.();
     this._detachWindowDragListeners();
+    this._cancelInteractionScrollAnchor();
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -1325,6 +1331,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     this._lastRenderSignature = signature;
     this._render();
+    this._scheduleInteractionScrollRestore(2);
   }
 
   getCardSize() {
@@ -1491,11 +1498,13 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const [domain, serviceName] = String(service || "").split(".");
     if (!domain || !serviceName) return;
+    this._prepareInteractionScrollAnchor();
     this._hass.callService(domain, serviceName, data);
   }
 
   _callCover(service, data = {}) {
     if (!this._hass || !this._config?.entity) return;
+    this._prepareInteractionScrollAnchor();
     this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
   }
 
@@ -1705,56 +1714,235 @@ class NodaliaCoverCard extends HTMLElement {
     );
   }
 
+  _captureInteractionScrollSnapshot() {
+    const doc = this.ownerDocument || (typeof document !== "undefined" ? document : null);
+    if (!doc) {
+      return [];
+    }
+
+    const win = doc.defaultView || (typeof window !== "undefined" ? window : null);
+    if (!win) {
+      return [];
+    }
+
+    const ElementCtor = win.Element;
+    const isElement = value => ElementCtor && value instanceof ElementCtor;
+    const seen = new Set();
+    const snapshot = [];
+    const addElement = element => {
+      if (!isElement(element) || seen.has(element)) {
+        return;
+      }
+      seen.add(element);
+      snapshot.push({
+        kind: "element",
+        element,
+        left: element.scrollLeft,
+        top: element.scrollTop,
+      });
+    };
+    const isScrollable = element => {
+      if (!isElement(element)) {
+        return false;
+      }
+      const style = win.getComputedStyle(element);
+      const scrollY = /(auto|scroll|overlay)/.test(String(style.overflowY || "")) && element.scrollHeight - element.clientHeight > 1;
+      const scrollX = /(auto|scroll|overlay)/.test(String(style.overflowX || "")) && element.scrollWidth - element.clientWidth > 1;
+      return scrollY || scrollX;
+    };
+
+    let node = this;
+    while (node) {
+      if (isScrollable(node)) {
+        addElement(node);
+      }
+      const rootNode = typeof node.getRootNode === "function" ? node.getRootNode() : null;
+      if (node.parentNode) {
+        node = node.parentNode;
+      } else if (rootNode?.host) {
+        node = rootNode.host;
+      } else {
+        break;
+      }
+    }
+
+    addElement(doc.scrollingElement || doc.documentElement || doc.body);
+    snapshot.push({
+      kind: "window",
+      win,
+      left: win.scrollX || win.pageXOffset || 0,
+      top: win.scrollY || win.pageYOffset || 0,
+    });
+    return snapshot;
+  }
+
+  _restoreInteractionScrollSnapshot() {
+    const snapshot = Array.isArray(this._interactionScrollSnapshot) ? this._interactionScrollSnapshot : [];
+    if (!snapshot.length) {
+      return;
+    }
+
+    snapshot.forEach(item => {
+      if (item.kind === "window" && item.win) {
+        try {
+          item.win.scrollTo(item.left, item.top);
+        } catch (_error) {}
+        return;
+      }
+      if (item.element) {
+        item.element.scrollLeft = item.left;
+        item.element.scrollTop = item.top;
+      }
+    });
+  }
+
+  _scheduleInteractionScrollRestore(passes = 1) {
+    if (!this._interactionScrollSnapshot.length || typeof window === "undefined") {
+      return;
+    }
+
+    if (this._interactionScrollRestoreFrame) {
+      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
+      this._interactionScrollRestoreFrame = 0;
+    }
+
+    let remaining = Math.max(1, Math.round(Number(passes) || 1));
+    const run = () => {
+      this._interactionScrollRestoreFrame = 0;
+      if (!this._interactionScrollSnapshot.length) {
+        return;
+      }
+      this._restoreInteractionScrollSnapshot();
+      remaining -= 1;
+      if (remaining > 0) {
+        this._interactionScrollRestoreFrame = window.requestAnimationFrame(run);
+      }
+    };
+    this._interactionScrollRestoreFrame = window.requestAnimationFrame(run);
+  }
+
+  _prepareInteractionScrollAnchor(options = {}) {
+    if (!this._interactionScrollSnapshot.length) {
+      this._interactionScrollSnapshot = this._captureInteractionScrollSnapshot();
+    }
+    if (!this._interactionScrollSnapshot.length || typeof window === "undefined") {
+      return;
+    }
+
+    if (options.watch !== false) {
+      this._startInteractionScrollCancelWatch();
+    }
+    if (this._interactionScrollCancelTimer) {
+      window.clearTimeout(this._interactionScrollCancelTimer);
+    }
+    this._interactionScrollCancelTimer = window.setTimeout(this._cancelInteractionScrollAnchor, 900);
+
+    if (options.schedule !== false) {
+      this._scheduleInteractionScrollRestore(2);
+    }
+  }
+
+  _startInteractionScrollCancelWatch() {
+    if (this._interactionScrollCancelWatchAttached || typeof window === "undefined") {
+      return;
+    }
+
+    this._interactionScrollCancelWatchAttached = true;
+    window.addEventListener("wheel", this._cancelInteractionScrollAnchor, { passive: true, capture: true });
+    window.addEventListener("touchmove", this._cancelInteractionScrollAnchor, { passive: true, capture: true });
+    window.addEventListener("keydown", this._cancelInteractionScrollAnchor, { capture: true });
+  }
+
+  _stopInteractionScrollCancelWatch() {
+    if (typeof window !== "undefined" && this._interactionScrollCancelTimer) {
+      window.clearTimeout(this._interactionScrollCancelTimer);
+      this._interactionScrollCancelTimer = 0;
+    }
+    if (!this._interactionScrollCancelWatchAttached || typeof window === "undefined") {
+      return;
+    }
+
+    this._interactionScrollCancelWatchAttached = false;
+    window.removeEventListener("wheel", this._cancelInteractionScrollAnchor, true);
+    window.removeEventListener("touchmove", this._cancelInteractionScrollAnchor, true);
+    window.removeEventListener("keydown", this._cancelInteractionScrollAnchor, true);
+  }
+
+  _cancelInteractionScrollAnchor() {
+    if (typeof window !== "undefined" && this._interactionScrollRestoreFrame) {
+      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
+      this._interactionScrollRestoreFrame = 0;
+    }
+    this._interactionScrollSnapshot = [];
+    this._stopInteractionScrollCancelWatch();
+  }
+
   _onPointerDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
+    const path = event.composedPath();
+    const slider = path.find(node =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
         node.dataset?.coverControl,
       );
 
-    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
+    if (slider) {
+      if (!this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
+        this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+      }
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (actionControl) {
+      this._prepareInteractionScrollAnchor();
+    }
   }
 
   _onMouseDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
+    const path = event.composedPath();
+    const slider = path.find(node =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
         node.dataset?.coverControl,
       );
 
-    if (this._activeSliderDrag || !slider || event.button !== 0) {
+    if (slider) {
+      if (!this._activeSliderDrag && event.button === 0) {
+        this._startSliderDrag(slider, event.clientX, event);
+      }
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event);
+    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (actionControl) {
+      this._prepareInteractionScrollAnchor();
+    }
   }
 
   _onTouchStart(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
+    const path = event.composedPath();
+    const slider = path.find(node =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
         node.dataset?.coverControl,
       );
 
-    if (this._activeSliderDrag || !slider || !event.touches?.length) {
+    if (slider) {
+      if (!this._activeSliderDrag && event.touches?.length) {
+        this._startSliderDrag(slider, event.touches[0].clientX, event);
+      }
       return;
     }
 
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
+    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    if (actionControl) {
+      this._prepareInteractionScrollAnchor();
+    }
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
     if (!slider) return;
+    this._prepareInteractionScrollAnchor({ watch: false });
     this._activeSliderDrag = {
       pointerId,
       slider,
