@@ -1460,7 +1460,7 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}) {
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${paX.toFixed(2)} ${paY.toFixed(2)} A ${r.toFixed(2)} ${r.toFixed(2)} 0 0 ${sweep} ${pbX.toFixed(2)} ${pbY.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
-/** Straight segment between trimmed endpoints (1–2 top sources / strip layout). */
+/** Straight segment between trimmed endpoints (short grid–home or similar runs). */
 function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   const start = offsetPoint(from, to, fromRadius);
   const end = offsetPoint(to, from, toRadius);
@@ -2923,7 +2923,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
-    const horizontalStripDiagram = false;
     const flowDotBoost = 1 + Math.max(0, flowWidth - 1) * 0.065;
     const flowDotGlowR = 2.1 * flowDotBoost;
     const flowDotCoreR = 1.12 * flowDotBoost;
@@ -3531,15 +3530,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           animation-play-state: paused !important;
         }
 
-        .power-flow-card--strip .power-flow-card__simple-dot {
-          box-shadow:
-            0 0 0 4px color-mix(in srgb, var(--line-color) 15%, transparent),
-            0 0 13px color-mix(in srgb, var(--line-color) 22%, transparent);
-          height: 12px;
-          width: 12px;
-          animation-name: power-flow-card-simple-dot-strip;
-        }
-
         @keyframes power-flow-card-simple-dot {
           0% {
             left: 0;
@@ -3553,23 +3543,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           }
           100% {
             left: calc(100% - 8px);
-            opacity: 0;
-          }
-        }
-
-        @keyframes power-flow-card-simple-dot-strip {
-          0% {
-            left: 0;
-            opacity: 0;
-          }
-          8% {
-            opacity: 1;
-          }
-          92% {
-            opacity: 1;
-          }
-          100% {
-            left: calc(100% - 12px);
             opacity: 0;
           }
         }
@@ -3907,7 +3880,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}${horizontalStripDiagram ? " power-flow-card--strip" : ""}">
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
         ${
           hasHeader
             ? `
