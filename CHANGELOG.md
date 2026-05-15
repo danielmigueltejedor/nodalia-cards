@@ -22,6 +22,18 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 
 ---
 
+## [1.1.1-alpha.3] - 2026-05-12
+
+Third **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.3`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.3.js`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** flow dots no longer occasionally flash at a card corner when animations resume — SVG **`unpauseAnimations`** is deferred by an extra animation frame after a layout read so **`animateMotion`** uses a stable geometry.
+
+- **`nodalia-utils.js` (`bindHostPointerHoldGesture`, synced standalone embeds):** long-press / **`hold_action`** no longer stops working after repeated use when Home Assistant modals stop event bubbling — **`pointerup`**, **`pointercancel`**, and **`pointermove`** are registered on **`window`** in the **capture** phase, and each primary-button **`pointerdown`** clears any stale tracking first.
+
+---
+
 ## [1.1.1-alpha.2] - 2026-05-12
 
 Second **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.2`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.2.js`**.

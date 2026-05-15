@@ -2,6 +2,10 @@
 
 Nodalia Cards is actively improving localization during the `1.1.0` line. Translation pull requests are welcome, including small wording fixes, missing editor labels, and complete new languages.
 
+## Community translations (Crowdin)
+
+**[Nodalia Cards on Crowdin](https://crowdin.com/project/nodalia-cards)** is the public community translation space for this repository. It complements GitHub PRs: you can suggest or vote on wording there without opening a PR. Project configuration for source and downloaded files lives in [`crowdin.yml`](../crowdin.yml) at the repo root (`i18n/editor/en.json`, `i18n/runtime/en.json`, and per-locale JSON paths).
+
 This guide explains the current translation system without requiring deep source-code knowledge.
 
 ## 1. Where translations live

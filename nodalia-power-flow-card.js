@@ -579,10 +579,11 @@
     let timer = null;
     let active = null;
 
+    /** Match capture + passive flags used on add (required for removeEventListener). */
     function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerUp);
-      window.removeEventListener("pointermove", onWindowPointerMove);
+      window.removeEventListener("pointerup", onWindowPointerUp, true);
+      window.removeEventListener("pointercancel", onWindowPointerUp, true);
+      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
     }
 
     function resetTracking() {
@@ -619,6 +620,8 @@
       if (typeof ev.button === "number" && ev.button !== 0) {
         return;
       }
+      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
+      resetTracking();
       const zone = options.resolveZone(ev);
       if (!zone) {
         return;
@@ -626,7 +629,6 @@
       if (shouldBeginHold(zone, ev) !== true) {
         return;
       }
-      resetTracking();
       active = {
         pointerId: ev.pointerId,
         x: ev.clientX,
@@ -643,9 +645,10 @@
         options.onHold(z);
         markHoldConsumedClick();
       }, holdMs);
-      window.addEventListener("pointerup", onWindowPointerUp);
-      window.addEventListener("pointercancel", onWindowPointerUp);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
+      window.addEventListener("pointerup", onWindowPointerUp, true);
+      window.addEventListener("pointercancel", onWindowPointerUp, true);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
     host.addEventListener("pointerdown", onPointerDownCapture, true);
@@ -753,7 +756,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.1-alpha.2";
+const CARD_VERSION = "1.1.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1591,10 +1594,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
       }
     };
+    /** Two rAFs + a layout read: SMIL `animateMotion` can paint one frame at the wrong origin if `unpauseAnimations` runs before the SVG has a stable box (tab focus, IO, fresh `innerHTML`). */
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
       this._flowUnpauseRaf = window.requestAnimationFrame(() => {
-        this._flowUnpauseRaf = 0;
-        runUnpause();
+        if (!this.isConnected || !this.shadowRoot) {
+          this._flowUnpauseRaf = 0;
+          return;
+        }
+        const surface = this.shadowRoot.querySelector(".power-flow-card__surface");
+        if (surface) {
+          void surface.offsetWidth;
+        }
+        this._flowUnpauseRaf = window.requestAnimationFrame(() => {
+          runUnpause();
+        });
       });
     } else {
       runUnpause();

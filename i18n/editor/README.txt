@@ -1,6 +1,9 @@
 Editor visual i18n (new path)
 ==============================
 
+Crowdin (community translations): https://crowdin.com/project/nodalia-cards
+Repo mapping: ../../crowdin.yml
+
 Stable keys:  ed.<card>.<slug>   (example: ed.calendar.visible_range)
 
 Source files (per language, same keys in every file):
