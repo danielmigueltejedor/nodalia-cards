@@ -373,6 +373,23 @@
         noState: "No state",
         fallbackName: "Fan"
       },
+      lightCard: {
+        controlModes: {
+          brightness: "Show brightness",
+          temperature: "Show temperature",
+          color: "Show color"
+        },
+        sections: {
+          temperature: "Temperature",
+          color: "Color",
+          presets: "Presets"
+        },
+        temperaturePresets: {
+          warm: "Warm",
+          neutral: "Neutral",
+          cool: "Cool"
+        }
+      },
       common: {
         aria: {
           togglePower: "Turn on or off"
@@ -2463,6 +2480,23 @@
         unknown: "Desconocido",
         noState: "Sin estado",
         fallbackName: "Ventilador"
+      },
+      lightCard: {
+        controlModes: {
+          brightness: "Mostrar brillo",
+          temperature: "Mostrar temperatura",
+          color: "Mostrar color"
+        },
+        sections: {
+          temperature: "Temperatura",
+          color: "Color",
+          presets: "Preajustes"
+        },
+        temperaturePresets: {
+          warm: "Cálida",
+          neutral: "Neutra",
+          cool: "Fría"
+        }
       },
       common: {
         aria: {
@@ -7969,6 +8003,24 @@
     });
   }
 
+  function translateLightUi(hass, configLang, path, fallback = "", values = {}) {
+    const lang = resolveLanguage(hass, configLang);
+    const dict = strings(lang).lightCard || strings("en").lightCard || {};
+    const raw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], dict);
+    const enRaw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], strings("en").lightCard || {});
+    const template = typeof raw === "string" ? raw : typeof enRaw === "string" ? enRaw : String(fallback || "");
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+      const value = values?.[key];
+      return value === undefined || value === null ? "" : String(value);
+    });
+  }
+
   function translateHumidifierMode(hass, configLang, value) {
     const lang = resolveLanguage(hass, configLang);
     const key = normalizeHumidifierModeKey(value);
@@ -8448,6 +8500,7 @@
     translateGraphEmptyHistory,
     translateNotificationsUi,
     translateCalendarUi,
+    translateLightUi,
     translateHumidifierMode,
     translateEntityStateChip,
     translateMediaPlayerState,

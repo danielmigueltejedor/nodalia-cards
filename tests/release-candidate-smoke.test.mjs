@@ -336,6 +336,20 @@ test("active icon animations are configurable across animated device cards", () 
   assert.match(vacuum, /translateVacuumErrorState/);
 });
 
+test("light card runtime preset labels use i18n", () => {
+  const light = read("nodalia-light-card.js");
+  const i18n = read("nodalia-i18n.js");
+
+  assert.match(light, /_lightCardUi\(path, fallback = "", values = \{\}\)/);
+  assert.match(light, /temperaturePresets\.warm/);
+  assert.match(light, /temperaturePresets\.neutral/);
+  assert.match(light, /temperaturePresets\.cool/);
+  assert.doesNotMatch(light, /\{ label: "Warm", kelvin: range\.min \}/);
+  assert.match(i18n, /function translateLightUi\(hass, configLang, path, fallback = "", values = \{\}\)/);
+  assert.match(i18n, /lightCard:\s*\{[\s\S]*?temperaturePresets:\s*\{[\s\S]*?warm:\s*"Warm"/);
+  assert.match(i18n, /lightCard:\s*\{[\s\S]*?temperaturePresets:\s*\{[\s\S]*?warm:\s*"Cálida"/);
+});
+
 test("notifications translate vacuum cleaning state in smart messages", () => {
   const source = read("nodalia-notifications-card.js");
   const i18n = read("nodalia-i18n.js");

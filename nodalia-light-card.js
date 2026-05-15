@@ -1625,6 +1625,7 @@ class NodaliaLightCard extends HTMLElement {
       `fx:${String(attrs.effect || "")}`,
       `m:${Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : ""}`,
       `sf:${Number(attrs.supported_features ?? -1)}`,
+      `lang:${window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en"}`,
       `c:${this._isCompactLayout ? 1 : 0}`,
       `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
       `cm:${String(this._activeControlMode || "")}`,
@@ -1672,6 +1673,19 @@ class NodaliaLightCard extends HTMLElement {
       return key;
     }
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", key);
+  }
+
+  _lightCardUi(path, fallback = "", values = {}) {
+    if (typeof window.NodaliaI18n?.translateLightUi === "function") {
+      return window.NodaliaI18n.translateLightUi(
+        this._hass,
+        this._config?.language ?? "auto",
+        path,
+        fallback,
+        values,
+      );
+    }
+    return fallback;
   }
 
   _getConfiguredGridColumns() {
@@ -2482,9 +2496,9 @@ class NodaliaLightCard extends HTMLElement {
     const middle = Math.round((range.min + range.max) / 2);
 
     return [
-      { label: "Warm", kelvin: range.min },
-      { label: "Neutral", kelvin: middle },
-      { label: "Cool", kelvin: range.max },
+      { label: this._lightCardUi("temperaturePresets.warm", "Warm"), kelvin: range.min },
+      { label: this._lightCardUi("temperaturePresets.neutral", "Neutral"), kelvin: middle },
+      { label: this._lightCardUi("temperaturePresets.cool", "Cool"), kelvin: range.max },
     ];
   }
 
@@ -3666,6 +3680,17 @@ class NodaliaLightCard extends HTMLElement {
     const displayedControlMode = modeTransition
       ? (modeTransition.phase === "collapsing" ? modeTransition.from : modeTransition.to)
       : activeControlMode;
+    const controlModeLabel = mode => {
+      const fallback = mode === "temperature"
+        ? "Show temperature"
+        : mode === "color"
+          ? "Show color"
+          : "Show brightness";
+      return this._lightCardUi(`controlModes.${mode}`, fallback);
+    };
+    const temperatureSectionLabel = this._lightCardUi("sections.temperature", "Temperature");
+    const colorSectionLabel = this._lightCardUi("sections.color", "Color");
+    const presetsSectionLabel = this._lightCardUi("sections.presets", "Presets");
     const modeTransitionAxisClass = animations.modeSwitchHorizontal
       ? "light-card__mode-panel-inner--horizontal"
       : "light-card__mode-panel-inner--vertical";
@@ -3753,7 +3778,7 @@ class NodaliaLightCard extends HTMLElement {
                     step="any"
                     value="${currentTemperatureSliderValue}"
                     style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
-                    aria-label="Temperature"
+                    aria-label="${escapeHtml(controlModeLabel("temperature"))}"
                   />
                   <div class="light-card__slider-thumb" data-light-control="temperature"></div>
                 </div>
@@ -3773,7 +3798,7 @@ class NodaliaLightCard extends HTMLElement {
                       step="any"
                       value="${currentHue}"
                       style="--color-progress:${clamp(colorProgress, 0, 100)};"
-                      aria-label="Color"
+                      aria-label="${escapeHtml(controlModeLabel("color"))}"
                     />
                     <div class="light-card__slider-thumb" data-light-control="color"></div>
                   </div>
@@ -3792,7 +3817,7 @@ class NodaliaLightCard extends HTMLElement {
                       step="any"
                       value="${brightnessPercent}"
                       style="--brightness:${brightnessPercent};"
-                      aria-label="Brillo"
+                      aria-label="${escapeHtml(controlModeLabel("brightness"))}"
                     />
                   </div>
                 </div>
@@ -3828,7 +3853,7 @@ class NodaliaLightCard extends HTMLElement {
                             data-light-action="mode"
                             data-mode="${mode}"
                             ${modeTransition ? "disabled" : ""}
-                            aria-label="${mode === "brightness" ? "Show brightness" : mode === "temperature" ? "Show temperature" : "Show color"}"
+                            aria-label="${escapeHtml(controlModeLabel(mode))}"
                           >
                             <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
                           </button>
@@ -3923,7 +3948,7 @@ class NodaliaLightCard extends HTMLElement {
       ? `
         <div class="light-card__section">
           <div class="light-card__section-header">
-            <span>Temperatura</span>
+            <span>${escapeHtml(temperatureSectionLabel)}</span>
             <span class="light-card__section-value">${escapeHtml(`${currentKelvin}K`)}</span>
           </div>
           <div class="light-card__actions">
@@ -3950,8 +3975,8 @@ class NodaliaLightCard extends HTMLElement {
       ? `
         <div class="light-card__section">
           <div class="light-card__section-header">
-            <span>Color</span>
-            <span class="light-card__section-value">Presets</span>
+            <span>${escapeHtml(colorSectionLabel)}</span>
+            <span class="light-card__section-value">${escapeHtml(presetsSectionLabel)}</span>
           </div>
           <div class="light-card__actions">
             ${COLOR_PRESETS

@@ -24,6 +24,7 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 ### Fixed
 
 - **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
+- **`nodalia-light-card.js`:** quick color-temperature preset labels and related control text now use runtime i18n instead of hardcoded English/Spanish strings.
 
 ---
 

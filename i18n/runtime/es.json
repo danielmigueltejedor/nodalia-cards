@@ -209,6 +209,23 @@
     "noState": "Sin estado",
     "fallbackName": "Ventilador"
   },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Mostrar brillo",
+      "temperature": "Mostrar temperatura",
+      "color": "Mostrar color"
+    },
+    "sections": {
+      "temperature": "Temperatura",
+      "color": "Color",
+      "presets": "Preajustes"
+    },
+    "temperaturePresets": {
+      "warm": "Cálida",
+      "neutral": "Neutra",
+      "cool": "Fría"
+    }
+  },
   "common": {
     "aria": {
       "togglePower": "Encender o apagar"
