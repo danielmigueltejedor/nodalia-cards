@@ -209,6 +209,23 @@
     "noState": "No state",
     "fallbackName": "Fan"
   },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Show brightness",
+      "temperature": "Show temperature",
+      "color": "Show color"
+    },
+    "sections": {
+      "temperature": "Temperature",
+      "color": "Color",
+      "presets": "Presets"
+    },
+    "temperaturePresets": {
+      "warm": "Warm",
+      "neutral": "Neutral",
+      "cool": "Cool"
+    }
+  },
   "common": {
     "aria": {
       "togglePower": "Turn on or off"
