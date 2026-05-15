@@ -2777,6 +2777,8 @@ class NodaliaWeatherCard extends HTMLElement {
         :host {
           --weather-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --weather-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --weather-card-popover-surface: color-mix(in srgb, var(--primary-background-color, #111318) 88%, var(--primary-text-color, #ffffff) 12%);
+          --weather-card-popover-surface-strong: color-mix(in srgb, var(--primary-background-color, #111318) 78%, var(--primary-text-color, #ffffff) 22%);
           display: block;
         }
 
@@ -3409,6 +3411,7 @@ class NodaliaWeatherCard extends HTMLElement {
           overflow: visible;
           padding: 4px 2px;
           position: relative;
+          isolation: isolate;
         }
 
         .weather-card__forecast-chart svg {
@@ -3515,9 +3518,11 @@ class NodaliaWeatherCard extends HTMLElement {
         .weather-card__forecast-popup {
           --weather-popup-transform: translate(-50%, calc(-100% - 16px));
           animation: weather-card-popup-in calc(var(--weather-card-content-duration) * 0.58) cubic-bezier(0.16, 0.84, 0.22, 1) both;
+          background-color: var(--weather-card-popover-surface);
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255,255,255,0.02));
+            linear-gradient(180deg, color-mix(in srgb, var(--weather-card-popover-surface-strong) 94%, var(--forecast-accent) 6%), var(--weather-card-popover-surface)),
+            var(--weather-card-popover-surface);
           border: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
@@ -3533,6 +3538,7 @@ class NodaliaWeatherCard extends HTMLElement {
           transform: var(--weather-popup-transform);
           transform-origin: 50% 100%;
           width: min(206px, calc(100% - 20px));
+          isolation: isolate;
           z-index: 2147483001;
         }
 
@@ -3546,9 +3552,11 @@ class NodaliaWeatherCard extends HTMLElement {
           align-items: center;
           animation: weather-card-hover-preview-in calc(var(--weather-card-content-duration) * 0.34) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           backdrop-filter: blur(14px);
+          background-color: var(--weather-card-popover-surface);
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
+            linear-gradient(180deg, color-mix(in srgb, var(--weather-card-popover-surface-strong) 90%, var(--forecast-accent) 10%), var(--weather-card-popover-surface)),
+            var(--weather-card-popover-surface);
           border: 1px solid color-mix(in srgb, var(--forecast-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 999px;
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
@@ -3564,6 +3572,7 @@ class NodaliaWeatherCard extends HTMLElement {
           top: var(--forecast-preview-top);
           transform: translate(-50%, calc(-100% - 12px));
           white-space: nowrap;
+          isolation: isolate;
           z-index: 2147483000;
         }
 

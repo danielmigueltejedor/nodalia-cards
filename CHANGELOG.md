@@ -21,6 +21,10 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
 
+### Fixed
+
+- **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
+
 ---
 
 ## [1.1.1] - 2026-05-15

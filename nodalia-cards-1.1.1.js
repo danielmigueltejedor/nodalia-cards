@@ -23088,6 +23088,8 @@
         :host {
           --weather-card-button-bounce-duration: ${o.enabled?o.buttonBounceDuration:0}ms;
           --weather-card-content-duration: ${o.enabled?o.contentDuration:0}ms;
+          --weather-card-popover-surface: color-mix(in srgb, var(--primary-background-color, #111318) 88%, var(--primary-text-color, #ffffff) 12%);
+          --weather-card-popover-surface-strong: color-mix(in srgb, var(--primary-background-color, #111318) 78%, var(--primary-text-color, #ffffff) 22%);
           display: block;
         }
 
@@ -23720,6 +23722,7 @@
           overflow: visible;
           padding: 4px 2px;
           position: relative;
+          isolation: isolate;
         }
 
         .weather-card__forecast-chart svg {
@@ -23826,9 +23829,11 @@
         .weather-card__forecast-popup {
           --weather-popup-transform: translate(-50%, calc(-100% - 16px));
           animation: weather-card-popup-in calc(var(--weather-card-content-duration) * 0.58) cubic-bezier(0.16, 0.84, 0.22, 1) both;
+          background-color: var(--weather-card-popover-surface);
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255,255,255,0.02));
+            linear-gradient(180deg, color-mix(in srgb, var(--weather-card-popover-surface-strong) 94%, var(--forecast-accent) 6%), var(--weather-card-popover-surface)),
+            var(--weather-card-popover-surface);
           border: 1px solid color-mix(in srgb, var(--forecast-accent) 36%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
@@ -23844,6 +23849,7 @@
           transform: var(--weather-popup-transform);
           transform-origin: 50% 100%;
           width: min(206px, calc(100% - 20px));
+          isolation: isolate;
           z-index: 2147483001;
         }
 
@@ -23857,9 +23863,11 @@
           align-items: center;
           animation: weather-card-hover-preview-in calc(var(--weather-card-content-duration) * 0.34) cubic-bezier(0.16, 0.84, 0.22, 1) both;
           backdrop-filter: blur(14px);
+          background-color: var(--weather-card-popover-surface);
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--forecast-accent) 18%, rgba(255,255,255,0.09)), rgba(255,255,255,0.025)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 86%, transparent);
+            linear-gradient(180deg, color-mix(in srgb, var(--weather-card-popover-surface-strong) 90%, var(--forecast-accent) 10%), var(--weather-card-popover-surface)),
+            var(--weather-card-popover-surface);
           border: 1px solid color-mix(in srgb, var(--forecast-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
           border-radius: 999px;
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
@@ -23875,6 +23883,7 @@
           top: var(--forecast-preview-top);
           transform: translate(-50%, calc(-100% - 12px));
           white-space: nowrap;
+          isolation: isolate;
           z-index: 2147483000;
         }
 
@@ -29269,5 +29278,5 @@ ${a}`:a}function st(r){let e=String(r??"").trim();return!e||/[<>{};"']/.test(e)|
       </div>
     `,this.shadowRoot.querySelectorAll('[data-mounted-control="vacuum-entity"]').forEach(y=>this._mountVacuumEntityPicker(y)),this.shadowRoot.querySelectorAll('[data-mounted-control="select-entity"]').forEach(y=>this._mountSelectEntityPicker(y)),this.shadowRoot.querySelectorAll('[data-mounted-control="sensor-entity"]').forEach(y=>this._mountSensorEntityPicker(y)),this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(y=>{y.hass=this._hass,y.value=y.dataset.value||"",y.addEventListener("value-changed",this._onShadowValueChanged)}),this._ensureEditorControlsReady()}};customElements.get(ql)||customElements.define(ql,Kl);window.NodaliaUtils.registerCustomCard({type:Ul,name:"Nodalia Vacuum Card",description:"Vacuum card with the Nodalia look, quick actions, and visual editor.",preview:!0});})();
 
-;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.1.1","contentSha256_12":"b3836affeb17"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.1.1 (b3836affeb17) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
-;if(typeof window!=="undefined"){window.__NODALIA_LOADER__={"mode":"inline","pkgVersion":"1.1.1","contentSha256_12":"b3836affeb17","file":"nodalia-cards-1.1.1.js","fallbackFile":"nodalia-cards.js"};}
+;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__={"pkgVersion":"1.1.1","contentSha256_12":"d9a7f546edc8"};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v1.1.1 (d9a7f546edc8) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}
+;if(typeof window!=="undefined"){window.__NODALIA_LOADER__={"mode":"inline","pkgVersion":"1.1.1","contentSha256_12":"d9a7f546edc8","file":"nodalia-cards-1.1.1.js","fallbackFile":"nodalia-cards.js"};}
