@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.1.1-alpha.7";
+const CARD_VERSION = "1.1.1-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

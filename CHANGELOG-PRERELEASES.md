@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.8] - 2026-05-15
+
+Eighth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.8`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** cover buttons and card/icon taps now follow the fan-card click path; slider-specific drag interception remains isolated to sliders.
+- **`nodalia-power-flow-card.js`:** SVG flow dots use relative motion paths from their connector start, preventing motion along the card edge.
+
+---
+
 ## [1.1.1-alpha.7] - 2026-05-15
 
 Seventh **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.7`**.
@@ -1410,4 +1421,3 @@ First **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This marks the s
 - **Editor support:** added a visual editor for title, calendars list, day range, refresh interval, and completed-event visibility/marking behavior.
 
 ---
-

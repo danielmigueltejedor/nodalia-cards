@@ -23,6 +23,21 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 
 ---
 
+## [1.1.1-alpha.8] - 2026-05-15
+
+Eighth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.8`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.8.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** mirror the fan-card interaction path for cover action buttons and card/icon taps by removing the extra focus/capture handling from non-slider controls, while keeping custom drag handling only for sliders.
+- **`nodalia-power-flow-card.js`:** normalize SVG `animateMotion` paths relative to each connector start point so animated flow dots travel on the drawn line instead of the card edge.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.8`**.
+
+---
+
 ## [1.1.1-alpha.7] - 2026-05-15
 
 Seventh **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.7`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.7.js`**.

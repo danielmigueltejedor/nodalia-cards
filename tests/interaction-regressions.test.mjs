@@ -651,7 +651,6 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
   const source = read("nodalia-cover-card.js");
-  assert.match(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
   assert.match(source, /_isCardTapAction\(action\) \{\s*return action === "body" \|\| action === "icon";\s*\}/);
   assert.match(
     source,
@@ -659,22 +658,24 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   );
   assert.match(
     source,
-    /if \(slider\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/,
-  );
-  assert.match(
-    source,
-    /if \(actionControl\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*\}/,
+    /_onPointerDown\(event\) \{[\s\S]*node\.type === "range"[\s\S]*node\.dataset\?\.coverControl[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/,
   );
   assert.match(source, /case "toggle_controls_view":[\s\S]*_syncCoverControlsViewDom\(\)/);
   assert.doesNotMatch(source, /case "toggle_controls_view":[\s\S]{0,280}this\._render\(\)/);
   assert.doesNotMatch(source, /_toggleCoverControlsView/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
-  assert.match(source, /String\(event\.pointerType \|\| ""\)\.toLowerCase\(\) === "touch"/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
+  assert.doesNotMatch(source, /addEventListener\("focusin"/);
+  assert.doesNotMatch(source, /_preventNonTouchFocus/);
+  assert.doesNotMatch(source, /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\)/);
   assert.match(
     source,
-    /_onTouchStart\(event\) \{[\s\S]*const slider = path\.find\(node => node instanceof HTMLInputElement && node\.dataset\?\.coverControl\);[\s\S]*return;\s*\}\s*\}/,
+    /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
+  );
+  assert.match(
+    source,
+    /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
   assert.doesNotMatch(source, /_rememberInteractionScroll/);
   assert.doesNotMatch(source, /_restoreInteractionScrollSnapshot/);
@@ -781,8 +782,14 @@ test("calendar card reuses date/time formatters during render", () => {
 test("power flow flow dots avoid origin flash before motion starts", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /function getSvgPathMotionStart\(pathD\)/);
-  assert.match(source, /const pathStart = getSvgPathMotionStart\(line\.path\)/);
+  assert.match(source, /function getSvgRelativeMotionPath\(pathD\)/);
+  assert.match(source, /const motionPath = getSvgRelativeMotionPath\(line\.path\)/);
+  assert.match(source, /formatSvgMotionNumber\(x - start\.x\)/);
+  assert.match(source, /formatSvgMotionNumber\(y - start\.y\)/);
   assert.match(source, /cx="\$\{cx\}" cy="\$\{cy\}"/);
+  assert.match(source, /const path = escapeHtml\(motionPath\.path\)/);
+  assert.match(source, /<animateMotion[^>]*path="\$\{path\}"/);
+  assert.doesNotMatch(source, /<animateMotion[^>]*path="\$\{line\.path\}"/);
   assert.match(source, /\.power-flow-card__dot-group \{[\s\S]*opacity: 0;/);
   assert.match(source, /\.power-flow-card:not\(\.power-flow-card--motion-paused\) \.power-flow-card__dot-group/);
   assert.match(source, /\.power-flow-card__simple-dot \{[\s\S]*opacity: 0;/);

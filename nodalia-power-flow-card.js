@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.1-alpha.7";
+const CARD_VERSION = "1.1.1-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1064,6 +1064,85 @@ function getSvgPathMotionStart(pathD) {
     return { x: 0, y: 0 };
   }
   return { x: Number(match[1]), y: Number(match[2]) };
+}
+
+function formatSvgMotionNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "0";
+  }
+  return String(Number(number.toFixed(3)));
+}
+
+function getSvgRelativeMotionPath(pathD) {
+  const source = String(pathD || "").trim();
+  const start = getSvgPathMotionStart(source);
+  if (!source) {
+    return { start, path: "M 0 0" };
+  }
+
+  const tokens = source.match(/[MLA]|[+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?/gi) || [];
+  if (!tokens.length) {
+    return { start, path: "M 0 0" };
+  }
+
+  const output = [];
+  let index = 0;
+  while (index < tokens.length) {
+    const command = tokens[index++];
+    const upper = String(command).toUpperCase();
+
+    if (upper === "M" || upper === "L") {
+      const x = Number(tokens[index++]);
+      const y = Number(tokens[index++]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return { start, path: "M 0 0" };
+      }
+      output.push(
+        upper,
+        formatSvgMotionNumber(x - start.x),
+        formatSvgMotionNumber(y - start.y),
+      );
+      continue;
+    }
+
+    if (upper === "A") {
+      const rx = Number(tokens[index++]);
+      const ry = Number(tokens[index++]);
+      const rotation = Number(tokens[index++]);
+      const largeArc = Number(tokens[index++]);
+      const sweep = Number(tokens[index++]);
+      const x = Number(tokens[index++]);
+      const y = Number(tokens[index++]);
+      if (
+        !Number.isFinite(rx) ||
+        !Number.isFinite(ry) ||
+        !Number.isFinite(rotation) ||
+        !Number.isFinite(largeArc) ||
+        !Number.isFinite(sweep) ||
+        !Number.isFinite(x) ||
+        !Number.isFinite(y)
+      ) {
+        return { start, path: "M 0 0" };
+      }
+      output.push(
+        upper,
+        formatSvgMotionNumber(rx),
+        formatSvgMotionNumber(ry),
+        formatSvgMotionNumber(rotation),
+        String(largeArc ? 1 : 0),
+        String(sweep ? 1 : 0),
+        formatSvgMotionNumber(x - start.x),
+        formatSvgMotionNumber(y - start.y),
+      );
+      continue;
+    }
+  }
+
+  return {
+    start,
+    path: output.length ? output.join(" ") : "M 0 0",
+  };
 }
 
 function escapeHtml(value) {
@@ -2572,16 +2651,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const coreRy = coreR * viewAspect;
     const motionPhase = ((String(line.id || "").split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 19) / 19) * 0.92;
     const beginAttr = motionPhase > 0.02 ? ` begin="${motionPhase.toFixed(3)}s"` : "";
-    const pathStart = getSvgPathMotionStart(line.path);
-    const cx = pathStart.x.toFixed(3);
-    const cy = pathStart.y.toFixed(3);
+    const motionPath = getSvgRelativeMotionPath(line.path);
+    const cx = motionPath.start.x.toFixed(3);
+    const cy = motionPath.start.y.toFixed(3);
+    const path = escapeHtml(motionPath.path);
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
         <ellipse class="power-flow-card__dot-glow" cx="${cx}" cy="${cy}" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
-          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
+          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${path}"${beginAttr}></animateMotion>
         </ellipse>
         <ellipse class="power-flow-card__dot-core" cx="${cx}" cy="${cy}" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
-          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
+          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${path}"${beginAttr}></animateMotion>
         </ellipse>
       </g>
     `;

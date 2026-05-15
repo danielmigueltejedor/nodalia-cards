@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.1-alpha.7";
+const CARD_VERSION = "1.1.1-alpha.8";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -1243,7 +1243,6 @@ class NodaliaCoverCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
-    this._onFocusIn = this._onFocusIn.bind(this);
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onTouchStart = this._onTouchStart.bind(this);
@@ -1251,15 +1250,17 @@ class NodaliaCoverCard extends HTMLElement {
     this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
     this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("focusin", this._onFocusIn);
-    this.shadowRoot.addEventListener("pointerdown", this._onPointerDown, { capture: true });
-    this.shadowRoot.addEventListener("mousedown", this._onMouseDown, { capture: true });
-    this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false, capture: true });
+    this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
+    }
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -1704,73 +1705,52 @@ class NodaliaCoverCard extends HTMLElement {
     );
   }
 
-  _onFocusIn(event) {
-    const path = event.composedPath();
-    if (!path.includes(this.shadowRoot)) {
-      return;
-    }
-
-    const control = path.find(
-      node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
-    );
-    const target =
-      control instanceof HTMLElement
-        ? control
-        : event.target instanceof HTMLElement
-          ? event.target
-          : null;
-    if (target && typeof target.blur === "function") {
-      target.blur();
-    }
-  }
-
-  _preventNonTouchFocus(event) {
-    if (!event || event.cancelable === false) return;
-    if (String(event.pointerType || "").toLowerCase() === "touch") return;
-    event.preventDefault();
-  }
-
   _onPointerDown(event) {
-    const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
-    if (slider) {
-      this._preventNonTouchFocus(event);
-      if (!this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
-        this._startSliderDrag(slider, event.clientX, event, event.pointerId);
-      }
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+      );
+
+    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
       return;
     }
-    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl) {
-      this._preventNonTouchFocus(event);
-    }
+
+    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
   }
 
   _onMouseDown(event) {
-    const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
-    if (slider) {
-      this._preventNonTouchFocus(event);
-      if (!this._activeSliderDrag && event.button === 0) {
-        this._startSliderDrag(slider, event.clientX, event);
-      }
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+      );
+
+    if (this._activeSliderDrag || !slider || event.button !== 0) {
       return;
     }
-    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl) {
-      this._preventNonTouchFocus(event);
-    }
+
+    this._startSliderDrag(slider, event.clientX, event);
   }
 
   _onTouchStart(event) {
-    const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
-    if (slider) {
-      if (!this._activeSliderDrag && event.touches?.length) {
-        this._startSliderDrag(slider, event.touches[0].clientX, event);
-      }
+    const slider = event
+      .composedPath()
+      .find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+      );
+
+    if (this._activeSliderDrag || !slider || !event.touches?.length) {
       return;
     }
+
+    this._startSliderDrag(slider, event.touches[0].clientX, event);
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
@@ -1844,6 +1824,26 @@ class NodaliaCoverCard extends HTMLElement {
     this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
   }
 
+  _onWindowTouchStartCapture(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag) {
+      return;
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    if (path.includes(drag.slider)) {
+      return;
+    }
+
+    this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
   _onWindowTouchEnd(event) {
     if (!this._activeSliderDrag) return;
     const clientX = event.changedTouches?.[0]?.clientX;
@@ -1867,9 +1867,12 @@ class NodaliaCoverCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
   }
 
   _detachWindowDragListeners() {
@@ -1880,9 +1883,12 @@ class NodaliaCoverCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
   }
 
   _onShadowInput(event) {
