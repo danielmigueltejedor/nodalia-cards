@@ -13,11 +13,13 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "registerCustomCard",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
@@ -146,6 +148,19 @@
   }
 
   /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
+  }
+
+  /**
    * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
    */
   function normalizeHomeAssistantWebhookId(webhookId) {
@@ -232,6 +247,57 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function dedupeCustomCardsArray(cards) {
+    if (!Array.isArray(cards)) {
+      return [];
+    }
+    const seen = new Set();
+    for (let index = cards.length - 1; index >= 0; index -= 1) {
+      const type = String(cards[index]?.type || "").trim();
+      if (!type) {
+        continue;
+      }
+      if (seen.has(type)) {
+        cards.splice(index, 1);
+        continue;
+      }
+      seen.add(type);
+    }
+    return cards;
+  }
+
+  function ensureCustomCardsDeduped() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    window.customCards = dedupeCustomCardsArray(window.customCards || []);
+    return window.customCards;
+  }
+
+  /**
+   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
+   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
+   * other front-end code that may also touch the shared array.
+   */
+  function registerCustomCard(metadata) {
+    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
+      return;
+    }
+    const cards = ensureCustomCardsDeduped();
+    if (!cards) {
+      return;
+    }
+    const type = String(metadata.type || "").trim();
+    if (type) {
+      for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (String(cards[index]?.type || "").trim() === type) {
+          cards.splice(index, 1);
+        }
+      }
+    }
+    cards.push(metadata);
   }
 
   /**
@@ -665,17 +731,20 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    registerCustomCard,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
+    ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
   }
 })();
@@ -684,7 +753,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.0.5";
+const CARD_VERSION = "1.1.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -712,6 +781,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   show_state_chip: true,
   show_current_temperature_chip: true,
   show_humidity_chip: true,
@@ -1135,7 +1206,7 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
-/** Row slices for stacked mode buttons (first row may be 2 or 3 when exactly six controls). */
+/** Row slices for stacked mode buttons, keeping denser lower rows narrow inside the dial. */
 function buildClimateDialModeButtonRows(fragments) {
   const n = fragments.length;
   if (n === 0) {
@@ -1146,8 +1217,8 @@ function buildClimateDialModeButtonRows(fragments) {
     return [fragments];
   }
 
-  if (n === 6) {
-    return [fragments.slice(0, 3), fragments.slice(3, 6)];
+  if (n === 5 || n === 6) {
+    return [fragments.slice(0, 3), fragments.slice(3)];
   }
 
   const rows = [fragments.slice(0, 2)];
@@ -1326,14 +1397,11 @@ function getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactL
     tightLayout ? tightStr : compactLayout ? compactStr : regularStr
   );
 
-  if (modeDialButtonCount === 6) {
+  if (modeDialButtonCount === 5 || modeDialButtonCount === 6) {
     return pick("22% 12.5% 16.5% 12.5%", "23% 14% 17% 14%", "24% 14% 17.5% 14%");
   }
   if (modeDialButtonCount >= 7) {
     return pick("24% 12% 12% 12%", "25% 13.5% 13% 13.5%", "26% 14% 13.5% 14%");
-  }
-  if (modeDialButtonCount >= 5) {
-    return pick("23% 13% 14% 13%", "24% 14.5% 15.5% 14.5%", "25% 14.5% 16% 14.5%");
   }
   if (modeDialButtonCount === 4) {
     return pick("24% 13.5% 15.5% 13.5%", "25% 15% 16.5% 15%", "26% 14.5% 17% 14.5%");
@@ -1379,6 +1447,8 @@ function migrateLegacyClimateOffColors(styles) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
   migrateLegacyClimateOffColors(config.styles);
   return config;
 }
@@ -1581,6 +1651,8 @@ class NodaliaClimateCard extends HTMLElement {
       state: String(state?.state || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
+      showEntityPicture: this._config?.show_entity_picture === true,
+      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
       temperature: parseFiniteClimateNumber(attrs.temperature),
       currentTemperature: parseFiniteClimateNumber(attrs.current_temperature),
       targetTempHigh: parseFiniteClimateNumber(attrs.target_temp_high),
@@ -1714,13 +1786,25 @@ class NodaliaClimateCard extends HTMLElement {
     return this._config?.name
       || state?.attributes?.friendly_name
       || this._config?.entity
-      || "Clima";
+      || "Climate";
   }
 
   _getClimateIcon(state) {
     return this._config?.icon
       || state?.attributes?.icon
       || "mdi:thermostat";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _getTemperatureRange(state) {
@@ -1932,6 +2016,7 @@ class NodaliaClimateCard extends HTMLElement {
       : [];
     const uniqueModes = [...new Set(rawModes)];
     const preferredOrder = ["heat", "cool", "heat_cool", "auto", "dry", "fan_only"];
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
 
     return uniqueModes
       .filter(mode => normalizeTextKey(mode) !== "off")
@@ -1940,7 +2025,7 @@ class NodaliaClimateCard extends HTMLElement {
         const rightIndex = preferredOrder.indexOf(normalizeTextKey(right));
         const safeLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
         const safeRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
-        return safeLeft - safeRight || left.localeCompare(right, "es");
+        return safeLeft - safeRight || left.localeCompare(right, sortLoc);
       });
   }
 
@@ -3500,6 +3585,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     const title = this._getClimateName(state);
     const icon = this._getClimateIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const accentColor = this._getAccentColor(state);
     const currentMode = this._getCurrentMode(state);
     const currentTemperature = this._getCurrentTemperature(state);
@@ -3556,6 +3642,9 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const i18nLang = config.language ?? "auto";
+    const toggleAriaLabel = window.NodaliaI18n?.translateClimateAria
+      ? window.NodaliaI18n.translateClimateAria(hass, i18nLang, "togglePower", "Turn on or off")
+      : "Turn on or off";
     const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
     const tempScale = getClimateTemperatureScaleLetter(hass);
     const translateClimateMode = mode => (
@@ -3632,18 +3721,16 @@ class NodaliaClimateCard extends HTMLElement {
     const modeControlRenderPx =
       modeDialButtonCount >= 8
         ? Math.max(24, Math.round(modeControlSize - 9))
-        : modeDialButtonCount >= 6
+        : modeDialButtonCount >= 5
           ? Math.max(28, Math.round(modeControlSize - 6))
-          : modeDialButtonCount >= 5
-            ? Math.max(30, Math.round(modeControlSize - 3))
-            : modeControlSize;
+          : modeControlSize;
     const modeDialButtonGap =
       modeDialButtonCount >= 8
         ? "3px"
         : modeDialButtonCount >= 7
           ? "4px"
           : modeDialButtonCount >= 5
-            ? "6px"
+            ? (tightLayout ? "4px" : "5px")
             : (tightLayout ? "8px" : "10px");
     const interBlockGapPx = showStepControls
       ? (tightLayout ? 16 : compactLayout ? 18 : 20)
@@ -3659,7 +3746,7 @@ class NodaliaClimateCard extends HTMLElement {
       ),
     );
     const dialCenterGridGap =
-      modeDialButtonCount >= 6
+      modeDialButtonCount >= 5
         ? (tightLayout ? "6px" : compactLayout ? "7px" : "8px")
         : modeDialButtonCount >= 3
           ? (tightLayout ? "8px" : compactLayout ? "9px" : "11px")
@@ -3667,7 +3754,7 @@ class NodaliaClimateCard extends HTMLElement {
     const dialCenterInsetCss = getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactLayout);
     const dialCenterAlignContent = modeDialButtonCount >= 3 ? "start" : "center";
     const stackedModeControlsGap =
-      modeDialButtonCount >= 6 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");
+      modeDialButtonCount >= 5 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");
     const targetUnitTopEm = modeDialButtonCount >= 3 ? "0.44em" : "0.14em";
     const targetBlockPaddingTop = modeDialButtonCount >= 3 ? "0.12em" : "0";
     const tempSpan = Math.max(temperatureRange.max - temperatureRange.min, temperatureStep);
@@ -4019,6 +4106,15 @@ class NodaliaClimateCard extends HTMLElement {
           top: 50%;
           transform: translate(-50%, -50%);
           width: calc(${effectiveIconSize} * 0.44);
+        }
+
+        .climate-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          position: absolute;
+          width: 100%;
         }
 
         .climate-card__unavailable-badge {
@@ -4789,9 +4885,11 @@ class NodaliaClimateCard extends HTMLElement {
               type="button"
               class="climate-card__icon"
               data-climate-action="toggle"
-              aria-label="Encender o apagar"
+              aria-label="${escapeHtml(toggleAriaLabel)}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="climate-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="climate-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             <div class="climate-card__copy">
@@ -4839,7 +4937,7 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__step-button"
                     data-climate-action="decrease"
-                    aria-label="Bajar temperatura"
+                    aria-label="Decrease temperature"
                   >
                     <span>&minus;</span>
                   </button>
@@ -4847,7 +4945,7 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__step-button"
                     data-climate-action="increase"
-                    aria-label="Subir temperatura"
+                    aria-label="Increase temperature"
                   >
                     <span>+</span>
                   </button>
@@ -5103,9 +5201,10 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
   }
 
   _getEntityOptionsMarkup() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const climateIds = Object.keys(this._hass?.states || {})
       .filter(entityId => entityId.startsWith("climate."))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     return `
       <datalist id="climate-card-entities">
@@ -5349,6 +5448,10 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:thermostat",
             })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/climate.png",
+            })}
           </div>
         </section>
 
@@ -5536,7 +5639,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -5560,6 +5663,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
   }
 
   _getClimateEntityOptions() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => entityId.startsWith("climate."))
       .map(([entityId, state]) => {
@@ -5573,8 +5677,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(this._config?.entity || "").trim();
@@ -6334,6 +6438,11 @@ class NodaliaClimateCardEditor extends HTMLElement {
               placeholder: "mdi:thermostat",
               fullWidth: true,
             })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/climate.png",
+              fullWidth: true,
+            })}
           </div>
         </section>
 
@@ -6560,8 +6669,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaClimateCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Climate Card",
   description: "Tarjeta de clima con dial circular, modos HVAC y control rapido de temperatura.",

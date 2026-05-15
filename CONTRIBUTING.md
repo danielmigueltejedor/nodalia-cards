@@ -223,6 +223,7 @@ Current supported languages:
 - French
 - Italian
 - Dutch
+- Norwegian
 - Portuguese
 - Russian
 - Greek
@@ -240,6 +241,10 @@ If helping with translations:
 - Keep UI text compact
 - Preserve consistency between cards
 - Match Home Assistant terminology when possible
+
+For the full step-by-step workflow, including adding a new language to the bundle, see [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
+
+For matching Nodalia’s look on **other** Lovelace cards (themes, **card-mod**, YAML), see [`docs/STYLING.md`](./docs/STYLING.md).
 
 ---
 
@@ -265,7 +270,14 @@ template under:
 
 ## Runtime
 
-`nodalia-i18n.js`
+Runtime strings are edited in `i18n/runtime/<lang>.json` (see `docs/TRANSLATIONS.md`). Regenerate the embedded pack in `nodalia-i18n.js` with:
+
+```bash
+pnpm run i18n:validate-runtime
+pnpm run i18n:gen-runtime
+```
+
+The `nodalia-i18n.js` file still holds all resolution helpers (`resolveLanguage`, `translate*`, …); only the `const PACK` block between `// <nodalia-runtime-i18n-pack>` and `// </nodalia-runtime-i18n-pack>` is generated from JSON.
 
 - Locale packs are deep-merged over English
 - Partial translations still work safely

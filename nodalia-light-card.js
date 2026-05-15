@@ -13,11 +13,13 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "registerCustomCard",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
@@ -146,6 +148,19 @@
   }
 
   /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
+  }
+
+  /**
    * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
    */
   function normalizeHomeAssistantWebhookId(webhookId) {
@@ -232,6 +247,57 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function dedupeCustomCardsArray(cards) {
+    if (!Array.isArray(cards)) {
+      return [];
+    }
+    const seen = new Set();
+    for (let index = cards.length - 1; index >= 0; index -= 1) {
+      const type = String(cards[index]?.type || "").trim();
+      if (!type) {
+        continue;
+      }
+      if (seen.has(type)) {
+        cards.splice(index, 1);
+        continue;
+      }
+      seen.add(type);
+    }
+    return cards;
+  }
+
+  function ensureCustomCardsDeduped() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    window.customCards = dedupeCustomCardsArray(window.customCards || []);
+    return window.customCards;
+  }
+
+  /**
+   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
+   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
+   * other front-end code that may also touch the shared array.
+   */
+  function registerCustomCard(metadata) {
+    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
+      return;
+    }
+    const cards = ensureCustomCardsDeduped();
+    if (!cards) {
+      return;
+    }
+    const type = String(metadata.type || "").trim();
+    if (type) {
+      for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (String(cards[index]?.type || "").trim() === type) {
+          cards.splice(index, 1);
+        }
+      }
+    }
+    cards.push(metadata);
   }
 
   /**
@@ -665,17 +731,20 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    registerCustomCard,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
+    ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
   }
 })();
@@ -684,7 +753,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.0.5";
+const CARD_VERSION = "1.1.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -700,18 +769,20 @@ const OPTIMISTIC_TURN_OFF_TIMEOUT = 3200;
 const OPTIMISTIC_VISUAL_SETTLE_MS = 420;
 const LIGHT_MEMORY_STORAGE_KEY = "nodalia-light-card:last-visual-state:v1";
 const COLOR_PRESETS = [
-  { color: "#ffd166", hs: [42, 60], label: "Calida" },
-  { color: "#fff1c1", hs: [48, 18], label: "Suave" },
-  { color: "#ff7f50", hs: [16, 72], label: "Atardecer" },
-  { color: "#ff4d6d", hs: [348, 70], label: "Rosa" },
-  { color: "#4dabf7", hs: [210, 70], label: "Azul" },
-  { color: "#38d9a9", hs: [160, 68], label: "Menta" },
+  { color: "#ffd166", hs: [42, 60], label: "Warm" },
+  { color: "#fff1c1", hs: [48, 18], label: "Soft" },
+  { color: "#ff7f50", hs: [16, 72], label: "Sunset" },
+  { color: "#ff4d6d", hs: [348, 70], label: "Pink" },
+  { color: "#4dabf7", hs: [210, 70], label: "Blue" },
+  { color: "#38d9a9", hs: [160, 68], label: "Mint" },
 ];
 
 const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
+  entity_picture: "",
+  show_entity_picture: false,
   show_state: false,
   state_position: "right",
   compact_layout_mode: "auto",
@@ -1232,6 +1303,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  config.entity_picture = String(config.entity_picture ?? "").trim();
+  config.show_entity_picture = config.show_entity_picture === true;
 
   return config;
 }
@@ -1482,6 +1555,8 @@ class NodaliaLightCard extends HTMLElement {
       `s:${String(state?.state || "")}`,
       `n:${String(attrs.friendly_name || "")}`,
       `i:${String(attrs.icon || "")}`,
+      `sep:${this._config?.show_entity_picture ? 1 : 0}`,
+      `ep:${String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "")}`,
       `b:${Number(attrs.brightness ?? -1)}`,
       `ct:${Number(attrs.color_temp ?? -1)}`,
       `ctk:${Number(attrs.color_temp_kelvin ?? -1)}`,
@@ -2338,20 +2413,20 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     if (state?.attributes?._nodalia_optimistic_on === true) {
-      return entityStates?.opening || "Encendiendo";
+      return entityStates?.opening || "Turning on";
     }
 
     switch (state?.state) {
       case "on":
-        return entityStates?.on || "Encendida";
+        return entityStates?.on || "On";
       case "off":
-        return entityStates?.off || "Apagada";
+        return entityStates?.off || "Off";
       case "unavailable":
-        return entityStates?.unavailable || "No disponible";
+        return entityStates?.unavailable || "Unavailable";
       case "unknown":
-        return entityStates?.unknown || "Desconocida";
+        return entityStates?.unknown || "Unknown";
       default:
-        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "Sin estado");
+        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "No state");
     }
   }
 
@@ -2369,6 +2444,18 @@ class NodaliaLightCard extends HTMLElement {
 
   _getLightIcon(state) {
     return this._config?.icon || state?.attributes?.icon || "mdi:lightbulb";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
   }
 
   _getAccentColor(state) {
@@ -3380,6 +3467,7 @@ class NodaliaLightCard extends HTMLElement {
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
+    const entityPicture = this._getEntityPicture(state);
     const showUnavailableBadge = isUnavailableState(state);
     const stateLabel = this._getStateLabel(state);
     const isCompactLayout = this._isCompactLayout;
@@ -3578,7 +3666,7 @@ class NodaliaLightCard extends HTMLElement {
                     step="any"
                     value="${currentTemperatureSliderValue}"
                     style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
-                    aria-label="Temperatura"
+                    aria-label="Temperature"
                   />
                   <div class="light-card__slider-thumb" data-light-control="temperature"></div>
                 </div>
@@ -3653,7 +3741,7 @@ class NodaliaLightCard extends HTMLElement {
                             data-light-action="mode"
                             data-mode="${mode}"
                             ${modeTransition ? "disabled" : ""}
-                            aria-label="${mode === "brightness" ? "Mostrar brillo" : mode === "temperature" ? "Mostrar temperatura" : "Mostrar color"}"
+                            aria-label="${mode === "brightness" ? "Show brightness" : mode === "temperature" ? "Show temperature" : "Show color"}"
                           >
                             <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
                           </button>
@@ -3985,6 +4073,16 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__icon ha-icon {
           color: ${isOn ? styles.icon.color : styles.icon.off_color};
           font-size: 26px;
+        }
+
+        .light-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          pointer-events: none;
+          position: absolute;
+          width: 100%;
         }
 
         .light-card__unavailable-badge {
@@ -4807,9 +4905,11 @@ class NodaliaLightCard extends HTMLElement {
               type="button"
               class="light-card__icon"
               data-light-action="icon"
-              aria-label="Encender o apagar"
+              aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"
             >
-              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              ${entityPicture
+                ? `<img class="light-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="light-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             ${showCopyBlock
@@ -4909,7 +5009,7 @@ class NodaliaLightCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -4933,6 +5033,7 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _getLightEntityOptions() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => entityId.startsWith("light."))
       .map(([entityId, state]) => {
@@ -4946,8 +5047,8 @@ class NodaliaLightCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(this._config?.entity || "").trim();
@@ -5305,9 +5406,10 @@ class NodaliaLightCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsMarkup() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const entityIds = Object.keys(this._hass?.states || {})
       .filter(entityId => entityId.startsWith("light."))
-      .sort((left, right) => left.localeCompare(right, "es"));
+      .sort((left, right) => left.localeCompare(right, sortLoc));
 
     if (!entityIds.length) {
       return "";
@@ -5721,6 +5823,11 @@ class NodaliaLightCardEditor extends HTMLElement {
               placeholder: phLightName,
               fullWidth: true,
             })}
+            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
+            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+              placeholder: "/local/light.png",
+              fullWidth: true,
+            })}
             ${this._renderTextField(
               "ed.light.quick_brightness",
               "quick_brightness",
@@ -6129,8 +6236,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaLightCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Light Card",
   description: "Tarjeta de luz con estilo Nodalia, presets y editor visual.",

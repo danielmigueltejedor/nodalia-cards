@@ -13,11 +13,13 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "registerCustomCard",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
@@ -146,6 +148,19 @@
   }
 
   /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
+  }
+
+  /**
    * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
    */
   function normalizeHomeAssistantWebhookId(webhookId) {
@@ -232,6 +247,57 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function dedupeCustomCardsArray(cards) {
+    if (!Array.isArray(cards)) {
+      return [];
+    }
+    const seen = new Set();
+    for (let index = cards.length - 1; index >= 0; index -= 1) {
+      const type = String(cards[index]?.type || "").trim();
+      if (!type) {
+        continue;
+      }
+      if (seen.has(type)) {
+        cards.splice(index, 1);
+        continue;
+      }
+      seen.add(type);
+    }
+    return cards;
+  }
+
+  function ensureCustomCardsDeduped() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    window.customCards = dedupeCustomCardsArray(window.customCards || []);
+    return window.customCards;
+  }
+
+  /**
+   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
+   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
+   * other front-end code that may also touch the shared array.
+   */
+  function registerCustomCard(metadata) {
+    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
+      return;
+    }
+    const cards = ensureCustomCardsDeduped();
+    if (!cards) {
+      return;
+    }
+    const type = String(metadata.type || "").trim();
+    if (type) {
+      for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (String(cards[index]?.type || "").trim() === type) {
+          cards.splice(index, 1);
+        }
+      }
+    }
+    cards.push(metadata);
   }
 
   /**
@@ -665,17 +731,20 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    registerCustomCard,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
+    ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
   }
 })();
@@ -684,7 +753,7 @@
 
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "1.0.5";
+const CARD_VERSION = "1.1.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1214,12 +1283,17 @@ function inferDecimals(rawValue) {
   return Math.min(3, normalized.split(".")[1].length);
 }
 
-function formatNumberValue(value, decimals = 0) {
+function getHassLocaleTag(hass, language = "auto") {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
+  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+}
+
+function formatNumberValue(value, decimals = 0, locale = undefined) {
   if (!Number.isFinite(Number(value))) {
     return "--";
   }
 
-  return Number(value).toLocaleString("es-ES", {
+  return Number(value).toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -1562,7 +1636,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       return configuredLabel;
     }
 
-    return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state));
+    return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state), this._getLocaleTag());
   }
 
   _getGaugeTintScale() {
@@ -1602,13 +1676,17 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
   _formatValue(value, state, withUnit = false) {
     const decimals = this._getDecimals(state);
-    const formatted = formatNumberValue(value, decimals);
+    const formatted = formatNumberValue(value, decimals, this._getLocaleTag());
     if (!withUnit) {
       return formatted;
     }
 
     const unit = this._getUnit(state);
     return unit ? `${formatted} ${unit}` : formatted;
+  }
+
+  _getLocaleTag() {
+    return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
   }
 
   _getAnimationSettings() {
@@ -2610,7 +2688,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -2636,6 +2714,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _getNumericEntityOptions() {
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => (
         entityId.startsWith("sensor.")
@@ -2653,8 +2732,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(this._config?.entity || "").trim();
@@ -3655,8 +3734,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaCircularGaugeCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Circular Gauge Card",
   description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",

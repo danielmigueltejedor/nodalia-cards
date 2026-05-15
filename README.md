@@ -2,8 +2,8 @@
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 
-![Package](https://img.shields.io/badge/package-1.0.3--alpha.15-df7138)
-![Latest stable on main](https://img.shields.io/badge/latest%20stable%20%28main%29-1.0.3-2ea043)
+![Package](https://img.shields.io/badge/package-1.1.0-2ea043)
+![Latest stable on main](https://img.shields.io/badge/latest%20stable%20%28main%29-1.1.0-2ea043)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -48,9 +48,9 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.0.x
+# 🚀 What’s new in 1.1.x
 
-**This branch tracks prerelease `1.0.3-alpha.10`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone and newer cards; release notes for **`1.0.3-alpha.*`**, stable **`1.0.2`**, **`1.0.1`**, and earlier are in [`CHANGELOG.md`](./CHANGELOG.md).
+**This branch tracks stable `1.1.0`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone and newer cards; release notes are in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🧠 Notifications Card
 
@@ -179,6 +179,7 @@ Major internal improvements:
 - `custom:nodalia-circular-gauge-card`
 - `custom:nodalia-graph-card`
 - `custom:nodalia-power-flow-card`
+- `custom:nodalia-cover-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-advance-vacuum-card`
@@ -265,8 +266,10 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.1.0.js
 ```
+
+HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.
 
 No manual resource setup is normally required.
 
@@ -302,7 +305,7 @@ JavaScript module
 
 # 🌍 Translations
 
-**1.0.x** includes multi-language runtime and visual editor support.
+**1.1.0** continues improving the multi-language runtime and visual editor support introduced in **1.0.x**.
 
 Supported languages:
 
@@ -321,11 +324,19 @@ Supported languages:
 
 Translation improvements are ongoing.
 
+Translation PRs are welcome. See the step-by-step contributor guide in [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
+
+---
+
+# 🎨 Styling and theme
+
+To reuse Nodalia’s look (radii, HA theme variables, chips, sliders) on **other** cards via **card-mod** or YAML, see the consolidated reference in [`docs/STYLING.md`](./docs/STYLING.md).
+
 ---
 
 # 🛣️ Roadmap
 
-Future work planned on top of **1.0.x** (after the **1.0.0** milestone):
+Future work planned on top of **1.1.x**:
 
 - Graph Card redesign
 - Power Flow improvements
@@ -344,6 +355,14 @@ Future work planned on top of **1.0.x** (after the **1.0.0** milestone):
 Feedback, ideas, bug reports and contributions are always welcome.
 
 If you find bugs or translation issues, please open an issue using the provided templates.
+
+---
+
+# ☕ Support
+
+If Nodalia Cards makes your dashboard nicer, you can support the project here:
+
+[Buy Me a Coffee](https://buymeacoffee.com/danielmigueltejedor)
 
 ---
 
@@ -375,5 +394,7 @@ Daniel Miguel Tejedor
 ---
 
 ## 💰 Donations
+
+https://buymeacoffee.com/danielmigueltejedor
 
 https://paypal.me/DanielMiguelTejedor

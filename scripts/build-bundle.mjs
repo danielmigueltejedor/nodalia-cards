@@ -39,6 +39,7 @@ const parts = [
   "nodalia-circular-gauge-card.js",
   "nodalia-graph-card.js",
   "nodalia-power-flow-card.js",
+  "nodalia-cover-card.js",
   "nodalia-climate-card.js",
   "nodalia-alarm-panel-card.js",
   "nodalia-advance-vacuum-card.js",
@@ -99,13 +100,17 @@ const footer = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSO
 const bundleFile = "nodalia-cards.bundle.js";
 const manifestFile = "nodalia-cards.manifest.js";
 const loaderFile = "nodalia-cards.js";
+const versionedLoaderFile = `nodalia-cards-${pkg.version}.js`;
 const bundlePath = path.join(root, bundleFile);
 const manifestPath = path.join(root, manifestFile);
 const loaderPath = path.join(root, loaderFile);
+const versionedLoaderPath = path.join(root, versionedLoaderFile);
 const manifest = {
   pkgVersion: pkg.version,
   contentSha256_12: contentHash,
   file: bundleFile,
+  loaderFile,
+  hacsFile: versionedLoaderFile,
 };
 const manifestSource = `export default ${JSON.stringify(manifest, null, 2)};\nexport const pkgVersion = ${JSON.stringify(pkg.version)};\nexport const contentSha256_12 = ${JSON.stringify(contentHash)};\nexport const file = ${JSON.stringify(bundleFile)};\n`;
 const inlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
@@ -114,7 +119,15 @@ const inlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LO
   contentSha256_12: contentHash,
   file: loaderFile,
 })};}`;
+const versionedInlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
+  mode: "inline",
+  pkgVersion: pkg.version,
+  contentSha256_12: contentHash,
+  file: versionedLoaderFile,
+  fallbackFile: loaderFile,
+})};}`;
 fs.writeFileSync(bundlePath, `${body}\n${footer}\n`);
 fs.writeFileSync(manifestPath, manifestSource);
 fs.writeFileSync(loaderPath, `${body}\n${footer}\n${inlineLoaderFooter}\n`);
-console.log(`Wrote ${path.relative(root, loaderPath)} self-contained bundle + ${bundleFile} artifact (${parts.length} modules + i18n, ${contentHash}).`);
+fs.writeFileSync(versionedLoaderPath, `${body}\n${footer}\n${versionedInlineLoaderFooter}\n`);
+console.log(`Wrote ${path.relative(root, loaderPath)} + ${path.relative(root, versionedLoaderPath)} self-contained bundles and ${bundleFile} artifact (${parts.length} modules + i18n, ${contentHash}).`);

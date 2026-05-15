@@ -4,21 +4,37 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Detailed prerelease history for `1.0.0-alpha.*` and `1.0.0-beta.*` has been archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*` and the completed `1.1.0-alpha.*` line is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
-Maintenance work continues toward the next stable **`1.0.x`** cut.
+Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** line.
 
 ### Planned / In progress
 
 - Bug fixes and compatibility patches.
 - Performance and rendering improvements.
 - Security and service-action hardening.
-- Editor/i18n refinements.
+- Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
+
+---
+
+## [1.1.0] - 2026-05-12
+
+Stable **`1.1.0`**. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.0.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **`custom:nodalia-cover-card`:** Home Assistant **`cover`** card with open / stop / close, optional position and tilt sliders, compact layout, scroll-safe controls on mobile, and a visual editor aligned with the Fan Card. **`open_close_icons`** chooses vertical (↑↓) or horizontal (←→) arrows; **`auto`** follows the entity **`device_class`** so **`door`**, **`gate`**, and **`garage`** use horizontal arrows (better for sliding doors and similar), while blinds, shades, curtains, and shutters keep vertical arrows by default.
+- **`nodalia-power-flow-card`:** diamond-style energy diagram, grid export / feed-in support, animated flows with viewport-aware motion pause, routing and chip polish, and locale-aware number formatting.
+- **`nodalia-calendar-card`:** cached **`Intl.DateTimeFormat`** reuse on busy calendars to cut formatter churn.
+- **Localization:** profile language resolution fixes, broader runtime and editor **`i18n`**, contributor docs (**`docs/TRANSLATIONS.md`**) and dashboard styling reference (**`docs/STYLING.md`**).
+- **Broader card polish:** optional **`show_entity_picture`** on several device cards, alarm panel PIN and editor fixes, notifications **`tap_action`** for smart rules, deduplicated **`customCards`** registration, graph card cleanup of stray listeners, and removal of stray Spanish numeric fallbacks on power flow, circular gauge, and graph cards.
+
+Per-alpha notes for **`1.1.0-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 

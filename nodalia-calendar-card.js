@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.0.5";
+const CARD_VERSION = "1.1.0";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -17,6 +17,8 @@ const CALENDAR_DELETE_RECURRENCE_THIS = "";
 const CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE = "THISANDFUTURE";
 
 const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
+const DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
+const dateTimeFormatterCache = new Map();
 
 const DEFAULT_CONFIG = {
   title: "Calendar",
@@ -193,7 +195,14 @@ function sanitizeCssRuntimeValue(value) {
   if (!raw) {
     return "";
   }
-  if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /<\/style/i.test(raw)) {
+  if (
+    /[<>{};"']/.test(raw)
+    || raw.includes("/*")
+    || raw.includes("*/")
+    || /<\/style/i.test(raw)
+    || /\burl\s*\(/i.test(raw)
+    || /\b@import\b/i.test(raw)
+  ) {
     return "";
   }
   return raw;
@@ -596,8 +605,21 @@ function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
+function getDateTimeFormatter(locale, options) {
+  const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
+  let formatter = dateTimeFormatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateTimeFormatterCache.set(key, formatter);
+    if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
+      dateTimeFormatterCache.delete(dateTimeFormatterCache.keys().next().value);
+    }
+  }
+  return formatter;
+}
+
 function formatDateLabel(date, locale) {
-  return new Intl.DateTimeFormat(locale, {
+  return getDateTimeFormatter(locale, {
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -605,7 +627,7 @@ function formatDateLabel(date, locale) {
 }
 
 function formatTimeLabel(date, locale) {
-  return new Intl.DateTimeFormat(locale, {
+  return getDateTimeFormatter(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
@@ -924,7 +946,9 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   _getLocale() {
-    return this._hass?.locale?.language || "es-ES";
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto");
+    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
   }
 
   _getCalendarEntityLabel(entityId) {
@@ -1036,7 +1060,7 @@ class NodaliaCalendarCard extends HTMLElement {
       return a - b;
     });
     const longTitle = this._capitalizeFirst(
-      new Intl.DateTimeFormat(locale, {
+      getDateTimeFormatter(locale, {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -1096,7 +1120,7 @@ class NodaliaCalendarCard extends HTMLElement {
           : "";
     const dayLabel = start
       ? this._capitalizeFirst(
-        new Intl.DateTimeFormat(locale, {
+        getDateTimeFormatter(locale, {
           weekday: "long",
           day: "numeric",
           month: "long",
@@ -1218,7 +1242,7 @@ class NodaliaCalendarCard extends HTMLElement {
     const refMonday = new Date(2024, 0, 1);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(refMonday.getTime() + i * 86400000);
-      return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
+      return getDateTimeFormatter(locale, { weekday: "short" }).format(d);
     });
   }
 
@@ -1284,7 +1308,7 @@ class NodaliaCalendarCard extends HTMLElement {
       const daysInMonth = last.getDate();
       const leading = (first.getDay() + 6) % 7;
       const map = this._groupsByDayKey(groups);
-      const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(first);
+      const title = getDateTimeFormatter(locale, { month: "long", year: "numeric" }).format(first);
       const headers = this._weekdayHeadersMondayFirst(locale);
       const cells = [];
       for (let i = 0; i < leading; i += 1) {
@@ -2388,7 +2412,7 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   async _submitNativeEventComposer() {
-    if (!this._hass || !this.shadowRoot) {
+    if (!this.isConnected || !this._hass || !this.shadowRoot) {
       return;
     }
     this._setComposerError("native", "");
@@ -4444,7 +4468,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     customElements.whenDefined(tagName)
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
         const focusState = this._captureFocusState();
@@ -5590,10 +5614,15 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+const _nodaliaCalendarCardMeta = {
   type: CARD_TAG,
   name: "Nodalia Calendar Card",
   description: "Tarjeta de calendario elegante estilo Nodalia con eventos nativos.",
   preview: true,
-});
+};
+if (typeof window.NodaliaUtils?.registerCustomCard === "function") {
+  window.NodaliaUtils.registerCustomCard(_nodaliaCalendarCardMeta);
+} else {
+  window.customCards = window.customCards || [];
+  window.customCards.push(_nodaliaCalendarCardMeta);
+}

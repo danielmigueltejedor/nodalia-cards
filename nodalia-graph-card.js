@@ -13,11 +13,13 @@
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
+    "editorSortLocale",
     "sanitizeActionUrl",
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
+    "registerCustomCard",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
@@ -146,6 +148,19 @@
   }
 
   /**
+   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
+   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
+   */
+  function editorSortLocale(hass, language) {
+    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
+      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
+    }
+    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
+    const s = String(raw || "").trim();
+    return s || "en";
+  }
+
+  /**
    * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
    */
   function normalizeHomeAssistantWebhookId(webhookId) {
@@ -232,6 +247,57 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function dedupeCustomCardsArray(cards) {
+    if (!Array.isArray(cards)) {
+      return [];
+    }
+    const seen = new Set();
+    for (let index = cards.length - 1; index >= 0; index -= 1) {
+      const type = String(cards[index]?.type || "").trim();
+      if (!type) {
+        continue;
+      }
+      if (seen.has(type)) {
+        cards.splice(index, 1);
+        continue;
+      }
+      seen.add(type);
+    }
+    return cards;
+  }
+
+  function ensureCustomCardsDeduped() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    window.customCards = dedupeCustomCardsArray(window.customCards || []);
+    return window.customCards;
+  }
+
+  /**
+   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
+   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
+   * other front-end code that may also touch the shared array.
+   */
+  function registerCustomCard(metadata) {
+    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
+      return;
+    }
+    const cards = ensureCustomCardsDeduped();
+    if (!cards) {
+      return;
+    }
+    const type = String(metadata.type || "").trim();
+    if (type) {
+      for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (String(cards[index]?.type || "").trim() === type) {
+          cards.splice(index, 1);
+        }
+      }
+    }
+    cards.push(metadata);
   }
 
   /**
@@ -665,17 +731,20 @@
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
+    editorSortLocale,
     sanitizeActionUrl,
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
+    registerCustomCard,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
   };
 
   if (typeof window !== "undefined") {
+    ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
   }
 })();
@@ -684,7 +753,7 @@
 
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.0.5";
+const CARD_VERSION = "1.1.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -709,7 +778,7 @@ const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 const DEFAULT_CONFIG = {
   entity: "",
   entities: [],
-  name: "Temperatura",
+  name: "Temperature",
   icon: "mdi:thermometer",
   min: 15,
   max: 25,
@@ -756,19 +825,19 @@ const DEFAULT_CONFIG = {
 };
 
 const STUB_CONFIG = {
-  name: "Temperatura",
+  name: "Temperature",
   icon: "mdi:thermometer",
   min: 15,
   max: 25,
   entities: [
     {
       entity: "sensor.termostato_dormitorios_temperatura",
-      name: "Dormitorio de Rocío",
+      name: "Bedroom",
       color: "#ffaa00",
     },
     {
       entity: "sensor.termostato_habitaciones_comunes_temperatura",
-      name: "Pasillo",
+      name: "Hallway",
       color: "#ffc677",
     },
   ],
@@ -947,13 +1016,18 @@ function parseHistoryTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formatNumberValue(value, decimals = 0) {
+function getHassLocaleTag(hass, language = "auto") {
+  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
+  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+}
+
+function formatNumberValue(value, decimals = 0, locale = undefined) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return "--";
   }
 
-  return numeric.toLocaleString("es-ES", {
+  return numeric.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -1146,13 +1220,13 @@ function moveItem(array, fromIndex, toIndex) {
   return array;
 }
 
-function formatHoverTimestamp(value) {
+function formatHoverTimestamp(value, locale = undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -1361,6 +1435,8 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyAbortController?.abort();
     this._historyAbortController = null;
     this._detachViewVisibilityObserver();
+    this.removeEventListener("pointerleave", this._onShadowPointerLeave);
+    this.removeEventListener("mouseleave", this._onShadowPointerLeave);
     this.removeEventListener("pointerout", this._onHostPointerOut);
     this.removeEventListener("mouseout", this._onHostPointerOut);
     this._detachDocumentHoverWatch();
@@ -1474,6 +1550,10 @@ class NodaliaGraphCard extends HTMLElement {
     return resolveEntityEntries(this._config);
   }
 
+  _getLocaleTag() {
+    return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
+  }
+
   _getRenderSignature(hass = this._hass) {
     const runtime = getRenderSignatureRuntime();
     const trackedStates = this._getTrackedStateSignatureRows(hass, runtime);
@@ -1576,6 +1656,8 @@ class NodaliaGraphCard extends HTMLElement {
       return { value: "--", unit: this._getUnit() };
     }
 
+    const locale = this._getLocaleTag();
+
     // When multiple active series share the same unit, show the mean value.
     if (!selectedEntry && currentSeries.length > 1) {
       const unit = currentSeries[0].unit;
@@ -1588,7 +1670,7 @@ class NodaliaGraphCard extends HTMLElement {
           3,
         );
         return {
-          value: formatNumberValue(avg, decimals),
+          value: formatNumberValue(avg, decimals, locale),
           unit,
         };
       }
@@ -1596,7 +1678,7 @@ class NodaliaGraphCard extends HTMLElement {
 
     const primary = currentSeries[0];
     return {
-      value: formatNumberValue(primary.value, primary.decimals),
+      value: formatNumberValue(primary.value, primary.decimals, locale),
       unit: primary.unit || this._getUnit(),
     };
   }
@@ -2472,9 +2554,10 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     const decimals = this._getDecimals();
+    const locale = this._getLocaleTag();
     return {
       index: boundedIndex,
-      label: formatHoverTimestamp(primarySample.ts),
+      label: formatHoverTimestamp(primarySample.ts, locale),
       x: anchorPoint.x,
       values: chart.entries
         .map(entry => {
@@ -2486,7 +2569,7 @@ class NodaliaGraphCard extends HTMLElement {
           return {
             color: entry.color,
             name: entry.name,
-            value: formatNumberValue(sample.value, decimals),
+            value: formatNumberValue(sample.value, decimals, locale),
             unit: entry.unit || this._getUnit(),
             point: entry.points?.[boundedIndex] || null,
           };
@@ -3523,7 +3606,7 @@ class NodaliaGraphCard extends HTMLElement {
                 `
                 : ""
             }
-            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "Sin historial disponible")}</div>`}
+            ${hasGraphData ? "" : `<div class="graph-card__chart-empty">${escapeHtml(window.NodaliaI18n?.translateGraphEmptyHistory?.(this._hass, this._config?.language ?? "auto") || "No history available")}</div>`}
           </div>
         </div>
       </ha-card>
@@ -4034,7 +4117,7 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Temperatura",
+              placeholder: "Temperature",
             })}
             ${this._renderTextField("Icono", "icon", config.icon, {
               placeholder: "mdi:water-percent",
@@ -4076,12 +4159,12 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
             ${this._renderCheckboxField("Mostrar relleno", "show_fill", config.show_fill !== false)}
             ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
             ${this._renderSelectField(
-              "Tap action",
+              "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "More info" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
             )}
           </div>
@@ -4093,20 +4176,20 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selection" },
-                { value: "light", label: "Light" },
-                { value: "medium", label: "Medium" },
-                { value: "heavy", label: "Heavy" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "failure", label: "Failure" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>
@@ -4221,7 +4304,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
       .then(() => {
         this._pendingEditorControlTags.delete(tagName);
 
-        if (!this._hass || !this.shadowRoot) {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
 
@@ -4250,6 +4333,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     const normalizedDomains = Array.isArray(domains)
       ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
       : [];
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => (
         !normalizedDomains.length
@@ -4266,8 +4350,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
         };
       })
       .sort((left, right) => (
-        left.label.localeCompare(right.label, "es", { sensitivity: "base" })
-        || left.value.localeCompare(right.value, "es", { sensitivity: "base" })
+        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
+        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
       ));
 
     const currentValue = String(getByPath(this._config, field) || "").trim();
@@ -4701,7 +4785,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
               fullWidth: true,
             })}
             ${this._renderTextField("Nombre visible", `entities.${index}.name`, series.name, {
-              placeholder: "Dormitorio",
+              placeholder: "Bedroom",
               fullWidth: true,
             })}
             ${this._renderColorField("Color de la linea", `entities.${index}.color`, series.color, {
@@ -5229,18 +5313,18 @@ class NodaliaGraphCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Estadisticas",
+              placeholder: "Statistics",
             })}
             ${this._renderIconPickerField("Icono", "icon", config.icon, {
               placeholder: "mdi:chart-line",
             })}
             ${this._renderSelectField(
-              "Acción al tocar",
+              "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
               [
-                { value: "more-info", label: "Más información" },
-                { value: "none", label: "Sin accion" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
               ],
             )}
             ${this._renderTextField("Horas a mostrar", "hours_to_show", config.hours_to_show, {
@@ -5300,20 +5384,20 @@ class NodaliaGraphCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional para taps, hover y cambios de serie."))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("Activar haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("Fallback con vibracion", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "Estilo",
+              "ed.entity.haptic_style",
               "haptics.style",
               hapticStyle,
               [
-                { value: "selection", label: "Selección" },
-                { value: "light", label: "Ligero" },
-                { value: "medium", label: "Medio" },
-                { value: "heavy", label: "Intenso" },
-                { value: "success", label: "Exito" },
-                { value: "warning", label: "Aviso" },
-                { value: "failure", label: "Fallo" },
+                { value: "selection", label: "ed.person.haptic_selection" },
+                { value: "light", label: "ed.person.haptic_light" },
+                { value: "medium", label: "ed.person.haptic_medium" },
+                { value: "heavy", label: "ed.person.haptic_heavy" },
+                { value: "success", label: "ed.person.haptic_success" },
+                { value: "warning", label: "ed.person.haptic_warning" },
+                { value: "failure", label: "ed.person.haptic_failure" },
               ],
             )}
           </div>
@@ -5438,8 +5522,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaGraphCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Graph Card",
   description: "Tarjeta de grafica elegante para una o varias entidades numericas con estilo Nodalia.",
