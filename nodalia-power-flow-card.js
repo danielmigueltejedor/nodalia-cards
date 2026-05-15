@@ -579,10 +579,11 @@
     let timer = null;
     let active = null;
 
+    /** Match capture + passive flags used on add (required for removeEventListener). */
     function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerUp);
-      window.removeEventListener("pointermove", onWindowPointerMove);
+      window.removeEventListener("pointerup", onWindowPointerUp, true);
+      window.removeEventListener("pointercancel", onWindowPointerUp, true);
+      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
     }
 
     function resetTracking() {
@@ -619,6 +620,8 @@
       if (typeof ev.button === "number" && ev.button !== 0) {
         return;
       }
+      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
+      resetTracking();
       const zone = options.resolveZone(ev);
       if (!zone) {
         return;
@@ -626,7 +629,6 @@
       if (shouldBeginHold(zone, ev) !== true) {
         return;
       }
-      resetTracking();
       active = {
         pointerId: ev.pointerId,
         x: ev.clientX,
@@ -643,9 +645,10 @@
         options.onHold(z);
         markHoldConsumedClick();
       }, holdMs);
-      window.addEventListener("pointerup", onWindowPointerUp);
-      window.addEventListener("pointercancel", onWindowPointerUp);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
+      window.addEventListener("pointerup", onWindowPointerUp, true);
+      window.addEventListener("pointercancel", onWindowPointerUp, true);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
     host.addEventListener("pointerdown", onPointerDownCapture, true);
@@ -753,7 +756,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1050,6 +1053,279 @@ function clamp(value, min, max) {
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function formatSvgMotionNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "0";
+  }
+  return String(Number(number.toFixed(3)));
+}
+
+const SVG_PATH_TOKEN_RE = /[AaCcHhLlMmQqSsTtVvZz]|[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][+-]?\d+)?/g;
+
+function tokenizeSvgPath(pathD) {
+  return String(pathD || "").match(SVG_PATH_TOKEN_RE) || [];
+}
+
+function isSvgPathCommand(token) {
+  return /^[AaCcHhLlMmQqSsTtVvZz]$/.test(String(token || ""));
+}
+
+function createSvgTokenReader(tokens) {
+  let index = 0;
+
+  return {
+    get index() {
+      return index;
+    },
+    set index(value) {
+      index = value;
+    },
+    hasMore() {
+      return index < tokens.length;
+    },
+    hasNumber() {
+      return index < tokens.length && !isSvgPathCommand(tokens[index]);
+    },
+    peek() {
+      return tokens[index];
+    },
+    readCommand() {
+      return isSvgPathCommand(tokens[index]) ? tokens[index++] : "";
+    },
+    readNumber() {
+      if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
+        return NaN;
+      }
+      const value = Number(tokens[index]);
+      index += 1;
+      return value;
+    },
+    readFlag() {
+      if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
+        return NaN;
+      }
+      const raw = String(tokens[index]);
+      const first = raw.charAt(0);
+      if (first !== "0" && first !== "1") {
+        index += 1;
+        return NaN;
+      }
+      if (raw.length > 1) {
+        tokens[index] = raw.slice(1);
+      } else {
+        index += 1;
+      }
+      return Number(first);
+    },
+  };
+}
+
+function getSvgPathMotionStart(pathD) {
+  const tokens = tokenizeSvgPath(pathD);
+  const reader = createSvgTokenReader(tokens);
+  const command = reader.readCommand();
+  if (String(command).toUpperCase() !== "M") {
+    return { x: 0, y: 0 };
+  }
+  const x = reader.readNumber();
+  const y = reader.readNumber();
+  return Number.isFinite(x) && Number.isFinite(y)
+    ? { x, y }
+    : { x: 0, y: 0 };
+}
+
+function pushSvgPoint(output, command, x, y, start, absolute) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return false;
+  }
+  output.push(
+    command,
+    formatSvgMotionNumber(absolute ? x - start.x : x),
+    formatSvgMotionNumber(absolute ? y - start.y : y),
+  );
+  return true;
+}
+
+function getSvgRelativeMotionPath(pathD) {
+  const source = String(pathD || "").trim();
+  const start = getSvgPathMotionStart(source);
+  if (!source) {
+    return { start, path: "M 0 0" };
+  }
+
+  const tokens = tokenizeSvgPath(source);
+  if (!tokens.length) {
+    return { start, path: "M 0 0" };
+  }
+
+  const reader = createSvgTokenReader(tokens);
+  const output = [];
+  let command = "";
+  let firstMove = true;
+
+  while (reader.hasMore()) {
+    if (isSvgPathCommand(reader.peek())) {
+      command = reader.readCommand();
+    } else if (!command) {
+      return { start, path: "M 0 0" };
+    }
+
+    const upper = String(command).toUpperCase();
+    const absolute = command === upper;
+
+    if (upper === "Z") {
+      output.push(command);
+      continue;
+    }
+
+    if (upper === "M") {
+      let firstPair = true;
+      while (reader.hasNumber()) {
+        const x = reader.readNumber();
+        const y = reader.readNumber();
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          return { start, path: "M 0 0" };
+        }
+        if (firstMove) {
+          output.push("M", "0", "0");
+          firstMove = false;
+        } else {
+          const outCommand = firstPair ? (absolute ? "M" : "m") : (absolute ? "L" : "l");
+          if (!pushSvgPoint(output, outCommand, x, y, start, absolute)) {
+            return { start, path: "M 0 0" };
+          }
+        }
+        firstPair = false;
+      }
+      command = absolute ? "L" : "l";
+      continue;
+    }
+
+    if (upper === "L" || upper === "T") {
+      while (reader.hasNumber()) {
+        const x = reader.readNumber();
+        const y = reader.readNumber();
+        if (!pushSvgPoint(output, command, x, y, start, absolute)) {
+          return { start, path: "M 0 0" };
+        }
+      }
+      continue;
+    }
+
+    if (upper === "H") {
+      while (reader.hasNumber()) {
+        const x = reader.readNumber();
+        if (!Number.isFinite(x)) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command, formatSvgMotionNumber(absolute ? x - start.x : x));
+      }
+      continue;
+    }
+
+    if (upper === "V") {
+      while (reader.hasNumber()) {
+        const y = reader.readNumber();
+        if (!Number.isFinite(y)) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command, formatSvgMotionNumber(absolute ? y - start.y : y));
+      }
+      continue;
+    }
+
+    if (upper === "C") {
+      while (reader.hasNumber()) {
+        const values = [
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+        ];
+        if (values.some(value => !Number.isFinite(value))) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command);
+        for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
+          output.push(
+            formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
+            formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1]),
+          );
+        }
+      }
+      continue;
+    }
+
+    if (upper === "S" || upper === "Q") {
+      while (reader.hasNumber()) {
+        const values = [
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+        ];
+        if (values.some(value => !Number.isFinite(value))) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command);
+        for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
+          output.push(
+            formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
+            formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1]),
+          );
+        }
+      }
+      continue;
+    }
+
+    if (upper === "A") {
+      while (reader.hasNumber()) {
+        const rx = reader.readNumber();
+        const ry = reader.readNumber();
+        const rotation = reader.readNumber();
+        const largeArc = reader.readFlag();
+        const sweep = reader.readFlag();
+        const x = reader.readNumber();
+        const y = reader.readNumber();
+        if (
+          !Number.isFinite(rx) ||
+          !Number.isFinite(ry) ||
+          !Number.isFinite(rotation) ||
+          !Number.isFinite(largeArc) ||
+          !Number.isFinite(sweep) ||
+          !Number.isFinite(x) ||
+          !Number.isFinite(y)
+        ) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(
+          command,
+          formatSvgMotionNumber(rx),
+          formatSvgMotionNumber(ry),
+          formatSvgMotionNumber(rotation),
+          String(largeArc ? 1 : 0),
+          String(sweep ? 1 : 0),
+          formatSvgMotionNumber(absolute ? x - start.x : x),
+          formatSvgMotionNumber(absolute ? y - start.y : y),
+        );
+      }
+      continue;
+    }
+
+    if (reader.hasNumber()) {
+      return { start, path: "M 0 0" };
+    }
+  }
+
+  return {
+    start,
+    path: output.length ? output.join(" ") : "M 0 0",
+  };
 }
 
 function escapeHtml(value) {
@@ -1591,10 +1867,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
       }
     };
+    /** Two rAFs give freshly-rendered SVG motion paths a stable frame without forcing synchronous layout. */
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
       this._flowUnpauseRaf = window.requestAnimationFrame(() => {
-        this._flowUnpauseRaf = 0;
-        runUnpause();
+        if (!this.isConnected || !this.shadowRoot) {
+          this._flowUnpauseRaf = 0;
+          return;
+        }
+        this._flowUnpauseRaf = window.requestAnimationFrame(() => {
+          runUnpause();
+        });
       });
     } else {
       runUnpause();
@@ -2548,13 +2830,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const coreRy = coreR * viewAspect;
     const motionPhase = ((String(line.id || "").split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 19) / 19) * 0.92;
     const beginAttr = motionPhase > 0.02 ? ` begin="${motionPhase.toFixed(3)}s"` : "";
+    const motionPath = getSvgRelativeMotionPath(line.path);
+    const cx = motionPath.start.x.toFixed(3);
+    const cy = motionPath.start.y.toFixed(3);
+    const path = escapeHtml(motionPath.path);
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <ellipse class="power-flow-card__dot-glow" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
-          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
+        <ellipse class="power-flow-card__dot-glow" cx="${cx}" cy="${cy}" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
+          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${path}"${beginAttr}></animateMotion>
         </ellipse>
-        <ellipse class="power-flow-card__dot-core" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
-          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
+        <ellipse class="power-flow-card__dot-core" cx="${cx}" cy="${cy}" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
+          <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${path}"${beginAttr}></animateMotion>
         </ellipse>
       </g>
     `;
@@ -3224,7 +3510,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--lines {
-          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
+          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 82ms;
           transform-origin: center;
         }
@@ -3234,7 +3520,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--dots {
-          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
+          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 124ms;
           transform: none;
           transform-origin: center;
@@ -3254,6 +3540,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
           stroke-linecap: round;
           stroke-linejoin: round;
           stroke-width: ${flowWidth * 1.28}px;
+        }
+
+        .power-flow-card__dot-group {
+          opacity: 0;
+        }
+
+        .power-flow-card:not(.power-flow-card--motion-paused) .power-flow-card__dot-group {
+          opacity: 1;
         }
 
         .power-flow-card__dot-glow {
@@ -3515,6 +3809,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-dot {
+          animation: power-flow-card-simple-dot linear infinite both;
           background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
           border-radius: 999px;
           box-shadow:
@@ -3522,12 +3817,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
             0 0 10px color-mix(in srgb, var(--line-color) 20%, transparent);
           height: 8px;
           left: 0;
+          opacity: 0;
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
           width: 8px;
           will-change: left, opacity;
-          animation: power-flow-card-simple-dot linear infinite;
+        }
+
+        .power-flow-card__simple-rail--entering .power-flow-card__simple-dot {
+          animation: none;
+          opacity: 0;
+          visibility: hidden;
         }
 
         .power-flow-card--motion-paused .power-flow-card__simple-dot {

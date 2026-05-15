@@ -257,6 +257,16 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);
 });
 
+test("weather forecast popups use an opaque theme-safe surface", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /--weather-card-popover-surface:/);
+  assert.match(source, /\.weather-card__forecast-chart \{[\s\S]*?isolation: isolate;/);
+  assert.match(source, /\.weather-card__forecast-popup \{[\s\S]*?background-color: var\(--weather-card-popover-surface\);/);
+  assert.match(source, /\.weather-card__forecast-popup \{[\s\S]*?var\(--weather-card-popover-surface\);[\s\S]*?isolation: isolate;/);
+  assert.match(source, /\.weather-card__forecast-hover-preview \{[\s\S]*?background-color: var\(--weather-card-popover-surface\);/);
+  assert.match(source, /\.weather-card__forecast-hover-preview \{[\s\S]*?var\(--weather-card-popover-surface\);[\s\S]*?isolation: isolate;/);
+});
+
 test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
@@ -324,6 +334,20 @@ test("active icon animations are configurable across animated device cards", () 
   assert.match(vacuum, /error_entity: ""/);
   assert.match(vacuum, /_guessRelatedErrorEntity/);
   assert.match(vacuum, /translateVacuumErrorState/);
+});
+
+test("light card runtime preset labels use i18n", () => {
+  const light = read("nodalia-light-card.js");
+  const i18n = read("nodalia-i18n.js");
+
+  assert.match(light, /_lightCardUi\(path, fallback = "", values = \{\}\)/);
+  assert.match(light, /temperaturePresets\.warm/);
+  assert.match(light, /temperaturePresets\.neutral/);
+  assert.match(light, /temperaturePresets\.cool/);
+  assert.doesNotMatch(light, /\{ label: "Warm", kelvin: range\.min \}/);
+  assert.match(i18n, /function translateLightUi\(hass, configLang, path, fallback = "", values = \{\}\)/);
+  assert.match(i18n, /lightCard:\s*\{[\s\S]*?temperaturePresets:\s*\{[\s\S]*?warm:\s*"Warm"/);
+  assert.match(i18n, /lightCard:\s*\{[\s\S]*?temperaturePresets:\s*\{[\s\S]*?warm:\s*"Cálida"/);
 });
 
 test("notifications translate vacuum cleaning state in smart messages", () => {

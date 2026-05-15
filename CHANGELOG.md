@@ -4,13 +4,14 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*` and the completed `1.1.0-alpha.*` line is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, and completed **`1.1.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
 Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** line.
+
 
 ### Planned / In progress
 
@@ -19,6 +20,51 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Security and service-action hardening.
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
+
+### Fixed
+
+- **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
+- **`nodalia-light-card.js`:** quick color-temperature preset labels and related control text now use runtime i18n instead of hardcoded English/Spanish strings.
+
+---
+
+## [1.1.1] - 2026-05-15
+
+Stable **`1.1.1`** patch release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.1.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Cover Card:** refined the post-`1.1.0` interaction model so cover controls, card/icon taps, slider commits, and compact layouts behave closer to the Fan and Light cards, with fewer focus/scroll side effects on mobile and bottom-of-dashboard views.
+- **Power Flow Card:** hardened animated flow rendering so dots start on the drawn connector, follow normalized SVG paths, and avoid corner flashes or forced layout reflows.
+- **Light Card:** added quick color and temperature preset rows with visual-editor support.
+- **Hold actions:** cards with long-press support now default to Home Assistant **more-info**, making body/icon hold behavior more useful out of the box.
+
+### Added
+
+- **`nodalia-light-card.js`:** optional quick **temperature** and **color** preset chip rows with slider/mode controls.
+- **`nodalia-light-card.js` editor:** up to **four** configurable color presets with label and color picker fields, including editor translations in **`i18n/editor/*`** and the embedded editor catalog.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** remove the remaining cover-only scroll anchoring/focus workarounds, `overflow-anchor` overrides, `touch-action: manipulation`, and forced `tabindex="-1"` controls so cover interactions follow the same browser event path as fan/light cards.
+- **`nodalia-cover-card.js`:** polish open / stop / close, card body, icon, and slider interactions across the alpha line so taps no longer steal focus or nudge dashboard scroll while still allowing normal page scrolling.
+- **`nodalia-cover-card.js`:** prevent narrow dashboard layouts from overlapping the open / stop / close transport with the view-toggle button by using a dedicated compact lane at **6 columns** or less.
+- **`nodalia-power-flow-card.js`:** keep simple-layout and SVG flow dots hidden until their motion path is ready, preventing flashes in the card corner on first dashboard navigation or animation resume.
+- **`nodalia-power-flow-card.js`:** normalize SVG **`animateMotion`** paths relative to connector start points so animated dots travel on the drawn line instead of along the card edge.
+- **`nodalia-power-flow-card.js`:** make SVG motion-path normalization handle the standard SVG path command set (`M/L/H/V/C/S/Q/T/A/Z`, relative and absolute) and compact arc flags, preventing parser desynchronization on optimized paths.
+- **`nodalia-utils.js`:** long-press / **`hold_action`** gestures no longer stop working after repeated use when Home Assistant modals stop event bubbling.
+
+### Changed
+
+- **Hold actions:** **`nodalia-light-card`**, **`nodalia-fan-card`**, **`nodalia-entity-card`**, **`nodalia-humidifier-card`**, **`nodalia-cover-card`**, **`nodalia-insignia-card`**, and **`nodalia-vacuum-card`** now default **`hold_action`** to **more-info** instead of **none**.
+- **`nodalia-cover-card.js`:** when position or tilt sliders are shown, the main control row follows the Fan/Light card slider-row pattern with a right-side toggle between slider and arrow-control views.
+- **`nodalia-cover-card.js`:** open / stop / close actions use a centered pill transport treatment, with compact grid behavior for narrow stacks.
+- **`nodalia-light-card.js`:** brightness / temperature / color quick presets are centered and only shown for the active slider mode.
+- **`nodalia-light-card.js`:** avoid replaying expanded controls during the power-down animation when the panel was already collapsed.
+- **`nodalia-power-flow-card.js`:** unpause SVG flow animations after two animation frames without forcing a synchronous `offsetWidth` layout read.
+- **Release metadata:** promote the **`1.1.1`** line from prerelease to stable **`1.1.1`**.
+
+Per-alpha notes for **`1.1.1-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 

@@ -242,6 +242,8 @@ If helping with translations:
 - Preserve consistency between cards
 - Match Home Assistant terminology when possible
 
+You can also contribute via **[Nodalia Cards on Crowdin](https://crowdin.com/project/nodalia-cards)** (community strings for runtime + editor catalogs; see [`crowdin.yml`](./crowdin.yml)).
+
 For the full step-by-step workflow, including adding a new language to the bundle, see [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
 
 For matching Nodalia’s look on **other** Lovelace cards (themes, **card-mod**, YAML), see [`docs/STYLING.md`](./docs/STYLING.md).

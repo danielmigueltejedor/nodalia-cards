@@ -579,10 +579,11 @@
     let timer = null;
     let active = null;
 
+    /** Match capture + passive flags used on add (required for removeEventListener). */
     function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerUp);
-      window.removeEventListener("pointermove", onWindowPointerMove);
+      window.removeEventListener("pointerup", onWindowPointerUp, true);
+      window.removeEventListener("pointercancel", onWindowPointerUp, true);
+      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
     }
 
     function resetTracking() {
@@ -619,6 +620,8 @@
       if (typeof ev.button === "number" && ev.button !== 0) {
         return;
       }
+      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
+      resetTracking();
       const zone = options.resolveZone(ev);
       if (!zone) {
         return;
@@ -626,7 +629,6 @@
       if (shouldBeginHold(zone, ev) !== true) {
         return;
       }
-      resetTracking();
       active = {
         pointerId: ev.pointerId,
         x: ev.clientX,
@@ -643,9 +645,10 @@
         options.onHold(z);
         markHoldConsumedClick();
       }, holdMs);
-      window.addEventListener("pointerup", onWindowPointerUp);
-      window.addEventListener("pointercancel", onWindowPointerUp);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
+      window.addEventListener("pointerup", onWindowPointerUp, true);
+      window.addEventListener("pointercancel", onWindowPointerUp, true);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
     host.addEventListener("pointerdown", onPointerDownCapture, true);
@@ -753,7 +756,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -790,9 +793,17 @@ const DEFAULT_CONFIG = {
   show_brightness: true,
   show_slider_mode_buttons: true,
   show_quick_brightness: true,
+  show_quick_temperature_presets: false,
+  show_quick_color_presets: false,
   show_color_controls: true,
   show_temperature_controls: true,
   quick_brightness: [10, 35, 65, 100],
+  color_presets: [
+    { color: "#ffd166", label: "Warm" },
+    { color: "#fff1c1", label: "Soft" },
+    { color: "#4dabf7", label: "Blue" },
+    { color: "#ff4d6d", label: "Pink" },
+  ],
   tap_action: "toggle",
   tap_service: "",
   tap_service_data: "",
@@ -803,7 +814,7 @@ const DEFAULT_CONFIG = {
   icon_tap_service_data: "",
   icon_tap_url: "",
   icon_tap_new_tab: false,
-  hold_action: "none",
+  hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
   hold_url: "",
@@ -1034,6 +1045,30 @@ function rgbToHs(rgb) {
   return [Math.round(hue), Math.round(saturation)];
 }
 
+function hexToRgb(hex) {
+  const normalized = normalizeHexColorForLightPreset(hex);
+  if (!normalized) {
+    return null;
+  }
+  const n = Number.parseInt(normalized.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function normalizeHexColorForLightPreset(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) {
+    return "";
+  }
+  if (!s.startsWith("#")) {
+    s = `#${s}`;
+  }
+  if (/^#[0-9a-f]{3}$/i.test(s)) {
+    const x = s.slice(1).toLowerCase();
+    s = `#${x[0]}${x[0]}${x[1]}${x[1]}${x[2]}${x[2]}`;
+  }
+  return /^#[0-9a-f]{6}$/i.test(s) ? s.toLowerCase() : "";
+}
+
 function arrayFromCsv(value) {
   return String(value || "")
     .split(",")
@@ -1125,6 +1160,13 @@ function getEditorColorFallbackValue(field) {
 
   if (normalizedField.endsWith("accent_background")) {
     return "rgba(113, 192, 255, 0.2)";
+  }
+
+  const colorPresetSlot = /^color_presets\.(\d+)\.color$/.exec(normalizedField);
+  if (colorPresetSlot) {
+    const slot = Number(colorPresetSlot[1]);
+    const defaults = ["#ffd166", "#fff1c1", "#4dabf7", "#ff4d6d"];
+    return defaults[slot] || "#71c0ff";
   }
 
   if (normalizedField.endsWith("progress_background")) {
@@ -1247,6 +1289,24 @@ function normalizeConfig(rawConfig) {
   if (!config.quick_brightness.length) {
     config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
   }
+
+  const rawPresets = Array.isArray(config.color_presets) ? config.color_presets : [];
+  const normalizedPresets = [];
+  for (let index = 0; index < Math.min(rawPresets.length, 4); index += 1) {
+    const entry = rawPresets[index];
+    if (!isObject(entry)) {
+      continue;
+    }
+    const color = normalizeHexColorForLightPreset(entry.color);
+    if (!color) {
+      continue;
+    }
+    normalizedPresets.push({
+      color,
+      label: String(entry.label ?? "").trim(),
+    });
+  }
+  config.color_presets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
 
   const numericPowerDuration = Number(config.animations?.power_duration);
   const numericControlsDuration = Number(config.animations?.controls_duration);
@@ -1565,6 +1625,7 @@ class NodaliaLightCard extends HTMLElement {
       `fx:${String(attrs.effect || "")}`,
       `m:${Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : ""}`,
       `sf:${Number(attrs.supported_features ?? -1)}`,
+      `lang:${window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en"}`,
       `c:${this._isCompactLayout ? 1 : 0}`,
       `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
       `cm:${String(this._activeControlMode || "")}`,
@@ -1572,6 +1633,9 @@ class NodaliaLightCard extends HTMLElement {
       `sp:${String(this._config?.state_position || "right")}`,
       `ae:${this._config?.auto_expand === false ? 0 : 1}`,
       `co:${this._controlsPanelUserOpen ? 1 : 0}`,
+      `qpt:${this._config?.show_quick_temperature_presets === true ? 1 : 0}`,
+      `qpc:${this._config?.show_quick_color_presets === true ? 1 : 0}`,
+      `cps:${Array.isArray(this._config?.color_presets) ? this._config.color_presets.map(p => `${String(p?.label ?? "").trim()}~${normalizeHexColorForLightPreset(p?.color)}`).join(";") : ""}`,
       `tap:${[
         String(this._config?.tap_action || ""),
         String(this._config?.icon_tap_action || ""),
@@ -1611,6 +1675,19 @@ class NodaliaLightCard extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", key);
   }
 
+  _lightCardUi(path, fallback = "", values = {}) {
+    if (typeof window.NodaliaI18n?.translateLightUi === "function") {
+      return window.NodaliaI18n.translateLightUi(
+        this._hass,
+        this._config?.language ?? "auto",
+        path,
+        fallback,
+        values,
+      );
+    }
+    return fallback;
+  }
+
   _getConfiguredGridColumns() {
     const numericColumns = Number(this._config?.grid_options?.columns);
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
@@ -1626,6 +1703,28 @@ class NodaliaLightCard extends HTMLElement {
       COMPACT_LAYOUT_THRESHOLD,
       Math.round(iconSize + (cardPadding * 2) + cardGap + 24),
     );
+  }
+
+  _getQuickColorPresetRows(config = this._config) {
+    const rows = Array.isArray(config?.color_presets) ? config.color_presets : [];
+    const out = [];
+    for (const row of rows.slice(0, 4)) {
+      const color = normalizeHexColorForLightPreset(row?.color);
+      if (!color) {
+        continue;
+      }
+      const rgb = hexToRgb(color);
+      const hs = rgb ? rgbToHs(rgb) : null;
+      if (!hs) {
+        continue;
+      }
+      out.push({
+        color,
+        label: String(row?.label ?? "").trim(),
+        hs,
+      });
+    }
+    return out;
   }
 
   _getMiniLayoutThreshold() {
@@ -2397,9 +2496,9 @@ class NodaliaLightCard extends HTMLElement {
     const middle = Math.round((range.min + range.max) / 2);
 
     return [
-      { label: "Calida", kelvin: range.min },
-      { label: "Neutra", kelvin: middle },
-      { label: "Fria", kelvin: range.max },
+      { label: this._lightCardUi("temperaturePresets.warm", "Warm"), kelvin: range.min },
+      { label: this._lightCardUi("temperaturePresets.neutral", "Neutral"), kelvin: middle },
+      { label: this._lightCardUi("temperaturePresets.cool", "Cool"), kelvin: range.max },
     ];
   }
 
@@ -3473,6 +3572,7 @@ class NodaliaLightCard extends HTMLElement {
     const isCompactLayout = this._isCompactLayout;
     const isMiniLayout = this._shouldUseMiniLayout();
     const quickBrightness = Array.isArray(config.quick_brightness) ? config.quick_brightness : [];
+    const quickColorPresetRows = this._getQuickColorPresetRows(config);
     const temperaturePresets = this._getTemperaturePresets(state);
     const availableControlModes = isOn ? this._getAvailableControlModes(state) : [];
     const autoExpandControls = config.auto_expand !== false;
@@ -3524,7 +3624,8 @@ class NodaliaLightCard extends HTMLElement {
           } else {
             this._controlsTransition = null;
           }
-        } else if (this._lastControlsMarkup) {
+        } else if (this._lastControlsMarkup && this._lastRenderedShowDetailedControls) {
+          /** If detailed controls were already collapsed (`auto_expand: false` + chevron), skip replaying expanded markup during `powering-down` — stale `_lastControlsMarkup` would otherwise force a full-height shell off the compact card. */
           controlsAnimationState = "leaving";
           this._controlsTransition = {
             endsAt: now + animations.controlsDuration,
@@ -3579,6 +3680,17 @@ class NodaliaLightCard extends HTMLElement {
     const displayedControlMode = modeTransition
       ? (modeTransition.phase === "collapsing" ? modeTransition.from : modeTransition.to)
       : activeControlMode;
+    const controlModeLabel = mode => {
+      const fallback = mode === "temperature"
+        ? "Show temperature"
+        : mode === "color"
+          ? "Show color"
+          : "Show brightness";
+      return this._lightCardUi(`controlModes.${mode}`, fallback);
+    };
+    const temperatureSectionLabel = this._lightCardUi("sections.temperature", "Temperature");
+    const colorSectionLabel = this._lightCardUi("sections.color", "Color");
+    const presetsSectionLabel = this._lightCardUi("sections.presets", "Presets");
     const modeTransitionAxisClass = animations.modeSwitchHorizontal
       ? "light-card__mode-panel-inner--horizontal"
       : "light-card__mode-panel-inner--vertical";
@@ -3666,7 +3778,7 @@ class NodaliaLightCard extends HTMLElement {
                     step="any"
                     value="${currentTemperatureSliderValue}"
                     style="--temperature-progress:${clamp(temperatureProgress, 0, 100)};"
-                    aria-label="Temperature"
+                    aria-label="${escapeHtml(controlModeLabel("temperature"))}"
                   />
                   <div class="light-card__slider-thumb" data-light-control="temperature"></div>
                 </div>
@@ -3686,7 +3798,7 @@ class NodaliaLightCard extends HTMLElement {
                       step="any"
                       value="${currentHue}"
                       style="--color-progress:${clamp(colorProgress, 0, 100)};"
-                      aria-label="Color"
+                      aria-label="${escapeHtml(controlModeLabel("color"))}"
                     />
                     <div class="light-card__slider-thumb" data-light-control="color"></div>
                   </div>
@@ -3705,7 +3817,7 @@ class NodaliaLightCard extends HTMLElement {
                       step="any"
                       value="${brightnessPercent}"
                       style="--brightness:${brightnessPercent};"
-                      aria-label="Brillo"
+                      aria-label="${escapeHtml(controlModeLabel("brightness"))}"
                     />
                   </div>
                 </div>
@@ -3741,7 +3853,7 @@ class NodaliaLightCard extends HTMLElement {
                             data-light-action="mode"
                             data-mode="${mode}"
                             ${modeTransition ? "disabled" : ""}
-                            aria-label="${mode === "brightness" ? "Show brightness" : mode === "temperature" ? "Show temperature" : "Show color"}"
+                            aria-label="${escapeHtml(controlModeLabel(mode))}"
                           >
                             <ha-icon icon="${this._getControlModeIcon(mode)}"></ha-icon>
                           </button>
@@ -3777,6 +3889,58 @@ class NodaliaLightCard extends HTMLElement {
         </div>
       `
       : "";
+    const temperatureQuickPresetsMarkup = showDetailedControls &&
+      useSliderModeButtons &&
+      config.show_quick_temperature_presets === true &&
+      config.show_temperature_controls !== false &&
+      supportsColorTemperature &&
+      displayedControlMode === "temperature" &&
+      temperaturePresets.length
+      ? `
+        <div class="light-card__actions">
+          ${temperaturePresets
+            .map(item => `
+              <button
+                type="button"
+                class="light-card__temperature-preset ${Math.abs(item.kelvin - currentKelvin) <= 250 ? "is-active" : ""}"
+                data-light-action="temperature"
+                data-kelvin="${item.kelvin}"
+              >
+                ${escapeHtml(item.label)}
+              </button>
+            `)
+            .join("")}
+        </div>
+      `
+      : "";
+    const colorQuickPresetsMarkup = showDetailedControls &&
+      useSliderModeButtons &&
+      config.show_quick_color_presets === true &&
+      config.show_color_controls !== false &&
+      supportsColor &&
+      displayedControlMode === "color" &&
+      quickColorPresetRows.length
+      ? `
+        <div class="light-card__actions">
+          ${quickColorPresetRows
+            .map(item => {
+              const label = item.label || item.color;
+              return `
+              <button
+                type="button"
+                class="light-card__color-preset"
+                style="--swatch-color:${escapeHtml(item.color)};"
+                data-light-action="color"
+                data-hs="${escapeHtml(item.hs.join(","))}"
+                aria-label="${escapeHtml(label)}"
+                title="${escapeHtml(label)}"
+              ></button>
+            `;
+            })
+            .join("")}
+        </div>
+      `
+      : "";
     const temperatureControlsMarkup = showDetailedControls &&
       !useSliderModeButtons &&
       config.show_temperature_controls !== false &&
@@ -3784,7 +3948,7 @@ class NodaliaLightCard extends HTMLElement {
       ? `
         <div class="light-card__section">
           <div class="light-card__section-header">
-            <span>Temperatura</span>
+            <span>${escapeHtml(temperatureSectionLabel)}</span>
             <span class="light-card__section-value">${escapeHtml(`${currentKelvin}K`)}</span>
           </div>
           <div class="light-card__actions">
@@ -3811,8 +3975,8 @@ class NodaliaLightCard extends HTMLElement {
       ? `
         <div class="light-card__section">
           <div class="light-card__section-header">
-            <span>Color</span>
-            <span class="light-card__section-value">Presets</span>
+            <span>${escapeHtml(colorSectionLabel)}</span>
+            <span class="light-card__section-value">${escapeHtml(presetsSectionLabel)}</span>
           </div>
           <div class="light-card__actions">
             ${COLOR_PRESETS
@@ -3835,6 +3999,8 @@ class NodaliaLightCard extends HTMLElement {
     const currentControlsMarkup = [
       sliderSectionMarkup,
       brightnessPresetsMarkup,
+      temperatureQuickPresetsMarkup,
+      colorQuickPresetsMarkup,
       temperatureControlsMarkup,
       colorControlsMarkup,
     ].filter(Boolean).join("");
@@ -4601,6 +4767,7 @@ class NodaliaLightCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
+          justify-content: center;
         }
 
         .light-card__brightness-preset,
@@ -5843,6 +6010,41 @@ class NodaliaLightCardEditor extends HTMLElement {
 
         <section class="editor-section">
           <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.color_presets_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.color_presets_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${[0, 1, 2, 3]
+              .map(
+                slotIndex => `
+              <div class="editor-field--full" style="display: flex; flex-direction: column; gap: 10px; padding-top: 4px;">
+                <div class="editor-section__hint" style="margin: 0; font-weight: 600;">
+                  ${escapeHtml(this._editorLabel(`ed.light.color_preset_slot_${slotIndex + 1}_title`))}
+                </div>
+                ${this._renderTextField(
+                  "ed.light.color_preset_slot_label",
+                  `color_presets.${slotIndex}.label`,
+                  String(config.color_presets?.[slotIndex]?.label ?? "").trim(),
+                  {
+                    placeholder: this._editorLabel("ed.light.color_preset_slot_label_placeholder"),
+                    fullWidth: true,
+                  },
+                )}
+                ${this._renderColorField(
+                  "ed.light.color_preset_slot_color",
+                  `color_presets.${slotIndex}.color`,
+                  config.color_presets?.[slotIndex]?.color,
+                  { fallbackValue: getEditorColorFallbackValue(`color_presets.${slotIndex}.color`) },
+                )}
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
           </div>
@@ -6058,6 +6260,8 @@ class NodaliaLightCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.light.show_brightness", "show_brightness", config.show_brightness !== false)}
             ${this._renderCheckboxField("ed.light.slider_mode_buttons", "show_slider_mode_buttons", config.show_slider_mode_buttons !== false)}
             ${this._renderCheckboxField("ed.light.show_quick_brightness", "show_quick_brightness", config.show_quick_brightness !== false)}
+            ${this._renderCheckboxField("ed.light.show_quick_temperature_presets", "show_quick_temperature_presets", config.show_quick_temperature_presets === true)}
+            ${this._renderCheckboxField("ed.light.show_quick_color_presets", "show_quick_color_presets", config.show_quick_color_presets === true)}
             ${this._renderCheckboxField("ed.light.show_color_controls", "show_color_controls", config.show_color_controls !== false)}
             ${this._renderCheckboxField("ed.light.show_temperature_controls", "show_temperature_controls", config.show_temperature_controls !== false)}
             ${this._renderCheckboxField("ed.light.auto_expand_controls", "auto_expand", config.auto_expand !== false)}

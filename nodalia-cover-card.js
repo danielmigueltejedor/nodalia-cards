@@ -579,10 +579,11 @@
     let timer = null;
     let active = null;
 
+    /** Match capture + passive flags used on add (required for removeEventListener). */
     function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerUp);
-      window.removeEventListener("pointermove", onWindowPointerMove);
+      window.removeEventListener("pointerup", onWindowPointerUp, true);
+      window.removeEventListener("pointercancel", onWindowPointerUp, true);
+      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
     }
 
     function resetTracking() {
@@ -619,6 +620,8 @@
       if (typeof ev.button === "number" && ev.button !== 0) {
         return;
       }
+      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
+      resetTracking();
       const zone = options.resolveZone(ev);
       if (!zone) {
         return;
@@ -626,7 +629,6 @@
       if (shouldBeginHold(zone, ev) !== true) {
         return;
       }
-      resetTracking();
       active = {
         pointerId: ev.pointerId,
         x: ev.clientX,
@@ -643,9 +645,10 @@
         options.onHold(z);
         markHoldConsumedClick();
       }, holdMs);
-      window.addEventListener("pointerup", onWindowPointerUp);
-      window.addEventListener("pointercancel", onWindowPointerUp);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
+      window.addEventListener("pointerup", onWindowPointerUp, true);
+      window.addEventListener("pointercancel", onWindowPointerUp, true);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
     host.addEventListener("pointerdown", onPointerDownCapture, true);
@@ -753,7 +756,9 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1";
+const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
+const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -798,7 +803,7 @@ const DEFAULT_CONFIG = {
   icon_tap_service_data: "",
   icon_tap_url: "",
   icon_tap_new_tab: false,
-  hold_action: "none",
+  hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
   hold_url: "",
@@ -1207,31 +1212,55 @@ class NodaliaCoverCard extends HTMLElement {
     this._dragWindowListenersAttached = false;
     this._pendingRenderAfterDrag = false;
     this._suppressNextCoverTap = false;
-    this._interactionScrollSnapshot = [];
-    this._interactionScrollCancelTimer = 0;
-    this._interactionScrollCancelWatchAttached = false;
-    this._interactionScrollRestoreFrame = 0;
+    this._cardWidth = 0;
+    this._resizeObserver =
+      typeof ResizeObserver === "function"
+        ? new ResizeObserver(entries => {
+            const entry = entries[0];
+            if (!entry) {
+              return;
+            }
+            const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+            if (nextWidth === this._cardWidth) {
+              return;
+            }
+            this._cardWidth = nextWidth;
+            if (this._activeSliderDrag) {
+              this._pendingRenderAfterDrag = true;
+              return;
+            }
+            const signature = this._getRenderSignature(this._hass);
+            if (signature === this._lastRenderSignature) {
+              this._syncCoverControlsToggleLaneDom();
+              return;
+            }
+            this._lastRenderSignature = signature;
+            this._render();
+          })
+        : null;
+    /** `"slider"` = sliders in main cell; `"arrows"` = open/stop/close in main cell (toggle on the right). */
+    this._coverControlsViewMode = "slider";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
-    this._onFocusIn = this._onFocusIn.bind(this);
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onTouchStart = this._onTouchStart.bind(this);
-    this._cancelInteractionScrollRestore = this._cancelInteractionScrollRestore.bind(this);
     this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
     this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
     this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
     this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("focusin", this._onFocusIn);
-    this.shadowRoot.addEventListener("pointerdown", this._onPointerDown, { capture: true });
-    this.shadowRoot.addEventListener("mousedown", this._onMouseDown, { capture: true });
-    this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false, capture: true });
+    this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
+    }
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -1261,13 +1290,15 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._resizeObserver?.observe(this);
+    this._cardWidth = Math.round(this.clientWidth || 0);
     this._render();
   }
 
   disconnectedCallback() {
+    this._resizeObserver?.disconnect();
     this._detachHostHold?.();
     this._detachWindowDragListeners();
-    this._cancelInteractionScrollRestore();
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -1276,6 +1307,7 @@ class NodaliaCoverCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._coverControlsViewMode = "slider";
     this._lastRenderSignature = "";
     this._render();
   }
@@ -1300,7 +1332,20 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   getGridOptions() {
-    return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
+    return { rows: "auto", columns: "full", min_rows: 2, min_columns: 6 };
+  }
+
+  _getConfiguredGridColumns() {
+    const numericColumns = Number(this._config?.grid_options?.columns);
+    return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+  }
+
+  _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+    const gridColumns = this._getConfiguredGridColumns();
+    if (gridColumns !== null) {
+      return gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS;
+    }
+    return width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
   }
 
   _getState(hass = this._hass) {
@@ -1321,6 +1366,7 @@ class NodaliaCoverCard extends HTMLElement {
         current_tilt_position: attrs.current_tilt_position ?? "",
         supported_features: attrs.supported_features ?? "",
       },
+      coverToggleLane: this._shouldReserveCoverToggleLane(),
     });
   }
 
@@ -1572,13 +1618,13 @@ class NodaliaCoverCard extends HTMLElement {
       }
       return;
     }
-    this._rememberInteractionScroll();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
-    if (button instanceof HTMLElement && typeof button.blur === "function") {
-      button.blur();
-    }
     switch (coverAction) {
+      case "toggle_controls_view":
+        this._coverControlsViewMode = this._coverControlsViewMode === "arrows" ? "slider" : "arrows";
+        this._syncCoverControlsViewDom();
+        break;
       case "open":
         this._callCover("open_cover");
         break;
@@ -1591,93 +1637,127 @@ class NodaliaCoverCard extends HTMLElement {
       default:
         break;
     }
-    this._scheduleInteractionScrollRestore();
   }
 
   _isCardTapAction(action) {
     return action === "body" || action === "icon";
   }
 
-  _onFocusIn(event) {
-    const control = event.composedPath().find(
-      node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
-    );
-    if (!control) return;
-    if (this._isCardTapAction(control.dataset?.coverAction)) {
-      if (typeof control.blur === "function") {
-        control.blur();
-      }
+  _syncCoverControlsViewDom() {
+    const root = this.shadowRoot;
+    if (!root) {
       return;
     }
-    this._rememberInteractionScroll();
-    if (typeof control.blur === "function") {
-      control.blur();
+
+    const card = root.querySelector("ha-card.fan-card");
+    const toggleButton = root.querySelector('[data-cover-action="toggle_controls_view"]');
+    if (!card || !toggleButton) {
+      return;
     }
-    this._scheduleInteractionScrollRestore();
+
+    const isArrows = this._coverControlsViewMode === "arrows";
+    card.classList.remove("fan-card--cover-ui-arrows", "fan-card--cover-ui-slider");
+    card.classList.add(isArrows ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider");
+
+    const slidersView = root.querySelector(".fan-card__view--sliders");
+    const arrowsView = root.querySelector(".fan-card__view--arrows");
+    if (slidersView) {
+      if (isArrows) {
+        slidersView.setAttribute("aria-hidden", "true");
+      } else {
+        slidersView.removeAttribute("aria-hidden");
+      }
+    }
+    if (arrowsView) {
+      if (isArrows) {
+        arrowsView.removeAttribute("aria-hidden");
+      } else {
+        arrowsView.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
+    const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
+    const toggleLabel = isArrows ? tToggleToSliders : tToggleToArrows;
+    toggleButton.classList.toggle("fan-card__control--active", isArrows);
+    toggleButton.setAttribute("aria-label", toggleLabel);
+    toggleButton.setAttribute("title", toggleLabel);
+    const toggleIcon = toggleButton.querySelector("ha-icon");
+    if (toggleIcon) {
+      toggleIcon.setAttribute("icon", isArrows ? "mdi:pan-horizontal" : "mdi:tune-variant");
+    }
+    this._syncCoverControlsToggleLaneDom();
   }
 
-  _preventNonTouchFocus(event) {
-    if (!event || event.cancelable === false) return;
-    if (String(event.pointerType || "").toLowerCase() === "touch") return;
-    event.preventDefault();
+  _syncCoverControlsToggleLaneDom() {
+    const root = this.shadowRoot;
+    if (!root) {
+      return;
+    }
+    const card = root.querySelector("ha-card.fan-card");
+    if (!card) {
+      return;
+    }
+    const reserveToggleLane = this._shouldReserveCoverToggleLane();
+    card.classList.toggle(
+      "fan-card--cover-ui-toggle-lane",
+      this._coverControlsViewMode === "arrows" && reserveToggleLane,
+    );
   }
 
   _onPointerDown(event) {
     const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    const slider = path.find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+      );
+
     if (slider) {
       if (!this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
         this._startSliderDrag(slider, event.clientX, event, event.pointerId);
       }
       return;
     }
-    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl) {
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
-        return;
-      }
-      this._rememberInteractionScroll();
-      this._preventNonTouchFocus(event);
-    }
+
   }
 
   _onMouseDown(event) {
     const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    const slider = path.find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+      );
+
     if (slider) {
       if (!this._activeSliderDrag && event.button === 0) {
         this._startSliderDrag(slider, event.clientX, event);
       }
       return;
     }
-    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl) {
-      if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
-        return;
-      }
-      this._rememberInteractionScroll();
-      this._preventNonTouchFocus(event);
-    }
+
   }
 
   _onTouchStart(event) {
     const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    const slider = path.find(node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+      );
+
     if (slider) {
       if (!this._activeSliderDrag && event.touches?.length) {
         this._startSliderDrag(slider, event.touches[0].clientX, event);
       }
       return;
     }
-    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl && !this._isCardTapAction(actionControl.dataset?.coverAction)) {
-      this._rememberInteractionScroll();
-    }
+
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
     if (!slider) return;
-    this._rememberInteractionScroll();
     this._activeSliderDrag = {
       pointerId,
       slider,
@@ -1709,15 +1789,11 @@ class NodaliaCoverCard extends HTMLElement {
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
     this._applySliderValue(drag.slider, nextValue, { commit: true });
-    if (typeof drag.slider.blur === "function") {
-      drag.slider.blur();
-    }
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
       this._render();
-      this._restoreInteractionScrollSnapshot();
     }
   }
 
@@ -1751,6 +1827,26 @@ class NodaliaCoverCard extends HTMLElement {
     this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
   }
 
+  _onWindowTouchStartCapture(event) {
+    const drag = this._activeSliderDrag;
+    if (!drag) {
+      return;
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    if (path.includes(drag.slider)) {
+      return;
+    }
+
+    this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
   _onWindowTouchEnd(event) {
     if (!this._activeSliderDrag) return;
     const clientX = event.changedTouches?.[0]?.clientX;
@@ -1760,7 +1856,6 @@ class NodaliaCoverCard extends HTMLElement {
       if (this._pendingRenderAfterDrag) {
         this._pendingRenderAfterDrag = false;
         this._render();
-        this._restoreInteractionScrollSnapshot();
       }
       return;
     }
@@ -1775,9 +1870,12 @@ class NodaliaCoverCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-    window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-    window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+    }
   }
 
   _detachWindowDragListeners() {
@@ -1788,9 +1886,12 @@ class NodaliaCoverCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    window.removeEventListener("touchmove", this._onWindowTouchMove);
-    window.removeEventListener("touchend", this._onWindowTouchEnd);
-    window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
   }
 
   _onShadowInput(event) {
@@ -1829,123 +1930,13 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _captureInteractionScrollSnapshot() {
-    if (typeof window === "undefined") return [];
-    const doc = this.ownerDocument || document;
-    const win = doc.defaultView || window;
-    const ElementCtor = win.Element;
-    const seen = new Set();
-    const snapshot = [];
-    const isElement = value => ElementCtor && value instanceof ElementCtor;
-    const addElement = element => {
-      if (!isElement(element) || seen.has(element)) return;
-      seen.add(element);
-      snapshot.push({ kind: "element", element, left: element.scrollLeft, top: element.scrollTop });
-    };
-    const isScrollable = element => {
-      if (!isElement(element)) return false;
-      const style = win.getComputedStyle(element);
-      const scrollY = /(auto|scroll|overlay)/.test(String(style.overflowY || "")) && element.scrollHeight - element.clientHeight > 1;
-      const scrollX = /(auto|scroll|overlay)/.test(String(style.overflowX || "")) && element.scrollWidth - element.clientWidth > 1;
-      return scrollY || scrollX;
-    };
-    let node = this;
-    while (node) {
-      if (isScrollable(node)) addElement(node);
-      const root = typeof node.getRootNode === "function" ? node.getRootNode() : null;
-      if (node.parentNode) {
-        node = node.parentNode;
-      } else if (root?.host) {
-        node = root.host;
-      } else {
-        break;
-      }
-    }
-    addElement(doc.scrollingElement || doc.documentElement || doc.body);
-    snapshot.push({ kind: "window", win, left: win.scrollX || win.pageXOffset || 0, top: win.scrollY || win.pageYOffset || 0 });
-    return snapshot;
-  }
-
-  _restoreInteractionScrollSnapshot(options = {}) {
-    const snapshot = Array.isArray(this._interactionScrollSnapshot) ? this._interactionScrollSnapshot : [];
-    if (!snapshot.length) return;
-    if (options.preserve !== true) {
-      this._stopInteractionScrollCancelWatch();
-    }
-    snapshot.forEach(item => {
-      if (item.kind === "window" && item.win) {
-        try {
-          item.win.scrollTo(item.left, item.top);
-        } catch (_error) {}
-        return;
-      }
-      if (item.element) {
-        item.element.scrollLeft = item.left;
-        item.element.scrollTop = item.top;
-      }
-    });
-    if (options.preserve !== true) {
-      this._interactionScrollSnapshot = [];
-    }
-  }
-
-  _scheduleInteractionScrollRestore() {
-    if (!this._interactionScrollSnapshot.length || typeof window === "undefined") return;
-    if (this._interactionScrollRestoreFrame) {
-      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
-    }
-    this._interactionScrollRestoreFrame = window.requestAnimationFrame(() => {
-      this._interactionScrollRestoreFrame = 0;
-      this._restoreInteractionScrollSnapshot({ preserve: true });
-    });
-  }
-
-  _rememberInteractionScroll() {
-    if (!this._interactionScrollSnapshot.length) {
-      this._interactionScrollSnapshot = this._captureInteractionScrollSnapshot();
-    }
-    if (!this._interactionScrollSnapshot.length || typeof window === "undefined") return;
-    this._startInteractionScrollCancelWatch();
-    if (this._interactionScrollCancelTimer) {
-      window.clearTimeout(this._interactionScrollCancelTimer);
-    }
-    this._interactionScrollCancelTimer = window.setTimeout(this._cancelInteractionScrollRestore, 1600);
-  }
-
-  _startInteractionScrollCancelWatch() {
-    if (this._interactionScrollCancelWatchAttached || typeof window === "undefined") return;
-    this._interactionScrollCancelWatchAttached = true;
-    window.addEventListener("wheel", this._cancelInteractionScrollRestore, { passive: true, capture: true });
-    window.addEventListener("touchmove", this._cancelInteractionScrollRestore, { passive: true, capture: true });
-    window.addEventListener("keydown", this._cancelInteractionScrollRestore, { capture: true });
-  }
-
-  _stopInteractionScrollCancelWatch() {
-    if (typeof window !== "undefined" && this._interactionScrollCancelTimer) {
-      window.clearTimeout(this._interactionScrollCancelTimer);
-      this._interactionScrollCancelTimer = 0;
-    }
-    if (!this._interactionScrollCancelWatchAttached || typeof window === "undefined") return;
-    this._interactionScrollCancelWatchAttached = false;
-    window.removeEventListener("wheel", this._cancelInteractionScrollRestore, true);
-    window.removeEventListener("touchmove", this._cancelInteractionScrollRestore, true);
-    window.removeEventListener("keydown", this._cancelInteractionScrollRestore, true);
-  }
-
-  _cancelInteractionScrollRestore() {
-    if (typeof window !== "undefined" && this._interactionScrollRestoreFrame) {
-      window.cancelAnimationFrame(this._interactionScrollRestoreFrame);
-      this._interactionScrollRestoreFrame = 0;
-    }
-    this._interactionScrollSnapshot = [];
-    this._stopInteractionScrollCancelWatch();
-  }
-
-  _renderSlider(kind, label, value) {
+  _renderSlider(kind, label, value, options = {}) {
     const styles = this._config.styles;
     const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
+    const rowClass =
+      options.variant === "stack" ? "fan-card__slider-row fan-card__slider-row--stack" : "fan-card__slider-row fan-card__slider-row--solo";
     return `
-      <div class="fan-card__slider-row fan-card__slider-row--solo">
+      <div class="${rowClass}">
         <div class="fan-card__slider-wrap">
           <div class="fan-card__slider-shell" style="--percentage:${percentage};">
             <div class="fan-card__slider-track"></div>
@@ -1959,7 +1950,6 @@ class NodaliaCoverCard extends HTMLElement {
               value="${percentage}"
               style="--percentage:${percentage};"
               aria-label="${escapeHtml(label)}"
-              tabindex="-1"
             />
           </div>
         </div>
@@ -1977,7 +1967,11 @@ class NodaliaCoverCard extends HTMLElement {
       const emptyBody = escapeHtml(this._coverCardUi("emptyBody", "Set `entity` to a `cover.*` entity to show this card."));
       this.shadowRoot.innerHTML = `
         <style>
-          :host { display: block; overflow-anchor: none; }
+          :host {
+          container-name: cover-card;
+          container-type: inline-size;
+          display: block;
+        }
           * { box-sizing: border-box; }
           .fan-card--empty {
             background: ${styles.card.background};
@@ -2022,22 +2016,53 @@ class NodaliaCoverCard extends HTMLElement {
     if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
     if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip">${Math.round(position)}%</span>`);
     if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
-    const controlsMarkup = `
-      ${supportsPosition ? this._renderSlider("position", tPosSlider, position) : ""}
-      <div class="fan-card__controls">
-        <button type="button" class="fan-card__control" data-cover-action="open" aria-label="${escapeHtml(tOpen)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
-        ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="${escapeHtml(tStop)}" tabindex="-1"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
-        <button type="button" class="fan-card__control" data-cover-action="close" aria-label="${escapeHtml(tClose)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
-      </div>
-      ${supportsTilt ? this._renderSlider("tilt", tTiltSlider, tilt) : ""}
-    `;
+    const coverUiMode = this._coverControlsViewMode === "arrows" ? "arrows" : "slider";
+    const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
+    const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
+    /** Side action matches fan-card preset / light mode column: tune = alternate control set, sliders icon = back to position/tilt. */
+    const toggleIcon = coverUiMode === "slider" ? "mdi:tune-variant" : "mdi:pan-horizontal";
+    const toggleAria = coverUiMode === "slider" ? tToggleToArrows : tToggleToSliders;
+    const hasSliders = supportsPosition || supportsTilt;
+    const coverUiClass = hasSliders ? (coverUiMode === "arrows" ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider") : "";
+    const coverToggleLaneClass =
+      hasSliders && coverUiMode === "arrows" && this._shouldReserveCoverToggleLane()
+        ? " fan-card--cover-ui-toggle-lane"
+        : "";
+    const arrowButtonsHtml = `
+        <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="open" aria-label="${escapeHtml(tOpen)}"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
+        ${supportsStop ? `<button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="stop" aria-label="${escapeHtml(tStop)}"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
+        <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="close" aria-label="${escapeHtml(tClose)}"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
+      `;
+    const arrowTransportHtml = `<div class="fan-card__transport">${arrowButtonsHtml}</div>`;
+    const controlsMarkup = hasSliders
+      ? `
+        <div class="fan-card__slider-row">
+          <div class="fan-card__cover-controls-pane">
+            <div class="fan-card__view fan-card__view--sliders"${coverUiMode === "arrows" ? ' aria-hidden="true"' : ""}>
+              ${supportsPosition ? this._renderSlider("position", tPosSlider, position, { variant: "stack" }) : ""}
+              ${supportsTilt ? this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" }) : ""}
+            </div>
+            <div class="fan-card__view fan-card__view--arrows"${coverUiMode === "slider" ? ' aria-hidden="true"' : ""}>
+              <div class="fan-card__controls fan-card__controls--embedded">${arrowTransportHtml}</div>
+            </div>
+          </div>
+          <div class="fan-card__slider-actions">
+            <button type="button" class="fan-card__control${coverUiMode === "arrows" ? " fan-card__control--active" : ""}" data-cover-action="toggle_controls_view" aria-label="${escapeHtml(toggleAria)}" title="${escapeHtml(toggleAria)}"><ha-icon icon="${escapeHtml(toggleIcon)}"></ha-icon></button>
+          </div>
+        </div>
+      `
+      : `<div class="fan-card__controls">${arrowTransportHtml}</div>`;
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; overflow-anchor: none; }
+        :host {
+          container-name: cover-card;
+          container-type: inline-size;
+          display: block;
+        }
         * { box-sizing: border-box; }
         ha-card.fan-card {
           --fan-card-controls-gap: calc(${styles.card.gap} + 4px);
@@ -2049,7 +2074,6 @@ class NodaliaCoverCard extends HTMLElement {
           color: var(--primary-text-color);
           min-width: 0;
           overflow: hidden;
-          overflow-anchor: none;
           padding: ${styles.card.padding};
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -2159,6 +2183,108 @@ class NodaliaCoverCard extends HTMLElement {
           overflow: visible;
         }
         .fan-card__controls-inner { display: grid; gap: 10px; }
+        .fan-card__controls-inner--cover-combined { gap: 0; }
+        .fan-card__cover-controls-pane {
+          align-items: center;
+          display: grid;
+          grid-template: auto / minmax(0, 1fr);
+          min-width: 0;
+        }
+        .fan-card__slider-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 12px;
+          justify-content: flex-end;
+        }
+        .fan-card__view--sliders,
+        .fan-card__view--arrows {
+          grid-area: 1 / 1;
+          min-width: 0;
+        }
+        .fan-card__view--sliders {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .fan-card__view--arrows {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+        }
+        .fan-card__controls--embedded {
+          display: flex;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 100%;
+        }
+        .fan-card__transport {
+          align-items: center;
+          backdrop-filter: blur(18px);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.14);
+          display: inline-flex;
+          gap: 6px;
+          padding: 8px 10px;
+        }
+        .fan-card__transport .fan-card__control--in-transport {
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+        }
+        .fan-card__controls > .fan-card__transport {
+          margin-inline: auto;
+        }
+        .fan-card--cover-ui-arrows .fan-card__view--sliders { display: none; }
+        .fan-card--cover-ui-slider .fan-card__view--arrows { display: none; }
+        .fan-card--cover-ui-arrows .fan-card__slider-row {
+          grid-template-columns: minmax(0, 1fr);
+          position: relative;
+        }
+        .fan-card--cover-ui-arrows .fan-card__slider-actions {
+          align-items: center;
+          inset-block: 0;
+          justify-content: flex-end;
+          position: absolute;
+          right: 4px;
+          z-index: 1;
+        }
+        .fan-card--cover-ui-arrows.fan-card--cover-ui-toggle-lane .fan-card__slider-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+          position: static;
+        }
+        .fan-card--cover-ui-arrows.fan-card--cover-ui-toggle-lane .fan-card__slider-actions {
+          inset: auto;
+          position: static;
+        }
+        .fan-card--cover-ui-arrows.fan-card--cover-ui-toggle-lane .fan-card__view--arrows {
+          justify-content: center;
+        }
+        @container cover-card (max-width: ${COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH}px) {
+          .fan-card--cover-ui-arrows .fan-card__slider-row {
+            grid-template-columns: minmax(0, 1fr) auto;
+            position: static;
+          }
+          .fan-card--cover-ui-arrows .fan-card__slider-actions {
+            inset: auto;
+            position: static;
+          }
+          .fan-card--cover-ui-arrows .fan-card__view--arrows {
+            justify-content: center;
+          }
+        }
+        .fan-card__control--active {
+          background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
+          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          color: ${styles.control.accent_color};
+        }
+        .fan-card__slider-row--stack {
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+          padding-inline: 0;
+        }
         .fan-card__controls {
           display: flex;
           flex-wrap: wrap;
@@ -2202,8 +2328,12 @@ class NodaliaCoverCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 14px;
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr) auto;
           padding-inline: 4px;
+        }
+        .fan-card__slider-row--solo,
+        .fan-card__slider-row--stack {
+          grid-template-columns: minmax(0, 1fr);
         }
         .fan-card__slider-wrap {
           --fan-card-slider-input-height: max(44px, calc(${styles.slider_thumb_size} + 12px));
@@ -2295,12 +2425,12 @@ class NodaliaCoverCard extends HTMLElement {
         ${animations.enabled ? "" : `.fan-card, .fan-card * { animation: none !important; transition: none !important; }`}
       </style>
       <ha-card
-        class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}${coverUiClass ? ` ${coverUiClass}` : ""}${coverToggleLaneClass}"
         data-cover-action="body"
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">
-            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover" tabindex="-1">
+            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
@@ -2314,7 +2444,7 @@ class NodaliaCoverCard extends HTMLElement {
             ` : ""}
           </div>
           <div class="fan-card__controls-shell">
-            <div class="fan-card__controls-inner">
+            <div class="fan-card__controls-inner${hasSliders ? " fan-card__controls-inner--cover-combined" : ""}">
               ${controlsMarkup}
             </div>
           </div>

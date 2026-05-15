@@ -1,10 +1,128 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, and the **`1.1.0-alpha.*`** line copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable.
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), and completed **`1.1.1-alpha.*`** prereleases.
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [1.1.1-alpha.9] - 2026-05-15
+
+Ninth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.9`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.9.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** add a one-shot scroll anchor around cover services, action taps, and slider commits so bottom-of-dashboard focus/re-render nudges are restored without blocking normal wheel/touch scrolling.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.9`**.
+
+---
+
+## [1.1.1-alpha.8] - 2026-05-15
+
+Eighth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.8`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.8.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** mirror the fan-card interaction path for cover action buttons and card/icon taps by removing the extra focus/capture handling from non-slider controls, while keeping custom drag handling only for sliders.
+- **`nodalia-power-flow-card.js`:** normalize SVG `animateMotion` paths relative to each connector start point so animated flow dots travel on the drawn line instead of the card edge.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.8`**.
+
+---
+
+## [1.1.1-alpha.7] - 2026-05-15
+
+Seventh **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.7`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.7.js`**.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** minimum dashboard width is **6 columns** (`min_columns: 6`); at **6 columns or less**, open/stop/close transport centers in a dedicated lane so it does not overlap the view-toggle button (grid + container query + `grid_options.columns`).
+
+---
+
+## [1.1.1-alpha.6] - 2026-05-15
+
+Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.6.js`**.
+
+### Added
+
+- **`nodalia-light-card.js`:** optional quick **temperature** and **color** preset chip rows (with slider + mode buttons); up to **four** configurable color presets in the visual editor (label + color picker). Editor strings in **`i18n/editor/*`** and embedded **`nodalia-editor-ui.js`** catalog.
+
+### Changed
+
+- **`nodalia-light-card.js`:** brightness / temperature / color quick presets are **centered** and only shown for the **active slider mode** (brightness, temperature, or color).
+- **`nodalia-cover-card.js`:** open / stop / close controls sit in a **pill transport bubble** (media-player style); arrow view centers controls with the mode toggle **overlaid** on the right.
+- **`nodalia-light-card.js`:** power-down animation no longer replays expanded controls when the panel was already collapsed (`auto_expand: false`).
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** open / stop / close, icon, and sliders no longer steal focus or nudge dashboard scroll — all controls use **`preventDefault`** on pointer/mouse down (like the view toggle), **`focusin`** only blurs without scroll snapshot restore, and click no longer calls **`button.blur()`**.
+- **`nodalia-power-flow-card.js`:** simple-layout flow dots and SVG SMIL dots no longer flash at the top-left on animation start — **`animation-fill-mode: both`**, hidden during entrance, initial **`cx`/`cy`** from path start, and dot groups stay hidden until motion unpause.
+
+---
+
+## [1.1.1-alpha.5] - 2026-05-12
+
+Fifth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.5`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.5.js`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** animated flow dots no longer flash in the card corner on first dashboard navigation — entrance **`animation-fill-mode`** is **`both`** (not **`forwards`**) so **`opacity: 0`** from the first keyframe applies during the CSS **`animation-delay`** before dots fade in.
+
+- **`nodalia-cover-card.js`:** tapping open / stop / close or the card chrome while the card is partly off-screen no longer nudges the dashboard scroll — **`focusin`** no longer pairs **`_rememberInteractionScroll`** with **`_scheduleInteractionScrollRestore`** for those controls (it fought the browser’s scroll-into-view after focus), and the same snapshot / restore calls were removed from their pointer / click paths; sliders still use the snapshot flow after **`hass`**-driven re-renders.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.5`**.
+
+---
+
+## [1.1.1-alpha.4] - 2026-05-12
+
+Fourth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.4`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.4.js`**.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** when position or tilt sliders are shown, the main control row matches **fan card** / **light card** layout — **`fan-card__slider-row`** plus **`fan-card__slider-actions`** on the right toggles between **sliders** and **open / stop / close** ( **`mdi:tune-variant`** / **`mdi:pan-horizontal`** ), with **`fan-card__control--active`** while the arrow controls are visible. Runtime strings **`coverCard.toggleShowButtons`** and **`toggleShowSliders`** supply **`aria-label`** / **`title`**.
+
+---
+
+## [1.1.1-alpha.3] - 2026-05-12
+
+Third **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.3`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.3.js`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** flow dots no longer occasionally flash at a card corner when animations resume — SVG **`unpauseAnimations`** is deferred by an extra animation frame after a layout read so **`animateMotion`** uses a stable geometry.
+
+- **`nodalia-utils.js` (`bindHostPointerHoldGesture`, synced standalone embeds):** long-press / **`hold_action`** no longer stops working after repeated use when Home Assistant modals stop event bubbling — **`pointerup`**, **`pointercancel`**, and **`pointermove`** are registered on **`window`** in the **capture** phase, and each primary-button **`pointerdown`** clears any stale tracking first.
+
+---
+
+## [1.1.1-alpha.2] - 2026-05-12
+
+Second **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.2`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.2.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** taps on the main card / icon no longer nudge the dashboard scroll position — **`pointerdown`** / **`mousedown`** call **`_preventNonTouchFocus`** on body and icon zones (same pattern as the arrow controls), **`focusin`** blurs stray focus inside the shadow root when it is not a known **`coverAction`** / **`coverControl`**, and **`ha-card`** uses **`touch-action: manipulation`** to reduce touch-driven layout quirks.
+
+---
+
+## [1.1.1-alpha.1] - 2026-05-12
+
+First **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.1.js`**.
+
+### Changed
+
+- **Hold actions:** cards that support long-press now default **`hold_action`** to **`more-info`** (native Home Assistant more-info dialog) instead of **`none`**, including **`nodalia-light-card`**, **`nodalia-fan-card`**, **`nodalia-entity-card`**, **`nodalia-humidifier-card`**, **`nodalia-cover-card`**, **`nodalia-insignia-card`**, and **`nodalia-vacuum-card`** (vacuum normalizes to **`more_info`** internally). Empty **`icon_hold_action`** continues to inherit the body hold, so icon and body match unless you override the icon explicitly.
 
 ---
 
@@ -1328,4 +1446,3 @@ First **`alpha`** on the **`1.0.0`** line (**branch `alpha`**). This marks the s
 - **Editor support:** added a visual editor for title, calendars list, day range, refresh interval, and completed-event visibility/marking behavior.
 
 ---
-

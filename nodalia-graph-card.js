@@ -579,10 +579,11 @@
     let timer = null;
     let active = null;
 
+    /** Match capture + passive flags used on add (required for removeEventListener). */
     function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerUp);
-      window.removeEventListener("pointermove", onWindowPointerMove);
+      window.removeEventListener("pointerup", onWindowPointerUp, true);
+      window.removeEventListener("pointercancel", onWindowPointerUp, true);
+      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
     }
 
     function resetTracking() {
@@ -619,6 +620,8 @@
       if (typeof ev.button === "number" && ev.button !== 0) {
         return;
       }
+      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
+      resetTracking();
       const zone = options.resolveZone(ev);
       if (!zone) {
         return;
@@ -626,7 +629,6 @@
       if (shouldBeginHold(zone, ev) !== true) {
         return;
       }
-      resetTracking();
       active = {
         pointerId: ev.pointerId,
         x: ev.clientX,
@@ -643,9 +645,10 @@
         options.onHold(z);
         markHoldConsumedClick();
       }, holdMs);
-      window.addEventListener("pointerup", onWindowPointerUp);
-      window.addEventListener("pointercancel", onWindowPointerUp);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
+      window.addEventListener("pointerup", onWindowPointerUp, true);
+      window.addEventListener("pointercancel", onWindowPointerUp, true);
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
     host.addEventListener("pointerdown", onPointerDownCapture, true);
@@ -753,7 +756,7 @@
 
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -771,8 +774,10 @@ const SERIES_COLORS = [
   "#b993ff",
   "#7ad66f",
 ];
-const TOUCH_HOLD_DELAY = 240;
+/** Long-press on chart for `hold_action` (more-info); tap shows the hover tooltip. */
+const TOUCH_CHART_HOLD_MS = 500;
 const TOUCH_MOVE_CANCEL_DISTANCE = 14;
+const CHART_TAP_MAX_MOVE = 14;
 const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
 
 const DEFAULT_CONFIG = {
@@ -791,6 +796,7 @@ const DEFAULT_CONFIG = {
   show_fill: true,
   show_unavailable_badge: true,
   tap_action: "more-info",
+  hold_action: "more-info",
   haptics: {
     enabled: true,
     style: "medium",
@@ -1393,9 +1399,10 @@ class NodaliaGraphCard extends HTMLElement {
     this._tooltipSyncFrame = 0;
     this._lastTooltipViewportPosition = null;
     this._documentHoverWatchAttached = false;
-    this._touchPressTimer = 0;
+    this._chartHoldTimer = 0;
     this._touchPressState = null;
-    this._touchHoverActive = false;
+    this._touchChartHoldFired = false;
+    this._chartPointerSession = null;
     this._suppressClickUntil = 0;
     this._viewVisibilityObserver = null;
     this._wasInViewport = false;
@@ -1409,7 +1416,12 @@ class NodaliaGraphCard extends HTMLElement {
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
     this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
     this._onShadowTouchCancel = this._onShadowTouchCancel.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
+    this.shadowRoot.addEventListener("pointercancel", this._onShadowPointerUp);
     this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerLeave);
     this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: true });
@@ -1452,9 +1464,10 @@ class NodaliaGraphCard extends HTMLElement {
     if (this._hoverMediaQuery && typeof this._hoverMediaQuery.removeEventListener === "function") {
       this._hoverMediaQuery.removeEventListener("change", this._onHoverMediaChange);
     }
-    this._clearTouchPressTimer();
+    this._clearChartHoldTimer();
+    this._clearChartPointerSession();
     this._touchPressState = null;
-    this._touchHoverActive = false;
+    this._touchChartHoldFired = false;
     this._wasInViewport = false;
   }
 
@@ -1701,6 +1714,10 @@ class NodaliaGraphCard extends HTMLElement {
     return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._getPrimaryEntityId());
   }
 
+  _canRunHoldAction() {
+    return (this._config?.hold_action || "more-info") !== "none" && Boolean(this._getPrimaryEntityId());
+  }
+
   _triggerHaptic(styleOverride = null) {
     const haptics = this._config?.haptics || {};
     if (haptics.enabled !== true) {
@@ -1730,13 +1747,43 @@ class NodaliaGraphCard extends HTMLElement {
     });
   }
 
-  _onShadowClick(event) {
-    if (Date.now() < this._suppressClickUntil) {
-      event.preventDefault();
-      event.stopPropagation();
+  _fireChartHoldAction() {
+    if (!this._canRunHoldAction()) {
       return;
     }
 
+    this._scheduleHoverRender(null);
+    this._triggerHaptic();
+    this._openMoreInfo();
+    this._suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_WINDOW;
+  }
+
+  _clearChartHoldTimer() {
+    if (!this._chartHoldTimer) {
+      return;
+    }
+
+    window.clearTimeout(this._chartHoldTimer);
+    this._chartHoldTimer = 0;
+  }
+
+  _clearChartPointerSession() {
+    this._clearChartHoldTimer();
+    if (
+      this._chartPointerSession?.surface instanceof HTMLElement
+      && typeof this._chartPointerSession.pointerId === "number"
+    ) {
+      try {
+        this._chartPointerSession.surface.releasePointerCapture(this._chartPointerSession.pointerId);
+      } catch (_error) {
+        // Ignore if capture already released.
+      }
+    }
+
+    this._chartPointerSession = null;
+  }
+
+  _onShadowClick(event) {
     const seriesChip = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.graphSeries);
@@ -1751,6 +1798,24 @@ class NodaliaGraphCard extends HTMLElement {
       this._triggerHaptic("selection");
       this._triggerButtonBounce(seriesChip);
       this._render();
+      return;
+    }
+
+    if (Date.now() < this._suppressClickUntil) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const chartSurface = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.graphSurface === "chart");
+
+    if (chartSurface && this._hoverChart?.entries?.length && this._getHoverSampleCount() > 1) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._updateHoverFromClientX(chartSurface, event.clientX);
+      this._triggerHaptic("selection");
       return;
     }
 
@@ -1864,16 +1929,12 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _onShadowPointerLeave() {
-    if (this._touchHoverActive) {
-      return;
-    }
-
     this._scheduleHoverRender(null);
     this._lastTooltipViewportPosition = null;
   }
 
   _onHostPointerOut(event) {
-    if (this._touchHoverActive || this._hoverIndex === null) {
+    if (this._hoverIndex === null) {
       return;
     }
     const clientX = Number(event?.clientX);
@@ -1891,7 +1952,7 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _onDocumentPointerMove(event) {
-    if (this._touchHoverActive || this._hoverIndex === null) {
+    if (this._hoverIndex === null) {
       return;
     }
     const clientX = Number(event?.clientX);
@@ -1926,81 +1987,135 @@ class NodaliaGraphCard extends HTMLElement {
     document.removeEventListener("mousemove", this._onDocumentPointerMove, true);
   }
 
-  _clearTouchPressTimer() {
-    if (!this._touchPressTimer) {
-      return;
-    }
-
-    window.clearTimeout(this._touchPressTimer);
-    this._touchPressTimer = 0;
-  }
-
   _findTrackedTouch(touches) {
     if (!this._touchPressState || !touches) {
       return null;
     }
 
-    return Array.from(touches).find(touch => touch.identifier === this._touchPressState.identifier) || null;
+    return Array.from(touches).find(item => item.identifier === this._touchPressState.identifier) || null;
   }
 
-  _clearTouchHover(options = {}) {
-    const shouldRender = options.shouldRender !== false;
-    const suppressClick = options.suppressClick === true;
-    const shouldClearHover = options.clearHover !== false;
-
-    this._clearTouchPressTimer();
+  _resetChartTouchTracking(options = {}) {
+    const clearTooltip = options.clearTooltip === true;
+    this._clearChartHoldTimer();
     this._touchPressState = null;
-
-    if (suppressClick) {
-      this._suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_WINDOW;
-    }
-
-    const wasActive = this._touchHoverActive;
-    this._touchHoverActive = false;
-    if (!wasActive || !shouldClearHover) {
-      return;
-    }
-
-    if (shouldRender) {
+    this._touchChartHoldFired = false;
+    if (clearTooltip && this._hoverIndex !== null) {
       this._scheduleHoverRender(null);
-      return;
+      this._lastTooltipViewportPosition = null;
     }
-
-    this._hoverIndex = null;
   }
 
-  _onShadowTouchStart(event) {
-    if (event.touches.length !== 1) {
-      this._clearTouchHover({ shouldRender: false, clearHover: false });
+  _onShadowPointerDown(event) {
+    if (event.pointerType === "touch") {
       return;
     }
 
     const surface = this._getChartSurfaceFromEvent(event);
-    if (!surface || !this._hoverChart?.entries?.length) {
-      this._clearTouchHover({ shouldRender: false, clearHover: false });
+    if (!surface || !this._hoverChart?.entries?.length || this._getHoverSampleCount() <= 1) {
+      return;
+    }
+
+    this._clearChartPointerSession();
+    this._resetChartTouchTracking({ clearTooltip: false });
+
+    this._chartPointerSession = {
+      pointerId: event.pointerId,
+      surface,
+      startX: event.clientX,
+      startY: event.clientY,
+      startTime: Date.now(),
+      holdFired: false,
+    };
+
+    try {
+      surface.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // setPointerCapture may fail for disconnected nodes.
+    }
+
+    if (!this._canRunHoldAction()) {
+      return;
+    }
+
+    const pointerId = event.pointerId;
+    this._chartHoldTimer = window.setTimeout(() => {
+      this._chartHoldTimer = 0;
+      if (!this._chartPointerSession || this._chartPointerSession.pointerId !== pointerId) {
+        return;
+      }
+
+      this._chartPointerSession.holdFired = true;
+      this._fireChartHoldAction();
+    }, TOUCH_CHART_HOLD_MS);
+  }
+
+  _onShadowPointerUp(event) {
+    if (event.pointerType === "touch") {
+      return;
+    }
+
+    const session = this._chartPointerSession;
+    if (!session || session.pointerId !== event.pointerId) {
+      return;
+    }
+
+    this._clearChartHoldTimer();
+
+    try {
+      session.surface.releasePointerCapture(event.pointerId);
+    } catch (_error) {
+      // Ignore if capture already released.
+    }
+
+    this._chartPointerSession = null;
+
+    if (session.holdFired) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _onShadowTouchStart(event) {
+    if (event.touches.length !== 1) {
+      this._resetChartTouchTracking({ clearTooltip: false });
+      return;
+    }
+
+    const surface = this._getChartSurfaceFromEvent(event);
+    if (!surface || !this._hoverChart?.entries?.length || this._getHoverSampleCount() <= 1) {
+      this._resetChartTouchTracking({ clearTooltip: false });
       return;
     }
 
     const touch = event.touches[0];
-    this._clearTouchPressTimer();
+    this._clearChartPointerSession();
+    this._clearChartHoldTimer();
+    this._touchChartHoldFired = false;
     this._touchPressState = {
       identifier: touch.identifier,
       lastX: touch.clientX,
       startX: touch.clientX,
       startY: touch.clientY,
+      startTime: Date.now(),
       surface,
     };
 
-    this._touchPressTimer = window.setTimeout(() => {
-      if (!this._touchPressState) {
+    if (!this._canRunHoldAction()) {
+      return;
+    }
+
+    const touchId = touch.identifier;
+    this._chartHoldTimer = window.setTimeout(() => {
+      this._chartHoldTimer = 0;
+      if (!this._touchPressState || this._touchPressState.identifier !== touchId) {
         return;
       }
 
-      this._touchPressTimer = 0;
-      this._touchHoverActive = true;
-      this._updateHoverFromClientX(this._touchPressState.surface, this._touchPressState.lastX);
-      this._triggerHaptic("selection");
-    }, TOUCH_HOLD_DELAY);
+      this._touchChartHoldFired = true;
+      this._touchPressState = null;
+      this._fireChartHoldAction();
+    }, TOUCH_CHART_HOLD_MS);
   }
 
   _onShadowTouchMove(event) {
@@ -2015,37 +2130,58 @@ class NodaliaGraphCard extends HTMLElement {
 
     this._touchPressState.lastX = touch.clientX;
 
-    if (!this._touchHoverActive) {
+    if (!this._touchChartHoldFired) {
       const deltaX = touch.clientX - this._touchPressState.startX;
       const deltaY = touch.clientY - this._touchPressState.startY;
       const isVerticalScroll = Math.abs(deltaY) > TOUCH_MOVE_CANCEL_DISTANCE && Math.abs(deltaY) > Math.abs(deltaX) * 1.2;
       if (isVerticalScroll) {
-        this._clearTouchHover({ shouldRender: false, clearHover: false });
+        this._resetChartTouchTracking({ clearTooltip: false });
+        return;
       }
-      return;
     }
 
-    event.preventDefault();
     this._updateHoverFromClientX(this._touchPressState.surface, touch.clientX);
   }
 
   _onShadowTouchEnd(event) {
-    const touch = this._findTrackedTouch(event.changedTouches);
-    if (!touch && !this._touchHoverActive && !this._touchPressTimer) {
+    this._clearChartHoldTimer();
+
+    if (this._touchChartHoldFired) {
+      this._touchChartHoldFired = false;
+      this._touchPressState = null;
+      event.preventDefault();
       return;
     }
 
-    if (this._touchHoverActive) {
-      event.preventDefault();
+    const touch = this._findTrackedTouch(event.changedTouches);
+    const state = this._touchPressState;
+    this._touchPressState = null;
+
+    if (!state) {
+      return;
     }
 
-    this._clearTouchHover({
-      suppressClick: this._touchHoverActive,
-    });
+    if (!touch || touch.identifier !== state.identifier) {
+      return;
+    }
+
+    const elapsed = Date.now() - state.startTime;
+    const deltaX = touch.clientX - state.startX;
+    const deltaY = touch.clientY - state.startY;
+    const isTap = elapsed < TOUCH_CHART_HOLD_MS
+      && Math.abs(deltaX) <= CHART_TAP_MAX_MOVE
+      && Math.abs(deltaY) <= CHART_TAP_MAX_MOVE;
+
+    if (isTap) {
+      this._updateHoverFromClientX(state.surface, touch.clientX);
+      this._triggerHaptic("selection");
+      this._suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_WINDOW;
+      event.preventDefault();
+    }
   }
 
   _onShadowTouchCancel() {
-    this._clearTouchHover();
+    this._resetChartTouchTracking({ clearTooltip: true });
   }
 
   _scheduleHoverRender(nextIndex) {
@@ -2774,6 +2910,8 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
+    const primaryHeaderAttr = this._canRunTapAction() && config.show_header !== false ? ' data-graph-action="primary"' : "";
+    const primaryValueAttr = this._canRunTapAction() && config.show_value !== false ? ' data-graph-action="primary"' : "";
     const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
     const initialTooltipStyle = this._lastTooltipViewportPosition
       ? `left:${this._lastTooltipViewportPosition.left}px; top:${this._lastTooltipViewportPosition.top}px; opacity:1; --graph-tooltip-transform:${this._lastTooltipViewportPosition.transform}; --tooltip-tint:${escapeHtml(tooltipTint)};`
@@ -3482,11 +3620,11 @@ class NodaliaGraphCard extends HTMLElement {
         }
       </style>
       <ha-card class="graph-card">
-        <div class="graph-card__content ${shouldAnimateEntrance ? "graph-card__content--entering" : ""}" ${this._canRunTapAction() ? 'data-graph-action="primary"' : ""}>
+        <div class="graph-card__content ${shouldAnimateEntrance ? "graph-card__content--entering" : ""}">
           ${
             config.show_header !== false
               ? `
-                <div class="graph-card__header">
+                <div class="graph-card__header"${primaryHeaderAttr}>
                   ${
                     config.show_icon !== false
                       ? `
@@ -3507,7 +3645,7 @@ class NodaliaGraphCard extends HTMLElement {
             config.show_value !== false && config.show_legend !== false
               ? `
                 <div class="graph-card__primary-row">
-                  <div class="graph-card__value">
+                  <div class="graph-card__value"${primaryValueAttr}>
                     <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
                     ${currentValue.unit ? `<div class="graph-card__value-unit">${escapeHtml(currentValue.unit)}</div>` : ""}
                   </div>
@@ -3530,7 +3668,7 @@ class NodaliaGraphCard extends HTMLElement {
           ${
             config.show_value !== false && config.show_legend === false
               ? `
-                <div class="graph-card__value">
+                <div class="graph-card__value"${primaryValueAttr}>
                   <div class="graph-card__value-number">${escapeHtml(currentValue.value)}</div>
                   ${currentValue.unit ? `<div class="graph-card__value-unit">${escapeHtml(currentValue.unit)}</div>` : ""}
                 </div>
@@ -4162,6 +4300,15 @@ class NodaliaGraphCardEditorLegacy extends HTMLElement {
               "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
+              [
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_hold_action",
+              "hold_action",
+              config.hold_action || "more-info",
               [
                 { value: "more-info", label: "ed.entity.tap_more_info" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -5322,6 +5469,15 @@ class NodaliaGraphCardEditor extends HTMLElement {
               "ed.entity.tap_action",
               "tap_action",
               config.tap_action || "more-info",
+              [
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "none", label: "ed.entity.tap_none" },
+              ],
+            )}
+            ${this._renderSelectField(
+              "ed.light.card_hold_action",
+              "hold_action",
+              config.hold_action || "more-info",
               [
                 { value: "more-info", label: "ed.entity.tap_more_info" },
                 { value: "none", label: "ed.entity.tap_none" },
