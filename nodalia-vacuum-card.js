@@ -753,7 +753,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -831,7 +831,7 @@ const DEFAULT_CONFIG = {
   tap_action: "default",
   tap_navigation_path: "",
   icon_tap_action: "",
-  hold_action: "none",
+  hold_action: "more-info",
   icon_hold_action: "",
   hold_navigation_path: "",
   icon_hold_navigation_path: "",

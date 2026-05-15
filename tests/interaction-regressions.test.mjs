@@ -134,6 +134,14 @@ test("graph tooltip keeps document hover watch guards", () => {
   assert.match(source, /_scheduleHoverRender\(null\)/);
 });
 
+test("graph card chart tap shows tooltip and hold_action defaults to more-info", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /hold_action:\s*"more-info"/);
+  assert.match(source, /_onShadowPointerDown/);
+  assert.match(source, /_fireChartHoldAction/);
+  assert.match(source, /_canRunHoldAction/);
+});
+
 test("nav media/popup entrance animations are transition-driven", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /_lastMediaToggleVisible/);

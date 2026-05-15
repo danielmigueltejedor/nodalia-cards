@@ -753,7 +753,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.1.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -803,7 +803,7 @@ const DEFAULT_CONFIG = {
   icon_tap_service_data: "",
   icon_tap_url: "",
   icon_tap_new_tab: false,
-  hold_action: "none",
+  hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
   hold_url: "",

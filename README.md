@@ -2,8 +2,8 @@
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
 
-![Package](https://img.shields.io/badge/package-1.1.0-2ea043)
-![Latest stable on main](https://img.shields.io/badge/latest%20stable%20%28main%29-1.1.0-2ea043)
+![Package](https://img.shields.io/badge/package-1.1.1--alpha.1-fbca04)
+![Prerelease channel](https://img.shields.io/badge/prerelease%20channel-1.1.1--alpha.1-fbca04)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -50,7 +50,7 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.1.x
 
-**This branch tracks stable `1.1.0`** — match **`package.json`** and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone and newer cards; release notes are in [`CHANGELOG.md`](./CHANGELOG.md).
+**This branch tracks prerelease `1.1.1-alpha.1`** — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.1-alpha.1.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. The sections below summarize the **`1.0.0`** milestone and newer cards; release notes are in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🧠 Notifications Card
 
@@ -266,7 +266,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.1.0.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.1.1-alpha.1.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.
@@ -305,7 +305,7 @@ JavaScript module
 
 # 🌍 Translations
 
-**1.1.0** continues improving the multi-language runtime and visual editor support introduced in **1.0.x**.
+**1.1.x** continues improving the multi-language runtime and visual editor support introduced in **1.0.x**.
 
 Supported languages:
 

@@ -1,10 +1,20 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, and the **`1.1.0-alpha.*`** line copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable.
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), and ongoing **`1.1.1-alpha.*`** prereleases.
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [1.1.1-alpha.1] - 2026-05-12
+
+First **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.1.js`**.
+
+### Changed
+
+- **Hold actions:** cards that support long-press now default **`hold_action`** to **`more-info`** (native Home Assistant more-info dialog) instead of **`none`**, including **`nodalia-light-card`**, **`nodalia-fan-card`**, **`nodalia-entity-card`**, **`nodalia-humidifier-card`**, **`nodalia-cover-card`**, **`nodalia-insignia-card`**, and **`nodalia-vacuum-card`** (vacuum normalizes to **`more_info`** internally). Empty **`icon_hold_action`** continues to inherit the body hold, so icon and body match unless you override the icon explicitly.
 
 ---
 
