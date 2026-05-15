@@ -1,0 +1,728 @@
+{
+  "advanceVacuum": {
+    "modeLabels": {
+      "all": "Tutto",
+      "rooms": "Stanze",
+      "zone": "Zona",
+      "routines": "Routine",
+      "goto": "Vai al punto"
+    },
+    "aria": {
+      "modeTablist": "Modalità di pulizia"
+    },
+    "panelModes": {
+      "smart": "Smart",
+      "vacuum_mop": "Aspira e lava",
+      "vacuum": "Aspirazione",
+      "mop": "Lavaggio",
+      "custom": "Personalizzato"
+    },
+    "dockSections": {
+      "control": "Comandi base",
+      "settings": "Impostazioni base"
+    },
+    "dockSettings": {
+      "mop_wash_frequency": "Frequenza lavaggio panno",
+      "mop_mode": "Modalità lavaggio",
+      "auto_empty_frequency": "Frequenza svuotamento auto",
+      "empty_mode": "Modalità svuotamento",
+      "drying_duration": "Durata asciugatura"
+    },
+    "dockControls": {
+      "empty": {
+        "label": "Svuota contenitore",
+        "active": "Stop svuotamento"
+      },
+      "wash": {
+        "label": "Lava panno",
+        "active": "Stop lavaggio"
+      },
+      "dry": {
+        "label": "Asciuga mopa",
+        "active": "Stop asciugatura"
+      }
+    },
+    "vacuumModes": {
+      "quiet": "Silenzioso",
+      "silent": "Silenzioso",
+      "balanced": "Bilanciato",
+      "standard": "Standard",
+      "normal": "Normale",
+      "turbo": "Turbo",
+      "max": "Max",
+      "maxplus": "Max+",
+      "max_plus": "Max+",
+      "gentle": "Delicato",
+      "strong": "Forte",
+      "smart": "Smart",
+      "smartmode": "Smart",
+      "smart_mode": "Smart",
+      "intelligent": "Smart",
+      "custom": "Personalizzato",
+      "custommode": "Personalizzato",
+      "custom_mode": "Personalizzato",
+      "custom_water_flow": "Portata acqua personalizzata",
+      "custom_watter_flow": "Portata acqua personalizzata",
+      "off": "Senza lavaggio",
+      "low": "Bassa",
+      "medium": "Media",
+      "high": "Alta",
+      "intense": "Intenso",
+      "deep": "Profondo",
+      "deep_plus": "Profondo+",
+      "deepplus": "Profondo+",
+      "fast": "Veloce",
+      "rapido": "Veloce"
+    },
+    "offSuction": "Off",
+    "reportedStates": {
+      "docked": "In base",
+      "charging": "In carica",
+      "charging_completed": "In carica",
+      "cleaning": "Pulizia",
+      "spot_cleaning": "Pulizia",
+      "segment_cleaning": "Pulizia",
+      "room_cleaning": "Pulizia",
+      "zone_cleaning": "Pulizia",
+      "clean_area": "Pulizia",
+      "paused": "In pausa",
+      "returning": "Ritorno alla base",
+      "return_to_base": "Ritorno alla base",
+      "returning_home": "Ritorno alla base",
+      "washing": "Lavaggio mop",
+      "wash_mop": "Lavaggio mop",
+      "washing_mop": "Lavaggio mop",
+      "washing_pads": "Lavaggio mop",
+      "drying": "Asciugatura",
+      "drying_mop": "Asciugatura",
+      "emptying": "Svuotamento auto",
+      "self_emptying": "Svuotamento auto",
+      "unavailable": "Non disponibile",
+      "unknown": "Sconosciuto",
+      "error": "Errore",
+      "fallback": "Sconosciuto"
+    },
+    "mapStatus": {
+      "washing_mop": "Lavaggio mopa",
+      "drying_mop": "Asciugatura mopa",
+      "emptying_dust": "Svuotamento polvere",
+      "charging": "In carica"
+    },
+    "descriptorLabels": {
+      "suction": "Aspirazione",
+      "mop": "Lavaggio",
+      "mop_mode": "Modalità mopa"
+    },
+    "utility": {
+      "cleaningMode": "Modalità pulizia",
+      "cleaningCounter": "Passaggi",
+      "dockActions": "Azioni base",
+      "chargingStation": "Base di ricarica",
+      "zonesWord": "zone",
+      "pointWord": "punto",
+      "zoneTool": "Zona",
+      "routineDefault": "Routine",
+      "customMenuDefault": "Base",
+      "modesFallbackTitle": "Modalità aspirazione e lavaggio"
+    },
+    "actions": {
+      "returnToBase": "Torna alla base",
+      "locate": "Localizza",
+      "stop": "Stop",
+      "run": "Avvia",
+      "addZoneToClean": "Aggiungi zona alla pulizia",
+      "cleanZone": "Pulisci zona"
+    },
+    "handles": {
+      "moveZone": "Sposta zona",
+      "deleteZone": "Elimina zona",
+      "resizeZone": "Ridimensiona zona"
+    },
+    "titles": {
+      "editZone": "Modifica zona",
+      "backPanel": "Torna al pannello",
+      "addZone": "Aggiungi zona",
+      "gotoFallback": "Punto"
+    }
+  },
+  "navigationMusicAssist": {
+    "artist": "Artisti",
+    "artists": "Artisti",
+    "album": "Album",
+    "albums": "Album",
+    "track": "Brani",
+    "tracks": "Brani",
+    "song": "Brani",
+    "songs": "Brani",
+    "playlist": "Playlist",
+    "playlists": "Playlist",
+    "radio station": "Radio",
+    "radio stations": "Radio",
+    "podcast": "Podcast",
+    "podcasts": "Podcast",
+    "audiobook": "Audiolibri",
+    "audiobooks": "Audiolibri",
+    "genre": "Generi",
+    "genres": "Generi",
+    "favorite": "Preferiti",
+    "favorites": "Preferiti",
+    "favourites": "Preferiti",
+    "search": "Cerca",
+    "recently played": "Riprodotti di recente",
+    "recently added": "Aggiunti di recente",
+    "recently played tracks": "Brani recenti",
+    "browseFallback": "Elemento"
+  },
+  "vacuumSimple": {
+    "quiet": "Silenzioso",
+    "silent": "Silenzioso",
+    "balanced": "Bilanciato",
+    "standard": "Standard",
+    "normal": "Normale",
+    "turbo": "Turbo",
+    "max": "Max",
+    "maxplus": "Max+",
+    "max_plus": "Max+",
+    "gentle": "Delicato",
+    "strong": "Forte",
+    "smart": "Smart",
+    "smartmode": "Smart",
+    "smart_mode": "Smart",
+    "intelligent": "Smart",
+    "custom": "Personalizzato",
+    "custommode": "Personalizzato",
+    "custom_mode": "Personalizzato",
+    "custom_water_flow": "Portata acqua personalizzata",
+    "custom_watter_flow": "Portata acqua personalizzata",
+    "off": "Senza lavaggio",
+    "low": "Bassa",
+    "medium": "Media",
+    "high": "Alta",
+    "intense": "Intenso",
+    "deep": "Profondo"
+  },
+  "fan": {
+    "off": "Spento",
+    "on": "Acceso",
+    "unavailable": "Non disponibile",
+    "unknown": "Sconosciuto",
+    "noState": "Nessuno stato",
+    "fallbackName": "Ventilatore"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Show brightness",
+      "temperature": "Show temperature",
+      "color": "Show color"
+    },
+    "sections": {
+      "temperature": "Temperature",
+      "color": "Color",
+      "presets": "Presets"
+    },
+    "temperaturePresets": {
+      "warm": "Warm",
+      "neutral": "Neutral",
+      "cool": "Cool"
+    }
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Turn on or off"
+    }
+  },
+  "alarmPanel": {
+    "defaultTitle": "Allarme",
+    "noState": "Nessuno stato",
+    "wrongCode": "Codice errato",
+    "emptyTitle": "Nodalia Alarm Panel Card",
+    "emptyBody": "Imposta `entity` per mostrare questa scheda.",
+    "codePlaceholder": "Codice",
+    "actions": {
+      "disarm": "Disarma",
+      "arm_home": "Casa",
+      "arm_away": "Fuori",
+      "arm_night": "Notte",
+      "arm_vacation": "Vacanza",
+      "arm_custom_bypass": "Personalizzato"
+    },
+    "states": {
+      "disarmed": "Disattivato",
+      "armed_home": "Casa",
+      "armed_away": "Fuori",
+      "armed_night": "Notte",
+      "armed_vacation": "Vacanza",
+      "armed_custom_bypass": "Personalizzato",
+      "armed": "Attivo",
+      "arming": "Attivazione",
+      "disarming": "Disattivazione",
+      "pending": "In attesa",
+      "triggered": "Scattato",
+      "unavailable": "Non disponibile",
+      "unknown": "Sconosciuto"
+    }
+  },
+  "coverCard": {
+    "emptyTitle": "Nodalia Cover Card",
+    "emptyBody": "Imposta `entity` su un'entità `cover.*` per mostrare questa scheda.",
+    "cardDescription": "Controlli in stile scheda ventilatore per tapparelle e tende in Home Assistant.",
+    "open": "Apri",
+    "close": "Chiudi",
+    "stop": "Stop",
+    "positionSlider": "Posizione",
+    "tiltSlider": "Inclinazione",
+    "tiltChip": "Inclinazione {value}%",
+    "toggleShowButtons": "Show open, stop, and close",
+    "toggleShowSliders": "Show sliders"
+  },
+  "person": {
+    "home": "A casa",
+    "notHome": "Fuori",
+    "work": "Lavoro",
+    "school": "Scuola",
+    "unavailable": "Non disponibile",
+    "unknown": "Sconosciuto",
+    "locationUnknown": "Posizione sconosciuta",
+    "emptyTitle": "Nodalia Person Card",
+    "emptyBody": "Imposta `entity` per mostrare questa scheda.",
+    "defaultName": "Persona"
+  },
+  "entityCard": {
+    "binarySensor": {
+      "doorOpen": "Aperta",
+      "doorClosed": "Chiusa",
+      "motionOn": "Rilevato",
+      "motionOff": "Libero"
+    },
+    "boolean": {
+      "yes": "Sì",
+      "no": "No"
+    },
+    "states": {
+      "on": "Acceso",
+      "off": "Spento",
+      "open": "Aperto",
+      "opening": "Apertura",
+      "closed": "Chiuso",
+      "closing": "Chiusura",
+      "playing": "In riproduzione",
+      "paused": "In pausa",
+      "buffering": "Buffering",
+      "idle": "Inattivo",
+      "standby": "Standby",
+      "home": "A casa",
+      "not_home": "Fuori",
+      "detected": "Rilevato",
+      "clear": "Libero",
+      "unavailable": "Non disponibile",
+      "unknown": "Sconosciuto",
+      "locked": "Bloccato",
+      "unlocked": "Sbloccato",
+      "locking": "Blocco…",
+      "unlocking": "Sblocco…",
+      "locking_failed": "Blocco fallito",
+      "unlocking_failed": "Sblocco fallito",
+      "jammed": "Inceppato",
+      "pending": "In attesa",
+      "stopped": "Fermato",
+      "armed_away": "Armato fuori",
+      "armed_home": "Armato casa",
+      "disarmed": "Disattivato",
+      "triggered": "Scattato",
+      "comfortable": "Comodo",
+      "very_comfortable": "Molto comodo",
+      "slightly_uncomfortable": "Leggermente scomodo",
+      "somewhat_uncomfortable": "Abbastanza scomodo",
+      "quite_uncomfortable": "Piuttosto scomodo",
+      "extremely_uncomfortable": "Molto scomodo",
+      "ok_but_humid": "OK ma umido",
+      "little_or_no_discomfort": "Poco o nessun disagio",
+      "some_discomfort": "Qualche disagio",
+      "great_discomfort_avoid_exertion": "Grande disagio",
+      "dangerous_discomfort": "Disagio pericoloso",
+      "heat_stroke_imminent": "Colpo di calore imminente",
+      "dry": "Asciutto",
+      "very_dry": "Molto asciutto",
+      "too_dry": "Troppo asciutto",
+      "humid": "Umido",
+      "very_humid": "Molto umido",
+      "too_humid": "Troppo umido",
+      "wet": "Bagnato",
+      "low": "Basso",
+      "medium": "Medio",
+      "moderate": "Moderato",
+      "high": "Alto",
+      "very_high": "Molto alto",
+      "severely_high": "Estremamente alto",
+      "critical": "Critico",
+      "excellent": "Eccellente",
+      "good": "Buono",
+      "fair": "Discreto",
+      "poor": "Scarso"
+    }
+  },
+  "weatherCard": {
+    "conditions": {
+      "clear_night": "Cielo sereno",
+      "cloudy": "Nuvoloso",
+      "exceptional": "Eccezionale",
+      "fog": "Nebbia",
+      "hail": "Grandine",
+      "lightning": "Temporale",
+      "lightning_rainy": "Temporale con pioggia",
+      "partlycloudy": "Parzialmente nuvoloso",
+      "pouring": "Pioggia intensa",
+      "rainy": "Piovoso",
+      "snowy": "Nevoso",
+      "snowy_rainy": "Nevischio",
+      "sunny": "Soleggiato",
+      "windy": "Ventoso",
+      "windy_variant": "Vento variabile"
+    },
+    "defaultCondition": "Meteo",
+    "forecast": {
+      "chartAriaHourly": "Grafico previsioni orarie",
+      "chartAriaDaily": "Grafico previsioni settimanali",
+      "tabsAria": "Vista previsioni",
+      "tabCards": "Schede",
+      "tabChart": "Grafico",
+      "hoursTab": "Ore",
+      "weekTab": "Settimana",
+      "emptyHourly": "Nessuna previsione oraria disponibile.",
+      "emptyDaily": "Nessuna previsione settimanale disponibile.",
+      "chartInsufficientData": "Dati insufficienti per mostrare il grafico.",
+      "closeDetail": "Chiudi dettaglio",
+      "maxLabel": "Max",
+      "minLabel": "Min",
+      "temperatureLabel": "Temperatura",
+      "rainLabel": "Pioggia",
+      "humidityLabel": "Umidità",
+      "windLabel": "Vento"
+    },
+    "meteoalarm": {
+      "name": "Meteoalarm",
+      "alertFallback": "Allerta",
+      "noAlerts": "Nessuna allerta",
+      "weatherAlert": "Allerta meteo",
+      "noWeatherAlerts": "Nessuna allerta meteo",
+      "level": "Livello",
+      "type": "Tipo",
+      "start": "Inizio",
+      "end": "Fine",
+      "severity": "Severità",
+      "urgency": "Urgenza",
+      "certainty": "Certezza",
+      "close": "Chiudi",
+      "descriptionTitle": "Descrizione",
+      "instructionsTitle": "Istruzioni",
+      "terms": {
+        "moderate": "Moderato",
+        "severe": "Grave",
+        "high": "Alto",
+        "extreme": "Estremo",
+        "minor": "Lieve",
+        "yellow": "Giallo",
+        "orange": "Arancione",
+        "red": "Rosso",
+        "green": "Verde",
+        "future": "Futuro",
+        "immediate": "Immediato",
+        "expected": "Previsto",
+        "past": "Passato",
+        "likely": "Probabile",
+        "observed": "Osservato",
+        "possible": "Possibile",
+        "unlikely": "Improbabile",
+        "unknown": "Sconosciuto",
+        "met": "Meteorologico",
+        "monitor": "Monitoraggio"
+      }
+    }
+  },
+  "humidifierCard": {
+    "modes": {
+      "auto": "Auto",
+      "automatic": "Auto",
+      "smart": "Smart",
+      "smart_mode": "Smart",
+      "sleep": "Notte",
+      "night": "Notte",
+      "eco": "Eco",
+      "quiet": "Silenzioso",
+      "silent": "Silenzioso",
+      "low": "Basso",
+      "medium": "Medio",
+      "mid": "Medio",
+      "high": "Alto",
+      "boost": "Boost",
+      "turbo": "Turbo",
+      "normal": "Normale",
+      "balanced": "Normale",
+      "dry": "Asciugatura",
+      "drying": "Asciugatura",
+      "continuous": "Continuo",
+      "clothes_dry": "Bucato",
+      "laundry": "Bucato"
+    },
+    "deviceStates": {
+      "on": "Acceso",
+      "off": "Spento",
+      "humidifying": "Umidificazione",
+      "dehumidifying": "Deumidificazione",
+      "drying": "Asciugatura",
+      "idle": "Inattivo",
+      "unavailable": "Non disponibile",
+      "unknown": "Sconosciuto"
+    }
+  },
+  "climateCard": {
+    "modes": {
+      "off": "Spento",
+      "heat": "Caldo",
+      "cool": "Freddo",
+      "heat_cool": "Caldo / freddo",
+      "auto": "Auto",
+      "dry": "Deumidificazione",
+      "fan_only": "Solo ventilatore"
+    },
+    "actions": {
+      "heating": "Riscalda",
+      "cooling": "Raffredda",
+      "drying": "Deumidifica",
+      "fan": "Ventila",
+      "fan_only": "Ventilatore",
+      "idle": "Inattivo",
+      "off": "Spento"
+    },
+    "aria": {
+      "dialRangeGroup": "Fascia di comfort e temperatura interna",
+      "dialTargetSlider": "Temperatura target",
+      "dialNoSetpoint": "Temperatura interna; nessun setpoint attivo sul termostato",
+      "togglePower": "Turn on or off"
+    },
+    "dialNoSetpointHint": "Nessun setpoint attivo"
+  },
+  "graphCard": {
+    "emptyHistory": "Nessuno storico disponibile"
+  },
+  "notificationsCard": {
+    "fallbackEvent": "Evento",
+    "allDay": "Tutto il giorno",
+    "titles": {
+      "calendarSoon": "Evento tra poco",
+      "calendarToday": "Evento previsto oggi",
+      "calendarUnavailable": "Calendario non disponibile",
+      "vacuumAttention": "Robot da controllare",
+      "vacuumPaused": "Robot in pausa",
+      "cleaningStarted": "Pulizia avviata",
+      "returningDock": "Robot verso la base",
+      "motionDetected": "Movimento rilevato",
+      "doorOpen": "Porta aperta",
+      "windowOpen": "Finestra aperta",
+      "hot": "Fa caldo",
+      "cold": "Temperatura bassa",
+      "rainSoon": "Pioggia in arrivo",
+      "batteryLow": "Batteria scarica",
+      "humidifierFillLow": "Serbatoio basso",
+      "inkLow": "Inchiostro basso",
+      "humidityHigh": "Umidità alta",
+      "humidityLow": "Umidità bassa",
+      "customFallback": "Notifica",
+      "mediaLeftOn": "Multimedia acceso senza presenza"
+    },
+    "messages": {
+      "vacuumAttention": "{name} è nello stato {state}.",
+      "vacuumPaused": "{name} è in pausa o in attesa.",
+      "vacuumState": "{name}: {state}.",
+      "hot": "{source} segna {value}. Puoi accendere {fan}.",
+      "rainSoon": "{source} prevede pioggia verso {time}. Se hai panni fuori, conviene controllare.",
+      "lowLevel": "{source} è a {value}.",
+      "sensorValue": "{source} segna {value}.",
+      "hotClimate": "{source} segna {value}. Puoi attivare il freddo su {climate}.",
+      "mediaLeftOn": "{media} è ancora acceso e {source} non rileva presenza."
+    },
+    "actions": {
+      "openCalendar": "Apri calendario",
+      "viewRobot": "Vedi robot",
+      "continue": "Continua",
+      "viewSensor": "Vedi sensore",
+      "turnOnFan": "Accendi ventilatore",
+      "viewWeather": "Vedi meteo",
+      "buyBattery": "Compra batteria",
+      "buyInk": "Compra inchiostro",
+      "run": "Esegui",
+      "toggle": "Alterna",
+      "open": "Apri",
+      "less": "Meno",
+      "turnOnCooling": "Attiva raffrescamento",
+      "turnOnHeat": "Attiva riscaldamento",
+      "turnOnDehumidifier": "Accendi deumidificatore",
+      "turnOff": "Spegni"
+    },
+    "severity": {
+      "critical": "Critica",
+      "warning": "Avviso",
+      "success": "OK",
+      "info": "Info"
+    },
+    "empty": {
+      "title": "All quiet",
+      "message": "You have no current alerts"
+    },
+    "aria": {
+      "dismiss": "Elimina notifica",
+      "showLess": "Mostra meno",
+      "showAll": "Mostra tutte le notifiche"
+    }
+  },
+  "favCard": {
+    "disarmedF": "Disattivato",
+    "armed_home": "Casa",
+    "armed_away": "Fuori",
+    "armed_night": "Notte",
+    "armed_vacation": "Vacanza",
+    "armed_custom_bypass": "Personalizzato",
+    "arming": "Attivazione",
+    "disarming": "Disattivazione",
+    "pending": "In attesa",
+    "triggered": "Scattato"
+  },
+  "calendarCard": {
+    "allDay": "Tutto il giorno",
+    "timeRange": {
+      "threeDays": "3 giorni",
+      "oneWeek": "1 settimana",
+      "twoWeeks": "2 settimane",
+      "oneMonth": "1 mese"
+    },
+    "buttons": {
+      "month": "Mese",
+      "back": "Indietro",
+      "delete": "Elimina",
+      "cancel": "Annulla",
+      "create": "Crea"
+    },
+    "fields": {
+      "calendar": "Calendario",
+      "title": "Titolo",
+      "description": "Descrizione",
+      "location": "Luogo",
+      "date": "Data",
+      "start": "Inizio",
+      "end": "Fine",
+      "repeat": "Ripetizione",
+      "repeatFrequency": "Frequenza",
+      "repeatInterval": "Ogni quante unità",
+      "customColor": "Colore proprio",
+      "customColorTitle": "Colore personalizzato",
+      "color": "Colore"
+    },
+    "placeholders": {
+      "title": "Es. visita medica",
+      "optional": "Opzionale"
+    },
+    "repeat": {
+      "none": "Non si ripete",
+      "yearly": "Annualmente",
+      "monthly": "Mensilmente",
+      "weekly": "Settimanalmente",
+      "daily": "Ogni giorno",
+      "custom": "Personalizzato"
+    },
+    "composer": {
+      "newEvent": "Nuovo evento"
+    },
+    "event": {
+      "untitled": "Evento senza titolo"
+    },
+    "states": {
+      "loading": "Caricamento eventi..."
+    },
+    "empty": {
+      "range": "Nessun evento in questo intervallo.",
+      "day": "Nessun evento oggi.",
+      "eventDetails": "Questo evento non ha descrizione né luogo."
+    },
+    "errors": {
+      "loadEvents": "Impossibile caricare gli eventi del calendario.",
+      "selectCalendar": "Seleziona un calendario.",
+      "enterTitle": "Inserisci un titolo.",
+      "selectDate": "Seleziona una data.",
+      "selectDateTime": "Seleziona data, inizio e fine.",
+      "selectRepeatFrequency": "Seleziona una frequenza per la ripetizione personalizzata.",
+      "invalidRepeatInterval": "L’intervallo deve essere un numero maggiore o uguale a 1.",
+      "pastDate": "La data non può essere precedente a oggi.",
+      "createEvent": "Impossibile creare l'evento.",
+      "createEventWithMessage": "Impossibile creare l'evento: {message}"
+    },
+    "deleteRecurrence": {
+      "title": "Delete recurring event",
+      "message": "This event is part of a series. What would you like to delete?",
+      "thisOnly": "This occurrence only",
+      "thisAndFuture": "This and all following occurrences",
+      "deleteFailed": "Could not delete the event. Please try again.",
+      "deleteFailedWithMessage": "Could not delete the event: {message}"
+    },
+    "aria": {
+      "newEventDialog": "Nuovo evento calendario",
+      "deleteEvent": "Elimina evento",
+      "deleteRecurringDialog": "Choose how to delete the recurring event",
+      "createHaEvent": "Crea evento HA",
+      "close": "Chiudi"
+    }
+  },
+  "vacuumErrorLabels": {
+    "lidar_blocked": "LiDAR blocked",
+    "bumper_stuck": "Bumper stuck",
+    "wheels_suspended": "Wheels suspended",
+    "cliff_sensor_error": "Cliff sensor error",
+    "main_brush_jammed": "Main brush jammed",
+    "side_brush_jammed": "Side brush jammed",
+    "wheels_jammed": "Wheels jammed",
+    "robot_trapped": "Robot trapped",
+    "no_dustbin": "Dustbin missing",
+    "strainer_error": "Filter error",
+    "compass_error": "Compass error",
+    "low_battery": "Low battery",
+    "charging_error": "Charging error",
+    "battery_error": "Battery error",
+    "wall_sensor_dirty": "Wall sensor dirty",
+    "robot_tilted": "Robot tilted",
+    "side_brush_error": "Side brush error",
+    "fan_error": "Fan error",
+    "dock": "Dock error",
+    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
+    "vertical_bumper_pressed": "Vertical bumper pressed",
+    "dock_locator_error": "Dock locator error",
+    "return_to_dock_fail": "Failed to return to dock",
+    "nogo_zone_detected": "No-go zone detected",
+    "visual_sensor": "Visual sensor error",
+    "light_touch": "Light touch sensor triggered",
+    "vibrarise_jammed": "VibraRise jammed",
+    "robot_on_carpet": "Robot on carpet",
+    "filter_blocked": "Filter blocked",
+    "invisible_wall_detected": "Invisible wall detected",
+    "cannot_cross_carpet": "Cannot cross carpet",
+    "internal_error": "Internal error",
+    "collect_dust_error_3": "Dust collection error",
+    "collect_dust_error_4": "Dust collection error",
+    "mopping_roller_1": "Mopping roller error",
+    "mopping_roller_error_2": "Mopping roller error",
+    "clear_water_box_hoare": "Clean water tank abnormal",
+    "dirty_water_box_hoare": "Dirty water tank abnormal",
+    "sink_strainer_hoare": "Sink strainer abnormal",
+    "clear_water_box_exception": "Clean water tank error",
+    "clear_brush_exception": "Cleaning brush error",
+    "clear_brush_exception_2": "Cleaning brush error",
+    "filter_screen_exception": "Filter screen error",
+    "mopping_roller_2": "Mopping roller error",
+    "up_water_exception": "Water refill error",
+    "drain_water_exception": "Water drain error",
+    "temperature_protection": "Temperature protection",
+    "clean_carousel_exception": "Cleaning carousel error",
+    "clean_carousel_water_full": "Cleaning carousel water full",
+    "water_carriage_drop": "Water carriage dropped",
+    "check_clean_carouse": "Check cleaning carousel",
+    "audio_error": "Audio error"
+  }
+}

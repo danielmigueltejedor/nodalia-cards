@@ -1,0 +1,728 @@
+{
+  "advanceVacuum": {
+    "modeLabels": {
+      "all": "Всё",
+      "rooms": "Комнаты",
+      "zone": "Зона",
+      "routines": "Сценарии",
+      "goto": "К точке"
+    },
+    "aria": {
+      "modeTablist": "Режим уборки"
+    },
+    "panelModes": {
+      "smart": "Умный",
+      "vacuum_mop": "Пылесос и мытьё",
+      "vacuum": "Пылесос",
+      "mop": "Мытьё",
+      "custom": "Свой"
+    },
+    "dockSections": {
+      "control": "Управление базой",
+      "settings": "Настройки базы"
+    },
+    "dockSettings": {
+      "mop_wash_frequency": "Частота промывки швабры",
+      "mop_mode": "Режим мытья",
+      "auto_empty_frequency": "Частота самоочистки",
+      "empty_mode": "Режим опорожнения",
+      "drying_duration": "Длительность сушки"
+    },
+    "dockControls": {
+      "empty": {
+        "label": "Опорожнить контейнер",
+        "active": "Остановить опорожнение"
+      },
+      "wash": {
+        "label": "Промыть швабру",
+        "active": "Остановить промывку"
+      },
+      "dry": {
+        "label": "Сушить швабру",
+        "active": "Остановить сушку"
+      }
+    },
+    "vacuumModes": {
+      "quiet": "Тихий",
+      "silent": "Тихий",
+      "balanced": "Сбалансированный",
+      "standard": "Стандарт",
+      "normal": "Обычный",
+      "turbo": "Турбо",
+      "max": "Макс",
+      "maxplus": "Макс+",
+      "max_plus": "Макс+",
+      "gentle": "Мягкий",
+      "strong": "Сильный",
+      "smart": "Умный",
+      "smartmode": "Умный",
+      "smart_mode": "Умный",
+      "intelligent": "Умный",
+      "custom": "Свой",
+      "custommode": "Свой",
+      "custom_mode": "Свой",
+      "custom_water_flow": "Свой расход воды",
+      "custom_watter_flow": "Свой расход воды",
+      "off": "Без мытья",
+      "low": "Низкий",
+      "medium": "Средний",
+      "high": "Высокий",
+      "intense": "Интенсивный",
+      "deep": "Глубокий",
+      "deep_plus": "Глубокий+",
+      "deepplus": "Глубокий+",
+      "fast": "Быстрый",
+      "rapido": "Быстрый"
+    },
+    "offSuction": "Выкл.",
+    "reportedStates": {
+      "docked": "На базе",
+      "charging": "Зарядка",
+      "charging_completed": "Зарядка",
+      "cleaning": "Уборка",
+      "spot_cleaning": "Уборка",
+      "segment_cleaning": "Уборка",
+      "room_cleaning": "Уборка",
+      "zone_cleaning": "Уборка",
+      "clean_area": "Уборка",
+      "paused": "Пауза",
+      "returning": "Возврат на базу",
+      "return_to_base": "Возврат на базу",
+      "returning_home": "Возврат на базу",
+      "washing": "Промывка швабры",
+      "wash_mop": "Промывка швабры",
+      "washing_mop": "Промывка швабры",
+      "washing_pads": "Промывка швабры",
+      "drying": "Сушка",
+      "drying_mop": "Сушка",
+      "emptying": "Самоочистка",
+      "self_emptying": "Самоочистка",
+      "unavailable": "Недоступно",
+      "unknown": "Неизвестно",
+      "error": "Ошибка",
+      "fallback": "Неизвестно"
+    },
+    "mapStatus": {
+      "washing_mop": "Промывка швабры",
+      "drying_mop": "Сушка швабры",
+      "emptying_dust": "Опорожнение контейнера",
+      "charging": "Зарядка"
+    },
+    "descriptorLabels": {
+      "suction": "Пылесос",
+      "mop": "Мытьё",
+      "mop_mode": "Режим швабры"
+    },
+    "utility": {
+      "cleaningMode": "Режим уборки",
+      "cleaningCounter": "Проходы уборки",
+      "dockActions": "Действия базы",
+      "chargingStation": "Зарядная база",
+      "zonesWord": "зоны",
+      "pointWord": "точка",
+      "zoneTool": "Зона",
+      "routineDefault": "Сценарий",
+      "customMenuDefault": "База",
+      "modesFallbackTitle": "Режимы пылесоса и мытья"
+    },
+    "actions": {
+      "returnToBase": "На базу",
+      "locate": "Найти",
+      "stop": "Стоп",
+      "run": "Пуск",
+      "addZoneToClean": "Добавить зону к уборке",
+      "cleanZone": "Убрать зону"
+    },
+    "handles": {
+      "moveZone": "Переместить зону",
+      "deleteZone": "Удалить зону",
+      "resizeZone": "Размер зоны"
+    },
+    "titles": {
+      "editZone": "Редактировать зону",
+      "backPanel": "К основной панели",
+      "addZone": "Добавить зону",
+      "gotoFallback": "Точка"
+    }
+  },
+  "navigationMusicAssist": {
+    "artist": "Артисты",
+    "artists": "Артисты",
+    "album": "Альбомы",
+    "albums": "Альбомы",
+    "track": "Треки",
+    "tracks": "Треки",
+    "song": "Треки",
+    "songs": "Треки",
+    "playlist": "Плейлисты",
+    "playlists": "Плейлисты",
+    "radio station": "Радиостанции",
+    "radio stations": "Радиостанции",
+    "podcast": "Подкасты",
+    "podcasts": "Подкасты",
+    "audiobook": "Аудиокниги",
+    "audiobooks": "Аудиокниги",
+    "genre": "Жанры",
+    "genres": "Жанры",
+    "favorite": "Избранное",
+    "favorites": "Избранное",
+    "favourites": "Избранное",
+    "search": "Поиск",
+    "recently played": "Недавно воспроизведённые",
+    "recently added": "Недавно добавленные",
+    "recently played tracks": "Недавно воспроизведённые треки",
+    "browseFallback": "Элемент"
+  },
+  "vacuumSimple": {
+    "quiet": "Тихий",
+    "silent": "Тихий",
+    "balanced": "Сбалансированный",
+    "standard": "Стандарт",
+    "normal": "Обычный",
+    "turbo": "Турбо",
+    "max": "Макс",
+    "maxplus": "Макс+",
+    "max_plus": "Макс+",
+    "gentle": "Мягкий",
+    "strong": "Сильный",
+    "smart": "Умный",
+    "smartmode": "Умный",
+    "smart_mode": "Умный",
+    "intelligent": "Умный",
+    "custom": "Свой",
+    "custommode": "Свой",
+    "custom_mode": "Свой",
+    "custom_water_flow": "Свой расход воды",
+    "custom_watter_flow": "Свой расход воды",
+    "off": "Без мытья",
+    "low": "Низкий",
+    "medium": "Средний",
+    "high": "Высокий",
+    "intense": "Интенсивный",
+    "deep": "Глубокий"
+  },
+  "fan": {
+    "off": "Выкл.",
+    "on": "Вкл.",
+    "unavailable": "Недоступно",
+    "unknown": "Неизвестно",
+    "noState": "Нет состояния",
+    "fallbackName": "Вентилятор"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Show brightness",
+      "temperature": "Show temperature",
+      "color": "Show color"
+    },
+    "sections": {
+      "temperature": "Temperature",
+      "color": "Color",
+      "presets": "Presets"
+    },
+    "temperaturePresets": {
+      "warm": "Warm",
+      "neutral": "Neutral",
+      "cool": "Cool"
+    }
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Turn on or off"
+    }
+  },
+  "alarmPanel": {
+    "defaultTitle": "Сигнализация",
+    "noState": "Нет состояния",
+    "wrongCode": "Неверный код",
+    "emptyTitle": "Nodalia Alarm Panel Card",
+    "emptyBody": "Укажите `entity`, чтобы показать эту карточку.",
+    "codePlaceholder": "Код",
+    "actions": {
+      "disarm": "Снять",
+      "arm_home": "Дома",
+      "arm_away": "Нет дома",
+      "arm_night": "Ночь",
+      "arm_vacation": "Отпуск",
+      "arm_custom_bypass": "Свой режим"
+    },
+    "states": {
+      "disarmed": "Снята",
+      "armed_home": "Дома",
+      "armed_away": "Нет дома",
+      "armed_night": "Ночь",
+      "armed_vacation": "Отпуск",
+      "armed_custom_bypass": "Свой режим",
+      "armed": "Включена",
+      "arming": "Включение",
+      "disarming": "Выключение",
+      "pending": "Ожидание",
+      "triggered": "Сработала",
+      "unavailable": "Недоступно",
+      "unknown": "Неизвестно"
+    }
+  },
+  "coverCard": {
+    "emptyTitle": "Nodalia Cover Card",
+    "emptyBody": "Задайте `entity` как сущность `cover.*`, чтобы показать карточку.",
+    "cardDescription": "Элементы управления в стиле карточки вентилятора для штор Home Assistant.",
+    "open": "Открыть",
+    "close": "Закрыть",
+    "stop": "Стоп",
+    "positionSlider": "Положение",
+    "tiltSlider": "Наклон",
+    "tiltChip": "Наклон {value}%",
+    "toggleShowButtons": "Show open, stop, and close",
+    "toggleShowSliders": "Show sliders"
+  },
+  "person": {
+    "home": "Дома",
+    "notHome": "Не дома",
+    "work": "Работа",
+    "school": "Школа",
+    "unavailable": "Недоступно",
+    "unknown": "Неизвестно",
+    "locationUnknown": "Местоположение неизвестно",
+    "emptyTitle": "Nodalia Person Card",
+    "emptyBody": "Укажите `entity`, чтобы показать эту карточку.",
+    "defaultName": "Человек"
+  },
+  "entityCard": {
+    "binarySensor": {
+      "doorOpen": "Открыта",
+      "doorClosed": "Закрыта",
+      "motionOn": "Обнаружено",
+      "motionOff": "Нет движения"
+    },
+    "boolean": {
+      "yes": "Да",
+      "no": "Нет"
+    },
+    "states": {
+      "on": "Вкл.",
+      "off": "Выкл.",
+      "open": "Открыто",
+      "opening": "Открывается",
+      "closed": "Закрыто",
+      "closing": "Закрывается",
+      "playing": "Воспроизведение",
+      "paused": "Пауза",
+      "buffering": "Буферизация",
+      "idle": "Ожидание",
+      "standby": "Ожидание",
+      "home": "Дома",
+      "not_home": "Не дома",
+      "detected": "Обнаружено",
+      "clear": "Норма",
+      "unavailable": "Недоступно",
+      "unknown": "Неизвестно",
+      "locked": "Заперто",
+      "unlocked": "Открыто",
+      "locking": "Запирание",
+      "unlocking": "Отпирание",
+      "locking_failed": "Ошибка запирания",
+      "unlocking_failed": "Ошибка отпирания",
+      "jammed": "Заклинило",
+      "pending": "Ожидание",
+      "stopped": "Остановлено",
+      "armed_away": "Включена (нет дома)",
+      "armed_home": "Включена (дома)",
+      "disarmed": "Снята",
+      "triggered": "Сработала",
+      "comfortable": "Комфортно",
+      "very_comfortable": "Очень комфортно",
+      "slightly_uncomfortable": "Немного некомфортно",
+      "somewhat_uncomfortable": "Некомфортно",
+      "quite_uncomfortable": "Довольно некомфортно",
+      "extremely_uncomfortable": "Очень некомфортно",
+      "ok_but_humid": "Нормально, но влажно",
+      "little_or_no_discomfort": "Нет дискомфорта",
+      "some_discomfort": "Есть дискомфорт",
+      "great_discomfort_avoid_exertion": "Сильный дискомфорт",
+      "dangerous_discomfort": "Опасный дискомфорт",
+      "heat_stroke_imminent": "Угроза теплового удара",
+      "dry": "Сухо",
+      "very_dry": "Очень сухо",
+      "too_dry": "Слишком сухо",
+      "humid": "Влажно",
+      "very_humid": "Очень влажно",
+      "too_humid": "Слишком влажно",
+      "wet": "Мокро",
+      "low": "Низкий",
+      "medium": "Средний",
+      "moderate": "Умеренный",
+      "high": "Высокий",
+      "very_high": "Очень высокий",
+      "severely_high": "Критически высокий",
+      "critical": "Критично",
+      "excellent": "Отлично",
+      "good": "Хорошо",
+      "fair": "Удовлетворительно",
+      "poor": "Плохо"
+    }
+  },
+  "weatherCard": {
+    "conditions": {
+      "clear_night": "Ясная ночь",
+      "cloudy": "Облачно",
+      "exceptional": "Исключительно",
+      "fog": "Туман",
+      "hail": "Град",
+      "lightning": "Молния",
+      "lightning_rainy": "Гроза с дождём",
+      "partlycloudy": "Переменная облачность",
+      "pouring": "Ливень",
+      "rainy": "Дождь",
+      "snowy": "Снег",
+      "snowy_rainy": "Мокрый снег",
+      "sunny": "Солнечно",
+      "windy": "Ветрено",
+      "windy_variant": "Переменный ветер"
+    },
+    "defaultCondition": "Погода",
+    "forecast": {
+      "chartAriaHourly": "Почасовой прогноз",
+      "chartAriaDaily": "Недельный прогноз",
+      "tabsAria": "Вид прогноза",
+      "tabCards": "Карточки",
+      "tabChart": "График",
+      "hoursTab": "Часы",
+      "weekTab": "Неделя",
+      "emptyHourly": "Почасовой прогноз недоступен.",
+      "emptyDaily": "Недельный прогноз недоступен.",
+      "chartInsufficientData": "Недостаточно данных для графика.",
+      "closeDetail": "Закрыть детали",
+      "maxLabel": "Макс.",
+      "minLabel": "Мин.",
+      "temperatureLabel": "Температура",
+      "rainLabel": "Дождь",
+      "humidityLabel": "Влажность",
+      "windLabel": "Ветер"
+    },
+    "meteoalarm": {
+      "name": "Meteoalarm",
+      "alertFallback": "Предупреждение",
+      "noAlerts": "Нет предупреждений",
+      "weatherAlert": "Погодное предупреждение",
+      "noWeatherAlerts": "Нет погодных предупреждений",
+      "level": "Уровень",
+      "type": "Тип",
+      "start": "Начало",
+      "end": "Конец",
+      "severity": "Серьёзность",
+      "urgency": "Срочность",
+      "certainty": "Достоверность",
+      "close": "Закрыть",
+      "descriptionTitle": "Описание",
+      "instructionsTitle": "Инструкции",
+      "terms": {
+        "moderate": "Умеренный",
+        "severe": "Сильный",
+        "high": "Высокий",
+        "extreme": "Экстремальный",
+        "minor": "Низкий",
+        "yellow": "Жёлтый",
+        "orange": "Оранжевый",
+        "red": "Красный",
+        "green": "Зелёный",
+        "future": "Будущее",
+        "immediate": "Немедленно",
+        "expected": "Ожидается",
+        "past": "Прошлое",
+        "likely": "Вероятно",
+        "observed": "Наблюдается",
+        "possible": "Возможно",
+        "unlikely": "Маловероятно",
+        "unknown": "Неизвестно",
+        "met": "Метеорологический",
+        "monitor": "Мониторинг"
+      }
+    }
+  },
+  "humidifierCard": {
+    "modes": {
+      "auto": "Авто",
+      "automatic": "Авто",
+      "smart": "Умный",
+      "smart_mode": "Умный",
+      "sleep": "Ночь",
+      "night": "Ночь",
+      "eco": "Эко",
+      "quiet": "Тихий",
+      "silent": "Тихий",
+      "low": "Низкий",
+      "medium": "Средний",
+      "mid": "Средний",
+      "high": "Высокий",
+      "boost": "Boost",
+      "turbo": "Турбо",
+      "normal": "Обычный",
+      "balanced": "Обычный",
+      "dry": "Сушка",
+      "drying": "Сушка",
+      "continuous": "Непрерывно",
+      "clothes_dry": "Бельё",
+      "laundry": "Бельё"
+    },
+    "deviceStates": {
+      "on": "Вкл.",
+      "off": "Выкл.",
+      "humidifying": "Увлажнение",
+      "dehumidifying": "Осушение",
+      "drying": "Сушка",
+      "idle": "Ожидание",
+      "unavailable": "Недоступно",
+      "unknown": "Неизвестно"
+    }
+  },
+  "climateCard": {
+    "modes": {
+      "off": "Выкл.",
+      "heat": "Обогрев",
+      "cool": "Охлаждение",
+      "heat_cool": "Обогрев и охлаждение",
+      "auto": "Авто",
+      "dry": "Осушение",
+      "fan_only": "Только вентилятор"
+    },
+    "actions": {
+      "heating": "Обогрев",
+      "cooling": "Охлаждение",
+      "drying": "Осушение",
+      "fan": "Вентиляция",
+      "fan_only": "Вентилятор",
+      "idle": "Ожидание",
+      "off": "Выкл."
+    },
+    "aria": {
+      "dialRangeGroup": "Диапазон комфорта и температура в помещении",
+      "dialTargetSlider": "Заданная температура",
+      "dialNoSetpoint": "Комнатная температура; на термостате нет активной уставки",
+      "togglePower": "Turn on or off"
+    },
+    "dialNoSetpointHint": "Нет активной уставки"
+  },
+  "graphCard": {
+    "emptyHistory": "История недоступна"
+  },
+  "notificationsCard": {
+    "fallbackEvent": "Событие",
+    "allDay": "Весь день",
+    "titles": {
+      "calendarSoon": "Скоро событие",
+      "calendarToday": "Событие сегодня",
+      "calendarUnavailable": "Календарь недоступен",
+      "vacuumAttention": "Робот требует внимания",
+      "vacuumPaused": "Робот на паузе",
+      "cleaningStarted": "Уборка начата",
+      "returningDock": "Робот возвращается на базу",
+      "motionDetected": "Обнаружено движение",
+      "doorOpen": "Дверь открыта",
+      "windowOpen": "Окно открыто",
+      "hot": "Жарко",
+      "cold": "Низкая температура",
+      "rainSoon": "Скоро дождь",
+      "batteryLow": "Низкий заряд батареи",
+      "humidifierFillLow": "Низкий уровень бака",
+      "inkLow": "Мало чернил",
+      "humidityHigh": "Высокая влажность",
+      "humidityLow": "Низкая влажность",
+      "customFallback": "Уведомление",
+      "mediaLeftOn": "Мультимедиа включено без присутствия"
+    },
+    "messages": {
+      "vacuumAttention": "{name} в состоянии {state}.",
+      "vacuumPaused": "{name} на паузе или ожидает.",
+      "vacuumState": "{name}: {state}.",
+      "hot": "{source} показывает {value}. Можно включить {fan}.",
+      "rainSoon": "{source} ожидает дождь около {time}. Если бельё снаружи, стоит проверить.",
+      "lowLevel": "{source}: {value}.",
+      "sensorValue": "{source} показывает {value}.",
+      "hotClimate": "{source} показывает {value}. Можно включить охлаждение на {climate}.",
+      "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие."
+    },
+    "actions": {
+      "openCalendar": "Открыть календарь",
+      "viewRobot": "Показать робота",
+      "continue": "Продолжить",
+      "viewSensor": "Показать датчик",
+      "turnOnFan": "Включить вентилятор",
+      "viewWeather": "Показать погоду",
+      "buyBattery": "Купить батарейку",
+      "buyInk": "Купить чернила",
+      "run": "Выполнить",
+      "toggle": "Переключить",
+      "open": "Открыть",
+      "less": "Меньше",
+      "turnOnCooling": "Включить охлаждение",
+      "turnOnHeat": "Включить обогрев",
+      "turnOnDehumidifier": "Включить осушитель",
+      "turnOff": "Выключить"
+    },
+    "severity": {
+      "critical": "Критично",
+      "warning": "Предупреждение",
+      "success": "OK",
+      "info": "Инфо"
+    },
+    "empty": {
+      "title": "All quiet",
+      "message": "You have no current alerts"
+    },
+    "aria": {
+      "dismiss": "Удалить уведомление",
+      "showLess": "Показать меньше",
+      "showAll": "Показать все уведомления"
+    }
+  },
+  "favCard": {
+    "disarmedF": "Снята",
+    "armed_home": "Дома",
+    "armed_away": "Нет дома",
+    "armed_night": "Ночь",
+    "armed_vacation": "Отпуск",
+    "armed_custom_bypass": "Свой режим",
+    "arming": "Включение",
+    "disarming": "Выключение",
+    "pending": "Ожидание",
+    "triggered": "Сработала"
+  },
+  "calendarCard": {
+    "allDay": "Весь день",
+    "timeRange": {
+      "threeDays": "3 дня",
+      "oneWeek": "1 неделя",
+      "twoWeeks": "2 недели",
+      "oneMonth": "1 месяц"
+    },
+    "buttons": {
+      "month": "Месяц",
+      "back": "Назад",
+      "delete": "Удалить",
+      "cancel": "Отмена",
+      "create": "Создать"
+    },
+    "fields": {
+      "calendar": "Календарь",
+      "title": "Заголовок",
+      "description": "Описание",
+      "location": "Место",
+      "date": "Дата",
+      "start": "Начало",
+      "end": "Конец",
+      "repeat": "Повтор",
+      "repeatFrequency": "Частота",
+      "repeatInterval": "Каждые сколько единиц",
+      "customColor": "Свой цвет",
+      "customColorTitle": "Пользовательский цвет",
+      "color": "Цвет"
+    },
+    "placeholders": {
+      "title": "Напр. визит к врачу",
+      "optional": "Необязательно"
+    },
+    "repeat": {
+      "none": "Не повторяется",
+      "yearly": "Ежегодно",
+      "monthly": "Ежемесячно",
+      "weekly": "Еженедельно",
+      "daily": "Ежедневно",
+      "custom": "Пользовательский"
+    },
+    "composer": {
+      "newEvent": "Новое событие"
+    },
+    "event": {
+      "untitled": "Событие без названия"
+    },
+    "states": {
+      "loading": "Загрузка событий..."
+    },
+    "empty": {
+      "range": "В этом диапазоне нет событий.",
+      "day": "В этот день нет событий.",
+      "eventDetails": "У этого события нет описания и места."
+    },
+    "errors": {
+      "loadEvents": "Не удалось загрузить события календаря.",
+      "selectCalendar": "Выберите календарь.",
+      "enterTitle": "Введите заголовок.",
+      "selectDate": "Выберите дату.",
+      "selectDateTime": "Выберите дату, начало и конец.",
+      "selectRepeatFrequency": "Выберите частоту для пользовательского повтора.",
+      "invalidRepeatInterval": "Интервал должен быть числом больше или равным 1.",
+      "pastDate": "Дата не может быть раньше сегодняшнего дня.",
+      "createEvent": "Не удалось создать событие.",
+      "createEventWithMessage": "Не удалось создать событие: {message}"
+    },
+    "deleteRecurrence": {
+      "title": "Delete recurring event",
+      "message": "This event is part of a series. What would you like to delete?",
+      "thisOnly": "This occurrence only",
+      "thisAndFuture": "This and all following occurrences",
+      "deleteFailed": "Could not delete the event. Please try again.",
+      "deleteFailedWithMessage": "Could not delete the event: {message}"
+    },
+    "aria": {
+      "newEventDialog": "Новое событие календаря",
+      "deleteEvent": "Удалить событие",
+      "deleteRecurringDialog": "Choose how to delete the recurring event",
+      "createHaEvent": "Создать событие HA",
+      "close": "Закрыть"
+    }
+  },
+  "vacuumErrorLabels": {
+    "lidar_blocked": "LiDAR blocked",
+    "bumper_stuck": "Bumper stuck",
+    "wheels_suspended": "Wheels suspended",
+    "cliff_sensor_error": "Cliff sensor error",
+    "main_brush_jammed": "Main brush jammed",
+    "side_brush_jammed": "Side brush jammed",
+    "wheels_jammed": "Wheels jammed",
+    "robot_trapped": "Robot trapped",
+    "no_dustbin": "Dustbin missing",
+    "strainer_error": "Filter error",
+    "compass_error": "Compass error",
+    "low_battery": "Low battery",
+    "charging_error": "Charging error",
+    "battery_error": "Battery error",
+    "wall_sensor_dirty": "Wall sensor dirty",
+    "robot_tilted": "Robot tilted",
+    "side_brush_error": "Side brush error",
+    "fan_error": "Fan error",
+    "dock": "Dock error",
+    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
+    "vertical_bumper_pressed": "Vertical bumper pressed",
+    "dock_locator_error": "Dock locator error",
+    "return_to_dock_fail": "Failed to return to dock",
+    "nogo_zone_detected": "No-go zone detected",
+    "visual_sensor": "Visual sensor error",
+    "light_touch": "Light touch sensor triggered",
+    "vibrarise_jammed": "VibraRise jammed",
+    "robot_on_carpet": "Robot on carpet",
+    "filter_blocked": "Filter blocked",
+    "invisible_wall_detected": "Invisible wall detected",
+    "cannot_cross_carpet": "Cannot cross carpet",
+    "internal_error": "Internal error",
+    "collect_dust_error_3": "Dust collection error",
+    "collect_dust_error_4": "Dust collection error",
+    "mopping_roller_1": "Mopping roller error",
+    "mopping_roller_error_2": "Mopping roller error",
+    "clear_water_box_hoare": "Clean water tank abnormal",
+    "dirty_water_box_hoare": "Dirty water tank abnormal",
+    "sink_strainer_hoare": "Sink strainer abnormal",
+    "clear_water_box_exception": "Clean water tank error",
+    "clear_brush_exception": "Cleaning brush error",
+    "clear_brush_exception_2": "Cleaning brush error",
+    "filter_screen_exception": "Filter screen error",
+    "mopping_roller_2": "Mopping roller error",
+    "up_water_exception": "Water refill error",
+    "drain_water_exception": "Water drain error",
+    "temperature_protection": "Temperature protection",
+    "clean_carousel_exception": "Cleaning carousel error",
+    "clean_carousel_water_full": "Cleaning carousel water full",
+    "water_carriage_drop": "Water carriage dropped",
+    "check_clean_carouse": "Check cleaning carousel",
+    "audio_error": "Audio error"
+  }
+}
