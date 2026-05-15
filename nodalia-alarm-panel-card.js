@@ -1857,10 +1857,14 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       };
 
       const promise = this._hass.callService("alarm_control_panel", service, payload);
-      Promise.resolve(promise).catch(() => {
-        this._clearPinVerifyWatch();
-        this._showNativePinErrorChip();
-      });
+      Promise.resolve(promise)
+        .then(() => {
+          this._clearPinVerifyWatch();
+        })
+        .catch(() => {
+          this._clearPinVerifyWatch();
+          this._showNativePinErrorChip();
+        });
     } else {
       this._hass.callService("alarm_control_panel", service, payload);
     }

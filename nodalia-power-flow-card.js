@@ -2510,8 +2510,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (line.id === "solar" || line.id === "solar-grid") {
         pathHints.preferVerticalFirst = true;
       }
-      /** Battery sits on the bottom spine: vertical-first keeps arcs consistent with solar (avoid horizontal-first 90° when |dx|≈|dy|). */
-      if (line.id === "battery" || line.id === "battery-grid" || line.id === "grid-battery") {
+      /** Battery sits on the bottom spine: vertical-first for home↔battery; grid→battery uses horizontal-first (hub routing). */
+      if (line.id === "battery" || line.id === "battery-grid") {
         pathHints.preferVerticalFirst = true;
       }
       const path = line.straight
