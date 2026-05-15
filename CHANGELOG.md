@@ -12,11 +12,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** line.
 
-### Fixed
-
-- **`nodalia-power-flow-card.js`:** animated flow dots no longer flash in the card corner on first dashboard navigation — entrance **`animation-fill-mode`** is **`both`** (not **`forwards`**) so **`opacity: 0`** from the first keyframe applies during the CSS **`animation-delay`** before dots fade in.
-
-- **`nodalia-cover-card.js`:** tapping open / stop / close or the card chrome while the card is partly off-screen no longer nudges the dashboard scroll — **`focusin`** no longer pairs **`_rememberInteractionScroll`** with **`_scheduleInteractionScrollRestore`** for those controls (it fought the browser’s scroll-into-view after focus), and the same snapshot / restore calls were removed from their pointer / click paths; sliders still use the snapshot flow after **`hass`**-driven re-renders.
 
 ### Planned / In progress
 
@@ -25,6 +20,22 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Security and service-action hardening.
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
+
+---
+
+## [1.1.1-alpha.5] - 2026-05-12
+
+Fifth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.5`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.5.js`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** animated flow dots no longer flash in the card corner on first dashboard navigation — entrance **`animation-fill-mode`** is **`both`** (not **`forwards`**) so **`opacity: 0`** from the first keyframe applies during the CSS **`animation-delay`** before dots fade in.
+
+- **`nodalia-cover-card.js`:** tapping open / stop / close or the card chrome while the card is partly off-screen no longer nudges the dashboard scroll — **`focusin`** no longer pairs **`_rememberInteractionScroll`** with **`_scheduleInteractionScrollRestore`** for those controls (it fought the browser’s scroll-into-view after focus), and the same snapshot / restore calls were removed from their pointer / click paths; sliders still use the snapshot flow after **`hass`**-driven re-renders.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.5`**.
 
 ---
 

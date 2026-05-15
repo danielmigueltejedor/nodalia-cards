@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.5] - 2026-05-12
+
+Fifth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.5`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.5.js`**.
+
+### Changed
+
+- **Release metadata:** bump the **`1.1.1`** prerelease line to **`1.1.1-alpha.5`**.
+
+---
+
 ## [1.1.1-alpha.4] - 2026-05-12
 
 Fourth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.4`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.4.js`**.
