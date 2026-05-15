@@ -670,33 +670,23 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.doesNotMatch(source, /_preventNonTouchFocus/);
   assert.match(
     source,
-    /const actionControl = path\.find\(node => node instanceof HTMLElement && node\.dataset\?\.coverAction\);[\s\S]*this\._prepareInteractionScrollAnchor\(\)/,
-  );
-  assert.match(
-    source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
   );
   assert.match(
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
-  assert.match(source, /_captureInteractionScrollSnapshot\(\)/);
-  assert.match(source, /_prepareInteractionScrollAnchor\(options = \{\}\)/);
-  assert.match(source, /_cancelInteractionScrollAnchor\(\)/);
-  assert.match(source, /this\._render\(\);\s*this\._scheduleInteractionScrollRestore\(2\);/);
-  assert.match(source, /this\._prepareInteractionScrollAnchor\(\);\s*this\._hass\.callService\("cover"/);
-  assert.match(source, /this\._prepareInteractionScrollAnchor\(\{ watch: false \}\);/);
-  assert.match(source, /window\.addEventListener\("wheel", this\._cancelInteractionScrollAnchor, \{ passive: true, capture: true \}\)/);
-  assert.match(source, /window\.addEventListener\("touchmove", this\._cancelInteractionScrollAnchor, \{ passive: true, capture: true \}\)/);
+  assert.doesNotMatch(source, /_captureInteractionScrollSnapshot/);
+  assert.doesNotMatch(source, /_prepareInteractionScrollAnchor/);
+  assert.doesNotMatch(source, /getComputedStyle\(element\)/);
   assert.doesNotMatch(source, /_rememberInteractionScroll/);
   assert.doesNotMatch(source, /_cancelInteractionScrollRestore/);
   assert.doesNotMatch(source, /const coverAction = button\.dataset\.coverAction;[\s\S]*button\.blur\(\)/);
-  assert.match(source, /overflow-anchor: none/);
+  assert.doesNotMatch(source, /overflow-anchor: none/);
+  assert.doesNotMatch(source, /touch-action: manipulation/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
-  assert.match(source, /tabindex="-1"/);
-  assert.doesNotMatch(source, /data-cover-action="body"[\s\S]{0,80}tabindex="-1"/);
-  assert.match(source, /data-cover-action="icon"[^>]*tabindex="-1"/);
+  assert.doesNotMatch(source, /tabindex="-1"/);
   assert.match(source, /opacity: 0;[\s\S]*outline: none;[\s\S]*touch-action: pan-y;/);
 });
 
@@ -791,14 +781,20 @@ test("calendar card reuses date/time formatters during render", () => {
 test("power flow flow dots avoid origin flash before motion starts", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /function getSvgPathMotionStart\(pathD\)/);
+  assert.match(source, /const SVG_PATH_TOKEN_RE = \/\[AaCcHhLlMmQqSsTtVvZz\]/);
+  assert.match(source, /function tokenizeSvgPath\(pathD\)/);
+  assert.match(source, /readFlag\(\)/);
   assert.match(source, /function getSvgRelativeMotionPath\(pathD\)/);
   assert.match(source, /const motionPath = getSvgRelativeMotionPath\(line\.path\)/);
-  assert.match(source, /formatSvgMotionNumber\(x - start\.x\)/);
-  assert.match(source, /formatSvgMotionNumber\(y - start\.y\)/);
+  assert.match(source, /upper === "C"/);
+  assert.match(source, /upper === "S" \|\| upper === "Q"/);
+  assert.match(source, /upper === "H"/);
+  assert.match(source, /upper === "V"/);
   assert.match(source, /cx="\$\{cx\}" cy="\$\{cy\}"/);
   assert.match(source, /const path = escapeHtml\(motionPath\.path\)/);
   assert.match(source, /<animateMotion[^>]*path="\$\{path\}"/);
   assert.doesNotMatch(source, /<animateMotion[^>]*path="\$\{line\.path\}"/);
+  assert.doesNotMatch(source, /offsetWidth/);
   assert.match(source, /\.power-flow-card__dot-group \{[\s\S]*opacity: 0;/);
   assert.match(source, /\.power-flow-card:not\(\.power-flow-card--motion-paused\) \.power-flow-card__dot-group/);
   assert.match(source, /\.power-flow-card__simple-dot \{[\s\S]*opacity: 0;/);

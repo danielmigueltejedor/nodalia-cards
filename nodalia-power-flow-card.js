@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.1-alpha.9";
+const CARD_VERSION = "1.1.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1055,23 +1055,98 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function getSvgPathMotionStart(pathD) {
-  const normalized = String(pathD || "").trim();
-  const match = normalized.match(
-    /^[Mm]\s*([+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?)[,\s]+([+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?)/,
-  );
-  if (!match) {
-    return { x: 0, y: 0 };
-  }
-  return { x: Number(match[1]), y: Number(match[2]) };
-}
-
 function formatSvgMotionNumber(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return "0";
   }
   return String(Number(number.toFixed(3)));
+}
+
+const SVG_PATH_TOKEN_RE = /[AaCcHhLlMmQqSsTtVvZz]|[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][+-]?\d+)?/g;
+
+function tokenizeSvgPath(pathD) {
+  return String(pathD || "").match(SVG_PATH_TOKEN_RE) || [];
+}
+
+function isSvgPathCommand(token) {
+  return /^[AaCcHhLlMmQqSsTtVvZz]$/.test(String(token || ""));
+}
+
+function createSvgTokenReader(tokens) {
+  let index = 0;
+
+  return {
+    get index() {
+      return index;
+    },
+    set index(value) {
+      index = value;
+    },
+    hasMore() {
+      return index < tokens.length;
+    },
+    hasNumber() {
+      return index < tokens.length && !isSvgPathCommand(tokens[index]);
+    },
+    peek() {
+      return tokens[index];
+    },
+    readCommand() {
+      return isSvgPathCommand(tokens[index]) ? tokens[index++] : "";
+    },
+    readNumber() {
+      if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
+        return NaN;
+      }
+      const value = Number(tokens[index]);
+      index += 1;
+      return value;
+    },
+    readFlag() {
+      if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
+        return NaN;
+      }
+      const raw = String(tokens[index]);
+      const first = raw.charAt(0);
+      if (first !== "0" && first !== "1") {
+        index += 1;
+        return NaN;
+      }
+      if (raw.length > 1) {
+        tokens[index] = raw.slice(1);
+      } else {
+        index += 1;
+      }
+      return Number(first);
+    },
+  };
+}
+
+function getSvgPathMotionStart(pathD) {
+  const tokens = tokenizeSvgPath(pathD);
+  const reader = createSvgTokenReader(tokens);
+  const command = reader.readCommand();
+  if (String(command).toUpperCase() !== "M") {
+    return { x: 0, y: 0 };
+  }
+  const x = reader.readNumber();
+  const y = reader.readNumber();
+  return Number.isFinite(x) && Number.isFinite(y)
+    ? { x, y }
+    : { x: 0, y: 0 };
+}
+
+function pushSvgPoint(output, command, x, y, start, absolute) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return false;
+  }
+  output.push(
+    command,
+    formatSvgMotionNumber(absolute ? x - start.x : x),
+    formatSvgMotionNumber(absolute ? y - start.y : y),
+  );
+  return true;
 }
 
 function getSvgRelativeMotionPath(pathD) {
@@ -1081,61 +1156,169 @@ function getSvgRelativeMotionPath(pathD) {
     return { start, path: "M 0 0" };
   }
 
-  const tokens = source.match(/[MLA]|[+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?/gi) || [];
+  const tokens = tokenizeSvgPath(source);
   if (!tokens.length) {
     return { start, path: "M 0 0" };
   }
 
+  const reader = createSvgTokenReader(tokens);
   const output = [];
-  let index = 0;
-  while (index < tokens.length) {
-    const command = tokens[index++];
-    const upper = String(command).toUpperCase();
+  let command = "";
+  let firstMove = true;
 
-    if (upper === "M" || upper === "L") {
-      const x = Number(tokens[index++]);
-      const y = Number(tokens[index++]);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        return { start, path: "M 0 0" };
+  while (reader.hasMore()) {
+    if (isSvgPathCommand(reader.peek())) {
+      command = reader.readCommand();
+    } else if (!command) {
+      return { start, path: "M 0 0" };
+    }
+
+    const upper = String(command).toUpperCase();
+    const absolute = command === upper;
+
+    if (upper === "Z") {
+      output.push(command);
+      continue;
+    }
+
+    if (upper === "M") {
+      let firstPair = true;
+      while (reader.hasNumber()) {
+        const x = reader.readNumber();
+        const y = reader.readNumber();
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          return { start, path: "M 0 0" };
+        }
+        if (firstMove) {
+          output.push("M", "0", "0");
+          firstMove = false;
+        } else {
+          const outCommand = firstPair ? (absolute ? "M" : "m") : (absolute ? "L" : "l");
+          if (!pushSvgPoint(output, outCommand, x, y, start, absolute)) {
+            return { start, path: "M 0 0" };
+          }
+        }
+        firstPair = false;
       }
-      output.push(
-        upper,
-        formatSvgMotionNumber(x - start.x),
-        formatSvgMotionNumber(y - start.y),
-      );
+      command = absolute ? "L" : "l";
+      continue;
+    }
+
+    if (upper === "L" || upper === "T") {
+      while (reader.hasNumber()) {
+        const x = reader.readNumber();
+        const y = reader.readNumber();
+        if (!pushSvgPoint(output, command, x, y, start, absolute)) {
+          return { start, path: "M 0 0" };
+        }
+      }
+      continue;
+    }
+
+    if (upper === "H") {
+      while (reader.hasNumber()) {
+        const x = reader.readNumber();
+        if (!Number.isFinite(x)) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command, formatSvgMotionNumber(absolute ? x - start.x : x));
+      }
+      continue;
+    }
+
+    if (upper === "V") {
+      while (reader.hasNumber()) {
+        const y = reader.readNumber();
+        if (!Number.isFinite(y)) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command, formatSvgMotionNumber(absolute ? y - start.y : y));
+      }
+      continue;
+    }
+
+    if (upper === "C") {
+      while (reader.hasNumber()) {
+        const values = [
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+        ];
+        if (values.some(value => !Number.isFinite(value))) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command);
+        for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
+          output.push(
+            formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
+            formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1]),
+          );
+        }
+      }
+      continue;
+    }
+
+    if (upper === "S" || upper === "Q") {
+      while (reader.hasNumber()) {
+        const values = [
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+          reader.readNumber(),
+        ];
+        if (values.some(value => !Number.isFinite(value))) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(command);
+        for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
+          output.push(
+            formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
+            formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1]),
+          );
+        }
+      }
       continue;
     }
 
     if (upper === "A") {
-      const rx = Number(tokens[index++]);
-      const ry = Number(tokens[index++]);
-      const rotation = Number(tokens[index++]);
-      const largeArc = Number(tokens[index++]);
-      const sweep = Number(tokens[index++]);
-      const x = Number(tokens[index++]);
-      const y = Number(tokens[index++]);
-      if (
-        !Number.isFinite(rx) ||
-        !Number.isFinite(ry) ||
-        !Number.isFinite(rotation) ||
-        !Number.isFinite(largeArc) ||
-        !Number.isFinite(sweep) ||
-        !Number.isFinite(x) ||
-        !Number.isFinite(y)
-      ) {
-        return { start, path: "M 0 0" };
+      while (reader.hasNumber()) {
+        const rx = reader.readNumber();
+        const ry = reader.readNumber();
+        const rotation = reader.readNumber();
+        const largeArc = reader.readFlag();
+        const sweep = reader.readFlag();
+        const x = reader.readNumber();
+        const y = reader.readNumber();
+        if (
+          !Number.isFinite(rx) ||
+          !Number.isFinite(ry) ||
+          !Number.isFinite(rotation) ||
+          !Number.isFinite(largeArc) ||
+          !Number.isFinite(sweep) ||
+          !Number.isFinite(x) ||
+          !Number.isFinite(y)
+        ) {
+          return { start, path: "M 0 0" };
+        }
+        output.push(
+          command,
+          formatSvgMotionNumber(rx),
+          formatSvgMotionNumber(ry),
+          formatSvgMotionNumber(rotation),
+          String(largeArc ? 1 : 0),
+          String(sweep ? 1 : 0),
+          formatSvgMotionNumber(absolute ? x - start.x : x),
+          formatSvgMotionNumber(absolute ? y - start.y : y),
+        );
       }
-      output.push(
-        upper,
-        formatSvgMotionNumber(rx),
-        formatSvgMotionNumber(ry),
-        formatSvgMotionNumber(rotation),
-        String(largeArc ? 1 : 0),
-        String(sweep ? 1 : 0),
-        formatSvgMotionNumber(x - start.x),
-        formatSvgMotionNumber(y - start.y),
-      );
       continue;
+    }
+
+    if (reader.hasNumber()) {
+      return { start, path: "M 0 0" };
     }
   }
 
@@ -1684,16 +1867,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
       }
     };
-    /** Two rAFs + a layout read: SMIL `animateMotion` can paint one frame at the wrong origin if `unpauseAnimations` runs before the SVG has a stable box (tab focus, IO, fresh `innerHTML`). */
+    /** Two rAFs give freshly-rendered SVG motion paths a stable frame without forcing synchronous layout. */
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
       this._flowUnpauseRaf = window.requestAnimationFrame(() => {
         if (!this.isConnected || !this.shadowRoot) {
           this._flowUnpauseRaf = 0;
           return;
-        }
-        const surface = this.shadowRoot.querySelector(".power-flow-card__surface");
-        if (surface) {
-          void surface.offsetWidth;
         }
         this._flowUnpauseRaf = window.requestAnimationFrame(() => {
           runUnpause();
