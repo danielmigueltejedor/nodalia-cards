@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.7] - 2026-05-15
+
+Seventh **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.7`**.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** `min_columns: 6`; narrow-grid toggle lane for centered transport without overlap.
+
+---
+
 ## [1.1.1-alpha.6] - 2026-05-15
 
 Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.6.js`**.
@@ -20,6 +30,11 @@ Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package
 
 - **`nodalia-light-card.js`:** preset chips centered and mode-scoped; collapsed-panel power-down fix.
 - **`nodalia-cover-card.js`:** transport pill for open/stop/close; centered arrow controls with overlay mode toggle.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** unified focus prevention for sliders and action chips (no scroll snapshot / restore).
+- **`nodalia-power-flow-card.js`:** flow dot origin flash on simple and SVG layouts.
 
 ---
 

@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.1-alpha.6";
+const CARD_VERSION = "1.1.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1053,6 +1053,17 @@ function clamp(value, min, max) {
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function getSvgPathMotionStart(pathD) {
+  const normalized = String(pathD || "").trim();
+  const match = normalized.match(
+    /^[Mm]\s*([+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?)[,\s]+([+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?)/,
+  );
+  if (!match) {
+    return { x: 0, y: 0 };
+  }
+  return { x: Number(match[1]), y: Number(match[2]) };
 }
 
 function escapeHtml(value) {
@@ -2561,12 +2572,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const coreRy = coreR * viewAspect;
     const motionPhase = ((String(line.id || "").split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 19) / 19) * 0.92;
     const beginAttr = motionPhase > 0.02 ? ` begin="${motionPhase.toFixed(3)}s"` : "";
+    const pathStart = getSvgPathMotionStart(line.path);
+    const cx = pathStart.x.toFixed(3);
+    const cy = pathStart.y.toFixed(3);
     return `
       <g class="power-flow-card__dot-group" style="--dot-color:${escapeHtml(line.color)};">
-        <ellipse class="power-flow-card__dot-glow" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
+        <ellipse class="power-flow-card__dot-glow" cx="${cx}" cy="${cy}" rx="${glowR.toFixed(3)}" ry="${glowRy.toFixed(3)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
         </ellipse>
-        <ellipse class="power-flow-card__dot-core" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
+        <ellipse class="power-flow-card__dot-core" cx="${cx}" cy="${cy}" rx="${coreR.toFixed(3)}" ry="${coreRy.toFixed(3)}" stroke-width="${coreStroke.toFixed(2)}">
           <animateMotion dur="${bubbleDuration.toFixed(2)}s" repeatCount="indefinite" calcMode="linear" path="${line.path}"${beginAttr}></animateMotion>
         </ellipse>
       </g>
@@ -3269,6 +3283,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
           stroke-width: ${flowWidth * 1.28}px;
         }
 
+        .power-flow-card__dot-group {
+          opacity: 0;
+        }
+
+        .power-flow-card:not(.power-flow-card--motion-paused) .power-flow-card__dot-group {
+          opacity: 1;
+        }
+
         .power-flow-card__dot-glow {
           fill: color-mix(in srgb, var(--dot-color) 32%, rgba(255,255,255,0.2));
           opacity: 0.88;
@@ -3528,6 +3550,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__simple-dot {
+          animation: power-flow-card-simple-dot linear infinite both;
           background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
           border-radius: 999px;
           box-shadow:
@@ -3535,12 +3558,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
             0 0 10px color-mix(in srgb, var(--line-color) 20%, transparent);
           height: 8px;
           left: 0;
+          opacity: 0;
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
           width: 8px;
           will-change: left, opacity;
-          animation: power-flow-card-simple-dot linear infinite;
+        }
+
+        .power-flow-card__simple-rail--entering .power-flow-card__simple-dot {
+          animation: none;
+          opacity: 0;
+          visibility: hidden;
         }
 
         .power-flow-card--motion-paused .power-flow-card__simple-dot {

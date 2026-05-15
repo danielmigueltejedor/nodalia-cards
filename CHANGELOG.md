@@ -23,6 +23,16 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 
 ---
 
+## [1.1.1-alpha.7] - 2026-05-15
+
+Seventh **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.7`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.7.js`**.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** minimum dashboard width is **6 columns** (`min_columns: 6`); at **6 columns or less**, open/stop/close transport centers in a dedicated lane so it does not overlap the view-toggle button (grid + container query + `grid_options.columns`).
+
+---
+
 ## [1.1.1-alpha.6] - 2026-05-15
 
 Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.6.js`**.
@@ -36,6 +46,11 @@ Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package
 - **`nodalia-light-card.js`:** brightness / temperature / color quick presets are **centered** and only shown for the **active slider mode** (brightness, temperature, or color).
 - **`nodalia-cover-card.js`:** open / stop / close controls sit in a **pill transport bubble** (media-player style); arrow view centers controls with the mode toggle **overlaid** on the right.
 - **`nodalia-light-card.js`:** power-down animation no longer replays expanded controls when the panel was already collapsed (`auto_expand: false`).
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** open / stop / close, icon, and sliders no longer steal focus or nudge dashboard scroll — all controls use **`preventDefault`** on pointer/mouse down (like the view toggle), **`focusin`** only blurs without scroll snapshot restore, and click no longer calls **`button.blur()`**.
+- **`nodalia-power-flow-card.js`:** simple-layout flow dots and SVG SMIL dots no longer flash at the top-left on animation start — **`animation-fill-mode: both`**, hidden during entrance, initial **`cx`/`cy`** from path start, and dot groups stay hidden until motion unpause.
 
 ---
 

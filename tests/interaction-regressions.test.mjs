@@ -659,13 +659,15 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   );
   assert.match(
     source,
-    /if \(actionControl\) \{[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*return;[\s\S]*\}[\s\S]*this\._preventNonTouchFocus\(event\);/,
+    /if \(slider\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/,
   );
-  assert.match(source, /chipAction === "open" \|\| chipAction === "close" \|\| chipAction === "stop"/);
   assert.match(
     source,
-    /Open \/ stop \/ close: blur only — scroll snapshot \+ rAF restore fights the browser's scroll-into-view/,
+    /if \(actionControl\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*\}/,
   );
+  assert.match(source, /case "toggle_controls_view":[\s\S]*_syncCoverControlsViewDom\(\)/);
+  assert.doesNotMatch(source, /case "toggle_controls_view":[\s\S]{0,280}this\._render\(\)/);
+  assert.doesNotMatch(source, /_toggleCoverControlsView/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false, capture: true \}\)/);
@@ -674,23 +676,27 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
     source,
     /_onTouchStart\(event\) \{[\s\S]*const slider = path\.find\(node => node instanceof HTMLInputElement && node\.dataset\?\.coverControl\);[\s\S]*return;\s*\}\s*\}/,
   );
-  assert.match(source, /_scheduleInteractionScrollRestore\(\) \{[\s\S]*window\.requestAnimationFrame/);
-  assert.doesNotMatch(source, /_restoreInteractionScroll\(\)/);
-  assert.match(source, /_rememberInteractionScroll\(\)/);
-  assert.match(source, /_restoreInteractionScrollSnapshot\(options = \{\}\)/);
-  assert.match(source, /this\._restoreInteractionScrollSnapshot\(\{ preserve: true \}\)/);
-  assert.doesNotMatch(source, /this\._lastRenderedIsActive = isActive;\s*\n\s*this\._restoreInteractionScrollSnapshot/);
-  assert.match(source, /window\.addEventListener\("wheel", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
-  assert.match(source, /window\.addEventListener\("touchmove", this\._cancelInteractionScrollRestore, \{ passive: true, capture: true \}\)/);
-  assert.match(source, /_cancelInteractionScrollRestore\(\)/);
+  assert.doesNotMatch(source, /_rememberInteractionScroll/);
+  assert.doesNotMatch(source, /_restoreInteractionScrollSnapshot/);
+  assert.doesNotMatch(source, /_scheduleInteractionScrollRestore/);
+  assert.doesNotMatch(source, /_cancelInteractionScrollRestore/);
+  assert.doesNotMatch(source, /const coverAction = button\.dataset\.coverAction;[\s\S]*button\.blur\(\)/);
   assert.match(source, /overflow-anchor: none/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
-  assert.match(source, /typeof button\.blur === "function"[\s\S]*button\.blur\(\)/);
   assert.match(source, /tabindex="-1"/);
   assert.doesNotMatch(source, /data-cover-action="body"[\s\S]{0,80}tabindex="-1"/);
   assert.match(source, /data-cover-action="icon"[^>]*tabindex="-1"/);
   assert.match(source, /opacity: 0;[\s\S]*outline: none;[\s\S]*touch-action: pan-y;/);
+});
+
+test("cover card enforces six-column minimum and reserves toggle lane on narrow grids", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /min_columns: 6/);
+  assert.match(source, /COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6/);
+  assert.match(source, /_shouldReserveCoverToggleLane\(/);
+  assert.match(source, /fan-card--cover-ui-toggle-lane/);
+  assert.match(source, /@container cover-card \(max-width:/);
 });
 
 test("cover card combines sliders and a row toggle for open/stop/close", () => {
@@ -770,6 +776,18 @@ test("calendar card reuses date/time formatters during render", () => {
   assert.equal((source.match(/new Intl\.DateTimeFormat/g) || []).length, 1);
   assert.match(source, /formatDateLabel\(date, locale\)[\s\S]*getDateTimeFormatter\(locale/);
   assert.match(source, /formatTimeLabel\(date, locale\)[\s\S]*getDateTimeFormatter\(locale/);
+});
+
+test("power flow flow dots avoid origin flash before motion starts", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /function getSvgPathMotionStart\(pathD\)/);
+  assert.match(source, /const pathStart = getSvgPathMotionStart\(line\.path\)/);
+  assert.match(source, /cx="\$\{cx\}" cy="\$\{cy\}"/);
+  assert.match(source, /\.power-flow-card__dot-group \{[\s\S]*opacity: 0;/);
+  assert.match(source, /\.power-flow-card:not\(\.power-flow-card--motion-paused\) \.power-flow-card__dot-group/);
+  assert.match(source, /\.power-flow-card__simple-dot \{[\s\S]*opacity: 0;/);
+  assert.match(source, /animation: power-flow-card-simple-dot linear infinite both;/);
+  assert.match(source, /\.power-flow-card__simple-rail--entering \.power-flow-card__simple-dot/);
 });
 
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
