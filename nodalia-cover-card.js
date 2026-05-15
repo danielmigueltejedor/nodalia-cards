@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.1-alpha.5";
+const CARD_VERSION = "1.1.1-alpha.6";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2063,10 +2063,11 @@ class NodaliaCoverCard extends HTMLElement {
     const hasSliders = supportsPosition || supportsTilt;
     const coverUiClass = hasSliders ? (coverUiMode === "arrows" ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider") : "";
     const arrowButtonsHtml = `
-        <button type="button" class="fan-card__control" data-cover-action="open" aria-label="${escapeHtml(tOpen)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
-        ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="${escapeHtml(tStop)}" tabindex="-1"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
-        <button type="button" class="fan-card__control" data-cover-action="close" aria-label="${escapeHtml(tClose)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
+        <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="open" aria-label="${escapeHtml(tOpen)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
+        ${supportsStop ? `<button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="stop" aria-label="${escapeHtml(tStop)}" tabindex="-1"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
+        <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="close" aria-label="${escapeHtml(tClose)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
       `;
+    const arrowTransportHtml = `<div class="fan-card__transport">${arrowButtonsHtml}</div>`;
     const controlsMarkup = hasSliders
       ? `
         <div class="fan-card__slider-row">
@@ -2076,8 +2077,7 @@ class NodaliaCoverCard extends HTMLElement {
               ${supportsTilt ? this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" }) : ""}
             </div>
             <div class="fan-card__view fan-card__view--arrows">
-              <div class="fan-card__controls fan-card__controls--embedded">${arrowButtonsHtml}
-              </div>
+              <div class="fan-card__controls fan-card__controls--embedded">${arrowTransportHtml}</div>
             </div>
           </div>
           <div class="fan-card__slider-actions">
@@ -2085,8 +2085,7 @@ class NodaliaCoverCard extends HTMLElement {
           </div>
         </div>
       `
-      : `<div class="fan-card__controls">${arrowButtonsHtml}
-      </div>`;
+      : `<div class="fan-card__controls">${arrowTransportHtml}</div>`;
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
@@ -2245,15 +2244,45 @@ class NodaliaCoverCard extends HTMLElement {
           justify-content: center;
         }
         .fan-card__controls--embedded {
-          flex-wrap: nowrap;
-          gap: 10px;
+          display: flex;
           justify-content: center;
           margin: 0;
           padding: 0;
           width: 100%;
         }
+        .fan-card__transport {
+          align-items: center;
+          backdrop-filter: blur(18px);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.14);
+          display: inline-flex;
+          gap: 6px;
+          padding: 8px 10px;
+        }
+        .fan-card__transport .fan-card__control--in-transport {
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+        }
+        .fan-card__controls > .fan-card__transport {
+          margin-inline: auto;
+        }
         .fan-card--cover-ui-arrows .fan-card__view--sliders { display: none; }
         .fan-card--cover-ui-slider .fan-card__view--arrows { display: none; }
+        .fan-card--cover-ui-arrows .fan-card__slider-row {
+          grid-template-columns: minmax(0, 1fr);
+          position: relative;
+        }
+        .fan-card--cover-ui-arrows .fan-card__slider-actions {
+          align-items: center;
+          inset-block: 0;
+          justify-content: flex-end;
+          position: absolute;
+          right: 4px;
+          z-index: 1;
+        }
         .fan-card__control--active {
           background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
           border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));

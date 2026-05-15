@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.1-alpha.5";
+const CARD_VERSION = "1.1.1-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3869,7 +3869,7 @@ class NodaliaLightCard extends HTMLElement {
       config.show_quick_temperature_presets === true &&
       config.show_temperature_controls !== false &&
       supportsColorTemperature &&
-      (displayedControlMode === "brightness" || displayedControlMode === "temperature") &&
+      displayedControlMode === "temperature" &&
       temperaturePresets.length
       ? `
         <div class="light-card__actions">
@@ -3893,7 +3893,7 @@ class NodaliaLightCard extends HTMLElement {
       config.show_quick_color_presets === true &&
       config.show_color_controls !== false &&
       supportsColor &&
-      (displayedControlMode === "brightness" || displayedControlMode === "color") &&
+      displayedControlMode === "color" &&
       quickColorPresetRows.length
       ? `
         <div class="light-card__actions">

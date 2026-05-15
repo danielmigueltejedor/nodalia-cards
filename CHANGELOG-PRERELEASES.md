@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.6] - 2026-05-15
+
+Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.6.js`**.
+
+### Added
+
+- **`nodalia-light-card.js`:** quick temperature / color preset chips (toggles + editor); four editable color presets; **`nodalia-editor-ui.js`** regenerated for **`ed.light.*`** catalog keys.
+
+### Changed
+
+- **`nodalia-light-card.js`:** preset chips centered and mode-scoped; collapsed-panel power-down fix.
+- **`nodalia-cover-card.js`:** transport pill for open/stop/close; centered arrow controls with overlay mode toggle.
+
+---
+
 ## [1.1.1-alpha.5] - 2026-05-12
 
 Fifth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.5`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.5.js`**.

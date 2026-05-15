@@ -23,6 +23,22 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 
 ---
 
+## [1.1.1-alpha.6] - 2026-05-15
+
+Sixth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.6`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.6.js`**.
+
+### Added
+
+- **`nodalia-light-card.js`:** optional quick **temperature** and **color** preset chip rows (with slider + mode buttons); up to **four** configurable color presets in the visual editor (label + color picker). Editor strings in **`i18n/editor/*`** and embedded **`nodalia-editor-ui.js`** catalog.
+
+### Changed
+
+- **`nodalia-light-card.js`:** brightness / temperature / color quick presets are **centered** and only shown for the **active slider mode** (brightness, temperature, or color).
+- **`nodalia-cover-card.js`:** open / stop / close controls sit in a **pill transport bubble** (media-player style); arrow view centers controls with the mode toggle **overlaid** on the right.
+- **`nodalia-light-card.js`:** power-down animation no longer replays expanded controls when the panel was already collapsed (`auto_expand: false`).
+
+---
+
 ## [1.1.1-alpha.5] - 2026-05-12
 
 Fifth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.5`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.5.js`**.

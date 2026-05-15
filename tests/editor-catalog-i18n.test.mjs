@@ -25,4 +25,7 @@ test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   assert.match(src, /EDITOR_CATALOG_JSON/);
   assert.match(src, /rawInput\.startsWith\("ed\."\)/);
   assert.match(src, /\\"ed\.calendar\.visible_range\\"/);
+  assert.match(src, /\\"ed\.light\.color_presets_section_title\\"/);
+  assert.match(src, /\\"ed\.light\.show_quick_color_presets\\"/);
+  assert.match(src, /\\"ed\.light\.show_quick_temperature_presets\\"/);
 });
