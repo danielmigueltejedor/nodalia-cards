@@ -133,6 +133,8 @@ Including:
 - Exact override normalization
 - Cross-card translation consistency
 
+**Community translations (Crowdin):** help translate or review strings in the public project **[Nodalia Cards on Crowdin](https://crowdin.com/project/nodalia-cards)** (syncs with `i18n/runtime` and `i18n/editor` via [`crowdin.yml`](./crowdin.yml)).
+
 ---
 
 ## 🎨 Unified Visual System
@@ -306,6 +308,8 @@ JavaScript module
 # 🌍 Translations
 
 **1.1.0** continues improving the multi-language runtime and visual editor support introduced in **1.0.x**.
+
+**[Translate on Crowdin →](https://crowdin.com/project/nodalia-cards)** — community workspace for runtime and visual-editor strings (see also [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md) and [`crowdin.yml`](./crowdin.yml)).
 
 Supported languages:
 
