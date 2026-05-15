@@ -418,7 +418,9 @@
         stop: "Stop",
         positionSlider: "Position",
         tiltSlider: "Tilt",
-        tiltChip: "Tilt {value}%"
+        tiltChip: "Tilt {value}%",
+        toggleShowButtons: "Show open, stop, and close",
+        toggleShowSliders: "Show sliders"
       },
       person: {
         home: "Home",

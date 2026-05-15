@@ -142,6 +142,12 @@ test("graph card chart tap shows tooltip and hold_action defaults to more-info",
   assert.match(source, /_canRunHoldAction/);
 });
 
+test("light card power-down skips expanded controls shell when panel was collapsed", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
+  assert.match(source, /stale `_lastControlsMarkup` would otherwise force a full-height shell/);
+});
+
 test("nav media/popup entrance animations are transition-driven", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /_lastMediaToggleVisible/);
@@ -649,11 +655,16 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /_isCardTapAction\(action\) \{\s*return action === "body" \|\| action === "icon";\s*\}/);
   assert.match(
     source,
-    /const coverAction = button\.dataset\.coverAction;\s*if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*return;\s*\}\s*this\._rememberInteractionScroll\(\)/,
+    /const coverAction = button\.dataset\.coverAction;\s*if \(this\._isCardTapAction\(coverAction\)\) \{[\s\S]*this\._runAction\(coverAction\);[\s\S]*return;\s*\}\s*this\._triggerHaptic\(\)/,
   );
   assert.match(
     source,
-    /if \(actionControl\) \{[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*return;[\s\S]*\}[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*this\._preventNonTouchFocus\(event\);/,
+    /if \(actionControl\) \{[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*return;[\s\S]*\}[\s\S]*this\._preventNonTouchFocus\(event\);/,
+  );
+  assert.match(source, /chipAction === "open" \|\| chipAction === "close" \|\| chipAction === "stop"/);
+  assert.match(
+    source,
+    /Open \/ stop \/ close: blur only — scroll snapshot \+ rAF restore fights the browser's scroll-into-view/,
   );
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);
@@ -661,7 +672,7 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /String\(event\.pointerType \|\| ""\)\.toLowerCase\(\) === "touch"/);
   assert.match(
     source,
-    /_onTouchStart\(event\)[\s\S]*if \(actionControl && !this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*\}/,
+    /_onTouchStart\(event\) \{[\s\S]*const slider = path\.find\(node => node instanceof HTMLInputElement && node\.dataset\?\.coverControl\);[\s\S]*return;\s*\}\s*\}/,
   );
   assert.match(source, /_scheduleInteractionScrollRestore\(\) \{[\s\S]*window\.requestAnimationFrame/);
   assert.doesNotMatch(source, /_restoreInteractionScroll\(\)/);
@@ -682,15 +693,19 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /opacity: 0;[\s\S]*outline: none;[\s\S]*touch-action: pan-y;/);
 });
 
-test("cover card renders position slider above open stop close controls", () => {
+test("cover card combines sliders and a row toggle for open/stop/close", () => {
   const source = read("nodalia-cover-card.js");
-  const controlsMarkupStart = source.indexOf("const controlsMarkup = `");
-  const positionSliderIndex = source.indexOf('this._renderSlider("position"', controlsMarkupStart);
-  const controlsRowIndex = source.indexOf('<div class="fan-card__controls">', controlsMarkupStart);
+  const controlsMarkupStart = source.indexOf("const controlsMarkup = hasSliders");
   assert.ok(controlsMarkupStart > 0);
-  assert.ok(positionSliderIndex > controlsMarkupStart);
-  assert.ok(controlsRowIndex > controlsMarkupStart);
-  assert.ok(positionSliderIndex < controlsRowIndex);
+  assert.match(source, /data-cover-action="toggle_controls_view"/);
+  assert.match(source, /fan-card__slider-actions/);
+  assert.match(source, /fan-card__cover-controls-pane/);
+  assert.match(source, /fan-card--cover-ui-slider/);
+  assert.match(source, /fan-card--cover-ui-arrows/);
+  const posSlider = source.indexOf('this._renderSlider("position"', controlsMarkupStart);
+  const toggleIdx = source.indexOf('data-cover-action="toggle_controls_view"', controlsMarkupStart);
+  assert.ok(posSlider > controlsMarkupStart);
+  assert.ok(toggleIdx > posSlider);
 });
 
 test("cover card switches open/close arrow orientation by device class and open_close_icons", () => {

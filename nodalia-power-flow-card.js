@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.1-alpha.3";
+const CARD_VERSION = "1.1.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3237,7 +3237,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--lines {
-          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
+          animation: power-flow-card-lines-in calc(var(--power-flow-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 82ms;
           transform-origin: center;
         }
@@ -3247,7 +3247,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__surface--entering .power-flow-card__svg--dots {
-          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
+          animation: power-flow-card-dots-in calc(var(--power-flow-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           animation-delay: 124ms;
           transform: none;
           transform-origin: center;

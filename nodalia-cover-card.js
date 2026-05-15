@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.1-alpha.3";
+const CARD_VERSION = "1.1.1-alpha.5";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1214,6 +1214,8 @@ class NodaliaCoverCard extends HTMLElement {
     this._interactionScrollCancelTimer = 0;
     this._interactionScrollCancelWatchAttached = false;
     this._interactionScrollRestoreFrame = 0;
+    /** `"slider"` = sliders in main cell; `"arrows"` = open/stop/close in main cell (toggle on the right). */
+    this._coverControlsViewMode = "slider";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -1279,6 +1281,7 @@ class NodaliaCoverCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._coverControlsViewMode = "slider";
     this._lastRenderSignature = "";
     this._render();
   }
@@ -1324,6 +1327,7 @@ class NodaliaCoverCard extends HTMLElement {
         current_tilt_position: attrs.current_tilt_position ?? "",
         supported_features: attrs.supported_features ?? "",
       },
+      coverUiMode: this._coverControlsViewMode === "arrows" ? "arrows" : "slider",
     });
   }
 
@@ -1575,13 +1579,22 @@ class NodaliaCoverCard extends HTMLElement {
       }
       return;
     }
-    this._rememberInteractionScroll();
     this._triggerHaptic();
     this._triggerButtonBounce(button);
     if (button instanceof HTMLElement && typeof button.blur === "function") {
       button.blur();
     }
     switch (coverAction) {
+      case "toggle_controls_view": {
+        this._coverControlsViewMode = this._coverControlsViewMode === "arrows" ? "slider" : "arrows";
+        if (this._hass) {
+          this._lastRenderSignature = this._getRenderSignature(this._hass);
+        } else {
+          this._lastRenderSignature = "";
+        }
+        this._render();
+        break;
+      }
       case "open":
         this._callCover("open_cover");
         break;
@@ -1594,7 +1607,6 @@ class NodaliaCoverCard extends HTMLElement {
       default:
         break;
     }
-    this._scheduleInteractionScrollRestore();
   }
 
   _isCardTapAction(action) {
@@ -1618,6 +1630,14 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
     if (this._isCardTapAction(control.dataset?.coverAction)) {
+      if (typeof control.blur === "function") {
+        control.blur();
+      }
+      return;
+    }
+    /** Open / stop / close: blur only — scroll snapshot + rAF restore fights the browser's scroll-into-view when the card is partly off-screen. Sliders still use remember + restore after hass-driven re-render. */
+    const chipAction = String(control.dataset?.coverAction || "").trim();
+    if (chipAction === "open" || chipAction === "close" || chipAction === "stop" || chipAction === "toggle_controls_view") {
       if (typeof control.blur === "function") {
         control.blur();
       }
@@ -1651,7 +1671,6 @@ class NodaliaCoverCard extends HTMLElement {
         this._preventNonTouchFocus(event);
         return;
       }
-      this._rememberInteractionScroll();
       this._preventNonTouchFocus(event);
     }
   }
@@ -1671,7 +1690,6 @@ class NodaliaCoverCard extends HTMLElement {
         this._preventNonTouchFocus(event);
         return;
       }
-      this._rememberInteractionScroll();
       this._preventNonTouchFocus(event);
     }
   }
@@ -1684,10 +1702,6 @@ class NodaliaCoverCard extends HTMLElement {
         this._startSliderDrag(slider, event.touches[0].clientX, event);
       }
       return;
-    }
-    const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
-    if (actionControl && !this._isCardTapAction(actionControl.dataset?.coverAction)) {
-      this._rememberInteractionScroll();
     }
   }
 
@@ -1957,11 +1971,13 @@ class NodaliaCoverCard extends HTMLElement {
     this._stopInteractionScrollCancelWatch();
   }
 
-  _renderSlider(kind, label, value) {
+  _renderSlider(kind, label, value, options = {}) {
     const styles = this._config.styles;
     const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
+    const rowClass =
+      options.variant === "stack" ? "fan-card__slider-row fan-card__slider-row--stack" : "fan-card__slider-row fan-card__slider-row--solo";
     return `
-      <div class="fan-card__slider-row fan-card__slider-row--solo">
+      <div class="${rowClass}">
         <div class="fan-card__slider-wrap">
           <div class="fan-card__slider-shell" style="--percentage:${percentage};">
             <div class="fan-card__slider-track"></div>
@@ -2038,15 +2054,39 @@ class NodaliaCoverCard extends HTMLElement {
     if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
     if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip">${Math.round(position)}%</span>`);
     if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
-    const controlsMarkup = `
-      ${supportsPosition ? this._renderSlider("position", tPosSlider, position) : ""}
-      <div class="fan-card__controls">
+    const coverUiMode = this._coverControlsViewMode === "arrows" ? "arrows" : "slider";
+    const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
+    const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
+    /** Side action matches fan-card preset / light mode column: tune = alternate control set, sliders icon = back to position/tilt. */
+    const toggleIcon = coverUiMode === "slider" ? "mdi:tune-variant" : "mdi:pan-horizontal";
+    const toggleAria = coverUiMode === "slider" ? tToggleToArrows : tToggleToSliders;
+    const hasSliders = supportsPosition || supportsTilt;
+    const coverUiClass = hasSliders ? (coverUiMode === "arrows" ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider") : "";
+    const arrowButtonsHtml = `
         <button type="button" class="fan-card__control" data-cover-action="open" aria-label="${escapeHtml(tOpen)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
         ${supportsStop ? `<button type="button" class="fan-card__control" data-cover-action="stop" aria-label="${escapeHtml(tStop)}" tabindex="-1"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
         <button type="button" class="fan-card__control" data-cover-action="close" aria-label="${escapeHtml(tClose)}" tabindex="-1"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
-      </div>
-      ${supportsTilt ? this._renderSlider("tilt", tTiltSlider, tilt) : ""}
-    `;
+      `;
+    const controlsMarkup = hasSliders
+      ? `
+        <div class="fan-card__slider-row">
+          <div class="fan-card__cover-controls-pane">
+            <div class="fan-card__view fan-card__view--sliders">
+              ${supportsPosition ? this._renderSlider("position", tPosSlider, position, { variant: "stack" }) : ""}
+              ${supportsTilt ? this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" }) : ""}
+            </div>
+            <div class="fan-card__view fan-card__view--arrows">
+              <div class="fan-card__controls fan-card__controls--embedded">${arrowButtonsHtml}
+              </div>
+            </div>
+          </div>
+          <div class="fan-card__slider-actions">
+            <button type="button" class="fan-card__control${coverUiMode === "arrows" ? " fan-card__control--active" : ""}" data-cover-action="toggle_controls_view" aria-label="${escapeHtml(toggleAria)}" title="${escapeHtml(toggleAria)}" tabindex="-1"><ha-icon icon="${escapeHtml(toggleIcon)}"></ha-icon></button>
+          </div>
+        </div>
+      `
+      : `<div class="fan-card__controls">${arrowButtonsHtml}
+      </div>`;
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
@@ -2176,6 +2216,54 @@ class NodaliaCoverCard extends HTMLElement {
           overflow: visible;
         }
         .fan-card__controls-inner { display: grid; gap: 10px; }
+        .fan-card__controls-inner--cover-combined { gap: 0; }
+        .fan-card__cover-controls-pane {
+          align-items: center;
+          display: grid;
+          grid-template: auto / minmax(0, 1fr);
+          min-width: 0;
+        }
+        .fan-card__slider-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 12px;
+          justify-content: flex-end;
+        }
+        .fan-card__view--sliders,
+        .fan-card__view--arrows {
+          grid-area: 1 / 1;
+          min-width: 0;
+        }
+        .fan-card__view--sliders {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .fan-card__view--arrows {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+        }
+        .fan-card__controls--embedded {
+          flex-wrap: nowrap;
+          gap: 10px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 100%;
+        }
+        .fan-card--cover-ui-arrows .fan-card__view--sliders { display: none; }
+        .fan-card--cover-ui-slider .fan-card__view--arrows { display: none; }
+        .fan-card__control--active {
+          background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
+          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          color: ${styles.control.accent_color};
+        }
+        .fan-card__slider-row--stack {
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+          padding-inline: 0;
+        }
         .fan-card__controls {
           display: flex;
           flex-wrap: wrap;
@@ -2219,8 +2307,12 @@ class NodaliaCoverCard extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 14px;
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr) auto;
           padding-inline: 4px;
+        }
+        .fan-card__slider-row--solo,
+        .fan-card__slider-row--stack {
+          grid-template-columns: minmax(0, 1fr);
         }
         .fan-card__slider-wrap {
           --fan-card-slider-input-height: max(44px, calc(${styles.slider_thumb_size} + 12px));
@@ -2312,7 +2404,7 @@ class NodaliaCoverCard extends HTMLElement {
         ${animations.enabled ? "" : `.fan-card, .fan-card * { animation: none !important; transition: none !important; }`}
       </style>
       <ha-card
-        class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}"
+        class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}${coverUiClass ? ` ${coverUiClass}` : ""}"
         data-cover-action="body"
       >
         <div class="fan-card__content">
@@ -2331,7 +2423,7 @@ class NodaliaCoverCard extends HTMLElement {
             ` : ""}
           </div>
           <div class="fan-card__controls-shell">
-            <div class="fan-card__controls-inner">
+            <div class="fan-card__controls-inner${hasSliders ? " fan-card__controls-inner--cover-combined" : ""}">
               ${controlsMarkup}
             </div>
           </div>

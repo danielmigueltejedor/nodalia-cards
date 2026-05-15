@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.4] - 2026-05-12
+
+Fourth **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.4`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.4.js`**.
+
+### Changed
+
+- **`nodalia-cover-card.js`:** slider vs open/stop/close toggle uses the same **`fan-card__slider-row`** + **`fan-card__slider-actions`** column pattern as **fan** / **light** cards; side button **`fan-card__control--active`** when arrows are shown; icons **`mdi:tune-variant`** / **`mdi:pan-horizontal`**; i18n **`coverCard.toggleShowButtons`** / **`toggleShowSliders`**.
+
+---
+
 ## [1.1.1-alpha.3] - 2026-05-12
 
 Third **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.3`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.3.js`**.
