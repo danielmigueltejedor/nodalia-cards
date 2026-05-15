@@ -57,6 +57,8 @@
   "ed.alarm_panel.tint_disarmed": "Оттенок снят с охраны",
   "ed.alarm_panel.tint_pending": "Оттенок ожидания",
   "ed.alarm_panel.tint_triggered": "Оттенок сработавшей тревоги",
+  "ed.alarm_panel.wrong_code_feedback_hint": "Delay before showing “wrong code” if the alarm state has not updated (2000–30000 ms). Increase for slow cloud or RF bridges.",
+  "ed.alarm_panel.wrong_code_feedback_ms": "Wrong-code feedback delay (ms)",
   "ed.calendar.accent_if_tint_off": "Акцентный цвет (когда автоматическое тонирование отключено)",
   "ed.calendar.add_calendar": "Добавить календарь",
   "ed.calendar.allow_delete_native": "Разрешить удаление собственных событий",

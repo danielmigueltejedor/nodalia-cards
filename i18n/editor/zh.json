@@ -57,6 +57,8 @@
   "ed.alarm_panel.tint_disarmed": "撤防色调",
   "ed.alarm_panel.tint_pending": "等待中色调",
   "ed.alarm_panel.tint_triggered": "触发色调",
+  "ed.alarm_panel.wrong_code_feedback_hint": "Delay before showing “wrong code” if the alarm state has not updated (2000–30000 ms). Increase for slow cloud or RF bridges.",
+  "ed.alarm_panel.wrong_code_feedback_ms": "Wrong-code feedback delay (ms)",
   "ed.calendar.accent_if_tint_off": "强调色（关闭自动着色时生效）",
   "ed.calendar.add_calendar": "添加日历",
   "ed.calendar.allow_delete_native": "允许删除原生日历事件",

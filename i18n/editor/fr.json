@@ -57,6 +57,8 @@
   "ed.alarm_panel.tint_disarmed": "Teinte désarmée",
   "ed.alarm_panel.tint_pending": "Teinte en attente",
   "ed.alarm_panel.tint_triggered": "Teinte déclenchée",
+  "ed.alarm_panel.wrong_code_feedback_hint": "Delay before showing “wrong code” if the alarm state has not updated (2000–30000 ms). Increase for slow cloud or RF bridges.",
+  "ed.alarm_panel.wrong_code_feedback_ms": "Wrong-code feedback delay (ms)",
   "ed.calendar.accent_if_tint_off": "Accent color (when automatic tinting is off)",
   "ed.calendar.add_calendar": "Ajouter un calendrier",
   "ed.calendar.allow_delete_native": "Allow deleting native events",

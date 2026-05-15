@@ -57,6 +57,8 @@
   "ed.alarm_panel.tint_disarmed": "Tonalidade desarmada",
   "ed.alarm_panel.tint_pending": "Tonalidade pendente",
   "ed.alarm_panel.tint_triggered": "Tonalidade disparada",
+  "ed.alarm_panel.wrong_code_feedback_hint": "Delay before showing “wrong code” if the alarm state has not updated (2000–30000 ms). Increase for slow cloud or RF bridges.",
+  "ed.alarm_panel.wrong_code_feedback_ms": "Wrong-code feedback delay (ms)",
   "ed.calendar.accent_if_tint_off": "Cor de destaque (quando a coloração automática está desativada)",
   "ed.calendar.add_calendar": "Adicionar calendário",
   "ed.calendar.allow_delete_native": "Permitir exclusão de eventos nativos",

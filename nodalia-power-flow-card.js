@@ -1438,8 +1438,10 @@ function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}) {
     horizFirst = false;
   }
   let r = Math.min(adx, ady) * 0.54;
-  r = Math.min(Math.max(r, 2.55), 14.5, adx - 0.32, ady - 0.32);
-  if (r < 1.62) {
+  const capX = Math.max(adx - 0.32, 0);
+  const capY = Math.max(ady - 0.32, 0);
+  r = Math.min(Math.max(r, 2.55), 14.5, capX, capY);
+  if (!Number.isFinite(r) || r < 1.62) {
     return buildStraightFlowPath(from, to, fromRadius, toRadius);
   }
 
@@ -2282,6 +2284,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     let batteryToGrid = Math.min(batteryExportCapacity, remainingGridExport);
     remainingGridExport = Math.max(0, remainingGridExport - batteryToGrid);
 
+    // Small positive remainder after measured splits: visualization-only; prefer a solar export path
+    // when a solar entity exists (typical PV surplus), else battery discharge-to-grid — not strict physics.
     if (remainingGridExport > 0.001) {
       if (hasSolar) {
         solarToGrid += remainingGridExport;

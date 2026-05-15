@@ -765,7 +765,6 @@ const HAPTIC_PATTERNS = {
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
 /** If entity state is still unchanged after arming/disarming with a code, show "wrong code" (slow cloud/RF integrations need more than ~1.5s). */
-const PIN_VERIFY_WRONG_CODE_MS = 5000;
 const FEATURE_ARM_HOME = 1;
 const FEATURE_ARM_AWAY = 2;
 const FEATURE_ARM_NIGHT = 4;
@@ -796,6 +795,8 @@ const DEFAULT_CONFIG = {
   code_entity: "",
   show_state: true,
   show_code_input: "auto",
+  /** After arming/disarming with a manual code, wait this long (ms) before showing “wrong code” if state is unchanged. */
+  wrong_code_feedback_ms: 5000,
   show_disarm: true,
   show_arm_home: true,
   show_arm_away: true,
@@ -1143,6 +1144,10 @@ function normalizeConfig(rawConfig) {
   } else {
     config.show_code_input = "auto";
   }
+  const wcfb = Number(config.wrong_code_feedback_ms);
+  config.wrong_code_feedback_ms = Number.isFinite(wcfb)
+    ? clamp(Math.round(wcfb), 2000, 30000)
+    : DEFAULT_CONFIG.wrong_code_feedback_ms;
   return config;
 }
 
@@ -1411,6 +1416,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       helperEntityId,
       helperState: String(helperState?.state || ""),
       compact: Boolean(this._isCompactLayout),
+      wrongCodeFeedbackMs: Number(this._config?.wrong_code_feedback_ms) || 5000,
     });
   }
 
@@ -1829,6 +1835,11 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       this._clearPinVerifyWatch();
       const snapState = state.state;
       const snapLc = state.last_changed;
+      const pinVerifyMs = clamp(
+        Number(this._config?.wrong_code_feedback_ms) || DEFAULT_CONFIG.wrong_code_feedback_ms,
+        2000,
+        30000,
+      );
       this._pinVerifyWatch = {
         snapState,
         snapLc,
@@ -1842,7 +1853,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
             return;
           }
           this._showNativePinErrorChip();
-        }, PIN_VERIFY_WRONG_CODE_MS),
+        }, pinVerifyMs),
       };
 
       const promise = this._hass.callService("alarm_control_panel", service, payload);
@@ -2751,6 +2762,10 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
         return Boolean(input.checked);
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "number": {
+        const n = Number(input.value);
+        return Number.isFinite(n) ? n : undefined;
+      }
       default:
         return input.value;
     }
@@ -3427,6 +3442,15 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
               ],
               { fullWidth: true },
             )}
+            ${this._renderTextField("ed.alarm_panel.wrong_code_feedback_ms", "wrong_code_feedback_ms", config.wrong_code_feedback_ms, {
+              fullWidth: true,
+              type: "number",
+              valueType: "number",
+              placeholder: "5000",
+            })}
+            <div class="editor-section__hint" style="grid-column: 1 / -1; margin-top: -4px;">
+              ${escapeHtml(this._editorLabel("ed.alarm_panel.wrong_code_feedback_hint"))}
+            </div>
           </div>
         </section>
 
