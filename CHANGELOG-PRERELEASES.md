@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1-alpha.2] - 2026-05-12
+
+Second **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.2`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.2.js`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** taps on the main card / icon no longer nudge the dashboard scroll position — **`pointerdown`** / **`mousedown`** call **`_preventNonTouchFocus`** on body and icon zones, **`focusin`** blurs stray focus inside the shadow root when it is not a known **`coverAction`** / **`coverControl`**, and **`ha-card`** uses **`touch-action: manipulation`**.
+
+---
+
 ## [1.1.1-alpha.1] - 2026-05-12
 
 First **`1.1.1`** **`alpha`**: release channel **`1.1.1-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.1-alpha.1.js`**.

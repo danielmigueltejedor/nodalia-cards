@@ -653,7 +653,7 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   );
   assert.match(
     source,
-    /if \(actionControl\) \{[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*return;[\s\S]*\}[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*this\._preventNonTouchFocus\(event\);/,
+    /if \(actionControl\) \{[\s\S]*if \(this\._isCardTapAction\(actionControl\.dataset\?\.coverAction\)\) \{[\s\S]*this\._preventNonTouchFocus\(event\);[\s\S]*return;[\s\S]*\}[\s\S]*this\._rememberInteractionScroll\(\);[\s\S]*this\._preventNonTouchFocus\(event\);/,
   );
   assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown, \{ capture: true \}\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown, \{ capture: true \}\)/);

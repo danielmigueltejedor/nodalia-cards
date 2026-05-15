@@ -753,7 +753,7 @@
 
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.1.1-alpha.1";
+const CARD_VERSION = "1.1.1-alpha.2";
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1599,10 +1599,21 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _onFocusIn(event) {
-    const control = event.composedPath().find(
+    const path = event.composedPath();
+    if (!path.includes(this.shadowRoot)) {
+      return;
+    }
+
+    const control = path.find(
       node => node instanceof HTMLElement && (node.dataset?.coverAction || node.dataset?.coverControl),
     );
-    if (!control) return;
+    if (!control) {
+      const target = event.target;
+      if (target instanceof HTMLElement && typeof target.blur === "function") {
+        target.blur();
+      }
+      return;
+    }
     if (this._isCardTapAction(control.dataset?.coverAction)) {
       if (typeof control.blur === "function") {
         control.blur();
@@ -1634,6 +1645,7 @@ class NodaliaCoverCard extends HTMLElement {
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
       if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
+        this._preventNonTouchFocus(event);
         return;
       }
       this._rememberInteractionScroll();
@@ -1653,6 +1665,7 @@ class NodaliaCoverCard extends HTMLElement {
     const actionControl = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (actionControl) {
       if (this._isCardTapAction(actionControl.dataset?.coverAction)) {
+        this._preventNonTouchFocus(event);
         return;
       }
       this._rememberInteractionScroll();
@@ -2052,6 +2065,7 @@ class NodaliaCoverCard extends HTMLElement {
           overflow-anchor: none;
           padding: ${styles.card.padding};
           position: relative;
+          touch-action: manipulation;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         ha-card::before {
