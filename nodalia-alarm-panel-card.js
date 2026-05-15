@@ -268,46 +268,34 @@
     return cards;
   }
 
-  function installCustomCardsDedupe() {
+  function ensureCustomCardsDeduped() {
     if (typeof window === "undefined") {
       return null;
     }
     window.customCards = dedupeCustomCardsArray(window.customCards || []);
-    const cards = window.customCards;
-    if (cards.__nodaliaDedupePushInstalled === true) {
-      return cards;
-    }
-    Object.defineProperty(cards, "__nodaliaDedupePushInstalled", {
-      configurable: true,
-      enumerable: false,
-      value: true,
-    });
-    Object.defineProperty(cards, "push", {
-      configurable: true,
-      enumerable: false,
-      value(...items) {
-        let length = this.length;
-        items.forEach(item => {
-          const type = String(item?.type || "").trim();
-          if (type) {
-            for (let index = this.length - 1; index >= 0; index -= 1) {
-              if (String(this[index]?.type || "").trim() === type) {
-                this.splice(index, 1);
-              }
-            }
-          }
-          length = Array.prototype.push.call(this, item);
-        });
-        return length;
-      },
-    });
-    return cards;
+    return window.customCards;
   }
 
+  /**
+   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
+   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
+   * other front-end code that may also touch the shared array.
+   */
   function registerCustomCard(metadata) {
-    const cards = installCustomCardsDedupe();
-    if (!cards || !metadata || typeof metadata !== "object") {
+    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
       return;
+    }
+    const cards = ensureCustomCardsDeduped();
+    if (!cards) {
+      return;
+    }
+    const type = String(metadata.type || "").trim();
+    if (type) {
+      for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (String(cards[index]?.type || "").trim() === type) {
+          cards.splice(index, 1);
+        }
+      }
     }
     cards.push(metadata);
   }
@@ -756,7 +744,7 @@
   };
 
   if (typeof window !== "undefined") {
-    installCustomCardsDedupe();
+    ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
   }
 })();
@@ -776,6 +764,8 @@ const HAPTIC_PATTERNS = {
   failure: [12, 40, 12, 40, 18],
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
+/** If entity state is still unchanged after arming/disarming with a code, show "wrong code" (slow cloud/RF integrations need more than ~1.5s). */
+const PIN_VERIFY_WRONG_CODE_MS = 5000;
 const FEATURE_ARM_HOME = 1;
 const FEATURE_ARM_AWAY = 2;
 const FEATURE_ARM_NIGHT = 4;
@@ -1852,7 +1842,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
             return;
           }
           this._showNativePinErrorChip();
-        }, 1400),
+        }, PIN_VERIFY_WRONG_CODE_MS),
       };
 
       const promise = this._hass.callService("alarm_control_panel", service, payload);
@@ -3639,8 +3629,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaAlarmPanelCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Alarm Panel Card",
   description: "Tarjeta elegante para paneles de alarma",

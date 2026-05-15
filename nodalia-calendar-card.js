@@ -5614,10 +5614,15 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+const _nodaliaCalendarCardMeta = {
   type: CARD_TAG,
   name: "Nodalia Calendar Card",
   description: "Tarjeta de calendario elegante estilo Nodalia con eventos nativos.",
   preview: true,
-});
+};
+if (typeof window.NodaliaUtils?.registerCustomCard === "function") {
+  window.NodaliaUtils.registerCustomCard(_nodaliaCalendarCardMeta);
+} else {
+  window.customCards = window.customCards || [];
+  window.customCards.push(_nodaliaCalendarCardMeta);
+}

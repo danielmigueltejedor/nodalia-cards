@@ -268,46 +268,34 @@
     return cards;
   }
 
-  function installCustomCardsDedupe() {
+  function ensureCustomCardsDeduped() {
     if (typeof window === "undefined") {
       return null;
     }
     window.customCards = dedupeCustomCardsArray(window.customCards || []);
-    const cards = window.customCards;
-    if (cards.__nodaliaDedupePushInstalled === true) {
-      return cards;
-    }
-    Object.defineProperty(cards, "__nodaliaDedupePushInstalled", {
-      configurable: true,
-      enumerable: false,
-      value: true,
-    });
-    Object.defineProperty(cards, "push", {
-      configurable: true,
-      enumerable: false,
-      value(...items) {
-        let length = this.length;
-        items.forEach(item => {
-          const type = String(item?.type || "").trim();
-          if (type) {
-            for (let index = this.length - 1; index >= 0; index -= 1) {
-              if (String(this[index]?.type || "").trim() === type) {
-                this.splice(index, 1);
-              }
-            }
-          }
-          length = Array.prototype.push.call(this, item);
-        });
-        return length;
-      },
-    });
-    return cards;
+    return window.customCards;
   }
 
+  /**
+   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
+   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
+   * other front-end code that may also touch the shared array.
+   */
   function registerCustomCard(metadata) {
-    const cards = installCustomCardsDedupe();
-    if (!cards || !metadata || typeof metadata !== "object") {
+    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
       return;
+    }
+    const cards = ensureCustomCardsDeduped();
+    if (!cards) {
+      return;
+    }
+    const type = String(metadata.type || "").trim();
+    if (type) {
+      for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (String(cards[index]?.type || "").trim() === type) {
+          cards.splice(index, 1);
+        }
+      }
     }
     cards.push(metadata);
   }
@@ -756,7 +744,7 @@
   };
 
   if (typeof window !== "undefined") {
-    installCustomCardsDedupe();
+    ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
   }
 })();
@@ -5821,8 +5809,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaPowerFlowCardVisualEditor);
 }
 
-window.customCards = window.customCards || [];
-window.customCards.push({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Power Flow Card",
   description: "Tarjeta Nodalia de flujo energetico para red, solar, bateria, agua, gas y consumos individuales.",

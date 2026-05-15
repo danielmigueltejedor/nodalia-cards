@@ -270,7 +270,14 @@ template under:
 
 ## Runtime
 
-`nodalia-i18n.js`
+Runtime strings are edited in `i18n/runtime/<lang>.json` (see `docs/TRANSLATIONS.md`). Regenerate the embedded pack in `nodalia-i18n.js` with:
+
+```bash
+pnpm run i18n:validate-runtime
+pnpm run i18n:gen-runtime
+```
+
+The `nodalia-i18n.js` file still holds all resolution helpers (`resolveLanguage`, `translate*`, …); only the `const PACK` block between `// <nodalia-runtime-i18n-pack>` and `// </nodalia-runtime-i18n-pack>` is generated from JSON.
 
 - Locale packs are deep-merged over English
 - Partial translations still work safely

@@ -218,14 +218,14 @@ test("calendar all-day labels use shared locale text", () => {
   assert.match(i18n, /function translateCalendarUi/);
   assert.match(i18n, /calendarCard/);
   assert.match(i18n, /allDay: "Ganztägig"/);
-  assert.match(i18n, /fields: \{ calendar: "Kalender", title: "Titel"/);
-  assert.match(i18n, /buttons: \{ month: "Mois", back: "Retour", delete: "Supprimer", cancel: "Annuler", create: "Créer" \}/);
-  assert.match(i18n, /repeat: \{ none: "不重复", yearly: "每年", monthly: "每月", weekly: "每周", daily: "每天", custom: "自定义" \}/);
-  assert.match(i18n, /repeatFrequency: "Frequency"/);
-  assert.match(i18n, /selectRepeatFrequency: "Select a frequency for custom repeat\."/);
-  assert.match(i18n, /createEventWithMessage: "Nu s-a putut crea evenimentul: \{message\}"/);
-  assert.match(i18n, /allDay: "Toute la journée"/);
-  assert.match(i18n, /allDay: "全天"/);
+  assert.match(i18n, /fields:\s*\{[\s\S]*?calendar:\s*"Kalender"[\s\S]*?title:\s*"Titel"/);
+  assert.match(i18n, /buttons:\s*\{[\s\S]*?month:\s*"Mois"[\s\S]*?create:\s*"Créer"/);
+  assert.match(i18n, /repeat:\s*\{[\s\S]*?none:\s*"不重复"[\s\S]*?custom:\s*"自定义"/);
+  assert.match(i18n, /repeatFrequency:\s*"Frequency"/);
+  assert.match(i18n, /selectRepeatFrequency:\s*"Select a frequency for custom repeat\."/);
+  assert.match(i18n, /createEventWithMessage:\s*"Nu s-a putut crea evenimentul: \{message\}"/);
+  assert.match(i18n, /allDay:\s*"Toute la journée"/);
+  assert.match(i18n, /allDay:\s*"全天"/);
 });
 
 test("calendar editor signature only scans relevant entity domains", () => {
@@ -261,7 +261,7 @@ test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
   assert.match(source, /no: "nb-NO"/);
-  assert.match(source, /\n    no: \{\},/);
+  assert.match(source, /\n    no: \{\s*\n\s*vacuumErrorLabels:/);
 });
 
 test("shared visual editor ROWS map covers all supported editor languages", () => {
@@ -563,10 +563,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /sanitizeCssRuntimeValue/);
   assert.match(i18n, /notificationsCard/);
-  assert.match(i18n, /NOTIFICATIONS_CARD_TRANSLATIONS/);
-  assert.match(i18n, /de: \{\s*fallbackEvent: "Termin"/);
-  assert.match(i18n, /fr: \{\s*fallbackEvent: "Événement"/);
-  assert.match(i18n, /zh: \{\s*fallbackEvent: "事件"/);
+  assert.match(i18n, /<nodalia-runtime-i18n-pack>/);
+  assert.match(i18n, /\bde:\s*\{[\s\S]*?fallbackEvent:\s*"Termin"/);
+  assert.match(i18n, /\bfr:\s*\{[\s\S]*?fallbackEvent:\s*"Événement"/);
+  assert.match(i18n, /\bzh:\s*\{[\s\S]*?fallbackEvent:\s*"事件"/);
   assert.match(i18n, /mediaLeftOn: "Multimedia ohne Anwesenheit eingeschaltet"/);
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);

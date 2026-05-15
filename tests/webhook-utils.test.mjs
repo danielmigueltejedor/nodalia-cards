@@ -115,8 +115,8 @@ test("NodaliaUtils deduplicates repeated customCards registrations", () => {
   vm.createContext(sandbox);
   vm.runInContext(code, sandbox);
 
-  sandbox.window.customCards.push({ type: "nodalia-cover-card", name: "Cover 1" });
-  sandbox.window.customCards.push({ type: "nodalia-cover-card", name: "Cover 2" });
+  sandbox.window.NodaliaUtils.registerCustomCard({ type: "nodalia-cover-card", name: "Cover 1" });
+  sandbox.window.NodaliaUtils.registerCustomCard({ type: "nodalia-cover-card", name: "Cover 2" });
   sandbox.window.NodaliaUtils.registerCustomCard({ type: "nodalia-light-card", name: "Fresh light" });
 
   assert.deepStrictEqual(

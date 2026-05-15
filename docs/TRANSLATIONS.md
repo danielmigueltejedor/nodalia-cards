@@ -8,7 +8,7 @@ This guide explains the current translation system without requiring deep source
 
 Nodalia currently has two translation surfaces:
 
-- Runtime card text lives in `nodalia-i18n.js`.
+- Runtime card text is authored in `i18n/runtime/<lang>.json` and compiled into `nodalia-i18n.js` (see below).
 - Visual editor text lives in `i18n/editor/<lang>.json`.
 
 Runtime text is the text shown by cards while they are running: states, actions, weather labels, notification text, vacuum modes, and similar UI labels.
@@ -35,7 +35,20 @@ sv
 
 ## 3. Runtime translation keys
 
-Runtime keys are grouped by card or shared feature inside `nodalia-i18n.js`.
+Runtime strings use nested JSON objects per language under `i18n/runtime/`. The canonical file is `i18n/runtime/en.json`. Other locales may omit keys: missing branches inherit from English when the card resolves text (`deepMergeLocale`).
+
+After editing any `i18n/runtime/*.json` file, regenerate the embedded pack in `nodalia-i18n.js`:
+
+```bash
+pnpm run i18n:gen-runtime
+pnpm run i18n:validate-runtime
+```
+
+The `nodalia-i18n.js` file contains a generated `const PACK = { ... }` block between `// <nodalia-runtime-i18n-pack>` and `// </nodalia-runtime-i18n-pack>` — do not hand-edit that block; change the JSON sources instead.
+
+Robot vacuum **error-code labels** live under the `vacuumErrorLabels` object in each locale file (merged with English for codes only translated in some languages).
+
+Keys are grouped by card or shared feature, for example:
 
 Good examples:
 
@@ -67,7 +80,21 @@ i18n/editor/en.json
 
 Every other `i18n/editor/<lang>.json` file must contain the same keys as `en.json`.
 
-## 5. Editing an existing language
+## 5. Editing runtime (card UI) strings
+
+1. Open `i18n/runtime/<lang>.json` (use `en.json` as the full reference tree).
+2. Change only string values unless you are adding a new key that already exists in `en.json`.
+3. Run:
+
+```bash
+pnpm run i18n:validate-runtime
+pnpm run i18n:gen-runtime
+pnpm run bundle
+```
+
+4. Commit both the JSON files and the updated `nodalia-i18n.js` generated block.
+
+## 6. Editing an existing editor language
 
 1. Find the language file in `i18n/editor/`.
 2. Edit only the values, not the keys.
@@ -91,7 +118,7 @@ npm run i18n:gen-editor
 npm run bundle
 ```
 
-## 6. Adding a new editor language
+## 7. Adding a new editor language
 
 Example: adding Japanese (`ja`).
 
@@ -103,31 +130,28 @@ cp i18n/editor/en.json i18n/editor/ja.json
 
 2. Translate the values in `i18n/editor/ja.json`.
 3. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs`.
-4. Add `ja` support to `nodalia-i18n.js`:
-
-- `localeTag()`
-- the runtime `PACK` object
-- any language alias handling if needed
+4. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs`, add `ja` to `RUNTIME_LANGS` in `scripts/gen-runtime-i18n.mjs`, copy `i18n/runtime/en.json` to `i18n/runtime/ja.json`, then extend `nodalia-i18n.js` (outside the generated pack) only where needed: `localeTag()`, `baseLang()` / alias handling in `resolveLanguage`, and any card-specific language lists.
 
 5. Run:
 
 ```bash
 npm run i18n:validate-editor
 npm run i18n:gen-editor
+npm run i18n:validate-runtime
+npm run i18n:gen-runtime
 npm run bundle
 npm test
 ```
 
-## 7. Adding runtime translations
+## 8. Adding runtime translation keys
 
-Runtime translations live in `nodalia-i18n.js`. English should always be complete because other languages fall back to English when a string is missing.
+Add new keys to **`i18n/runtime/en.json`** first (same nested shape as sibling keys). Mirror the key path in other `i18n/runtime/<lang>.json` files when you have a translation.
 
-When adding a runtime string:
+Then run `pnpm run i18n:validate-runtime` and `pnpm run i18n:gen-runtime` so the `const PACK` block in `nodalia-i18n.js` is regenerated.
 
-1. Add the English value first.
-2. Add translations in the relevant language packs when possible.
-3. Keep the same object shape across languages.
-4. Use helper functions already exposed by `window.NodaliaI18n` where available.
+English should stay complete: locales with missing branches inherit from English via `deepMergeLocale`.
+
+Use helper functions already exposed by `window.NodaliaI18n` from cards instead of hardcoding user-visible strings.
 
 Good:
 
@@ -143,7 +167,7 @@ const label = "Sin prevision por horas";
 
 Hardcoded strings make localization harder and can cause mixed-language dashboards.
 
-## 8. Testing in Home Assistant
+## 9. Testing in Home Assistant
 
 1. Build the bundle:
 
@@ -158,7 +182,7 @@ npm run bundle
 6. Open the card visual editor and check field labels.
 7. Trigger runtime states where possible, such as unavailable, active, empty, warning, or error states.
 
-## 9. Switching Home Assistant language
+## 10. Switching Home Assistant language
 
 In Home Assistant:
 
@@ -170,23 +194,26 @@ In Home Assistant:
 
 Nodalia's `language: auto` follows the Home Assistant profile language. You can also force a card language in YAML when a card exposes `language`.
 
-## 10. Common mistakes
+## 11. Common mistakes
 
 - Changing keys instead of values.
 - Removing placeholders like `{name}` or `{value}`.
 - Translating technical entity IDs, service names, or YAML field names.
 - Making editor labels too long for mobile.
 - Adding a new editor language file but not adding it to `EDITOR_CATALOG_LANGS`.
+- Editing the generated `const PACK` block or the `// <nodalia-runtime-i18n-pack>` region in `nodalia-i18n.js` by hand. Edit `i18n/runtime/*.json` and run `pnpm run i18n:gen-runtime`.
 - Editing `nodalia-editor-ui.js` directly. It is generated.
-- Hardcoding user-facing strings inside a card instead of using `nodalia-i18n.js` or `ed.*` keys.
+- Hardcoding user-facing strings inside a card instead of using `window.NodaliaI18n` helpers or `ed.*` keys.
 
-## 11. Pull request checklist
+## 12. Pull request checklist
 
 Before opening a translation PR:
 
 ```bash
 npm run i18n:validate-editor
 npm run i18n:gen-editor
+npm run i18n:validate-runtime
+npm run i18n:gen-runtime
 npm run bundle
 npm test
 ```
