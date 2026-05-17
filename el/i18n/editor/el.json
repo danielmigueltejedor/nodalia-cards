@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "Εμφάνιση τσιπ υγρασίας",
   "ed.weather.show_meteoalarm_chip": "Εμφάνιση τσιπ Meteoalarm",
   "ed.weather.show_pressure_chip": "Εμφάνιση τσιπ πίεσης",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "Εμφάνιση ρυθμίσεων στυλ",
   "ed.weather.show_wind_chip": "Εμφάνιση τσιπ αέρα",
   "ed.weather.styles_section_hint": "Βασικές οπτικές ρυθμίσεις για την κάρτα.",
