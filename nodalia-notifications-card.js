@@ -23,6 +23,9 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "cancelCardZoneTap",
+    "scheduleCardZoneTap",
+    "renderLovelaceEntityGuardCardHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -589,6 +592,104 @@
     </div>`;
   }
 
+  const CARD_ZONE_DOUBLE_TAP_MS = 320;
+
+  function escapeLovelaceWarningText(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function getLovelaceEntityWarningMessage(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id) {
+      return (
+        hass?.localize?.("ui.panel.lovelace.cards.show_entity_picker")
+        ?? "No entity specified"
+      );
+    }
+    if (hass?.states?.[id]) {
+      return "";
+    }
+    return (
+      hass?.localize?.("ui.components.entity.entity_not_found", { entity: id })
+      ?? hass?.localize?.("ui.card.common.entity_not_found")
+      ?? `Entity not found: ${id}`
+    );
+  }
+
+  function renderLovelaceEntityWarningMarkup(hass, entityId) {
+    const message = getLovelaceEntityWarningMessage(hass, entityId);
+    if (!message) {
+      return "";
+    }
+    const safe = escapeLovelaceWarningText(message);
+    if (typeof customElements !== "undefined" && customElements.get("hui-warning")) {
+      return `<hui-warning>${safe}</hui-warning>`;
+    }
+    if (typeof customElements !== "undefined" && customElements.get("ha-alert")) {
+      return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
+    }
+    return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
+    const markup = renderLovelaceEntityWarningMarkup(hass, entityId);
+    if (!markup) {
+      return null;
+    }
+    const cardClass = String(options.cardClass ?? "").trim();
+    const classAttr = cardClass ? ` class="${cardClass.replace(/"/g, "")}"` : "";
+    return `<ha-card${classAttr}>${markup}</ha-card>`;
+  }
+
+  function cancelCardZoneTap(host) {
+    if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
+      return;
+    }
+    const pending = host._nodaliaZoneTap;
+    if (pending?.timer) {
+      window.clearTimeout(pending.timer);
+    }
+    host._nodaliaZoneTap = null;
+  }
+
+  function scheduleCardZoneTap(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const zone = String(options?.zone ?? "body");
+    const delayMs = Number.isFinite(Number(options?.doubleTapMs)) && Number(options.doubleTapMs) > 0
+      ? Math.round(Number(options.doubleTapMs))
+      : CARD_ZONE_DOUBLE_TAP_MS;
+    const onSingle = typeof options?.onSingle === "function" ? options.onSingle : () => {};
+    const onDouble = typeof options?.onDouble === "function" ? options.onDouble : null;
+    const now = Date.now();
+    const pending = host._nodaliaZoneTap;
+
+    if (onDouble && pending && pending.zone === zone && now - pending.at <= delayMs) {
+      if (pending.timer) {
+        window.clearTimeout(pending.timer);
+      }
+      host._nodaliaZoneTap = null;
+      onDouble();
+      return;
+    }
+
+    cancelCardZoneTap(host);
+    const token = { zone, at: now };
+    host._nodaliaZoneTap = token;
+    token.timer = window.setTimeout(() => {
+      if (host._nodaliaZoneTap !== token) {
+        return;
+      }
+      host._nodaliaZoneTap = null;
+      onSingle();
+    }, delayMs);
+  }
+
   /**
    * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
    * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
@@ -780,6 +881,9 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    cancelCardZoneTap,
+    scheduleCardZoneTap,
+    renderLovelaceEntityGuardCardHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -794,7 +898,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3-alpha.1";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,

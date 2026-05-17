@@ -8,6 +8,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.1] - 2026-05-17
+
+First **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.1`**.
+
+### Added
+
+- **`nodalia-utils.js`:** `renderLovelaceEntityGuardCardHtml` shows Home Assistant's native **`hui-warning`** (or **`ha-alert`**) when no entity is configured or the entity is missing from state — replaces custom “configure entity” empty cards.
+- **`nodalia-utils.js`:** `scheduleCardZoneTap` / `cancelCardZoneTap` for double-tap actions (~320 ms) alongside existing hold gestures.
+- **`nodalia-weather-card.js`:** **`hold_action`** and **`double_tap_action`** (more-info / none), with long-press on the card body.
+- **`nodalia-entity-card.js` / `nodalia-fan-card.js`:** **`double_tap_action`** (and icon variant) with the same action types as tap/hold where applicable; entity card includes navigate paths.
+
+### Changed
+
+- **Entity-based cards** (weather, entity, fan, light, humidifier, cover, …): missing or unknown entities now use the Lovelace warning UI instead of branded empty-state copy.
+
+---
+
 ## [1.1.2-alpha.4] - 2026-05-15
 
 Fourth **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.4`**.

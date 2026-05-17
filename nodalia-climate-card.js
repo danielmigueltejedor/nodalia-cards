@@ -23,6 +23,9 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "cancelCardZoneTap",
+    "scheduleCardZoneTap",
+    "renderLovelaceEntityGuardCardHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -589,6 +592,104 @@
     </div>`;
   }
 
+  const CARD_ZONE_DOUBLE_TAP_MS = 320;
+
+  function escapeLovelaceWarningText(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function getLovelaceEntityWarningMessage(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id) {
+      return (
+        hass?.localize?.("ui.panel.lovelace.cards.show_entity_picker")
+        ?? "No entity specified"
+      );
+    }
+    if (hass?.states?.[id]) {
+      return "";
+    }
+    return (
+      hass?.localize?.("ui.components.entity.entity_not_found", { entity: id })
+      ?? hass?.localize?.("ui.card.common.entity_not_found")
+      ?? `Entity not found: ${id}`
+    );
+  }
+
+  function renderLovelaceEntityWarningMarkup(hass, entityId) {
+    const message = getLovelaceEntityWarningMessage(hass, entityId);
+    if (!message) {
+      return "";
+    }
+    const safe = escapeLovelaceWarningText(message);
+    if (typeof customElements !== "undefined" && customElements.get("hui-warning")) {
+      return `<hui-warning>${safe}</hui-warning>`;
+    }
+    if (typeof customElements !== "undefined" && customElements.get("ha-alert")) {
+      return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
+    }
+    return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
+    const markup = renderLovelaceEntityWarningMarkup(hass, entityId);
+    if (!markup) {
+      return null;
+    }
+    const cardClass = String(options.cardClass ?? "").trim();
+    const classAttr = cardClass ? ` class="${cardClass.replace(/"/g, "")}"` : "";
+    return `<ha-card${classAttr}>${markup}</ha-card>`;
+  }
+
+  function cancelCardZoneTap(host) {
+    if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
+      return;
+    }
+    const pending = host._nodaliaZoneTap;
+    if (pending?.timer) {
+      window.clearTimeout(pending.timer);
+    }
+    host._nodaliaZoneTap = null;
+  }
+
+  function scheduleCardZoneTap(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const zone = String(options?.zone ?? "body");
+    const delayMs = Number.isFinite(Number(options?.doubleTapMs)) && Number(options.doubleTapMs) > 0
+      ? Math.round(Number(options.doubleTapMs))
+      : CARD_ZONE_DOUBLE_TAP_MS;
+    const onSingle = typeof options?.onSingle === "function" ? options.onSingle : () => {};
+    const onDouble = typeof options?.onDouble === "function" ? options.onDouble : null;
+    const now = Date.now();
+    const pending = host._nodaliaZoneTap;
+
+    if (onDouble && pending && pending.zone === zone && now - pending.at <= delayMs) {
+      if (pending.timer) {
+        window.clearTimeout(pending.timer);
+      }
+      host._nodaliaZoneTap = null;
+      onDouble();
+      return;
+    }
+
+    cancelCardZoneTap(host);
+    const token = { zone, at: now };
+    host._nodaliaZoneTap = token;
+    token.timer = window.setTimeout(() => {
+      if (host._nodaliaZoneTap !== token) {
+        return;
+      }
+      host._nodaliaZoneTap = null;
+      onSingle();
+    }, delayMs);
+  }
+
   /**
    * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
    * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
@@ -780,6 +881,9 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    cancelCardZoneTap,
+    scheduleCardZoneTap,
+    renderLovelaceEntityGuardCardHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -794,7 +898,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -830,6 +934,9 @@ const DEFAULT_CONFIG = {
   show_mode_buttons: true,
   show_step_controls: true,
   show_unavailable_badge: true,
+  tap_action: "more-info",
+  hold_action: "more-info",
+  double_tap_action: "none",
   display: {
     /** `"target"` (default): large dial = setpoint; secondary = current when a target exists. `"current"`: swap. */
     main_temperature: "target",
@@ -1488,6 +1595,14 @@ function migrateLegacyClimateOffColors(styles) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const CLIMATE_ACTIONS = new Set(["more-info", "none"]);
+  const norm = (value, fallback) => {
+    const key = String(value ?? fallback).trim().toLowerCase();
+    return CLIMATE_ACTIONS.has(key) ? key : fallback;
+  };
+  config.tap_action = norm(config.tap_action, "more-info");
+  config.hold_action = norm(config.hold_action, "more-info");
+  config.double_tap_action = norm(config.double_tap_action, "none");
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   migrateLegacyClimateOffColors(config.styles);
@@ -1590,6 +1705,8 @@ class NodaliaClimateCard extends HTMLElement {
     this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
+    this._detachHostHold = () => {};
+    this._suppressNextClimateTap = false;
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
@@ -1599,6 +1716,37 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const path = event.composedPath();
+              if (path.some(node => node instanceof HTMLElement && node.dataset?.climateAction)) {
+                return null;
+              }
+              if (path.some(node => node instanceof HTMLElement && node.dataset?.climateControl)) {
+                return null;
+              }
+              return path.some(node => node instanceof HTMLElement && node.dataset?.climateCard === "root")
+                ? "body"
+                : null;
+            },
+            shouldBeginHold: () => {
+              const action = String(this._config?.hold_action || "more-info");
+              return action !== "none" && Boolean(this._getState());
+            },
+            onHold: () => {
+              this._triggerHaptic();
+              this._triggerPressAnimation(this.shadowRoot?.querySelector(".climate-card__content"));
+              this._performHoldAction();
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextClimateTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -1607,6 +1755,9 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold = () => {};
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
     this._setDragWindowListeners(false);
 
     if (this._draftResetTimer) {
@@ -1706,6 +1857,7 @@ class NodaliaClimateCard extends HTMLElement {
       presetMode: String(attrs.preset_mode || ""),
       fanMode: String(attrs.fan_mode || ""),
       swingMode: String(attrs.swing_mode || ""),
+      actions: `${String(this._config?.tap_action || "")}|${String(this._config?.hold_action || "")}|${String(this._config?.double_tap_action || "")}`,
     });
   }
 
@@ -3526,26 +3678,78 @@ class NodaliaClimateCard extends HTMLElement {
     this._commitDialDrag(touch.clientX, touch.clientY, event);
   }
 
+  _performClimateCardAction(actionKind) {
+    const key = actionKind === "hold"
+      ? "hold_action"
+      : actionKind === "double_tap"
+        ? "double_tap_action"
+        : "tap_action";
+    const action = String(this._config?.[key] || "more-info");
+    if (action === "none") {
+      return;
+    }
+
+    this._triggerHaptic();
+
+    if (action === "more-info") {
+      fireEvent(this, "hass-more-info", {
+        entityId: this._config.entity,
+      });
+    }
+  }
+
+  _performTapAction() {
+    this._performClimateCardAction("tap");
+  }
+
+  _performHoldAction() {
+    this._performClimateCardAction("hold");
+  }
+
+  _performDoubleTapAction() {
+    this._performClimateCardAction("double_tap");
+  }
+
+  _triggerPressAnimation(element, className = "is-pressing") {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+    if (animations.enabled === false) {
+      return;
+    }
+
+    const duration = clamp(
+      Number(animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+      120,
+      1200,
+    );
+    element.classList.remove(className);
+    element.getBoundingClientRect();
+    element.classList.add(className);
+    window.setTimeout(() => {
+      element.classList.remove(className);
+    }, duration + 40);
+  }
+
   _onShadowClick(event) {
     const path = event.composedPath();
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (!actionButton) {
-      return;
-    }
+    if (actionButton) {
+      event.preventDefault();
+      event.stopPropagation();
 
-    event.preventDefault();
-    event.stopPropagation();
+      const state = this._getState();
+      if (!state) {
+        return;
+      }
 
-    const state = this._getState();
-    if (!state) {
-      return;
-    }
+      if (event.detail === 0) {
+        this._triggerButtonBounce(actionButton);
+      }
 
-    if (event.detail === 0) {
-      this._triggerButtonBounce(actionButton);
-    }
-
-    switch (actionButton.dataset.climateAction) {
+      switch (actionButton.dataset.climateAction) {
       case "toggle":
         this._selectedRangeThumb = null;
         this._triggerHaptic();
@@ -3566,7 +3770,58 @@ class NodaliaClimateCard extends HTMLElement {
         break;
       default:
         break;
+      }
+      return;
     }
+
+    const cardRoot = path.find(node => node instanceof HTMLElement && node.dataset?.climateCard === "root");
+    if (!cardRoot) {
+      return;
+    }
+
+    if (path.some(node => node instanceof HTMLElement && node.dataset?.climateControl)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this._getState()) {
+      return;
+    }
+
+    if (this._suppressNextClimateTap) {
+      this._suppressNextClimateTap = false;
+      return;
+    }
+
+    const tapAction = String(this._config?.tap_action || "more-info");
+    const doubleAction = String(this._config?.double_tap_action || "none");
+    const runTap = () => {
+      if (tapAction === "none") {
+        return;
+      }
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".climate-card__content"));
+      this._performTapAction();
+    };
+    const runDouble = () => {
+      if (doubleAction === "none") {
+        return;
+      }
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".climate-card__content"));
+      this._performDoubleTapAction();
+    };
+
+    if (doubleAction !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+      window.NodaliaUtils.scheduleCardZoneTap(this, {
+        zone: "body",
+        onSingle: runTap,
+        onDouble: runDouble,
+      });
+      return;
+    }
+
+    runTap();
   }
 
   _renderEmptyState() {
@@ -3585,43 +3840,19 @@ class NodaliaClimateCard extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const styles = config.styles || DEFAULT_CONFIG.styles;
+
+    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+      this._hass,
+      config.entity,
+      { cardClass: "climate-card" },
+    );
+    if (entityGuard) {
+      this.shadowRoot.innerHTML = entityGuard;
+      return;
+    }
+
     const state = this._getState();
-
     if (!state) {
-      this.shadowRoot.innerHTML = `
-        <style>
-          :host {
-            display: block;
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          .climate-card--empty {
-            background: ${styles.card.background};
-            border: ${styles.card.border};
-            border-radius: ${styles.card.border_radius};
-            box-shadow: ${styles.card.box_shadow};
-            display: grid;
-            gap: 6px;
-            padding: ${styles.card.padding};
-          }
-
-          .climate-card__empty-title {
-            color: var(--primary-text-color);
-            font-size: 15px;
-            font-weight: 700;
-          }
-
-          .climate-card__empty-text {
-            color: var(--secondary-text-color);
-            font-size: 13px;
-            line-height: 1.5;
-          }
-        </style>
-        ${this._renderEmptyState()}
-      `;
       return;
     }
 
@@ -4921,7 +5152,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
       </style>
       <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
-        <div class="climate-card__content">
+        <div class="climate-card__content" data-climate-card="root">
           <div class="climate-card__hero ${shouldAnimateEntrance ? "climate-card__hero--entering" : ""}">
             <button
               type="button"
@@ -5263,6 +5494,9 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const tapAction = config.tap_action || "more-info";
+    const holdAction = config.hold_action || "more-info";
+    const doubleTapAction = config.double_tap_action || "none";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -5495,6 +5729,36 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
               placeholder: "/local/climate.png",
             })}
+            ${this._renderSelectField(
+              "ed.climate.tap_action",
+              "tap_action",
+              tapAction,
+              [
+                { value: "more-info", label: "ed.climate.tap_more_info" },
+                { value: "none", label: "ed.climate.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.climate.hold_action",
+              "hold_action",
+              holdAction,
+              [
+                { value: "more-info", label: "ed.climate.tap_more_info" },
+                { value: "none", label: "ed.climate.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.climate.double_tap_action",
+              "double_tap_action",
+              doubleTapAction,
+              [
+                { value: "none", label: "ed.climate.tap_none" },
+                { value: "more-info", label: "ed.climate.tap_more_info" },
+              ],
+              { fullWidth: true },
+            )}
           </div>
         </section>
 
@@ -6177,6 +6441,9 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
+    const tapAction = config.tap_action || "more-info";
+    const holdAction = config.hold_action || "more-info";
+    const doubleTapAction = config.double_tap_action || "none";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -6492,6 +6759,37 @@ class NodaliaClimateCardEditor extends HTMLElement {
               placeholder: "/local/climate.png",
               fullWidth: true,
             })}
+            ${this._renderSelectField(
+              "ed.climate.tap_action",
+              "tap_action",
+              tapAction,
+              [
+                { value: "more-info", label: "ed.climate.tap_more_info" },
+                { value: "none", label: "ed.climate.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.climate.hold_action",
+              "hold_action",
+              holdAction,
+              [
+                { value: "more-info", label: "ed.climate.tap_more_info" },
+                { value: "none", label: "ed.climate.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.climate.double_tap_action",
+              "double_tap_action",
+              doubleTapAction,
+              [
+                { value: "none", label: "ed.climate.tap_none" },
+                { value: "more-info", label: "ed.climate.tap_more_info" },
+              ],
+              { fullWidth: true },
+            )}
+
           </div>
         </section>
 

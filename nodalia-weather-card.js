@@ -23,6 +23,9 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "cancelCardZoneTap",
+    "scheduleCardZoneTap",
+    "renderLovelaceEntityGuardCardHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -589,6 +592,104 @@
     </div>`;
   }
 
+  const CARD_ZONE_DOUBLE_TAP_MS = 320;
+
+  function escapeLovelaceWarningText(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function getLovelaceEntityWarningMessage(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id) {
+      return (
+        hass?.localize?.("ui.panel.lovelace.cards.show_entity_picker")
+        ?? "No entity specified"
+      );
+    }
+    if (hass?.states?.[id]) {
+      return "";
+    }
+    return (
+      hass?.localize?.("ui.components.entity.entity_not_found", { entity: id })
+      ?? hass?.localize?.("ui.card.common.entity_not_found")
+      ?? `Entity not found: ${id}`
+    );
+  }
+
+  function renderLovelaceEntityWarningMarkup(hass, entityId) {
+    const message = getLovelaceEntityWarningMessage(hass, entityId);
+    if (!message) {
+      return "";
+    }
+    const safe = escapeLovelaceWarningText(message);
+    if (typeof customElements !== "undefined" && customElements.get("hui-warning")) {
+      return `<hui-warning>${safe}</hui-warning>`;
+    }
+    if (typeof customElements !== "undefined" && customElements.get("ha-alert")) {
+      return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
+    }
+    return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
+    const markup = renderLovelaceEntityWarningMarkup(hass, entityId);
+    if (!markup) {
+      return null;
+    }
+    const cardClass = String(options.cardClass ?? "").trim();
+    const classAttr = cardClass ? ` class="${cardClass.replace(/"/g, "")}"` : "";
+    return `<ha-card${classAttr}>${markup}</ha-card>`;
+  }
+
+  function cancelCardZoneTap(host) {
+    if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
+      return;
+    }
+    const pending = host._nodaliaZoneTap;
+    if (pending?.timer) {
+      window.clearTimeout(pending.timer);
+    }
+    host._nodaliaZoneTap = null;
+  }
+
+  function scheduleCardZoneTap(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const zone = String(options?.zone ?? "body");
+    const delayMs = Number.isFinite(Number(options?.doubleTapMs)) && Number(options.doubleTapMs) > 0
+      ? Math.round(Number(options.doubleTapMs))
+      : CARD_ZONE_DOUBLE_TAP_MS;
+    const onSingle = typeof options?.onSingle === "function" ? options.onSingle : () => {};
+    const onDouble = typeof options?.onDouble === "function" ? options.onDouble : null;
+    const now = Date.now();
+    const pending = host._nodaliaZoneTap;
+
+    if (onDouble && pending && pending.zone === zone && now - pending.at <= delayMs) {
+      if (pending.timer) {
+        window.clearTimeout(pending.timer);
+      }
+      host._nodaliaZoneTap = null;
+      onDouble();
+      return;
+    }
+
+    cancelCardZoneTap(host);
+    const token = { zone, at: now };
+    host._nodaliaZoneTap = token;
+    token.timer = window.setTimeout(() => {
+      if (host._nodaliaZoneTap !== token) {
+        return;
+      }
+      host._nodaliaZoneTap = null;
+      onSingle();
+    }, delayMs);
+  }
+
   /**
    * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
    * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
@@ -780,6 +881,9 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    cancelCardZoneTap,
+    scheduleCardZoneTap,
+    renderLovelaceEntityGuardCardHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -794,7 +898,7 @@
 
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -814,6 +918,8 @@ const DEFAULT_CONFIG = {
   temperature_unit: "auto",
   wind_speed_unit: "auto",
   tap_action: "more-info",
+  hold_action: "more-info",
+  double_tap_action: "none",
   show_condition: true,
   show_humidity_chip: true,
   show_wind_chip: true,
@@ -1527,7 +1633,16 @@ function getConditionAccent(value) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const WEATHER_ACTIONS = new Set(["more-info", "none"]);
+  const norm = (value, fallback) => {
+    const key = String(value ?? fallback).trim().toLowerCase();
+    return WEATHER_ACTIONS.has(key) ? key : fallback;
+  };
+  config.tap_action = norm(config.tap_action, "more-info");
+  config.hold_action = norm(config.hold_action, "more-info");
+  config.double_tap_action = norm(config.double_tap_action, "none");
+  return config;
 }
 
 function normalizeUnitSystem(value) {
@@ -1618,9 +1733,39 @@ class NodaliaWeatherCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._detachHostHold = () => {};
+    this._suppressNextWeatherTap = false;
   }
 
   connectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const path = event.composedPath();
+              if (path.some(node => node instanceof HTMLElement && node.dataset?.weatherAction)) {
+                return null;
+              }
+              return path.some(node => node instanceof HTMLElement && node.dataset?.weatherCard === "root")
+                ? "body"
+                : null;
+            },
+            shouldBeginHold: () => {
+              const action = String(this._config?.hold_action || "more-info");
+              return action !== "none" && Boolean(this._getState());
+            },
+            onHold: () => {
+              this._triggerHaptic();
+              this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__content"));
+              this._performHoldAction();
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextWeatherTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
@@ -1633,6 +1778,9 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold = () => {};
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot?.removeEventListener("pointerleave", this._onShadowPointerLeave);
@@ -2039,8 +2187,13 @@ class NodaliaWeatherCard extends HTMLElement {
     }, animations.buttonBounceDuration + 40);
   }
 
-  _performTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
+  _performWeatherCardAction(actionKind) {
+    const key = actionKind === "hold"
+      ? "hold_action"
+      : actionKind === "double_tap"
+        ? "double_tap_action"
+        : "tap_action";
+    const action = String(this._config?.[key] || "more-info");
     if (action === "none") {
       return;
     }
@@ -2052,6 +2205,18 @@ class NodaliaWeatherCard extends HTMLElement {
         entityId: this._config.entity,
       });
     }
+  }
+
+  _performTapAction() {
+    this._performWeatherCardAction("tap");
+  }
+
+  _performHoldAction() {
+    this._performWeatherCardAction("hold");
+  }
+
+  _performDoubleTapAction() {
+    this._performWeatherCardAction("double_tap");
   }
 
   _getForecastPointOverlayPosition(actionButton, width, height) {
@@ -2229,15 +2394,47 @@ class NodaliaWeatherCard extends HTMLElement {
     }
 
     const card = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.weatherCard === "root");
-    if (!card || String(this._config?.tap_action || "more-info") === "none") {
+    if (!card) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
-    this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
-    this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
-    this._performTapAction();
+
+    if (this._suppressNextWeatherTap) {
+      this._suppressNextWeatherTap = false;
+      return;
+    }
+
+    const tapAction = String(this._config?.tap_action || "more-info");
+    const doubleAction = String(this._config?.double_tap_action || "none");
+    const runTap = () => {
+      if (tapAction === "none") {
+        return;
+      }
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
+      this._performTapAction();
+    };
+    const runDouble = () => {
+      if (doubleAction === "none") {
+        return;
+      }
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
+      this._performDoubleTapAction();
+    };
+
+    if (doubleAction !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+      window.NodaliaUtils.scheduleCardZoneTap(this, {
+        zone: "body",
+        onSingle: runTap,
+        onDouble: runDouble,
+      });
+      return;
+    }
+
+    runTap();
   }
 
   _renderChip(icon, label, accentColor) {
@@ -2767,9 +2964,18 @@ class NodaliaWeatherCard extends HTMLElement {
       return;
     }
 
+    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+      this._hass,
+      this._config?.entity,
+      { cardClass: "weather-card" },
+    );
+    if (entityGuard) {
+      this.shadowRoot.innerHTML = entityGuard;
+      return;
+    }
+
     const state = this._getState();
-    if (!this._config?.entity || !state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
+    if (!state) {
       return;
     }
 
@@ -4579,6 +4785,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "more-info";
+    const holdAction = config.hold_action || "more-info";
+    const doubleTapAction = config.double_tap_action || "none";
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -4898,6 +5106,26 @@ class NodaliaWeatherCardEditor extends HTMLElement {
               [
                 { value: "more-info", label: "ed.weather.tap_more_info" },
                 { value: "none", label: "ed.weather.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.weather.hold_action",
+              "hold_action",
+              holdAction,
+              [
+                { value: "more-info", label: "ed.weather.tap_more_info" },
+                { value: "none", label: "ed.weather.tap_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderSelectField(
+              "ed.weather.double_tap_action",
+              "double_tap_action",
+              doubleTapAction,
+              [
+                { value: "none", label: "ed.weather.tap_none" },
+                { value: "more-info", label: "ed.weather.tap_more_info" },
               ],
               { fullWidth: true },
             )}

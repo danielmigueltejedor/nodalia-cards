@@ -23,6 +23,9 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "cancelCardZoneTap",
+    "scheduleCardZoneTap",
+    "renderLovelaceEntityGuardCardHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -589,6 +592,104 @@
     </div>`;
   }
 
+  const CARD_ZONE_DOUBLE_TAP_MS = 320;
+
+  function escapeLovelaceWarningText(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function getLovelaceEntityWarningMessage(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id) {
+      return (
+        hass?.localize?.("ui.panel.lovelace.cards.show_entity_picker")
+        ?? "No entity specified"
+      );
+    }
+    if (hass?.states?.[id]) {
+      return "";
+    }
+    return (
+      hass?.localize?.("ui.components.entity.entity_not_found", { entity: id })
+      ?? hass?.localize?.("ui.card.common.entity_not_found")
+      ?? `Entity not found: ${id}`
+    );
+  }
+
+  function renderLovelaceEntityWarningMarkup(hass, entityId) {
+    const message = getLovelaceEntityWarningMessage(hass, entityId);
+    if (!message) {
+      return "";
+    }
+    const safe = escapeLovelaceWarningText(message);
+    if (typeof customElements !== "undefined" && customElements.get("hui-warning")) {
+      return `<hui-warning>${safe}</hui-warning>`;
+    }
+    if (typeof customElements !== "undefined" && customElements.get("ha-alert")) {
+      return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
+    }
+    return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
+    const markup = renderLovelaceEntityWarningMarkup(hass, entityId);
+    if (!markup) {
+      return null;
+    }
+    const cardClass = String(options.cardClass ?? "").trim();
+    const classAttr = cardClass ? ` class="${cardClass.replace(/"/g, "")}"` : "";
+    return `<ha-card${classAttr}>${markup}</ha-card>`;
+  }
+
+  function cancelCardZoneTap(host) {
+    if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
+      return;
+    }
+    const pending = host._nodaliaZoneTap;
+    if (pending?.timer) {
+      window.clearTimeout(pending.timer);
+    }
+    host._nodaliaZoneTap = null;
+  }
+
+  function scheduleCardZoneTap(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const zone = String(options?.zone ?? "body");
+    const delayMs = Number.isFinite(Number(options?.doubleTapMs)) && Number(options.doubleTapMs) > 0
+      ? Math.round(Number(options.doubleTapMs))
+      : CARD_ZONE_DOUBLE_TAP_MS;
+    const onSingle = typeof options?.onSingle === "function" ? options.onSingle : () => {};
+    const onDouble = typeof options?.onDouble === "function" ? options.onDouble : null;
+    const now = Date.now();
+    const pending = host._nodaliaZoneTap;
+
+    if (onDouble && pending && pending.zone === zone && now - pending.at <= delayMs) {
+      if (pending.timer) {
+        window.clearTimeout(pending.timer);
+      }
+      host._nodaliaZoneTap = null;
+      onDouble();
+      return;
+    }
+
+    cancelCardZoneTap(host);
+    const token = { zone, at: now };
+    host._nodaliaZoneTap = token;
+    token.timer = window.setTimeout(() => {
+      if (host._nodaliaZoneTap !== token) {
+        return;
+      }
+      host._nodaliaZoneTap = null;
+      onSingle();
+    }, delayMs);
+  }
+
   /**
    * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
    * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
@@ -780,6 +881,9 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    cancelCardZoneTap,
+    scheduleCardZoneTap,
+    renderLovelaceEntityGuardCardHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -794,7 +898,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -841,6 +945,18 @@ const DEFAULT_CONFIG = {
   icon_hold_url: "",
   icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
+  double_tap_action: "none",
+  icon_double_tap_action: "",
+  double_tap_service: "",
+  double_tap_service_data: "",
+  double_tap_url: "",
+  double_tap_navigation_path: "",
+  double_tap_new_tab: false,
+  icon_double_tap_service: "",
+  icon_double_tap_service_data: "",
+  icon_double_tap_url: "",
+  icon_double_tap_navigation_path: "",
+  icon_double_tap_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
   state_position: "below",
@@ -1434,6 +1550,30 @@ function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
+  const normDouble = String(config.double_tap_action ?? "none").trim().toLowerCase();
+  config.double_tap_action = TAP_ACTIONS.has(normDouble) ? normDouble : "none";
+  const iconDoubleStr = config.icon_double_tap_action === undefined || config.icon_double_tap_action === null
+    ? ""
+    : String(config.icon_double_tap_action).trim();
+  if (!iconDoubleStr) {
+    config.icon_double_tap_action = "";
+  } else {
+    const n = iconDoubleStr.toLowerCase();
+    config.icon_double_tap_action = TAP_ACTIONS.has(n) ? n : "";
+  }
+  config.double_tap_service = String(config.double_tap_service ?? "").trim();
+  config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
+  config.double_tap_url = String(config.double_tap_url ?? "").trim();
+  config.double_tap_navigation_path = String(config.double_tap_navigation_path ?? "").trim();
+  config.double_tap_new_tab = config.double_tap_new_tab === true;
+  config.icon_double_tap_service = String(config.icon_double_tap_service ?? "").trim();
+  config.icon_double_tap_service_data = String(config.icon_double_tap_service_data ?? "").trim();
+  config.icon_double_tap_url = String(config.icon_double_tap_url ?? "").trim();
+  config.icon_double_tap_navigation_path = String(config.icon_double_tap_navigation_path ?? "").trim();
+  config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
+  if (config.double_tap_action === "navigate" && !config.double_tap_navigation_path && config.double_tap_url) {
+    config.double_tap_navigation_path = config.double_tap_url;
+  }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
 
@@ -1508,6 +1648,7 @@ class NodaliaEntityCard extends HTMLElement {
             },
             markHoldConsumedClick: () => {
               this._suppressNextEntityTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
           })
         : () => {};
@@ -2016,6 +2157,54 @@ class NodaliaEntityCard extends HTMLElement {
     return false;
   }
 
+  _effectiveDoubleTapAction(zone) {
+    if (zone === "icon") {
+      const raw = this._config?.icon_double_tap_action;
+      if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return this._config?.double_tap_action || "none";
+      }
+      return String(raw).trim() || "none";
+    }
+    return String(this._config?.double_tap_action || "none").trim() || "none";
+  }
+
+  _canRunDoubleTapAction(state, zone = "body") {
+    const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
+    if (doubleAction === "none") {
+      return false;
+    }
+
+    if (doubleAction === "service") {
+      let service = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
+      if (zone === "icon" && !String(service || "").trim()) {
+        service = this._config?.double_tap_service;
+      }
+      return Boolean(service && String(service).trim());
+    }
+
+    if (doubleAction === "url") {
+      let url = zone === "icon" ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
+      if (zone === "icon" && !String(url || "").trim()) {
+        url = this._config?.double_tap_url;
+      }
+      return Boolean(url && String(url).trim());
+    }
+
+    if (doubleAction === "navigate") {
+      return Boolean(this._navigationPathForZone(zone, "double"));
+    }
+
+    if (doubleAction === "toggle") {
+      return this._isBinaryOnOff(state);
+    }
+
+    if (doubleAction === "more-info" || doubleAction === "auto") {
+      return Boolean(this._config?.entity);
+    }
+
+    return false;
+  }
+
   _toggleEntity(entityId = this._config?.entity) {
     const state = this._hass?.states?.[entityId];
     const isPrimaryEntity = entityId && entityId === this._config?.entity;
@@ -2047,30 +2236,37 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _navigationPathForZone(zone = "body", actionKind = "tap") {
-    const isTap = actionKind === "tap";
+    const kind = actionKind === "hold" ? "hold" : actionKind === "double" ? "double" : "tap";
+    const pathKey = kind === "tap"
+      ? "navigation_path"
+      : kind === "hold"
+        ? "hold_navigation_path"
+        : "double_tap_navigation_path";
+    const iconPathKey = kind === "tap"
+      ? "icon_navigation_path"
+      : kind === "hold"
+        ? "icon_hold_navigation_path"
+        : "icon_double_tap_navigation_path";
+    const urlKey = kind === "tap" ? "tap_url" : kind === "hold" ? "hold_url" : "double_tap_url";
+    const iconUrlKey = kind === "tap" ? "icon_tap_url" : kind === "hold" ? "icon_hold_url" : "icon_double_tap_url";
     if (zone === "icon") {
-      const iconPath = String(
-        isTap ? this._config?.icon_navigation_path : this._config?.icon_hold_navigation_path,
-      ).trim();
+      const iconPath = String(this._config?.[iconPathKey] ?? "").trim();
       if (iconPath) {
         return iconPath;
       }
-      const inheritedBodyPath = String(
-        isTap ? this._config?.navigation_path : this._config?.hold_navigation_path,
-      ).trim();
+      const inheritedBodyPath = String(this._config?.[pathKey] ?? "").trim();
       if (inheritedBodyPath) {
         return inheritedBodyPath;
       }
-      return String(isTap ? this._config?.icon_tap_url : this._config?.icon_hold_url).trim()
-        || String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+      return String(this._config?.[iconUrlKey] ?? "").trim() || String(this._config?.[urlKey] ?? "").trim();
     }
 
-    const bodyPath = String(isTap ? this._config?.navigation_path : this._config?.hold_navigation_path).trim();
+    const bodyPath = String(this._config?.[pathKey] ?? "").trim();
     if (bodyPath) {
       return bodyPath;
     }
 
-    return String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+    return String(this._config?.[urlKey] ?? "").trim();
   }
 
   _navigateToPath(path) {
@@ -2245,6 +2441,51 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _performDoubleTapAction(state, zone = "body") {
+    const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
+    let doubleService = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
+    let doubleServiceData = zone === "icon" ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
+    let doubleUrl = zone === "icon" ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
+    let doubleNewTab = zone === "icon" ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
+    if (zone === "icon") {
+      if (!String(doubleService || "").trim()) {
+        doubleService = this._config?.double_tap_service;
+        doubleServiceData = this._config?.double_tap_service_data;
+      }
+      if (!String(doubleUrl || "").trim()) {
+        doubleUrl = this._config?.double_tap_url;
+        doubleNewTab = this._config?.double_tap_new_tab === true;
+      }
+    }
+
+    switch (doubleAction) {
+      case "toggle":
+        this._toggleEntity(this._config?.entity);
+        break;
+      case "more-info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "service":
+        this._callConfiguredService(doubleService, this._config?.entity, doubleServiceData);
+        break;
+      case "url":
+        this._openConfiguredUrl(doubleUrl, doubleNewTab);
+        break;
+      case "navigate":
+        this._navigateToPath(this._navigationPathForZone(zone, "double"));
+        break;
+      case "auto":
+      default:
+        if (this._isBinaryOnOff(state)) {
+          this._toggleEntity(this._config?.entity);
+          return;
+        }
+
+        this._openMoreInfo(this._config?.entity);
+        break;
+    }
+  }
+
   _performQuickAction(action) {
     const targetEntity = action?.entity || this._config?.entity;
 
@@ -2356,14 +2597,30 @@ class NodaliaEntityCard extends HTMLElement {
         this._suppressNextEntityTap = false;
         return;
       }
-      if (!this._canRunTapAction(state, action)) {
+      const zone = action;
+      const runTap = () => {
+        if (!this._canRunTapAction(state, zone)) {
+          return;
+        }
+        this._triggerHaptic();
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+        this._performTapAction(state, zone);
+      };
+      const runDouble = () => {
+        if (!this._canRunDoubleTapAction(state, zone)) {
+          return;
+        }
+        this._triggerHaptic();
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+        this._performDoubleTapAction(state, zone);
+      };
+      if (this._canRunDoubleTapAction(state, zone) && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+        window.NodaliaUtils.scheduleCardZoneTap(this, { zone, onSingle: runTap, onDouble: runDouble });
         return;
       }
-
-      this._triggerHaptic();
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
-      this._performTapAction(state, action);
+      runTap();
       return;
     }
 
@@ -2404,14 +2661,18 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (!this._config?.entity) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
+    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+      this._hass,
+      this._config?.entity,
+      { cardClass: "entity-card" },
+    );
+    if (entityGuard) {
+      this.shadowRoot.innerHTML = entityGuard;
       return;
     }
 
     const state = this._getState();
     if (!state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
       return;
     }
 
@@ -3608,7 +3869,13 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const showCardHoldNavigate = holdAction === "navigate";
     const showCardHoldService = holdAction === "service";
     const showIconHoldService = iconHoldSelect === "service" || (iconHoldSelect === "" && holdAction === "service");
-    const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
+    const doubleTapAction = config.double_tap_action || "none";
+    const iconDoubleTapSelect = String(config.icon_double_tap_action ?? "").trim();
+    const showIconDoubleTapNavigate = iconDoubleTapSelect === "navigate";
+    const showCardDoubleTapNavigate = doubleTapAction === "navigate";
+    const showCardDoubleTapService = doubleTapAction === "service";
+    const showIconDoubleTapService = iconDoubleTapSelect === "service" || (iconDoubleTapSelect === "" && doubleTapAction === "service");
+    const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService || showCardDoubleTapService || showIconDoubleTapService;
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -4229,6 +4496,21 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 `
                 : ""
             }
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.double_tap_actions_section_hint"))}</div>
+            ${this._renderSelectField(
+              "ed.light.card_double_tap_action",
+              "double_tap_action",
+              doubleTapAction,
+              [
+                { value: "none", label: "ed.entity.tap_none" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+              ],
+              { fullWidth: true },
+            )}
           </div>
         </section>
 

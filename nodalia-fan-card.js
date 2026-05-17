@@ -23,6 +23,9 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "cancelCardZoneTap",
+    "scheduleCardZoneTap",
+    "renderLovelaceEntityGuardCardHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -589,6 +592,104 @@
     </div>`;
   }
 
+  const CARD_ZONE_DOUBLE_TAP_MS = 320;
+
+  function escapeLovelaceWarningText(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function getLovelaceEntityWarningMessage(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id) {
+      return (
+        hass?.localize?.("ui.panel.lovelace.cards.show_entity_picker")
+        ?? "No entity specified"
+      );
+    }
+    if (hass?.states?.[id]) {
+      return "";
+    }
+    return (
+      hass?.localize?.("ui.components.entity.entity_not_found", { entity: id })
+      ?? hass?.localize?.("ui.card.common.entity_not_found")
+      ?? `Entity not found: ${id}`
+    );
+  }
+
+  function renderLovelaceEntityWarningMarkup(hass, entityId) {
+    const message = getLovelaceEntityWarningMessage(hass, entityId);
+    if (!message) {
+      return "";
+    }
+    const safe = escapeLovelaceWarningText(message);
+    if (typeof customElements !== "undefined" && customElements.get("hui-warning")) {
+      return `<hui-warning>${safe}</hui-warning>`;
+    }
+    if (typeof customElements !== "undefined" && customElements.get("ha-alert")) {
+      return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
+    }
+    return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
+    const markup = renderLovelaceEntityWarningMarkup(hass, entityId);
+    if (!markup) {
+      return null;
+    }
+    const cardClass = String(options.cardClass ?? "").trim();
+    const classAttr = cardClass ? ` class="${cardClass.replace(/"/g, "")}"` : "";
+    return `<ha-card${classAttr}>${markup}</ha-card>`;
+  }
+
+  function cancelCardZoneTap(host) {
+    if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
+      return;
+    }
+    const pending = host._nodaliaZoneTap;
+    if (pending?.timer) {
+      window.clearTimeout(pending.timer);
+    }
+    host._nodaliaZoneTap = null;
+  }
+
+  function scheduleCardZoneTap(host, options) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const zone = String(options?.zone ?? "body");
+    const delayMs = Number.isFinite(Number(options?.doubleTapMs)) && Number(options.doubleTapMs) > 0
+      ? Math.round(Number(options.doubleTapMs))
+      : CARD_ZONE_DOUBLE_TAP_MS;
+    const onSingle = typeof options?.onSingle === "function" ? options.onSingle : () => {};
+    const onDouble = typeof options?.onDouble === "function" ? options.onDouble : null;
+    const now = Date.now();
+    const pending = host._nodaliaZoneTap;
+
+    if (onDouble && pending && pending.zone === zone && now - pending.at <= delayMs) {
+      if (pending.timer) {
+        window.clearTimeout(pending.timer);
+      }
+      host._nodaliaZoneTap = null;
+      onDouble();
+      return;
+    }
+
+    cancelCardZoneTap(host);
+    const token = { zone, at: now };
+    host._nodaliaZoneTap = token;
+    token.timer = window.setTimeout(() => {
+      if (host._nodaliaZoneTap !== token) {
+        return;
+      }
+      host._nodaliaZoneTap = null;
+      onSingle();
+    }, delayMs);
+  }
+
   /**
    * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
    * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
@@ -780,6 +881,9 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    cancelCardZoneTap,
+    scheduleCardZoneTap,
+    renderLovelaceEntityGuardCardHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -794,7 +898,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -841,6 +945,16 @@ const DEFAULT_CONFIG = {
   icon_hold_service_data: "",
   icon_hold_url: "",
   icon_hold_new_tab: false,
+  double_tap_action: "none",
+  icon_double_tap_action: "",
+  double_tap_service: "",
+  double_tap_service_data: "",
+  double_tap_url: "",
+  double_tap_new_tab: false,
+  icon_double_tap_service: "",
+  icon_double_tap_service_data: "",
+  icon_double_tap_url: "",
+  icon_double_tap_new_tab: false,
   security: {
     strict_service_actions: true,
     allowed_services: [],
@@ -1311,6 +1425,25 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  const normDouble = String(config.double_tap_action ?? "none").trim().toLowerCase();
+  config.double_tap_action = TAP_ACTIONS.has(normDouble) ? normDouble : "none";
+  const iconDoubleStr = config.icon_double_tap_action === undefined || config.icon_double_tap_action === null
+    ? ""
+    : String(config.icon_double_tap_action).trim();
+  if (!iconDoubleStr) {
+    config.icon_double_tap_action = "";
+  } else {
+    const n = iconDoubleStr.toLowerCase();
+    config.icon_double_tap_action = TAP_ACTIONS.has(n) ? n : "";
+  }
+  config.double_tap_service = String(config.double_tap_service ?? "").trim();
+  config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
+  config.double_tap_url = String(config.double_tap_url ?? "").trim();
+  config.double_tap_new_tab = config.double_tap_new_tab === true;
+  config.icon_double_tap_service = String(config.icon_double_tap_service ?? "").trim();
+  config.icon_double_tap_service_data = String(config.icon_double_tap_service_data ?? "").trim();
+  config.icon_double_tap_url = String(config.icon_double_tap_url ?? "").trim();
+  config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
 
@@ -1420,6 +1553,7 @@ class NodaliaFanCard extends HTMLElement {
             },
             markHoldConsumedClick: () => {
               this._suppressNextFanTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
           })
         : () => {};
@@ -1519,6 +1653,7 @@ class NodaliaFanCard extends HTMLElement {
       presetPanelOpen: Boolean(this._presetPanelOpen),
       tap: `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
       hold: `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
+      double: `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`,
     });
   }
 
@@ -2088,6 +2223,60 @@ class NodaliaFanCard extends HTMLElement {
     }
   }
 
+  _resolveFanDoubleTapEffect(zone) {
+    const bodyRaw = this._config?.double_tap_action ?? "none";
+    const iconRaw = this._config?.icon_double_tap_action;
+    const raw =
+      zone === "icon"
+        ? (iconRaw === undefined || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw)
+        : bodyRaw;
+    let effect = String(raw || "none").trim().toLowerCase();
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    if (!allowed.has(effect)) {
+      effect = "none";
+    }
+    if (effect === "auto") {
+      const state = this._getState();
+      return this._isFanToggleableState(state) ? "toggle" : "more-info";
+    }
+    return effect;
+  }
+
+  _executeFanDoubleTapEffect(zone, effect) {
+    const isIcon = zone === "icon";
+    switch (effect) {
+      case "toggle":
+        this._toggleFan(this._getState());
+        break;
+      case "more-info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "service": {
+        let service = isIcon ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
+        let data = isIcon ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
+        if (isIcon && !String(service || "").trim()) {
+          service = this._config?.double_tap_service;
+          data = this._config?.double_tap_service_data;
+        }
+        this._callConfiguredService(service, this._config?.entity, data);
+        break;
+      }
+      case "url": {
+        let url = isIcon ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
+        let tab = isIcon ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
+        if (isIcon && !String(url || "").trim()) {
+          url = this._config?.double_tap_url;
+          tab = this._config?.double_tap_new_tab === true;
+        }
+        this._openConfiguredUrl(url, tab);
+        break;
+      }
+      case "none":
+      default:
+        break;
+    }
+  }
+
   _commitPercentage(percent) {
     const nextValue = clamp(Math.round(Number(percent)), 0, 100);
     if (!Number.isFinite(nextValue)) {
@@ -2597,12 +2786,27 @@ class NodaliaFanCard extends HTMLElement {
         this._suppressNextFanTap = false;
         return;
       }
-      const effect = this._resolveFanTapEffect(zone);
-      if (effect === "none") {
+      const tapEffect = this._resolveFanTapEffect(zone);
+      const doubleEffect = this._resolveFanDoubleTapEffect(zone);
+      const runTap = () => {
+        if (tapEffect === "none") {
+          return;
+        }
+        this._triggerHaptic();
+        this._executeFanTapEffect(zone, tapEffect);
+      };
+      const runDouble = () => {
+        if (doubleEffect === "none") {
+          return;
+        }
+        this._triggerHaptic();
+        this._executeFanDoubleTapEffect(zone, doubleEffect);
+      };
+      if (doubleEffect !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+        window.NodaliaUtils.scheduleCardZoneTap(this, { zone, onSingle: runTap, onDouble: runDouble });
         return;
       }
-      this._triggerHaptic();
-      this._executeFanTapEffect(zone, effect);
+      runTap();
       return;
     }
 
@@ -2643,44 +2847,20 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const state = this._getState();
     const styles = config.styles;
 
+    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+      this._hass,
+      config.entity,
+      { cardClass: "fan-card" },
+    );
+    if (entityGuard) {
+      this.shadowRoot.innerHTML = entityGuard;
+      return;
+    }
+
+    const state = this._getState();
     if (!state) {
-      this.shadowRoot.innerHTML = `
-        <style>
-          :host {
-            display: block;
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          .fan-card--empty {
-            background: ${styles.card.background};
-            border: ${styles.card.border};
-            border-radius: ${styles.card.border_radius};
-            box-shadow: ${styles.card.box_shadow};
-            display: grid;
-            gap: 6px;
-            padding: ${styles.card.padding};
-          }
-
-          .fan-card__empty-title {
-            color: var(--primary-text-color);
-            font-size: 15px;
-            font-weight: 700;
-          }
-
-          .fan-card__empty-text {
-            color: var(--secondary-text-color);
-            font-size: 13px;
-            line-height: 1.5;
-          }
-        </style>
-        ${this._renderEmptyState()}
-      `;
       return;
     }
 
