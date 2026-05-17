@@ -794,7 +794,7 @@
 
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.1.2-alpha.4";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1663,10 +1663,20 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    window.history.pushState(null, "", navigationPath);
-    window.dispatchEvent(new CustomEvent("location-changed", {
-      detail: { replace: false },
-    }));
+    if (this._hass?.navigate) {
+      this._hass.navigate(navigationPath);
+      return;
+    }
+
+    if (window?.history?.pushState && !navigationPath.includes("://")) {
+      window.history.pushState(null, "", navigationPath);
+      window.dispatchEvent(new CustomEvent("location-changed", {
+        detail: { replace: false },
+      }));
+      return;
+    }
+
+    fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
   _effectiveVacuumTapAction(zone = "body") {

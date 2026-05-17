@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, and current **`1.1.2-alpha.*`** prereleases.
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, and completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 

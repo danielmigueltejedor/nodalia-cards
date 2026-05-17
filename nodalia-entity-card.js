@@ -794,7 +794,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.2-alpha.4";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1687,7 +1687,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     const actualKey = normalizeTextKey(actualState?.state);
     const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
-    if (!this._isBinaryOnOff(actualState) || actualKey === expectedKey) {
+    if (!actualState || !this._isBinaryOnOff(actualState) || actualKey === expectedKey) {
       this._optimisticToggle = null;
       return false;
     }
@@ -2084,7 +2084,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (window?.history?.pushState) {
+    if (window?.history?.pushState && !navigationPath.includes("://")) {
       window.history.pushState(null, "", navigationPath);
       fireEvent(this, "location-changed", { replace: false });
       return;
@@ -4022,7 +4022,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -4037,7 +4037,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -4097,7 +4097,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
             }
             ${
               showIconTapNavigate
-                ? this._renderTextField("ed.vacuum.navigation_path", "icon_navigation_path", config.icon_navigation_path, {
+                ? this._renderTextField("ed.entity.navigation_path", "icon_navigation_path", config.icon_navigation_path, {
                     placeholder: "/home-page/details",
                     fullWidth: true,
                   })
@@ -4105,7 +4105,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
             }
             ${
               showCardTapNavigate
-                ? this._renderTextField("ed.vacuum.navigation_path", "navigation_path", config.navigation_path, {
+                ? this._renderTextField("ed.entity.navigation_path", "navigation_path", config.navigation_path, {
                     placeholder: "/home-page/matt-details",
                     fullWidth: true,
                   })
@@ -4143,7 +4143,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -4158,7 +4158,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -4193,7 +4193,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
             }
             ${
               showIconHoldNavigate || (iconHoldSelect === "" && showCardHoldNavigate)
-                ? this._renderTextField("ed.vacuum.hold_navigation_path", "icon_hold_navigation_path", config.icon_hold_navigation_path, {
+                ? this._renderTextField("ed.entity.hold_navigation_path", "icon_hold_navigation_path", config.icon_hold_navigation_path, {
                     placeholder: "/home-page/details",
                     fullWidth: true,
                   })
@@ -4201,7 +4201,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
             }
             ${
               showCardHoldNavigate
-                ? this._renderTextField("ed.vacuum.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
+                ? this._renderTextField("ed.entity.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
                     placeholder: "/home-page/matt-details",
                     fullWidth: true,
                   })

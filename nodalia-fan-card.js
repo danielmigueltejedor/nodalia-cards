@@ -794,7 +794,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.2-alpha.4";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1618,7 +1618,7 @@ class NodaliaFanCard extends HTMLElement {
 
     const actualKey = normalizeTextKey(actualState?.state);
     const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
-    if (!this._isFanToggleableState(actualState) || actualKey === expectedKey) {
+    if (!actualState || !this._isFanToggleableState(actualState) || actualKey === expectedKey) {
       this._optimisticToggle = null;
       return false;
     }

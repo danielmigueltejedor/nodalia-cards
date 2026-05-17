@@ -794,7 +794,7 @@
 
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.1.2-alpha.4";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1668,7 +1668,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const actualKey = normalizeTextKey(actualState?.state);
     const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
-    if (!this._isHumidifierToggleableState(actualState) || actualKey === expectedKey) {
+    if (!actualState || !this._isHumidifierToggleableState(actualState) || actualKey === expectedKey) {
       this._optimisticToggle = null;
       return false;
     }

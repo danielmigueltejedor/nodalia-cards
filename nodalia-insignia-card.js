@@ -794,7 +794,7 @@
 
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "1.1.2-alpha.4";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1700,7 +1700,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         this._hass.navigate(path);
         return;
       }
-      if (window?.history?.pushState) {
+      if (window?.history?.pushState && !path.includes("://")) {
         window.history.pushState(null, "", path);
         fireEvent(this, "location-changed", { replace: false });
         return;
@@ -1771,7 +1771,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         this._hass.navigate(path);
         return;
       }
-      if (window?.history?.pushState) {
+      if (window?.history?.pushState && !path.includes("://")) {
         window.history.pushState(null, "", path);
         fireEvent(this, "location-changed", { replace: false });
         return;
