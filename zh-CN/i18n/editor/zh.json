@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "显示湿度芯片",
   "ed.weather.show_meteoalarm_chip": "显示 Meteoalarm 芯片",
   "ed.weather.show_pressure_chip": "显示气压芯片",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "显示样式设置",
   "ed.weather.show_wind_chip": "显示风速芯片",
   "ed.weather.styles_section_hint": "卡片的基础视觉设置。",
