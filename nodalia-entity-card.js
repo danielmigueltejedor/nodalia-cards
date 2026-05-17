@@ -23,6 +23,8 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "getEntityFriendlyName",
+    "applyDefaultConfigNameFromEntity",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -247,6 +249,40 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function getEntityFriendlyName(hass, entityId) {
+    const id = String(entityId || "").trim();
+    if (!id || !hass?.states?.[id]) {
+      return "";
+    }
+    return String(hass.states[id].attributes?.friendly_name || "").trim();
+  }
+
+  /**
+   * When `name` is empty (or still matches the previous entity id/label), copy the entity friendly name.
+   */
+  function applyDefaultConfigNameFromEntity(config, hass, options = {}) {
+    if (!config || !isObject(config)) {
+      return config;
+    }
+    const entityId = String(config.entity || "").trim();
+    if (!entityId || !hass?.states?.[entityId]) {
+      return config;
+    }
+    const fallback = getEntityFriendlyName(hass, entityId) || entityId;
+    const currentName = String(config.name ?? "").trim();
+    const previousEntity = String(options.previousEntity ?? "").trim();
+    const previousFriendly = previousEntity
+      ? (getEntityFriendlyName(hass, previousEntity) || previousEntity)
+      : "";
+    const shouldApply =
+      !currentName
+      || (previousEntity && (currentName === previousEntity || currentName === previousFriendly));
+    if (shouldApply) {
+      config.name = fallback;
+    }
+    return config;
   }
 
   function dedupeCustomCardsArray(cards) {
@@ -744,6 +780,8 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    getEntityFriendlyName,
+    applyDefaultConfigNameFromEntity,
   };
 
   if (typeof window !== "undefined") {
@@ -756,7 +794,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.1";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -767,6 +805,7 @@ const HAPTIC_PATTERNS = {
   failure: [12, 40, 12, 40, 18],
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
+const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -782,21 +821,25 @@ const DEFAULT_CONFIG = {
   tap_service: "",
   tap_service_data: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
@@ -1342,7 +1385,9 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
-  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+  const normTap = String(config.tap_action ?? "auto").trim().toLowerCase();
+  config.tap_action = TAP_ACTIONS.has(normTap) ? normTap : "auto";
   const normHold = String(config.hold_action ?? "none").trim().toLowerCase();
   config.hold_action = TAP_ACTIONS.has(normHold) ? normHold : "none";
   const iconHoldStr = config.icon_hold_action === undefined || config.icon_hold_action === null
@@ -1354,14 +1399,41 @@ function normalizeConfig(rawConfig) {
     const n = iconHoldStr.toLowerCase();
     config.icon_hold_action = TAP_ACTIONS.has(n) ? n : "";
   }
+  const iconTapStr = config.icon_tap_action === undefined || config.icon_tap_action === null
+    ? ""
+    : String(config.icon_tap_action).trim();
+  if (!iconTapStr) {
+    config.icon_tap_action = "";
+  } else {
+    const normalizedIconTap = iconTapStr.toLowerCase();
+    config.icon_tap_action = TAP_ACTIONS.has(normalizedIconTap) ? normalizedIconTap : "";
+  }
+  config.tap_service = String(config.tap_service ?? "").trim();
+  config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_url = String(config.tap_url ?? "").trim();
+  config.navigation_path = String(config.navigation_path ?? "").trim();
+  config.tap_new_tab = config.tap_new_tab === true;
+  config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
+  config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
+  config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
+  config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
+  config.icon_tap_new_tab = config.icon_tap_new_tab === true;
   config.hold_service = String(config.hold_service ?? "").trim();
   config.hold_service_data = String(config.hold_service_data ?? "").trim();
   config.hold_url = String(config.hold_url ?? "").trim();
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.hold_new_tab = config.hold_new_tab === true;
   config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
+    config.navigation_path = config.tap_url;
+  }
+  if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
+    config.hold_navigation_path = config.hold_url;
+  }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
 
@@ -1382,6 +1454,8 @@ class NodaliaEntityCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
+    this._optimisticToggle = null;
+    this._optimisticToggleTimer = 0;
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._lastRenderSignature = "";
@@ -1441,6 +1515,7 @@ class NodaliaEntityCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._scheduleOptimisticToggleTimeout();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -1457,10 +1532,16 @@ class NodaliaEntityCard extends HTMLElement {
     }
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
+    this._clearOptimisticToggleTimer();
   }
 
   setConfig(config) {
+    const previousEntity = this._config?.entity || "";
     this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    if (previousEntity && previousEntity !== this._config.entity) {
+      this._clearOptimisticToggleState();
+    }
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
@@ -1470,8 +1551,9 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    this._syncOptimisticToggleState(this._getActualState());
+    const nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -1496,7 +1578,8 @@ class NodaliaEntityCard extends HTMLElement {
 
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const actualState = entityId ? hass?.states?.[entityId] || null : null;
+    const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
     const attrs = state?.attributes || {};
     const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
     const configuredPrimaryAttribute = String(this._config?.primary_attribute || "").trim();
@@ -1505,6 +1588,7 @@ class NodaliaEntityCard extends HTMLElement {
       `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
       `e:${entityId}`,
       `s:${String(state?.state || "")}`,
+      `o:${String(attrs._nodalia_optimistic_toggle || "")}`,
       `lu:${String(state?.last_updated || state?.last_changed || "")}`,
       `sa:${configuredStateAttribute}`,
       `sv:${configuredStateAttribute ? String(attrs[configuredStateAttribute] ?? "") : ""}`,
@@ -1565,7 +1649,122 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
+    return this._buildOptimisticToggleState(this._getActualState());
+  }
+
+  _getActualState(hass = this._hass) {
+    return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _createStateSnapshot(state) {
+    if (!state) {
+      return null;
+    }
+    return {
+      ...state,
+      attributes: { ...(state.attributes || {}) },
+    };
+  }
+
+  _clearOptimisticToggleTimer() {
+    if (this._optimisticToggleTimer) {
+      window.clearTimeout(this._optimisticToggleTimer);
+      this._optimisticToggleTimer = 0;
+    }
+  }
+
+  _clearOptimisticToggleState() {
+    this._clearOptimisticToggleTimer();
+    this._optimisticToggle = null;
+  }
+
+  _isOptimisticTogglePending(actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._optimisticToggle || this._optimisticToggle.entityId !== entityId) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    const actualKey = normalizeTextKey(actualState?.state);
+    const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
+    if (!actualState || !this._isBinaryOnOff(actualState) || actualKey === expectedKey) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    if (Date.now() >= this._optimisticToggle.expiresAt) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  _scheduleOptimisticToggleTimeout() {
+    this._clearOptimisticToggleTimer();
+    if (!this._optimisticToggle || !this.isConnected || typeof window === "undefined") {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
+    this._optimisticToggleTimer = window.setTimeout(() => {
+      this._optimisticToggleTimer = 0;
+      if (!this._isOptimisticTogglePending(this._getActualState())) {
+        this._lastRenderSignature = "";
+        this._render();
+        return;
+      }
+      this._scheduleOptimisticToggleTimeout();
+    }, remaining);
+  }
+
+  _startOptimisticToggle(expectedState, actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._isBinaryOnOff(actualState)) {
+      return;
+    }
+
+    this._clearOptimisticToggleState();
+    this._optimisticToggle = {
+      entityId,
+      expectedState,
+      expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
+      stateSnapshot: this._createStateSnapshot(actualState),
+    };
+    this._scheduleOptimisticToggleTimeout();
+  }
+
+  _buildOptimisticToggleState(actualState = this._getActualState()) {
+    if (!this._isOptimisticTogglePending(actualState)) {
+      return actualState;
+    }
+
+    const snapshot = this._optimisticToggle?.stateSnapshot || actualState;
+    if (!snapshot) {
+      return actualState;
+    }
+
+    return {
+      ...snapshot,
+      entity_id: snapshot.entity_id || actualState?.entity_id || this._config?.entity,
+      state: this._optimisticToggle.expectedState,
+      attributes: {
+        ...(snapshot.attributes || {}),
+        ...(actualState?.attributes || {}),
+        _nodalia_optimistic_toggle: this._optimisticToggle.expectedState,
+      },
+    };
+  }
+
+  _syncOptimisticToggleState(actualState = this._getActualState()) {
+    if (!this._optimisticToggle) {
+      return;
+    }
+    if (!this._isOptimisticTogglePending(actualState)) {
+      this._clearOptimisticToggleTimer();
+      return;
+    }
+    this._scheduleOptimisticToggleTimeout();
   }
 
   _getDomain(entityId = this._config?.entity) {
@@ -1757,6 +1956,10 @@ class NodaliaEntityCard extends HTMLElement {
       return Boolean(url && String(url).trim());
     }
 
+    if (tapAction === "navigate") {
+      return Boolean(this._navigationPathForZone(zone, "tap"));
+    }
+
     if (tapAction === "toggle") {
       return this._isBinaryOnOff(state);
     }
@@ -1794,6 +1997,10 @@ class NodaliaEntityCard extends HTMLElement {
       return Boolean(url && String(url).trim());
     }
 
+    if (holdAction === "navigate") {
+      return Boolean(this._navigationPathForZone(zone, "hold"));
+    }
+
     if (holdAction === "toggle") {
       return this._isBinaryOnOff(state);
     }
@@ -1811,14 +2018,22 @@ class NodaliaEntityCard extends HTMLElement {
 
   _toggleEntity(entityId = this._config?.entity) {
     const state = this._hass?.states?.[entityId];
-    if (!this._hass || !entityId || !state || !this._isBinaryOnOff(state)) {
+    const isPrimaryEntity = entityId && entityId === this._config?.entity;
+    const effectiveState = isPrimaryEntity ? this._getState() : state;
+    if (!this._hass || !entityId || !effectiveState || !this._isBinaryOnOff(effectiveState)) {
       return;
     }
 
-    const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
+    const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
+    if (isPrimaryEntity) {
+      this._startOptimisticToggle(service === "turn_on" ? "on" : "off", state);
+    }
     this._hass.callService("homeassistant", service, {
       entity_id: entityId,
     });
+    if (isPrimaryEntity) {
+      this._render();
+    }
   }
 
   _openMoreInfo(entityId = this._config?.entity) {
@@ -1829,6 +2044,53 @@ class NodaliaEntityCard extends HTMLElement {
     fireEvent(this, "hass-more-info", {
       entityId,
     });
+  }
+
+  _navigationPathForZone(zone = "body", actionKind = "tap") {
+    const isTap = actionKind === "tap";
+    if (zone === "icon") {
+      const iconPath = String(
+        isTap ? this._config?.icon_navigation_path : this._config?.icon_hold_navigation_path,
+      ).trim();
+      if (iconPath) {
+        return iconPath;
+      }
+      const inheritedBodyPath = String(
+        isTap ? this._config?.navigation_path : this._config?.hold_navigation_path,
+      ).trim();
+      if (inheritedBodyPath) {
+        return inheritedBodyPath;
+      }
+      return String(isTap ? this._config?.icon_tap_url : this._config?.icon_hold_url).trim()
+        || String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+    }
+
+    const bodyPath = String(isTap ? this._config?.navigation_path : this._config?.hold_navigation_path).trim();
+    if (bodyPath) {
+      return bodyPath;
+    }
+
+    return String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+  }
+
+  _navigateToPath(path) {
+    const navigationPath = String(path || "").trim();
+    if (!navigationPath) {
+      return;
+    }
+
+    if (this._hass?.navigate) {
+      this._hass.navigate(navigationPath);
+      return;
+    }
+
+    if (window?.history?.pushState && !navigationPath.includes("://")) {
+      window.history.pushState(null, "", navigationPath);
+      fireEvent(this, "location-changed", { replace: false });
+      return;
+    }
+
+    fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
   _parseServiceData(rawValue) {
@@ -1923,6 +2185,9 @@ class NodaliaEntityCard extends HTMLElement {
       case "url":
         this._openConfiguredUrl(tapUrl, tapNewTab);
         break;
+      case "navigate":
+        this._navigateToPath(this._navigationPathForZone(zone, "tap"));
+        break;
       case "auto":
       default:
         if (this._isBinaryOnOff(state)) {
@@ -1964,6 +2229,9 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "url":
         this._openConfiguredUrl(holdUrl, holdNewTab);
+        break;
+      case "navigate":
+        this._navigateToPath(this._navigationPathForZone(zone, "hold"));
         break;
       case "auto":
       default:
@@ -2756,6 +3024,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
   setConfig(config) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
   }
@@ -2996,7 +3265,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
       control.dataset.value = String(nextValue || "");
     }
 
-    this._setFieldValue(control.dataset.field, nextValue);
+    const field = control.dataset.field;
+    const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+    this._setFieldValue(field, nextValue);
+    if (field === "entity") {
+      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+    }
     this._setEditorConfig();
     this._emitConfig();
   }
@@ -3326,8 +3600,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const iconTapSelectValue = iconTapActionRaw;
     const showIconTapService = iconTapSelectValue === "service";
     const showCardTapService = tapAction === "service";
+    const showIconTapNavigate = iconTapSelectValue === "navigate";
+    const showCardTapNavigate = tapAction === "navigate";
     const holdAction = config.hold_action || "none";
     const iconHoldSelect = String(config.icon_hold_action ?? "").trim();
+    const showIconHoldNavigate = iconHoldSelect === "navigate";
+    const showCardHoldNavigate = holdAction === "navigate";
     const showCardHoldService = holdAction === "service";
     const showIconHoldService = iconHoldSelect === "service" || (iconHoldSelect === "" && holdAction === "service");
     const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
@@ -3744,6 +4022,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -3758,6 +4037,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -3816,6 +4096,22 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 : ""
             }
             ${
+              showIconTapNavigate
+                ? this._renderTextField("ed.entity.navigation_path", "icon_navigation_path", config.icon_navigation_path, {
+                    placeholder: "/home-page/details",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
+              showCardTapNavigate
+                ? this._renderTextField("ed.entity.navigation_path", "navigation_path", config.navigation_path, {
+                    placeholder: "/home-page/matt-details",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
               iconTapSelectValue === "url"
                 ? `
                   ${this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, {
@@ -3847,6 +4143,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -3861,6 +4158,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -3891,6 +4189,22 @@ class NodaliaEntityCardEditor extends HTMLElement {
                     placeholder: '{"brightness_pct": 70}',
                   })}
                 `
+                : ""
+            }
+            ${
+              showIconHoldNavigate || (iconHoldSelect === "" && showCardHoldNavigate)
+                ? this._renderTextField("ed.entity.hold_navigation_path", "icon_hold_navigation_path", config.icon_hold_navigation_path, {
+                    placeholder: "/home-page/details",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
+              showCardHoldNavigate
+                ? this._renderTextField("ed.entity.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
+                    placeholder: "/home-page/matt-details",
+                    fullWidth: true,
+                  })
                 : ""
             }
             ${

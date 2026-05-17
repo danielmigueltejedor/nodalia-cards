@@ -4,14 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, and completed **`1.1.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, and completed **`1.1.2-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
 Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** line.
-
 
 ### Planned / In progress
 
@@ -21,10 +20,39 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
 
+## [1.1.2] - 2026-05-15
+
+Stable **`1.1.2`** patch release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.2.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Entity Card:** **`tap_action: navigate`** with **`navigation_path`** uses Home Assistant SPA navigation so person/detail subviews work in the Companion App (unlike **`tap_action: url`** with relative paths, which reloads or opens the system browser).
+- **Cover Card:** cover controls follow the fan/light interaction model — no dashboard flicker on tap, slider-only pointer capture, and a dedicated compact transport lane at **6 columns** or less.
+- **Light Card:** temperature slider track gradient direction is correct for **`color_temp`** (mired) lights.
+- **Editors:** new cards and entity changes copy the entity **friendly name** into the **Name** field when it is still empty.
+
+### Added
+
+- **`nodalia-entity-card.js`:** **`tap_action: navigate`** and **`navigation_path`** (plus icon/hold variants) via `hass.navigate` → `history.pushState` + `location-changed` → `hass-navigate`.
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js` / `nodalia-entity-card.js`:** optimistic toggle state for instant tap feedback with HA confirmation fallback.
+
 ### Fixed
 
-- **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
-- **`nodalia-light-card.js`:** quick color-temperature preset labels and related control text now use runtime i18n instead of hardcoded English/Spanish strings.
+- **`nodalia-light-card.js`:** temperature slider track gradient for **`color_temp`** (mired) lights — cool on the left, warm on the right; **`color_temp_kelvin`** keeps warm→cool left→right.
+- **`nodalia-cover-card.js`:** fan-style pointer handling (slider-only capture, no `button.blur()` or scroll-restore helpers) so the dashboard no longer flashes when tapping controls.
+- **`nodalia-cover-card.js`:** suppress focus/scroll nudges on cover services and slider commits on bottom-of-dashboard layouts.
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** power/control expansion animations no longer restart visibly after fast optimistic toggles.
+- **`nodalia-weather-card.js`:** forecast chart popups use an opaque theme-safe surface so cards below no longer show through.
+- **`nodalia-light-card.js`:** quick color-temperature preset labels use runtime i18n instead of hardcoded strings.
+
+### Changed
+
+- **`nodalia-utils.js`:** **`applyDefaultConfigNameFromEntity`** fills the visual editor **Name** field from the entity friendly name when empty or still matching the previous entity label.
+- **`nodalia-cover-card.js`:** render signature no longer stringifies the full config object (fewer unnecessary re-renders).
+- **`README.md`:** Buy Me a Coffee badge placement; removed duplicate donation links and PayPal entry.
+- **Release metadata:** promote the **`1.1.2`** line from prerelease to stable **`1.1.2`**.
+
+Per-alpha notes for **`1.1.2-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 

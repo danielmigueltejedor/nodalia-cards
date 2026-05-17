@@ -23,6 +23,8 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "getEntityFriendlyName",
+    "applyDefaultConfigNameFromEntity",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -247,6 +249,40 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function getEntityFriendlyName(hass, entityId) {
+    const id = String(entityId || "").trim();
+    if (!id || !hass?.states?.[id]) {
+      return "";
+    }
+    return String(hass.states[id].attributes?.friendly_name || "").trim();
+  }
+
+  /**
+   * When `name` is empty (or still matches the previous entity id/label), copy the entity friendly name.
+   */
+  function applyDefaultConfigNameFromEntity(config, hass, options = {}) {
+    if (!config || !isObject(config)) {
+      return config;
+    }
+    const entityId = String(config.entity || "").trim();
+    if (!entityId || !hass?.states?.[entityId]) {
+      return config;
+    }
+    const fallback = getEntityFriendlyName(hass, entityId) || entityId;
+    const currentName = String(config.name ?? "").trim();
+    const previousEntity = String(options.previousEntity ?? "").trim();
+    const previousFriendly = previousEntity
+      ? (getEntityFriendlyName(hass, previousEntity) || previousEntity)
+      : "";
+    const shouldApply =
+      !currentName
+      || (previousEntity && (currentName === previousEntity || currentName === previousFriendly));
+    if (shouldApply) {
+      config.name = fallback;
+    }
+    return config;
   }
 
   function dedupeCustomCardsArray(cards) {
@@ -744,6 +780,8 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    getEntityFriendlyName,
+    applyDefaultConfigNameFromEntity,
   };
 
   if (typeof window !== "undefined") {
@@ -756,7 +794,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.1";
+const CARD_VERSION = "1.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -767,6 +805,7 @@ const HAPTIC_PATTERNS = {
   failure: [12, 40, 12, 40, 18],
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
+const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -1292,6 +1331,8 @@ class NodaliaFanCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
+    this._optimisticToggle = null;
+    this._optimisticToggleTimer = 0;
     this._draftPercentage = new Map();
     this._presetPanelOpen = false;
     this._cardWidth = 0;
@@ -1386,6 +1427,7 @@ class NodaliaFanCard extends HTMLElement {
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
+    this._scheduleOptimisticToggleTimeout();
   }
 
   disconnectedCallback() {
@@ -1404,10 +1446,17 @@ class NodaliaFanCard extends HTMLElement {
     this._controlsTransition = null;
     this._presetPanelTransition = null;
     this._pendingDragUpdate = null;
+    this._clearOptimisticToggleTimer();
   }
 
   setConfig(config) {
+    const previousEntity = this._config?.entity || "";
     this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    if (previousEntity && previousEntity !== this._config.entity) {
+      this._draftPercentage.delete(previousEntity);
+      this._clearOptimisticToggleState();
+    }
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
@@ -1416,8 +1465,9 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    this._syncOptimisticToggleState(this._getActualState());
+    const nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -1448,11 +1498,13 @@ class NodaliaFanCard extends HTMLElement {
 
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const actualState = entityId ? hass?.states?.[entityId] || null : null;
+    const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
     const attrs = state?.attributes || {};
     return JSON.stringify({
       entityId,
       state: String(state?.state || ""),
+      optimistic: String(attrs._nodalia_optimistic_toggle || ""),
       friendlyName: String(attrs.friendly_name || ""),
       icon: String(attrs.icon || ""),
       showEntityPicture: this._config?.show_entity_picture === true,
@@ -1528,7 +1580,122 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
+    return this._buildOptimisticToggleState(this._getActualState());
+  }
+
+  _getActualState(hass = this._hass) {
+    return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _createStateSnapshot(state) {
+    if (!state) {
+      return null;
+    }
+    return {
+      ...state,
+      attributes: { ...(state.attributes || {}) },
+    };
+  }
+
+  _clearOptimisticToggleTimer() {
+    if (this._optimisticToggleTimer) {
+      window.clearTimeout(this._optimisticToggleTimer);
+      this._optimisticToggleTimer = 0;
+    }
+  }
+
+  _clearOptimisticToggleState() {
+    this._clearOptimisticToggleTimer();
+    this._optimisticToggle = null;
+  }
+
+  _isOptimisticTogglePending(actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._optimisticToggle || this._optimisticToggle.entityId !== entityId) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    const actualKey = normalizeTextKey(actualState?.state);
+    const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
+    if (!actualState || !this._isFanToggleableState(actualState) || actualKey === expectedKey) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    if (Date.now() >= this._optimisticToggle.expiresAt) {
+      this._optimisticToggle = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  _scheduleOptimisticToggleTimeout() {
+    this._clearOptimisticToggleTimer();
+    if (!this._optimisticToggle || !this.isConnected || typeof window === "undefined") {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
+    this._optimisticToggleTimer = window.setTimeout(() => {
+      this._optimisticToggleTimer = 0;
+      if (!this._isOptimisticTogglePending(this._getActualState())) {
+        this._lastRenderSignature = "";
+        this._render();
+        return;
+      }
+      this._scheduleOptimisticToggleTimeout();
+    }, remaining);
+  }
+
+  _startOptimisticToggle(expectedState, actualState = this._getActualState()) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !this._isFanToggleableState(actualState)) {
+      return;
+    }
+
+    this._clearOptimisticToggleState();
+    this._optimisticToggle = {
+      entityId,
+      expectedState,
+      expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
+      stateSnapshot: this._createStateSnapshot(actualState),
+    };
+    this._scheduleOptimisticToggleTimeout();
+  }
+
+  _buildOptimisticToggleState(actualState = this._getActualState()) {
+    if (!this._isOptimisticTogglePending(actualState)) {
+      return actualState;
+    }
+
+    const snapshot = this._optimisticToggle?.stateSnapshot || actualState;
+    if (!snapshot) {
+      return actualState;
+    }
+
+    return {
+      ...snapshot,
+      entity_id: snapshot.entity_id || actualState?.entity_id || this._config?.entity,
+      state: this._optimisticToggle.expectedState,
+      attributes: {
+        ...(snapshot.attributes || {}),
+        ...(actualState?.attributes || {}),
+        _nodalia_optimistic_toggle: this._optimisticToggle.expectedState,
+      },
+    };
+  }
+
+  _syncOptimisticToggleState(actualState = this._getActualState()) {
+    if (!this._optimisticToggle) {
+      return;
+    }
+    if (!this._isOptimisticTogglePending(actualState)) {
+      this._clearOptimisticToggleTimer();
+      return;
+    }
+    this._scheduleOptimisticToggleTimeout();
   }
 
   _isOn(state = this._getState()) {
@@ -1726,12 +1893,19 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _toggleFan(state) {
-    if (this._isOn(state)) {
+    const actualState = this._getActualState();
+    const effectiveState = state || this._getState();
+    const turnOff = this._isOn(effectiveState);
+    this._startOptimisticToggle(turnOff ? "off" : "on", actualState);
+
+    if (turnOff) {
       this._setFanState("turn_off");
+      this._render();
       return;
     }
 
     this._setFanState("turn_on");
+    this._render();
   }
 
   _isFanToggleableState(state) {
@@ -2565,6 +2739,7 @@ class NodaliaFanCard extends HTMLElement {
       powerAnimationState = isOn ? "powering-up" : "powering-down";
       this._powerTransition = {
         endsAt: now + animations.powerDuration,
+        startedAt: now,
         state: powerAnimationState,
       };
 
@@ -2572,6 +2747,7 @@ class NodaliaFanCard extends HTMLElement {
         controlsAnimationState = isOn ? "entering" : "leaving";
         this._controlsTransition = {
           endsAt: now + animations.controlsDuration,
+          startedAt: now,
           state: controlsAnimationState,
         };
       } else {
@@ -2596,6 +2772,7 @@ class NodaliaFanCard extends HTMLElement {
         presetPanelAnimationState = isPresetPanelVisible ? "entering" : "leaving";
         this._presetPanelTransition = {
           endsAt: now + animations.presetDuration,
+          startedAt: now,
           state: presetPanelAnimationState,
         };
       } else if (this._presetPanelTransition?.endsAt > now) {
@@ -2772,11 +2949,20 @@ class NodaliaFanCard extends HTMLElement {
     const powerAnimationRemaining = powerAnimationState && this._powerTransition
       ? Math.max(0, this._powerTransition.endsAt - now)
       : 0;
+    const powerAnimationDelay = powerAnimationState && this._powerTransition
+      ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration)
+      : 0;
     const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
       ? Math.max(0, this._controlsTransition.endsAt - now)
       : 0;
+    const controlsAnimationDelay = controlsAnimationState && this._controlsTransition
+      ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration)
+      : 0;
     const presetAnimationRemaining = presetPanelAnimationState && this._presetPanelTransition
       ? Math.max(0, this._presetPanelTransition.endsAt - now)
+      : 0;
+    const presetAnimationDelay = presetPanelAnimationState && this._presetPanelTransition
+      ? -clamp(now - Number(this._presetPanelTransition.startedAt || now), 0, animations.presetDuration)
       : 0;
     const percentageFillAnimationRemaining = shouldAnimatePercentageFill
       ? percentageFillDuration
@@ -2808,8 +2994,11 @@ class NodaliaFanCard extends HTMLElement {
           --fan-card-controls-max-height: 360px;
           --fan-card-controls-gap: calc(${styles.card.gap} + 4px);
           --fan-card-controls-duration: ${animations.controlsDuration}ms;
+          --fan-card-controls-delay: ${controlsAnimationDelay}ms;
           --fan-card-panel-duration: ${animations.presetDuration}ms;
+          --fan-card-panel-delay: ${presetAnimationDelay}ms;
           --fan-card-power-duration: ${animations.powerDuration}ms;
+          --fan-card-power-delay: ${powerAnimationDelay}ms;
           --fan-card-percentage-fill-duration: ${percentageFillDuration}ms;
           --fan-card-percentage-empty-duration: ${animations.controlsDuration}ms;
           --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -2852,19 +3041,19 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--powering-up {
-          animation: fan-card-power-up var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: fan-card-power-up var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card--powering-down {
-          animation: fan-card-power-down var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: fan-card-power-down var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card--powering-up::after {
-          animation: fan-card-power-glow-in var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: fan-card-power-glow-in var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card--powering-down::after {
-          animation: fan-card-power-glow-out var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: fan-card-power-glow-out var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card {
@@ -3067,24 +3256,24 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__controls-shell--entering {
-          animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-controls-delay, 0ms) both;
           overflow: visible;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--entering .fan-card__controls-inner {
-          animation: fan-card-controls-content-in var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-controls-content-in var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-controls-delay, 0ms) both;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--leaving {
-          animation: fan-card-controls-collapse var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-controls-collapse var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-controls-delay, 0ms) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--leaving .fan-card__controls-inner {
-          animation: fan-card-controls-content-out var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-controls-content-out var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-controls-delay, 0ms) both;
           transform-origin: top;
         }
 
@@ -3292,23 +3481,23 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__preset-panel-shell--entering {
-          animation: fan-card-preset-panel-expand var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-preset-panel-expand var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
         .fan-card__preset-panel-shell--entering .fan-card__preset-panel-inner {
-          animation: fan-card-preset-panel-content-in var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-preset-panel-content-in var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
         .fan-card__preset-panel-shell--leaving {
-          animation: fan-card-preset-panel-collapse var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-preset-panel-collapse var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-panel-delay, 0ms) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .fan-card__preset-panel-shell--leaving .fan-card__preset-panel-inner {
-          animation: fan-card-preset-panel-content-out var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-preset-panel-content-out var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
@@ -3684,6 +3873,7 @@ class NodaliaFanCardEditor extends HTMLElement {
   setConfig(config) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
   }
@@ -3921,7 +4111,12 @@ class NodaliaFanCardEditor extends HTMLElement {
       control.dataset.value = String(nextValue || "");
     }
 
-    this._setFieldValue(control.dataset.field, nextValue);
+    const field = control.dataset.field;
+    const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+    this._setFieldValue(field, nextValue);
+    if (field === "entity") {
+      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+    }
     this._setEditorConfig();
     this._emitConfig();
   }

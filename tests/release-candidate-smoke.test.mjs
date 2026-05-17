@@ -27,6 +27,15 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
 });
 
+test("README keeps support link in the badge area without duplicate donations", () => {
+  const readme = read("README.md");
+  const coffeeMatches = readme.match(/buymeacoffee\.com\/danielmigueltejedor/g) || [];
+  assert.equal(coffeeMatches.length, 1);
+  assert.match(readme, /img\.shields\.io\/badge\/Buy%20Me%20a%20Coffee-support/);
+  assert.doesNotMatch(readme, /paypal/i);
+  assert.doesNotMatch(readme, /## 💰 Donations/);
+});
+
 test("url openings keep noopener,noreferrer hardening", () => {
   const files = [
     "nodalia-insignia-card.js",

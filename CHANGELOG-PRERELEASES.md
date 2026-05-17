@@ -1,10 +1,67 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), and completed **`1.1.1-alpha.*`** prereleases.
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, and completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [1.1.2-alpha.4] - 2026-05-15
+
+Fourth **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.4`**.
+
+### Added
+
+- **`nodalia-entity-card.js`:** **`tap_action: navigate`** and **`navigation_path`** (plus icon/hold variants) use Home Assistant SPA navigation (`hass.navigate` → `history.pushState` → `hass-navigate`) so subview links work in the Companion App instead of opening the system browser via **`tap_action: url`**.
+
+---
+
+## [1.1.2-alpha.3] - 2026-05-15
+
+Third **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.3`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** cover controls follow the fan card interaction model (slider-only pointer capture, no `button.blur()` or scroll-restore helpers) so the dashboard no longer flashes when tapping open/stop/close or sliders.
+- **`nodalia-utils.js`:** new cards and entity changes in the visual editor copy the entity **friendly name** into the **Name** field when it is still empty (or still matches the previous entity label).
+
+### Changed
+
+- **`nodalia-cover-card.js`:** render signature no longer stringifies the full config object (avoids unnecessary full re-renders).
+
+---
+
+## [1.1.2-alpha.2] - 2026-05-15
+
+Second **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.2`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`:** temperature slider track gradient now matches control direction for **`color_temp`** (mired) lights — cool tones on the left, warm on the right — while **`color_temp_kelvin`** sliders keep warm→cool left→right.
+
+---
+
+## [1.1.2-alpha.1] - 2026-05-15
+
+First **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.2-alpha.1.js`**.
+
+### Added
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js` / `nodalia-entity-card.js`:** add Light Card-style optimistic toggle state so tap-to-toggle interactions respond instantly, wait briefly for Home Assistant confirmation, and fall back to the real HA state if the service call is not confirmed.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** suppress focus on cover pointer interactions and preserve the active scroll container around cover taps/slider commits, preventing bottom-of-dashboard scroll nudges without blocking normal wheel/touch scrolling.
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** keep power/control expansion animations progressing across fast Home Assistant confirmations, avoiding the visible restart/lag after optimistic toggles.
+- **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
+- **`nodalia-light-card.js`:** quick color-temperature preset labels and related control text now use runtime i18n instead of hardcoded English/Spanish strings.
+
+### Changed
+
+- **`README.md`:** move the Buy Me a Coffee link into the top badge area, remove duplicate donation links, and remove the old PayPal entry.
+- **Release metadata:** start the **`1.1.2`** prerelease line at **`1.1.2-alpha.1`**.
 
 ---
 

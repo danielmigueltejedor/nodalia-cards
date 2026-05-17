@@ -142,6 +142,21 @@ test("graph card chart tap shows tooltip and hold_action defaults to more-info",
   assert.match(source, /_canRunHoldAction/);
 });
 
+test("cards default empty name field to entity friendly name", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function applyDefaultConfigNameFromEntity\(config, hass, options = \{\}\)/);
+  const fan = read("nodalia-fan-card.js");
+  assert.match(fan, /applyDefaultConfigNameFromEntity\?\.\(this\._config, this\._hass, \{ previousEntity \}\)/);
+  assert.match(fan, /applyDefaultConfigNameFromEntity\?\.\(this\._config, this\._hass\)/);
+});
+
+test("light card temperature slider gradient follows mired vs kelvin control direction", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /function getTemperatureSliderTrackGradient\(unit = "kelvin"\)/);
+  assert.match(source, /unit === "mired"[\s\S]*#8fd3ff 0%/);
+  assert.match(source, /getTemperatureSliderTrackGradient\(temperatureControlDomain\.unit\)/);
+});
+
 test("light card power-down skips expanded controls shell when panel was collapsed", () => {
   const source = read("nodalia-light-card.js");
   assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
@@ -667,7 +682,14 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
   assert.doesNotMatch(source, /addEventListener\("focusin"/);
-  assert.doesNotMatch(source, /_preventNonTouchFocus/);
+  assert.doesNotMatch(source, /_preventCoverPointerFocus/);
+  assert.doesNotMatch(source, /button\.blur\(\)/);
+  assert.match(source, /overflow-anchor: none/);
+  assert.match(source, /touch-action: manipulation/);
+  assert.match(
+    source,
+    /_onPointerDown\(event\) \{[\s\S]*node\.type === "range"[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\);[\s\S]*\}/,
+  );
   assert.match(
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
@@ -676,18 +698,53 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
-  assert.doesNotMatch(source, /_captureInteractionScrollSnapshot/);
-  assert.doesNotMatch(source, /_prepareInteractionScrollAnchor/);
-  assert.doesNotMatch(source, /getComputedStyle\(element\)/);
-  assert.doesNotMatch(source, /_rememberInteractionScroll/);
-  assert.doesNotMatch(source, /_cancelInteractionScrollRestore/);
-  assert.doesNotMatch(source, /const coverAction = button\.dataset\.coverAction;[\s\S]*button\.blur\(\)/);
-  assert.doesNotMatch(source, /overflow-anchor: none/);
-  assert.doesNotMatch(source, /touch-action: manipulation/);
+  assert.doesNotMatch(source, /_captureCoverInteractionScrollSnapshot/);
+  assert.doesNotMatch(source, /_rememberCoverInteractionScroll/);
+  assert.doesNotMatch(source, /_scheduleCoverInteractionScrollRestore/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.doesNotMatch(source, /tabindex="-1"/);
   assert.match(source, /opacity: 0;[\s\S]*outline: none;[\s\S]*touch-action: pan-y;/);
+});
+
+test("fan humidifier and entity cards use light-style optimistic toggle state", () => {
+  const files = [
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-entity-card.js",
+  ];
+
+  files.forEach(file => {
+    const source = read(file);
+    assert.match(source, /const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;/);
+    assert.match(source, /this\._optimisticToggle = null;/);
+    assert.match(source, /this\._optimisticToggleTimer = 0;/);
+    assert.match(source, /_getActualState\(hass = this\._hass\)/);
+    assert.match(source, /_buildOptimisticToggleState\(actualState = this\._getActualState\(\)\)/);
+    assert.match(source, /_syncOptimisticToggleState\(this\._getActualState\(\)\)/);
+    assert.match(source, /_nodalia_optimistic_toggle/);
+    assert.match(source, /_scheduleOptimisticToggleTimeout\(\)/);
+  });
+
+  assert.match(read("nodalia-fan-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
+  assert.match(read("nodalia-humidifier-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
+  assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
+});
+
+test("fan and humidifier animations keep progress across fast state confirmations", () => {
+  const fan = read("nodalia-fan-card.js");
+  const humidifier = read("nodalia-humidifier-card.js");
+
+  for (const source of [fan, humidifier]) {
+    assert.match(source, /startedAt: now/);
+    assert.match(source, /const controlsAnimationDelay = controlsAnimationState && this\._controlsTransition/);
+    assert.match(source, /-clamp\(now - Number\(this\._controlsTransition\.startedAt \|\| now\)/);
+  }
+
+  assert.match(fan, /--fan-card-controls-delay: \$\{controlsAnimationDelay\}ms;/);
+  assert.match(fan, /var\(--fan-card-controls-delay, 0ms\) both/);
+  assert.match(humidifier, /--humidifier-card-controls-delay: \$\{controlsAnimationDelay\}ms;/);
+  assert.match(humidifier, /var\(--humidifier-card-controls-delay, 0ms\) both/);
 });
 
 test("cover card enforces six-column minimum and reserves toggle lane on narrow grids", () => {
@@ -721,6 +778,19 @@ test("cover card switches open/close arrow orientation by device class and open_
   assert.match(source, /coverDeviceClassPrefersHorizontalOpenClose/);
   assert.match(source, /"ed\.cover\.open_close_icons"/);
   assert.match(source, /escapeHtml\(openCloseIcons\.open\)/);
+});
+
+test("entity card supports in-app navigate tap action with navigation_path", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /navigation_path: ""/);
+  assert.match(source, /"navigate", label: "ed\.entity\.tap_navigate"/);
+  assert.match(source, /_navigateToPath\(path\)/);
+  assert.match(source, /this\._hass\.navigate\(navigationPath\)/);
+  assert.match(source, /!navigationPath\.includes\(":\/\/"\)/);
+  assert.match(source, /fireEvent\(this, "location-changed", \{ replace: false \}\)/);
+  assert.match(source, /fireEvent\(this, "hass-navigate", \{ path: navigationPath \}\)/);
+  assert.match(source, /case "navigate":[\s\S]*_navigationPathForZone\(zone, "tap"\)/);
+  assert.match(source, /tap_action === "navigate" && !config\.navigation_path && config\.tap_url/);
 });
 
 test("entity card supports entity pictures in the main icon bubble", () => {

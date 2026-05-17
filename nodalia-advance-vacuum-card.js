@@ -23,6 +23,8 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "getEntityFriendlyName",
+    "applyDefaultConfigNameFromEntity",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -247,6 +249,40 @@
     console.warn(
       `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
     );
+  }
+
+  function getEntityFriendlyName(hass, entityId) {
+    const id = String(entityId || "").trim();
+    if (!id || !hass?.states?.[id]) {
+      return "";
+    }
+    return String(hass.states[id].attributes?.friendly_name || "").trim();
+  }
+
+  /**
+   * When `name` is empty (or still matches the previous entity id/label), copy the entity friendly name.
+   */
+  function applyDefaultConfigNameFromEntity(config, hass, options = {}) {
+    if (!config || !isObject(config)) {
+      return config;
+    }
+    const entityId = String(config.entity || "").trim();
+    if (!entityId || !hass?.states?.[entityId]) {
+      return config;
+    }
+    const fallback = getEntityFriendlyName(hass, entityId) || entityId;
+    const currentName = String(config.name ?? "").trim();
+    const previousEntity = String(options.previousEntity ?? "").trim();
+    const previousFriendly = previousEntity
+      ? (getEntityFriendlyName(hass, previousEntity) || previousEntity)
+      : "";
+    const shouldApply =
+      !currentName
+      || (previousEntity && (currentName === previousEntity || currentName === previousFriendly));
+    if (shouldApply) {
+      config.name = fallback;
+    }
+    return config;
   }
 
   function dedupeCustomCardsArray(cards) {
@@ -744,6 +780,8 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    getEntityFriendlyName,
+    applyDefaultConfigNameFromEntity,
   };
 
   if (typeof window !== "undefined") {
@@ -756,7 +794,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.1.1";
+const CARD_VERSION = "1.1.2";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -2397,6 +2435,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
     this._repeats = clamp(Number(this._config.max_repeats || 1), 1, 9);
     this._selectedRoomIds = [];
@@ -8911,6 +8950,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   setConfig(config) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
   }
