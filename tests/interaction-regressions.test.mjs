@@ -142,6 +142,14 @@ test("graph card chart tap shows tooltip and hold_action defaults to more-info",
   assert.match(source, /_canRunHoldAction/);
 });
 
+test("cards default empty name field to entity friendly name", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function applyDefaultConfigNameFromEntity\(config, hass, options = \{\}\)/);
+  const fan = read("nodalia-fan-card.js");
+  assert.match(fan, /applyDefaultConfigNameFromEntity\?\.\(this\._config, this\._hass, \{ previousEntity \}\)/);
+  assert.match(fan, /applyDefaultConfigNameFromEntity\?\.\(this\._config, this\._hass\)/);
+});
+
 test("light card temperature slider gradient follows mired vs kelvin control direction", () => {
   const source = read("nodalia-light-card.js");
   assert.match(source, /function getTemperatureSliderTrackGradient\(unit = "kelvin"\)/);
@@ -674,7 +682,14 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown\)/);
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
   assert.doesNotMatch(source, /addEventListener\("focusin"/);
-  assert.doesNotMatch(source, /_preventNonTouchFocus/);
+  assert.doesNotMatch(source, /_preventCoverPointerFocus/);
+  assert.doesNotMatch(source, /button\.blur\(\)/);
+  assert.match(source, /overflow-anchor: none/);
+  assert.match(source, /touch-action: manipulation/);
+  assert.match(
+    source,
+    /_onPointerDown\(event\) \{[\s\S]*node\.type === "range"[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\);[\s\S]*\}/,
+  );
   assert.match(
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
@@ -683,18 +698,9 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
     source,
     /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
-  assert.match(source, /_captureCoverInteractionScrollSnapshot\(event = null\)/);
-  assert.match(source, /_rememberCoverInteractionScroll\(event\)/);
-  assert.match(source, /_scheduleCoverInteractionScrollRestore\(\)/);
-  assert.match(source, /_preventCoverPointerFocus\(event, actionTarget\)/);
-  assert.doesNotMatch(source, /_captureInteractionScrollSnapshot/);
-  assert.doesNotMatch(source, /_prepareInteractionScrollAnchor/);
-  assert.doesNotMatch(source, /getComputedStyle\(element\)/);
-  assert.doesNotMatch(source, /_rememberInteractionScroll/);
-  assert.doesNotMatch(source, /_cancelInteractionScrollRestore/);
-  assert.match(source, /button\.blur\(\)/);
-  assert.doesNotMatch(source, /overflow-anchor: none/);
-  assert.doesNotMatch(source, /touch-action: manipulation/);
+  assert.doesNotMatch(source, /_captureCoverInteractionScrollSnapshot/);
+  assert.doesNotMatch(source, /_rememberCoverInteractionScroll/);
+  assert.doesNotMatch(source, /_scheduleCoverInteractionScrollRestore/);
   assert.match(source, /_startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/);
   assert.match(source, /this\._pendingRenderAfterDrag = true/);
   assert.doesNotMatch(source, /tabindex="-1"/);

@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.2-alpha.3] - 2026-05-15
+
+Third **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.3`**.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** cover controls follow the fan card interaction model (slider-only pointer capture, no `button.blur()` or scroll-restore helpers) so the dashboard no longer flashes when tapping open/stop/close or sliders.
+- **`nodalia-utils.js`:** new cards and entity changes in the visual editor copy the entity **friendly name** into the **Name** field when it is still empty (or still matches the previous entity label).
+
+### Changed
+
+- **`nodalia-cover-card.js`:** render signature no longer stringifies the full config object (avoids unnecessary full re-renders).
+
+---
+
 ## [1.1.2-alpha.2] - 2026-05-15
 
 Second **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.2`**.
