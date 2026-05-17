@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "Afficher la puce d'humidité",
   "ed.weather.show_meteoalarm_chip": "Afficher la puce Meteoalarm",
   "ed.weather.show_pressure_chip": "Afficher la puce de pression",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "Afficher les paramètres de style",
   "ed.weather.show_wind_chip": "Afficher la puce du vent",
   "ed.weather.styles_section_hint": "Paramètres visuels de base pour la carte.",
