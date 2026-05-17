@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "Arată cip de umiditate",
   "ed.weather.show_meteoalarm_chip": "Afișează cip Meteoalarm",
   "ed.weather.show_pressure_chip": "Arată cip de presiune",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "Afișați setările de stil",
   "ed.weather.show_wind_chip": "Arată cip de vânt",
   "ed.weather.styles_section_hint": "Setări vizuale de bază pentru card.",
