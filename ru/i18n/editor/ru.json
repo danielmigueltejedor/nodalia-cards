@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "Показать чип влажности",
   "ed.weather.show_meteoalarm_chip": "Показать чип Meteoalarm",
   "ed.weather.show_pressure_chip": "Показать чип давления",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "Показать настройки стиля",
   "ed.weather.show_wind_chip": "Показать ветровой чип",
   "ed.weather.styles_section_hint": "Базовые визуальные настройки карты.",
