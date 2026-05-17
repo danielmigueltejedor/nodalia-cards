@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "Mostra il chip di umidità",
   "ed.weather.show_meteoalarm_chip": "Mostra il chip Meteoalarm",
   "ed.weather.show_pressure_chip": "Mostra il chip della pressione",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "Mostra le impostazioni di stile",
   "ed.weather.show_wind_chip": "Mostra il chip del vento",
   "ed.weather.styles_section_hint": "Impostazioni visive di base per la scheda.",
