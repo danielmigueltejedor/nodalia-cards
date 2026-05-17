@@ -1046,6 +1046,8 @@
   "ed.weather.show_humidity_chip": "Laat de vochtigheidschip zien",
   "ed.weather.show_meteoalarm_chip": "Toon Meteoalarm-chip",
   "ed.weather.show_pressure_chip": "Drukchip tonen",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
   "ed.weather.show_style_settings": "Stijlinstellingen weergeven",
   "ed.weather.show_wind_chip": "Windchip tonen",
   "ed.weather.styles_section_hint": "Basis visuele instellingen voor de kaart.",
