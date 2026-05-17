@@ -913,6 +913,8 @@
   "ed.power_flow.zero_lines_mode": "Linee a flusso zero",
   "ed.power_flow.zero_lines_show": "Spettacolo",
   "ed.power_flow.zero_lines_transparency": "Trasparenza della linea zero",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
   "ed.vacuum.animations_section_hint": "Feedback visivo per pulsanti e pannelli robot.",
   "ed.vacuum.aux_section_hint": "Sensori e selettori opzionali per arricchire stato e controlli.",
   "ed.vacuum.aux_section_title": "Enti ausiliari",

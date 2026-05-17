@@ -26,6 +26,8 @@
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
     "renderLovelaceEntityGuardCardHtml",
+    "renderLovelaceEntityGuardForEntities",
+    "renderEditorCollapsibleToggleHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -645,6 +647,35 @@
     return `<ha-card${classAttr}>${markup}</ha-card>`;
   }
 
+  /** First configured id with a warning (missing or empty list → no entity). */
+  function renderLovelaceEntityGuardForEntities(hass, entityIds, options = {}) {
+    const ids = (Array.isArray(entityIds) ? entityIds : [entityIds])
+      .map((id) => String(id ?? "").trim());
+    if (!ids.length || ids.every((id) => !id)) {
+      return renderLovelaceEntityGuardCardHtml(hass, "", options);
+    }
+    for (const id of ids) {
+      const guard = renderLovelaceEntityGuardCardHtml(hass, id, options);
+      if (guard) {
+        return guard;
+      }
+    }
+    return null;
+  }
+
+  function renderEditorCollapsibleToggleHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const toggleId = String(options.toggleId ?? "").trim().replace(/"/g, "");
+    if (typeof escapeHtml !== "function" || !toggleId) {
+      return "";
+    }
+    const expanded = options.expanded === true;
+    const showLabel = escapeHtml(String(options.showLabel ?? "Show"));
+    const hideLabel = escapeHtml(String(options.hideLabel ?? "Hide"));
+    const label = expanded ? hideLabel : showLabel;
+    return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -884,6 +915,8 @@
     cancelCardZoneTap,
     scheduleCardZoneTap,
     renderLovelaceEntityGuardCardHtml,
+    renderLovelaceEntityGuardForEntities,
+    renderEditorCollapsibleToggleHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -3010,8 +3043,13 @@ class NodaliaGraphCard extends HTMLElement {
     }
 
     const entries = this._getEntityEntries();
-    if (!entries.length) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
+    const graphGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
+      this._hass,
+      entries.length ? entries.map((entry) => entry.entity) : [""],
+      { cardClass: "graph-card" },
+    );
+    if (graphGuard) {
+      this.shadowRoot.innerHTML = graphGuard;
       return;
     }
 

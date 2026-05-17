@@ -26,6 +26,8 @@
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
     "renderLovelaceEntityGuardCardHtml",
+    "renderLovelaceEntityGuardForEntities",
+    "renderEditorCollapsibleToggleHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -645,6 +647,35 @@
     return `<ha-card${classAttr}>${markup}</ha-card>`;
   }
 
+  /** First configured id with a warning (missing or empty list → no entity). */
+  function renderLovelaceEntityGuardForEntities(hass, entityIds, options = {}) {
+    const ids = (Array.isArray(entityIds) ? entityIds : [entityIds])
+      .map((id) => String(id ?? "").trim());
+    if (!ids.length || ids.every((id) => !id)) {
+      return renderLovelaceEntityGuardCardHtml(hass, "", options);
+    }
+    for (const id of ids) {
+      const guard = renderLovelaceEntityGuardCardHtml(hass, id, options);
+      if (guard) {
+        return guard;
+      }
+    }
+    return null;
+  }
+
+  function renderEditorCollapsibleToggleHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const toggleId = String(options.toggleId ?? "").trim().replace(/"/g, "");
+    if (typeof escapeHtml !== "function" || !toggleId) {
+      return "";
+    }
+    const expanded = options.expanded === true;
+    const showLabel = escapeHtml(String(options.showLabel ?? "Show"));
+    const hideLabel = escapeHtml(String(options.hideLabel ?? "Hide"));
+    const label = expanded ? hideLabel : showLabel;
+    return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -884,6 +915,8 @@
     cancelCardZoneTap,
     scheduleCardZoneTap,
     renderLovelaceEntityGuardCardHtml,
+    renderLovelaceEntityGuardForEntities,
+    renderEditorCollapsibleToggleHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -4647,6 +4680,27 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     if (this._shouldHideForScreen()) {
       this.shadowRoot.innerHTML = "";
+      return;
+    }
+
+    const mediaGuardIds = [];
+    const mediaEntity = String(this._config?.entity ?? "").trim();
+    if (mediaEntity) {
+      mediaGuardIds.push(mediaEntity);
+    }
+    for (const player of Array.isArray(this._config?.players) ? this._config.players : []) {
+      const playerEntity = String(player?.entity ?? "").trim();
+      if (playerEntity && !mediaGuardIds.includes(playerEntity)) {
+        mediaGuardIds.push(playerEntity);
+      }
+    }
+    const mediaEntityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
+      this._hass,
+      mediaGuardIds.length ? mediaGuardIds : [""],
+      { cardClass: "media-player" },
+    );
+    if (mediaEntityGuard) {
+      this.shadowRoot.innerHTML = mediaEntityGuard;
       return;
     }
 

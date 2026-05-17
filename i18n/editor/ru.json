@@ -913,6 +913,8 @@
   "ed.power_flow.zero_lines_mode": "Линии с нулевым потоком",
   "ed.power_flow.zero_lines_show": "Показывать",
   "ed.power_flow.zero_lines_transparency": "Прозрачность нулевой линии",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
   "ed.vacuum.animations_section_hint": "Визуальная обратная связь для кнопок и панелей робота.",
   "ed.vacuum.aux_section_hint": "Дополнительные датчики и селекторы для улучшения состояния и элементов управления.",
   "ed.vacuum.aux_section_title": "Вспомогательные объекты",

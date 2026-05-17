@@ -26,6 +26,8 @@
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
     "renderLovelaceEntityGuardCardHtml",
+    "renderLovelaceEntityGuardForEntities",
+    "renderEditorCollapsibleToggleHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -645,6 +647,35 @@
     return `<ha-card${classAttr}>${markup}</ha-card>`;
   }
 
+  /** First configured id with a warning (missing or empty list → no entity). */
+  function renderLovelaceEntityGuardForEntities(hass, entityIds, options = {}) {
+    const ids = (Array.isArray(entityIds) ? entityIds : [entityIds])
+      .map((id) => String(id ?? "").trim());
+    if (!ids.length || ids.every((id) => !id)) {
+      return renderLovelaceEntityGuardCardHtml(hass, "", options);
+    }
+    for (const id of ids) {
+      const guard = renderLovelaceEntityGuardCardHtml(hass, id, options);
+      if (guard) {
+        return guard;
+      }
+    }
+    return null;
+  }
+
+  function renderEditorCollapsibleToggleHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const toggleId = String(options.toggleId ?? "").trim().replace(/"/g, "");
+    if (typeof escapeHtml !== "function" || !toggleId) {
+      return "";
+    }
+    const expanded = options.expanded === true;
+    const showLabel = escapeHtml(String(options.showLabel ?? "Show"));
+    const hideLabel = escapeHtml(String(options.hideLabel ?? "Hide"));
+    const label = expanded ? hideLabel : showLabel;
+    return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -884,6 +915,8 @@
     cancelCardZoneTap,
     scheduleCardZoneTap,
     renderLovelaceEntityGuardCardHtml,
+    renderLovelaceEntityGuardForEntities,
+    renderEditorCollapsibleToggleHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -4343,6 +4376,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
     this._showAnimationSection = false;
+    this._showTapActionsSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -4653,6 +4687,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
+
+    if (toggleButton.dataset.editorToggle === "tap_actions") {
+      this._showTapActionsSection = !this._showTapActionsSection;
+      this._render();
+      return;
+    }
 
     if (toggleButton.dataset.editorToggle === "styles") {
       this._showStyleSection = !this._showStyleSection;
@@ -5414,7 +5454,19 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.tap_actions_section_hint"))}</div>
+            <div class="editor-section__actions">
+              ${window.NodaliaUtils.renderEditorCollapsibleToggleHtml({
+                toggleId: "tap_actions",
+                expanded: this._showTapActionsSection === true,
+                showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
+                hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
+                escapeHtml,
+              })}
+            </div>
           </div>
+          ${
+            this._showTapActionsSection
+              ? `
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
               "ed.light.icon_tap_action",
@@ -5499,6 +5551,10 @@ class NodaliaVacuumCardEditor extends HTMLElement {
                 : ""
             }
           </div>
+
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">

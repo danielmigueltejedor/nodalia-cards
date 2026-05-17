@@ -913,6 +913,8 @@
   "ed.power_flow.zero_lines_mode": "Linhas de fluxo zero",
   "ed.power_flow.zero_lines_show": "Mostrar",
   "ed.power_flow.zero_lines_transparency": "Transparência de linha zero",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
   "ed.vacuum.animations_section_hint": "Feedback visual para botões e painéis do robô.",
   "ed.vacuum.aux_section_hint": "Sensores e seletores opcionais para enriquecer o estado e os controles.",
   "ed.vacuum.aux_section_title": "Entidades auxiliares",

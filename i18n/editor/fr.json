@@ -913,6 +913,8 @@
   "ed.power_flow.zero_lines_mode": "Lignes à débit nul",
   "ed.power_flow.zero_lines_show": "Montrer",
   "ed.power_flow.zero_lines_transparency": "Transparence de ligne zéro",
+  "ed.shared.hide_tap_action_settings": "Hide tap actions",
+  "ed.shared.show_tap_action_settings": "Show tap actions",
   "ed.vacuum.animations_section_hint": "Retour visuel pour les boutons et panneaux du robot.",
   "ed.vacuum.aux_section_hint": "Capteurs et sélecteurs optionnels pour enrichir l’état et les contrôles.",
   "ed.vacuum.aux_section_title": "Entités auxiliaires",
