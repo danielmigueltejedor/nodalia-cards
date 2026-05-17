@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.2-alpha.2] - 2026-05-15
+
+Second **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.2`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`:** temperature slider track gradient now matches control direction for **`color_temp`** (mired) lights — cool tones on the left, warm on the right — while **`color_temp_kelvin`** sliders keep warm→cool left→right.
+
+---
+
 ## [1.1.2-alpha.1] - 2026-05-15
 
 First **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`CARD_VERSION`** on bundled card modules, and **`nodalia-cards-1.1.2-alpha.1.js`**.
@@ -19,6 +29,7 @@ First **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.1`** on **`package
 ### Fixed
 
 - **`nodalia-cover-card.js`:** suppress focus on cover pointer interactions and preserve the active scroll container around cover taps/slider commits, preventing bottom-of-dashboard scroll nudges without blocking normal wheel/touch scrolling.
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** keep power/control expansion animations progressing across fast Home Assistant confirmations, avoiding the visible restart/lag after optimistic toggles.
 - **`nodalia-weather-card.js`:** forecast chart popups now use an opaque theme-safe surface, preventing Nodalia cards placed immediately below the Weather Card from showing through the detail panel.
 - **`nodalia-light-card.js`:** quick color-temperature preset labels and related control text now use runtime i18n instead of hardcoded English/Spanish strings.
 

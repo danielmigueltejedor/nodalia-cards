@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.2-alpha.1";
+const CARD_VERSION = "1.1.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2700,6 +2700,7 @@ class NodaliaFanCard extends HTMLElement {
       powerAnimationState = isOn ? "powering-up" : "powering-down";
       this._powerTransition = {
         endsAt: now + animations.powerDuration,
+        startedAt: now,
         state: powerAnimationState,
       };
 
@@ -2707,6 +2708,7 @@ class NodaliaFanCard extends HTMLElement {
         controlsAnimationState = isOn ? "entering" : "leaving";
         this._controlsTransition = {
           endsAt: now + animations.controlsDuration,
+          startedAt: now,
           state: controlsAnimationState,
         };
       } else {
@@ -2731,6 +2733,7 @@ class NodaliaFanCard extends HTMLElement {
         presetPanelAnimationState = isPresetPanelVisible ? "entering" : "leaving";
         this._presetPanelTransition = {
           endsAt: now + animations.presetDuration,
+          startedAt: now,
           state: presetPanelAnimationState,
         };
       } else if (this._presetPanelTransition?.endsAt > now) {
@@ -2907,11 +2910,20 @@ class NodaliaFanCard extends HTMLElement {
     const powerAnimationRemaining = powerAnimationState && this._powerTransition
       ? Math.max(0, this._powerTransition.endsAt - now)
       : 0;
+    const powerAnimationDelay = powerAnimationState && this._powerTransition
+      ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration)
+      : 0;
     const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
       ? Math.max(0, this._controlsTransition.endsAt - now)
       : 0;
+    const controlsAnimationDelay = controlsAnimationState && this._controlsTransition
+      ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration)
+      : 0;
     const presetAnimationRemaining = presetPanelAnimationState && this._presetPanelTransition
       ? Math.max(0, this._presetPanelTransition.endsAt - now)
+      : 0;
+    const presetAnimationDelay = presetPanelAnimationState && this._presetPanelTransition
+      ? -clamp(now - Number(this._presetPanelTransition.startedAt || now), 0, animations.presetDuration)
       : 0;
     const percentageFillAnimationRemaining = shouldAnimatePercentageFill
       ? percentageFillDuration
@@ -2943,8 +2955,11 @@ class NodaliaFanCard extends HTMLElement {
           --fan-card-controls-max-height: 360px;
           --fan-card-controls-gap: calc(${styles.card.gap} + 4px);
           --fan-card-controls-duration: ${animations.controlsDuration}ms;
+          --fan-card-controls-delay: ${controlsAnimationDelay}ms;
           --fan-card-panel-duration: ${animations.presetDuration}ms;
+          --fan-card-panel-delay: ${presetAnimationDelay}ms;
           --fan-card-power-duration: ${animations.powerDuration}ms;
+          --fan-card-power-delay: ${powerAnimationDelay}ms;
           --fan-card-percentage-fill-duration: ${percentageFillDuration}ms;
           --fan-card-percentage-empty-duration: ${animations.controlsDuration}ms;
           --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -2987,19 +3002,19 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--powering-up {
-          animation: fan-card-power-up var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: fan-card-power-up var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card--powering-down {
-          animation: fan-card-power-down var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: fan-card-power-down var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card--powering-up::after {
-          animation: fan-card-power-glow-in var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: fan-card-power-glow-in var(--fan-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card--powering-down::after {
-          animation: fan-card-power-glow-out var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: fan-card-power-glow-out var(--fan-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--fan-card-power-delay, 0ms) both;
         }
 
         .fan-card {
@@ -3202,24 +3217,24 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__controls-shell--entering {
-          animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-controls-delay, 0ms) both;
           overflow: visible;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--entering .fan-card__controls-inner {
-          animation: fan-card-controls-content-in var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-controls-content-in var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-controls-delay, 0ms) both;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--leaving {
-          animation: fan-card-controls-collapse var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-controls-collapse var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-controls-delay, 0ms) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--leaving .fan-card__controls-inner {
-          animation: fan-card-controls-content-out var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-controls-content-out var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-controls-delay, 0ms) both;
           transform-origin: top;
         }
 
@@ -3427,23 +3442,23 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__preset-panel-shell--entering {
-          animation: fan-card-preset-panel-expand var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-preset-panel-expand var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
         .fan-card__preset-panel-shell--entering .fan-card__preset-panel-inner {
-          animation: fan-card-preset-panel-content-in var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: fan-card-preset-panel-content-in var(--fan-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
         .fan-card__preset-panel-shell--leaving {
-          animation: fan-card-preset-panel-collapse var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-preset-panel-collapse var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-panel-delay, 0ms) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .fan-card__preset-panel-shell--leaving .fan-card__preset-panel-inner {
-          animation: fan-card-preset-panel-content-out var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-preset-panel-content-out var(--fan-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 

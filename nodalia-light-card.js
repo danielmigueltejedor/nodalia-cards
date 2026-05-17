@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.2-alpha.1";
+const CARD_VERSION = "1.1.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1243,6 +1243,14 @@ function miredToKelvin(value) {
 
 function kelvinToMired(value) {
   return value > 0 ? Math.round(1000000 / value) : 0;
+}
+
+/** Kelvin sliders increase left→right (warm→cool). Mired sliders increase left→right (cool→warm). */
+function getTemperatureSliderTrackGradient(unit = "kelvin") {
+  if (unit === "mired") {
+    return "linear-gradient(90deg, #8fd3ff 0%, #b8e4ff 24%, #fff1c1 56%, #ffd166 72%, #f4b55f 100%)";
+  }
+  return "linear-gradient(90deg, #f4b55f 0%, #ffd166 32%, #fff1c1 56%, #8fd3ff 100%)";
 }
 
 /** Older defaults / editor-saved YAML used `--state-inactive-color`, which stays merged over new defaults. */
@@ -3583,6 +3591,7 @@ class NodaliaLightCard extends HTMLElement {
     const currentHue = this._getCurrentHue(state);
     const temperatureRange = this._getTemperatureRange(state);
     const temperatureControlDomain = this._getTemperatureControlDomain(state);
+    const temperatureTrackGradient = getTemperatureSliderTrackGradient(temperatureControlDomain.unit);
     const currentTemperatureSliderValue = this._kelvinToTemperatureSliderValue(currentKelvin, state);
     const temperatureProgress = temperatureControlDomain.max === temperatureControlDomain.min
       ? 0
@@ -4602,13 +4611,7 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__slider-track[data-light-control="temperature"] {
-          background: linear-gradient(
-            90deg,
-            #f4b55f 0%,
-            #ffd166 32%,
-            #fff1c1 56%,
-            #8fd3ff 100%
-          );
+          background: ${temperatureTrackGradient};
         }
 
         .light-card__slider-track[data-light-control="color"] {

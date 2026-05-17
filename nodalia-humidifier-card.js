@@ -756,7 +756,7 @@
 
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.1.2-alpha.1";
+const CARD_VERSION = "1.1.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2938,6 +2938,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       powerAnimationState = isOn ? "powering-up" : "powering-down";
       this._powerTransition = {
         endsAt: now + animations.powerDuration,
+        startedAt: now,
         state: powerAnimationState,
       };
 
@@ -2945,6 +2946,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         controlsAnimationState = isOn ? "entering" : "leaving";
         this._controlsTransition = {
           endsAt: now + animations.controlsDuration,
+          startedAt: now,
           state: controlsAnimationState,
         };
       } else {
@@ -2969,6 +2971,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         panelAnimationState = currentPanelKey ? "entering" : "leaving";
         this._panelTransition = {
           endsAt: now + animations.panelDuration,
+          startedAt: now,
           state: panelAnimationState,
         };
       } else if (this._panelTransition?.endsAt > now) {
@@ -3162,11 +3165,20 @@ class NodaliaHumidifierCard extends HTMLElement {
     const powerAnimationRemaining = powerAnimationState && this._powerTransition
       ? Math.max(0, this._powerTransition.endsAt - now)
       : 0;
+    const powerAnimationDelay = powerAnimationState && this._powerTransition
+      ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration)
+      : 0;
     const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition
       ? Math.max(0, this._controlsTransition.endsAt - now)
       : 0;
+    const controlsAnimationDelay = controlsAnimationState && this._controlsTransition
+      ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration)
+      : 0;
     const panelAnimationRemaining = panelAnimationState && this._panelTransition
       ? Math.max(0, this._panelTransition.endsAt - now)
+      : 0;
+    const panelAnimationDelay = panelAnimationState && this._panelTransition
+      ? -clamp(now - Number(this._panelTransition.startedAt || now), 0, animations.panelDuration)
       : 0;
     const humidityFillAnimationRemaining = shouldAnimateHumidityFill
       ? humidityFillDuration
@@ -3201,8 +3213,11 @@ class NodaliaHumidifierCard extends HTMLElement {
           --humidifier-card-controls-max-height: 360px;
           --humidifier-card-controls-gap: calc(${styles.card.gap} + 4px);
           --humidifier-card-controls-duration: ${animations.controlsDuration}ms;
+          --humidifier-card-controls-delay: ${controlsAnimationDelay}ms;
           --humidifier-card-panel-duration: ${animations.panelDuration}ms;
+          --humidifier-card-panel-delay: ${panelAnimationDelay}ms;
           --humidifier-card-power-duration: ${animations.powerDuration}ms;
+          --humidifier-card-power-delay: ${powerAnimationDelay}ms;
           --humidifier-card-humidity-fill-duration: ${humidityFillDuration}ms;
           --humidifier-card-humidity-empty-duration: ${animations.controlsDuration}ms;
           --humidifier-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -3245,19 +3260,19 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card--powering-up {
-          animation: humidifier-card-power-up var(--humidifier-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: humidifier-card-power-up var(--humidifier-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--humidifier-card-power-delay, 0ms) both;
         }
 
         .humidifier-card--powering-down {
-          animation: humidifier-card-power-down var(--humidifier-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: humidifier-card-power-down var(--humidifier-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--humidifier-card-power-delay, 0ms) both;
         }
 
         .humidifier-card--powering-up::after {
-          animation: humidifier-card-power-glow-in var(--humidifier-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) both;
+          animation: humidifier-card-power-glow-in var(--humidifier-card-power-duration) cubic-bezier(0.24, 0.82, 0.25, 1) var(--humidifier-card-power-delay, 0ms) both;
         }
 
         .humidifier-card--powering-down::after {
-          animation: humidifier-card-power-glow-out var(--humidifier-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) both;
+          animation: humidifier-card-power-glow-out var(--humidifier-card-power-duration) cubic-bezier(0.32, 0, 0.24, 1) var(--humidifier-card-power-delay, 0ms) both;
         }
 
         .humidifier-card {
@@ -3483,24 +3498,24 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__controls-shell--entering {
-          animation: humidifier-card-controls-expand var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: humidifier-card-controls-expand var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--humidifier-card-controls-delay, 0ms) both;
           overflow: visible;
           transform-origin: top;
         }
 
         .humidifier-card__controls-shell--entering .humidifier-card__controls-inner {
-          animation: humidifier-card-controls-content-in var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: humidifier-card-controls-content-in var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--humidifier-card-controls-delay, 0ms) both;
           transform-origin: top;
         }
 
         .humidifier-card__controls-shell--leaving {
-          animation: humidifier-card-controls-collapse var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: humidifier-card-controls-collapse var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-controls-delay, 0ms) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .humidifier-card__controls-shell--leaving .humidifier-card__controls-inner {
-          animation: humidifier-card-controls-content-out var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: humidifier-card-controls-content-out var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-controls-delay, 0ms) both;
           transform-origin: top;
         }
 
@@ -3707,23 +3722,23 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__panel-shell--entering {
-          animation: humidifier-card-panel-expand var(--humidifier-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: humidifier-card-panel-expand var(--humidifier-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--humidifier-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
         .humidifier-card__panel-shell--entering .humidifier-card__panel-inner {
-          animation: humidifier-card-panel-content-in var(--humidifier-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: humidifier-card-panel-content-in var(--humidifier-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--humidifier-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 
         .humidifier-card__panel-shell--leaving {
-          animation: humidifier-card-panel-collapse var(--humidifier-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: humidifier-card-panel-collapse var(--humidifier-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-panel-delay, 0ms) both;
           pointer-events: none;
           transform-origin: top;
         }
 
         .humidifier-card__panel-shell--leaving .humidifier-card__panel-inner {
-          animation: humidifier-card-panel-content-out var(--humidifier-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: humidifier-card-panel-content-out var(--humidifier-card-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-panel-delay, 0ms) both;
           transform-origin: top;
         }
 

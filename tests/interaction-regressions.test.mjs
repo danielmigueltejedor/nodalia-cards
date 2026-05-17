@@ -142,6 +142,13 @@ test("graph card chart tap shows tooltip and hold_action defaults to more-info",
   assert.match(source, /_canRunHoldAction/);
 });
 
+test("light card temperature slider gradient follows mired vs kelvin control direction", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /function getTemperatureSliderTrackGradient\(unit = "kelvin"\)/);
+  assert.match(source, /unit === "mired"[\s\S]*#8fd3ff 0%/);
+  assert.match(source, /getTemperatureSliderTrackGradient\(temperatureControlDomain\.unit\)/);
+});
+
 test("light card power-down skips expanded controls shell when panel was collapsed", () => {
   const source = read("nodalia-light-card.js");
   assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
@@ -716,6 +723,22 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
   assert.match(read("nodalia-fan-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
   assert.match(read("nodalia-humidifier-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
   assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
+});
+
+test("fan and humidifier animations keep progress across fast state confirmations", () => {
+  const fan = read("nodalia-fan-card.js");
+  const humidifier = read("nodalia-humidifier-card.js");
+
+  for (const source of [fan, humidifier]) {
+    assert.match(source, /startedAt: now/);
+    assert.match(source, /const controlsAnimationDelay = controlsAnimationState && this\._controlsTransition/);
+    assert.match(source, /-clamp\(now - Number\(this\._controlsTransition\.startedAt \|\| now\)/);
+  }
+
+  assert.match(fan, /--fan-card-controls-delay: \$\{controlsAnimationDelay\}ms;/);
+  assert.match(fan, /var\(--fan-card-controls-delay, 0ms\) both/);
+  assert.match(humidifier, /--humidifier-card-controls-delay: \$\{controlsAnimationDelay\}ms;/);
+  assert.match(humidifier, /var\(--humidifier-card-controls-delay, 0ms\) both/);
 });
 
 test("cover card enforces six-column minimum and reserves toggle lane on narrow grids", () => {
