@@ -794,7 +794,7 @@
 
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.2-alpha.3";
+const CARD_VERSION = "1.1.2-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -821,21 +821,25 @@ const DEFAULT_CONFIG = {
   tap_service: "",
   tap_service_data: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
@@ -1381,7 +1385,9 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
-  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+  const normTap = String(config.tap_action ?? "auto").trim().toLowerCase();
+  config.tap_action = TAP_ACTIONS.has(normTap) ? normTap : "auto";
   const normHold = String(config.hold_action ?? "none").trim().toLowerCase();
   config.hold_action = TAP_ACTIONS.has(normHold) ? normHold : "none";
   const iconHoldStr = config.icon_hold_action === undefined || config.icon_hold_action === null
@@ -1393,14 +1399,41 @@ function normalizeConfig(rawConfig) {
     const n = iconHoldStr.toLowerCase();
     config.icon_hold_action = TAP_ACTIONS.has(n) ? n : "";
   }
+  const iconTapStr = config.icon_tap_action === undefined || config.icon_tap_action === null
+    ? ""
+    : String(config.icon_tap_action).trim();
+  if (!iconTapStr) {
+    config.icon_tap_action = "";
+  } else {
+    const normalizedIconTap = iconTapStr.toLowerCase();
+    config.icon_tap_action = TAP_ACTIONS.has(normalizedIconTap) ? normalizedIconTap : "";
+  }
+  config.tap_service = String(config.tap_service ?? "").trim();
+  config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_url = String(config.tap_url ?? "").trim();
+  config.navigation_path = String(config.navigation_path ?? "").trim();
+  config.tap_new_tab = config.tap_new_tab === true;
+  config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
+  config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
+  config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
+  config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
+  config.icon_tap_new_tab = config.icon_tap_new_tab === true;
   config.hold_service = String(config.hold_service ?? "").trim();
   config.hold_service_data = String(config.hold_service_data ?? "").trim();
   config.hold_url = String(config.hold_url ?? "").trim();
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.hold_new_tab = config.hold_new_tab === true;
   config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
+    config.navigation_path = config.tap_url;
+  }
+  if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
+    config.hold_navigation_path = config.hold_url;
+  }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
 
@@ -1923,6 +1956,10 @@ class NodaliaEntityCard extends HTMLElement {
       return Boolean(url && String(url).trim());
     }
 
+    if (tapAction === "navigate") {
+      return Boolean(this._navigationPathForZone(zone, "tap"));
+    }
+
     if (tapAction === "toggle") {
       return this._isBinaryOnOff(state);
     }
@@ -1958,6 +1995,10 @@ class NodaliaEntityCard extends HTMLElement {
         url = this._config?.hold_url;
       }
       return Boolean(url && String(url).trim());
+    }
+
+    if (holdAction === "navigate") {
+      return Boolean(this._navigationPathForZone(zone, "hold"));
     }
 
     if (holdAction === "toggle") {
@@ -2003,6 +2044,53 @@ class NodaliaEntityCard extends HTMLElement {
     fireEvent(this, "hass-more-info", {
       entityId,
     });
+  }
+
+  _navigationPathForZone(zone = "body", actionKind = "tap") {
+    const isTap = actionKind === "tap";
+    if (zone === "icon") {
+      const iconPath = String(
+        isTap ? this._config?.icon_navigation_path : this._config?.icon_hold_navigation_path,
+      ).trim();
+      if (iconPath) {
+        return iconPath;
+      }
+      const inheritedBodyPath = String(
+        isTap ? this._config?.navigation_path : this._config?.hold_navigation_path,
+      ).trim();
+      if (inheritedBodyPath) {
+        return inheritedBodyPath;
+      }
+      return String(isTap ? this._config?.icon_tap_url : this._config?.icon_hold_url).trim()
+        || String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+    }
+
+    const bodyPath = String(isTap ? this._config?.navigation_path : this._config?.hold_navigation_path).trim();
+    if (bodyPath) {
+      return bodyPath;
+    }
+
+    return String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+  }
+
+  _navigateToPath(path) {
+    const navigationPath = String(path || "").trim();
+    if (!navigationPath) {
+      return;
+    }
+
+    if (this._hass?.navigate) {
+      this._hass.navigate(navigationPath);
+      return;
+    }
+
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", navigationPath);
+      fireEvent(this, "location-changed", { replace: false });
+      return;
+    }
+
+    fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
   _parseServiceData(rawValue) {
@@ -2097,6 +2185,9 @@ class NodaliaEntityCard extends HTMLElement {
       case "url":
         this._openConfiguredUrl(tapUrl, tapNewTab);
         break;
+      case "navigate":
+        this._navigateToPath(this._navigationPathForZone(zone, "tap"));
+        break;
       case "auto":
       default:
         if (this._isBinaryOnOff(state)) {
@@ -2138,6 +2229,9 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "url":
         this._openConfiguredUrl(holdUrl, holdNewTab);
+        break;
+      case "navigate":
+        this._navigateToPath(this._navigationPathForZone(zone, "hold"));
         break;
       case "auto":
       default:
@@ -3506,8 +3600,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const iconTapSelectValue = iconTapActionRaw;
     const showIconTapService = iconTapSelectValue === "service";
     const showCardTapService = tapAction === "service";
+    const showIconTapNavigate = iconTapSelectValue === "navigate";
+    const showCardTapNavigate = tapAction === "navigate";
     const holdAction = config.hold_action || "none";
     const iconHoldSelect = String(config.icon_hold_action ?? "").trim();
+    const showIconHoldNavigate = iconHoldSelect === "navigate";
+    const showCardHoldNavigate = holdAction === "navigate";
     const showCardHoldService = holdAction === "service";
     const showIconHoldService = iconHoldSelect === "service" || (iconHoldSelect === "" && holdAction === "service");
     const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
@@ -3924,6 +4022,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -3938,6 +4037,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -3996,6 +4096,22 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 : ""
             }
             ${
+              showIconTapNavigate
+                ? this._renderTextField("ed.vacuum.navigation_path", "icon_navigation_path", config.icon_navigation_path, {
+                    placeholder: "/home-page/details",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
+              showCardTapNavigate
+                ? this._renderTextField("ed.vacuum.navigation_path", "navigation_path", config.navigation_path, {
+                    placeholder: "/home-page/matt-details",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
               iconTapSelectValue === "url"
                 ? `
                   ${this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, {
@@ -4027,6 +4143,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -4041,6 +4158,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 { value: "auto", label: "ed.entity.tap_auto" },
                 { value: "toggle", label: "ed.entity.tap_toggle" },
                 { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "navigate", label: "ed.vacuum.tap_navigate" },
                 { value: "url", label: "ed.entity.tap_open_url" },
                 { value: "service", label: "ed.entity.tap_service" },
                 { value: "none", label: "ed.entity.tap_none" },
@@ -4071,6 +4189,22 @@ class NodaliaEntityCardEditor extends HTMLElement {
                     placeholder: '{"brightness_pct": 70}',
                   })}
                 `
+                : ""
+            }
+            ${
+              showIconHoldNavigate || (iconHoldSelect === "" && showCardHoldNavigate)
+                ? this._renderTextField("ed.vacuum.hold_navigation_path", "icon_hold_navigation_path", config.icon_hold_navigation_path, {
+                    placeholder: "/home-page/details",
+                    fullWidth: true,
+                  })
+                : ""
+            }
+            ${
+              showCardHoldNavigate
+                ? this._renderTextField("ed.vacuum.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
+                    placeholder: "/home-page/matt-details",
+                    fullWidth: true,
+                  })
                 : ""
             }
             ${

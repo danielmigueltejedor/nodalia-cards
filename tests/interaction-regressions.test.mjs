@@ -780,6 +780,18 @@ test("cover card switches open/close arrow orientation by device class and open_
   assert.match(source, /escapeHtml\(openCloseIcons\.open\)/);
 });
 
+test("entity card supports in-app navigate tap action with navigation_path", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /navigation_path: ""/);
+  assert.match(source, /"navigate", label: "ed\.vacuum\.tap_navigate"/);
+  assert.match(source, /_navigateToPath\(path\)/);
+  assert.match(source, /this\._hass\.navigate\(navigationPath\)/);
+  assert.match(source, /fireEvent\(this, "location-changed", \{ replace: false \}\)/);
+  assert.match(source, /fireEvent\(this, "hass-navigate", \{ path: navigationPath \}\)/);
+  assert.match(source, /case "navigate":[\s\S]*_navigationPathForZone\(zone, "tap"\)/);
+  assert.match(source, /tap_action === "navigate" && !config\.navigation_path && config\.tap_url/);
+});
+
 test("entity card supports entity pictures in the main icon bubble", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /show_entity_picture: false/);

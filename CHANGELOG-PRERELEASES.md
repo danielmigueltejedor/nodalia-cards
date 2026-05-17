@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.2-alpha.4] - 2026-05-15
+
+Fourth **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.4`**.
+
+### Added
+
+- **`nodalia-entity-card.js`:** **`tap_action: navigate`** and **`navigation_path`** (plus icon/hold variants) use Home Assistant SPA navigation (`hass.navigate` → `history.pushState` → `hass-navigate`) so subview links work in the Companion App instead of opening the system browser via **`tap_action: url`**.
+
+---
+
 ## [1.1.2-alpha.3] - 2026-05-15
 
 Third **`1.1.2`** **`alpha`**: release channel **`1.1.2-alpha.3`**.
