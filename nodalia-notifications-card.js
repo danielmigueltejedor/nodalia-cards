@@ -3750,10 +3750,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
     const hasNotifications = notifications.length > 0;
     const customEmptyMessage = String(config.empty_message ?? "").trim();
-    const customEmptyTitle = String(config.empty_title ?? "").trim();
     const emptyText =
       customEmptyMessage ||
-      customEmptyTitle ||
       this._text("empty.message", "");
     const animations = this._getAnimationSettings();
     const nextNotificationIdsSignature = notifications.map(item => item.id).join("|");
