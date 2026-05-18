@@ -524,6 +524,7 @@
       "rainSoon": "Pluie bientôt",
       "batteryLow": "Batterie faible",
       "humidifierFillLow": "Réservoir bas",
+      "humidifierFillFull": "Tank full",
       "inkLow": "Encre faible",
       "humidityHigh": "Humidité élevée",
       "humidityLow": "Humidité basse",
@@ -537,6 +538,7 @@
       "hot": "{source} indique {value}. Vous pouvez allumer {fan}.",
       "rainSoon": "{source} prévoit de la pluie vers {time}. Si du linge est dehors, mieux vaut vérifier.",
       "lowLevel": "{source} est à {value}.",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} indique {value}.",
       "hotClimate": "{source} indique {value}. Vous pouvez activer le froid sur {climate}.",
       "mediaLeftOn": "{media} est toujours allumé et {source} ne détecte aucune présence."
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
