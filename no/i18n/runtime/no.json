@@ -524,6 +524,7 @@
       "rainSoon": "Rain soon",
       "batteryLow": "Low battery",
       "humidifierFillLow": "Low tank",
+      "humidifierFillFull": "Tank full",
       "inkLow": "Low ink",
       "humidityHigh": "High humidity",
       "humidityLow": "Low humidity",
@@ -537,6 +538,7 @@
       "hot": "{source} reads {value}. You can turn on {fan}.",
       "rainSoon": "{source} expects rain around {time}. If laundry is outside, it is worth checking.",
       "lowLevel": "{source} is at {value}.",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} reads {value}.",
       "hotClimate": "{source} reads {value}. You can turn on cooling on {climate}.",
       "mediaLeftOn": "{media} is still on and {source} detects no presence."
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
