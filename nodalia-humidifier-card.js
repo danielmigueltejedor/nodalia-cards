@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.1.3-alpha.6";
+const CARD_VERSION = "1.1.3-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2419,16 +2419,23 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const shouldAnimateHumidityFill = animations.enabled &&
-      wasOn !== null &&
-      wasOn !== isOn &&
+      powerAnimationState === "powering-up" &&
       isOn &&
       supportsHumidity;
     const humidityFillDuration = shouldAnimateHumidityFill
       ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
       : 0;
-    const humidityFillDelay = shouldAnimateHumidityFill
+    const humidityFillDelayBase = shouldAnimateHumidityFill
       ? clamp(Math.round(animations.controlsDuration * 0.48), 140, 820)
       : 0;
+    let humidityFillDelay = humidityFillDelayBase;
+    if (shouldAnimateHumidityFill && this._powerTransition?.startedAt != null) {
+      const fillStartAt = Number(this._powerTransition.startedAt) + humidityFillDelayBase;
+      const fillElapsed = now - fillStartAt;
+      if (fillElapsed > 0) {
+        humidityFillDelay = -clamp(fillElapsed, 0, humidityFillDuration);
+      }
+    }
     const humiditySliderShellClass = shouldAnimateHumidityFill ? " humidifier-card__slider-shell--humidity-fill" : "";
 
     const mainControlsMarkup = isOn && supportsHumidity
@@ -2617,8 +2624,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     const panelAnimationDelay = panelAnimationState && this._panelTransition
       ? -clamp(now - Number(this._panelTransition.startedAt || now), 0, animations.panelDuration)
       : 0;
-    const humidityFillAnimationRemaining = shouldAnimateHumidityFill
-      ? humidityFillDuration
+    const humidityFillAnimationRemaining = shouldAnimateHumidityFill && this._powerTransition
+      ? Math.max(0, Number(this._powerTransition.startedAt) + humidityFillDelayBase + humidityFillDuration - now)
       : 0;
     const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || panelAnimationRemaining || humidityFillAnimationRemaining);
     const cleanupDelay = shouldCleanupAfterAnimation

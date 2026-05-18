@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.7] - 2026-05-18
+
+Seventh **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.7`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** percentage/humidity slider fill animation runs for the full `powering-up` transition (negative animation delay on re-renders) so optimistic UI no longer cuts the fill short.
+
+### Changed
+
+- **Shared utils:** Lovelace helpers live only in **`nodalia-utils.js`**; card sources no longer commit inlined `// <nodalia-standalone-utils>` blocks (bundle still loads utils once). Use **`node scripts/sync-standalone-embed.mjs`** locally for single-file Lovelace resources.
+- **`nodalia-fan-card.js`:** `ALLOWED_DOUBLE_TAP_ACTIONS` module constant for double-tap validation.
+
+---
+
 ## [1.1.3-alpha.6] - 2026-05-18
 
 Sixth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.6`**.

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.3-alpha.6";
+const CARD_VERSION = "1.1.3-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2261,16 +2261,23 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const shouldAnimatePercentageFill = animations.enabled &&
-      wasOn !== null &&
-      wasOn !== isOn &&
+      powerAnimationState === "powering-up" &&
       isOn &&
       supportsPercentage;
     const percentageFillDuration = shouldAnimatePercentageFill
       ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
       : 0;
-    const percentageFillDelay = shouldAnimatePercentageFill
+    const percentageFillDelayBase = shouldAnimatePercentageFill
       ? clamp(Math.round(animations.controlsDuration * 0.48), 140, 820)
       : 0;
+    let percentageFillDelay = percentageFillDelayBase;
+    if (shouldAnimatePercentageFill && this._powerTransition?.startedAt != null) {
+      const fillStartAt = Number(this._powerTransition.startedAt) + percentageFillDelayBase;
+      const fillElapsed = now - fillStartAt;
+      if (fillElapsed > 0) {
+        percentageFillDelay = -clamp(fillElapsed, 0, percentageFillDuration);
+      }
+    }
     const percentageSliderShellClass = shouldAnimatePercentageFill ? " fan-card__slider-shell--percentage-fill" : "";
 
     const mainControlsMarkup = isOn && supportsPercentage
@@ -2442,8 +2449,8 @@ class NodaliaFanCard extends HTMLElement {
     const presetAnimationDelay = presetPanelAnimationState && this._presetPanelTransition
       ? -clamp(now - Number(this._presetPanelTransition.startedAt || now), 0, animations.presetDuration)
       : 0;
-    const percentageFillAnimationRemaining = shouldAnimatePercentageFill
-      ? percentageFillDuration
+    const percentageFillAnimationRemaining = shouldAnimatePercentageFill && this._powerTransition
+      ? Math.max(0, Number(this._powerTransition.startedAt) + percentageFillDelayBase + percentageFillDuration - now)
       : 0;
     const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining || percentageFillAnimationRemaining);
     const cleanupDelay = shouldCleanupAfterAnimation
