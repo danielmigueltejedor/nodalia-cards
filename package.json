@@ -7,7 +7,7 @@
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
   "scripts": {
     "sync-standalone-embed": "node scripts/sync-standalone-embed.mjs",
-    "bundle": "node scripts/sync-standalone-embed.mjs && node scripts/build-bundle.mjs",
+    "bundle": "node scripts/build-bundle.mjs",
     "i18n:validate-editor": "node scripts/validate-editor-i18n.mjs",
     "i18n:gen-editor": "node scripts/gen-editor-ui.mjs",
     "i18n:validate-runtime": "node scripts/validate-runtime-i18n.mjs",

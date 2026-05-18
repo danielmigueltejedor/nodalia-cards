@@ -28,6 +28,10 @@ function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "e
   return sandbox.window.NodaliaI18n;
 }
 
+function loadNodaliaUtils(sandbox) {
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+}
+
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -72,6 +76,7 @@ function loadClimateCardClass() {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
   vm.runInContext(read("nodalia-climate-card.js"), sandbox);
   return registry.get("nodalia-climate-card");
 }
@@ -120,6 +125,7 @@ function loadPowerFlowCardClass() {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
   vm.runInContext(read("nodalia-power-flow-card.js"), sandbox);
   return registry.get("nodalia-power-flow-card");
 }

@@ -333,7 +333,6 @@ pnpm run bundle
 This runs:
 
 ```bash
-scripts/sync-standalone-embed.mjs
 scripts/build-bundle.mjs
 ```
 
@@ -361,36 +360,13 @@ If changing dependencies or adding modules, preserve correct initialization orde
 
 ---
 
-# 🧰 Standalone card scripts
+# 🧰 Shared utilities (`nodalia-utils.js`)
 
-Each standalone card file includes embedded utility helpers between:
+Lovelace helpers (`escapeLovelaceWarningText`, entity guards, editor collapsibles, zone tap scheduling, etc.) live only in **`nodalia-utils.js`** and are exposed as **`window.NodaliaUtils`**. Card sources call those APIs; they do not duplicate the implementations.
 
-```js
-// <nodalia-standalone-utils>
-// </nodalia-standalone-utils>
-```
+The bundle loads **`nodalia-utils.js` once** before card modules (see order above). After editing **`nodalia-utils.js`**, run **`pnpm run bundle`** and commit the updated **`nodalia-cards*.js`** artifact.
 
-The main bundle strips those blocks automatically to avoid duplication.
-
-After editing:
-
-```text
-nodalia-utils.js
-```
-
-run:
-
-```bash
-pnpm run bundle
-```
-
-or:
-
-```bash
-node scripts/sync-standalone-embed.mjs
-```
-
-to keep standalone files synchronized.
+For a **single-file** Lovelace resource (one card JS without the full bundle), run **`node scripts/sync-standalone-embed.mjs`** locally to inline utils into that file; do not commit those embed blocks to the repo.
 
 ---
 

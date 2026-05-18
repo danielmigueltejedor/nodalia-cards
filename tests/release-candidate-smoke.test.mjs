@@ -27,6 +27,41 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
 });
 
+test("card sources use nodalia-utils.js instead of inlined duplicate helpers", () => {
+  const cards = [
+    "nodalia-navigation-bar.js",
+    "nodalia-media-player.js",
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-circular-gauge-card.js",
+    "nodalia-graph-card.js",
+    "nodalia-power-flow-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-climate-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-advance-vacuum-card.js",
+    "nodalia-entity-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-insignia-card.js",
+    "nodalia-person-card.js",
+    "nodalia-weather-card.js",
+    "nodalia-notifications-card.js",
+    "nodalia-vacuum-card.js",
+  ];
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function escapeLovelaceWarningText\(/);
+  assert.match(utils, /function scheduleCardZoneTap\(/);
+  for (const file of cards) {
+    const source = read(file);
+    assert.doesNotMatch(source, /\/\/ <nodalia-standalone-utils>/, `${file} should not embed utils`);
+    assert.doesNotMatch(source, /function escapeLovelaceWarningText\(/, `${file} should not duplicate utils`);
+    assert.doesNotMatch(source, /\(function initNodaliaUtils\(\)/, `${file} should not duplicate utils IIFE`);
+  }
+  const build = read("scripts/build-bundle.mjs");
+  assert.match(build, /nodalia-utils\.js/);
+});
+
 test("README keeps support link in the badge area without duplicate donations", () => {
   const readme = read("README.md");
   const coffeeMatches = readme.match(/buymeacoffee\.com\/danielmigueltejedor/g) || [];

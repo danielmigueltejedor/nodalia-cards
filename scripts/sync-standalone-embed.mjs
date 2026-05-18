@@ -1,9 +1,9 @@
 /**
- * Inlines nodalia-utils.js at the top of each card that depends on window.NodaliaUtils,
- * so a single Lovelace resource (e.g. nodalia-entity-card.js) works without loading
- * nodalia-utils.js separately. The block is stripped by scripts/build-bundle.mjs when
- * building nodalia-cards.js. Regenerate after editing nodalia-utils.js:
- *   node scripts/sync-standalone-embed.mjs
+ * Optional: inlines nodalia-utils.js for single-file Lovelace resources (not committed in repo).
+ * Source of truth: nodalia-utils.js — loaded once in nodalia-cards.js via build-bundle.mjs.
+ *
+ *   node scripts/sync-standalone-embed.mjs          # embed (release / standalone artifact)
+ *   node scripts/sync-standalone-embed.mjs --strip  # remove embed blocks from card sources
  */
 import fs from "fs";
 import path from "path";
@@ -62,23 +62,36 @@ ${END}
 `;
 }
 
-const utilsSrc = fs.readFileSync(path.join(root, "nodalia-utils.js"), "utf8");
-const embed = wrapEmbed(utilsSrc);
-
 function normalizeNewlines(s) {
   return s.replace(/\r\n/g, "\n");
 }
 
-let updated = 0;
-for (const name of FILES) {
-  const filePath = path.join(root, name);
-  const beforeFull = fs.readFileSync(filePath, "utf8");
-  const stripped = stripEmbed(beforeFull);
-  const next = embed + stripped;
-  if (normalizeNewlines(next) !== normalizeNewlines(beforeFull)) {
-    fs.writeFileSync(filePath, next);
-    updated += 1;
-  }
-}
+const stripOnly = process.argv.includes("--strip");
 
-console.log(`Standalone utils embed: updated ${updated} file(s).`);
+let updated = 0;
+if (stripOnly) {
+  for (const name of FILES) {
+    const filePath = path.join(root, name);
+    const beforeFull = fs.readFileSync(filePath, "utf8");
+    const next = stripEmbed(beforeFull);
+    if (normalizeNewlines(next) !== normalizeNewlines(beforeFull)) {
+      fs.writeFileSync(filePath, next);
+      updated += 1;
+    }
+  }
+  console.log(`Standalone utils embed: stripped ${updated} file(s).`);
+} else {
+  const utilsSrc = fs.readFileSync(path.join(root, "nodalia-utils.js"), "utf8");
+  const embed = wrapEmbed(utilsSrc);
+  for (const name of FILES) {
+    const filePath = path.join(root, name);
+    const beforeFull = fs.readFileSync(filePath, "utf8");
+    const stripped = stripEmbed(beforeFull);
+    const next = embed + stripped;
+    if (normalizeNewlines(next) !== normalizeNewlines(beforeFull)) {
+      fs.writeFileSync(filePath, next);
+      updated += 1;
+    }
+  }
+  console.log(`Standalone utils embed: updated ${updated} file(s).`);
+}
