@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.6] - 2026-05-18
+
+Sixth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.6`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** light-style optimistic turn-on (last known on-state, visual settle after Home Assistant confirms) and percentage/humidity slider fill animates once per power-on edge (no double animation flicker).
+- **`nodalia-notifications-card.js`:** empty-state body no longer falls back to `empty_title` when only a custom title is set.
+
+### Changed
+
+- **Editor i18n:** tap/hold/double-tap action labels translated for climate, weather, light, and entity editors (all locales); `en.json` key order cleaned up.
+
+---
+
 ## [1.1.3-alpha.5] - 2026-05-18
 
 Fifth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.5`**.
