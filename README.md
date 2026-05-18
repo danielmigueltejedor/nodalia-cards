@@ -1,7 +1,6 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-
 ![Package](https://img.shields.io/badge/package-1.1.2--alpha.1-f59e0b)
 ![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
