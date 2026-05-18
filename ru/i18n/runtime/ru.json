@@ -524,6 +524,7 @@
       "rainSoon": "Скоро дождь",
       "batteryLow": "Низкий заряд батареи",
       "humidifierFillLow": "Низкий уровень бака",
+      "humidifierFillFull": "Tank full",
       "inkLow": "Мало чернил",
       "humidityHigh": "Высокая влажность",
       "humidityLow": "Низкая влажность",
@@ -537,6 +538,7 @@
       "hot": "{source} показывает {value}. Можно включить {fan}.",
       "rainSoon": "{source} ожидает дождь около {time}. Если бельё снаружи, стоит проверить.",
       "lowLevel": "{source}: {value}.",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} показывает {value}.",
       "hotClimate": "{source} показывает {value}. Можно включить охлаждение на {climate}.",
       "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие."
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
