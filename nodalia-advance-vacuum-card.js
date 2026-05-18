@@ -989,7 +989,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.1.3-alpha.4";
+const CARD_VERSION = "1.1.3-alpha.5";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -7516,6 +7516,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderMapTools() {
+    const advanceVacuumStrings = this._advanceVacuumStrings();
     const state = this._getVacuumState();
     const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
     const isCleaningSessionActive = this._isCleaningSessionActive(state);

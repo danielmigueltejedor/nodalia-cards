@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.5] - 2026-05-18
+
+Fifth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.5`**.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** **`Can't find variable: advanceVacuumStrings`** in map tools (add-zone button) — missing `const advanceVacuumStrings = this._advanceVacuumStrings()` in `_renderMapTools`.
+
+---
+
 ## [1.1.3-alpha.4] - 2026-05-18
 
 Fourth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.4`**.
