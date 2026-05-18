@@ -28,6 +28,7 @@
     "renderLovelaceEntityGuardCardHtml",
     "renderLovelaceEntityGuardForEntities",
     "renderEditorCollapsibleToggleHtml",
+    "renderEditorCollapsibleSectionHeaderHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -676,6 +677,36 @@
     return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
   }
 
+  /**
+   * Collapsible editor section header (title + hint + chevron toggle). Pair with
+   * `this._showTapActionsSection ? \`...\` : ""` around the section body.
+   */
+  function renderEditorCollapsibleSectionHeaderHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const editorLabel = options.editorLabel;
+    if (typeof escapeHtml !== "function" || typeof editorLabel !== "function") {
+      return "";
+    }
+    const titleKey = String(options.titleKey ?? "ed.light.tap_actions_section_title");
+    const hintKey = String(options.hintKey ?? "ed.light.tap_actions_section_hint");
+    const toggleId = String(options.toggleId ?? "tap_actions").replace(/"/g, "");
+    const expanded = options.expanded === true;
+    const showLabelKey = String(options.showLabelKey ?? "ed.shared.show_tap_action_settings");
+    const hideLabelKey = String(options.hideLabelKey ?? "ed.shared.hide_tap_action_settings");
+    const toggle = renderEditorCollapsibleToggleHtml({
+      toggleId,
+      expanded,
+      showLabel: editorLabel(showLabelKey),
+      hideLabel: editorLabel(hideLabelKey),
+      escapeHtml,
+    });
+    return `<div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(editorLabel(titleKey))}</div>
+            <div class="editor-section__hint">${escapeHtml(editorLabel(hintKey))}</div>
+            <div class="editor-section__actions">${toggle}</div>
+          </div>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -917,6 +948,7 @@
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
     renderEditorCollapsibleToggleHtml,
+    renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -931,7 +963,7 @@
 
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.1.3-alpha.1";
+const CARD_VERSION = "1.1.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -5280,9 +5312,12 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showTapActionsSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {
@@ -5505,6 +5540,19 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
         </select>
       </label>
     `;
+  }
+
+  _onShadowClick(event) {
+    const toggleButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+    if (!toggleButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (toggleButton.dataset.editorToggle === "tap_actions") {
+      this._showTapActionsSection = !this._showTapActionsSection;
+      this._render();
+    }
   }
 
   _getEntityOptionsMarkup() {
@@ -5762,6 +5810,22 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
               placeholder: "/local/climate.png",
             })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
+            escapeHtml,
+            editorLabel: key => this._editorLabel(key),
+            titleKey: "ed.light.tap_actions_section_title",
+            hintKey: "ed.light.tap_actions_section_hint",
+            toggleId: "tap_actions",
+            expanded: this._showTapActionsSection === true,
+          })}
+          ${
+            this._showTapActionsSection
+              ? `
+          <div class="editor-grid">
             ${this._renderSelectField(
               "ed.climate.tap_action",
               "tap_action",
@@ -5793,6 +5857,9 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
               { fullWidth: true },
             )}
           </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">
@@ -5929,6 +5996,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
     this._showAnimationSection = false;
+    this._showTapActionsSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -6221,6 +6289,12 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
     if (toggleButton.dataset.editorToggle === "animations") {
       this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "tap_actions") {
+      this._showTapActionsSection = !this._showTapActionsSection;
       this._render();
     }
   }
@@ -6792,6 +6866,19 @@ class NodaliaClimateCardEditor extends HTMLElement {
               placeholder: "/local/climate.png",
               fullWidth: true,
             })}
+        <section class="editor-section">
+          ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
+            escapeHtml,
+            editorLabel: key => this._editorLabel(key),
+            titleKey: "ed.light.tap_actions_section_title",
+            hintKey: "ed.light.tap_actions_section_hint",
+            toggleId: "tap_actions",
+            expanded: this._showTapActionsSection === true,
+          })}
+          ${
+            this._showTapActionsSection
+              ? `
+          <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
               "ed.climate.tap_action",
               "tap_action",
@@ -6822,6 +6909,12 @@ class NodaliaClimateCardEditor extends HTMLElement {
               ],
               { fullWidth: true },
             )}
+          </div>
+              `
+              : ""
+          }
+        </section>
+
 
           </div>
         </section>

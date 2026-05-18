@@ -28,6 +28,7 @@
     "renderLovelaceEntityGuardCardHtml",
     "renderLovelaceEntityGuardForEntities",
     "renderEditorCollapsibleToggleHtml",
+    "renderEditorCollapsibleSectionHeaderHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -676,6 +677,36 @@
     return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
   }
 
+  /**
+   * Collapsible editor section header (title + hint + chevron toggle). Pair with
+   * `this._showTapActionsSection ? \`...\` : ""` around the section body.
+   */
+  function renderEditorCollapsibleSectionHeaderHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const editorLabel = options.editorLabel;
+    if (typeof escapeHtml !== "function" || typeof editorLabel !== "function") {
+      return "";
+    }
+    const titleKey = String(options.titleKey ?? "ed.light.tap_actions_section_title");
+    const hintKey = String(options.hintKey ?? "ed.light.tap_actions_section_hint");
+    const toggleId = String(options.toggleId ?? "tap_actions").replace(/"/g, "");
+    const expanded = options.expanded === true;
+    const showLabelKey = String(options.showLabelKey ?? "ed.shared.show_tap_action_settings");
+    const hideLabelKey = String(options.hideLabelKey ?? "ed.shared.hide_tap_action_settings");
+    const toggle = renderEditorCollapsibleToggleHtml({
+      toggleId,
+      expanded,
+      showLabel: editorLabel(showLabelKey),
+      hideLabel: editorLabel(hideLabelKey),
+      escapeHtml,
+    });
+    return `<div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(editorLabel(titleKey))}</div>
+            <div class="editor-section__hint">${escapeHtml(editorLabel(hintKey))}</div>
+            <div class="editor-section__actions">${toggle}</div>
+          </div>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -917,6 +948,7 @@
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
     renderEditorCollapsibleToggleHtml,
+    renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -931,7 +963,7 @@
 
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "1.1.3-alpha.1";
+const CARD_VERSION = "1.1.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2826,6 +2858,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
     this._showAnimationSection = false;
+    this._showTapActionsSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -3123,6 +3156,11 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
     if (toggleButton.dataset.editorToggle === "animations") {
       this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+      return;
+    }
+    if (toggleButton.dataset.editorToggle === "tap_actions") {
+      this._showTapActionsSection = !this._showTapActionsSection;
       this._render();
     }
   }
@@ -3711,6 +3749,22 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
               type: "number",
               valueType: "number",
             })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
+            escapeHtml,
+            editorLabel: key => this._editorLabel(key),
+            titleKey: "ed.light.tap_actions_section_title",
+            hintKey: "ed.light.tap_actions_section_hint",
+            toggleId: "tap_actions",
+            expanded: this._showTapActionsSection === true,
+          })}
+          ${
+            this._showTapActionsSection
+              ? `
+          <div class="editor-grid">
             ${this._renderSelectField(
               "ed.entity.tap_action",
               "tap_action",
@@ -3721,6 +3775,9 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
               ],
             )}
           </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">

@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.2] - 2026-05-17
+
+Second **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.2`**.
+
+### Added
+
+- **`nodalia-utils.js`:** `renderEditorCollapsibleSectionHeaderHtml` and `renderLovelaceEntityGuardForEntities` for shared editor and entity-guard patterns.
+- **Editors (weather, climate, person, graph, power-flow, fav, circular gauge, …):** collapsible **Tap actions** sections (collapsed by default), aligned with light/cover/humidifier editors and `ed.shared.show_tap_action_settings` / `hide_tap_action_settings` i18n.
+
+### Changed
+
+- **Entity-based cards** (media player, alarm, circular gauge, person, vacuum, graph, insignia, advance-vacuum, calendar, power-flow, …): missing entities use native Lovelace **`hui-warning`** / **`ha-alert`** where not already applied.
+
+---
+
 ## [1.1.3-alpha.1] - 2026-05-17
 
 First **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.1`**.

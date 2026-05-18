@@ -25,6 +25,7 @@
     "renderLovelaceEntityGuardCardHtml",
     "renderLovelaceEntityGuardForEntities",
     "renderEditorCollapsibleToggleHtml",
+    "renderEditorCollapsibleSectionHeaderHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -673,6 +674,36 @@
     return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
   }
 
+  /**
+   * Collapsible editor section header (title + hint + chevron toggle). Pair with
+   * `this._showTapActionsSection ? \`...\` : ""` around the section body.
+   */
+  function renderEditorCollapsibleSectionHeaderHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const editorLabel = options.editorLabel;
+    if (typeof escapeHtml !== "function" || typeof editorLabel !== "function") {
+      return "";
+    }
+    const titleKey = String(options.titleKey ?? "ed.light.tap_actions_section_title");
+    const hintKey = String(options.hintKey ?? "ed.light.tap_actions_section_hint");
+    const toggleId = String(options.toggleId ?? "tap_actions").replace(/"/g, "");
+    const expanded = options.expanded === true;
+    const showLabelKey = String(options.showLabelKey ?? "ed.shared.show_tap_action_settings");
+    const hideLabelKey = String(options.hideLabelKey ?? "ed.shared.hide_tap_action_settings");
+    const toggle = renderEditorCollapsibleToggleHtml({
+      toggleId,
+      expanded,
+      showLabel: editorLabel(showLabelKey),
+      hideLabel: editorLabel(hideLabelKey),
+      escapeHtml,
+    });
+    return `<div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(editorLabel(titleKey))}</div>
+            <div class="editor-section__hint">${escapeHtml(editorLabel(hintKey))}</div>
+            <div class="editor-section__actions">${toggle}</div>
+          </div>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -914,6 +945,7 @@
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
     renderEditorCollapsibleToggleHtml,
+    renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };

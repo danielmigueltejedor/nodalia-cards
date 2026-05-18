@@ -28,6 +28,7 @@
     "renderLovelaceEntityGuardCardHtml",
     "renderLovelaceEntityGuardForEntities",
     "renderEditorCollapsibleToggleHtml",
+    "renderEditorCollapsibleSectionHeaderHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
   ];
@@ -676,6 +677,36 @@
     return `<button type="button" class="editor-section__toggle-button" data-editor-toggle="${toggleId}" aria-expanded="${expanded ? "true" : "false"}"><ha-icon icon="${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label}</span></button>`;
   }
 
+  /**
+   * Collapsible editor section header (title + hint + chevron toggle). Pair with
+   * `this._showTapActionsSection ? \`...\` : ""` around the section body.
+   */
+  function renderEditorCollapsibleSectionHeaderHtml(options = {}) {
+    const escapeHtml = options.escapeHtml;
+    const editorLabel = options.editorLabel;
+    if (typeof escapeHtml !== "function" || typeof editorLabel !== "function") {
+      return "";
+    }
+    const titleKey = String(options.titleKey ?? "ed.light.tap_actions_section_title");
+    const hintKey = String(options.hintKey ?? "ed.light.tap_actions_section_hint");
+    const toggleId = String(options.toggleId ?? "tap_actions").replace(/"/g, "");
+    const expanded = options.expanded === true;
+    const showLabelKey = String(options.showLabelKey ?? "ed.shared.show_tap_action_settings");
+    const hideLabelKey = String(options.hideLabelKey ?? "ed.shared.hide_tap_action_settings");
+    const toggle = renderEditorCollapsibleToggleHtml({
+      toggleId,
+      expanded,
+      showLabel: editorLabel(showLabelKey),
+      hideLabel: editorLabel(hideLabelKey),
+      escapeHtml,
+    });
+    return `<div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(editorLabel(titleKey))}</div>
+            <div class="editor-section__hint">${escapeHtml(editorLabel(hintKey))}</div>
+            <div class="editor-section__actions">${toggle}</div>
+          </div>`;
+  }
+
   function cancelCardZoneTap(host) {
     if (!(host instanceof HTMLElement) || !host._nodaliaZoneTap) {
       return;
@@ -917,6 +948,7 @@
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
     renderEditorCollapsibleToggleHtml,
+    renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
   };
@@ -931,7 +963,7 @@
 
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.3-alpha.1";
+const CARD_VERSION = "1.1.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -5037,10 +5069,6 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
             ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energy" })}
             ${this._renderTextField("ed.power_flow.energy_dashboard_url", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview" })}
             ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energy" })}
-            ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", config.tap_action || "none", [
-              { value: "none", label: "ed.power_flow.tap_none" },
-              { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
-            ])}
             ${this._renderCheckboxField("ed.power_flow.show_header", "show_header", config.show_header !== false)}
             ${this._renderCheckboxField("ed.power_flow.show_dashboard_button", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
             ${this._renderCheckboxField("ed.power_flow.show_labels", "show_labels", config.show_labels !== false)}
@@ -5049,6 +5077,29 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.power_flow.clickable_entities", "clickable_entities", config.clickable_entities !== false)}
             ${this._renderCheckboxField("ed.power_flow.badge_unavailable", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
+        </section>
+
+        <section class="editor-section">
+          ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
+            escapeHtml,
+            editorLabel: key => this._editorLabel(key),
+            titleKey: "ed.light.tap_actions_section_title",
+            hintKey: "ed.light.tap_actions_section_hint",
+            toggleId: "tap_actions",
+            expanded: this._showTapActionsSection === true,
+          })}
+          ${
+            this._showTapActionsSection
+              ? `
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
+              { value: "none", label: "ed.power_flow.tap_none" },
+              { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
+            ], { fullWidth: true })}
+          </div>
+              `
+              : ""
+          }
         </section>
 
         ${this._renderNodeSection("ed.power_flow.node_grid_title", "ed.power_flow.node_grid_hint_yaml", "entities.grid", grid)}
@@ -5191,6 +5242,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._entityOptionsSignature = "";
     this._showAnimationSection = false;
     this._showStyleSection = false;
+    this._showTapActionsSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
@@ -5504,6 +5556,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       this._render();
     } else if (toggleButton.dataset.editorToggle === "animations") {
       this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+    } else if (toggleButton.dataset.editorToggle === "tap_actions") {
+      this._showTapActionsSection = !this._showTapActionsSection;
       this._render();
     }
   }
@@ -6097,10 +6152,6 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             ${this._renderTextField("ed.nav.title_bar", "title", config.title, { placeholder: "Energy", fullWidth: true })}
             ${this._renderTextField("ed.power_flow.energy_dashboard_url", "dashboard_link", config.dashboard_link, { placeholder: "/energy/overview", fullWidth: true })}
             ${this._renderTextField("ed.power_flow.energy_dashboard_button_label", "dashboard_link_label", config.dashboard_link_label, { placeholder: "Energy", fullWidth: true })}
-            ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
-              { value: "none", label: "ed.power_flow.tap_none" },
-              { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
-            ], { fullWidth: true })}
             ${this._renderCheckboxField("ed.power_flow.show_header", "show_header", config.show_header !== false)}
             ${this._renderCheckboxField("ed.power_flow.show_dashboard_button", "show_dashboard_link_button", config.show_dashboard_link_button !== false)}
             ${this._renderCheckboxField("ed.power_flow.show_labels", "show_labels", config.show_labels !== false)}
@@ -6109,6 +6160,29 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.power_flow.clickable_entities", "clickable_entities", config.clickable_entities !== false)}
             ${this._renderCheckboxField("ed.power_flow.badge_unavailable", "show_unavailable_badge", config.show_unavailable_badge !== false)}
           </div>
+        </section>
+
+        <section class="editor-section">
+          ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
+            escapeHtml,
+            editorLabel: key => this._editorLabel(key),
+            titleKey: "ed.light.tap_actions_section_title",
+            hintKey: "ed.light.tap_actions_section_hint",
+            toggleId: "tap_actions",
+            expanded: this._showTapActionsSection === true,
+          })}
+          ${
+            this._showTapActionsSection
+              ? `
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
+              { value: "none", label: "ed.power_flow.tap_none" },
+              { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
+            ], { fullWidth: true })}
+          </div>
+              `
+              : ""
+          }
         </section>
 
         ${this._renderNodeSection("ed.power_flow.node_grid_title", "ed.power_flow.node_grid_hint_visual", "entities.grid", grid)}
