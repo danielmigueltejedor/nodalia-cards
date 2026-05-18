@@ -524,6 +524,7 @@
       "rainSoon": "Ploaie în curând",
       "batteryLow": "Baterie descărcată",
       "humidifierFillLow": "Rezervor scăzut",
+      "humidifierFillFull": "Tank full",
       "inkLow": "Cerneală puțină",
       "humidityHigh": "Umiditate ridicată",
       "humidityLow": "Umiditate scăzută",
@@ -537,6 +538,7 @@
       "hot": "{source} indică {value}. Poți porni {fan}.",
       "rainSoon": "{source} estimează ploaie în jurul {time}. Dacă ai rufe afară, merită verificat.",
       "lowLevel": "{source} este la {value}.",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} indică {value}.",
       "hotClimate": "{source} indică {value}. Poți porni răcirea pe {climate}.",
       "mediaLeftOn": "{media} este încă pornit, iar {source} nu detectează prezență."
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
