@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.4] - 2026-05-18
+
+Fourth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.4`**.
+
+### Fixed
+
+- **`nodalia-utils.js`:** entity guard no longer shows **Entity not found** while Home Assistant is still loading `hass.states` (`connected` / empty registry); entities known via `hass.entities` are accepted.
+- **`nodalia-advance-vacuum-card.js`:** re-renders after the guard when `hass` arrives (signature updated on warning path).
+
+---
+
 ## [1.1.3-alpha.3] - 2026-05-17
 
 Third **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.3`**.

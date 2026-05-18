@@ -605,6 +605,29 @@
       .replace(/"/g, "&quot;");
   }
 
+  function isLovelaceHassStatesHydrated(hass) {
+    if (!hass) {
+      return false;
+    }
+    if (hass.connected === false) {
+      return false;
+    }
+    const states = hass.states;
+    return Boolean(states && typeof states === "object" && Object.keys(states).length > 0);
+  }
+
+  function isLovelaceEntityKnown(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id || !hass) {
+      return false;
+    }
+    if (hass.states?.[id]) {
+      return true;
+    }
+    const registry = hass.entities ?? hass.entityRegistry ?? hass.entity_registry;
+    return Boolean(registry && typeof registry === "object" && registry[id]);
+  }
+
   function getLovelaceEntityWarningMessage(hass, entityId) {
     const id = String(entityId ?? "").trim();
     if (!id) {
@@ -613,7 +636,10 @@
         ?? "No entity specified"
       );
     }
-    if (hass?.states?.[id]) {
+    if (!isLovelaceHassStatesHydrated(hass)) {
+      return "";
+    }
+    if (isLovelaceEntityKnown(hass, id)) {
       return "";
     }
     return (
@@ -963,7 +989,7 @@
 
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.1.3-alpha.3";
+const CARD_VERSION = "1.1.3-alpha.4";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,

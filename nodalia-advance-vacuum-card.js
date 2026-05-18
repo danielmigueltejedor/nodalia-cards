@@ -605,6 +605,29 @@
       .replace(/"/g, "&quot;");
   }
 
+  function isLovelaceHassStatesHydrated(hass) {
+    if (!hass) {
+      return false;
+    }
+    if (hass.connected === false) {
+      return false;
+    }
+    const states = hass.states;
+    return Boolean(states && typeof states === "object" && Object.keys(states).length > 0);
+  }
+
+  function isLovelaceEntityKnown(hass, entityId) {
+    const id = String(entityId ?? "").trim();
+    if (!id || !hass) {
+      return false;
+    }
+    if (hass.states?.[id]) {
+      return true;
+    }
+    const registry = hass.entities ?? hass.entityRegistry ?? hass.entity_registry;
+    return Boolean(registry && typeof registry === "object" && registry[id]);
+  }
+
   function getLovelaceEntityWarningMessage(hass, entityId) {
     const id = String(entityId ?? "").trim();
     if (!id) {
@@ -613,7 +636,10 @@
         ?? "No entity specified"
       );
     }
-    if (hass?.states?.[id]) {
+    if (!isLovelaceHassStatesHydrated(hass)) {
+      return "";
+    }
+    if (isLovelaceEntityKnown(hass, id)) {
       return "";
     }
     return (
@@ -963,7 +989,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.1.3-alpha.3";
+const CARD_VERSION = "1.1.3-alpha.4";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -7785,6 +7811,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       );
       if (advanceVacuumGuard) {
         this.shadowRoot.innerHTML = advanceVacuumGuard;
+        this._lastRenderSignature = this._getRenderSignature();
         return;
       }
       const state = this._getVacuumState();
