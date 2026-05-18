@@ -524,6 +524,7 @@
       "rainSoon": "Βροχή σύντομα",
       "batteryLow": "Χαμηλή μπαταρία",
       "humidifierFillLow": "Χαμηλή στάθμη δοχείου",
+      "humidifierFillFull": "Tank full",
       "inkLow": "Χαμηλή στάθμη μελανιού",
       "humidityHigh": "Υψηλή υγρασία",
       "humidityLow": "Χαμηλή υγρασία",
@@ -537,6 +538,7 @@
       "hot": "Το {source} δείχνει {value}. Μπορείς να ενεργοποιήσεις το {fan}.",
       "rainSoon": "Το {source} προβλέπει βροχή γύρω στις {time}. Αν έχεις ρούχα έξω, έλεγξέ τα.",
       "lowLevel": "Το {source} είναι στο {value}.",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "Το {source} δείχνει {value}.",
       "hotClimate": "Το {source} δείχνει {value}. Μπορείς να ενεργοποιήσεις ψύξη στο {climate}.",
       "mediaLeftOn": "Το {media} παραμένει ενεργό και το {source} δεν ανιχνεύει παρουσία."
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
