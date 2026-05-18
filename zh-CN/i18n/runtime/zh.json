@@ -524,6 +524,7 @@
       "rainSoon": "即将下雨",
       "batteryLow": "电池电量低",
       "humidifierFillLow": "水箱水位低",
+      "humidifierFillFull": "Tank full",
       "inkLow": "墨水不足",
       "humidityHigh": "湿度偏高",
       "humidityLow": "湿度偏低",
@@ -537,6 +538,7 @@
       "hot": "{source} 显示 {value}。你可以打开 {fan}。",
       "rainSoon": "{source} 预计 {time} 左右有雨。如果外面晾着衣物，建议检查一下。",
       "lowLevel": "{source} 剩余 {value}。",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} 显示 {value}。",
       "hotClimate": "{source} 显示 {value}。可以在 {climate} 上开启制冷。",
       "mediaLeftOn": "{media} 仍处于开启状态，{source} 未检测到有人。"
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
