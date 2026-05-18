@@ -1001,6 +1001,8 @@ const HAPTIC_PATTERNS = {
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
 const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
+const OPTIMISTIC_VISUAL_SETTLE_MS = 420;
+const HUMIDIFIER_MEMORY_STORAGE_KEY = "nodalia-humidifier-card:last-visual-state:v1";
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -1561,6 +1563,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._hass = null;
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
+    this._optimisticVisualSettle = null;
+    this._lastKnownOnState = new Map();
     this._draftHumidity = new Map();
     this._modePanelOpen = false;
     this._fanModePanelOpen = false;
@@ -1697,6 +1701,8 @@ class NodaliaHumidifierCard extends HTMLElement {
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     if (previousEntity && previousEntity !== this._config.entity) {
       this._draftHumidity.delete(previousEntity);
+      this._lastKnownOnState.delete(previousEntity);
+      this._optimisticVisualSettle = null;
       this._clearOptimisticToggleState();
     }
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -1727,7 +1733,9 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._syncOptimisticToggleState(this._getActualState());
+    const actualState = this._getActualState();
+    this._syncLastKnownOnState(actualState);
+    this._syncOptimisticToggleState(actualState);
     const nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
@@ -1825,7 +1833,12 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _getState() {
-    return this._buildOptimisticToggleState(this._getActualState());
+    const actualState = this._getActualState();
+    const optimisticState = this._buildOptimisticToggleState(actualState);
+    if (this._shouldUseOptimisticVisualSettle(actualState)) {
+      return this._buildOptimisticVisualSettleState(actualState);
+    }
+    return optimisticState;
   }
 
   _getActualState(hass = this._hass) {
@@ -1839,6 +1852,164 @@ class NodaliaHumidifierCard extends HTMLElement {
     return {
       ...state,
       attributes: { ...(state.attributes || {}) },
+    };
+  }
+
+  _getStoredHumidifierMemory() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return {};
+    }
+    try {
+      return JSON.parse(window.localStorage.getItem(HUMIDIFIER_MEMORY_STORAGE_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  _storeHumidifierMemory(entityId, snapshot) {
+    if (!entityId || !snapshot || typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+    try {
+      const memory = this._getStoredHumidifierMemory();
+      memory[entityId] = {
+        attributes: { ...(snapshot.attributes || {}) },
+        last_changed: snapshot.last_changed || new Date().toISOString(),
+      };
+      window.localStorage.setItem(HUMIDIFIER_MEMORY_STORAGE_KEY, JSON.stringify(memory));
+    } catch {
+      // Ignore storage quota or privacy mode failures.
+    }
+  }
+
+  _getStoredHumidifierSnapshot(entityId) {
+    const stored = this._getStoredHumidifierMemory()[entityId];
+    if (!stored?.attributes || typeof stored.attributes !== "object") {
+      return null;
+    }
+    return {
+      entity_id: entityId,
+      state: "on",
+      attributes: { ...(stored.attributes || {}) },
+      last_changed: stored.last_changed || new Date().toISOString(),
+      last_updated: stored.last_changed || new Date().toISOString(),
+    };
+  }
+
+  _syncLastKnownOnState(actualState) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !actualState) {
+      return;
+    }
+
+    const snapshot = this._createStateSnapshot(actualState);
+    if (actualState.state === "on") {
+      this._lastKnownOnState.set(entityId, snapshot);
+      this._storeHumidifierMemory(entityId, snapshot);
+      return;
+    }
+
+    const attrs = actualState.attributes || {};
+    if (
+      Number.isFinite(Number(attrs.humidity)) ||
+      Number.isFinite(Number(attrs.target_humidity))
+    ) {
+      this._lastKnownOnState.set(entityId, {
+        ...snapshot,
+        state: "on",
+      });
+      this._storeHumidifierMemory(entityId, snapshot);
+    }
+  }
+
+  _getLastKnownOnState(entityId = this._config?.entity || "") {
+    if (!entityId) {
+      return null;
+    }
+
+    const cached = this._lastKnownOnState.get(entityId);
+    if (cached) {
+      return cached;
+    }
+
+    const stored = this._getStoredHumidifierSnapshot(entityId);
+    if (stored) {
+      this._lastKnownOnState.set(entityId, this._createStateSnapshot(stored));
+    }
+
+    return stored;
+  }
+
+  _startOptimisticVisualSettle(actualState, optimisticState) {
+    const entityId = this._config?.entity || "";
+    if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
+      this._optimisticVisualSettle = null;
+      return;
+    }
+
+    this._optimisticVisualSettle = {
+      entityId,
+      expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
+      stateSnapshot: this._createStateSnapshot(optimisticState),
+    };
+  }
+
+  _hasPublishedHumidity(actualState) {
+    const attrs = actualState?.attributes || {};
+    return (
+      Number.isFinite(Number(attrs.humidity)) ||
+      Number.isFinite(Number(attrs.target_humidity))
+    );
+  }
+
+  _shouldUseOptimisticVisualSettle(actualState = this._getActualState()) {
+    if (!this._optimisticVisualSettle) {
+      return false;
+    }
+
+    if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
+      this._optimisticVisualSettle = null;
+      return false;
+    }
+
+    if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
+      this._optimisticVisualSettle = null;
+      return false;
+    }
+
+    if (this._hasPublishedHumidity(actualState)) {
+      this._optimisticVisualSettle = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  _buildOptimisticVisualSettleState(actualState = this._getActualState()) {
+    const snapshot = this._optimisticVisualSettle?.stateSnapshot;
+    if (!actualState || !snapshot) {
+      return actualState;
+    }
+
+    const entityId = this._config?.entity || "";
+    const attrs = {
+      ...(actualState.attributes || {}),
+      ...(snapshot.attributes || {}),
+    };
+
+    if (entityId && this._draftHumidity.has(entityId)) {
+      const nextHumidity = clamp(
+        Math.round(Number(this._draftHumidity.get(entityId))),
+        this._getHumidityRange(actualState).min,
+        this._getHumidityRange(actualState).max,
+      );
+      attrs.humidity = nextHumidity;
+      attrs.target_humidity = nextHumidity;
+    }
+
+    return {
+      ...actualState,
+      attributes: attrs,
     };
   }
 
@@ -1900,14 +2071,60 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
+    const turningOn = normalizeTextKey(expectedState) === "on";
+    const snapshotSource = turningOn
+      ? (this._getLastKnownOnState(entityId) || actualState)
+      : actualState;
+
     this._clearOptimisticToggleState();
+    this._optimisticVisualSettle = null;
     this._optimisticToggle = {
       entityId,
       expectedState,
       expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
-      stateSnapshot: this._createStateSnapshot(actualState),
+      stateSnapshot: this._createStateSnapshot(snapshotSource),
     };
     this._scheduleOptimisticToggleTimeout();
+  }
+
+  _composeOptimisticToggleState(actualState, toggle = this._optimisticToggle) {
+    if (!toggle) {
+      return actualState;
+    }
+
+    const turningOn = normalizeTextKey(toggle.expectedState) === "on";
+    const snapshot = (turningOn
+      ? (this._getLastKnownOnState(toggle.entityId) || toggle.stateSnapshot)
+      : toggle.stateSnapshot) || actualState;
+    if (!snapshot) {
+      return actualState;
+    }
+
+    const entityId = toggle.entityId || this._config?.entity || "";
+    const attrs = {
+      ...(snapshot.attributes || {}),
+      ...(actualState?.attributes || {}),
+    };
+
+    if (entityId && this._draftHumidity.has(entityId)) {
+      const nextHumidity = clamp(
+        Math.round(Number(this._draftHumidity.get(entityId))),
+        this._getHumidityRange(actualState).min,
+        this._getHumidityRange(actualState).max,
+      );
+      attrs.humidity = nextHumidity;
+      attrs.target_humidity = nextHumidity;
+    }
+
+    return {
+      ...snapshot,
+      entity_id: snapshot.entity_id || actualState?.entity_id || entityId,
+      state: toggle.expectedState,
+      attributes: {
+        ...attrs,
+        _nodalia_optimistic_toggle: toggle.expectedState,
+      },
+    };
   }
 
   _buildOptimisticToggleState(actualState = this._getActualState()) {
@@ -1915,31 +2132,26 @@ class NodaliaHumidifierCard extends HTMLElement {
       return actualState;
     }
 
-    const snapshot = this._optimisticToggle?.stateSnapshot || actualState;
-    if (!snapshot) {
-      return actualState;
-    }
-
-    return {
-      ...snapshot,
-      entity_id: snapshot.entity_id || actualState?.entity_id || this._config?.entity,
-      state: this._optimisticToggle.expectedState,
-      attributes: {
-        ...(snapshot.attributes || {}),
-        ...(actualState?.attributes || {}),
-        _nodalia_optimistic_toggle: this._optimisticToggle.expectedState,
-      },
-    };
+    return this._composeOptimisticToggleState(actualState);
   }
 
   _syncOptimisticToggleState(actualState = this._getActualState()) {
-    if (!this._optimisticToggle) {
+    const toggle = this._optimisticToggle;
+    if (!toggle) {
       return;
     }
-    if (!this._isOptimisticTogglePending(actualState)) {
+
+    const optimisticDisplay = this._composeOptimisticToggleState(actualState, toggle);
+    const stillPending = this._isOptimisticTogglePending(actualState);
+
+    if (!stillPending) {
+      if (actualState?.state === "on" && normalizeTextKey(toggle.expectedState) === "on") {
+        this._startOptimisticVisualSettle(actualState, optimisticDisplay);
+      }
       this._clearOptimisticToggleTimer();
       return;
     }
+
     this._scheduleOptimisticToggleTimeout();
   }
 
@@ -3196,11 +3408,15 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const shouldAnimateHumidityFill = animations.enabled &&
-      powerAnimationState === "powering-up" &&
+      wasOn !== null &&
+      wasOn !== isOn &&
       isOn &&
       supportsHumidity;
     const humidityFillDuration = shouldAnimateHumidityFill
       ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
+      : 0;
+    const humidityFillDelay = shouldAnimateHumidityFill
+      ? clamp(Math.round(animations.controlsDuration * 0.48), 140, 820)
       : 0;
     const humiditySliderShellClass = shouldAnimateHumidityFill ? " humidifier-card__slider-shell--humidity-fill" : "";
 
@@ -3428,6 +3644,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           --humidifier-card-panel-delay: ${panelAnimationDelay}ms;
           --humidifier-card-power-duration: ${animations.powerDuration}ms;
           --humidifier-card-power-delay: ${powerAnimationDelay}ms;
+          --humidifier-card-humidity-fill-delay: ${humidityFillDelay}ms;
           --humidifier-card-humidity-fill-duration: ${humidityFillDuration}ms;
           --humidifier-card-humidity-empty-duration: ${animations.controlsDuration}ms;
           --humidifier-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -3784,7 +4001,8 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__slider-shell--humidity-fill .humidifier-card__slider-track::before {
-          animation: humidifier-card-humidity-fill var(--humidifier-card-humidity-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) both;
+          transform: scaleX(0.01);
+          animation: humidifier-card-humidity-fill var(--humidifier-card-humidity-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--humidifier-card-humidity-fill-delay, 0ms) both;
         }
 
         .humidifier-card__controls-shell--leaving .humidifier-card__slider-track::before {

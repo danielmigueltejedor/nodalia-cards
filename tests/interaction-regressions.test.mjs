@@ -721,14 +721,29 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
     assert.match(source, /this\._optimisticToggleTimer = 0;/);
     assert.match(source, /_getActualState\(hass = this\._hass\)/);
     assert.match(source, /_buildOptimisticToggleState\(actualState = this\._getActualState\(\)\)/);
-    assert.match(source, /_syncOptimisticToggleState\(this\._getActualState\(\)\)/);
+    assert.match(source, /_syncOptimisticToggleState/);
     assert.match(source, /_nodalia_optimistic_toggle/);
     assert.match(source, /_scheduleOptimisticToggleTimeout\(\)/);
   });
 
+  assert.match(read("nodalia-fan-card.js"), /_syncOptimisticToggleState\(actualState\)/);
+  assert.match(read("nodalia-humidifier-card.js"), /_syncOptimisticToggleState\(actualState\)/);
+
   assert.match(read("nodalia-fan-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
   assert.match(read("nodalia-humidifier-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
   assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
+});
+
+test("fan and humidifier cards use optimistic visual settle and single slider fill on power-on", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /OPTIMISTIC_VISUAL_SETTLE_MS/);
+    assert.match(source, /_lastKnownOnState = new Map\(\)/);
+    assert.match(source, /_shouldUseOptimisticVisualSettle/);
+    assert.match(source, /_startOptimisticVisualSettle/);
+    assert.match(source, /wasOn !== null &&[\s\S]*wasOn !== isOn/);
+    assert.match(source, /-fill-delay/);
+  }
 });
 
 test("fan and humidifier animations keep progress across fast state confirmations", () => {
