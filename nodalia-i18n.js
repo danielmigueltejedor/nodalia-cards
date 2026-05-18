@@ -688,6 +688,7 @@
           rainSoon: "Rain soon",
           batteryLow: "Low battery",
           humidifierFillLow: "Low tank",
+          humidifierFillFull: "Tank full",
           inkLow: "Low ink",
           humidityHigh: "High humidity",
           humidityLow: "Low humidity",
@@ -701,6 +702,7 @@
           hot: "{source} reads {value}. You can turn on {fan}.",
           rainSoon: "{source} expects rain around {time}. If laundry is outside, it is worth checking.",
           lowLevel: "{source} is at {value}.",
+          highLevel: "{source} is at {value}.",
           sensorValue: "{source} reads {value}.",
           hotClimate: "{source} reads {value}. You can turn on cooling on {climate}.",
           mediaLeftOn: "{media} is still on and {source} detects no presence."
@@ -887,7 +889,8 @@
         clean_carousel_water_full: "Cleaning carousel water full",
         water_carriage_drop: "Water carriage dropped",
         check_clean_carouse: "Check cleaning carousel",
-        audio_error: "Audio error"
+        audio_error: "Audio error",
+        water_empty: "Water tank empty"
       }
     },
     de: {
@@ -2795,6 +2798,7 @@
           rainSoon: "Lluvia próxima",
           batteryLow: "Batería baja",
           humidifierFillLow: "Depósito bajo",
+          humidifierFillFull: "Depósito lleno",
           inkLow: "Tinta baja",
           humidityHigh: "Humedad alta",
           humidityLow: "Humedad baja",
@@ -2809,6 +2813,7 @@
           mediaLeftOn: "{media} sigue encendido y {source} no detecta presencia.",
           rainSoon: "{source} prevé lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.",
           lowLevel: "{source} queda en {value}.",
+          highLevel: "{source} está al {value}.",
           sensorValue: "{source} marca {value}."
         },
         actions: {
@@ -2993,7 +2998,8 @@
         clean_carousel_water_full: "Agua llena en carrusel de limpieza",
         water_carriage_drop: "Carro de agua caído",
         check_clean_carouse: "Revisa el carrusel de limpieza",
-        audio_error: "Error de audio"
+        audio_error: "Error de audio",
+        water_empty: "Depósito de agua vacío"
       }
     },
     fr: {

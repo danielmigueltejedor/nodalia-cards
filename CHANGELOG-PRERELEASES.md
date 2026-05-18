@@ -8,6 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.3] - 2026-05-17
+
+Third **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.3`**.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** **Zona** mode works again when drawing manual zones on the map; stale shared cleaning sessions no longer wipe selections on every render while docked.
+- **`nodalia-notifications-card.js`:** vacuum **`water_empty`** and related runtime strings use i18n instead of hard-coded English.
+- **`nodalia-fan-card.js` / `nodalia-entity-card.js` / `nodalia-media-player.js`:** editor **Tap actions** toggle shows and updates the section again.
+- **`nodalia-climate-card.js`:** **Tap actions** editor section sits outside **General** (same layout as other cards).
+- **Editor i18n:** `ed.shared.show_tap_action_settings` / `hide_tap_action_settings` translated in all editor locales.
+
+---
+
 ## [1.1.3-alpha.2] - 2026-05-17
 
 Second **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.2`**.

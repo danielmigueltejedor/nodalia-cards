@@ -963,7 +963,7 @@
 
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.1.3-alpha.2";
+const CARD_VERSION = "1.1.3-alpha.3";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -3728,7 +3728,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     const emptyText =
       customEmptyMessage ||
       customEmptyTitle ||
-      this._text("empty.message", DEFAULT_CONFIG.empty_message);
+      this._text("empty.message", "");
     const animations = this._getAnimationSettings();
     const nextNotificationIdsSignature = notifications.map(item => item.id).join("|");
     const animateEntrance = animations.enabled && this._animateContentOnNextRender;

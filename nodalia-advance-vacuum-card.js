@@ -963,7 +963,7 @@
 
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.1.3-alpha.2";
+const CARD_VERSION = "1.1.3-alpha.3";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -2492,6 +2492,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
+    this._wasCleaningSessionActive = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -2639,6 +2640,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
+    this._wasCleaningSessionActive = false;
     this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._ensurePersistedCleaningSessionStateLoaded();
@@ -3887,6 +3889,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]);
     const isReportedCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
     const isCleaningSessionActive = this._isCleaningSessionActive(state, persistedSession);
+    const wasCleaningSessionActive = this._wasCleaningSessionActive;
+    this._wasCleaningSessionActive = isCleaningSessionActive;
     const hadTrackedCleaningSession = Boolean(
       this._activeCleaningSessionMode ||
       persistedSession?.mode ||
@@ -3898,6 +3902,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       persistedSession?.pendingStartAt ||
       this._getPendingRoomCleaningResumeState(persistedSession).roomIds.length
     );
+    const preserveInteractiveSelection = ["rooms", "zone", "goto"].includes(this._activeMode);
 
     if (this._attemptPendingRoomCleaningResume(state, persistedSession)) {
       return;
@@ -3934,7 +3939,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._clearCleaningSessionPendingStart();
       this._clearPendingRoomCleaningResume();
       this._roomCleaningResumeInFlight = false;
-      if (hadTrackedCleaningSession) {
+      if (wasCleaningSessionActive && hadTrackedCleaningSession && !preserveInteractiveSelection) {
         this._selectedRoomIds = [];
         this._selectedPredefinedZoneIds = [];
         this._manualZones = [];
@@ -6123,9 +6128,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _setActiveMode(modeId) {
-    if (!modeId || modeId === this._activeMode) {
+    if (!modeId) {
       return;
     }
+
+    if (modeId === this._activeMode) {
+      if (modeId === "zone" && !this._isCleaningSessionActive(this._getVacuumState())) {
+        this._activeUtilityPanel = null;
+        this._persistCurrentCleaningSessionState(this._activeMode, {
+          markSelectionChange: true,
+        });
+        this._triggerHaptic("selection");
+        this._render();
+      }
+      return;
+    }
+
     this._activeMode = modeId;
     this._transientZoneReturnMode = "";
     this._activeUtilityPanel = null;
@@ -7781,23 +7799,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const predefinedZones = this._getPredefinedZones();
       const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
       const modes = this._getAvailableModes();
-      const preferredModeId = ["rooms", "zone", "goto"].includes(this._activeMode)
-        ? this._activeMode
-        : (this._activeCleaningSessionMode || this._activeMode || "all");
-      const currentMode = modes.find(mode => mode.id === preferredModeId)
-        || (["rooms", "zone", "goto"].includes(preferredModeId)
-          ? {
-              id: preferredModeId,
-              label: advanceVacuumStrings?.modeLabels?.[preferredModeId] || MODE_LABELS[preferredModeId],
-              icon: preferredModeId === "rooms"
-                ? "mdi:floor-plan"
-                : preferredModeId === "zone"
-                  ? "mdi:vector-rectangle"
-                  : "mdi:map-marker",
-            }
-          : null)
-        || modes[0]
-        || { id: "all", label: advanceVacuumStrings?.modeLabels?.all || MODE_LABELS.all, icon: "mdi:home" };
+      const isCleaningSessionActive = this._isCleaningSessionActive(state);
       const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
       const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
       const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
@@ -7827,14 +7829,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
       const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
       const gotoColor = styles.map.goto_color || "#f6b73c";
-      const isCleaningSessionActive = this._isCleaningSessionActive(state);
-      const isRoomSelectionMode = currentMode.id === "rooms";
+      const isRoomSelectionMode = this._activeMode === "rooms";
       const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
       const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
-      const zoneModeCleaningZones = currentMode.id === "zone" ? this._activeCleaningZones : [];
+      const zoneModeCleaningZones = this._activeMode === "zone" ? this._activeCleaningZones : [];
       const showRoomSelectionDim = isRoomSelectionMode;
       const showRealRoomSelectionColors = isRoomSelectionMode && (highlightedRoomIds.size > 0 || roomModeCleaningZones.length > 0);
-      const hasPendingZoneSelection = currentMode.id === "zone" && (
+      const hasPendingZoneSelection = this._activeMode === "zone" && (
         this._selectedPredefinedZoneIds.length > 0 ||
         this._manualZones.length > 0
       );
@@ -7853,9 +7854,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const dockSettingDescriptors = this._getDockSettingDescriptors(state);
       const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
       const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
-      const isRoutinesMode = currentMode.id === "routines";
+      const isRoutinesMode = this._activeMode === "routines";
       const showPrimaryActionButton = !isRoutinesMode;
-      const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || currentMode.id !== "all");
+      const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || this._activeMode !== "all");
       const showDockMenuButton = !isRoutinesMode && (dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0);
       const utilityPanelMarkup = isRoutinesMode
         ? ""
@@ -8898,10 +8899,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
-                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, currentMode.id) : ""}
-                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, currentMode.id) : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, this._activeMode) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, this._activeMode) : ""}
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
-                  ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
+                  ${this._activeMode === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
                       class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? (showRealRoomSelectionColors ? "is-revealed" : "is-selected") : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
                       data-room-id="${escapeHtml(room.id)}"
@@ -8909,7 +8910,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                     ></polygon>
                   `).join("")).join("") : ""}
 
-                  ${currentMode.id === "rooms" ? roomModeCleaningZones.map(zone => {
+                  ${this._activeMode === "rooms" ? roomModeCleaningZones.map(zone => {
                     const rect = this._zoneToSvgRect(zone);
                     return `
                       <rect
@@ -8924,7 +8925,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                     `;
                   }).join("") : ""}
 
-                  ${currentMode.id === "zone" ? allZoneRects.map(zone => {
+                  ${this._activeMode === "zone" ? allZoneRects.map(zone => {
                     const rect = this._zoneToSvgRect(zone);
                     return `
                       <rect
@@ -8940,7 +8941,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                   }).join("") : ""}
 
                   ${
-                    currentMode.id === "goto" && this._gotoPoint
+                    this._activeMode === "goto" && this._gotoPoint
                       ? (() => {
                           const mapped = this._converter.vacuumToMap(this._gotoPoint.x, this._gotoPoint.y);
                           return `
@@ -8955,10 +8956,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             </div>
             <div class="advance-vacuum-card__map-overlays">
               ${this._renderManualZoneEditors()}
-              ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
-              ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
+              ${this._activeMode === "rooms" ? this._renderRoomMarkers(rooms) : ""}
+              ${this._activeMode === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
               ${
-                currentMode.id === "zone" ? predefinedZones.map(zone => {
+                this._activeMode === "zone" ? predefinedZones.map(zone => {
                   const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
                   const percent = this._vacuumToViewportPercent(position);
                   const selected = this._selectedPredefinedZoneIds.includes(zone.id);
@@ -8980,7 +8981,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         </div>
 
-        ${this._renderRoomFallbackList(rooms, currentMode.id)}
+        ${this._renderRoomFallbackList(rooms, this._activeMode)}
 
         <div class="advance-vacuum-card__footer">
 
@@ -8990,7 +8991,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__modes">
                 <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
                 ${modes.map(mode => `
-                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === currentMode.id ? "true" : "false"}">
+                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === this._activeMode ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === this._activeMode ? "true" : "false"}">
                     ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>

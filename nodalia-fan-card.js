@@ -963,7 +963,7 @@
 
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.3-alpha.2";
+const CARD_VERSION = "1.1.3-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4387,6 +4387,12 @@ class NodaliaFanCardEditor extends HTMLElement {
 
     if (toggleButton.dataset.editorToggle === "animations") {
       this._showAnimationSection = !this._showAnimationSection;
+      this._render();
+      return;
+    }
+
+    if (toggleButton.dataset.editorToggle === "tap_actions") {
+      this._showTapActionsSection = !this._showTapActionsSection;
       this._render();
     }
   }
