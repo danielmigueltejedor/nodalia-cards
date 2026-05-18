@@ -524,6 +524,7 @@
       "rainSoon": "Binnenkort regen",
       "batteryLow": "Batterij bijna leeg",
       "humidifierFillLow": "Tank bijna leeg",
+      "humidifierFillFull": "Tank full",
       "inkLow": "Inkt bijna op",
       "humidityHigh": "Hoge luchtvochtigheid",
       "humidityLow": "Lage luchtvochtigheid",
@@ -537,6 +538,7 @@
       "hot": "{source} geeft {value} aan. Je kunt {fan} inschakelen.",
       "rainSoon": "{source} verwacht regen rond {time}. Als er was buiten hangt, controleer die even.",
       "lowLevel": "{source} staat op {value}.",
+      "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} geeft {value} aan.",
       "hotClimate": "{source} geeft {value} aan. Je kunt koeling op {climate} inschakelen.",
       "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid."
@@ -723,6 +725,7 @@
     "clean_carousel_water_full": "Cleaning carousel water full",
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "audio_error": "Audio error",
+    "water_empty": "Water tank empty"
   }
 }
