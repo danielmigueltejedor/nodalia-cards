@@ -78,7 +78,7 @@ jobs:
                 "2. Go to Nodalia Cards",
                 "3. Click the menu → Redownload",
                 "4. Select **Need a different version?**",
-                "5. Choose the latest `1.0.0-alpha.x` release",
+                "5. Choose the latest `1.1.0-alpha.x` release",
                 "",
                 "If anything still feels off, please let me know."
               ].join("\n"));
