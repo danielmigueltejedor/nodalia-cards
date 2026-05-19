@@ -661,10 +661,17 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _notifyLayoutChange() {
+    if (!this.isConnected) {
+      return;
+    }
+
     fireEvent(this, "iron-resize", {});
 
     if (typeof window !== "undefined") {
       requestAnimationFrame(() => {
+        if (!this.isConnected) {
+          return;
+        }
         window.dispatchEvent(new Event("resize"));
       });
     }
@@ -676,6 +683,9 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     window.setTimeout(() => {
+      if (!this.isConnected) {
+        return;
+      }
       this._notifyLayoutChange();
     }, Math.max(0, Number(delay) || 0));
   }

@@ -522,8 +522,14 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           return;
         }
 
-        this._cardWidth = entry.contentRect.width;
-        this._isCompactLayout = this._shouldUseCompactLayout(this._cardWidth);
+        const nextWidth = entry.contentRect.width;
+        const nextCompact = this._shouldUseCompactLayout(nextWidth);
+        if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+          return;
+        }
+
+        this._cardWidth = nextWidth;
+        this._isCompactLayout = nextCompact;
         this._requestRender();
       });
     }

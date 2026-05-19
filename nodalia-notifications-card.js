@@ -920,6 +920,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._mobileSent = new Set();
     this._mobileNotifyTimer = 0;
     this._lastRenderSignature = "";
+    this._trackedEntityIdsCache = null;
+    this._trackedEntityRevision = null;
+    this._trackedEntitiesStamp = "";
+    this._trackedEntityIdsLength = 0;
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
     this._animateContentOnNextRender = true;
@@ -1103,6 +1107,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._loadDismissed();
     this._loadMobileSent();
     this._syncSharedDismissedFromHass(true);
+    this._invalidateTrackedEntityStampCache();
     this._lastRenderSignature = "";
     if (this._hass) {
       this._renderIfChanged(true);
@@ -1124,6 +1129,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._syncSharedDismissedFromHass();
     this._refreshCalendarEventsSoon();
     this._refreshWeatherForecastsSoon();
+    this._syncTrackedEntitiesStamp(hass);
     this._renderIfChanged();
   }
 
@@ -2327,25 +2333,18 @@ class NodaliaNotificationsCard extends HTMLElement {
     return visible;
   }
 
-  _getRenderSignature(hass = this._hass) {
-    const parts = [
-      CARD_VERSION,
-      this._expanded ? "expanded" : "collapsed",
-      [...this._dismissed].join(","),
-      this._calendarLoading ? "loading" : "",
-      this._calendarError,
-      this._calendarEvents
-        .map(event => {
-          const start = calendarEventDate(event.start);
-          const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
-          const uid = String(event.uid ?? event.id ?? "");
-          const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
-          return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
-        })
-        .join("|"),
-      Object.entries(this._weatherForecasts || {}).map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`).join("|"),
-    ];
-    const tracked = [
+  _invalidateTrackedEntityStampCache() {
+    this._trackedEntityIdsCache = null;
+    this._trackedEntityRevision = null;
+    this._trackedEntitiesStamp = "";
+    this._trackedEntityIdsLength = 0;
+  }
+
+  _getTrackedEntityIds() {
+    if (this._trackedEntityIdsCache) {
+      return this._trackedEntityIdsCache;
+    }
+    this._trackedEntityIdsCache = [
       ...this._config.vacuum_entities,
       ...this._config.vacuum_error_entities,
       ...this._config.fan_entities,
@@ -2364,19 +2363,109 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.ink_entities,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
     ];
+    return this._trackedEntityIdsCache;
+  }
+
+  _buildTrackedEntitiesStamp(hass = this._hass) {
+    if (!hass || !this._config) {
+      return "";
+    }
+    const chunks = [];
+    for (const entityId of this._getTrackedEntityIds()) {
+      const state = hass.states?.[entityId];
+      chunks.push(`${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`);
+    }
+    for (const entityId of this._config.vacuum_entities) {
+      const errorState = this._getVacuumErrorState(entityId);
+      chunks.push(`vacuum-error:${entityId}:${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`);
+    }
+    return chunks.join("|");
+  }
+
+  _syncTrackedEntitiesStamp(hass = this._hass) {
+    if (!hass || !this._config) {
+      this._trackedEntitiesStamp = "";
+      return;
+    }
+
+    if (!this._trackedEntityRevision) {
+      this._trackedEntityRevision = new Map();
+    }
+
+    const ids = this._getTrackedEntityIds();
+    let dirty = ids.length !== this._trackedEntityIdsLength;
+    if (!dirty) {
+      for (const entityId of ids) {
+        const state = hass.states?.[entityId];
+        const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+        if (this._trackedEntityRevision.get(entityId) !== revision) {
+          this._trackedEntityRevision.set(entityId, revision);
+          dirty = true;
+        }
+      }
+      if (!dirty) {
+        for (const entityId of this._config.vacuum_entities) {
+          const errorState = this._getVacuumErrorState(entityId);
+          const key = `vacuum-error:${entityId}`;
+          const revision = `${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`;
+          if (this._trackedEntityRevision.get(key) !== revision) {
+            this._trackedEntityRevision.set(key, revision);
+            dirty = true;
+          }
+        }
+      }
+    } else {
+      this._trackedEntityRevision.clear();
+      for (const entityId of ids) {
+        const state = hass.states?.[entityId];
+        this._trackedEntityRevision.set(
+          entityId,
+          `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`,
+        );
+      }
+      for (const entityId of this._config.vacuum_entities) {
+        const errorState = this._getVacuumErrorState(entityId);
+        const key = `vacuum-error:${entityId}`;
+        this._trackedEntityRevision.set(
+          key,
+          `${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`,
+        );
+      }
+      this._trackedEntityIdsLength = ids.length;
+      dirty = true;
+    }
+
+    if (dirty || !this._trackedEntitiesStamp) {
+      this._trackedEntitiesStamp = this._buildTrackedEntitiesStamp(hass);
+    }
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const parts = [
+      CARD_VERSION,
+      this._expanded ? "expanded" : "collapsed",
+      [...this._dismissed].join(","),
+      this._calendarLoading ? "loading" : "",
+      this._calendarError,
+      this._calendarEvents
+        .map(event => {
+          const start = calendarEventDate(event.start);
+          const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
+          const uid = String(event.uid ?? event.id ?? "");
+          const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
+          return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
+        })
+        .join("|"),
+      Object.entries(this._weatherForecasts || {}).map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`).join("|"),
+    ];
     parts.push(this._config.language || "auto");
     parts.push(
       (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage?.(hass, this._config.language || "auto")) || "",
     );
-    tracked.forEach(entityId => {
-      const state = hass?.states?.[entityId];
-      const stamp = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
-      parts.push(`${entityId}:${stamp}`);
-    });
-    this._config.vacuum_entities.forEach(entityId => {
-      const errorState = this._getVacuumErrorState(entityId);
-      parts.push(`vacuum-error:${entityId}:${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`);
-    });
+    if (!this._trackedEntitiesStamp && hass) {
+      this._syncTrackedEntitiesStamp(hass);
+    }
+    parts.push(this._trackedEntitiesStamp);
     return parts.join("||");
   }
 

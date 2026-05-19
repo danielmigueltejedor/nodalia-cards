@@ -688,6 +688,12 @@ class NodaliaLightCard extends HTMLElement {
         return;
       }
 
+      const signature = this._getRenderSignature();
+      if (signature === this._lastRenderSignature) {
+        return;
+      }
+
+      this._lastRenderSignature = signature;
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -827,11 +833,17 @@ class NodaliaLightCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    let nextSignature = this._getRenderSignature();
+    const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !hasPendingOptimistic) {
+      return;
+    }
+
     const actualState = this._getActualState();
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
-    const nextSignature = this._getRenderSignature();
+    nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;

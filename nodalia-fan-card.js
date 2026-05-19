@@ -614,6 +614,12 @@ class NodaliaFanCard extends HTMLElement {
         return;
       }
 
+      const signature = this._getRenderSignature();
+      if (signature === this._lastRenderSignature) {
+        return;
+      }
+
+      this._lastRenderSignature = signature;
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -709,10 +715,15 @@ class NodaliaFanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    let nextSignature = this._getRenderSignature();
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
+      return;
+    }
+
     const actualState = this._getActualState();
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticToggleState(actualState);
-    const nextSignature = this._getRenderSignature();
+    nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -902,7 +913,8 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    if (Number.isFinite(Number(actualState.attributes?.percentage))) {
+    const rememberedPercentage = Number(actualState.attributes?.percentage);
+    if (Number.isFinite(rememberedPercentage) && rememberedPercentage > 0) {
       this._lastKnownOnState.set(entityId, {
         ...snapshot,
         state: "on",

@@ -620,6 +620,12 @@ class NodaliaHumidifierCard extends HTMLElement {
         return;
       }
 
+      const signature = this._getRenderSignature();
+      if (signature === this._lastRenderSignature) {
+        return;
+      }
+
+      this._lastRenderSignature = signature;
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -744,10 +750,15 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    let nextSignature = this._getRenderSignature();
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
+      return;
+    }
+
     const actualState = this._getActualState();
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticToggleState(actualState);
-    const nextSignature = this._getRenderSignature();
+    nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -921,10 +932,10 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const attrs = actualState.attributes || {};
-    if (
-      Number.isFinite(Number(attrs.humidity)) ||
-      Number.isFinite(Number(attrs.target_humidity))
-    ) {
+    const rememberedHumidity = Number(
+      Number.isFinite(Number(attrs.humidity)) ? attrs.humidity : attrs.target_humidity,
+    );
+    if (Number.isFinite(rememberedHumidity) && rememberedHumidity > 0) {
       this._lastKnownOnState.set(entityId, {
         ...snapshot,
         state: "on",

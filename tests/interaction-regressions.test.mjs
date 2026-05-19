@@ -762,6 +762,31 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
   }
 });
 
+test("device cards skip redundant set hass work when render signature is unchanged", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-light-card.js"]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /let nextSignature = this\._getRenderSignature\(\);[\s\S]*!this\._optimisticToggle|!hasPendingOptimistic/,
+    );
+    assert.match(source, /nextSignature = this\._getRenderSignature\(\);/);
+  }
+
+  const entity = read("nodalia-entity-card.js");
+  assert.match(
+    entity,
+    /let nextSignature = this\._getRenderSignature\(\);[\s\S]*!this\._optimisticToggle/,
+  );
+});
+
+test("resize observers skip full render when signature is unchanged", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-light-card.js", "nodalia-entity-card.js"]) {
+    const source = read(file);
+    assert.match(source, /const signature = this\._getRenderSignature\(\);/);
+    assert.match(source, /if \(signature === this\._lastRenderSignature\) \{\s*return;\s*\}/);
+  }
+});
+
 test("fan and humidifier slider empty animation stays in sync while controls leave", () => {
   for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
     const source = read(file);
@@ -926,6 +951,33 @@ test("numeric display cards use Home Assistant locale instead of hardcoded Spani
     assert.match(source, /getHassLocaleTag\(hass, language = "auto"\)/);
     assert.match(source, /window\.NodaliaI18n\?\.localeTag/);
   });
+});
+
+test("advance vacuum map display follows cleaning session mode", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /_getDisplayCleaningModeId\(\)/);
+  assert.match(source, /_resolveDisplayMode\(/);
+  assert.match(source, /const currentMode = this\._resolveDisplayMode\(modes, advanceVacuumStrings\)/);
+  assert.match(source, /\$\{currentMode\.id === "rooms" \? rooms\.map/);
+  assert.match(source, /advance-vacuum-card__mode-button \$\{mode\.id === this\._activeMode/);
+});
+
+test("fan off-state memory ignores zero percentage", () => {
+  const source = read("nodalia-fan-card.js");
+  assert.match(source, /rememberedPercentage > 0/);
+});
+
+test("humidifier off-state memory ignores zero humidity", () => {
+  const source = read("nodalia-humidifier-card.js");
+  assert.match(source, /rememberedHumidity > 0/);
+});
+
+test("notifications tracked entity stamp is cached between hass updates", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
+  assert.match(source, /_trackedEntitiesStamp/);
+  assert.match(source, /parts\.push\(this\._trackedEntitiesStamp\)/);
+  assert.doesNotMatch(source, /tracked\.forEach\(entityId =>/);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

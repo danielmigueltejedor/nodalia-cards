@@ -4370,6 +4370,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach(el => {
+      if ("hass" in el) {
+        el.hass = hass;
+      }
+    });
   }
 
   _editorLabel(s) {

@@ -719,6 +719,13 @@ class NodaliaEntityCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      const signature = this._getRenderSignature();
+      if (signature === this._lastRenderSignature) {
+        return;
+      }
+
+      this._lastRenderSignature = signature;
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -795,8 +802,13 @@ class NodaliaEntityCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    let nextSignature = this._getRenderSignature();
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
+      return;
+    }
+
     this._syncOptimisticToggleState(this._getActualState());
-    const nextSignature = this._getRenderSignature();
+    nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
