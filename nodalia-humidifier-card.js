@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.1.3-alpha.7";
+const CARD_VERSION = "1.1.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2437,6 +2437,14 @@ class NodaliaHumidifierCard extends HTMLElement {
       }
     }
     const humiditySliderShellClass = shouldAnimateHumidityFill ? " humidifier-card__slider-shell--humidity-fill" : "";
+    const shouldAnimateHumidityEmpty = animations.enabled && controlsAnimationState === "leaving";
+    const humidityEmptyDuration = shouldAnimateHumidityEmpty
+      ? clamp(Math.round(animations.controlsDuration * 0.72), 180, 900)
+      : 0;
+    let humidityEmptyDelay = 0;
+    if (shouldAnimateHumidityEmpty && this._controlsTransition?.startedAt != null) {
+      humidityEmptyDelay = -clamp(now - Number(this._controlsTransition.startedAt), 0, humidityEmptyDuration);
+    }
 
     const mainControlsMarkup = isOn && supportsHumidity
       ? `
@@ -2627,9 +2635,24 @@ class NodaliaHumidifierCard extends HTMLElement {
     const humidityFillAnimationRemaining = shouldAnimateHumidityFill && this._powerTransition
       ? Math.max(0, Number(this._powerTransition.startedAt) + humidityFillDelayBase + humidityFillDuration - now)
       : 0;
-    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || panelAnimationRemaining || humidityFillAnimationRemaining);
+    const humidityEmptyAnimationRemaining = shouldAnimateHumidityEmpty && this._controlsTransition
+      ? Math.max(0, Number(this._controlsTransition.startedAt) + humidityEmptyDuration - now)
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(
+      powerAnimationRemaining ||
+      controlsAnimationRemaining ||
+      panelAnimationRemaining ||
+      humidityFillAnimationRemaining ||
+      humidityEmptyAnimationRemaining,
+    );
     const cleanupDelay = shouldCleanupAfterAnimation
-      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, panelAnimationRemaining, humidityFillAnimationRemaining) + 40
+      ? Math.max(
+        powerAnimationRemaining,
+        controlsAnimationRemaining,
+        panelAnimationRemaining,
+        humidityFillAnimationRemaining,
+        humidityEmptyAnimationRemaining,
+      ) + 40
       : 0;
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const contentEntranceDuration = clamp(Math.round(animations.controlsDuration * 0.9), 180, 900);
@@ -2664,7 +2687,8 @@ class NodaliaHumidifierCard extends HTMLElement {
           --humidifier-card-power-delay: ${powerAnimationDelay}ms;
           --humidifier-card-humidity-fill-delay: ${humidityFillDelay}ms;
           --humidifier-card-humidity-fill-duration: ${humidityFillDuration}ms;
-          --humidifier-card-humidity-empty-duration: ${animations.controlsDuration}ms;
+          --humidifier-card-humidity-empty-delay: ${humidityEmptyDelay}ms;
+          --humidifier-card-humidity-empty-duration: ${humidityEmptyDuration}ms;
           --humidifier-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -3023,8 +3047,14 @@ class NodaliaHumidifierCard extends HTMLElement {
           animation: humidifier-card-humidity-fill var(--humidifier-card-humidity-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--humidifier-card-humidity-fill-delay, 0ms) both;
         }
 
+        ${
+          shouldAnimateHumidityEmpty
+            ? `
         .humidifier-card__controls-shell--leaving .humidifier-card__slider-track::before {
-          animation: humidifier-card-humidity-empty var(--humidifier-card-humidity-empty-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: humidifier-card-humidity-empty var(--humidifier-card-humidity-empty-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-humidity-empty-delay, 0ms) both;
+        }
+        `
+            : ""
         }
 
         .humidifier-card__slider-actions {
@@ -3300,6 +3330,9 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         @keyframes humidifier-card-humidity-empty {
+          0% {
+            transform: scaleX(calc(var(--humidity-target, var(--humidity, 0)) / 100));
+          }
           100% {
             transform: scaleX(0.01);
           }

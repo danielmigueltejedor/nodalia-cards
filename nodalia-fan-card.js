@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.3-alpha.7";
+const CARD_VERSION = "1.1.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2279,6 +2279,14 @@ class NodaliaFanCard extends HTMLElement {
       }
     }
     const percentageSliderShellClass = shouldAnimatePercentageFill ? " fan-card__slider-shell--percentage-fill" : "";
+    const shouldAnimatePercentageEmpty = animations.enabled && controlsAnimationState === "leaving";
+    const percentageEmptyDuration = shouldAnimatePercentageEmpty
+      ? clamp(Math.round(animations.controlsDuration * 0.72), 180, 900)
+      : 0;
+    let percentageEmptyDelay = 0;
+    if (shouldAnimatePercentageEmpty && this._controlsTransition?.startedAt != null) {
+      percentageEmptyDelay = -clamp(now - Number(this._controlsTransition.startedAt), 0, percentageEmptyDuration);
+    }
 
     const mainControlsMarkup = isOn && supportsPercentage
       ? `
@@ -2452,9 +2460,24 @@ class NodaliaFanCard extends HTMLElement {
     const percentageFillAnimationRemaining = shouldAnimatePercentageFill && this._powerTransition
       ? Math.max(0, Number(this._powerTransition.startedAt) + percentageFillDelayBase + percentageFillDuration - now)
       : 0;
-    const shouldCleanupAfterAnimation = Boolean(powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining || percentageFillAnimationRemaining);
+    const percentageEmptyAnimationRemaining = shouldAnimatePercentageEmpty && this._controlsTransition
+      ? Math.max(0, Number(this._controlsTransition.startedAt) + percentageEmptyDuration - now)
+      : 0;
+    const shouldCleanupAfterAnimation = Boolean(
+      powerAnimationRemaining ||
+      controlsAnimationRemaining ||
+      presetAnimationRemaining ||
+      percentageFillAnimationRemaining ||
+      percentageEmptyAnimationRemaining,
+    );
     const cleanupDelay = shouldCleanupAfterAnimation
-      ? Math.max(powerAnimationRemaining, controlsAnimationRemaining, presetAnimationRemaining, percentageFillAnimationRemaining) + 40
+      ? Math.max(
+        powerAnimationRemaining,
+        controlsAnimationRemaining,
+        presetAnimationRemaining,
+        percentageFillAnimationRemaining,
+        percentageEmptyAnimationRemaining,
+      ) + 40
       : 0;
 
     if (currentPresetPanelMarkup) {
@@ -2486,7 +2509,8 @@ class NodaliaFanCard extends HTMLElement {
           --fan-card-power-delay: ${powerAnimationDelay}ms;
           --fan-card-percentage-fill-delay: ${percentageFillDelay}ms;
           --fan-card-percentage-fill-duration: ${percentageFillDuration}ms;
-          --fan-card-percentage-empty-duration: ${animations.controlsDuration}ms;
+          --fan-card-percentage-empty-delay: ${percentageEmptyDelay}ms;
+          --fan-card-percentage-empty-duration: ${percentageEmptyDuration}ms;
           --fan-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           background: ${isOn ? onCardBackground : styles.card.background};
           border: ${isOn ? `1px solid ${onCardBorder}` : styles.card.border};
@@ -2876,8 +2900,14 @@ class NodaliaFanCard extends HTMLElement {
           animation: fan-card-percentage-fill var(--fan-card-percentage-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--fan-card-percentage-fill-delay, 0ms) both;
         }
 
+        ${
+          shouldAnimatePercentageEmpty
+            ? `
         .fan-card__controls-shell--leaving .fan-card__slider-track::before {
-          animation: fan-card-percentage-empty var(--fan-card-percentage-empty-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          animation: fan-card-percentage-empty var(--fan-card-percentage-empty-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-percentage-empty-delay, 0ms) both;
+        }
+        `
+            : ""
         }
 
         .fan-card__slider-row--solo {
@@ -3100,6 +3130,9 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         @keyframes fan-card-percentage-empty {
+          0% {
+            transform: scaleX(calc(var(--percentage-target, var(--percentage, 0)) / 100));
+          }
           100% {
             transform: scaleX(0.01);
           }

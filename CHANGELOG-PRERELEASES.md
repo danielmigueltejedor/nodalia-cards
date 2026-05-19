@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.8] - 2026-05-18
+
+Eighth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.8`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** percentage/humidity slider **empty** animation on power-off is restored and synced to the controls `leaving` transition (negative animation delay on re-renders, explicit keyframe from current level to empty).
+
+---
+
 ## [1.1.3-alpha.7] - 2026-05-18
 
 Seventh **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.7`**.

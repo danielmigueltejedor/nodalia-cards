@@ -754,6 +754,18 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
   }
 });
 
+test("fan and humidifier slider empty animation stays in sync while controls leave", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /controlsAnimationState === "leaving"/);
+    assert.match(source, /EmptyDuration = shouldAnimate.*Empty/);
+    assert.match(source, /EmptyDelay = -clamp\(now - Number\(this\._controlsTransition\.startedAt\)/);
+    assert.match(source, /@keyframes (fan-card-percentage-empty|humidifier-card-humidity-empty)/);
+    assert.match(source, /transform: scaleX\(calc\(var\(--(percentage|humidity)-target/);
+    assert.match(source, /var\(--(fan|humidifier)-card-(percentage|humidity)-empty-delay/);
+  }
+});
+
 test("fan and humidifier animations keep progress across fast state confirmations", () => {
   const fan = read("nodalia-fan-card.js");
   const humidifier = read("nodalia-humidifier-card.js");
