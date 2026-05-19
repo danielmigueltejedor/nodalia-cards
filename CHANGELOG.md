@@ -21,6 +21,7 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Home Assistant frontend compatibility updates.
 
 ## [1.1.3] - 2026-05-19
+### Interaction Polish & Dashboard Performance
 
 Stable **`1.1.3`** patch release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.3.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
 
