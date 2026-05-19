@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.3] - 2026-05-18
+
+Third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.3`**.
+
+### Fixed
+
+- **Power flow:** home node in `auto` mode always opens the in-card devices panel (empty state when no sub-devices are configured); improved click detection and panel stacking (`z-index`).
+- **Light card editor:** visual layout section moved to the top with a prominent button; layout editor overlay uses `z-index: 10000` on `document.body` so it appears above the HA card dialog.
+- **Editor i18n:** `ed.light.visual_layout_*` keys regenerated into `nodalia-editor-ui.js`.
+
+---
+
 ## [1.2.0-alpha.2] - 2026-05-18
 
 Second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.2`**.

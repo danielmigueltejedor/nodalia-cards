@@ -655,6 +655,30 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.ok(!measuredBatteryExportLines.includes("grid"));
 });
 
+test("power flow home tap opens details panel in auto mode even without sub-devices", () => {
+  const PowerFlowCard = loadPowerFlowCardClass();
+  const card = new PowerFlowCard();
+  card._config = {
+    clickable_entities: true,
+    home_tap_action: "auto",
+    entities: {
+      home: { entity: "sensor.home", color: "#ffffff" },
+      grid: {},
+      solar: {},
+      battery: {},
+      water: {},
+      gas: {},
+      individual: [],
+    },
+  };
+  card._hass = {
+    states: {
+      "sensor.home": { state: "500", attributes: { unit_of_measurement: "W" } },
+    },
+  };
+  assert.equal(card._getHomeNodeAction(), "home-details");
+});
+
 test("power flow home tap opens details panel when individuals exist", () => {
   const PowerFlowCard = loadPowerFlowCardClass();
   const card = new PowerFlowCard();
@@ -692,6 +716,9 @@ test("power flow home tap opens details panel when individuals exist", () => {
 
   card._config.home_tap_action = "more-info";
   assert.equal(card._getHomeNodeAction(), "more-info");
+
+  card._config.home_tap_action = "auto";
+  assert.equal(card._getHomeNodeAction(), "home-details");
 
   card._config.home_tap_action = "none";
   assert.equal(card._getHomeNodeAction(), "");

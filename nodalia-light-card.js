@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.2";
+const CARD_VERSION = "1.2.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4786,9 +4786,29 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
+  _renderVisualLayoutEditorSection() {
+    return `
+        <section class="editor-section editor-section--visual-layout">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.visual_layout_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.visual_layout_section_hint"))}</div>
+          </div>
+          <div class="editor-section__actions">
+            <button type="button" class="editor-section__toggle-button editor-section__toggle-button--primary" data-editor-action="open-visual-layout">
+              <ha-icon icon="mdi:grid"></ha-icon>
+              <span>${escapeHtml(this._editorLabel("ed.light.open_visual_layout"))}</span>
+            </button>
+          </div>
+        </section>
+      `;
+  }
+
   _openVisualLayoutEditor() {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
+      if (typeof window !== "undefined" && typeof window.alert === "function") {
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.3.js or newer.");
+      }
       return;
     }
 
@@ -5148,7 +5168,20 @@ class NodaliaLightCardEditor extends HTMLElement {
           padding: 0 12px;
         }
 
-        .editor-section__toggle-button ha-icon {
+        .editor-section--visual-layout {
+          border-color: color-mix(in srgb, var(--primary-color) 28%, transparent);
+        }
+
+        .editor-section__toggle-button--primary {
+          background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+          border-color: color-mix(in srgb, var(--primary-color) 36%, transparent);
+          color: var(--primary-text-color);
+          font-weight: 700;
+          min-height: 42px;
+          padding: 0 16px;
+        }
+
+                .editor-section__toggle-button ha-icon {
           --mdc-icon-size: 16px;
         }
 
@@ -5396,6 +5429,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         }
 </style>
       <div class="editor">
+        ${this._renderVisualLayoutEditorSection()}
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
@@ -5432,20 +5466,6 @@ class NodaliaLightCardEditor extends HTMLElement {
             )}
           </div>
         </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.visual_layout_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.visual_layout_section_hint"))}</div>
-          </div>
-          <div class="editor-section__actions">
-            <button type="button" class="editor-section__toggle-button" data-editor-action="open-visual-layout">
-              <ha-icon icon="mdi:grid"></ha-icon>
-              <span>${escapeHtml(this._editorLabel("ed.light.open_visual_layout"))}</span>
-            </button>
-          </div>
-        </section>
-
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.color_presets_section_title"))}</div>

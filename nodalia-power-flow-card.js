@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.2";
+const CARD_VERSION = "1.2.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1730,11 +1730,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (mode === "none") {
       return "";
     }
-    if (mode === "details" || (mode === "auto" && childCount > 0)) {
-      return "home-details";
+    if (mode === "more_info") {
+      return homeEntity ? "more-info" : "";
     }
-    if ((mode === "more_info" || mode === "auto") && homeEntity) {
-      return "more-info";
+    // auto + details: always open the in-card panel (empty state when no sub-devices).
+    if (mode === "details" || mode === "auto") {
+      return "home-details";
     }
     return "";
   }
@@ -2660,7 +2661,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    const homeDetailsOpen = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.nodeAction === "home-details");
+    const homeDetailsOpen = event.composedPath().find(node => {
+      if (!(node instanceof HTMLElement)) {
+        return false;
+      }
+      const action = node.dataset?.nodeAction || node.getAttribute?.("data-node-action") || "";
+      return action === "home-details";
+    });
     if (homeDetailsOpen) {
       event.preventDefault();
       event.stopPropagation();
@@ -3013,7 +3020,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           padding: 6px;
           pointer-events: auto;
           position: absolute;
-          z-index: 14;
+          z-index: 40;
         }
 
         .power-flow-card__home-details-backdrop {

@@ -466,7 +466,7 @@ test("power flow home node can open in-card device details panel", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /home_tap_action: "auto"/);
   assert.match(source, /_getHomeNodeAction\(\)/);
-  assert.match(source, /nodeAction === "home-details"/);
+  assert.match(source, /getAttribute\?\.\("data-node-action"\)/);
   assert.match(source, /return "home-details"/);
   assert.match(source, /_renderHomeDetailsPanel\(/);
   assert.match(source, /power-flow-card__home-details/);

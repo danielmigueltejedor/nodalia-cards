@@ -353,7 +353,7 @@
     .nodalia-vlayout-overlay {
       inset: 0;
       position: fixed;
-      z-index: 220;
+      z-index: 10000;
     }
     .nodalia-vlayout-overlay__backdrop {
       background: color-mix(in srgb, var(--primary-background-color, #111) 55%, transparent);
@@ -609,14 +609,7 @@
     overlay.addEventListener("pointerup", surface._onPointerUp);
     overlay.addEventListener("pointercancel", surface._onPointerUp);
 
-    (editorHost.getRootNode?.() instanceof ShadowRoot
-      ? editorHost.getRootNode().host?.parentElement
-      : document.body
-    )?.appendChild(overlay);
-
-    if (!overlay.parentElement) {
-      document.body.appendChild(overlay);
-    }
+    document.body.appendChild(overlay);
 
     return { overlay, surface, close };
   }
