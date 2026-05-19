@@ -655,6 +655,48 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.ok(!measuredBatteryExportLines.includes("grid"));
 });
 
+test("power flow home tap opens details panel when individuals exist", () => {
+  const PowerFlowCard = loadPowerFlowCardClass();
+  const card = new PowerFlowCard();
+  card._config = {
+    clickable_entities: true,
+    home_tap_action: "auto",
+    entities: {
+      home: { entity: "sensor.home", color: "#ffffff" },
+      grid: {},
+      solar: {},
+      battery: {},
+      water: {},
+      gas: {},
+      individual: [{ entity: "switch.ev_charger", name: "EV", icon: "mdi:car-electric", color: "#44d07b" }],
+    },
+    show_values: true,
+    show_secondary_info: true,
+  };
+  card._hass = {
+    states: {
+      "sensor.home": { state: "1200", attributes: { unit_of_measurement: "W", friendly_name: "Home" } },
+      "switch.ev_charger": { state: "on", attributes: { friendly_name: "EV" } },
+    },
+  };
+
+  assert.equal(card._getHomeNodeAction(), "home-details");
+  const children = card._getHomeDetailChildNodes(card._getNodes());
+  assert.equal(children.length, 1);
+  assert.equal(children[0].entityId, "switch.ev_charger");
+
+  card._openHomeDetails();
+  assert.equal(card._homeDetailsOpen, true);
+  card._closeHomeDetails();
+  assert.equal(card._homeDetailsOpen, false);
+
+  card._config.home_tap_action = "more-info";
+  assert.equal(card._getHomeNodeAction(), "more-info");
+
+  card._config.home_tap_action = "none";
+  assert.equal(card._getHomeNodeAction(), "");
+});
+
 test("cover editor uses domain-filtered pickers and fan-style editor controls", () => {
   const source = read("nodalia-cover-card.js");
   const editorLabels = JSON.parse(read("i18n/editor/en.json"));

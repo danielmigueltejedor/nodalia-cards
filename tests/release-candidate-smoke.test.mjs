@@ -447,6 +447,31 @@ test("power flow supports grid feed-in export sensors", () => {
   assert.match(source, /value: -Math\.abs\(magnitude\)/);
 });
 
+test("light card ships visual layout editor module and config", () => {
+  const layout = read("nodalia-visual-layout-editor.js");
+  const light = read("nodalia-light-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const pkg = read("package.json");
+  assert.match(layout, /window\.NodaliaVisualLayout/);
+  assert.match(layout, /attachEditorOverlay/);
+  assert.match(light, /LIGHT_VISUAL_LAYOUT_CATALOG/);
+  assert.match(light, /visual_layout:/);
+  assert.match(light, /data-editor-action="open-visual-layout"/);
+  assert.match(light, /_renderVisualLayoutGrid/);
+  assert.match(build, /nodalia-visual-layout-editor\.js/);
+  assert.match(pkg, /"nodalia-visual-layout-editor\.js"/);
+});
+
+test("power flow home node can open in-card device details panel", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /home_tap_action: "auto"/);
+  assert.match(source, /_getHomeNodeAction\(\)/);
+  assert.match(source, /nodeAction === "home-details"/);
+  assert.match(source, /return "home-details"/);
+  assert.match(source, /_renderHomeDetailsPanel\(/);
+  assert.match(source, /power-flow-card__home-details/);
+});
+
 test("notifications card is bundled and supports smart dismissible notifications", () => {
   const source = read("nodalia-notifications-card.js");
   const i18n = read("nodalia-i18n.js");

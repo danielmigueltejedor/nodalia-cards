@@ -1,10 +1,32 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), and completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), and the active **`1.2.0-alpha.*`** line.
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [1.2.0-alpha.2] - 2026-05-18
+
+Second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.2`**.
+
+### Added
+
+- **`nodalia-visual-layout-editor.js`:** shared drag-and-drop grid editor (overlay, block palette, collision-aware placement) that serializes to `visual_layout` YAML.
+- **`nodalia-light-card.js`:** visual layout editor button in the card editor; blocks **icon**, **title**, **chips**, **sliders**, brightness/temperature/color presets and sections can be repositioned on a 12-column grid when `visual_layout.enabled` is true.
+
+---
+
+## [1.2.0-alpha.1] - 2026-05-18
+
+First **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.1`**.
+
+### Added
+
+- **`nodalia-power-flow-card.js`:** tapping the **home** node opens an in-card **home devices** panel when `entities.individual` (and optional water/gas) are configured — hero summary for home plus a grid of child devices (smart plugs, EV charger, etc.) with values and **more-info** on each device. Close via backdrop, **X**, or **Escape**.
+- **Config:** `home_tap_action` — `auto` (default: details when sub-devices exist, else more-info), `details`, `more-info`, or `none`. Editor field under tap actions.
 
 ---
 

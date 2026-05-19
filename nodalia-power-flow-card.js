@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.3";
+const CARD_VERSION = "1.2.0-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -86,6 +86,8 @@ const DEFAULT_CONFIG = {
   show_unavailable_badge: true,
   clickable_entities: true,
   tap_action: "none",
+  /** auto: home details when individual devices exist, else more-info; details | more-info | none */
+  home_tap_action: "auto",
   min_flow_rate: 1.4,
   max_flow_rate: 5.8,
   haptics: {
@@ -1024,6 +1026,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._onFlowViewport = this._onFlowViewport.bind(this);
     this._onFlowVisibility = this._onFlowVisibility.bind(this);
     this._flowUnpauseRaf = 0;
+    this._homeDetailsOpen = false;
+    this._onDocKeyDown = this._onDocKeyDown.bind(this);
   }
 
   _onFlowViewport(entries) {
@@ -1133,6 +1137,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    if (typeof document !== "undefined") {
+      document.addEventListener("keydown", this._onDocKeyDown);
+    }
     this._attachFlowViewportTracking();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
@@ -1144,6 +1151,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
   disconnectedCallback() {
     this._clearFlowUnpauseRaf();
     this._detachFlowViewportTracking();
+    if (typeof document !== "undefined") {
+      document.removeEventListener("keydown", this._onDocKeyDown);
+    }
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
@@ -1698,8 +1708,76 @@ class NodaliaPowerFlowCard extends HTMLElement {
       show_header: this._config?.show_header !== false,
       show_values: this._config?.show_values !== false,
       show_labels: this._config?.show_labels !== false,
+      homeDetailsOpen: Boolean(this._homeDetailsOpen),
       trackedStates: this._trackedEntitiesStamp,
     });
+  }
+
+  _pfText(key, fallback) {
+    const resolved = window.NodaliaI18n?.strings?.[key];
+    return typeof resolved === "string" && resolved.trim() ? resolved : fallback;
+  }
+
+  _getHomeNodeAction() {
+    if (this._config?.clickable_entities === false) {
+      return "";
+    }
+
+    const mode = normalizeTextKey(this._config?.home_tap_action || "auto");
+    const childCount = this._getHomeDetailChildNodes(this._getNodes()).length;
+    const homeEntity = String(this._config?.entities?.home?.entity || "").trim();
+
+    if (mode === "none") {
+      return "";
+    }
+    if (mode === "details" || (mode === "auto" && childCount > 0)) {
+      return "home-details";
+    }
+    if ((mode === "more_info" || mode === "auto") && homeEntity) {
+      return "more-info";
+    }
+    return "";
+  }
+
+  _getHomeDetailChildNodes(nodes = this._getNodes()) {
+    const children = [];
+    if (nodes.water?.entityId) {
+      children.push(nodes.water);
+    }
+    if (nodes.gas?.entityId) {
+      children.push(nodes.gas);
+    }
+    if (Array.isArray(nodes.individual)) {
+      nodes.individual.forEach(node => {
+        if (node?.entityId) {
+          children.push(node);
+        }
+      });
+    }
+    return children;
+  }
+
+  _openHomeDetails() {
+    if (this._homeDetailsOpen) {
+      return;
+    }
+    this._homeDetailsOpen = true;
+    this._render();
+  }
+
+  _closeHomeDetails() {
+    if (!this._homeDetailsOpen) {
+      return;
+    }
+    this._homeDetailsOpen = false;
+    this._render();
+  }
+
+  _onDocKeyDown(event) {
+    if (event.key === "Escape" && this._homeDetailsOpen) {
+      event.preventDefault();
+      this._closeHomeDetails();
+    }
   }
 
   /**
@@ -2249,12 +2327,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : "";
 
     if (node.kind === "home") {
+      const homeAction = this._getHomeNodeAction();
+      const isHomeClickable = Boolean(homeAction);
       return `
         <div class="${nodeClassName}" style="left:${node.position.x}%; top:${node.position.y}%; --node-enter-delay:${enterDelay}ms;">
           <button
-            class="power-flow-card__bubble power-flow-card__bubble--home ${isClickable ? "is-clickable" : ""}"
+            class="power-flow-card__bubble power-flow-card__bubble--home ${isHomeClickable ? "is-clickable" : ""}"
             data-node-entity="${escapeHtml(node.entityId)}"
-            data-node-action="${isClickable ? "more-info" : ""}"
+            data-node-action="${escapeHtml(homeAction)}"
             style="--node-size:${scaledNodeSize}px; --node-tint:${escapeHtml(color)};"
             title="${escapeHtml(node.label)}"
           >
@@ -2358,7 +2438,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const lineStartOffset = Math.max(18, Math.round(nodeSize * 0.42));
     const lineEndOffset = Math.max(30, Math.round(homeSize * 0.38));
     const sourceClickable = this._config?.clickable_entities !== false && sourceNode.entityId;
-    const homeClickable = this._config?.clickable_entities !== false && nodes.home.entityId;
+    const homeAction = this._getHomeNodeAction();
+    const homeClickable = Boolean(homeAction);
     const sourceUnavailableBadge = this._config?.show_unavailable_badge !== false && sourceNode.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
@@ -2420,7 +2501,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             <button
               class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(nodes.home.entityId)}"
-              data-node-action="${homeClickable ? "more-info" : ""}"
+              data-node-action="${escapeHtml(homeAction)}"
               style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)};"
               title="${escapeHtml(nodes.home.label)}"
             >
@@ -2470,6 +2551,96 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
+  _renderHomeDetailsChild(node) {
+    const clickable = this._config?.clickable_entities !== false && node.entityId;
+    const valueMarkup = this._config?.show_values === false
+      ? ""
+      : `
+        <span class="power-flow-card__home-details-item-value">
+          <span>${escapeHtml(node.valueText)}</span>
+          ${node.unitText ? `<span class="power-flow-card__home-details-item-unit">${escapeHtml(node.unitText)}</span>` : ""}
+        </span>
+      `;
+    const secondaryMarkup = node.secondary && this._config?.show_secondary_info !== false
+      ? `<span class="power-flow-card__home-details-item-secondary">${escapeHtml(node.secondary)}</span>`
+      : "";
+
+    return `
+      <button
+        type="button"
+        class="power-flow-card__home-details-item ${clickable ? "is-clickable" : ""}"
+        data-node-entity="${escapeHtml(node.entityId)}"
+        data-node-action="${clickable ? "more-info" : ""}"
+        style="--item-tint:${escapeHtml(node.color)};"
+        title="${escapeHtml(node.label)}"
+      >
+        <span class="power-flow-card__home-details-item-icon">
+          <ha-icon icon="${escapeHtml(node.icon)}"></ha-icon>
+        </span>
+        <span class="power-flow-card__home-details-item-copy">
+          <span class="power-flow-card__home-details-item-label">${escapeHtml(node.label)}</span>
+          ${valueMarkup}
+          ${secondaryMarkup}
+        </span>
+      </button>
+    `;
+  }
+
+  _renderHomeDetailsPanel(nodes) {
+    if (!this._homeDetailsOpen) {
+      return "";
+    }
+
+    const home = nodes.home;
+    const children = this._getHomeDetailChildNodes(nodes);
+    const title = this._pfText("power_flow.home_details_title", "Home devices");
+    const hint = this._pfText("power_flow.home_details_hint", "Tap a device for more info");
+    const emptyText = this._pfText("power_flow.home_details_empty", "No sub-devices configured yet.");
+    const closeLabel = this._pfText("power_flow.home_details_close", "Close");
+    const homeValueMarkup = this._config?.show_values === false
+      ? ""
+      : `
+        <span class="power-flow-card__home-details-hero-value">
+          <span class="power-flow-card__home-details-hero-value-number">${escapeHtml(home.valueText)}</span>
+          ${home.unitText ? `<span class="power-flow-card__home-details-hero-value-unit">${escapeHtml(home.unitText)}</span>` : ""}
+        </span>
+      `;
+    const homeSecondaryMarkup = home.secondary && this._config?.show_secondary_info !== false
+      ? `<span class="power-flow-card__home-details-hero-secondary">${escapeHtml(home.secondary)}</span>`
+      : "";
+    const childMarkup = children.length
+      ? `<div class="power-flow-card__home-details-grid">${children.map(child => this._renderHomeDetailsChild(child)).join("")}</div>`
+      : `<p class="power-flow-card__home-details-empty">${escapeHtml(emptyText)}</p>`;
+
+    return `
+      <div class="power-flow-card__home-details" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+        <button type="button" class="power-flow-card__home-details-backdrop" data-home-details-close aria-label="${escapeHtml(closeLabel)}"></button>
+        <div class="power-flow-card__home-details-panel">
+          <div class="power-flow-card__home-details-header">
+            <div class="power-flow-card__home-details-heading">
+              <span class="power-flow-card__home-details-title">${escapeHtml(title)}</span>
+              <span class="power-flow-card__home-details-hint">${escapeHtml(hint)}</span>
+            </div>
+            <button type="button" class="power-flow-card__home-details-close" data-home-details-close aria-label="${escapeHtml(closeLabel)}">
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
+          </div>
+          <div class="power-flow-card__home-details-hero" style="--hero-tint:${escapeHtml(home.color)};">
+            <span class="power-flow-card__home-details-hero-icon">
+              <ha-icon icon="${escapeHtml(home.icon)}"></ha-icon>
+            </span>
+            <span class="power-flow-card__home-details-hero-copy">
+              <span class="power-flow-card__home-details-hero-label">${escapeHtml(home.label)}</span>
+              ${homeValueMarkup}
+              ${homeSecondaryMarkup}
+            </span>
+          </div>
+          ${childMarkup}
+        </div>
+      </div>
+    `;
+  }
+
   _onShadowClick(event) {
     const dashboardButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dashboardAction === "navigate");
     if (dashboardButton) {
@@ -2478,6 +2649,24 @@ class NodaliaPowerFlowCard extends HTMLElement {
       this._triggerPressAnimation(dashboardButton);
       this._triggerHaptic("selection");
       this._navigate(this._config?.dashboard_link);
+      return;
+    }
+
+    const homeDetailsClose = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.homeDetailsClose !== undefined);
+    if (homeDetailsClose) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closeHomeDetails();
+      return;
+    }
+
+    const homeDetailsOpen = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.nodeAction === "home-details");
+    if (homeDetailsOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._triggerPressAnimation(homeDetailsOpen);
+      this._triggerHaptic("selection");
+      this._openHomeDetails();
       return;
     }
 
@@ -2807,6 +2996,257 @@ class NodaliaPowerFlowCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           z-index: 1;
+        }
+
+        .power-flow-card--home-details-open .power-flow-card__surface,
+        .power-flow-card--home-details-open .power-flow-card__simple-layout {
+          filter: saturate(0.9);
+          opacity: 0.42;
+          pointer-events: none;
+        }
+
+        .power-flow-card__home-details {
+          align-items: center;
+          display: flex;
+          inset: 0;
+          justify-content: center;
+          padding: 6px;
+          pointer-events: auto;
+          position: absolute;
+          z-index: 14;
+        }
+
+        .power-flow-card__home-details-backdrop {
+          background: color-mix(in srgb, var(--primary-background-color, #111) 42%, transparent);
+          border: 0;
+          cursor: pointer;
+          inset: 0;
+          position: absolute;
+        }
+
+        .power-flow-card__home-details-panel {
+          animation: power-flow-home-details-in 220ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent) 0%,
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 88%, transparent) 100%
+          );
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: calc(${styles.card.border_radius} - 4px);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 18px 40px rgba(0, 0, 0, 0.22);
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-height: calc(100% - 8px);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding: 12px;
+          position: relative;
+          width: min(100%, 420px);
+          z-index: 1;
+        }
+
+        @keyframes power-flow-home-details-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .power-flow-card__home-details-header {
+          align-items: flex-start;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .power-flow-card__home-details-heading {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .power-flow-card__home-details-title {
+          font-size: 15px;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+        }
+
+        .power-flow-card__home-details-hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.35;
+        }
+
+        .power-flow-card__home-details-close {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 32px;
+          justify-content: center;
+          width: 32px;
+        }
+
+        .power-flow-card__home-details-close ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .power-flow-card__home-details-hero {
+          align-items: center;
+          background: color-mix(in srgb, var(--hero-tint, #6da8ff) 14%, transparent);
+          border: 1px solid color-mix(in srgb, var(--hero-tint, #6da8ff) 24%, transparent);
+          border-radius: 16px;
+          display: flex;
+          gap: 12px;
+          padding: 12px 14px;
+        }
+
+        .power-flow-card__home-details-hero-icon {
+          align-items: center;
+          background: color-mix(in srgb, var(--hero-tint, #6da8ff) 22%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 52px;
+          justify-content: center;
+          width: 52px;
+        }
+
+        .power-flow-card__home-details-hero-icon ha-icon {
+          --mdc-icon-size: 28px;
+          color: var(--hero-tint, #6da8ff);
+        }
+
+        .power-flow-card__home-details-hero-copy {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .power-flow-card__home-details-hero-label {
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .power-flow-card__home-details-hero-value {
+          align-items: baseline;
+          display: inline-flex;
+          font-size: 22px;
+          font-weight: 700;
+          gap: 4px;
+          line-height: 1.1;
+        }
+
+        .power-flow-card__home-details-hero-value-unit {
+          font-size: 13px;
+          font-weight: 500;
+          opacity: 0.82;
+        }
+
+        .power-flow-card__home-details-hero-secondary {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+        }
+
+        .power-flow-card__home-details-grid {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+        }
+
+        .power-flow-card__home-details-item {
+          align-items: center;
+          background: color-mix(in srgb, var(--item-tint, #6da8ff) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--item-tint, #6da8ff) 20%, transparent);
+          border-radius: 14px;
+          color: inherit;
+          cursor: default;
+          display: flex;
+          gap: 10px;
+          padding: 10px 12px;
+          text-align: left;
+          width: 100%;
+        }
+
+        .power-flow-card__home-details-item.is-clickable {
+          cursor: pointer;
+        }
+
+        .power-flow-card__home-details-item.is-clickable:active {
+          transform: scale(0.98);
+        }
+
+        .power-flow-card__home-details-item-icon {
+          align-items: center;
+          background: color-mix(in srgb, var(--item-tint, #6da8ff) 18%, transparent);
+          border-radius: 12px;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          width: 40px;
+        }
+
+        .power-flow-card__home-details-item-icon ha-icon {
+          --mdc-icon-size: 22px;
+          color: var(--item-tint, #6da8ff);
+        }
+
+        .power-flow-card__home-details-item-copy {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .power-flow-card__home-details-item-label {
+          font-size: 13px;
+          font-weight: 600;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .power-flow-card__home-details-item-value {
+          align-items: baseline;
+          display: inline-flex;
+          font-size: 16px;
+          font-weight: 700;
+          gap: 3px;
+        }
+
+        .power-flow-card__home-details-item-unit {
+          font-size: 11px;
+          font-weight: 500;
+          opacity: 0.8;
+        }
+
+        .power-flow-card__home-details-item-secondary {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .power-flow-card__home-details-empty {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          margin: 0;
+          text-align: center;
         }
 
         .power-flow-card__content--entering {
@@ -3533,7 +3973,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         `}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}${this._homeDetailsOpen ? " power-flow-card--home-details-open" : ""}">
         ${
           hasHeader
             ? `
@@ -3617,6 +4057,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
               `
           }
         </div>
+        ${this._renderHomeDetailsPanel(nodes)}
       </ha-card>
     `;
 
@@ -4199,6 +4640,12 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
             ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
               { value: "none", label: "ed.power_flow.tap_none" },
               { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
+            ], { fullWidth: true })}
+            ${this._renderSelectField("ed.power_flow.home_tap_action", "home_tap_action", config.home_tap_action || "auto", [
+              { value: "auto", label: "ed.power_flow.home_tap_auto" },
+              { value: "details", label: "ed.power_flow.home_tap_details" },
+              { value: "more-info", label: "ed.power_flow.home_tap_more_info" },
+              { value: "none", label: "ed.power_flow.home_tap_none" },
             ], { fullWidth: true })}
           </div>
               `
@@ -5282,6 +5729,12 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             ${this._renderSelectField("ed.power_flow.card_tap_action", "tap_action", tapAction, [
               { value: "none", label: "ed.power_flow.tap_none" },
               { value: "more-info", label: "ed.power_flow.tap_more_info_home" },
+            ], { fullWidth: true })}
+            ${this._renderSelectField("ed.power_flow.home_tap_action", "home_tap_action", config.home_tap_action || "auto", [
+              { value: "auto", label: "ed.power_flow.home_tap_auto" },
+              { value: "details", label: "ed.power_flow.home_tap_details" },
+              { value: "more-info", label: "ed.power_flow.home_tap_more_info" },
+              { value: "none", label: "ed.power_flow.home_tap_none" },
             ], { fullWidth: true })}
           </div>
               `

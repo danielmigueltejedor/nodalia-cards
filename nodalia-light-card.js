@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.3";
+const CARD_VERSION = "1.2.0-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -81,6 +81,12 @@ const DEFAULT_CONFIG = {
     button_bounce_duration: 320,
     mode_switch_horizontal: true,
   },
+  visual_layout: {
+    enabled: false,
+    columns: 12,
+    rows: 10,
+    items: [],
+  },
   styles: {
     card: {
       background: "var(--ha-card-background)",
@@ -117,6 +123,54 @@ const DEFAULT_CONFIG = {
 const STUB_CONFIG = {
   entity: "light.salon",
   name: "Salon",
+};
+
+const LIGHT_VISUAL_LAYOUT_CATALOG = {
+  icon: {
+    labelKey: "ed.light.vlayout_icon",
+    fallbackLabel: "Icon",
+    default: { x: 0, y: 0, w: 2, h: 2 },
+  },
+  title: {
+    labelKey: "ed.light.vlayout_title",
+    fallbackLabel: "Title",
+    default: { x: 2, y: 0, w: 7, h: 1 },
+  },
+  chips: {
+    labelKey: "ed.light.vlayout_chips",
+    fallbackLabel: "Chips",
+    default: { x: 2, y: 1, w: 7, h: 1 },
+  },
+  sliders: {
+    labelKey: "ed.light.vlayout_sliders",
+    fallbackLabel: "Sliders",
+    default: { x: 0, y: 2, w: 12, h: 2 },
+  },
+  brightness_presets: {
+    labelKey: "ed.light.vlayout_brightness_presets",
+    fallbackLabel: "Brightness presets",
+    default: { x: 0, y: 4, w: 12, h: 1 },
+  },
+  temperature_presets: {
+    labelKey: "ed.light.vlayout_temperature_presets",
+    fallbackLabel: "Temperature presets",
+    default: { x: 0, y: 5, w: 12, h: 1 },
+  },
+  color_presets: {
+    labelKey: "ed.light.vlayout_color_presets",
+    fallbackLabel: "Color presets",
+    default: { x: 0, y: 6, w: 12, h: 1 },
+  },
+  temperature_section: {
+    labelKey: "ed.light.vlayout_temperature_section",
+    fallbackLabel: "Temperature section",
+    default: { x: 0, y: 7, w: 12, h: 2 },
+  },
+  color_section: {
+    labelKey: "ed.light.vlayout_color_section",
+    fallbackLabel: "Color section",
+    default: { x: 0, y: 9, w: 12, h: 2 },
+  },
 };
 
 function isObject(value) {
@@ -583,6 +637,20 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
+  if (typeof window !== "undefined" && window.NodaliaVisualLayout?.normalizeLayout) {
+    config.visual_layout = window.NodaliaVisualLayout.normalizeLayout(
+      config.visual_layout || {},
+      LIGHT_VISUAL_LAYOUT_CATALOG,
+    );
+  } else {
+    config.visual_layout = {
+      enabled: false,
+      columns: 12,
+      rows: 10,
+      items: [],
+    };
+  }
+
   const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
   const normTap = String(config.tap_action ?? "toggle").trim().toLowerCase();
   config.tap_action = TAP_ACTIONS.has(normTap) ? normTap : "toggle";
@@ -901,6 +969,7 @@ class NodaliaLightCard extends HTMLElement {
       `qpt:${this._config?.show_quick_temperature_presets === true ? 1 : 0}`,
       `qpc:${this._config?.show_quick_color_presets === true ? 1 : 0}`,
       `cps:${Array.isArray(this._config?.color_presets) ? this._config.color_presets.map(p => `${String(p?.label ?? "").trim()}~${normalizeHexColorForLightPreset(p?.color)}`).join(";") : ""}`,
+      `vl:${JSON.stringify(this._config?.visual_layout || {})}`,
       `tap:${[
         String(this._config?.tap_action || ""),
         String(this._config?.icon_tap_action || ""),
@@ -951,6 +1020,27 @@ class NodaliaLightCard extends HTMLElement {
       );
     }
     return fallback;
+  }
+
+  _canUseVisualLayout(isMiniLayout, isCompactLayout) {
+    const layout = this._config?.visual_layout;
+    if (!layout?.enabled || isMiniLayout || isCompactLayout) {
+      return false;
+    }
+    return Array.isArray(layout.items) && layout.items.some(item => item.visible !== false);
+  }
+
+  _renderVisualLayoutGrid(blocksById) {
+    const layoutApi = window.NodaliaVisualLayout;
+    const layout = this._config?.visual_layout;
+    if (!layoutApi || !layout?.enabled) {
+      return "";
+    }
+    return `
+      <div class="light-card__visual-grid" style="${layoutApi.layoutToGridStyle(layout)}">
+        ${layoutApi.renderPlacedBlocks(blocksById, layout, { wrapClass: "light-card__visual-item" })}
+      </div>
+    `;
   }
 
   _getConfiguredGridColumns() {
@@ -3287,6 +3377,65 @@ class NodaliaLightCard extends HTMLElement {
       this._lastControlsMarkup = "";
     }
 
+    const usesVisualLayout = this._canUseVisualLayout(isMiniLayout, isCompactLayout);
+    const iconBlockMarkup = `
+            <button
+              type="button"
+              class="light-card__icon"
+              data-light-action="icon"
+              aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"
+            >
+              ${entityPicture
+                ? `<img class="light-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
+              ${showUnavailableBadge ? `<span class="light-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
+            </button>
+          `;
+    const titleBlockMarkup = showCopyBlock && !isCompactLayout
+      ? `<div class="light-card__title">${escapeHtml(title)}</div>`
+      : "";
+    const chipsBlockMarkup = showCopyBlock && (hasHeaderChips || hasBelowChips)
+      ? `
+                <div class="light-card__copy">
+                  <div class="light-card__copy-header">
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}${controlsPanelToggleMarkup}</div>` : ""}
+                  </div>
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
+                </div>
+              `
+      : "";
+    const visualLayoutBlocks = {
+      icon: iconBlockMarkup,
+      title: titleBlockMarkup,
+      chips: chipsBlockMarkup,
+      sliders: sliderSectionMarkup || "",
+      brightness_presets: brightnessPresetsMarkup || "",
+      temperature_presets: temperatureQuickPresetsMarkup || "",
+      color_presets: colorQuickPresetsMarkup || "",
+      temperature_section: temperatureControlsMarkup || "",
+      color_section: colorControlsMarkup || "",
+    };
+    const defaultHeroMarkup = `
+          <div class="light-card__hero">
+            ${iconBlockMarkup}
+            ${showCopyBlock
+              ? `
+                <div class="light-card__copy">
+                  <div class="light-card__copy-header">
+                    ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
+                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}${controlsPanelToggleMarkup}</div>` : ""}
+                  </div>
+                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
+                </div>
+              `
+              : ""}
+          </div>
+          ${controlsShellMarkup}
+        `;
+    const cardBodyMarkup = usesVisualLayout
+      ? this._renderVisualLayoutGrid(visualLayoutBlocks)
+      : defaultHeroMarkup;
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -4285,6 +4434,24 @@ class NodaliaLightCard extends HTMLElement {
           }
         }
 
+        .light-card--visual-layout .light-card__visual-grid {
+          position: relative;
+          z-index: 1;
+        }
+
+        .light-card__visual-item {
+          min-width: 0;
+        }
+
+        .light-card__visual-item .light-card__icon {
+          margin-inline: auto;
+        }
+
+        .light-card__visual-item .light-card__copy,
+        .light-card__visual-item .light-card__section {
+          width: 100%;
+        }
+
         @media (max-width: 420px) {
           .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
@@ -4297,36 +4464,12 @@ class NodaliaLightCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
+        class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${usesVisualLayout ? "light-card--visual-layout" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         data-light-action="body"
       >
         <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">
-          <div class="light-card__hero">
-            <button
-              type="button"
-              class="light-card__icon"
-              data-light-action="icon"
-              aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"
-            >
-              ${entityPicture
-                ? `<img class="light-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
-                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
-              ${showUnavailableBadge ? `<span class="light-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
-            </button>
-            ${showCopyBlock
-              ? `
-                <div class="light-card__copy">
-                  <div class="light-card__copy-header">
-                    ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
-                    ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}${controlsPanelToggleMarkup}</div>` : ""}
-                  </div>
-                  ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}
-                </div>
-              `
-              : ""}
-          </div>
-          ${controlsShellMarkup}
+          ${cardBodyMarkup}
         </div>
       </ha-card>
     `;
@@ -4643,7 +4786,43 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
+  _openVisualLayoutEditor() {
+    const layoutApi = window.NodaliaVisualLayout;
+    if (!layoutApi?.attachEditorOverlay) {
+      return;
+    }
+
+    const layout = layoutApi.normalizeLayout(this._config?.visual_layout || {}, LIGHT_VISUAL_LAYOUT_CATALOG);
+    layoutApi.attachEditorOverlay(this, {
+      title: this._editorLabel("ed.light.visual_layout_title"),
+      hint: this._editorLabel("ed.light.visual_layout_hint"),
+      saveLabel: this._editorLabel("ed.light.visual_layout_save"),
+      resetLabel: this._editorLabel("ed.light.visual_layout_reset"),
+      paletteTitle: this._editorLabel("ed.light.visual_layout_palette"),
+      catalog: LIGHT_VISUAL_LAYOUT_CATALOG,
+      layout,
+      labelFor: (key, fallback) => this._editorLabel(key) || fallback,
+      onSave: savedLayout => {
+        this._config = normalizeConfig({
+          ...deepClone(this._config),
+          visual_layout: savedLayout,
+        });
+        this._emitConfig();
+      },
+    });
+  }
+
   _onShadowClick(event) {
+    const visualLayoutButton = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.editorAction === "open-visual-layout");
+    if (visualLayoutButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._openVisualLayoutEditor();
+      return;
+    }
+
     const toggleButton = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
@@ -5251,6 +5430,19 @@ class NodaliaLightCardEditor extends HTMLElement {
                 fullWidth: true,
               },
             )}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.visual_layout_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.visual_layout_section_hint"))}</div>
+          </div>
+          <div class="editor-section__actions">
+            <button type="button" class="editor-section__toggle-button" data-editor-action="open-visual-layout">
+              <ha-icon icon="mdi:grid"></ha-icon>
+              <span>${escapeHtml(this._editorLabel("ed.light.open_visual_layout"))}</span>
+            </button>
           </div>
         </section>
 

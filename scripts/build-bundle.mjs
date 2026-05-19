@@ -29,6 +29,7 @@ const parts = [
   "nodalia-i18n.js",
   "nodalia-editor-ui.js",
   "nodalia-utils.js",
+  "nodalia-visual-layout-editor.js",
   "nodalia-render-signature.js",
   "nodalia-bubble-contrast.js",
   "nodalia-navigation-bar.js",
