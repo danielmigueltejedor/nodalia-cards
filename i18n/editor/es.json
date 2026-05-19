@@ -1103,5 +1103,6 @@
   "ed.weather.unit_system": "Sistema de unidades",
   "ed.weather.wind_kmh": "km/h",
   "ed.weather.wind_mph": "mph",
-  "ed.weather.wind_speed_unit": "Unidad de viento"
+  "ed.weather.wind_speed_unit": "Unidad de viento",
+  "ed.light.visual_layout_open_failed": "Could not open the visual layout editor. Reload the dashboard and try again."
 }

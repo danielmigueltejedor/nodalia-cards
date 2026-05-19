@@ -445,6 +445,7 @@
   "ed.light.vlayout_props_full_width": "Full width",
   "ed.light.vlayout_props_remove": "Remove block",
   "ed.light.vlayout_palette_empty": "All blocks are on the grid",
+  "ed.light.visual_layout_open_failed": "Could not open the visual layout editor. Reload the dashboard and try again.",
   "ed.light.tap_actions_section_title": "Tap actions",
   "ed.light.visibility_section_hint": "Which blocks to show inside the card.",
   "ed.media_player.action_block": "Action",

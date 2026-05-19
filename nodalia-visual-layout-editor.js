@@ -159,32 +159,26 @@
     };
   }
 
+  function resolveEditorLayout(rawLayout, catalog, options = {}) {
+    let layout = normalizeLayout(rawLayout || {}, catalog, options);
+    const hasBlocks = layout.items.some(item => item.visible !== false);
+    if (!hasBlocks) {
+      layout = defaultLayoutFromCatalog(
+        catalog,
+        layout.columns || options.columns,
+        layout.rows || options.rows,
+      );
+    }
+    return layout;
+  }
+
   function mountOverlayElement(overlay) {
     overlay.setAttribute("data-nodalia-vlayout-overlay", "true");
-    overlay.style.cssText = [
-      "position:fixed",
-      "inset:0",
-      "z-index:2147483000",
-      "pointer-events:auto",
-    ].join(";");
+    overlay.classList.add("nodalia-vlayout-overlay--open");
 
-    const dialog =
-      document.querySelector("ha-dialog[open]")
-      || document.querySelector("hui-dialog-edit-card ha-dialog")
-      || document.querySelector("ha-dialog");
-
-    if (dialog) {
-      dialog.appendChild(overlay);
-      return;
-    }
-
-    const haRoot = document.querySelector("home-assistant");
-    if (haRoot) {
-      haRoot.appendChild(overlay);
-      return;
-    }
-
-    document.body.appendChild(overlay);
+    // Must mount on document.body: children of ha-dialog light DOM are not shown.
+    const root = document.body || document.documentElement;
+    root.appendChild(overlay);
   }
 
   class VisualLayoutSurface {
@@ -412,6 +406,7 @@
             ${placed}
           </div>
         `;
+        this._bindCanvasListeners();
       }
     }
 
@@ -434,14 +429,21 @@
 
       this._renderCanvas();
       this._renderSidebar();
+      this._bindCanvasListeners();
+    }
 
+    _bindCanvasListeners() {
+      this._canvasAbort?.abort();
+      this._canvasAbort = new AbortController();
+      const { signal } = this._canvasAbort;
       const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
-      if (canvas) {
-        canvas.addEventListener("pointerdown", this._onCanvasPointerDown);
-        canvas.addEventListener("pointermove", this._onCanvasPointerMove);
-        canvas.addEventListener("pointerup", this._onCanvasPointerUp);
-        canvas.addEventListener("pointercancel", this._onCanvasPointerUp);
+      if (!canvas) {
+        return;
       }
+      canvas.addEventListener("pointerdown", this._onCanvasPointerDown, { signal });
+      canvas.addEventListener("pointermove", this._onCanvasPointerMove, { signal });
+      canvas.addEventListener("pointerup", this._onCanvasPointerUp, { signal });
+      canvas.addEventListener("pointercancel", this._onCanvasPointerUp, { signal });
     }
 
     mount() {
@@ -673,11 +675,14 @@
   }
 
   const OVERLAY_STYLES = `
-    [data-nodalia-vlayout-overlay] {
+    [data-nodalia-vlayout-overlay],
+    .nodalia-vlayout-overlay--open {
       inset: 0 !important;
       pointer-events: auto !important;
       position: fixed !important;
-      z-index: 2147483000 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 2147483646 !important;
     }
     .nodalia-vlayout-overlay__backdrop {
       background: color-mix(in srgb, var(--primary-background-color, #111) 62%, transparent);
@@ -938,6 +943,8 @@
       existing.remove();
     }
 
+    const layout = resolveEditorLayout(options.layout, options.catalog, options);
+
     const overlay = document.createElement("div");
     overlay.className = "nodalia-vlayout-overlay";
     overlay.innerHTML = `
@@ -958,12 +965,18 @@
       </div>
     `;
 
-    mountOverlayElement(overlay);
+    try {
+      mountOverlayElement(overlay);
+    } catch (error) {
+      console.error("[Nodalia] visual layout overlay mount failed", error);
+      overlay.remove();
+      throw error;
+    }
 
     const body = overlay.querySelector(".nodalia-vlayout-overlay__body");
     const surface = new VisualLayoutSurface(body, {
       catalog: options.catalog,
-      layout: options.layout,
+      layout,
       columns: options.columns,
       rows: options.rows,
       labelFor: options.labelFor,
@@ -1019,6 +1032,7 @@
     itemToGridStyle,
     renderPlacedBlocks,
     serializeLayoutForSave,
+    resolveEditorLayout,
     createSurface: (host, options) => new VisualLayoutSurface(host, options),
     attachEditorOverlay,
     ensureOverlayStyles,

@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.5] - 2026-05-18
+
+Fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.5`**.
+
+### Fixed
+- **Visual layout editor** mounts on `document.body` (overlay inside `ha-dialog` light DOM was invisible).
+- Canvas pointer listeners re-bind after grid updates.
+
 ## [1.2.0-alpha.4] - 2026-05-18
 
 Fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.4`**.
