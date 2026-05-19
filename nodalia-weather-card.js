@@ -1,3 +1,22 @@
+/**
+ * Nodalia Weather card — `weather.*` forecast and current conditions.
+ *
+ * Lovelace: `nodalia-weather-card` / `nodalia-weather-card-editor`
+ *
+ * Features: multi-day forecast rows, condition icons, optional secondary sensors.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -734,6 +753,7 @@ function getConditionAccent(value) {
   }
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const WEATHER_ACTIONS = new Set(["more-info", "none"]);
@@ -805,6 +825,7 @@ function normalizeWindUnitFromState(value) {
   return "kmh";
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaWeatherCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -3398,6 +3419,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaWeatherCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaWeatherCardEditor extends HTMLElement {
   constructor() {
     super();

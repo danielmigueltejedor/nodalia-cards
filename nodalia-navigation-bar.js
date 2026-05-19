@@ -1,3 +1,22 @@
+/**
+ * Nodalia Navigation bar — bottom dashboard nav (views / actions / media shortcuts).
+ *
+ * Lovelace: `nodalia-navigation-bar` / `nodalia-navigation-bar-editor`
+ *
+ * Features: route items, optional embedded media browser patterns (shared with media-player).
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -590,6 +609,7 @@ function matchPath(currentPath, candidatePath, mode) {
   return currentPath === candidatePath;
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(config) {
   const baseConfig = { ...config };
 
@@ -605,6 +625,8 @@ function normalizeConfig(config) {
   return mergeConfig(DEFAULT_CONFIG, baseConfig);
 }
 
+/** Lovelace dashboard card (runtime). */
+/** Lovelace dashboard card (runtime). */
 class NodaliaNavigationBarCard extends HTMLElement {
   static getStubConfig() {
     return deepClone(STUB_CONFIG);
@@ -4353,6 +4375,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaNavigationBarEditor extends HTMLElement {
   constructor() {
     super();

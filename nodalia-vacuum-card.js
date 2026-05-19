@@ -1,3 +1,22 @@
+/**
+ * Nodalia Vacuum card — standard `vacuum.*` controls and status.
+ *
+ * Lovelace: `nodalia-vacuum-card` / `nodalia-vacuum-card-editor`
+ *
+ * Features: start/pause/dock actions, map-agnostic layout; simpler than advance-vacuum.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -469,6 +488,7 @@ function humanizeModeLabel(value, kind = "generic", hass = null, configLang = nu
     .replace(/\b\w/g, match => match.toUpperCase());
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const normalizeList = value => (
@@ -513,6 +533,7 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaVacuumCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -3453,6 +3474,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaVacuumCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaVacuumCardEditor extends HTMLElement {
   constructor() {
     super();

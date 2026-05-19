@@ -1,3 +1,22 @@
+/**
+ * Nodalia Favorites card — quick-launch grid of entities + optional alarm controls.
+ *
+ * Lovelace: `nodalia-fav-card` / `nodalia-fav-card-editor`
+ *
+ * Features: mini/inline layout thresholds; can embed alarm arm tiles (FEATURE_ARM_*).
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -562,10 +581,12 @@ function fireEvent(node, type, detail, options) {
   return event;
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaFavCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1998,6 +2019,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaFavCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaFavCardEditor extends HTMLElement {
   constructor() {
     super();

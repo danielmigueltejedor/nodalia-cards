@@ -1,3 +1,22 @@
+/**
+ * Nodalia Media player card — `media_player.*` transport and browse (incl. Music Assistant).
+ *
+ * Lovelace: `nodalia-media-player` / `nodalia-media-player-editor`
+ *
+ * Features: browse media tree, MUSIC_ASSISTANT_* filters, album/artist directory icons.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -729,6 +748,7 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const mediaConfig = isObject(rawConfig?.media_player) ? rawConfig.media_player : null;
@@ -790,6 +810,7 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaMediaPlayer extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -5214,6 +5235,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaMediaPlayer);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaMediaPlayerEditor extends HTMLElement {
   constructor() {
     super();

@@ -1,3 +1,22 @@
+/**
+ * Nodalia Humidifier card — `humidifier.*` target humidity and modes.
+ *
+ * Lovelace: `nodalia-humidifier-card` / `nodalia-humidifier-card-editor`
+ *
+ * Features: humidity slider, mode/preset chips, compact layout, service actions.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -515,6 +534,7 @@ function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const normalizeList = value => (
@@ -558,6 +578,7 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaHumidifierCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -3639,6 +3660,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaHumidifierCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaHumidifierCardEditor extends HTMLElement {
   constructor() {
     super();

@@ -1,3 +1,22 @@
+/**
+ * Nodalia Insignia card — compact badge (icon + name + value) for dashboards.
+ *
+ * Lovelace: `nodalia-insignia-card` / `nodalia-insignia-card-editor`
+ *
+ * Features: minimal footprint, state_attribute override, active/inactive icons.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -466,6 +485,7 @@ function fireEvent(node, type, detail, options) {
   return event;
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const legacyPreset = normalizeTintPreset(rawConfig?.tint_preset || rawConfig?.color);
@@ -487,6 +507,7 @@ function normalizeConfig(rawConfig) {
   return merged;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaInsigniaCard extends HTMLElement {
   static getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1309,6 +1330,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaInsigniaCardEditor extends HTMLElement {
   constructor() {
     super();

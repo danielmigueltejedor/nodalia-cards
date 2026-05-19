@@ -1,3 +1,22 @@
+/**
+ * Nodalia Fan card — `fan.*` speed, presets, oscillation.
+ *
+ * Lovelace: `nodalia-fan-card` / `nodalia-fan-card-editor`
+ *
+ * Features: percentage slider, preset modes, optimistic UI (OPTIMISTIC_*), last-visual localStorage.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -494,6 +513,7 @@ function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const normalizeList = value => (
@@ -555,6 +575,7 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaFanCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -3400,6 +3421,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaFanCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaFanCardEditor extends HTMLElement {
   constructor() {
     super();

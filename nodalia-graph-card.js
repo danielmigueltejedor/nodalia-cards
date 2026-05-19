@@ -1,3 +1,23 @@
+/**
+ * Nodalia Graph card — history chart for one or more entities.
+ *
+ * Lovelace: `nodalia-graph-card` / `nodalia-graph-card-editor`
+ *
+ * Features: SVG/Canvas history, SERIES_COLORS, touch hold vs tap (TOUCH_CHART_HOLD_MS).
+ * NodaliaGraphCardEditorLegacy kept for compatibility.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -514,6 +534,7 @@ function resolveEntityEntries(config) {
     .filter(entry => entry?.entity);
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   merged.entities = resolveEntityEntries(merged);
@@ -598,6 +619,7 @@ function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackV
   });
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaGraphCard extends HTMLElement {
   static async getConfigElement() {
     if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
@@ -3016,6 +3038,8 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaGraphCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
+/** @deprecated Legacy editor embed; prefer NodaliaGraphCardEditor. */
 class NodaliaGraphCardEditorLegacy extends HTMLElement {
   constructor() {
     super();

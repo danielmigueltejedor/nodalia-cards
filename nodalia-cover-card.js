@@ -1,3 +1,22 @@
+/**
+ * Nodalia Cover card — `cover.*` position, tilt, open/close/stop.
+ *
+ * Lovelace: `nodalia-cover-card` / `nodalia-cover-card-editor`
+ *
+ * Features: COVER_FEATURES bitmask gates controls; position/tilt sliders; open_close_icons auto.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -175,6 +194,7 @@ function normalizeList(value) {
   return String(value || "").split(",").map(item => item.trim()).filter(Boolean);
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode)
@@ -432,6 +452,7 @@ function coverDeviceIcon(state) {
   }
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaCoverCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1689,6 +1710,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaCoverCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaCoverCardEditor extends HTMLElement {
   constructor() {
     super();

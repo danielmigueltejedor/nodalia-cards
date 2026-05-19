@@ -1,3 +1,22 @@
+/**
+ * Nodalia Person card — `person.*` presence and tracking display.
+ *
+ * Lovelace: `nodalia-person-card` / `nodalia-person-card-editor`
+ *
+ * Features: entity picture, zone/state chips, tap actions.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -332,10 +351,12 @@ function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaPersonCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1248,6 +1269,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaPersonCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaPersonCardEditor extends HTMLElement {
   constructor() {
     super();

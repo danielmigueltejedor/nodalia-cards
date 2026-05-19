@@ -1,3 +1,23 @@
+/**
+ * Nodalia Power flow card — energy diagram (grid, solar, battery, home, optional water/gas).
+ *
+ * Lovelace: `nodalia-power-flow-card` / `nodalia-power-flow-card-visual-editor`
+ *
+ * Features: animated flows, NODE_DEFAULTS, home details overlay (home_tap_action),
+ * visual editor for node positions. Editor class is NodaliaPowerFlowCardVisualEditor.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -790,6 +810,7 @@ function resolveIndividualConfigs(config) {
     .filter(item => item.entity);
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   merged.entities = merged.entities || {};
@@ -991,6 +1012,7 @@ function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaPowerFlowCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1718,6 +1740,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return typeof resolved === "string" && resolved.trim() ? resolved : fallback;
   }
 
+  /**
+   * Resolves tap on the home node: `home-details` opens the in-card panel, `more-info` uses
+   * `entities.home.entity`. `auto` matches `details` (panel always; empty state if no children).
+   */
   _getHomeNodeAction() {
     if (this._config?.clickable_entities === false) {
       return "";
@@ -1740,6 +1766,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return "";
   }
 
+  /** Water, gas, and configured `individual` nodes shown inside the home details overlay. */
   _getHomeDetailChildNodes(nodes = this._getNodes()) {
     const children = [];
     if (nodes.water?.entityId) {
@@ -1758,6 +1785,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return children;
   }
 
+  /** Toggles `_homeDetailsOpen` and re-renders; Escape handled in `_onDocKeyDown`. */
   _openHomeDetails() {
     if (this._homeDetailsOpen) {
       return;
@@ -4081,6 +4109,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaPowerFlowCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaPowerFlowCardEditor extends HTMLElement {
   constructor() {
     super();
@@ -4791,6 +4820,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
   }
 }
 
+/** Power-flow visual layout editor (node positions). */
 class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
   constructor() {
     super();

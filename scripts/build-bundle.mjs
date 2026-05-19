@@ -1,3 +1,7 @@
+/**
+ * Builds the minified nodalia-cards-<version>.js bundle (esbuild IIFE).
+ * Module order in `parts` is load-order critical — see docs/cards-architecture.md.
+ */
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -29,7 +33,7 @@ const parts = [
   "nodalia-i18n.js",
   "nodalia-editor-ui.js",
   "nodalia-utils.js",
-  "nodalia-visual-layout-editor.js",
+  "nodalia-visual-layout-editor.js", // must load before cards that use window.NodaliaVisualLayout
   "nodalia-render-signature.js",
   "nodalia-bubble-contrast.js",
   "nodalia-navigation-bar.js",

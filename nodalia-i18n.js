@@ -1,3 +1,7 @@
+/**
+ * Nodalia runtime i18n — resolves ed.* / card strings from bundled locale packs.
+ * window.NodaliaI18n.t(key, hass). Editors may call resolveHass() when hass is not yet on element.
+ */
 (() => {
   function baseLang(code) {
     if (!code || typeof code !== "string") {

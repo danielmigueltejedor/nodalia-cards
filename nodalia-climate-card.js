@@ -1,3 +1,25 @@
+/**
+ * Nodalia Climate card — `climate.*` with circular temperature dial.
+ *
+ * Lovelace: `nodalia-climate-card` / `nodalia-climate-card-editor`
+ *
+ * Features: arc dial (DIAL_* constants), target/current display swap, HVAC mode buttons,
+ * draft confirmation for set_temperature (DRAFT_CONFIRMATION_*).
+ *
+ * Note: NodaliaClimateCardEditorLegacy remains for older editor embedding paths.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -695,6 +717,7 @@ function migrateLegacyClimateOffColors(styles) {
   }
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const CLIMATE_ACTIONS = new Set(["more-info", "none"]);
@@ -755,6 +778,7 @@ function getDialMarkerPosition(angle) {
   };
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaClimateCard extends HTMLElement {
   static async getConfigElement() {
     if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
@@ -4354,6 +4378,8 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaClimateCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
+/** @deprecated Legacy editor embed; prefer NodaliaClimateCardEditor. */
 class NodaliaClimateCardEditorLegacy extends HTMLElement {
   constructor() {
     super();

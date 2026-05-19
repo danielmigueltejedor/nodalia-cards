@@ -1,3 +1,23 @@
+/**
+ * Nodalia Advance vacuum card — map, rooms, zones, routines, dock panels.
+ *
+ * Lovelace: `nodalia-advance-vacuum-card` / `nodalia-advance-vacuum-card-editor`
+ *
+ * Features: CoordinatesConverter for map overlays; shared cleaning session via input_text helper;
+ * PANEL_MODE_PRESETS / DOCK_PANEL_SECTIONS; large surface — search by method name when debugging.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -1191,6 +1211,7 @@ function createHomographyMatrix(fromPoints, toPoints) {
   return solved ? [...solved, 1] : null;
 }
 
+/** Map coordinate transforms for advance vacuum overlays. */
 class CoordinatesConverter {
   constructor(calibrationPoints) {
     this.calibrated = false;
@@ -1462,6 +1483,7 @@ function resolveHeaderIcons(config) {
   }));
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
@@ -1471,6 +1493,7 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaAdvanceVacuumCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -8178,6 +8201,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaAdvanceVacuumCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   static get properties() {
     return {

@@ -1,3 +1,22 @@
+/**
+ * Nodalia Circular gauge card — sensor value on an arc dial (not climate HVAC).
+ *
+ * Lovelace: `nodalia-circular-gauge-card` / `nodalia-circular-gauge-card-editor`
+ *
+ * Features: min/max (entity or fixed), tint segments (GAUGE_TINT_SEGMENT_COUNT), percentage chip.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -546,6 +565,7 @@ function formatNumberValue(value, decimals = 0, locale = undefined) {
   });
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
 }
@@ -687,6 +707,7 @@ function resolveGaugeTintColor(scale, ratio) {
   return tintScale[tintScale.length - 1].color;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaCircularGaugeCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1886,6 +1907,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaCircularGaugeCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaCircularGaugeCardEditor extends HTMLElement {
   constructor() {
     super();

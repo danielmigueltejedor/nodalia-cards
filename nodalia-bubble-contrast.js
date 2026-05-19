@@ -1,3 +1,7 @@
+/**
+ * Nodalia bubble contrast — picks readable icon glyph color on tinted chip backgrounds.
+ * Exposed as window.NodaliaBubbleContrast (used by entity/light chips in the editor preview).
+ */
 (function initNodaliaBubbleContrast() {
   const existing = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
   if (existing && typeof existing.shouldDarkenBubbleIconGlyph === "function") {

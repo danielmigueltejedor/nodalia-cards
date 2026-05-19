@@ -1,14 +1,62 @@
 /**
- * Shared visual layout editor for Nodalia card editors (drag blocks on a grid → YAML).
- * Exposed as window.NodaliaVisualLayout.
+ * Nodalia visual layout editor (shared module).
+ *
+ * Purpose
+ * - Lets card editors (currently light card) reposition UI blocks on a CSS grid and persist
+ *   the result in YAML under `visual_layout`.
+ *
+ * Architecture
+ * - Pure helpers: normalize layout/items, collision detection, YAML serialization.
+ * - `VisualLayoutSurface`: in-dialog UI (live card preview, drag, property sidebar, context menu).
+ * - `attachEditorOverlay`: mounts a native `<dialog showModal>` above the HA card editor.
+ *
+ * Live preview mode (`options.livePreview`)
+ * - Renders a real card element (`nodalia-light-card`) with `data-vlayout-editing` so the user
+ *   sees true chips/icon/sliders while editing.
+ * - Pointer hit-testing uses an overlay (`nodalia-vlayout-hit-layer`) because the card sets
+ *   `pointer-events: none` during edit (prevents toggling the light on tap).
+ * - Selection frames (`nodalia-vlayout-frames`) hug each block's focus element (circle for icon),
+ *   not the full grid cell — see `BLOCK_FOCUS_SELECTORS`.
+ *
+ * Config shape written to YAML (`serializeLayoutForSave`)
+ * ```yaml
+ * visual_layout:
+ *   enabled: true
+ *   columns: 12
+ *   rows: 10
+ *   items:
+ *     - id: icon
+ *       x: 0
+ *       y: 0
+ *       w: 2
+ *       h: 2
+ *       color: "#6da8ff"   # optional per-block accent
+ *       radius: 50         # optional, icon only (px, maps to --vlayout-icon-radius)
+ * ```
+ *
+ * Integration checklist for new card types
+ * 1. Define a block `catalog` (id → default grid rect, `props`, `frame`, i18n keys).
+ * 2. At runtime, build `blocksById` markup and call `renderPlacedBlocks`.
+ * 3. In the card editor, call `attachEditorOverlay` with `livePreview: { cardTag, hass, getConfig }`.
+ * 4. On save, merge `serializeLayoutForSave` into Lovelace config (see light card `_commitVisualLayout`).
+ *
+ * Common bugs / fixes
+ * - Blocks snap back after drag → `findOpenCell` must prefer drop coordinates (not scan from 0,0).
+ * - Overlay behind HA editor → use `<dialog showModal>`, not a div inside `ha-dialog` light DOM.
+ * - Card toggles on tap while editing → card must guard `_onShadowClick` when `data-vlayout-editing`.
+ *
+ * Public API: `window.NodaliaVisualLayout` (also exported for unit tests via `findOpenCell`, etc.).
  */
 (function initNodaliaVisualLayout() {
+  // HACS bundle may evaluate this file twice; keep a single registration.
   if (typeof window !== "undefined" && window.NodaliaVisualLayout?.attachEditorOverlay) {
     return;
   }
 
+  /** Default grid size when the catalog / config does not override columns or rows. */
   const DEFAULT_COLUMNS = 12;
   const DEFAULT_ROWS = 10;
+  /** Ignore micro-movements so click-to-select does not start a drag. */
   const DRAG_THRESHOLD_PX = 6;
 
   function clampInt(value, min, max) {
@@ -27,6 +75,10 @@
     return catalog?.[id] || null;
   }
 
+  /**
+   * Maps block ids to the DOM node used for tight selection frames in live preview.
+   * Each card type provides its own catalog; selectors target light-card shadow DOM classes.
+   */
   const BLOCK_FOCUS_SELECTORS = {
     icon: ".light-card__icon",
     title: ".light-card__title",
@@ -62,6 +114,10 @@
   }
 
 
+  /**
+   * Normalizes one layout item from YAML or editor draft.
+   * Unknown ids are dropped (catalog is the source of truth for valid block types).
+   */
   function normalizeItem(raw, catalog, columns, rows) {
     const id = String(raw?.id ?? "").trim();
     const def = getCatalogDef(catalog, id);
@@ -90,6 +146,7 @@
     };
   }
 
+  /** Merges raw `visual_layout` config with catalog defaults; dedupes items by id. */
   function normalizeLayout(rawLayout, catalog, options = {}) {
     const columns = clampInt(rawLayout?.columns ?? options.columns ?? DEFAULT_COLUMNS, 4, 24);
     const rows = clampInt(rawLayout?.rows ?? options.rows ?? DEFAULT_ROWS, 4, 32);
@@ -136,6 +193,10 @@
     ].join(";");
   }
 
+  /**
+   * Inline grid placement for one block. CSS grid is 1-based; items are 0-based in config.
+   * Optional CSS variables are consumed by the card stylesheet (e.g. light card visual items).
+   */
   function itemToGridStyle(item) {
     const tint = item.color ? `--block-tint:${item.color};` : "";
     const iconRadius = item.id === "icon" && item.radius !== undefined
@@ -144,6 +205,10 @@
     return `grid-column:${item.x + 1} / span ${item.w};grid-row:${item.y + 1} / span ${item.h};min-width:0;${tint}${iconRadius}`;
   }
 
+  /**
+   * Wraps pre-rendered block HTML (icon, chips, etc.) in grid-positioned containers.
+   * Used by the card at runtime — not by the editor surface directly in live mode.
+   */
   function renderPlacedBlocks(blocksById, layout, options = {}) {
     const wrapClass = options.wrapClass || "nodalia-vlayout-item";
     return layout.items
@@ -177,6 +242,13 @@
     });
   }
 
+  /**
+   * Resolves grid position after resize or drag end.
+   *
+   * Important: always try `preferX` / `preferY` first (usually the drop location).
+   * Scanning from (0,0) caused blocks to snap back to their default slot after every drag.
+   * If the preferred cell collides, pick the nearest free cell by Manhattan distance.
+   */
   function findOpenCell(layout, item, excludeId, options = {}) {
     const preferX = Number.isFinite(options.preferX) ? options.preferX : item.x;
     const preferY = Number.isFinite(options.preferY) ? options.preferY : item.y;
@@ -209,6 +281,10 @@
     return { x: item.x, y: item.y };
   }
 
+  /**
+   * Produces the object stored in Lovelace YAML on "Save layout".
+   * Always sets `enabled: true` and omits `visible` (removed blocks are excluded from items).
+   */
   function serializeLayoutForSave(layout) {
     return {
       enabled: true,
@@ -229,6 +305,9 @@
     };
   }
 
+  /**
+   * Opening state for the editor: use saved layout or seed all catalog blocks when empty.
+   */
   function resolveEditorLayout(rawLayout, catalog, options = {}) {
     let layout = normalizeLayout(rawLayout || {}, catalog, options);
     const hasBlocks = layout.items.some(item => item.visible !== false);
@@ -242,6 +321,10 @@
     return layout;
   }
 
+  /**
+   * Native modal layer — stays above the HA card config dialog (top layer in the browser).
+   * Do not mount inside `ha-dialog` light DOM; those children are not painted.
+   */
   function openOverlayDialog(panelMarkup) {
     const existing = document.querySelector("dialog[data-nodalia-vlayout-overlay]");
     if (existing) {
@@ -258,6 +341,15 @@
     return dialog;
   }
 
+  /**
+   * Interactive editor surface inside the dialog body.
+   *
+   * Modes
+   * - Live (`livePreview` set): real card + hit layer + SVG-like frames.
+   * - Grid-only (legacy): abstract canvas with placeholder cells (no card integration).
+   *
+   * Draft state lives in `this._draft`; sync to the card via `_syncLiveCardConfig` (debounced).
+   */
   class VisualLayoutSurface {
     constructor(host, options) {
       this._host = host;
@@ -304,6 +396,11 @@
       return this._host.querySelector(".nodalia-vlayout-live-stage");
     }
 
+    /**
+     * Pushes the in-memory draft into the preview card via `setConfig`.
+     * Called after drag end and property edits (debounced via `_scheduleLiveSync`).
+     * `auto_expand: true` keeps sliders visible so the preview matches a typical dashboard card.
+     */
     _syncLiveCardConfig() {
       if (!this._isLiveMode() || !this._cardEl) {
         return;
@@ -325,6 +422,7 @@
       });
     }
 
+    /** Debounces full card re-renders while dragging or scrubbing sliders in the context menu. */
     _scheduleLiveSync() {
       if (!this._isLiveMode()) {
         return;
@@ -460,6 +558,11 @@
       }
     }
 
+    /**
+     * Draws dashed selection outlines over the live preview (not on grid cells).
+     * Rectangles are computed from `getBlockFocusElement` + catalog `frame` (circle vs rounded).
+     * `this._frameRects` is used for hit-testing drags on the transparent hit layer.
+     */
     _updateBlockFrames() {
       if (!this._isLiveMode()) {
         return;
@@ -530,6 +633,7 @@
         });
     }
 
+    /** Returns block id under pointer in stage coordinates, or "" if none. */
     _hitTestBlockAt(clientX, clientY) {
       const stage = this._getLiveStage();
       if (!stage) {
@@ -765,6 +869,11 @@
       }
     }
 
+    /**
+     * Builds live preview DOM:
+     * `.nodalia-vlayout-live-stage` > card + hit layer + frames layer.
+     * Width comes from `--nodalia-vlayout-preview-width` (set from HA editor preview).
+     */
     _mountLiveCard() {
       const host = this._host.querySelector(".nodalia-vlayout-live-host");
       if (!host) {
@@ -832,6 +941,7 @@
       this._canvasAbort?.abort();
       this._canvasAbort = new AbortController();
       const { signal } = this._canvasAbort;
+      // Hit layer receives events; the card underneath has pointer-events disabled.
       const canvas = this._isLiveMode()
         ? this._getLiveStage()?.querySelector(".nodalia-vlayout-hit-layer")
         : this._host.querySelector(".nodalia-vlayout-canvas");
@@ -887,6 +997,10 @@
       this._notifyChange();
     }
 
+    /**
+     * Pointer routing: live mode uses frame hit-test on the overlay;
+     * grid mode uses `.nodalia-vlayout-placed` cells.
+     */
     _onCanvasPointerDown(event) {
       if (this._isLiveMode() && typeof event.button === "number" && event.button !== 0) {
         return;
@@ -1003,6 +1117,7 @@
       if (item && this._drag.moved) {
         const targetX = item.x;
         const targetY = item.y;
+        // Keep drop position; only nudge if another block occupies the same cells.
         const open = findOpenCell(this._draft, item, item.id, {
           preferX: targetX,
           preferY: targetY,
@@ -1485,6 +1600,17 @@
     document.head.appendChild(style);
   }
 
+  /**
+   * Opens the full-screen layout editor from a card editor element.
+   *
+   * @param {HTMLElement} editorHost - Card editor (e.g. `nodalia-light-card-editor`); used as event context only.
+   * @param {object} options
+   * @param {object} options.catalog - Block definitions (per card type).
+   * @param {object} options.layout - Initial layout from config.
+   * @param {object} [options.livePreview] - `{ cardTag, hass, getConfig, previewWidthPx }` for WYSIWYG mode.
+   * @param {Function} options.onSave - Receives `serializeLayoutForSave` output; must write Lovelace YAML.
+   * @returns {{ dialog, surface, close }}
+   */
   function attachEditorOverlay(editorHost, options) {
     ensureOverlayStyles();
 
@@ -1576,6 +1702,7 @@
     return { dialog, surface, close };
   }
 
+  /** Public surface attached to `window.NodaliaVisualLayout` (see file header for contract). */
   const api = {
     DEFAULT_COLUMNS,
     DEFAULT_ROWS,

@@ -1,3 +1,27 @@
+/**
+ * Nodalia Light card — rich control for `light.*` entities.
+ *
+ * Lovelace: `nodalia-light-card` / `nodalia-light-card-editor`
+ *
+ * Features: brightness & color/temp sliders, presets, compact layout, optional visual_layout grid
+ * (see LIGHT_VISUAL_LAYOUT_CATALOG and docs/visual-layout-editor.md).
+ *
+ * Debugging
+ * - Layout not saved → _commitVisualLayout / _emitConfig visual_layout re-attach.
+ * - Card toggles while editing layout → data-vlayout-editing guards on pointer handlers.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -81,6 +105,8 @@ const DEFAULT_CONFIG = {
     button_bounce_duration: 320,
     mode_switch_horizontal: true,
   },
+  // Visual grid layout (optional). When enabled, card body uses `visual_layout.items` instead of
+  // the default hero row. Edited via `NodaliaVisualLayout.attachEditorOverlay` in the card editor.
   visual_layout: {
     enabled: false,
     columns: 12,
@@ -125,6 +151,17 @@ const STUB_CONFIG = {
   name: "Salon",
 };
 
+/**
+ * Visual layout block catalog for the light card editor.
+ *
+ * Each key is a block `id` stored in YAML (`visual_layout.items[].id`).
+ * - `default`: initial grid position when the user resets or first opens the editor.
+ * - `props`: which controls appear in the sidebar / context menu.
+ * - `frame`: how the editor draws selection outlines in live preview (shape, padding).
+ *
+ * Runtime markup for each id is assembled in `_render` as `visualLayoutBlocks` and passed to
+ * `NodaliaVisualLayout.renderPlacedBlocks`.
+ */
 const LIGHT_VISUAL_LAYOUT_BLOCK_PROPS = { color: true, resize: true, radius: true };
 
 const LIGHT_VISUAL_LAYOUT_CATALOG = {
@@ -594,6 +631,7 @@ function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   if (config.keep_collapsed === true) {
@@ -657,6 +695,7 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
+  // Clamp grid items to catalog ids and column/row bounds on every config load.
   if (typeof window !== "undefined" && window.NodaliaVisualLayout?.normalizeLayout) {
     config.visual_layout = window.NodaliaVisualLayout.normalizeLayout(
       config.visual_layout || {},
@@ -709,6 +748,7 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaLightCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -1042,6 +1082,10 @@ class NodaliaLightCard extends HTMLElement {
     return fallback;
   }
 
+  /**
+   * Whether to render the visual grid instead of the default hero layout.
+   * Disabled for mini/compact dashboard layouts where free-form grids do not fit.
+   */
   _canUseVisualLayout(isMiniLayout, isCompactLayout) {
     const layout = this._config?.visual_layout;
     if (!layout?.enabled || isMiniLayout || isCompactLayout) {
@@ -1050,6 +1094,7 @@ class NodaliaLightCard extends HTMLElement {
     return Array.isArray(layout.items) && layout.items.some(item => item.visible !== false);
   }
 
+  /** Places `blocksById` fragments on the CSS grid defined in `visual_layout`. */
   _renderVisualLayoutGrid(blocksById) {
     const layoutApi = window.NodaliaVisualLayout;
     const layout = this._config?.visual_layout;
@@ -2791,6 +2836,10 @@ class NodaliaLightCard extends HTMLElement {
     this._applySliderValue(slider, slider.value, { commit: true });
   }
 
+  /**
+   * True while the visual layout dialog has mounted this card for live preview.
+   * All light interactions must be suppressed — see guards in click/pointer/hold handlers.
+   */
   _isVisualLayoutEditing() {
     return this.hasAttribute("data-vlayout-editing");
   }
@@ -3446,6 +3495,7 @@ class NodaliaLightCard extends HTMLElement {
                 </div>
               `
       : "";
+    // Fragment map for visual layout: keys must match LIGHT_VISUAL_LAYOUT_CATALOG ids.
     const visualLayoutBlocks = {
       icon: iconBlockMarkup,
       title: titleBlockMarkup,
@@ -4481,6 +4531,7 @@ class NodaliaLightCard extends HTMLElement {
           z-index: 1;
         }
 
+        /* Live layout editor: card is preview-only; overlay handles pointer. */
         :host([data-vlayout-editing]) .light-card,
         :host([data-vlayout-editing]) .light-card * {
           pointer-events: none !important;
@@ -4557,6 +4608,7 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaLightCard);
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaLightCardEditor extends HTMLElement {
   constructor() {
     super();
@@ -4752,6 +4804,8 @@ class NodaliaLightCardEditor extends HTMLElement {
     let outgoing = compactConfig(
       window.NodaliaUtils.stripEqualToDefaults(this._config, DEFAULT_CONFIG) ?? {},
     );
+    // stripEqualToDefaults may drop visual_layout when only `enabled` differs from defaults.
+    // Always re-attach serialized layout when enabled so Lovelace keeps grid positions.
     const visualLayout = this._config?.visual_layout;
     if (visualLayout?.enabled) {
       const serialized = window.NodaliaVisualLayout?.serializeLayoutForSave
@@ -4875,6 +4929,11 @@ class NodaliaLightCardEditor extends HTMLElement {
       `;
   }
 
+  /**
+   * Persists layout from the visual editor dialog (Save layout).
+   * Uses a dedicated path instead of generic `_emitConfig` so `visual_layout` is never stripped
+   * and `type` is preserved for Lovelace.
+   */
   _commitVisualLayout(savedLayout) {
     const merged = normalizeConfig({
       ...deepClone(this._config),
@@ -4899,6 +4958,10 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
+  /**
+   * Matches live preview width to the HA card editor preview so WYSIWYG is accurate.
+   * Fallback 360px ≈ typical single-column dashboard card.
+   */
   _getVisualLayoutPreviewWidth() {
     const preview = document.querySelector("hui-card-preview");
     if (preview) {
@@ -4918,6 +4981,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     return 360;
   }
 
+  /** Opens `NodaliaVisualLayout.attachEditorOverlay` with light-card catalog and live preview. */
   _openVisualLayoutEditor() {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {

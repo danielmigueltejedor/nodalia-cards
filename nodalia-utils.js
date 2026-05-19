@@ -1,6 +1,14 @@
 /**
- * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
- * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
+ * Shared helpers for Nodalia cards — loaded early in the bundle as window.NodaliaUtils.
+ *
+ * API groups
+ * - Config: isObject, deepClone, deepEqual, stripEqualToDefaults (YAML diff vs DEFAULT_CONFIG)
+ * - Editor UX: mountEntityPickerHost, mountIconPickerHost, editorStatesSignature, collapsible HTML
+ * - Actions / security: sanitizeActionUrl, warnStrictServiceDenied, bindHostPointerHoldGesture
+ * - Integrations: postHomeAssistantWebhook, registerCustomCard
+ * - Lovelace guards: renderLovelaceEntityGuardCardHtml (missing entity placeholder)
+ *
+ * Idempotent: if all REQUIRED_API_KEYS exist on window.NodaliaUtils, the IIFE exits (HACS double-load).
  */
 (function initNodaliaUtils() {
   const REQUIRED_API_KEYS = [

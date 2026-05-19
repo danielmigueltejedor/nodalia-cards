@@ -1,3 +1,23 @@
+/**
+ * Nodalia Calendar card — aggregated calendar entities and event list.
+ *
+ * Lovelace: `nodalia-calendar-card` / `nodalia-calendar-card-editor`
+ *
+ * Features: time_range / days_to_show, nodalia event color metadata in descriptions,
+ * optional delete with recurrence (CALENDAR_DELETE_RECURRENCE_*), weather_entity hook.
+ *
+ * Nodalia suite — file layout
+ * - DEFAULT_CONFIG + normalizeConfig(): defaults and validation on every setConfig.
+ * - Nodalia*Card: Lovelace runtime (setConfig, hass, shadow DOM _render).
+ * - Nodalia*CardEditor: card config UI (dispatches config-changed).
+ * - window.NodaliaUtils.registerCustomCard at file end.
+ *
+ * Shared behaviour
+ * - Actions: tap / hold / double_tap (+ icon_*); security.strict_service_actions filters services.
+ * - Haptics: HAPTIC_PATTERNS + config.haptics.
+ * - Styles: config.styles → CSS variables on :host.
+ * - i18n: ed.* keys via window.NodaliaI18n / editor UI bundles.
+ */
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
 const CARD_VERSION = "1.2.0-alpha.8";
@@ -238,6 +258,7 @@ function normalizeCalendarEntries(calendars) {
   return out;
 }
 
+/** Validates and clamps user YAML; called from setConfig and the editor. */
 function normalizeConfig(config) {
   const normalized = mergeConfig(DEFAULT_CONFIG, config || {});
   normalized.calendars = normalizeCalendarEntries(normalized.calendars);
@@ -677,6 +698,7 @@ function dateInputIsBeforeToday(value) {
   return parsed.getTime() < today.getTime();
 }
 
+/** Lovelace dashboard card (runtime). */
 class NodaliaCalendarCard extends HTMLElement {
   static getStubConfig() {
     return deepClone(DEFAULT_CONFIG);
@@ -4322,6 +4344,7 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 }
 
+/** Lovelace card configuration UI (emits config-changed). */
 class NodaliaCalendarCardEditor extends HTMLElement {
   constructor() {
     super();
