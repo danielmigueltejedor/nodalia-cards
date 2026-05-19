@@ -3,7 +3,7 @@
 **Date:** 2026-05-18 (pass 1 + pass 2)  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
 **Target environment:** Home Assistant Core 2026.4+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
-**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.3-alpha.9.js` — rebuild after release)
+**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.3.js` — rebuild after release)
 
 ---
 
@@ -19,6 +19,16 @@ Nodalia Cards already uses **render signatures** on almost every dashboard card 
 Shared utilities live in `nodalia-utils.js` (no per-card embed in repo). Optimistic UI exists on **light**, **fan**, **humidifier**, and **entity** (toggle). Timers and global listeners are **generally cleaned up** in `disconnectedCallback`.
 
 This audit documents findings by severity and records **safe fixes applied** vs **recommended follow-ups**. **Pass 2** re-scanned all dashboard cards for hot paths missed in pass 1.
+
+---
+
+## Auditoría 3 — Resumen ejecutivo (2026-05-19)
+
+| Área | Hallazgo | Acción |
+|------|----------|--------|
+| Fan / humidifier | `set hass` con UI optimista re-renderizaba en cada tick y **reiniciaba** la animación de expansión al encender | **Aplicado:** omitir `_render()` si la firma no cambia y hay transición activa (`_isTransitionAnimationActive`) |
+| Fan / humidifier | Fill del slider empezaba ~48% después del expand (parecía scroll lento al encender) | **Aplicado:** fill desde t=0, sincronizado con collapse al apagar |
+| Weather | `_ensureForecastSubscription()` en cada `set hass` aunque la firma no cambiara | **Aplicado:** solo tras early-return fallido |
 
 ---
 
@@ -161,7 +171,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 
 - **Entry:** 25 card modules + i18n + utils + render-signature + bubble-contrast.
 - **Standalone embed:** `scripts/sync-standalone-embed.mjs` for single-file artifacts only (not committed in card sources).
-- **Tests:** `node --test tests/**/*.test.mjs` (94 tests). No ESLint script in `package.json`.
+- **Tests:** `node --test tests/**/*.test.mjs` (95 tests). No ESLint script in `package.json`.
 - **i18n:** Editor + runtime JSON; validate via `pnpm run i18n:validate-editor` etc.
 
 ---
@@ -183,6 +193,11 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 10. **Climate `set hass`:** Skip `_syncDraftWithState()` when signature unchanged and no temperature draft / pending post-drag render.
 11. **Fav / vacuum resize:** Skip `_render()` when render signature unchanged after width bucket update.
 12. **Power flow:** Cached tracked-entity stamp for render signature (same revision-map pattern as notifications).
+
+### Pass 3
+
+13. **Fan / humidifier power-on:** Slider fill starts with controls expand (no staged 48% delay); skip redundant `set hass` re-renders during active optimistic transitions.
+14. **Weather `set hass`:** Forecast subscription only when render signature changes.
 
 *(Earlier alpha releases already fixed: utils deduplication, fan/humidifier slider fill/empty animation sync, optimistic attribute spread, humidifier editor `</section>`, advance-vacuum guard signature.)*
 
@@ -240,7 +255,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 - [ ] Navigation bar: editor pickers actualizan nombres al cambiar `hass`.
 
 ### Regresión HACS
-- [ ] Recurso `nodalia-cards-1.1.3-alpha.9.js` (o actual) carga una vez.
+- [ ] Recurso `nodalia-cards-1.1.3.js` (o actual) carga una vez.
 - [ ] `window.__NODALIA_BUNDLE__.pkgVersion` coincide con `package.json`.
 
 ---
@@ -258,7 +273,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 ## Commands run
 
 ```bash
-node --test tests/**/*.test.mjs   # 94 pass
+node --test tests/**/*.test.mjs   # 95 pass
 node scripts/build-bundle.mjs     # when releasing
 ```
 

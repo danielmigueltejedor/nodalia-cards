@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.1.3-alpha.9";
+const CARD_VERSION = "1.1.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -751,8 +751,16 @@ class NodaliaHumidifierCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     let nextSignature = this._getRenderSignature();
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
-      return;
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      if (!this._optimisticToggle) {
+        return;
+      }
+      if (this._shouldSkipRenderForUnchangedSignature()) {
+        const actualState = this._getActualState();
+        this._syncLastKnownOnState(actualState);
+        this._syncOptimisticToggleState(actualState);
+        return;
+      }
     }
 
     const actualState = this._getActualState();
@@ -761,7 +769,12 @@ class NodaliaHumidifierCard extends HTMLElement {
     nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
+      if (this._shouldSkipRenderForUnchangedSignature()) {
+        return;
+      }
+      if (!this._optimisticToggle) {
+        return;
+      }
     }
 
     this._lastRenderSignature = nextSignature;
@@ -1367,6 +1380,27 @@ class NodaliaHumidifierCard extends HTMLElement {
       panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2400),
       buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
     };
+  }
+
+  _isTransitionAnimationActive(now = Date.now()) {
+    return Boolean(
+      (this._powerTransition?.endsAt > now)
+      || (this._controlsTransition?.endsAt > now)
+      || (this._panelTransition?.endsAt > now),
+    );
+  }
+
+  _shouldSkipRenderForUnchangedSignature() {
+    if (!this.shadowRoot?.innerHTML) {
+      return false;
+    }
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return true;
+    }
+
+    return Boolean(this._optimisticToggle && this._isTransitionAnimationActive());
   }
 
   _scheduleAnimationCleanup(delay) {
@@ -2435,13 +2469,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     const humidityFillDuration = shouldAnimateHumidityFill
       ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
       : 0;
-    const humidityFillDelayBase = shouldAnimateHumidityFill
-      ? clamp(Math.round(animations.controlsDuration * 0.48), 140, 820)
-      : 0;
-    let humidityFillDelay = humidityFillDelayBase;
+    let humidityFillDelay = 0;
     if (shouldAnimateHumidityFill && this._powerTransition?.startedAt != null) {
-      const fillStartAt = Number(this._powerTransition.startedAt) + humidityFillDelayBase;
-      const fillElapsed = now - fillStartAt;
+      const fillElapsed = now - Number(this._powerTransition.startedAt);
       if (fillElapsed > 0) {
         humidityFillDelay = -clamp(fillElapsed, 0, humidityFillDuration);
       }
@@ -2643,7 +2673,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       ? -clamp(now - Number(this._panelTransition.startedAt || now), 0, animations.panelDuration)
       : 0;
     const humidityFillAnimationRemaining = shouldAnimateHumidityFill && this._powerTransition
-      ? Math.max(0, Number(this._powerTransition.startedAt) + humidityFillDelayBase + humidityFillDuration - now)
+      ? Math.max(0, Number(this._powerTransition.startedAt) + humidityFillDuration - now)
       : 0;
     const humidityEmptyAnimationRemaining = shouldAnimateHumidityEmpty && this._controlsTransition
       ? Math.max(0, Number(this._controlsTransition.startedAt) + humidityEmptyDuration - now)
@@ -3364,7 +3394,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         @keyframes humidifier-card-controls-content-in {
           0% {
             opacity: 0;
-            transform: translateY(-10px) scaleY(0.96);
+            transform: translateY(-4px) scaleY(0.98);
           }
           100% {
             opacity: 1;

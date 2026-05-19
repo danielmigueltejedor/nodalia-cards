@@ -756,9 +756,18 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
     assert.match(source, /_shouldUseOptimisticVisualSettle/);
     assert.match(source, /_startOptimisticVisualSettle/);
     assert.match(source, /powerAnimationState === "powering-up"/);
-    assert.match(source, /FillDelayBase/);
-    assert.match(source, /fillStartAt = Number\(this\._powerTransition\.startedAt\) \+ .*FillDelayBase/);
+    assert.match(source, /const fillElapsed = now - Number\(this\._powerTransition\.startedAt\)/);
     assert.match(source, /percentageFillDelay = -clamp\(fillElapsed|humidityFillDelay = -clamp\(fillElapsed/);
+    assert.doesNotMatch(source, /FillDelayBase/);
+  }
+});
+
+test("fan and humidifier skip redundant renders during active power transitions", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /_isTransitionAnimationActive/);
+    assert.match(source, /_shouldSkipRenderForUnchangedSignature/);
+    assert.match(source, /this\._optimisticToggle && this\._isTransitionAnimationActive\(\)/);
   }
 });
 

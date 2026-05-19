@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.1.3-alpha.9";
+const CARD_VERSION = "1.1.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -716,8 +716,16 @@ class NodaliaFanCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     let nextSignature = this._getRenderSignature();
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
-      return;
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      if (!this._optimisticToggle) {
+        return;
+      }
+      if (this._shouldSkipRenderForUnchangedSignature()) {
+        const actualState = this._getActualState();
+        this._syncLastKnownOnState(actualState);
+        this._syncOptimisticToggleState(actualState);
+        return;
+      }
     }
 
     const actualState = this._getActualState();
@@ -726,7 +734,12 @@ class NodaliaFanCard extends HTMLElement {
     nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
+      if (this._shouldSkipRenderForUnchangedSignature()) {
+        return;
+      }
+      if (!this._optimisticToggle) {
+        return;
+      }
     }
 
     this._lastRenderSignature = nextSignature;
@@ -1267,6 +1280,27 @@ class NodaliaFanCard extends HTMLElement {
       presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
       buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
     };
+  }
+
+  _isTransitionAnimationActive(now = Date.now()) {
+    return Boolean(
+      (this._powerTransition?.endsAt > now)
+      || (this._controlsTransition?.endsAt > now)
+      || (this._presetPanelTransition?.endsAt > now),
+    );
+  }
+
+  _shouldSkipRenderForUnchangedSignature() {
+    if (!this.shadowRoot?.innerHTML) {
+      return false;
+    }
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return true;
+    }
+
+    return Boolean(this._optimisticToggle && this._isTransitionAnimationActive());
   }
 
   _scheduleAnimationCleanup(delay) {
@@ -2278,13 +2312,9 @@ class NodaliaFanCard extends HTMLElement {
     const percentageFillDuration = shouldAnimatePercentageFill
       ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
       : 0;
-    const percentageFillDelayBase = shouldAnimatePercentageFill
-      ? clamp(Math.round(animations.controlsDuration * 0.48), 140, 820)
-      : 0;
-    let percentageFillDelay = percentageFillDelayBase;
+    let percentageFillDelay = 0;
     if (shouldAnimatePercentageFill && this._powerTransition?.startedAt != null) {
-      const fillStartAt = Number(this._powerTransition.startedAt) + percentageFillDelayBase;
-      const fillElapsed = now - fillStartAt;
+      const fillElapsed = now - Number(this._powerTransition.startedAt);
       if (fillElapsed > 0) {
         percentageFillDelay = -clamp(fillElapsed, 0, percentageFillDuration);
       }
@@ -2469,7 +2499,7 @@ class NodaliaFanCard extends HTMLElement {
       ? -clamp(now - Number(this._presetPanelTransition.startedAt || now), 0, animations.presetDuration)
       : 0;
     const percentageFillAnimationRemaining = shouldAnimatePercentageFill && this._powerTransition
-      ? Math.max(0, Number(this._powerTransition.startedAt) + percentageFillDelayBase + percentageFillDuration - now)
+      ? Math.max(0, Number(this._powerTransition.startedAt) + percentageFillDuration - now)
       : 0;
     const percentageEmptyAnimationRemaining = shouldAnimatePercentageEmpty && this._controlsTransition
       ? Math.max(0, Number(this._controlsTransition.startedAt) + percentageEmptyDuration - now)
@@ -3165,7 +3195,7 @@ class NodaliaFanCard extends HTMLElement {
         @keyframes fan-card-controls-content-in {
           0% {
             opacity: 0;
-            transform: translateY(-10px) scaleY(0.96);
+            transform: translateY(-4px) scaleY(0.98);
           }
           100% {
             opacity: 1;

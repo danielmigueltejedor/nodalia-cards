@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.1.3-alpha.9";
+const CARD_VERSION = "1.1.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -913,12 +913,12 @@ class NodaliaWeatherCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
-    this._ensureForecastSubscription();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
 
+    this._ensureForecastSubscription();
     this._lastRenderSignature = nextSignature;
     this._render();
   }
