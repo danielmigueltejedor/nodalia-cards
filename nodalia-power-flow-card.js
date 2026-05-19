@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.3-alpha.8";
+const CARD_VERSION = "1.1.3-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1012,6 +1012,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
+    this._trackedEntityIdsCache = null;
+    this._trackedEntityRevision = null;
+    this._trackedEntitiesStamp = "";
+    this._trackedEntityIdsLength = 0;
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -1152,14 +1156,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    this._invalidateTrackedEntityStampCache();
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    this._syncTrackedEntitiesStamp(hass);
+    const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
@@ -1615,15 +1621,76 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return [...entityIds].sort((left, right) => left.localeCompare(right, sortLoc));
   }
 
+  _invalidateTrackedEntityStampCache() {
+    this._trackedEntityIdsCache = null;
+    this._trackedEntityRevision = null;
+    this._trackedEntitiesStamp = "";
+    this._trackedEntityIdsLength = 0;
+  }
+
+  _getCachedTrackedEntityIds() {
+    if (this._trackedEntityIdsCache) {
+      return this._trackedEntityIdsCache;
+    }
+    this._trackedEntityIdsCache = this._getTrackedEntityIds();
+    return this._trackedEntityIdsCache;
+  }
+
+  _buildTrackedEntitiesStamp(hass = this._hass) {
+    if (!hass) {
+      return "";
+    }
+    return this._getCachedTrackedEntityIds()
+      .map(entityId => {
+        const state = hass.states?.[entityId];
+        return `${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+      })
+      .join("|");
+  }
+
+  _syncTrackedEntitiesStamp(hass = this._hass) {
+    if (!hass) {
+      this._trackedEntitiesStamp = "";
+      return;
+    }
+
+    if (!this._trackedEntityRevision) {
+      this._trackedEntityRevision = new Map();
+    }
+
+    const ids = this._getCachedTrackedEntityIds();
+    let dirty = ids.length !== this._trackedEntityIdsLength;
+    if (!dirty) {
+      for (const entityId of ids) {
+        const state = hass.states?.[entityId];
+        const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+        if (this._trackedEntityRevision.get(entityId) !== revision) {
+          this._trackedEntityRevision.set(entityId, revision);
+          dirty = true;
+        }
+      }
+    } else {
+      this._trackedEntityRevision.clear();
+      for (const entityId of ids) {
+        const state = hass.states?.[entityId];
+        this._trackedEntityRevision.set(
+          entityId,
+          `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`,
+        );
+      }
+      this._trackedEntityIdsLength = ids.length;
+      dirty = true;
+    }
+
+    if (dirty || !this._trackedEntitiesStamp) {
+      this._trackedEntitiesStamp = this._buildTrackedEntitiesStamp(hass);
+    }
+  }
+
   _getRenderSignature(hass = this._hass) {
-    const trackedStates = this._getTrackedEntityIds().map(entityId => {
-      const state = hass?.states?.[entityId] || null;
-      return {
-        entityId,
-        state: String(state?.state || ""),
-        lu: String(state?.last_updated || state?.last_changed || ""),
-      };
-    });
+    if (!this._trackedEntitiesStamp && hass) {
+      this._syncTrackedEntitiesStamp(hass);
+    }
 
     return JSON.stringify({
       title: this._config?.title || this._config?.name || "",
@@ -1631,7 +1698,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       show_header: this._config?.show_header !== false,
       show_values: this._config?.show_values !== false,
       show_labels: this._config?.show_labels !== false,
-      trackedStates,
+      trackedStates: this._trackedEntitiesStamp,
     });
   }
 

@@ -1,9 +1,9 @@
 # Nodalia Cards — Performance & interaction audit
 
-**Date:** 2026-05-18  
+**Date:** 2026-05-18 (pass 1 + pass 2)  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
 **Target environment:** Home Assistant Core 2026.4+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
-**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.3-alpha.8.js`)
+**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.3-alpha.9.js` — rebuild after release)
 
 ---
 
@@ -18,7 +18,25 @@ Nodalia Cards already uses **render signatures** on almost every dashboard card 
 
 Shared utilities live in `nodalia-utils.js` (no per-card embed in repo). Optimistic UI exists on **light**, **fan**, **humidifier**, and **entity** (toggle). Timers and global listeners are **generally cleaned up** in `disconnectedCallback`.
 
-This audit documents findings by severity and records **safe fixes applied** in the same change set vs **recommended follow-ups**.
+This audit documents findings by severity and records **safe fixes applied** vs **recommended follow-ups**. **Pass 2** re-scanned all dashboard cards for hot paths missed in pass 1.
+
+---
+
+## Auditoría 2 — Resumen ejecutivo
+
+| Área | Hallazgo | Acción |
+|------|----------|--------|
+| Climate | `_syncDraftWithState()` en **cada** `set hass` aunque la firma no cambiara | **Aplicado:** solo si hay draft, `pendingRenderAfterDrag`, o firma nueva |
+| Fav / Vacuum | `ResizeObserver` repintaba aunque `layout`/`compact` en firma no cambiara (solo px) | **Aplicado:** comprobar firma antes de `_render()` |
+| Power flow | Firma mapeaba todas las entidades rastreadas en cada `set hass` | **Aplicado:** caché de stamp (mismo patrón que notifications) |
+| Advance vacuum | Firma sigue siendo `JSON.stringify` grande en early-return | Documentado P0 — lazy parcial ya hecho |
+| Notifications | Calendario + weather aún en firma (coste medio) | Documentado — tracked entities ya cacheadas |
+| Graph | Hover → `_render()` completo | Sin cambio (pedido explícito) |
+| CSS animaciones | `max-height`, blur, `backdrop-filter` | Sin cambio (cambiaría percepción visual) |
+| Lifecycle | Sin `console.log` en tarjetas; timers desconectados en cards principales | OK |
+| i18n editor | Claves `tap_actions` presentes en JSON + catálogo | OK |
+
+**Cobertura pass 2:** 18 módulos `*-card.js` + `nodalia-navigation-bar.js` — todos usan firma de render o `_renderIfChanged`; editores usan firma de opciones de entidad.
 
 ---
 
@@ -26,8 +44,8 @@ This audit documents findings by severity and records **safe fixes applied** in 
 
 | ID | Severity | File(s) | Issue | Solution | Regression risk |
 |----|----------|---------|-------|----------|-----------------|
-| R1 | **High** | `nodalia-advance-vacuum-card.js` | `_getRenderSignature()` builds a large `JSON.stringify` object calling `_getModeDescriptor`, routines, dock scans on **every** `set hass`, even when render is skipped. | Split cheap stamp (entity `last_updated`, map URL, UI flags) from expensive fragments; only recompute heavy parts when map/modes change. | Medium — must not miss map/mode updates. |
-| R2 | **High** | `nodalia-notifications-card.js` | `_getRenderSignature()` / `_renderIfChanged()` scans many entities + calendar rows each `set hass`. | Per-group `last_updated` tuples or hashed stamps instead of full scans. | Medium |
+| R1 | **High** | `nodalia-advance-vacuum-card.js` | `_getRenderSignature()` builds a large `JSON.stringify` object on **every** `set hass`, even when render is skipped. | **Partial (pass 1):** lazy mode/dock/routine fragments. Full split stamp vs payload: follow-up. | Medium |
+| R2 | **High** | `nodalia-notifications-card.js` | `_getRenderSignature()` / `_renderIfChanged()` scans many entities + calendar rows each `set hass`. | **Applied (pass 1):** tracked-entity stamp cache. Calendar/weather rows: see R13. | Medium |
 | R3 | **High** | `nodalia-graph-card.js` | `_scheduleHoverRender` → full `_render()` on tooltip index change (~1457). | Update tooltip DOM / SVG highlight only. | Low–medium |
 | R4 | **Medium** | `nodalia-fan-card.js`, `humidifier`, `light`, `entity` | `set hass` ran optimistic sync + signature even when signature unchanged and no pending optimistic toggle. | **Applied:** early return before sync when signature unchanged **and** `!_optimisticToggle` (light: turn-on/off flags). | Low |
 | R5 | **Medium** | `nodalia-fan-card.js`, `humidifier`, `light`, `entity` | `ResizeObserver` called `_render()` after width/compact update even when render signature unchanged. | **Applied:** signature check before `_render()` (cover-card pattern). | Low |
@@ -35,6 +53,12 @@ This audit documents findings by severity and records **safe fixes applied** in 
 | R7 | **Medium** | `nodalia-advance-vacuum-card.js` | Early `set hass` return did not assign `_lastRenderSignature`. | **Applied:** set signature on early return. | Low |
 | R8 | **Low** | `nodalia-calendar-card.js` | `set hass` only checks locale/label signature; weather via subscriptions. | Document or add forecast entity stamp if gaps found in QA. | Low |
 | R9 | **Low** | Most `*-card.js` | `JSON.stringify` render signatures vs `NodaliaRenderSignature.joinParts` (used by graph, nav, media-player). | Migrate pipe-delimited / `joinParts` signatures (see light, entity). | Low per card |
+| R10 | **Medium** | `nodalia-climate-card.js` | `_syncDraftWithState()` on every `set hass` before early return. | **Applied (pass 2):** sync only when draft pending, post-drag pending, or signature changed. | Low |
+| R11 | **Medium** | `nodalia-fav-card.js`, `nodalia-vacuum-card.js` | ResizeObserver called `_render()` without signature check (sub-pixel width noise). | **Applied (pass 2):** signature gate after layout bucket update. | Low |
+| R12 | **Medium** | `nodalia-power-flow-card.js` | `_getRenderSignature` rebuilt tracked entity array each update. | **Applied (pass 2):** `_syncTrackedEntitiesStamp()` cache. | Low |
+| R13 | **Low** | `nodalia-notifications-card.js` | Calendar + weather rows still rebuilt in signature each `set hass`. | Cache event/forecast stamps by revision (follow-up). | Medium |
+| R14 | **Low** | `nodalia-weather-card.js` | `_ensureForecastSubscription()` before early return (cheap if already subscribed). | Monitor; optional skip if signature unchanged. | Low |
+| R15 | **Low** | Several cards | `set hass` without `isConnected` guard (fan, light, climate…) — render only when connected via Lovelace anyway. | Optional early `if (!this.isConnected) { this._hass = hass; return; }` | Low |
 
 **Architecture note:** Cards are **not Lit elements** — no `shouldUpdate` / `requestUpdate`. Updates are manual: `set hass` → signature → `_render()` / `_renderIfChanged()` / `_requestRender()` (alarm).
 
@@ -137,7 +161,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 
 - **Entry:** 25 card modules + i18n + utils + render-signature + bubble-contrast.
 - **Standalone embed:** `scripts/sync-standalone-embed.mjs` for single-file artifacts only (not committed in card sources).
-- **Tests:** `node --test tests/**/*.test.mjs` (91 tests). No ESLint script in `package.json`.
+- **Tests:** `node --test tests/**/*.test.mjs` (94 tests). No ESLint script in `package.json`.
 - **i18n:** Editor + runtime JSON; validate via `pnpm run i18n:validate-editor` etc.
 
 ---
@@ -154,6 +178,12 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 8. **Notifications tracked entities:** `_syncTrackedEntitiesStamp()` caches per-entity revision; signature reuses stamp instead of scanning all entities every `set hass`.
 9. **Fan / humidifier last-known on:** While off, only remember `percentage` / humidity when value &gt; 0 (avoids restoring 0% after optimistic turn-on).
 
+### Pass 2 (same day)
+
+10. **Climate `set hass`:** Skip `_syncDraftWithState()` when signature unchanged and no temperature draft / pending post-drag render.
+11. **Fav / vacuum resize:** Skip `_render()` when render signature unchanged after width bucket update.
+12. **Power flow:** Cached tracked-entity stamp for render signature (same revision-map pattern as notifications).
+
 *(Earlier alpha releases already fixed: utils deduplication, fan/humidifier slider fill/empty animation sync, optimistic attribute spread, humidifier editor `</section>`, advance-vacuum guard signature.)*
 
 **Gemini review (same pass):** i18n keys `ed.light.tap_actions_section_*` are present in `i18n/editor/*.json` and `nodalia-editor-ui.js` catalog — no code change required.
@@ -164,7 +194,8 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 
 | Priority | Item | Effort |
 |----------|------|--------|
-| P0 | Further slim advance-vacuum signature (R1 — partial lazy descriptors only) | Medium |
+| P0 | Further slim advance-vacuum signature (R1 — avoid full JSON on early return) | Medium |
+| P1 | Notifications calendar/weather signature cache (R13) | Medium |
 | P1 | Graph hover partial DOM update (R3) | Medium |
 | P1 | Light temp/color thumb `transform` + remove blur (A1) | Medium |
 | P1 | Controls collapse without `max-height` (A2) | High |
@@ -209,7 +240,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 - [ ] Navigation bar: editor pickers actualizan nombres al cambiar `hass`.
 
 ### Regresión HACS
-- [ ] Recurso `nodalia-cards-1.1.3-alpha.8.js` (o actual) carga una vez.
+- [ ] Recurso `nodalia-cards-1.1.3-alpha.9.js` (o actual) carga una vez.
 - [ ] `window.__NODALIA_BUNDLE__.pkgVersion` coincide con `package.json`.
 
 ---
@@ -227,7 +258,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 ## Commands run
 
 ```bash
-node --test tests/**/*.test.mjs   # 91 pass
+node --test tests/**/*.test.mjs   # 94 pass
 node scripts/build-bundle.mjs     # when releasing
 ```
 

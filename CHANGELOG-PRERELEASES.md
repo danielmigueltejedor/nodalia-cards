@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.3-alpha.9] - 2026-05-18
+
+Ninth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.9`**.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** map overlays and room/zone/goto UI follow active cleaning session mode again when the user is on **All** or **Routines** (`_resolveDisplayMode` / `_getDisplayCleaningModeId`).
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** while off, last-known on-state is not stored when `percentage` / humidity is **0** (avoids restoring 0% after optimistic turn-on).
+
+### Changed
+
+- **Performance (pass 1 + 2):** fan, humidifier, light, and entity cards skip optimistic sync and full resize re-renders when the render signature is unchanged; alarm and vacuum layout/resize paths gated; advance-vacuum lazy mode/dock signature fragments; navigation bar editor propagates `hass` to pickers without full re-render.
+- **`nodalia-notifications-card.js` / `nodalia-power-flow-card.js`:** cached tracked-entity stamps for render signatures on busy dashboards.
+- **`nodalia-climate-card.js`:** `_syncDraftWithState()` only when a temperature draft is pending, post-drag render is queued, or the signature changed.
+- **`nodalia-fav-card.js` / `nodalia-vacuum-card.js`:** resize observer skips `_render()` when the signature is unchanged after layout bucket updates.
+- **`docs/performance-audit.md`:** second audit pass documented (R10–R15).
+
+---
+
 ## [1.1.3-alpha.8] - 2026-05-18
 
 Eighth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.8`**.

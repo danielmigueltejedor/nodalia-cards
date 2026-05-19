@@ -953,6 +953,25 @@ test("numeric display cards use Home Assistant locale instead of hardcoded Spani
   });
 });
 
+test("climate set hass skips draft sync when signature and drafts are unchanged", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /hasTemperatureDraft/);
+  assert.match(source, /if \(\s*hasTemperatureDraft\s*\|\|\s*this\._pendingRenderAfterDrag\s*\|\|\s*nextSignature !== this\._lastRenderSignature\s*\) \{\s*this\._syncDraftWithState\(\)/);
+});
+
+test("fav and vacuum resize observers skip render when signature is unchanged", () => {
+  const fav = read("nodalia-fav-card.js");
+  const vacuum = read("nodalia-vacuum-card.js");
+  assert.match(fav, /const signature = this\._getRenderSignature\(\);\s*if \(signature === this\._lastRenderSignature\)/);
+  assert.match(vacuum, /const signature = this\._getRenderSignature\(\);\s*if \(signature === this\._lastRenderSignature\)/);
+});
+
+test("power flow caches tracked entity stamp for render signature", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
+  assert.match(source, /trackedStates: this\._trackedEntitiesStamp/);
+});
+
 test("advance vacuum map display follows cleaning session mode", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /_getDisplayCleaningModeId\(\)/);

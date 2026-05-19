@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.1.3-alpha.8";
+const CARD_VERSION = "1.1.3-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -563,6 +563,13 @@ class NodaliaVacuumCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      const signature = this._getRenderSignature();
+      if (signature === this._lastRenderSignature) {
+        return;
+      }
+
+      this._lastRenderSignature = signature;
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);

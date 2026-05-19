@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.1.3-alpha.8";
+const CARD_VERSION = "1.1.3-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -917,7 +917,17 @@ class NodaliaClimateCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
-    this._syncDraftWithState();
+    const entityId = this._config?.entity || "";
+    const hasTemperatureDraft = Boolean(
+      entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId)),
+    );
+    if (
+      hasTemperatureDraft
+      || this._pendingRenderAfterDrag
+      || nextSignature !== this._lastRenderSignature
+    ) {
+      this._syncDraftWithState();
+    }
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
