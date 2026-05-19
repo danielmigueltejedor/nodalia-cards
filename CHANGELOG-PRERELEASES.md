@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.6] - 2026-05-18
+
+Sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.6`**.
+
+### Changed
+- **Visual layout editor** shows a **live light card preview** (real icon, chips, sliders) instead of placeholder boxes.
+- Editor opens in a native **`<dialog>`** (browser top layer, above the HA card editor).
+
+### Fixed
+- **Save layout** uses a dedicated commit path so `visual_layout` is always written to Lovelace YAML.
+
 ## [1.2.0-alpha.5] - 2026-05-18
 
 Fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.5`**.

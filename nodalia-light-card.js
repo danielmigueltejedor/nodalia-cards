@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.5";
+const CARD_VERSION = "1.2.0-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4450,6 +4450,34 @@ class NodaliaLightCard extends HTMLElement {
           z-index: 1;
         }
 
+        :host([data-vlayout-editing]) .light-card__visual-item {
+          cursor: grab;
+          outline: 2px dashed color-mix(in srgb, var(--primary-color) 45%, transparent);
+          outline-offset: 2px;
+          touch-action: none;
+        }
+
+        :host([data-vlayout-editing]) .light-card__visual-item.is-vlayout-selected {
+          outline: 2px solid var(--primary-color);
+          z-index: 4;
+        }
+
+        :host([data-vlayout-editing]) .light-card__visual-item.is-vlayout-dragging {
+          cursor: grabbing;
+          opacity: 0.92;
+          z-index: 5;
+        }
+
+        :host([data-vlayout-editing]) .light-card__visual-item[style*="--block-tint"] .light-card__icon {
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-tint) 40%, transparent);
+        }
+
+        :host([data-vlayout-editing]) .light-card button,
+        :host([data-vlayout-editing]) .light-card input,
+        :host([data-vlayout-editing]) .light-card .light-card__slider {
+          pointer-events: none !important;
+        }
+
         .light-card__visual-item {
           min-width: 0;
         }
@@ -4830,11 +4858,35 @@ class NodaliaLightCardEditor extends HTMLElement {
       `;
   }
 
+  _commitVisualLayout(savedLayout) {
+    const merged = normalizeConfig({
+      ...deepClone(this._config),
+      visual_layout: savedLayout,
+    });
+    this._config = merged;
+
+    const stripped = compactConfig(
+      window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {},
+    );
+    const outgoing = {
+      ...stripped,
+      type: merged.type || CARD_TAG,
+      visual_layout: window.NodaliaVisualLayout?.serializeLayoutForSave
+        ? window.NodaliaVisualLayout.serializeLayoutForSave(merged.visual_layout)
+        : { ...merged.visual_layout, enabled: true },
+    };
+
+    const focusState = this._captureFocusState();
+    fireEvent(this, "config-changed", { config: outgoing });
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
   _openVisualLayoutEditor() {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.5.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.6.js or newer.");
       }
       return;
     }
@@ -4844,22 +4896,23 @@ class NodaliaLightCardEditor extends HTMLElement {
       : layoutApi.normalizeLayout(this._config?.visual_layout || {}, LIGHT_VISUAL_LAYOUT_CATALOG);
     try {
       layoutApi.attachEditorOverlay(this, {
-      title: this._editorLabel("ed.light.visual_layout_title"),
-      hint: this._editorLabel("ed.light.visual_layout_hint"),
-      saveLabel: this._editorLabel("ed.light.visual_layout_save"),
-      resetLabel: this._editorLabel("ed.light.visual_layout_reset"),
-      paletteTitle: this._editorLabel("ed.light.visual_layout_palette"),
-      catalog: LIGHT_VISUAL_LAYOUT_CATALOG,
-      layout,
-      labelFor: (key, fallback) => this._editorLabel(key) || fallback,
-      onSave: savedLayout => {
-        this._config = normalizeConfig({
-          ...deepClone(this._config),
-          visual_layout: savedLayout,
-        });
-        this._emitConfig();
-      },
-    });
+        title: this._editorLabel("ed.light.visual_layout_title"),
+        hint: this._editorLabel("ed.light.visual_layout_hint"),
+        saveLabel: this._editorLabel("ed.light.visual_layout_save"),
+        resetLabel: this._editorLabel("ed.light.visual_layout_reset"),
+        paletteTitle: this._editorLabel("ed.light.visual_layout_palette"),
+        catalog: LIGHT_VISUAL_LAYOUT_CATALOG,
+        layout,
+        livePreview: {
+          cardTag: CARD_TAG,
+          hass: this._hass,
+          getConfig: () => deepClone(this._config),
+        },
+        labelFor: (key, fallback) => this._editorLabel(key) || fallback,
+        onSave: savedLayout => {
+          this._commitVisualLayout(savedLayout);
+        },
+      });
     } catch (error) {
       console.error("[Nodalia] failed to open visual layout editor", error);
       if (typeof window !== "undefined" && typeof window.alert === "function") {

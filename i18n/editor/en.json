@@ -424,7 +424,7 @@
   "ed.light.visual_layout_section_hint": "Drag blocks on a live grid to reposition icon, title, chips, sliders and presets. Saved layout is written to YAML.",
   "ed.light.open_visual_layout": "Open visual layout editor",
   "ed.light.visual_layout_title": "Light card layout",
-  "ed.light.visual_layout_hint": "Drag blocks onto the grid. Remove with × or add from the palette. Save updates the card config.",
+  "ed.light.visual_layout_hint": "Drag blocks on the live card preview. Tap a block to resize or set accent color. Save writes YAML.",
   "ed.light.visual_layout_save": "Save layout",
   "ed.light.visual_layout_reset": "Reset to default",
   "ed.light.visual_layout_palette": "Available blocks",

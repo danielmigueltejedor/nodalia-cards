@@ -172,13 +172,20 @@
     return layout;
   }
 
-  function mountOverlayElement(overlay) {
-    overlay.setAttribute("data-nodalia-vlayout-overlay", "true");
-    overlay.classList.add("nodalia-vlayout-overlay--open");
+  function openOverlayDialog(panelMarkup) {
+    const existing = document.querySelector("dialog[data-nodalia-vlayout-overlay]");
+    if (existing) {
+      existing.close();
+      existing.remove();
+    }
 
-    // Must mount on document.body: children of ha-dialog light DOM are not shown.
-    const root = document.body || document.documentElement;
-    root.appendChild(overlay);
+    const dialog = document.createElement("dialog");
+    dialog.className = "nodalia-vlayout-dialog";
+    dialog.setAttribute("data-nodalia-vlayout-overlay", "true");
+    dialog.innerHTML = panelMarkup;
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    return dialog;
   }
 
   class VisualLayoutSurface {
@@ -194,10 +201,61 @@
       this._onCanvasPointerDown = this._onCanvasPointerDown.bind(this);
       this._onCanvasPointerMove = this._onCanvasPointerMove.bind(this);
       this._onCanvasPointerUp = this._onCanvasPointerUp.bind(this);
+      this._livePreview = options.livePreview || null;
+      this._cardEl = null;
+      this._liveSyncTimer = null;
     }
 
     get layout() {
       return this._draft;
+    }
+
+    _isLiveMode() {
+      return typeof this._livePreview?.getConfig === "function";
+    }
+
+    _getLiveGrid() {
+      return this._cardEl?.shadowRoot?.querySelector(".light-card__visual-grid") || null;
+    }
+
+    _getLivePlacedNodes() {
+      const root = this._cardEl?.shadowRoot;
+      if (!root) {
+        return [];
+      }
+      return [...root.querySelectorAll(".light-card__visual-item[data-vlayout-id]")];
+    }
+
+    _syncLiveCardConfig() {
+      if (!this._isLiveMode() || !this._cardEl) {
+        return;
+      }
+      const base = this._livePreview.getConfig() || {};
+      const previewConfig = deepClone(base);
+      previewConfig.visual_layout = deepClone(this._draft);
+      previewConfig.visual_layout.enabled = true;
+      if (this._livePreview.hass !== undefined) {
+        this._cardEl.hass = this._livePreview.hass;
+      }
+      this._cardEl.setAttribute("data-vlayout-editing", "true");
+      this._cardEl.setConfig(previewConfig);
+      window.requestAnimationFrame(() => {
+        this._syncAllPlacedDom();
+        this._bindCanvasListeners();
+      });
+    }
+
+    _scheduleLiveSync() {
+      if (!this._isLiveMode()) {
+        return;
+      }
+      if (this._liveSyncTimer) {
+        window.cancelAnimationFrame(this._liveSyncTimer);
+      }
+      this._liveSyncTimer = window.requestAnimationFrame(() => {
+        this._liveSyncTimer = null;
+        this._syncLiveCardConfig();
+      });
     }
 
     _label(id) {
@@ -233,15 +291,20 @@
     }
 
     _getCanvasMetrics() {
-      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+      const canvas = this._isLiveMode()
+        ? this._getLiveGrid()
+        : this._host.querySelector(".nodalia-vlayout-canvas");
       if (!canvas) {
         return null;
       }
       const rect = canvas.getBoundingClientRect();
       const cols = this._draft.columns;
       const rows = this._draft.rows;
-      const gap = this._canvasGap;
-      const pad = this._canvasPad;
+      const computed = typeof window !== "undefined" ? window.getComputedStyle(canvas) : null;
+      const gap = this._isLiveMode()
+        ? Number.parseFloat(computed?.rowGap || computed?.gap || "10") || 10
+        : this._canvasGap;
+      const pad = this._isLiveMode() ? 0 : this._canvasPad;
       const innerW = Math.max(1, rect.width - pad * 2 - gap * Math.max(0, cols - 1));
       const innerH = Math.max(1, rect.height - pad * 2 - gap * Math.max(0, rows - 1));
       return {
@@ -277,7 +340,10 @@
     }
 
     _applyItemStyleToDom(item) {
-      const node = this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${item.id}"]`);
+      const selector = `[data-vlayout-id="${item.id}"]`;
+      const node = this._isLiveMode()
+        ? this._cardEl?.shadowRoot?.querySelector(`.light-card__visual-item${selector}`)
+        : this._host.querySelector(`.nodalia-vlayout-placed${selector}`);
       if (!node) {
         return;
       }
@@ -285,16 +351,34 @@
       node.style.gridRow = `${item.y + 1} / span ${item.h}`;
       if (item.color) {
         node.style.setProperty("--block-tint", item.color);
-        node.style.borderColor = `color-mix(in srgb, ${item.color} 40%, transparent)`;
-        node.style.background = `color-mix(in srgb, ${item.color} 12%, transparent)`;
+      } else {
+        node.style.removeProperty("--block-tint");
       }
-      node.classList.toggle("is-selected", item.id === this._selectedId);
+      if (!this._isLiveMode()) {
+        if (item.color) {
+          node.style.borderColor = `color-mix(in srgb, ${item.color} 40%, transparent)`;
+          node.style.background = `color-mix(in srgb, ${item.color} 12%, transparent)`;
+        }
+        node.classList.toggle("is-selected", item.id === this._selectedId);
+      } else {
+        node.classList.toggle("is-vlayout-selected", item.id === this._selectedId);
+        node.classList.remove("is-selected");
+      }
     }
 
     _syncAllPlacedDom() {
       this._draft.items
         .filter(item => item.visible !== false)
         .forEach(item => this._applyItemStyleToDom(item));
+      if (this._isLiveMode()) {
+        this._getLivePlacedNodes().forEach(node => {
+          const id = node.dataset.vlayoutId;
+          if (!this._draft.items.some(item => item.id === id && item.visible !== false)) {
+            return;
+          }
+          node.classList.toggle("is-vlayout-selected", id === this._selectedId);
+        });
+      }
     }
 
     _renderPropertiesPanel() {
@@ -410,7 +494,32 @@
       }
     }
 
+    _mountLiveCard() {
+      const host = this._host.querySelector(".nodalia-vlayout-live-host");
+      if (!host) {
+        return;
+      }
+      const tag = this._livePreview.cardTag || "nodalia-light-card";
+      if (!this._cardEl) {
+        this._cardEl = document.createElement(tag);
+        host.appendChild(this._cardEl);
+      }
+      this._syncLiveCardConfig();
+    }
+
     _render() {
+      if (this._isLiveMode()) {
+        this._host.innerHTML = `
+          <motion.div class="nodalia-vlayout-workspace nodalia-vlayout-workspace--live">
+            <div class="nodalia-vlayout-live-host"></div>
+            <aside class="nodalia-vlayout-sidebar"></aside>
+          </div>
+        `.replace("</motion.div>", "</div>").replace('<motion.div class="nodalia-vlayout-workspace nodalia-vlayout-workspace--live">', '<div class="nodalia-vlayout-workspace nodalia-vlayout-workspace--live">');
+        this._mountLiveCard();
+        this._renderSidebar();
+        return;
+      }
+
       const cols = this._draft.columns;
       const rows = this._draft.rows;
 
@@ -436,7 +545,9 @@
       this._canvasAbort?.abort();
       this._canvasAbort = new AbortController();
       const { signal } = this._canvasAbort;
-      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+      const canvas = this._isLiveMode()
+        ? this._getLiveGrid()
+        : this._host.querySelector(".nodalia-vlayout-canvas");
       if (!canvas) {
         return;
       }
@@ -479,11 +590,13 @@
       item.y = open.y;
       this._applyItemStyleToDom(item);
       this._renderSidebar();
+      this._scheduleLiveSync();
       this._notifyChange();
     }
 
     _onCanvasPointerDown(event) {
-      const placed = event.target.closest(".nodalia-vlayout-placed");
+      const placed = event.target.closest(".light-card__visual-item")
+        || event.target.closest(".nodalia-vlayout-placed");
       const removeBtn = event.target.closest("[data-vlayout-remove]");
       if (removeBtn) {
         return;
@@ -497,7 +610,9 @@
         }
         event.preventDefault();
         this._selectItem(id);
-        const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+        const canvas = this._isLiveMode()
+          ? this._getLiveGrid()
+          : this._host.querySelector(".nodalia-vlayout-canvas");
         canvas?.setPointerCapture?.(event.pointerId);
         this._drag = {
           id,
@@ -508,7 +623,7 @@
           originY: item.y,
           moved: false,
         };
-        placed.classList.add("is-dragging");
+        placed.classList.add(this._isLiveMode() ? "is-vlayout-dragging" : "is-dragging");
         return;
       }
 
@@ -546,10 +661,14 @@
       }
 
       const item = this._getItem(this._drag.id);
-      const placed = this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${this._drag.id}"]`);
-      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+      const placed = this._isLiveMode()
+        ? this._cardEl?.shadowRoot?.querySelector(`.light-card__visual-item[data-vlayout-id="${this._drag.id}"]`)
+        : this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${this._drag.id}"]`);
+      const canvas = this._isLiveMode()
+        ? this._getLiveGrid()
+        : this._host.querySelector(".nodalia-vlayout-canvas");
       if (placed) {
-        placed.classList.remove("is-dragging");
+        placed.classList.remove(this._isLiveMode() ? "is-vlayout-dragging" : "is-dragging");
       }
       try {
         canvas?.releasePointerCapture?.(event.pointerId);
@@ -562,6 +681,7 @@
         item.x = open.x;
         item.y = open.y;
         this._applyItemStyleToDom(item);
+        this._scheduleLiveSync();
         this._notifyChange();
       }
 
@@ -592,6 +712,7 @@
       item.y = open.y;
       this._applyItemStyleToDom(item);
       this._renderSidebar();
+      this._scheduleLiveSync();
       this._notifyChange();
     }
 
@@ -608,6 +729,7 @@
           item.w = this._draft.columns;
           this._applyItemStyleToDom(item);
           this._renderSidebar();
+          this._scheduleLiveSync();
           this._notifyChange();
           return;
         }
@@ -635,7 +757,11 @@
         normalized.y = open.y;
         this._draft.items.push(normalized);
         this._selectedId = normalized.id;
-        this._renderCanvas();
+        if (this._isLiveMode()) {
+          this._scheduleLiveSync();
+        } else {
+          this._renderCanvas();
+        }
         this._renderSidebar();
         this._notifyChange();
         return;
@@ -653,9 +779,23 @@
         if (this._selectedId === removeId) {
           this._selectedId = this._draft.items.find(entry => entry.visible !== false)?.id || "";
         }
-        this._renderCanvas();
+        if (this._isLiveMode()) {
+          this._scheduleLiveSync();
+        } else {
+          this._renderCanvas();
+        }
         this._renderSidebar();
         this._notifyChange();
+      }
+    }
+
+    destroy() {
+      this._canvasAbort?.abort();
+      if (this._liveSyncTimer) {
+        window.cancelAnimationFrame(this._liveSyncTimer);
+      }
+      if (this._cardEl) {
+        this._cardEl.removeAttribute("data-vlayout-editing");
       }
     }
 
@@ -675,36 +815,26 @@
   }
 
   const OVERLAY_STYLES = `
-    [data-nodalia-vlayout-overlay],
-    .nodalia-vlayout-overlay--open {
-      inset: 0 !important;
-      pointer-events: auto !important;
-      position: fixed !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 2147483646 !important;
+    dialog.nodalia-vlayout-dialog {
+      border: none;
+      border-radius: 18px;
+      color: var(--primary-text-color);
+      margin: auto;
+      max-height: calc(100vh - 24px);
+      max-width: min(1120px, calc(100vw - 24px));
+      overflow: hidden;
+      padding: 0;
+      width: calc(100vw - 24px);
+      background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
     }
-    .nodalia-vlayout-overlay__backdrop {
-      background: color-mix(in srgb, var(--primary-background-color, #111) 62%, transparent);
-      border: 0;
-      cursor: pointer;
-      inset: 0;
-      position: absolute;
+    dialog.nodalia-vlayout-dialog::backdrop {
+      background: color-mix(in srgb, #000 58%, transparent);
     }
     .nodalia-vlayout-overlay__panel {
-      background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
-      border: 1px solid var(--divider-color);
-      border-radius: 18px;
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      inset: 20px;
-      max-height: calc(100vh - 40px);
-      position: absolute;
-      width: calc(100% - 40px);
-      max-width: 1100px;
-      left: 50%;
-      transform: translateX(-50%);
+      max-height: calc(100vh - 24px);
+      width: 100%;
     }
     .nodalia-vlayout-overlay__header,
     .nodalia-vlayout-overlay__footer {
@@ -762,6 +892,22 @@
       gap: 14px;
       grid-template-columns: minmax(0, 1fr) 240px;
       min-height: 400px;
+    }
+    .nodalia-vlayout-workspace--live {
+      grid-template-columns: minmax(0, 1fr) 260px;
+      min-height: 360px;
+    }
+    .nodalia-vlayout-live-host {
+      align-items: stretch;
+      display: flex;
+      justify-content: center;
+      min-height: 320px;
+      overflow: auto;
+      padding: 4px;
+    }
+    .nodalia-vlayout-live-host > nodalia-light-card {
+      display: block;
+      width: min(100%, 520px);
     }
     .nodalia-vlayout-canvas-host {
       min-height: 400px;
@@ -938,22 +1084,13 @@
   function attachEditorOverlay(editorHost, options) {
     ensureOverlayStyles();
 
-    const existing = document.querySelector("[data-nodalia-vlayout-overlay]");
-    if (existing) {
-      existing.remove();
-    }
-
     const layout = resolveEditorLayout(options.layout, options.catalog, options);
-
-    const overlay = document.createElement("div");
-    overlay.className = "nodalia-vlayout-overlay";
-    overlay.innerHTML = `
-      <button type="button" class="nodalia-vlayout-overlay__backdrop" data-vlayout-close aria-label="Close"></button>
-      <div class="nodalia-vlayout-overlay__panel" role="dialog" aria-modal="true">
+    const panelMarkup = `
+      <div class="nodalia-vlayout-overlay__panel">
         <header class="nodalia-vlayout-overlay__header">
           <div>
             <div class="nodalia-vlayout-overlay__title">${options.title || "Visual layout"}</div>
-            <div class="nodalia-vlayout-overlay__hint">${options.hint || "Drag blocks on the grid. Save applies to card YAML."}</div>
+            <div class="nodalia-vlayout-overlay__hint">${options.hint || "Drag blocks on the live card preview. Save writes YAML."}</div>
           </div>
           <button type="button" class="nodalia-vlayout-overlay__close" data-vlayout-close aria-label="Close">×</button>
         </header>
@@ -965,15 +1102,15 @@
       </div>
     `;
 
+    let dialog;
     try {
-      mountOverlayElement(overlay);
+      dialog = openOverlayDialog(panelMarkup);
     } catch (error) {
-      console.error("[Nodalia] visual layout overlay mount failed", error);
-      overlay.remove();
+      console.error("[Nodalia] visual layout dialog failed", error);
       throw error;
     }
 
-    const body = overlay.querySelector(".nodalia-vlayout-overlay__body");
+    const body = dialog.querySelector(".nodalia-vlayout-overlay__body");
     const surface = new VisualLayoutSurface(body, {
       catalog: options.catalog,
       layout,
@@ -982,19 +1119,28 @@
       labelFor: options.labelFor,
       renderBlockPreview: options.renderBlockPreview,
       paletteTitle: options.paletteTitle,
+      livePreview: options.livePreview,
       onChange: options.onDraftChange,
     });
     surface.mount();
 
     const close = () => {
-      overlay.remove();
+      surface.destroy();
+      if (dialog.open) {
+        dialog.close();
+      }
+      dialog.remove();
       options.onClose?.();
     };
 
-    const onOverlayClick = event => {
+    const onDialogClick = event => {
       if (event.target.closest("[data-vlayout-close]")) {
         event.preventDefault();
         event.stopPropagation();
+        close();
+        return;
+      }
+      if (event.target === dialog) {
         close();
         return;
       }
@@ -1016,10 +1162,14 @@
       surface.handleClick(event);
     };
 
-    overlay.addEventListener("click", onOverlayClick, true);
-    overlay.addEventListener("input", event => surface.handleInput(event), true);
+    dialog.addEventListener("click", onDialogClick, true);
+    dialog.addEventListener("input", event => surface.handleInput(event), true);
+    dialog.addEventListener("cancel", event => {
+      event.preventDefault();
+      close();
+    });
 
-    return { overlay, surface, close };
+    return { dialog, surface, close };
   }
 
   const api = {
@@ -1036,7 +1186,7 @@
     createSurface: (host, options) => new VisualLayoutSurface(host, options),
     attachEditorOverlay,
     ensureOverlayStyles,
-    mountOverlayElement,
+    openOverlayDialog,
   };
 
   if (typeof window !== "undefined") {
