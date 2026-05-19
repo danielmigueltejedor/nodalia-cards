@@ -962,10 +962,26 @@ test("numeric display cards use Home Assistant locale instead of hardcoded Spani
   });
 });
 
-test("climate set hass skips draft sync when signature and drafts are unchanged", () => {
+test("climate render signature tracks temperature drafts", () => {
   const source = read("nodalia-climate-card.js");
-  assert.match(source, /hasTemperatureDraft/);
-  assert.match(source, /if \(\s*hasTemperatureDraft\s*\|\|\s*this\._pendingRenderAfterDrag\s*\|\|\s*nextSignature !== this\._lastRenderSignature\s*\) \{\s*this\._syncDraftWithState\(\)/);
+  assert.match(source, /hasTemperatureDraft: Boolean\(/);
+  assert.match(source, /this\._draftTemperature\.has\(entityId\) \|\| this\._draftTempRange\.has\(entityId\)/);
+});
+
+test("fan and humidifier re-render when optimistic toggle is confirmed during animation", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /const optimisticJustConfirmed = hadOptimisticToggle && !this\._optimisticToggle/);
+    assert.match(source, /&& !optimisticJustConfirmed/);
+  }
+});
+
+test("fan and humidifier visual settle waits for non-zero published values", () => {
+  const fan = read("nodalia-fan-card.js");
+  const humidifier = read("nodalia-humidifier-card.js");
+  assert.match(fan, /_hasPublishedPercentage\(actualState\)[\s\S]*percentage > 0/);
+  assert.match(humidifier, /_hasPublishedHumidity\(actualState\)[\s\S]*humidity > 0/);
+  assert.match(humidifier, /targetHumidity > 0/);
 });
 
 test("fav and vacuum resize observers skip render when signature is unchanged", () => {

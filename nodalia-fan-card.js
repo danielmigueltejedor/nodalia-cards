@@ -715,31 +715,37 @@ class NodaliaFanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    const actualState = this._getActualState();
     let nextSignature = this._getRenderSignature();
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      if (!this._optimisticToggle) {
-        return;
-      }
-      if (this._shouldSkipRenderForUnchangedSignature()) {
-        const actualState = this._getActualState();
-        this._syncLastKnownOnState(actualState);
-        this._syncOptimisticToggleState(actualState);
-        return;
-      }
+    const signatureUnchanged = Boolean(
+      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+    );
+
+    if (signatureUnchanged && !this._optimisticToggle) {
+      return;
     }
 
-    const actualState = this._getActualState();
+    const hadOptimisticToggle = Boolean(this._optimisticToggle);
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticToggleState(actualState);
     nextSignature = this._getRenderSignature();
+    const optimisticJustConfirmed = hadOptimisticToggle && !this._optimisticToggle;
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      if (this._shouldSkipRenderForUnchangedSignature()) {
-        return;
-      }
-      if (!this._optimisticToggle) {
-        return;
-      }
+    if (
+      signatureUnchanged
+      && !optimisticJustConfirmed
+      && this._shouldSkipRenderForUnchangedSignature()
+    ) {
+      return;
+    }
+
+    if (
+      this.shadowRoot?.innerHTML
+      && nextSignature === this._lastRenderSignature
+      && !optimisticJustConfirmed
+      && !this._optimisticToggle
+    ) {
+      return;
     }
 
     this._lastRenderSignature = nextSignature;
@@ -969,7 +975,8 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _hasPublishedPercentage(actualState) {
-    return Number.isFinite(Number(actualState?.attributes?.percentage));
+    const percentage = Number(actualState?.attributes?.percentage);
+    return Number.isFinite(percentage) && percentage > 0;
   }
 
   _shouldUseOptimisticVisualSettle(actualState = this._getActualState()) {

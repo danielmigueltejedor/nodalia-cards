@@ -915,21 +915,20 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
     const entityId = this._config?.entity || "";
-    const hasTemperatureDraft = Boolean(
-      entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId)),
-    );
     if (
-      hasTemperatureDraft
-      || this._pendingRenderAfterDrag
-      || nextSignature !== this._lastRenderSignature
+      entityId
+      && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))
     ) {
       this._syncDraftWithState();
     }
 
+    const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      if (this._activeDialDrag) {
+        this._pendingRenderAfterDrag = true;
+      }
       return;
     }
 
@@ -970,6 +969,9 @@ class NodaliaClimateCard extends HTMLElement {
       fanMode: String(attrs.fan_mode || ""),
       swingMode: String(attrs.swing_mode || ""),
       actions: `${String(this._config?.tap_action || "")}|${String(this._config?.hold_action || "")}|${String(this._config?.double_tap_action || "")}`,
+      hasTemperatureDraft: Boolean(
+        entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId)),
+      ),
     });
   }
 
