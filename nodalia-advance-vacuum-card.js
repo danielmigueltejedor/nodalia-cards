@@ -6823,7 +6823,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       );
       if (advanceVacuumGuard) {
         this.shadowRoot.innerHTML = advanceVacuumGuard;
-        this._lastRenderSignature = this._getRenderSignature();
+        this._lastRenderSignature = `guard:${config.entity || ""}`;
         return;
       }
       const state = this._getVacuumState();

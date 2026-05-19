@@ -1080,10 +1080,9 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const entityId = toggle.entityId || this._config?.entity || "";
-    const attrs = {
-      ...(snapshot.attributes || {}),
-      ...(actualState?.attributes || {}),
-    };
+    const attrs = turningOn
+      ? { ...(actualState?.attributes || {}), ...(snapshot.attributes || {}) }
+      : { ...(snapshot.attributes || {}), ...(actualState?.attributes || {}) };
 
     if (entityId && this._draftPercentage.has(entityId)) {
       attrs.percentage = clamp(Math.round(Number(this._draftPercentage.get(entityId))), 0, 100);

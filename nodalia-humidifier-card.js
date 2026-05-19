@@ -1112,10 +1112,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const entityId = toggle.entityId || this._config?.entity || "";
-    const attrs = {
-      ...(snapshot.attributes || {}),
-      ...(actualState?.attributes || {}),
-    };
+    const attrs = turningOn
+      ? { ...(actualState?.attributes || {}), ...(snapshot.attributes || {}) }
+      : { ...(snapshot.attributes || {}), ...(actualState?.attributes || {}) };
 
     if (entityId && this._draftHumidity.has(entityId)) {
       const nextHumidity = clamp(
@@ -4870,6 +4869,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
               fullWidth: true,
             })}
           </div>
+        </section>
 
         <section class="editor-section">
           <div class="editor-section__header">

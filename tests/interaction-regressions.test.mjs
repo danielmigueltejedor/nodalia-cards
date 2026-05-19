@@ -737,6 +737,14 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
 
   assert.match(read("nodalia-fan-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
   assert.match(read("nodalia-humidifier-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
+
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /const attrs = turningOn\s*\?\s*\{ \.\.\.\(actualState\?\.attributes \|\| \{\}\), \.\.\.\(snapshot\.attributes \|\| \{\}\) \}/,
+    );
+  }
   assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
 });
 
