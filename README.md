@@ -1,7 +1,6 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-
 ![Package](https://img.shields.io/badge/package-1.1.3-2ea44f)
 ![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
@@ -312,6 +311,8 @@ JavaScript module
 
 **[Translate on Crowdin →](https://crowdin.com/project/nodalia-cards)** — community workspace for runtime and visual-editor strings (see also [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md) and [`crowdin.yml`](./crowdin.yml)).
 
+**[Translate on Crowdin →](https://crowdin.com/project/nodalia-cards)** — community workspace for runtime and visual-editor strings (see also [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md) and [`crowdin.yml`](./crowdin.yml)).
+
 Supported languages:
 
 - Spanish
@@ -372,7 +373,11 @@ Special thanks to:
 - [@Sppedtech](https://github.com/Sppedtech)
 - [@flippedcracker](https://github.com/flippedcracker)
 - [@loicloiseau](https://github.com/loicloiseau)
-
+- [@pqpxo](https://github.com/pqpxo)
+- [@jjanssen95](https://github.com/jjanssen95)
+- [@alfonsoluna](https://github.com/alfonsoluna)
+- [@Scraft08YT](https://github.com/Scraft08YT)
+  
 For contributing ideas and improvements to:
 - Person Card
 - Light Card
