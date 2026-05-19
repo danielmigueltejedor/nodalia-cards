@@ -638,7 +638,7 @@
       "untitled": "无标题事件"
     },
     "states": {
-      "loading": "正在加载事件..."
+      "loading": "正在载入事件……"
     },
     "empty": {
       "range": "此范围内没有事件。",
