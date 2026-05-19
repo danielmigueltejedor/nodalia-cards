@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.8] - 2026-05-18
+
+Eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.8`**.
+
+### Fixed
+- **Visual layout drag** keeps the dropped position (`findOpenCell` no longer resets blocks to the first grid slot at 0,0).
+
 ## [1.2.0-alpha.7] - 2026-05-18
 
 Seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.7`**.

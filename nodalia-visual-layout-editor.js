@@ -167,21 +167,45 @@
     );
   }
 
-  function findOpenCell(layout, item, excludeId) {
+  function cellHasCollision(layout, item, x, y, excludeId) {
+    const candidate = { ...item, x, y };
+    return layout.items.some(other => {
+      if (other.id === excludeId || other.visible === false) {
+        return false;
+      }
+      return rectsOverlap(candidate, other);
+    });
+  }
+
+  function findOpenCell(layout, item, excludeId, options = {}) {
+    const preferX = Number.isFinite(options.preferX) ? options.preferX : item.x;
+    const preferY = Number.isFinite(options.preferY) ? options.preferY : item.y;
+
+    if (!cellHasCollision(layout, item, preferX, preferY, excludeId)) {
+      return { x: preferX, y: preferY };
+    }
+
+    const candidates = [];
     for (let y = 0; y <= layout.rows - item.h; y += 1) {
       for (let x = 0; x <= layout.columns - item.w; x += 1) {
-        const candidate = { ...item, x, y };
-        const collision = layout.items.some(other => {
-          if (other.id === excludeId || other.visible === false) {
-            return false;
-          }
-          return rectsOverlap(candidate, other);
-        });
-        if (!collision) {
-          return { x, y };
+        if (x === preferX && y === preferY) {
+          continue;
         }
+        candidates.push({
+          x,
+          y,
+          distance: Math.abs(x - preferX) + Math.abs(y - preferY),
+        });
       }
     }
+    candidates.sort((a, b) => a.distance - b.distance);
+
+    for (const candidate of candidates) {
+      if (!cellHasCollision(layout, item, candidate.x, candidate.y, excludeId)) {
+        return { x: candidate.x, y: candidate.y };
+      }
+    }
+
     return { x: item.x, y: item.y };
   }
 
@@ -960,8 +984,8 @@
       const placed = this._isLiveMode()
         ? this._cardEl?.shadowRoot?.querySelector(`.light-card__visual-item[data-vlayout-id="${this._drag.id}"]`)
         : this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${this._drag.id}"]`);
-      const canvas = this._isLiveMode()
-        ? this._getLiveGrid()
+      const captureTarget = this._isLiveMode()
+        ? this._getLiveStage()?.querySelector(".nodalia-vlayout-hit-layer")
         : this._host.querySelector(".nodalia-vlayout-canvas");
       if (this._isLiveMode()) {
         this._getLiveStage()?.querySelectorAll(".nodalia-vlayout-frame.is-dragging").forEach(node => {
@@ -971,19 +995,24 @@
         placed.classList.remove("is-dragging");
       }
       try {
-        canvas?.releasePointerCapture?.(event.pointerId);
+        captureTarget?.releasePointerCapture?.(event.pointerId);
       } catch (_error) {
         // ignore
       }
 
       if (item && this._drag.moved) {
-        const open = findOpenCell(this._draft, item, item.id);
+        const targetX = item.x;
+        const targetY = item.y;
+        const open = findOpenCell(this._draft, item, item.id, {
+          preferX: targetX,
+          preferY: targetY,
+        });
         item.x = open.x;
         item.y = open.y;
         this._applyItemStyleToDom(item);
         this._updateBlockFrames();
-        this._scheduleLiveSync();
         this._notifyChange();
+        this._scheduleLiveSync();
       }
 
       this._drag = null;
@@ -1558,6 +1587,8 @@
     renderPlacedBlocks,
     serializeLayoutForSave,
     resolveEditorLayout,
+    findOpenCell,
+    cellHasCollision,
     createSurface: (host, options) => new VisualLayoutSurface(host, options),
     attachEditorOverlay,
     ensureOverlayStyles,
