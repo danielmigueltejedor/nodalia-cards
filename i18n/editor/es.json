@@ -1104,5 +1104,6 @@
   "ed.weather.wind_kmh": "km/h",
   "ed.weather.wind_mph": "mph",
   "ed.weather.wind_speed_unit": "Unidad de viento",
-  "ed.light.visual_layout_open_failed": "Could not open the visual layout editor. Reload the dashboard and try again."
+  "ed.light.visual_layout_open_failed": "Could not open the visual layout editor. Reload the dashboard and try again.",
+  "ed.light.vlayout_props_radius": "Radio del icono"
 }

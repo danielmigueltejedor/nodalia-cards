@@ -440,6 +440,7 @@
   "ed.light.vlayout_props_title": "Block properties",
   "ed.light.vlayout_props_select": "Tap a block on the grid to change its size and accent color.",
   "ed.light.vlayout_props_color": "Accent color",
+  "ed.light.vlayout_props_radius": "Icon corner radius",
   "ed.light.vlayout_props_width": "Width (columns)",
   "ed.light.vlayout_props_height": "Height (rows)",
   "ed.light.vlayout_props_full_width": "Full width",

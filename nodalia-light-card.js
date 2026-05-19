@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.6";
+const CARD_VERSION = "1.2.0-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -125,7 +125,7 @@ const STUB_CONFIG = {
   name: "Salon",
 };
 
-const LIGHT_VISUAL_LAYOUT_BLOCK_PROPS = { color: true, resize: true };
+const LIGHT_VISUAL_LAYOUT_BLOCK_PROPS = { color: true, resize: true, radius: true };
 
 const LIGHT_VISUAL_LAYOUT_CATALOG = {
   icon: {
@@ -133,54 +133,63 @@ const LIGHT_VISUAL_LAYOUT_CATALOG = {
     fallbackLabel: "Icon",
     default: { x: 0, y: 0, w: 2, h: 2 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "circle", pad: 5 },
   },
   title: {
     labelKey: "ed.light.vlayout_title",
     fallbackLabel: "Title",
     default: { x: 2, y: 0, w: 7, h: 1 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 4, radius: 10 },
   },
   chips: {
     labelKey: "ed.light.vlayout_chips",
     fallbackLabel: "Chips",
     default: { x: 2, y: 1, w: 7, h: 1 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 6, radius: 14 },
   },
   sliders: {
     labelKey: "ed.light.vlayout_sliders",
     fallbackLabel: "Sliders",
     default: { x: 0, y: 2, w: 12, h: 2 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 8, radius: 16 },
   },
   brightness_presets: {
     labelKey: "ed.light.vlayout_brightness_presets",
     fallbackLabel: "Brightness presets",
     default: { x: 0, y: 4, w: 12, h: 1 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 6, radius: 12 },
   },
   temperature_presets: {
     labelKey: "ed.light.vlayout_temperature_presets",
     fallbackLabel: "Temperature presets",
     default: { x: 0, y: 5, w: 12, h: 1 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 6, radius: 12 },
   },
   color_presets: {
     labelKey: "ed.light.vlayout_color_presets",
     fallbackLabel: "Color presets",
     default: { x: 0, y: 6, w: 12, h: 1 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 6, radius: 12 },
   },
   temperature_section: {
     labelKey: "ed.light.vlayout_temperature_section",
     fallbackLabel: "Temperature section",
     default: { x: 0, y: 7, w: 12, h: 2 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 8, radius: 16 },
   },
   color_section: {
     labelKey: "ed.light.vlayout_color_section",
     fallbackLabel: "Color section",
     default: { x: 0, y: 9, w: 12, h: 2 },
     props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
+    frame: { shape: "rounded", pad: 8, radius: 16 },
   },
 };
 
@@ -810,7 +819,7 @@ class NodaliaLightCard extends HTMLElement {
               const zone = actionButton?.dataset?.lightAction;
               return zone === "body" || zone === "icon" ? zone : null;
             },
-            shouldBeginHold: zone => this._resolveHoldEffect(zone) !== "none",
+            shouldBeginHold: zone => !this._isVisualLayoutEditing() && this._resolveHoldEffect(zone) !== "none",
             onHold: zone => {
               const effect = this._resolveHoldEffect(zone);
               if (effect === "none") {
@@ -2441,6 +2450,12 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
+    if (this._isVisualLayoutEditing()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const slider = event
       .composedPath()
       .find(node =>
@@ -2532,6 +2547,12 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _onShadowMouseDown(event) {
+    if (this._isVisualLayoutEditing()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const slider = event
       .composedPath()
       .find(node =>
@@ -2770,7 +2791,17 @@ class NodaliaLightCard extends HTMLElement {
     this._applySliderValue(slider, slider.value, { commit: true });
   }
 
+  _isVisualLayoutEditing() {
+    return this.hasAttribute("data-vlayout-editing");
+  }
+
   _onShadowClick(event) {
+    if (this._isVisualLayoutEditing()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const path = event.composedPath();
     const slider = path.find(
       node => node instanceof HTMLInputElement && node.dataset?.lightControl,
@@ -4450,32 +4481,18 @@ class NodaliaLightCard extends HTMLElement {
           z-index: 1;
         }
 
-        :host([data-vlayout-editing]) .light-card__visual-item {
-          cursor: grab;
-          outline: 2px dashed color-mix(in srgb, var(--primary-color) 45%, transparent);
-          outline-offset: 2px;
-          touch-action: none;
-        }
-
-        :host([data-vlayout-editing]) .light-card__visual-item.is-vlayout-selected {
-          outline: 2px solid var(--primary-color);
-          z-index: 4;
-        }
-
-        :host([data-vlayout-editing]) .light-card__visual-item.is-vlayout-dragging {
-          cursor: grabbing;
-          opacity: 0.92;
-          z-index: 5;
+        :host([data-vlayout-editing]) .light-card,
+        :host([data-vlayout-editing]) .light-card * {
+          pointer-events: none !important;
+          user-select: none;
         }
 
         :host([data-vlayout-editing]) .light-card__visual-item[style*="--block-tint"] .light-card__icon {
           box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-tint) 40%, transparent);
         }
 
-        :host([data-vlayout-editing]) .light-card button,
-        :host([data-vlayout-editing]) .light-card input,
-        :host([data-vlayout-editing]) .light-card .light-card__slider {
-          pointer-events: none !important;
+        :host([data-vlayout-editing]) .light-card__visual-item[data-vlayout-id="icon"] .light-card__icon {
+          border-radius: var(--vlayout-icon-radius, 50%);
         }
 
         .light-card__visual-item {
@@ -4882,11 +4899,30 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
+  _getVisualLayoutPreviewWidth() {
+    const preview = document.querySelector("hui-card-preview");
+    if (preview) {
+      const inner = preview.querySelector(".card, ha-card, [class*='preview']") || preview;
+      const width = inner.getBoundingClientRect().width;
+      if (width >= 200 && width <= 900) {
+        return Math.round(width);
+      }
+    }
+    const editorPanel = this.closest("hui-dialog-edit-card, ha-dialog, .content");
+    if (editorPanel instanceof HTMLElement) {
+      const width = editorPanel.getBoundingClientRect().width;
+      if (width >= 240) {
+        return Math.round(Math.min(width - 56, 420));
+      }
+    }
+    return 360;
+  }
+
   _openVisualLayoutEditor() {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.6.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.7.js or newer.");
       }
       return;
     }
@@ -4906,6 +4942,7 @@ class NodaliaLightCardEditor extends HTMLElement {
         livePreview: {
           cardTag: CARD_TAG,
           hass: this._hass,
+          previewWidthPx: this._getVisualLayoutPreviewWidth(),
           getConfig: () => deepClone(this._config),
         },
         labelFor: (key, fallback) => this._editorLabel(key) || fallback,

@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.7] - 2026-05-18
+
+Seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.7`**.
+
+### Changed
+- **Visual layout editor**: selection frames hug each block (circle for icon); preview width matches the HA card editor.
+- **Right-click** on a block opens a context menu (color, width/height sliders, icon radius).
+
+### Fixed
+- Card no longer toggles on/off while editing layout (`data-vlayout-editing` blocks all light actions).
+
 ## [1.2.0-alpha.6] - 2026-05-18
 
 Sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.6`**.
