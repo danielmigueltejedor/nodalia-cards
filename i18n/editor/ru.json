@@ -1095,5 +1095,13 @@
   "ed.weather.unit_system": "Система единиц",
   "ed.weather.wind_kmh": "км/ч",
   "ed.weather.wind_mph": "миль в час",
-  "ed.weather.wind_speed_unit": "Единица измерения скорости ветра"
+  "ed.weather.wind_speed_unit": "Единица измерения скорости ветра",
+  "ed.light.vlayout_props_title": "Block properties",
+  "ed.light.vlayout_props_select": "Tap a block on the grid to change its size and accent color.",
+  "ed.light.vlayout_props_color": "Accent color",
+  "ed.light.vlayout_props_width": "Width (columns)",
+  "ed.light.vlayout_props_height": "Height (rows)",
+  "ed.light.vlayout_props_full_width": "Full width",
+  "ed.light.vlayout_props_remove": "Remove block",
+  "ed.light.vlayout_palette_empty": "All blocks are on the grid"
 }

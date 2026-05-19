@@ -3,12 +3,13 @@
  * Exposed as window.NodaliaVisualLayout.
  */
 (function initNodaliaVisualLayout() {
-  if (typeof window !== "undefined" && window.NodaliaVisualLayout?.createSurface) {
+  if (typeof window !== "undefined" && window.NodaliaVisualLayout?.attachEditorOverlay) {
     return;
   }
 
   const DEFAULT_COLUMNS = 12;
   const DEFAULT_ROWS = 10;
+  const DRAG_THRESHOLD_PX = 6;
 
   function clampInt(value, min, max) {
     const numeric = Math.round(Number(value));
@@ -18,9 +19,17 @@
     return Math.min(Math.max(numeric, min), max);
   }
 
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function getCatalogDef(catalog, id) {
+    return catalog?.[id] || null;
+  }
+
   function normalizeItem(raw, catalog, columns, rows) {
     const id = String(raw?.id ?? "").trim();
-    const def = catalog[id];
+    const def = getCatalogDef(catalog, id);
     if (!def) {
       return null;
     }
@@ -29,6 +38,7 @@
     const h = clampInt(raw?.h ?? base.h, 1, rows);
     const x = clampInt(raw?.x ?? base.x, 0, Math.max(0, columns - w));
     const y = clampInt(raw?.y ?? base.y, 0, Math.max(0, rows - h));
+    const color = String(raw?.color ?? base.color ?? "").trim();
     return {
       id,
       x,
@@ -36,6 +46,7 @@
       w,
       h,
       visible: raw?.visible !== false,
+      ...(color ? { color } : {}),
     };
   }
 
@@ -86,7 +97,8 @@
   }
 
   function itemToGridStyle(item) {
-    return `grid-column:${item.x + 1} / span ${item.w};grid-row:${item.y + 1} / span ${item.h};min-width:0;`;
+    const tint = item.color ? `--block-tint:${item.color};` : "";
+    return `grid-column:${item.x + 1} / span ${item.w};grid-row:${item.y + 1} / span ${item.h};min-width:0;${tint}`;
   }
 
   function renderPlacedBlocks(blocksById, layout, options = {}) {
@@ -130,16 +142,64 @@
     return { x: item.x, y: item.y };
   }
 
+  function serializeLayoutForSave(layout) {
+    return {
+      enabled: true,
+      columns: layout.columns,
+      rows: layout.rows,
+      items: layout.items
+        .filter(item => item.visible !== false)
+        .map(item => {
+          const out = { id: item.id, x: item.x, y: item.y, w: item.w, h: item.h };
+          if (item.color) {
+            out.color = item.color;
+          }
+          return out;
+        }),
+    };
+  }
+
+  function mountOverlayElement(overlay) {
+    overlay.setAttribute("data-nodalia-vlayout-overlay", "true");
+    overlay.style.cssText = [
+      "position:fixed",
+      "inset:0",
+      "z-index:2147483000",
+      "pointer-events:auto",
+    ].join(";");
+
+    const dialog =
+      document.querySelector("ha-dialog[open]")
+      || document.querySelector("hui-dialog-edit-card ha-dialog")
+      || document.querySelector("ha-dialog");
+
+    if (dialog) {
+      dialog.appendChild(overlay);
+      return;
+    }
+
+    const haRoot = document.querySelector("home-assistant");
+    if (haRoot) {
+      haRoot.appendChild(overlay);
+      return;
+    }
+
+    document.body.appendChild(overlay);
+  }
+
   class VisualLayoutSurface {
     constructor(host, options) {
       this._host = host;
       this._options = options;
       this._catalog = options.catalog || {};
       this._draft = normalizeLayout(options.layout || {}, this._catalog, options);
+      this._selectedId = this._draft.items.find(item => item.visible !== false)?.id || "";
       this._drag = null;
-      this._onPointerDown = this._onPointerDown.bind(this);
-      this._onPointerMove = this._onPointerMove.bind(this);
-      this._onPointerUp = this._onPointerUp.bind(this);
+      this._canvasGap = 6;
+      this._canvasPad = 10;
+      this._onCanvasPointerDown = this._onCanvasPointerDown.bind(this);
+      this._onCanvasPointerMove = this._onCanvasPointerMove.bind(this);
+      this._onCanvasPointerUp = this._onCanvasPointerUp.bind(this);
     }
 
     get layout() {
@@ -147,7 +207,7 @@
     }
 
     _label(id) {
-      const def = this._catalog[id];
+      const def = getCatalogDef(this._catalog, id);
       if (!def) {
         return id;
       }
@@ -157,15 +217,160 @@
       return def.fallbackLabel || id;
     }
 
+    _propsLabel(key, fallback) {
+      if (typeof this._options.labelFor === "function") {
+        return this._options.labelFor(key, fallback);
+      }
+      return fallback;
+    }
 
-    _renderBlockPreviewClean(id) {
+    _blockSupports(id, prop) {
+      const def = getCatalogDef(this._catalog, id);
+      return Boolean(def?.props?.[prop]);
+    }
+
+    _renderBlockPreview(id) {
       if (typeof this._options.renderBlockPreview === "function") {
         return this._options.renderBlockPreview(id, this._draft);
       }
-      return `<div class="nodalia-vlayout-block-preview">${this._label(id)}</div>`;
+      const item = this._getItem(id);
+      const tint = item?.color ? ` style="--preview-tint:${item.color}"` : "";
+      return `<div class="nodalia-vlayout-block-preview"${tint}>${this._label(id)}</div>`;
     }
 
-    _render() {
+    _getCanvasMetrics() {
+      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+      if (!canvas) {
+        return null;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const cols = this._draft.columns;
+      const rows = this._draft.rows;
+      const gap = this._canvasGap;
+      const pad = this._canvasPad;
+      const innerW = Math.max(1, rect.width - pad * 2 - gap * Math.max(0, cols - 1));
+      const innerH = Math.max(1, rect.height - pad * 2 - gap * Math.max(0, rows - 1));
+      return {
+        canvas,
+        rect,
+        cols,
+        rows,
+        gap,
+        pad,
+        cellW: innerW / cols,
+        cellH: innerH / rows,
+      };
+    }
+
+    _cellFromPointer(clientX, clientY, item = null) {
+      const metrics = this._getCanvasMetrics();
+      if (!metrics) {
+        return null;
+      }
+      const { rect, cols, rows, gap, pad, cellW, cellH } = metrics;
+      const relX = clientX - rect.left - pad;
+      const relY = clientY - rect.top - pad;
+      let x = Math.floor(relX / (cellW + gap));
+      let y = Math.floor(relY / (cellH + gap));
+      if (item) {
+        x = clampInt(x, 0, cols - item.w);
+        y = clampInt(y, 0, rows - item.h);
+      } else {
+        x = clampInt(x, 0, cols - 1);
+        y = clampInt(y, 0, rows - 1);
+      }
+      return { x, y };
+    }
+
+    _applyItemStyleToDom(item) {
+      const node = this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${item.id}"]`);
+      if (!node) {
+        return;
+      }
+      node.style.gridColumn = `${item.x + 1} / span ${item.w}`;
+      node.style.gridRow = `${item.y + 1} / span ${item.h}`;
+      if (item.color) {
+        node.style.setProperty("--block-tint", item.color);
+        node.style.borderColor = `color-mix(in srgb, ${item.color} 40%, transparent)`;
+        node.style.background = `color-mix(in srgb, ${item.color} 12%, transparent)`;
+      }
+      node.classList.toggle("is-selected", item.id === this._selectedId);
+    }
+
+    _syncAllPlacedDom() {
+      this._draft.items
+        .filter(item => item.visible !== false)
+        .forEach(item => this._applyItemStyleToDom(item));
+    }
+
+    _renderPropertiesPanel() {
+      const item = this._getItem(this._selectedId);
+      if (!item) {
+        return `
+          <div class="nodalia-vlayout-props-empty">
+            ${this._propsLabel("ed.light.vlayout_props_select", "Tap a block to edit size and color.")}
+          </div>
+        `;
+      }
+
+      const colorField = this._blockSupports(item.id, "color")
+        ? `
+          <label class="nodalia-vlayout-field">
+            <span>${this._propsLabel("ed.light.vlayout_props_color", "Accent color")}</span>
+            <input type="color" data-vlayout-prop="color" value="${item.color || "#6da8ff"}" />
+          </label>
+        `
+        : "";
+
+      return `
+        <div class="nodalia-vlayout-props">
+          <div class="nodalia-vlayout-props__title">${this._label(item.id)}</div>
+          <div class="nodalia-vlayout-prop-actions">
+            <button type="button" data-vlayout-resize="w-1">−W</button>
+            <button type="button" data-vlayout-resize="w+1">+W</button>
+            <button type="button" data-vlayout-resize="h-1">−H</button>
+            <button type="button" data-vlayout-resize="h+1">+H</button>
+            <button type="button" data-vlayout-resize="full">${this._propsLabel("ed.light.vlayout_props_full_width", "Full width")}</button>
+          </div>
+          <label class="nodalia-vlayout-field">
+            <span>${this._propsLabel("ed.light.vlayout_props_width", "Width (columns)")}</span>
+            <input type="number" min="1" max="${this._draft.columns}" data-vlayout-prop="w" value="${item.w}" />
+          </label>
+          <label class="nodalia-vlayout-field">
+            <span>${this._propsLabel("ed.light.vlayout_props_height", "Height (rows)")}</span>
+            <input type="number" min="1" max="${this._draft.rows}" data-vlayout-prop="h" value="${item.h}" />
+          </label>
+          ${colorField}
+          <button type="button" class="nodalia-vlayout-remove-block" data-vlayout-remove="${item.id}">
+            ${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}
+          </button>
+        </div>
+      `;
+    }
+
+    _renderSidebar() {
+      const sidebar = this._host.querySelector(".nodalia-vlayout-sidebar");
+      if (!sidebar) {
+        return;
+      }
+      const palette = Object.keys(this._catalog)
+        .filter(id => !this._draft.items.some(item => item.id === id && item.visible !== false))
+        .map(id => `
+          <button type="button" class="nodalia-vlayout-palette__item" data-vlayout-add="${id}">
+            + ${this._label(id)}
+          </button>
+        `)
+        .join("");
+
+      sidebar.innerHTML = `
+        <div class="nodalia-vlayout-sidebar__title">${this._propsLabel("ed.light.vlayout_props_title", "Block properties")}</div>
+        ${this._renderPropertiesPanel()}
+        <div class="nodalia-vlayout-sidebar__title nodalia-vlayout-sidebar__title--spaced">${this._options.paletteTitle || "Blocks"}</div>
+        <div class="nodalia-vlayout-palette">${palette || `<span class="nodalia-vlayout-muted">${this._propsLabel("ed.light.vlayout_palette_empty", "All blocks placed")}</span>`}</div>
+      `;
+    }
+
+    _renderCanvas() {
       const cols = this._draft.columns;
       const rows = this._draft.rows;
       const cells = [];
@@ -177,49 +382,66 @@
 
       const placed = this._draft.items
         .filter(item => item.visible !== false)
-        .map(item => `
-          <div
-            class="nodalia-vlayout-placed"
-            data-vlayout-id="${item.id}"
-            style="grid-column:${item.x + 1} / span ${item.w};grid-row:${item.y + 1} / span ${item.h};"
-          >
-            <div class="nodalia-vlayout-placed__toolbar">
-              <span>${this._label(item.id)}</span>
-              <button type="button" data-vlayout-remove="${item.id}" title="Remove">×</button>
+        .map(item => {
+          const tint = item.color ? `--block-tint:${item.color};` : "";
+          const selected = item.id === this._selectedId ? " is-selected" : "";
+          return `
+            <div
+              class="nodalia-vlayout-placed${selected}"
+              data-vlayout-id="${item.id}"
+              style="grid-column:${item.x + 1} / span ${item.w};grid-row:${item.y + 1} / span ${item.h};${tint}"
+            >
+              <div class="nodalia-vlayout-placed__toolbar">
+                <span>${this._label(item.id)}</span>
+                <button type="button" data-vlayout-remove="${item.id}" title="Remove">×</button>
+              </div>
+              <div class="nodalia-vlayout-placed__body">${this._renderBlockPreview(item.id)}</div>
             </div>
-            <div class="nodalia-vlayout-placed__body">${this._renderBlockPreviewClean(item.id)}</div>
-          </div>
-        `)
+          `;
+        })
         .join("");
 
-      const palette = Object.keys(this._catalog)
-        .filter(id => !this._draft.items.some(item => item.id === id && item.visible !== false))
-        .map(id => `
-          <button type="button" class="nodalia-vlayout-palette__item" data-vlayout-add="${id}">
-            + ${this._label(id)}
-          </button>
-        `)
-        .join("");
-
-      this._host.innerHTML = `
-        <div class="nodalia-vlayout-workspace">
+      const canvasHost = this._host.querySelector(".nodalia-vlayout-canvas-host");
+      if (canvasHost) {
+        canvasHost.innerHTML = `
           <div
             class="nodalia-vlayout-canvas"
-            style="grid-template-columns:repeat(${cols}, minmax(0, 1fr));grid-template-rows:repeat(${rows}, minmax(36px, auto));"
+            style="grid-template-columns:repeat(${cols}, minmax(0, 1fr));grid-template-rows:repeat(${rows}, minmax(40px, auto));"
           >
             ${cells}
             ${placed}
           </div>
-          <aside class="nodalia-vlayout-sidebar">
-            <div class="nodalia-vlayout-sidebar__title">${this._options.paletteTitle || "Blocks"}</div>
-            <div class="nodalia-vlayout-palette">${palette || `<span class="nodalia-vlayout-muted">All blocks placed</span>`}</div>
-          </aside>
+        `;
+      }
+    }
+
+    _render() {
+      const cols = this._draft.columns;
+      const rows = this._draft.rows;
+
+      this._host.innerHTML = `
+        <div class="nodalia-vlayout-workspace">
+          <div class="nodalia-vlayout-canvas-host">
+            <div
+              class="nodalia-vlayout-canvas"
+              style="grid-template-columns:repeat(${cols}, minmax(0, 1fr));grid-template-rows:repeat(${rows}, minmax(40px, auto));"
+            >
+            </div>
+          </div>
+          <aside class="nodalia-vlayout-sidebar"></aside>
         </div>
       `;
 
-      this._host.querySelectorAll(".nodalia-vlayout-placed").forEach(node => {
-        node.addEventListener("pointerdown", this._onPointerDown);
-      });
+      this._renderCanvas();
+      this._renderSidebar();
+
+      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+      if (canvas) {
+        canvas.addEventListener("pointerdown", this._onCanvasPointerDown);
+        canvas.addEventListener("pointermove", this._onCanvasPointerMove);
+        canvas.addEventListener("pointerup", this._onCanvasPointerUp);
+        canvas.addEventListener("pointercancel", this._onCanvasPointerUp);
+      }
     }
 
     mount() {
@@ -230,44 +452,68 @@
       return this._draft.items.find(item => item.id === id);
     }
 
-    _onPointerDown(event) {
-      const placed = event.target.closest(".nodalia-vlayout-placed");
-      if (!placed || event.button !== 0) {
-        return;
-      }
-      if (event.target.closest("[data-vlayout-remove]")) {
-        return;
-      }
-      const id = placed.dataset.vlayoutId;
-      const item = this._getItem(id);
+    _notifyChange() {
+      this._options.onChange?.(deepClone(this._draft));
+    }
+
+    _selectItem(id) {
+      this._selectedId = id || "";
+      this._syncAllPlacedDom();
+      this._renderSidebar();
+    }
+
+    _resizeItem(item, deltaW, deltaH) {
       if (!item) {
         return;
       }
-      event.preventDefault();
-      placed.setPointerCapture(event.pointerId);
-      this._drag = {
-        id,
-        pointerId: event.pointerId,
-      };
-      placed.classList.add("is-dragging");
+      const nextW = clampInt(item.w + deltaW, 1, this._draft.columns);
+      const nextH = clampInt(item.h + deltaH, 1, this._draft.rows);
+      item.w = nextW;
+      item.h = nextH;
+      item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+      item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+      const open = findOpenCell(this._draft, item, item.id);
+      item.x = open.x;
+      item.y = open.y;
+      this._applyItemStyleToDom(item);
+      this._renderSidebar();
+      this._notifyChange();
     }
 
-    _cellFromPoint(clientX, clientY) {
-      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
-      if (!canvas) {
-        return null;
+    _onCanvasPointerDown(event) {
+      const placed = event.target.closest(".nodalia-vlayout-placed");
+      const removeBtn = event.target.closest("[data-vlayout-remove]");
+      if (removeBtn) {
+        return;
       }
-      const cell = document.elementFromPoint(clientX, clientY)?.closest?.(".nodalia-vlayout-cell");
-      if (!cell || !canvas.contains(cell)) {
-        return null;
+
+      if (placed) {
+        const id = placed.dataset.vlayoutId;
+        const item = this._getItem(id);
+        if (!item) {
+          return;
+        }
+        event.preventDefault();
+        this._selectItem(id);
+        const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
+        canvas?.setPointerCapture?.(event.pointerId);
+        this._drag = {
+          id,
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: item.x,
+          originY: item.y,
+          moved: false,
+        };
+        placed.classList.add("is-dragging");
+        return;
       }
-      return {
-        x: clampInt(cell.dataset.cellX, 0, this._draft.columns - 1),
-        y: clampInt(cell.dataset.cellY, 0, this._draft.rows - 1),
-      };
+
+      this._selectItem("");
     }
 
-    _onPointerMove(event) {
+    _onCanvasPointerMove(event) {
       if (!this._drag || event.pointerId !== this._drag.pointerId) {
         return;
       }
@@ -275,44 +521,106 @@
       if (!item) {
         return;
       }
-      const cell = this._cellFromPoint(event.clientX, event.clientY);
+
+      const dx = event.clientX - this._drag.startX;
+      const dy = event.clientY - this._drag.startY;
+      if (!this._drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) {
+        return;
+      }
+      this._drag.moved = true;
+
+      const cell = this._cellFromPointer(event.clientX, event.clientY, item);
       if (!cell) {
         return;
       }
-      item.x = clampInt(cell.x, 0, this._draft.columns - item.w);
-      item.y = clampInt(cell.y, 0, this._draft.rows - item.h);
-      const placed = this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${this._drag.id}"]`);
-      if (placed) {
-        placed.style.gridColumn = `${item.x + 1} / span ${item.w}`;
-        placed.style.gridRow = `${item.y + 1} / span ${item.h}`;
-      }
+      item.x = cell.x;
+      item.y = cell.y;
+      this._applyItemStyleToDom(item);
     }
 
-    _onPointerUp(event) {
+    _onCanvasPointerUp(event) {
       if (!this._drag || event.pointerId !== this._drag.pointerId) {
         return;
       }
+
       const item = this._getItem(this._drag.id);
       const placed = this._host.querySelector(`.nodalia-vlayout-placed[data-vlayout-id="${this._drag.id}"]`);
+      const canvas = this._host.querySelector(".nodalia-vlayout-canvas");
       if (placed) {
         placed.classList.remove("is-dragging");
-        try {
-          placed.releasePointerCapture(event.pointerId);
-        } catch (_error) {
-          // ignore
-        }
       }
-      if (item) {
+      try {
+        canvas?.releasePointerCapture?.(event.pointerId);
+      } catch (_error) {
+        // ignore
+      }
+
+      if (item && this._drag.moved) {
         const open = findOpenCell(this._draft, item, item.id);
         item.x = open.x;
         item.y = open.y;
+        this._applyItemStyleToDom(item);
+        this._notifyChange();
       }
+
       this._drag = null;
-      this._render();
-      this._options.onChange?.(this._draft);
+    }
+
+    _applyPropFromSidebar(target) {
+      const item = this._getItem(this._selectedId);
+      if (!item) {
+        return;
+      }
+
+      const prop = target.dataset?.vlayoutProp;
+      if (prop === "w") {
+        item.w = clampInt(target.value, 1, this._draft.columns);
+        item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+      } else if (prop === "h") {
+        item.h = clampInt(target.value, 1, this._draft.rows);
+        item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+      } else if (prop === "color") {
+        item.color = String(target.value || "").trim();
+        if (!item.color) {
+          delete item.color;
+        }
+      }
+      const open = findOpenCell(this._draft, item, item.id);
+      item.x = open.x;
+      item.y = open.y;
+      this._applyItemStyleToDom(item);
+      this._renderSidebar();
+      this._notifyChange();
     }
 
     handleClick(event) {
+      const resize = event.target.closest("[data-vlayout-resize]")?.dataset?.vlayoutResize;
+      if (resize) {
+        event.preventDefault();
+        const item = this._getItem(this._selectedId);
+        if (!item) {
+          return;
+        }
+        if (resize === "full") {
+          item.x = 0;
+          item.w = this._draft.columns;
+          this._applyItemStyleToDom(item);
+          this._renderSidebar();
+          this._notifyChange();
+          return;
+        }
+        if (resize === "w-1") {
+          this._resizeItem(item, -1, 0);
+        } else if (resize === "w+1") {
+          this._resizeItem(item, 1, 0);
+        } else if (resize === "h-1") {
+          this._resizeItem(item, 0, -1);
+        } else if (resize === "h+1") {
+          this._resizeItem(item, 0, 1);
+        }
+        return;
+      }
+
       const addId = event.target.closest("[data-vlayout-add]")?.dataset?.vlayoutAdd;
       if (addId) {
         event.preventDefault();
@@ -324,8 +632,10 @@
         normalized.x = open.x;
         normalized.y = open.y;
         this._draft.items.push(normalized);
-        this._render();
-        this._options.onChange?.(this._draft);
+        this._selectedId = normalized.id;
+        this._renderCanvas();
+        this._renderSidebar();
+        this._notifyChange();
         return;
       }
 
@@ -338,25 +648,39 @@
         } else {
           this._draft.items = this._draft.items.filter(entry => entry.id !== removeId);
         }
-        this._render();
-        this._options.onChange?.(this._draft);
+        if (this._selectedId === removeId) {
+          this._selectedId = this._draft.items.find(entry => entry.visible !== false)?.id || "";
+        }
+        this._renderCanvas();
+        this._renderSidebar();
+        this._notifyChange();
       }
+    }
+
+    handleInput(event) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.dataset?.vlayoutProp) {
+        return;
+      }
+      this._applyPropFromSidebar(target);
     }
 
     setLayout(layout) {
       this._draft = normalizeLayout(layout, this._catalog, this._options);
+      this._selectedId = this._draft.items.find(item => item.visible !== false)?.id || "";
       this._render();
     }
   }
 
   const OVERLAY_STYLES = `
-    .nodalia-vlayout-overlay {
-      inset: 0;
-      position: fixed;
-      z-index: 10000;
+    [data-nodalia-vlayout-overlay] {
+      inset: 0 !important;
+      pointer-events: auto !important;
+      position: fixed !important;
+      z-index: 2147483000 !important;
     }
     .nodalia-vlayout-overlay__backdrop {
-      background: color-mix(in srgb, var(--primary-background-color, #111) 55%, transparent);
+      background: color-mix(in srgb, var(--primary-background-color, #111) 62%, transparent);
       border: 0;
       cursor: pointer;
       inset: 0;
@@ -366,12 +690,16 @@
       background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
       border: 1px solid var(--divider-color);
       border-radius: 18px;
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      inset: 24px;
-      max-height: calc(100vh - 48px);
+      inset: 20px;
+      max-height: calc(100vh - 40px);
       position: absolute;
+      width: calc(100% - 40px);
+      max-width: 1100px;
+      left: 50%;
+      transform: translateX(-50%);
     }
     .nodalia-vlayout-overlay__header,
     .nodalia-vlayout-overlay__footer {
@@ -427,8 +755,11 @@
     .nodalia-vlayout-workspace {
       display: grid;
       gap: 14px;
-      grid-template-columns: minmax(0, 1fr) 200px;
-      min-height: 360px;
+      grid-template-columns: minmax(0, 1fr) 240px;
+      min-height: 400px;
+    }
+    .nodalia-vlayout-canvas-host {
+      min-height: 400px;
     }
     .nodalia-vlayout-canvas {
       background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
@@ -436,14 +767,17 @@
       border-radius: 14px;
       display: grid;
       gap: 6px;
-      min-height: 360px;
+      min-height: 400px;
       padding: 10px;
       position: relative;
+      touch-action: none;
+      user-select: none;
     }
     .nodalia-vlayout-cell {
       background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
       border-radius: 8px;
-      min-height: 32px;
+      min-height: 36px;
+      pointer-events: none;
     }
     .nodalia-vlayout-placed {
       background: color-mix(in srgb, var(--primary-color) 8%, transparent);
@@ -452,14 +786,19 @@
       cursor: grab;
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
-      min-height: 48px;
+      min-height: 52px;
       overflow: hidden;
       touch-action: none;
       z-index: 2;
     }
+    .nodalia-vlayout-placed.is-selected {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 35%, transparent);
+    }
     .nodalia-vlayout-placed.is-dragging {
       cursor: grabbing;
-      opacity: 0.92;
+      opacity: 0.94;
+      z-index: 5;
     }
     .nodalia-vlayout-placed__toolbar {
       align-items: center;
@@ -483,7 +822,7 @@
       align-items: center;
       display: flex;
       justify-content: center;
-      min-height: 40px;
+      min-height: 44px;
       padding: 8px;
     }
     .nodalia-vlayout-block-preview {
@@ -491,16 +830,58 @@
       font-size: 12px;
       text-align: center;
     }
+    .nodalia-vlayout-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
     .nodalia-vlayout-sidebar__title {
       font-size: 12px;
       font-weight: 700;
-      margin-bottom: 8px;
     }
-    .nodalia-vlayout-palette {
+    .nodalia-vlayout-sidebar__title--spaced {
+      margin-top: 6px;
+      padding-top: 10px;
+      border-top: 1px solid var(--divider-color);
+    }
+    .nodalia-vlayout-props {
       display: grid;
-      gap: 8px;
+      gap: 10px;
     }
-    .nodalia-vlayout-palette__item {
+    .nodalia-vlayout-props-empty {
+      color: var(--secondary-text-color);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .nodalia-vlayout-field {
+      display: grid;
+      gap: 6px;
+    }
+    .nodalia-vlayout-field span {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .nodalia-vlayout-field input[type="number"],
+    .nodalia-vlayout-field input[type="color"] {
+      appearance: none;
+      background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+      border-radius: 10px;
+      color: var(--primary-text-color);
+      font: inherit;
+      min-height: 36px;
+      padding: 6px 10px;
+      width: 100%;
+    }
+    .nodalia-vlayout-prop-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .nodalia-vlayout-prop-actions button,
+    .nodalia-vlayout-palette__item,
+    .nodalia-vlayout-remove-block {
       appearance: none;
       background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
       border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
@@ -508,9 +889,16 @@
       color: var(--primary-text-color);
       cursor: pointer;
       font: inherit;
-      font-size: 12px;
-      padding: 8px 10px;
-      text-align: left;
+      font-size: 11px;
+      padding: 6px 10px;
+    }
+    .nodalia-vlayout-remove-block {
+      margin-top: 4px;
+      width: 100%;
+    }
+    .nodalia-vlayout-palette {
+      display: grid;
+      gap: 8px;
     }
     .nodalia-vlayout-muted {
       color: var(--secondary-text-color);
@@ -522,6 +910,7 @@
       }
       .nodalia-vlayout-overlay__panel {
         inset: 8px;
+        width: calc(100% - 16px);
       }
     }
   `;
@@ -530,7 +919,9 @@
     if (typeof document === "undefined") {
       return;
     }
-    if (document.getElementById("nodalia-vlayout-styles")) {
+    const existing = document.getElementById("nodalia-vlayout-styles");
+    if (existing) {
+      existing.textContent = OVERLAY_STYLES;
       return;
     }
     const style = document.createElement("style");
@@ -541,6 +932,12 @@
 
   function attachEditorOverlay(editorHost, options) {
     ensureOverlayStyles();
+
+    const existing = document.querySelector("[data-nodalia-vlayout-overlay]");
+    if (existing) {
+      existing.remove();
+    }
+
     const overlay = document.createElement("div");
     overlay.className = "nodalia-vlayout-overlay";
     overlay.innerHTML = `
@@ -561,6 +958,8 @@
       </div>
     `;
 
+    mountOverlayElement(overlay);
+
     const body = overlay.querySelector(".nodalia-vlayout-overlay__body");
     const surface = new VisualLayoutSurface(body, {
       catalog: options.catalog,
@@ -579,9 +978,10 @@
       options.onClose?.();
     };
 
-    overlay.addEventListener("click", event => {
+    const onOverlayClick = event => {
       if (event.target.closest("[data-vlayout-close]")) {
         event.preventDefault();
+        event.stopPropagation();
         close();
         return;
       }
@@ -594,22 +994,17 @@
       }
       if (event.target.closest("[data-vlayout-save]")) {
         event.preventDefault();
-        const saved = {
-          ...surface.layout,
-          enabled: true,
-        };
+        event.stopPropagation();
+        const saved = serializeLayoutForSave(surface.layout);
         options.onSave?.(saved);
         close();
         return;
       }
       surface.handleClick(event);
-    });
+    };
 
-    overlay.addEventListener("pointermove", surface._onPointerMove);
-    overlay.addEventListener("pointerup", surface._onPointerUp);
-    overlay.addEventListener("pointercancel", surface._onPointerUp);
-
-    document.body.appendChild(overlay);
+    overlay.addEventListener("click", onOverlayClick, true);
+    overlay.addEventListener("input", event => surface.handleInput(event), true);
 
     return { overlay, surface, close };
   }
@@ -623,9 +1018,11 @@
     layoutToGridStyle,
     itemToGridStyle,
     renderPlacedBlocks,
+    serializeLayoutForSave,
     createSurface: (host, options) => new VisualLayoutSurface(host, options),
     attachEditorOverlay,
     ensureOverlayStyles,
+    mountOverlayElement,
   };
 
   if (typeof window !== "undefined") {

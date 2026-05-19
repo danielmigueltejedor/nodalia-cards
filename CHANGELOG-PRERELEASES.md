@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.4] - 2026-05-18
+
+Fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.4`**.
+
+### Fixed
+- **Visual layout editor** opens above the HA card editor dialog (`z-index` + mount inside `ha-dialog`).
+- **Save layout** now persists `visual_layout` to card YAML reliably.
+- **Drag** uses pointer capture and grid coordinate math (fluid moves without full re-render).
+
+### Added
+- **Block properties** sidebar: tap a block to resize (±W/±H, full width), set accent color, or remove.
+
 ## [1.2.0-alpha.3] - 2026-05-18
 
 Third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.3`**.

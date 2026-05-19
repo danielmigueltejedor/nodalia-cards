@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.3";
+const CARD_VERSION = "1.2.0-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -125,51 +125,62 @@ const STUB_CONFIG = {
   name: "Salon",
 };
 
+const LIGHT_VISUAL_LAYOUT_BLOCK_PROPS = { color: true, resize: true };
+
 const LIGHT_VISUAL_LAYOUT_CATALOG = {
   icon: {
     labelKey: "ed.light.vlayout_icon",
     fallbackLabel: "Icon",
     default: { x: 0, y: 0, w: 2, h: 2 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   title: {
     labelKey: "ed.light.vlayout_title",
     fallbackLabel: "Title",
     default: { x: 2, y: 0, w: 7, h: 1 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   chips: {
     labelKey: "ed.light.vlayout_chips",
     fallbackLabel: "Chips",
     default: { x: 2, y: 1, w: 7, h: 1 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   sliders: {
     labelKey: "ed.light.vlayout_sliders",
     fallbackLabel: "Sliders",
     default: { x: 0, y: 2, w: 12, h: 2 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   brightness_presets: {
     labelKey: "ed.light.vlayout_brightness_presets",
     fallbackLabel: "Brightness presets",
     default: { x: 0, y: 4, w: 12, h: 1 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   temperature_presets: {
     labelKey: "ed.light.vlayout_temperature_presets",
     fallbackLabel: "Temperature presets",
     default: { x: 0, y: 5, w: 12, h: 1 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   color_presets: {
     labelKey: "ed.light.vlayout_color_presets",
     fallbackLabel: "Color presets",
     default: { x: 0, y: 6, w: 12, h: 1 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   temperature_section: {
     labelKey: "ed.light.vlayout_temperature_section",
     fallbackLabel: "Temperature section",
     default: { x: 0, y: 7, w: 12, h: 2 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
   color_section: {
     labelKey: "ed.light.vlayout_color_section",
     fallbackLabel: "Color section",
     default: { x: 0, y: 9, w: 12, h: 2 },
+    props: LIGHT_VISUAL_LAYOUT_BLOCK_PROPS,
   },
 };
 
@@ -4443,6 +4454,12 @@ class NodaliaLightCard extends HTMLElement {
           min-width: 0;
         }
 
+        .light-card__visual-item[style*="--block-tint"] {
+          border-radius: 14px;
+          outline: 1px solid color-mix(in srgb, var(--block-tint) 28%, transparent);
+          outline-offset: 2px;
+        }
+
         .light-card__visual-item .light-card__icon {
           margin-inline: auto;
         }
@@ -4687,10 +4704,20 @@ class NodaliaLightCardEditor extends HTMLElement {
     const focusState = this._captureFocusState();
     const nextConfig = deepClone(this._config);
     this._config = normalizeConfig(compactConfig(nextConfig));
+    let outgoing = compactConfig(
+      window.NodaliaUtils.stripEqualToDefaults(this._config, DEFAULT_CONFIG) ?? {},
+    );
+    const visualLayout = this._config?.visual_layout;
+    if (visualLayout?.enabled) {
+      const serialized = window.NodaliaVisualLayout?.serializeLayoutForSave
+        ? window.NodaliaVisualLayout.serializeLayoutForSave(visualLayout)
+        : { ...visualLayout, enabled: true };
+      outgoing = { ...outgoing, visual_layout: serialized };
+    }
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: outgoing,
     });
   }
 
@@ -4807,7 +4834,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.3.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.4.js or newer.");
       }
       return;
     }
