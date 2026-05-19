@@ -1,10 +1,136 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, and completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), and completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [1.1.3-alpha.9] - 2026-05-18
+
+Ninth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.9`**.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** map overlays and room/zone/goto UI follow active cleaning session mode again when the user is on **All** or **Routines** (`_resolveDisplayMode` / `_getDisplayCleaningModeId`).
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** while off, last-known on-state is not stored when `percentage` / humidity is **0** (avoids restoring 0% after optimistic turn-on).
+
+### Changed
+
+- **Performance (pass 1 + 2):** fan, humidifier, light, and entity cards skip optimistic sync and full resize re-renders when the render signature is unchanged; alarm and vacuum layout/resize paths gated; advance-vacuum lazy mode/dock signature fragments; navigation bar editor propagates `hass` to pickers without full re-render.
+- **`nodalia-notifications-card.js` / `nodalia-power-flow-card.js`:** cached tracked-entity stamps for render signatures on busy dashboards.
+- **`nodalia-climate-card.js`:** `_syncDraftWithState()` only when a temperature draft is pending, post-drag render is queued, or the signature changed.
+- **`nodalia-fav-card.js` / `nodalia-vacuum-card.js`:** resize observer skips `_render()` when the signature is unchanged after layout bucket updates.
+- **`docs/performance-audit.md`:** second audit pass documented (R10–R15).
+
+---
+
+## [1.1.3-alpha.8] - 2026-05-18
+
+Eighth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.8`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** percentage/humidity slider **empty** animation on power-off is restored and synced to the controls `leaving` transition (negative animation delay on re-renders, explicit keyframe from current level to empty).
+
+---
+
+## [1.1.3-alpha.7] - 2026-05-18
+
+Seventh **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.7`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** percentage/humidity slider fill animation runs for the full `powering-up` transition (negative animation delay on re-renders) so optimistic UI no longer cuts the fill short.
+
+### Changed
+
+- **Shared utils:** Lovelace helpers live only in **`nodalia-utils.js`**; card sources no longer commit inlined `// <nodalia-standalone-utils>` blocks (bundle still loads utils once). Use **`node scripts/sync-standalone-embed.mjs`** locally for single-file Lovelace resources.
+- **`nodalia-fan-card.js`:** `ALLOWED_DOUBLE_TAP_ACTIONS` module constant for double-tap validation.
+
+---
+
+## [1.1.3-alpha.6] - 2026-05-18
+
+Sixth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.6`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** light-style optimistic turn-on (last known on-state, visual settle after Home Assistant confirms) and percentage/humidity slider fill animates once per power-on edge (no double animation flicker).
+- **`nodalia-notifications-card.js`:** empty-state body no longer falls back to `empty_title` when only a custom title is set.
+
+### Changed
+
+- **Editor i18n:** tap/hold/double-tap action labels translated for climate, weather, light, and entity editors (all locales); `en.json` key order cleaned up.
+
+---
+
+## [1.1.3-alpha.5] - 2026-05-18
+
+Fifth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.5`**.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** **`Can't find variable: advanceVacuumStrings`** in map tools (add-zone button) — missing `const advanceVacuumStrings = this._advanceVacuumStrings()` in `_renderMapTools`.
+
+---
+
+## [1.1.3-alpha.4] - 2026-05-18
+
+Fourth **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.4`**.
+
+### Fixed
+
+- **`nodalia-utils.js`:** entity guard no longer shows **Entity not found** while Home Assistant is still loading `hass.states` (`connected` / empty registry); entities known via `hass.entities` are accepted.
+- **`nodalia-advance-vacuum-card.js`:** re-renders after the guard when `hass` arrives (signature updated on warning path).
+
+---
+
+## [1.1.3-alpha.3] - 2026-05-17
+
+Third **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.3`**.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** **Zona** mode works again when drawing manual zones on the map; stale shared cleaning sessions no longer wipe selections on every render while docked.
+- **`nodalia-notifications-card.js`:** vacuum **`water_empty`** and related runtime strings use i18n instead of hard-coded English.
+- **`nodalia-fan-card.js` / `nodalia-entity-card.js` / `nodalia-media-player.js`:** editor **Tap actions** toggle shows and updates the section again.
+- **`nodalia-climate-card.js`:** **Tap actions** editor section sits outside **General** (same layout as other cards).
+- **Editor i18n:** `ed.shared.show_tap_action_settings` / `hide_tap_action_settings` translated in all editor locales.
+
+---
+
+## [1.1.3-alpha.2] - 2026-05-17
+
+Second **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.2`**.
+
+### Added
+
+- **`nodalia-utils.js`:** `renderEditorCollapsibleSectionHeaderHtml` and `renderLovelaceEntityGuardForEntities` for shared editor and entity-guard patterns.
+- **Editors (weather, climate, person, graph, power-flow, fav, circular gauge, …):** collapsible **Tap actions** sections (collapsed by default), aligned with light/cover/humidifier editors and `ed.shared.show_tap_action_settings` / `hide_tap_action_settings` i18n.
+
+### Changed
+
+- **Entity-based cards** (media player, alarm, circular gauge, person, vacuum, graph, insignia, advance-vacuum, calendar, power-flow, …): missing entities use native Lovelace **`hui-warning`** / **`ha-alert`** where not already applied.
+
+---
+
+## [1.1.3-alpha.1] - 2026-05-17
+
+First **`1.1.3`** **`alpha`**: release channel **`1.1.3-alpha.1`**.
+
+### Added
+
+- **`nodalia-utils.js`:** `renderLovelaceEntityGuardCardHtml` shows Home Assistant's native **`hui-warning`** (or **`ha-alert`**) when no entity is configured or the entity is missing from state — replaces custom “configure entity” empty cards.
+- **`nodalia-utils.js`:** `scheduleCardZoneTap` / `cancelCardZoneTap` for double-tap actions (~320 ms) alongside existing hold gestures.
+- **`nodalia-weather-card.js`:** **`hold_action`** and **`double_tap_action`** (more-info / none), with long-press on the card body.
+- **`nodalia-entity-card.js` / `nodalia-fan-card.js`:** **`double_tap_action`** (and icon variant) with the same action types as tap/hold where applicable; entity card includes navigate paths.
+
+### Changed
+
+- **Entity-based cards** (weather, entity, fan, light, humidifier, cover, …): missing or unknown entities now use the Lovelace warning UI instead of branded empty-state copy.
 
 ---
 

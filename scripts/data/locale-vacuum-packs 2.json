@@ -1,0 +1,822 @@
+{
+  "pt": {
+    "advanceVacuum": {
+      "modeLabels": {
+        "all": "Tudo",
+        "rooms": "Divisões",
+        "zone": "Zona",
+        "routines": "Rotinas",
+        "goto": "Ir ao ponto"
+      },
+      "panelModes": {
+        "smart": "Inteligente",
+        "vacuum_mop": "Aspiração e esfregão",
+        "vacuum": "Aspiração",
+        "mop": "Esfregão",
+        "custom": "Personalizado"
+      },
+      "dockSections": {
+        "control": "Controlo da base",
+        "settings": "Definições da base"
+      },
+      "dockSettings": {
+        "mop_wash_frequency": "Frequência de lavagem da esfregona",
+        "mop_mode": "Modo de esfregão",
+        "auto_empty_frequency": "Frequência de esvaziamento automático",
+        "empty_mode": "Modo de esvaziamento",
+        "drying_duration": "Duração de secagem"
+      },
+      "dockControls": {
+        "empty": { "label": "Esvaziar depósito", "active": "Parar esvaziamento" },
+        "wash": { "label": "Lavar pano", "active": "Parar lavagem do pano" },
+        "dry": { "label": "Secar esfregona", "active": "Parar secagem" }
+      },
+      "vacuumModes": {
+        "quiet": "Silencioso",
+        "silent": "Silencioso",
+        "balanced": "Equilibrado",
+        "standard": "Padrão",
+        "normal": "Normal",
+        "turbo": "Turbo",
+        "max": "Max",
+        "maxplus": "Max+",
+        "max_plus": "Max+",
+        "gentle": "Suave",
+        "strong": "Forte",
+        "smart": "Inteligente",
+        "smartmode": "Inteligente",
+        "smart_mode": "Inteligente",
+        "intelligent": "Inteligente",
+        "custom": "Personalizado",
+        "custommode": "Personalizado",
+        "custom_mode": "Personalizado",
+        "custom_water_flow": "Caudal de água personalizado",
+        "custom_watter_flow": "Caudal de água personalizado",
+        "off": "Sem esfregão",
+        "low": "Baixa",
+        "medium": "Média",
+        "high": "Alta",
+        "intense": "Intenso",
+        "deep": "Profundo",
+        "deep_plus": "Profundo+",
+        "deepplus": "Profundo+",
+        "fast": "Rápido",
+        "rapido": "Rápido"
+      },
+      "offSuction": "Desligado",
+      "reportedStates": {
+        "docked": "Na base",
+        "charging": "A carregar",
+        "charging_completed": "A carregar",
+        "cleaning": "A limpar",
+        "spot_cleaning": "A limpar",
+        "segment_cleaning": "A limpar",
+        "room_cleaning": "A limpar",
+        "zone_cleaning": "A limpar",
+        "clean_area": "A limpar",
+        "paused": "Em pausa",
+        "returning": "A regressar à base",
+        "return_to_base": "A regressar à base",
+        "returning_home": "A regressar à base",
+        "washing": "A lavar esfregonas",
+        "wash_mop": "A lavar esfregonas",
+        "washing_mop": "A lavar esfregonas",
+        "washing_pads": "A lavar esfregonas",
+        "drying": "A secar",
+        "drying_mop": "A secar",
+        "emptying": "Esvaziamento automático",
+        "self_emptying": "Esvaziamento automático",
+        "unavailable": "Indisponível",
+        "unknown": "Desconhecido",
+        "error": "Erro",
+        "fallback": "Desconhecido"
+      },
+      "mapStatus": {
+        "washing_mop": "A lavar a esfregona",
+        "drying_mop": "A secar a esfregona",
+        "emptying_dust": "A esvaziar o depósito",
+        "charging": "A carregar"
+      },
+      "descriptorLabels": {
+        "suction": "Aspiração",
+        "mop": "Esfregão",
+        "mop_mode": "Modo da esfregona"
+      },
+      "utility": {
+        "cleaningMode": "Modo de limpeza",
+        "cleaningCounter": "Passagens de limpeza",
+        "dockActions": "Ações da base",
+        "chargingStation": "Estação de carga",
+        "zonesWord": "zonas",
+        "pointWord": "ponto",
+        "zoneTool": "Zona",
+        "routineDefault": "Rotina",
+        "customMenuDefault": "Base",
+        "modesFallbackTitle": "Modos de aspiração e esfregão"
+      },
+      "actions": {
+        "returnToBase": "Regressar à base",
+        "locate": "Localizar",
+        "stop": "Parar",
+        "run": "Executar",
+        "addZoneToClean": "Adicionar zona à limpeza",
+        "cleanZone": "Limpar zona"
+      },
+      "handles": {
+        "moveZone": "Mover zona",
+        "deleteZone": "Eliminar zona",
+        "resizeZone": "Redimensionar zona"
+      },
+      "titles": {
+        "editZone": "Editar zona",
+        "backPanel": "Voltar ao painel principal",
+        "addZone": "Adicionar zona",
+        "gotoFallback": "Ponto"
+      }
+    },
+    "vacuumSimple": {
+      "quiet": "Silencioso",
+      "silent": "Silencioso",
+      "balanced": "Equilibrado",
+      "standard": "Padrão",
+      "normal": "Normal",
+      "turbo": "Turbo",
+      "max": "Max",
+      "maxplus": "Max+",
+      "max_plus": "Max+",
+      "gentle": "Suave",
+      "strong": "Forte",
+      "smart": "Inteligente",
+      "smartmode": "Inteligente",
+      "smart_mode": "Inteligente",
+      "intelligent": "Inteligente",
+      "custom": "Personalizado",
+      "custommode": "Personalizado",
+      "custom_mode": "Personalizado",
+      "custom_water_flow": "Caudal de água personalizado",
+      "custom_watter_flow": "Caudal de água personalizado",
+      "off": "Sem esfregão",
+      "low": "Baixa",
+      "medium": "Média",
+      "high": "Alta",
+      "intense": "Intenso",
+      "deep": "Profundo"
+    }
+  },
+  "ru": {
+    "advanceVacuum": {
+      "modeLabels": {
+        "all": "Всё",
+        "rooms": "Комнаты",
+        "zone": "Зона",
+        "routines": "Сценарии",
+        "goto": "К точке"
+      },
+      "panelModes": {
+        "smart": "Умный",
+        "vacuum_mop": "Пылесос и мытьё",
+        "vacuum": "Пылесос",
+        "mop": "Мытьё",
+        "custom": "Свой"
+      },
+      "dockSections": {
+        "control": "Управление базой",
+        "settings": "Настройки базы"
+      },
+      "dockSettings": {
+        "mop_wash_frequency": "Частота промывки швабры",
+        "mop_mode": "Режим мытья",
+        "auto_empty_frequency": "Частота самоочистки",
+        "empty_mode": "Режим опорожнения",
+        "drying_duration": "Длительность сушки"
+      },
+      "dockControls": {
+        "empty": { "label": "Опорожнить контейнер", "active": "Остановить опорожнение" },
+        "wash": { "label": "Промыть швабру", "active": "Остановить промывку" },
+        "dry": { "label": "Сушить швабру", "active": "Остановить сушку" }
+      },
+      "vacuumModes": {
+        "quiet": "Тихий",
+        "silent": "Тихий",
+        "balanced": "Сбалансированный",
+        "standard": "Стандарт",
+        "normal": "Обычный",
+        "turbo": "Турбо",
+        "max": "Макс",
+        "maxplus": "Макс+",
+        "max_plus": "Макс+",
+        "gentle": "Мягкий",
+        "strong": "Сильный",
+        "smart": "Умный",
+        "smartmode": "Умный",
+        "smart_mode": "Умный",
+        "intelligent": "Умный",
+        "custom": "Свой",
+        "custommode": "Свой",
+        "custom_mode": "Свой",
+        "custom_water_flow": "Свой расход воды",
+        "custom_watter_flow": "Свой расход воды",
+        "off": "Без мытья",
+        "low": "Низкий",
+        "medium": "Средний",
+        "high": "Высокий",
+        "intense": "Интенсивный",
+        "deep": "Глубокий",
+        "deep_plus": "Глубокий+",
+        "deepplus": "Глубокий+",
+        "fast": "Быстрый",
+        "rapido": "Быстрый"
+      },
+      "offSuction": "Выкл.",
+      "reportedStates": {
+        "docked": "На базе",
+        "charging": "Зарядка",
+        "charging_completed": "Зарядка",
+        "cleaning": "Уборка",
+        "spot_cleaning": "Уборка",
+        "segment_cleaning": "Уборка",
+        "room_cleaning": "Уборка",
+        "zone_cleaning": "Уборка",
+        "clean_area": "Уборка",
+        "paused": "Пауза",
+        "returning": "Возврат на базу",
+        "return_to_base": "Возврат на базу",
+        "returning_home": "Возврат на базу",
+        "washing": "Промывка швабры",
+        "wash_mop": "Промывка швабры",
+        "washing_mop": "Промывка швабры",
+        "washing_pads": "Промывка швабры",
+        "drying": "Сушка",
+        "drying_mop": "Сушка",
+        "emptying": "Самоочистка",
+        "self_emptying": "Самоочистка",
+        "unavailable": "Недоступно",
+        "unknown": "Неизвестно",
+        "error": "Ошибка",
+        "fallback": "Неизвестно"
+      },
+      "mapStatus": {
+        "washing_mop": "Промывка швабры",
+        "drying_mop": "Сушка швабры",
+        "emptying_dust": "Опорожнение контейнера",
+        "charging": "Зарядка"
+      },
+      "descriptorLabels": {
+        "suction": "Пылесос",
+        "mop": "Мытьё",
+        "mop_mode": "Режим швабры"
+      },
+      "utility": {
+        "cleaningMode": "Режим уборки",
+        "cleaningCounter": "Проходы уборки",
+        "dockActions": "Действия базы",
+        "chargingStation": "Зарядная база",
+        "zonesWord": "зоны",
+        "pointWord": "точка",
+        "zoneTool": "Зона",
+        "routineDefault": "Сценарий",
+        "customMenuDefault": "База",
+        "modesFallbackTitle": "Режимы пылесоса и мытья"
+      },
+      "actions": {
+        "returnToBase": "На базу",
+        "locate": "Найти",
+        "stop": "Стоп",
+        "run": "Пуск",
+        "addZoneToClean": "Добавить зону к уборке",
+        "cleanZone": "Убрать зону"
+      },
+      "handles": {
+        "moveZone": "Переместить зону",
+        "deleteZone": "Удалить зону",
+        "resizeZone": "Размер зоны"
+      },
+      "titles": {
+        "editZone": "Редактировать зону",
+        "backPanel": "К основной панели",
+        "addZone": "Добавить зону",
+        "gotoFallback": "Точка"
+      }
+    },
+    "vacuumSimple": {
+      "quiet": "Тихий",
+      "silent": "Тихий",
+      "balanced": "Сбалансированный",
+      "standard": "Стандарт",
+      "normal": "Обычный",
+      "turbo": "Турбо",
+      "max": "Макс",
+      "maxplus": "Макс+",
+      "max_plus": "Макс+",
+      "gentle": "Мягкий",
+      "strong": "Сильный",
+      "smart": "Умный",
+      "smartmode": "Умный",
+      "smart_mode": "Умный",
+      "intelligent": "Умный",
+      "custom": "Свой",
+      "custommode": "Свой",
+      "custom_mode": "Свой",
+      "custom_water_flow": "Свой расход воды",
+      "custom_watter_flow": "Свой расход воды",
+      "off": "Без мытья",
+      "low": "Низкий",
+      "medium": "Средний",
+      "high": "Высокий",
+      "intense": "Интенсивный",
+      "deep": "Глубокий"
+    }
+  },
+  "el": {
+    "advanceVacuum": {
+      "modeLabels": {
+        "all": "Όλα",
+        "rooms": "Δωμάτια",
+        "zone": "Ζώνη",
+        "routines": "Ρουτίνες",
+        "goto": "Μετάβαση σε σημείο"
+      },
+      "panelModes": {
+        "smart": "Έξυπνο",
+        "vacuum_mop": "Σκούπισμα και σφουγγάρισμα",
+        "vacuum": "Σκούπισμα",
+        "mop": "Σφουγγάρισμα",
+        "custom": "Προσαρμοσμένο"
+      },
+      "dockSections": {
+        "control": "Έλεγχος βάσης",
+        "settings": "Ρυθμίσεις βάσης"
+      },
+      "dockSettings": {
+        "mop_wash_frequency": "Συχνότητα πλύσης πανιού",
+        "mop_mode": "Λειτουργία σφουγγαρίσματος",
+        "auto_empty_frequency": "Συχνότητα αυτόματου αδειάσματος",
+        "empty_mode": "Λειτουργία αδειάσματος",
+        "drying_duration": "Διάρκεια στεγνώματος"
+      },
+      "dockControls": {
+        "empty": { "label": "Άδειασμα δοχείου", "active": "Διακοπή αδειάσματος" },
+        "wash": { "label": "Πλύση πανιού", "active": "Διακοπή πλύσης" },
+        "dry": { "label": "Στέγνωμα πανιού", "active": "Διακοπή στεγνώματος" }
+      },
+      "vacuumModes": {
+        "quiet": "Ήσυχο",
+        "silent": "Ήσυχο",
+        "balanced": "Ισορροπημένο",
+        "standard": "Τυπικό",
+        "normal": "Κανονικό",
+        "turbo": "Turbo",
+        "max": "Μέγιστο",
+        "maxplus": "Μέγιστο+",
+        "max_plus": "Μέγιστο+",
+        "gentle": "Ήπιο",
+        "strong": "Δυνατό",
+        "smart": "Έξυπνο",
+        "smartmode": "Έξυπνο",
+        "smart_mode": "Έξυπνο",
+        "intelligent": "Έξυπνο",
+        "custom": "Προσαρμοσμένο",
+        "custommode": "Προσαρμοσμένο",
+        "custom_mode": "Προσαρμοσμένο",
+        "custom_water_flow": "Προσαρμοσμένη ροή νερού",
+        "custom_watter_flow": "Προσαρμοσμένη ροή νερού",
+        "off": "Χωρίς σφουγγάρισμα",
+        "low": "Χαμηλό",
+        "medium": "Μέτριο",
+        "high": "Υψηλό",
+        "intense": "Έντονο",
+        "deep": "Βαθύ",
+        "deep_plus": "Βαθύ+",
+        "deepplus": "Βαθύ+",
+        "fast": "Γρήγορο",
+        "rapido": "Γρήγορο"
+      },
+      "offSuction": "Ανενεργό",
+      "reportedStates": {
+        "docked": "Στη βάση",
+        "charging": "Φόρτιση",
+        "charging_completed": "Φόρτιση",
+        "cleaning": "Καθαρισμός",
+        "spot_cleaning": "Καθαρισμός",
+        "segment_cleaning": "Καθαρισμός",
+        "room_cleaning": "Καθαρισμός",
+        "zone_cleaning": "Καθαρισμός",
+        "clean_area": "Καθαρισμός",
+        "paused": "Παύση",
+        "returning": "Επιστροφή στη βάση",
+        "return_to_base": "Επιστροφή στη βάση",
+        "returning_home": "Επιστροφή στη βάση",
+        "washing": "Πλύση πανιού",
+        "wash_mop": "Πλύση πανιού",
+        "washing_mop": "Πλύση πανιού",
+        "washing_pads": "Πλύση πανιού",
+        "drying": "Στέγνωμα",
+        "drying_mop": "Στέγνωμα",
+        "emptying": "Αυτόματο άδειασμα",
+        "self_emptying": "Αυτόματο άδειασμα",
+        "unavailable": "Μη διαθέσιμο",
+        "unknown": "Άγνωστο",
+        "error": "Σφάλμα",
+        "fallback": "Άγνωστο"
+      },
+      "mapStatus": {
+        "washing_mop": "Πλύση πανιού",
+        "drying_mop": "Στέγνωμα πανιού",
+        "emptying_dust": "Άδειασμα δοχείου σκόνης",
+        "charging": "Φόρτιση"
+      },
+      "descriptorLabels": {
+        "suction": "Σκούπισμα",
+        "mop": "Σφουγγάρισμα",
+        "mop_mode": "Λειτουργία πανιού"
+      },
+      "utility": {
+        "cleaningMode": "Λειτουργία καθαρισμού",
+        "cleaningCounter": "Διαβάσεις καθαρισμού",
+        "dockActions": "Ενέργειες βάσης",
+        "chargingStation": "Σταθμός φόρτισης",
+        "zonesWord": "ζώνες",
+        "pointWord": "σημείο",
+        "zoneTool": "Ζώνη",
+        "routineDefault": "Ρουτίνα",
+        "customMenuDefault": "Βάση",
+        "modesFallbackTitle": "Λειτουργίες σκουπίσματος και σφουγγαρίσματος"
+      },
+      "actions": {
+        "returnToBase": "Επιστροφή στη βάση",
+        "locate": "Εντοπισμός",
+        "stop": "Διακοπή",
+        "run": "Εκτέλεση",
+        "addZoneToClean": "Προσθήκη ζώνης στον καθαρισμό",
+        "cleanZone": "Καθαρισμός ζώνης"
+      },
+      "handles": {
+        "moveZone": "Μετακίνηση ζώνης",
+        "deleteZone": "Διαγραφή ζώνης",
+        "resizeZone": "Αλλαγή μεγέθους ζώνης"
+      },
+      "titles": {
+        "editZone": "Επεξεργασία ζώνης",
+        "backPanel": "Πίσω στο κύριο πάνελ",
+        "addZone": "Προσθήκη ζώνης",
+        "gotoFallback": "Σημείο"
+      }
+    },
+    "vacuumSimple": {
+      "quiet": "Ήσυχο",
+      "silent": "Ήσυχο",
+      "balanced": "Ισορροπημένο",
+      "standard": "Τυπικό",
+      "normal": "Κανονικό",
+      "turbo": "Turbo",
+      "max": "Μέγιστο",
+      "maxplus": "Μέγιστο+",
+      "max_plus": "Μέγιστο+",
+      "gentle": "Ήπιο",
+      "strong": "Δυνατό",
+      "smart": "Έξυπνο",
+      "smartmode": "Έξυπνο",
+      "smart_mode": "Έξυπνο",
+      "intelligent": "Έξυπνο",
+      "custom": "Προσαρμοσμένο",
+      "custommode": "Προσαρμοσμένο",
+      "custom_mode": "Προσαρμοσμένο",
+      "custom_water_flow": "Προσαρμοσμένη ροή νερού",
+      "custom_watter_flow": "Προσαρμοσμένη ροή νερού",
+      "off": "Χωρίς σφουγγάρισμα",
+      "low": "Χαμηλό",
+      "medium": "Μέτριο",
+      "high": "Υψηλό",
+      "intense": "Έντονο",
+      "deep": "Βαθύ"
+    }
+  },
+  "zh": {
+    "advanceVacuum": {
+      "modeLabels": {
+        "all": "全部",
+        "rooms": "房间",
+        "zone": "区域",
+        "routines": "例行程序",
+        "goto": "前往点"
+      },
+      "panelModes": {
+        "smart": "智能",
+        "vacuum_mop": "吸尘与拖地",
+        "vacuum": "吸尘",
+        "mop": "拖地",
+        "custom": "自定义"
+      },
+      "dockSections": {
+        "control": "基站控制",
+        "settings": "基站设置"
+      },
+      "dockSettings": {
+        "mop_wash_frequency": "拖布清洗频率",
+        "mop_mode": "拖地模式",
+        "auto_empty_frequency": "自动集尘频率",
+        "empty_mode": "清空模式",
+        "drying_duration": "烘干时长"
+      },
+      "dockControls": {
+        "empty": { "label": "清空尘盒", "active": "停止清空" },
+        "wash": { "label": "清洗拖布", "active": "停止清洗" },
+        "dry": { "label": "烘干拖布", "active": "停止烘干" }
+      },
+      "vacuumModes": {
+        "quiet": "安静",
+        "silent": "安静",
+        "balanced": "均衡",
+        "standard": "标准",
+        "normal": "正常",
+        "turbo": "Turbo",
+        "max": "最大",
+        "maxplus": "最大+",
+        "max_plus": "最大+",
+        "gentle": "轻柔",
+        "strong": "强力",
+        "smart": "智能",
+        "smartmode": "智能",
+        "smart_mode": "智能",
+        "intelligent": "智能",
+        "custom": "自定义",
+        "custommode": "自定义",
+        "custom_mode": "自定义",
+        "custom_water_flow": "自定义水量",
+        "custom_watter_flow": "自定义水量",
+        "off": "关闭拖地",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "intense": "强力",
+        "deep": "深度",
+        "deep_plus": "深度+",
+        "deepplus": "深度+",
+        "fast": "快速",
+        "rapido": "快速"
+      },
+      "offSuction": "关闭",
+      "reportedStates": {
+        "docked": "在基站",
+        "charging": "充电中",
+        "charging_completed": "充电中",
+        "cleaning": "清扫中",
+        "spot_cleaning": "清扫中",
+        "segment_cleaning": "清扫中",
+        "room_cleaning": "清扫中",
+        "zone_cleaning": "清扫中",
+        "clean_area": "清扫中",
+        "paused": "已暂停",
+        "returning": "返回基站",
+        "return_to_base": "返回基站",
+        "returning_home": "返回基站",
+        "washing": "清洗拖布",
+        "wash_mop": "清洗拖布",
+        "washing_mop": "清洗拖布",
+        "washing_pads": "清洗拖布",
+        "drying": "烘干中",
+        "drying_mop": "烘干中",
+        "emptying": "自动集尘",
+        "self_emptying": "自动集尘",
+        "unavailable": "不可用",
+        "unknown": "未知",
+        "error": "错误",
+        "fallback": "未知"
+      },
+      "mapStatus": {
+        "washing_mop": "清洗拖布",
+        "drying_mop": "烘干拖布",
+        "emptying_dust": "清空尘盒",
+        "charging": "充电中"
+      },
+      "descriptorLabels": {
+        "suction": "吸尘",
+        "mop": "拖地",
+        "mop_mode": "拖布模式"
+      },
+      "utility": {
+        "cleaningMode": "清洁模式",
+        "cleaningCounter": "清洁次数",
+        "dockActions": "基站操作",
+        "chargingStation": "充电座",
+        "zonesWord": "区域",
+        "pointWord": "点",
+        "zoneTool": "区域",
+        "routineDefault": "例行程序",
+        "customMenuDefault": "基站",
+        "modesFallbackTitle": "吸尘与拖地模式"
+      },
+      "actions": {
+        "returnToBase": "返回基站",
+        "locate": "定位",
+        "stop": "停止",
+        "run": "开始",
+        "addZoneToClean": "添加清扫区域",
+        "cleanZone": "清扫区域"
+      },
+      "handles": {
+        "moveZone": "移动区域",
+        "deleteZone": "删除区域",
+        "resizeZone": "调整区域大小"
+      },
+      "titles": {
+        "editZone": "编辑区域",
+        "backPanel": "返回主面板",
+        "addZone": "添加区域",
+        "gotoFallback": "点"
+      }
+    },
+    "vacuumSimple": {
+      "quiet": "安静",
+      "silent": "安静",
+      "balanced": "均衡",
+      "standard": "标准",
+      "normal": "正常",
+      "turbo": "Turbo",
+      "max": "最大",
+      "maxplus": "最大+",
+      "max_plus": "最大+",
+      "gentle": "轻柔",
+      "strong": "强力",
+      "smart": "智能",
+      "smartmode": "智能",
+      "smart_mode": "智能",
+      "intelligent": "智能",
+      "custom": "自定义",
+      "custommode": "自定义",
+      "custom_mode": "自定义",
+      "custom_water_flow": "自定义水量",
+      "custom_watter_flow": "自定义水量",
+      "off": "关闭拖地",
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "intense": "强力",
+      "deep": "深度"
+    }
+  },
+  "ro": {
+    "advanceVacuum": {
+      "modeLabels": {
+        "all": "Tot",
+        "rooms": "Camere",
+        "zone": "Zonă",
+        "routines": "Rutine",
+        "goto": "Mergi la punct"
+      },
+      "panelModes": {
+        "smart": "Inteligent",
+        "vacuum_mop": "Aspirare și mop",
+        "vacuum": "Aspirare",
+        "mop": "Mop",
+        "custom": "Personalizat"
+      },
+      "dockSections": {
+        "control": "Control bază",
+        "settings": "Setări bază"
+      },
+      "dockSettings": {
+        "mop_wash_frequency": "Frecvență spălare mop",
+        "mop_mode": "Mod mop",
+        "auto_empty_frequency": "Frecvență golire automată",
+        "empty_mode": "Mod golire",
+        "drying_duration": "Durată uscare"
+      },
+      "dockControls": {
+        "empty": { "label": "Golește recipientul", "active": "Oprește golirea" },
+        "wash": { "label": "Spală mopul", "active": "Oprește spălarea" },
+        "dry": { "label": "Uscare mop", "active": "Oprește uscarea" }
+      },
+      "vacuumModes": {
+        "quiet": "Silențios",
+        "silent": "Silențios",
+        "balanced": "Echilibrat",
+        "standard": "Standard",
+        "normal": "Normal",
+        "turbo": "Turbo",
+        "max": "Max",
+        "maxplus": "Max+",
+        "max_plus": "Max+",
+        "gentle": "Ușor",
+        "strong": "Puternic",
+        "smart": "Inteligent",
+        "smartmode": "Inteligent",
+        "smart_mode": "Inteligent",
+        "intelligent": "Inteligent",
+        "custom": "Personalizat",
+        "custommode": "Personalizat",
+        "custom_mode": "Personalizat",
+        "custom_water_flow": "Debit apă personalizat",
+        "custom_watter_flow": "Debit apă personalizat",
+        "off": "Fără mop",
+        "low": "Scăzut",
+        "medium": "Mediu",
+        "high": "Ridicat",
+        "intense": "Intens",
+        "deep": "Profund",
+        "deep_plus": "Profund+",
+        "deepplus": "Profund+",
+        "fast": "Rapid",
+        "rapido": "Rapid"
+      },
+      "offSuction": "Oprit",
+      "reportedStates": {
+        "docked": "La bază",
+        "charging": "Încărcare",
+        "charging_completed": "Încărcare",
+        "cleaning": "Curățare",
+        "spot_cleaning": "Curățare",
+        "segment_cleaning": "Curățare",
+        "room_cleaning": "Curățare",
+        "zone_cleaning": "Curățare",
+        "clean_area": "Curățare",
+        "paused": "Pauză",
+        "returning": "Întoarcere la bază",
+        "return_to_base": "Întoarcere la bază",
+        "returning_home": "Întoarcere la bază",
+        "washing": "Spălare mop",
+        "wash_mop": "Spălare mop",
+        "washing_mop": "Spălare mop",
+        "washing_pads": "Spălare mop",
+        "drying": "Uscare",
+        "drying_mop": "Uscare",
+        "emptying": "Golire automată",
+        "self_emptying": "Golire automată",
+        "unavailable": "Indisponibil",
+        "unknown": "Necunoscut",
+        "error": "Eroare",
+        "fallback": "Necunoscut"
+      },
+      "mapStatus": {
+        "washing_mop": "Spălare mop",
+        "drying_mop": "Uscare mop",
+        "emptying_dust": "Golire recipient praf",
+        "charging": "Încărcare"
+      },
+      "descriptorLabels": {
+        "suction": "Aspirare",
+        "mop": "Mop",
+        "mop_mode": "Mod mop"
+      },
+      "utility": {
+        "cleaningMode": "Mod curățare",
+        "cleaningCounter": "Treceri curățare",
+        "dockActions": "Acțiuni bază",
+        "chargingStation": "Stație încărcare",
+        "zonesWord": "zone",
+        "pointWord": "punct",
+        "zoneTool": "Zonă",
+        "routineDefault": "Rutină",
+        "customMenuDefault": "Bază",
+        "modesFallbackTitle": "Moduri aspirare și mop"
+      },
+      "actions": {
+        "returnToBase": "Înapoi la bază",
+        "locate": "Localizare",
+        "stop": "Stop",
+        "run": "Pornește",
+        "addZoneToClean": "Adaugă zonă la curățare",
+        "cleanZone": "Curăță zona"
+      },
+      "handles": {
+        "moveZone": "Mută zona",
+        "deleteZone": "Șterge zona",
+        "resizeZone": "Redimensionează zona"
+      },
+      "titles": {
+        "editZone": "Editează zona",
+        "backPanel": "Înapoi la panoul principal",
+        "addZone": "Adaugă zonă",
+        "gotoFallback": "Punct"
+      }
+    },
+    "vacuumSimple": {
+      "quiet": "Silențios",
+      "silent": "Silențios",
+      "balanced": "Echilibrat",
+      "standard": "Standard",
+      "normal": "Normal",
+      "turbo": "Turbo",
+      "max": "Max",
+      "maxplus": "Max+",
+      "max_plus": "Max+",
+      "gentle": "Ușor",
+      "strong": "Puternic",
+      "smart": "Inteligent",
+      "smartmode": "Inteligent",
+      "smart_mode": "Inteligent",
+      "intelligent": "Inteligent",
+      "custom": "Personalizat",
+      "custommode": "Personalizat",
+      "custom_mode": "Personalizat",
+      "custom_water_flow": "Debit apă personalizat",
+      "custom_watter_flow": "Debit apă personalizat",
+      "off": "Fără mop",
+      "low": "Scăzut",
+      "medium": "Mediu",
+      "high": "Ridicat",
+      "intense": "Intens",
+      "deep": "Profund"
+    }
+  }
+}

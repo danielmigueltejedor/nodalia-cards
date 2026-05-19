@@ -1,800 +1,6 @@
-// <nodalia-standalone-utils>
-// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
-// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
-/**
- * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
- * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
- */
-(function initNodaliaUtils() {
-  const REQUIRED_API_KEYS = [
-    "isObject",
-    "deepClone",
-    "deepEqual",
-    "stripEqualToDefaults",
-    "editorStatesSignature",
-    "editorFilteredStatesSignature",
-    "editorSortLocale",
-    "sanitizeActionUrl",
-    "mountEntityPickerHost",
-    "mountIconPickerHost",
-    "postHomeAssistantWebhook",
-    "warnStrictServiceDenied",
-    "registerCustomCard",
-    "renderEditorChipBorderRadiusHtml",
-    "renderEditorCardBorderRadiusHtml",
-    "bindHostPointerHoldGesture",
-    "getEntityFriendlyName",
-    "applyDefaultConfigNameFromEntity",
-  ];
-  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
-  if (
-    existing &&
-    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
-  ) {
-    return;
-  }
-
-  function isObject(value) {
-    return value !== null && typeof value === "object" && !Array.isArray(value);
-  }
-
-  function deepClone(value) {
-    if (value === undefined) {
-      return undefined;
-    }
-    return JSON.parse(JSON.stringify(value));
-  }
-
-  function deepEqual(a, b) {
-    if (Object.is(a, b)) {
-      return true;
-    }
-    if (a == null || b == null) {
-      return a === b;
-    }
-    if (typeof a !== typeof b) {
-      return false;
-    }
-    if (typeof a !== "object") {
-      return false;
-    }
-    if (Array.isArray(a)) {
-      if (!Array.isArray(b) || a.length !== b.length) {
-        return false;
-      }
-      return a.every((value, index) => deepEqual(value, b[index]));
-    }
-    if (Array.isArray(b)) {
-      return false;
-    }
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) {
-      return false;
-    }
-    return keysA.every(key => deepEqual(a[key], b[key]));
-  }
-
-  function stripEqualToDefaults(config, defaults) {
-    if (defaults === undefined || defaults === null) {
-      return deepClone(config);
-    }
-    if (config === undefined || config === null) {
-      return undefined;
-    }
-    if (Array.isArray(config)) {
-      return deepEqual(config, defaults) ? undefined : deepClone(config);
-    }
-    if (isObject(config) && isObject(defaults)) {
-      const out = {};
-      for (const key of Object.keys(config)) {
-        const cv = config[key];
-        const dv = defaults[key];
-        if (!(key in defaults)) {
-          out[key] = deepClone(cv);
-          continue;
-        }
-        if (deepEqual(cv, dv)) {
-          continue;
-        }
-        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-          const stripped = stripEqualToDefaults(cv, dv);
-          if (stripped !== undefined) {
-            out[key] = stripped;
-          }
-        } else {
-          out[key] = deepClone(cv);
-        }
-      }
-      return Object.keys(out).length ? out : undefined;
-    }
-    return deepEqual(config, defaults) ? undefined : config;
-  }
-
-  /**
-   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
-   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
-   */
-  function editorFilteredStatesSignature(hass, language, predicate) {
-    const states = hass?.states || {};
-    const ids = [];
-    for (const id of Object.keys(states)) {
-      if (!predicate(id)) {
-        continue;
-      }
-      ids.push(id);
-    }
-    ids.sort();
-
-    const rows = new Array(ids.length);
-    for (let index = 0; index < ids.length; index += 1) {
-      const id = ids[index];
-      const state = states[id];
-      rows[index] = `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`;
-    }
-
-    const tag =
-      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
-        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
-        : "";
-    return `${tag}|${rows.join("|")}`;
-  }
-
-  /**
-   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
-   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
-   * re-render when labels or icons change, not only when the entity count changes.
-   */
-  function editorStatesSignature(hass, language) {
-    return editorFilteredStatesSignature(hass, language, () => true);
-  }
-
-  /**
-   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
-   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
-   */
-  function editorSortLocale(hass, language) {
-    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
-      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
-    }
-    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
-    const s = String(raw || "").trim();
-    return s || "en";
-  }
-
-  /**
-   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
-   */
-  function normalizeHomeAssistantWebhookId(webhookId) {
-    const raw = String(webhookId ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-    if (/^https?:\/\//i.test(raw)) {
-      try {
-        const u = new URL(raw);
-        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
-        return m ? decodeURIComponent(m[1]) : "";
-      } catch (_err) {
-        return "";
-      }
-    }
-    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
-    if (pathSeg) {
-      return decodeURIComponent(pathSeg[1]);
-    }
-    return raw;
-  }
-
-  /**
-   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
-   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
-   * an automation triggered by the webhook runs with normal HA privileges.
-   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
-   *
-   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
-   * often returns **401** in the HA frontend because API routes expect the bearer/session
-   * from `fetchWithAuth`, not cookies alone.
-   */
-  function postHomeAssistantWebhook(webhookId, body, hass) {
-    const id = normalizeHomeAssistantWebhookId(webhookId);
-    if (!id) {
-      return Promise.resolve(false);
-    }
-    const payload = body && typeof body === "object" ? body : {};
-    const path = `/api/webhook/${encodeURIComponent(id)}`;
-
-    const authFetch = hass?.auth?.fetchWithAuth;
-    if (typeof authFetch === "function") {
-      return authFetch(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }).then(
-        res => res.ok,
-        () => false,
-      );
-    }
-
-    if (typeof fetch !== "function") {
-      return Promise.resolve(false);
-    }
-    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
-    if (!origin) {
-      return Promise.resolve(false);
-    }
-    const url = `${origin}${path}`;
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "same-origin",
-    }    ).then(
-      res => res.ok,
-      () => false,
-    );
-  }
-
-  /**
-   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
-   */
-  function warnStrictServiceDenied(cardLabel, serviceValue) {
-    const service = String(serviceValue || "").trim();
-    if (!service) {
-      return;
-    }
-    if (typeof console === "undefined" || typeof console.warn !== "function") {
-      return;
-    }
-    console.warn(
-      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
-    );
-  }
-
-  function getEntityFriendlyName(hass, entityId) {
-    const id = String(entityId || "").trim();
-    if (!id || !hass?.states?.[id]) {
-      return "";
-    }
-    return String(hass.states[id].attributes?.friendly_name || "").trim();
-  }
-
-  /**
-   * When `name` is empty (or still matches the previous entity id/label), copy the entity friendly name.
-   */
-  function applyDefaultConfigNameFromEntity(config, hass, options = {}) {
-    if (!config || !isObject(config)) {
-      return config;
-    }
-    const entityId = String(config.entity || "").trim();
-    if (!entityId || !hass?.states?.[entityId]) {
-      return config;
-    }
-    const fallback = getEntityFriendlyName(hass, entityId) || entityId;
-    const currentName = String(config.name ?? "").trim();
-    const previousEntity = String(options.previousEntity ?? "").trim();
-    const previousFriendly = previousEntity
-      ? (getEntityFriendlyName(hass, previousEntity) || previousEntity)
-      : "";
-    const shouldApply =
-      !currentName
-      || (previousEntity && (currentName === previousEntity || currentName === previousFriendly));
-    if (shouldApply) {
-      config.name = fallback;
-    }
-    return config;
-  }
-
-  function dedupeCustomCardsArray(cards) {
-    if (!Array.isArray(cards)) {
-      return [];
-    }
-    const seen = new Set();
-    for (let index = cards.length - 1; index >= 0; index -= 1) {
-      const type = String(cards[index]?.type || "").trim();
-      if (!type) {
-        continue;
-      }
-      if (seen.has(type)) {
-        cards.splice(index, 1);
-        continue;
-      }
-      seen.add(type);
-    }
-    return cards;
-  }
-
-  function ensureCustomCardsDeduped() {
-    if (typeof window === "undefined") {
-      return null;
-    }
-    window.customCards = dedupeCustomCardsArray(window.customCards || []);
-    return window.customCards;
-  }
-
-  /**
-   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
-   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
-   * other front-end code that may also touch the shared array.
-   */
-  function registerCustomCard(metadata) {
-    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
-      return;
-    }
-    const cards = ensureCustomCardsDeduped();
-    if (!cards) {
-      return;
-    }
-    const type = String(metadata.type || "").trim();
-    if (type) {
-      for (let index = cards.length - 1; index >= 0; index -= 1) {
-        if (String(cards[index]?.type || "").trim() === type) {
-          cards.splice(index, 1);
-        }
-      }
-    }
-    cards.push(metadata);
-  }
-
-  /**
-   * Normalize and validate user-provided action URLs.
-   * Allows http/https and same-origin relative paths by default.
-   */
-  function sanitizeActionUrl(value, options = {}) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-    const allowRelative = options.allowRelative !== false;
-    const allowHash = options.allowHash === true;
-    if (allowHash && raw.startsWith("#")) {
-      return raw;
-    }
-    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
-      return raw;
-    }
-    try {
-      const base =
-        typeof window !== "undefined" && window.location
-          ? window.location.origin
-          : "https://example.invalid";
-      const parsed = new URL(raw, base);
-      const protocol = String(parsed.protocol || "").toLowerCase();
-      if (protocol !== "http:" && protocol !== "https:") {
-        return "";
-      }
-      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
-        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-      }
-      return parsed.toString();
-    } catch (_error) {
-      return "";
-    }
-  }
-
-  function copyDatasetExcept(control, host, skipKeys) {
-    const skip = new Set(skipKeys || []);
-    Object.entries(host.dataset || {}).forEach(([key, value]) => {
-      if (skip.has(key)) {
-        return;
-      }
-      control.dataset[key] = value;
-    });
-  }
-
-  /** Latest callbacks for reused picker controls (listeners call into this). */
-  const pickerCallbackState = new WeakMap();
-  const pickerControlsWithListeners = new WeakSet();
-
-  function dispatchPickerChange(ev) {
-    const control = ev.currentTarget;
-    const s = pickerCallbackState.get(control);
-    if (s && typeof s.onShadowInput === "function") {
-      s.onShadowInput(ev);
-    }
-  }
-
-  function dispatchPickerValueChanged(ev) {
-    const control = ev.currentTarget;
-    const s = pickerCallbackState.get(control);
-    if (!s) {
-      return;
-    }
-    const fn = s.onShadowValueChanged || s.onShadowInput;
-    if (typeof fn === "function") {
-      fn(ev);
-    }
-  }
-
-  /**
-   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
-   */
-  function mountEntityPickerHost(host, options) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const hass = options.hass;
-    const field = options.field || host.dataset.field || "entity";
-    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
-    const placeholder =
-      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
-    const onShadowInput = options.onShadowInput;
-    const onShadowValueChanged = options.onShadowValueChanged;
-    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
-
-    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
-    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
-
-    let desired = "input";
-    if (usePicker) {
-      desired = "picker";
-    } else if (useSelector) {
-      desired = "selector";
-    }
-
-    let control = host.firstElementChild;
-    const tag = control?.tagName || "";
-    const matches =
-      control &&
-      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
-        || (desired === "selector" && tag === "HA-SELECTOR")
-        || (desired === "input" && tag === "INPUT"));
-
-    if (!matches) {
-      host.replaceChildren();
-      if (usePicker) {
-        control = document.createElement("ha-entity-picker");
-        control.allowCustomEntity = true;
-      } else if (useSelector) {
-        control = document.createElement("ha-selector");
-        control.selector = { entity: {} };
-      } else {
-        control = document.createElement("input");
-        control.type = "text";
-      }
-
-      control.dataset.field = field;
-      if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
-      }
-
-      if ("hass" in control) {
-        control.hass = hass;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-      if (placeholder && "placeholder" in control) {
-        control.placeholder = placeholder;
-      }
-
-      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-      if (!pickerControlsWithListeners.has(control)) {
-        pickerControlsWithListeners.add(control);
-        if (control.tagName === "INPUT") {
-          control.addEventListener("change", dispatchPickerChange);
-        } else {
-          control.addEventListener("value-changed", dispatchPickerValueChanged);
-        }
-      }
-
-      host.appendChild(control);
-      return;
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-    if ("hass" in control) {
-      control.hass = hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control && control.value !== nextValue) {
-      control.value = nextValue;
-    }
-  }
-
-  /**
-   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
-   * Callers pass translated labels and their `escapeHtml` (card-local).
-   */
-  function renderEditorChipBorderRadiusHtml(options) {
-    const esc = options?.escapeHtml;
-    if (typeof esc !== "function") {
-      return "";
-    }
-    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
-    const field = fieldRaw || "styles.chip_border_radius";
-    const current = String(options?.value ?? "").trim() || "999px";
-    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
-    const labels = options?.labels ?? {};
-    const tPill = esc(String(labels.pill ?? "Capsule"));
-    const tSoft = esc(String(labels.soft ?? "Soft"));
-    const tRound = esc(String(labels.round ?? "Rounded"));
-    const tSquare = esc(String(labels.square ?? "Square"));
-    const STANDARD = [
-      { v: "999px", l: tPill },
-      { v: "12px", l: tSoft },
-      { v: "8px", l: tRound },
-      { v: "4px", l: tSquare },
-    ];
-    const inStandard = STANDARD.some(p => p.v === current);
-    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
-    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
-    const optionsHtml = presets
-      .map(p => {
-        const checked = current === p.v ? " checked" : "";
-        return `
-      <label class="editor-chip-radius__option">
-        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
-        <span>${p.l}</span>
-      </label>`;
-      })
-      .join("");
-    return `
-    <div class="editor-field editor-field--full editor-chip-radius">
-      <span>${tHeading}</span>
-      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
-        ${optionsHtml}
-      </div>
-    </div>`;
-  }
-
-  /**
-   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
-   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
-   */
-  function renderEditorCardBorderRadiusHtml(options) {
-    const esc = options?.escapeHtml;
-    if (typeof esc !== "function") {
-      return "";
-    }
-    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
-    const field = fieldRaw || "styles.card.border_radius";
-    const current = String(options?.value ?? "").trim() || "28px";
-    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
-    const labels = options?.labels ?? {};
-    const tPill = esc(String(labels.pill ?? "Capsule"));
-    const tSoft = esc(String(labels.soft ?? "Soft"));
-    const tRound = esc(String(labels.round ?? "Rounded"));
-    const tSquare = esc(String(labels.square ?? "Square"));
-    const STANDARD = [
-      { v: "28px", l: tPill },
-      { v: "20px", l: tSoft },
-      { v: "14px", l: tRound },
-      { v: "8px", l: tSquare },
-    ];
-    const inStandard = STANDARD.some(p => p.v === current);
-    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
-    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
-    const optionsHtml = presets
-      .map(p => {
-        const checked = current === p.v ? " checked" : "";
-        return `
-      <label class="editor-chip-radius__option">
-        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
-        <span>${p.l}</span>
-      </label>`;
-      })
-      .join("");
-    return `
-    <div class="editor-field editor-field--full editor-chip-radius">
-      <span>${tHeading}</span>
-      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
-        ${optionsHtml}
-      </div>
-    </div>`;
-  }
-
-  /**
-   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
-   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
-   * card's click handler can ignore the following click (synthetic after pointerup).
-   */
-  function bindHostPointerHoldGesture(host, options) {
-    if (!(host instanceof HTMLElement)) {
-      return () => {};
-    }
-    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
-      return () => {};
-    }
-    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
-      ? Math.round(Number(options.holdMs))
-      : 500;
-    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
-      ? Number(options.moveTolerancePx)
-      : 12;
-    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
-    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
-      ? options.markHoldConsumedClick
-      : () => {};
-
-    let timer = null;
-    let active = null;
-
-    /** Match capture + passive flags used on add (required for removeEventListener). */
-    function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp, true);
-      window.removeEventListener("pointercancel", onWindowPointerUp, true);
-      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
-    }
-
-    function resetTracking() {
-      if (timer) {
-        window.clearTimeout(timer);
-        timer = null;
-      }
-      clearWindowListeners();
-      active = null;
-    }
-
-    function onWindowPointerMove(ev) {
-      if (!active || ev.pointerId !== active.pointerId) {
-        return;
-      }
-      const dx = ev.clientX - active.x;
-      const dy = ev.clientY - active.y;
-      if (Math.hypot(dx, dy) > moveTol) {
-        resetTracking();
-      }
-    }
-
-    function onWindowPointerUp(ev) {
-      if (!active || ev.pointerId !== active.pointerId) {
-        return;
-      }
-      resetTracking();
-    }
-
-    function onPointerDownCapture(ev) {
-      if (!(ev instanceof PointerEvent)) {
-        return;
-      }
-      if (typeof ev.button === "number" && ev.button !== 0) {
-        return;
-      }
-      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
-      resetTracking();
-      const zone = options.resolveZone(ev);
-      if (!zone) {
-        return;
-      }
-      if (shouldBeginHold(zone, ev) !== true) {
-        return;
-      }
-      active = {
-        pointerId: ev.pointerId,
-        x: ev.clientX,
-        y: ev.clientY,
-        zone,
-      };
-      timer = window.setTimeout(() => {
-        timer = null;
-        if (!active || active.pointerId !== ev.pointerId) {
-          return;
-        }
-        const z = active.zone;
-        resetTracking();
-        options.onHold(z);
-        markHoldConsumedClick();
-      }, holdMs);
-      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
-      window.addEventListener("pointerup", onWindowPointerUp, true);
-      window.addEventListener("pointercancel", onWindowPointerUp, true);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
-    }
-
-    host.addEventListener("pointerdown", onPointerDownCapture, true);
-    return () => {
-      host.removeEventListener("pointerdown", onPointerDownCapture, true);
-      resetTracking();
-    };
-  }
-
-  function mountIconPickerHost(host, options) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const hass = options.hass;
-    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
-    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
-    const onShadowInput = options.onShadowInput;
-    const onShadowValueChanged = options.onShadowValueChanged;
-    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
-
-    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
-
-    let desired = useIconPicker ? "icon" : "input";
-    let control = host.firstElementChild;
-    const tag = control?.tagName || "";
-    const matches =
-      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
-
-    if (!matches) {
-      host.replaceChildren();
-      if (useIconPicker) {
-        control = document.createElement("ha-icon-picker");
-      } else {
-        control = document.createElement("input");
-        control.type = "text";
-      }
-
-      if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
-      }
-
-      if ("hass" in control) {
-        control.hass = hass;
-      }
-      if (placeholder && "placeholder" in control) {
-        control.placeholder = placeholder;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-
-      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-      if (!pickerControlsWithListeners.has(control)) {
-        pickerControlsWithListeners.add(control);
-        if (control.tagName === "INPUT") {
-          control.addEventListener("change", dispatchPickerChange);
-        } else {
-          control.addEventListener("value-changed", dispatchPickerValueChanged);
-        }
-      }
-
-      host.appendChild(control);
-      return;
-    }
-
-    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-    if ("hass" in control) {
-      control.hass = hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control && control.value !== nextValue) {
-      control.value = nextValue;
-    }
-  }
-
-  const api = {
-    isObject,
-    deepClone,
-    deepEqual,
-    stripEqualToDefaults,
-    editorStatesSignature,
-    editorFilteredStatesSignature,
-    editorSortLocale,
-    sanitizeActionUrl,
-    mountEntityPickerHost,
-    mountIconPickerHost,
-    postHomeAssistantWebhook,
-    warnStrictServiceDenied,
-    registerCustomCard,
-    renderEditorChipBorderRadiusHtml,
-    renderEditorCardBorderRadiusHtml,
-    bindHostPointerHoldGesture,
-    getEntityFriendlyName,
-    applyDefaultConfigNameFromEntity,
-  };
-
-  if (typeof window !== "undefined") {
-    ensureCustomCardsDeduped();
-    window.NodaliaUtils = api;
-  }
-})();
-
-// </nodalia-standalone-utils>
-
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -841,6 +47,18 @@ const DEFAULT_CONFIG = {
   icon_hold_url: "",
   icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
+  double_tap_action: "none",
+  icon_double_tap_action: "",
+  double_tap_service: "",
+  double_tap_service_data: "",
+  double_tap_url: "",
+  double_tap_navigation_path: "",
+  double_tap_new_tab: false,
+  icon_double_tap_service: "",
+  icon_double_tap_service_data: "",
+  icon_double_tap_url: "",
+  icon_double_tap_navigation_path: "",
+  icon_double_tap_new_tab: false,
   show_state: true,
   state_chip_on_title_row: false,
   state_position: "below",
@@ -1434,6 +652,30 @@ function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
+  const normDouble = String(config.double_tap_action ?? "none").trim().toLowerCase();
+  config.double_tap_action = TAP_ACTIONS.has(normDouble) ? normDouble : "none";
+  const iconDoubleStr = config.icon_double_tap_action === undefined || config.icon_double_tap_action === null
+    ? ""
+    : String(config.icon_double_tap_action).trim();
+  if (!iconDoubleStr) {
+    config.icon_double_tap_action = "";
+  } else {
+    const n = iconDoubleStr.toLowerCase();
+    config.icon_double_tap_action = TAP_ACTIONS.has(n) ? n : "";
+  }
+  config.double_tap_service = String(config.double_tap_service ?? "").trim();
+  config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
+  config.double_tap_url = String(config.double_tap_url ?? "").trim();
+  config.double_tap_navigation_path = String(config.double_tap_navigation_path ?? "").trim();
+  config.double_tap_new_tab = config.double_tap_new_tab === true;
+  config.icon_double_tap_service = String(config.icon_double_tap_service ?? "").trim();
+  config.icon_double_tap_service_data = String(config.icon_double_tap_service_data ?? "").trim();
+  config.icon_double_tap_url = String(config.icon_double_tap_url ?? "").trim();
+  config.icon_double_tap_navigation_path = String(config.icon_double_tap_navigation_path ?? "").trim();
+  config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
+  if (config.double_tap_action === "navigate" && !config.double_tap_navigation_path && config.double_tap_url) {
+    config.double_tap_navigation_path = config.double_tap_url;
+  }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
 
@@ -1477,6 +719,13 @@ class NodaliaEntityCard extends HTMLElement {
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      const signature = this._getRenderSignature();
+      if (signature === this._lastRenderSignature) {
+        return;
+      }
+
+      this._lastRenderSignature = signature;
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -1508,6 +757,7 @@ class NodaliaEntityCard extends HTMLElement {
             },
             markHoldConsumedClick: () => {
               this._suppressNextEntityTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
           })
         : () => {};
@@ -1552,8 +802,13 @@ class NodaliaEntityCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    let nextSignature = this._getRenderSignature();
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
+      return;
+    }
+
     this._syncOptimisticToggleState(this._getActualState());
-    const nextSignature = this._getRenderSignature();
+    nextSignature = this._getRenderSignature();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
@@ -2016,6 +1271,54 @@ class NodaliaEntityCard extends HTMLElement {
     return false;
   }
 
+  _effectiveDoubleTapAction(zone) {
+    if (zone === "icon") {
+      const raw = this._config?.icon_double_tap_action;
+      if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return this._config?.double_tap_action || "none";
+      }
+      return String(raw).trim() || "none";
+    }
+    return String(this._config?.double_tap_action || "none").trim() || "none";
+  }
+
+  _canRunDoubleTapAction(state, zone = "body") {
+    const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
+    if (doubleAction === "none") {
+      return false;
+    }
+
+    if (doubleAction === "service") {
+      let service = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
+      if (zone === "icon" && !String(service || "").trim()) {
+        service = this._config?.double_tap_service;
+      }
+      return Boolean(service && String(service).trim());
+    }
+
+    if (doubleAction === "url") {
+      let url = zone === "icon" ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
+      if (zone === "icon" && !String(url || "").trim()) {
+        url = this._config?.double_tap_url;
+      }
+      return Boolean(url && String(url).trim());
+    }
+
+    if (doubleAction === "navigate") {
+      return Boolean(this._navigationPathForZone(zone, "double"));
+    }
+
+    if (doubleAction === "toggle") {
+      return this._isBinaryOnOff(state);
+    }
+
+    if (doubleAction === "more-info" || doubleAction === "auto") {
+      return Boolean(this._config?.entity);
+    }
+
+    return false;
+  }
+
   _toggleEntity(entityId = this._config?.entity) {
     const state = this._hass?.states?.[entityId];
     const isPrimaryEntity = entityId && entityId === this._config?.entity;
@@ -2047,30 +1350,37 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _navigationPathForZone(zone = "body", actionKind = "tap") {
-    const isTap = actionKind === "tap";
+    const kind = actionKind === "hold" ? "hold" : actionKind === "double" ? "double" : "tap";
+    const pathKey = kind === "tap"
+      ? "navigation_path"
+      : kind === "hold"
+        ? "hold_navigation_path"
+        : "double_tap_navigation_path";
+    const iconPathKey = kind === "tap"
+      ? "icon_navigation_path"
+      : kind === "hold"
+        ? "icon_hold_navigation_path"
+        : "icon_double_tap_navigation_path";
+    const urlKey = kind === "tap" ? "tap_url" : kind === "hold" ? "hold_url" : "double_tap_url";
+    const iconUrlKey = kind === "tap" ? "icon_tap_url" : kind === "hold" ? "icon_hold_url" : "icon_double_tap_url";
     if (zone === "icon") {
-      const iconPath = String(
-        isTap ? this._config?.icon_navigation_path : this._config?.icon_hold_navigation_path,
-      ).trim();
+      const iconPath = String(this._config?.[iconPathKey] ?? "").trim();
       if (iconPath) {
         return iconPath;
       }
-      const inheritedBodyPath = String(
-        isTap ? this._config?.navigation_path : this._config?.hold_navigation_path,
-      ).trim();
+      const inheritedBodyPath = String(this._config?.[pathKey] ?? "").trim();
       if (inheritedBodyPath) {
         return inheritedBodyPath;
       }
-      return String(isTap ? this._config?.icon_tap_url : this._config?.icon_hold_url).trim()
-        || String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+      return String(this._config?.[iconUrlKey] ?? "").trim() || String(this._config?.[urlKey] ?? "").trim();
     }
 
-    const bodyPath = String(isTap ? this._config?.navigation_path : this._config?.hold_navigation_path).trim();
+    const bodyPath = String(this._config?.[pathKey] ?? "").trim();
     if (bodyPath) {
       return bodyPath;
     }
 
-    return String(isTap ? this._config?.tap_url : this._config?.hold_url).trim();
+    return String(this._config?.[urlKey] ?? "").trim();
   }
 
   _navigateToPath(path) {
@@ -2245,6 +1555,51 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _performDoubleTapAction(state, zone = "body") {
+    const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
+    let doubleService = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
+    let doubleServiceData = zone === "icon" ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
+    let doubleUrl = zone === "icon" ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
+    let doubleNewTab = zone === "icon" ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
+    if (zone === "icon") {
+      if (!String(doubleService || "").trim()) {
+        doubleService = this._config?.double_tap_service;
+        doubleServiceData = this._config?.double_tap_service_data;
+      }
+      if (!String(doubleUrl || "").trim()) {
+        doubleUrl = this._config?.double_tap_url;
+        doubleNewTab = this._config?.double_tap_new_tab === true;
+      }
+    }
+
+    switch (doubleAction) {
+      case "toggle":
+        this._toggleEntity(this._config?.entity);
+        break;
+      case "more-info":
+        this._openMoreInfo(this._config?.entity);
+        break;
+      case "service":
+        this._callConfiguredService(doubleService, this._config?.entity, doubleServiceData);
+        break;
+      case "url":
+        this._openConfiguredUrl(doubleUrl, doubleNewTab);
+        break;
+      case "navigate":
+        this._navigateToPath(this._navigationPathForZone(zone, "double"));
+        break;
+      case "auto":
+      default:
+        if (this._isBinaryOnOff(state)) {
+          this._toggleEntity(this._config?.entity);
+          return;
+        }
+
+        this._openMoreInfo(this._config?.entity);
+        break;
+    }
+  }
+
   _performQuickAction(action) {
     const targetEntity = action?.entity || this._config?.entity;
 
@@ -2356,14 +1711,30 @@ class NodaliaEntityCard extends HTMLElement {
         this._suppressNextEntityTap = false;
         return;
       }
-      if (!this._canRunTapAction(state, action)) {
+      const zone = action;
+      const runTap = () => {
+        if (!this._canRunTapAction(state, zone)) {
+          return;
+        }
+        this._triggerHaptic();
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+        this._performTapAction(state, zone);
+      };
+      const runDouble = () => {
+        if (!this._canRunDoubleTapAction(state, zone)) {
+          return;
+        }
+        this._triggerHaptic();
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+        this._performDoubleTapAction(state, zone);
+      };
+      if (this._canRunDoubleTapAction(state, zone) && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+        window.NodaliaUtils.scheduleCardZoneTap(this, { zone, onSingle: runTap, onDouble: runDouble });
         return;
       }
-
-      this._triggerHaptic();
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
-      this._performTapAction(state, action);
+      runTap();
       return;
     }
 
@@ -2404,14 +1775,18 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (!this._config?.entity) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
+    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+      this._hass,
+      this._config?.entity,
+      { cardClass: "entity-card" },
+    );
+    if (entityGuard) {
+      this.shadowRoot.innerHTML = entityGuard;
       return;
     }
 
     const state = this._getState();
     if (!state) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
       return;
     }
 
@@ -2991,6 +2366,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showAnimationSection = false;
+    this._showTapActionsSection = false;
     this._showStyleSection = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -3289,6 +2665,9 @@ class NodaliaEntityCardEditor extends HTMLElement {
         this._render();
       } else if (toggleButton.dataset.editorToggle === "animations") {
         this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      } else if (toggleButton.dataset.editorToggle === "tap_actions") {
+        this._showTapActionsSection = !this._showTapActionsSection;
         this._render();
       }
       return;
@@ -3608,7 +2987,13 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const showCardHoldNavigate = holdAction === "navigate";
     const showCardHoldService = holdAction === "service";
     const showIconHoldService = iconHoldSelect === "service" || (iconHoldSelect === "" && holdAction === "service");
-    const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
+    const doubleTapAction = config.double_tap_action || "none";
+    const iconDoubleTapSelect = String(config.icon_double_tap_action ?? "").trim();
+    const showIconDoubleTapNavigate = iconDoubleTapSelect === "navigate";
+    const showCardDoubleTapNavigate = doubleTapAction === "navigate";
+    const showCardDoubleTapService = doubleTapAction === "service";
+    const showIconDoubleTapService = iconDoubleTapSelect === "service" || (iconDoubleTapSelect === "" && doubleTapAction === "service");
+    const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService || showCardDoubleTapService || showIconDoubleTapService;
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -4011,7 +3396,19 @@ class NodaliaEntityCardEditor extends HTMLElement {
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
+            <div class="editor-section__actions">
+              ${window.NodaliaUtils.renderEditorCollapsibleToggleHtml({
+                toggleId: "tap_actions",
+                expanded: this._showTapActionsSection === true,
+                showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
+                hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
+                escapeHtml,
+              })}
+            </div>
           </div>
+          ${
+            this._showTapActionsSection
+              ? `
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
               "ed.light.icon_tap_action",
@@ -4229,7 +3626,25 @@ class NodaliaEntityCardEditor extends HTMLElement {
                 `
                 : ""
             }
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.double_tap_actions_section_hint"))}</div>
+            ${this._renderSelectField(
+              "ed.light.card_double_tap_action",
+              "double_tap_action",
+              doubleTapAction,
+              [
+                { value: "none", label: "ed.entity.tap_none" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+              ],
+              { fullWidth: true },
+            )}
           </div>
+              `
+              : ""
+          }
         </section>
 
         <section class="editor-section">

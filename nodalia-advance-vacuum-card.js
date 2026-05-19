@@ -1,800 +1,6 @@
-// <nodalia-standalone-utils>
-// Inlined for standalone Lovelace resources (single JS file). Stripped when building nodalia-cards.js.
-// Source of truth: nodalia-utils.js — regenerate: node scripts/sync-standalone-embed.mjs
-/**
- * Shared helpers for Nodalia cards (deep equality, config stripping, editor mounts).
- * Loaded early in nodalia-cards.js bundle; exposed as window.NodaliaUtils.
- */
-(function initNodaliaUtils() {
-  const REQUIRED_API_KEYS = [
-    "isObject",
-    "deepClone",
-    "deepEqual",
-    "stripEqualToDefaults",
-    "editorStatesSignature",
-    "editorFilteredStatesSignature",
-    "editorSortLocale",
-    "sanitizeActionUrl",
-    "mountEntityPickerHost",
-    "mountIconPickerHost",
-    "postHomeAssistantWebhook",
-    "warnStrictServiceDenied",
-    "registerCustomCard",
-    "renderEditorChipBorderRadiusHtml",
-    "renderEditorCardBorderRadiusHtml",
-    "bindHostPointerHoldGesture",
-    "getEntityFriendlyName",
-    "applyDefaultConfigNameFromEntity",
-  ];
-  const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
-  if (
-    existing &&
-    REQUIRED_API_KEYS.every(key => typeof existing[key] === "function")
-  ) {
-    return;
-  }
-
-  function isObject(value) {
-    return value !== null && typeof value === "object" && !Array.isArray(value);
-  }
-
-  function deepClone(value) {
-    if (value === undefined) {
-      return undefined;
-    }
-    return JSON.parse(JSON.stringify(value));
-  }
-
-  function deepEqual(a, b) {
-    if (Object.is(a, b)) {
-      return true;
-    }
-    if (a == null || b == null) {
-      return a === b;
-    }
-    if (typeof a !== typeof b) {
-      return false;
-    }
-    if (typeof a !== "object") {
-      return false;
-    }
-    if (Array.isArray(a)) {
-      if (!Array.isArray(b) || a.length !== b.length) {
-        return false;
-      }
-      return a.every((value, index) => deepEqual(value, b[index]));
-    }
-    if (Array.isArray(b)) {
-      return false;
-    }
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) {
-      return false;
-    }
-    return keysA.every(key => deepEqual(a[key], b[key]));
-  }
-
-  function stripEqualToDefaults(config, defaults) {
-    if (defaults === undefined || defaults === null) {
-      return deepClone(config);
-    }
-    if (config === undefined || config === null) {
-      return undefined;
-    }
-    if (Array.isArray(config)) {
-      return deepEqual(config, defaults) ? undefined : deepClone(config);
-    }
-    if (isObject(config) && isObject(defaults)) {
-      const out = {};
-      for (const key of Object.keys(config)) {
-        const cv = config[key];
-        const dv = defaults[key];
-        if (!(key in defaults)) {
-          out[key] = deepClone(cv);
-          continue;
-        }
-        if (deepEqual(cv, dv)) {
-          continue;
-        }
-        if (isObject(cv) && !Array.isArray(cv) && isObject(dv) && !Array.isArray(dv)) {
-          const stripped = stripEqualToDefaults(cv, dv);
-          if (stripped !== undefined) {
-            out[key] = stripped;
-          }
-        } else {
-          out[key] = deepClone(cv);
-        }
-      }
-      return Object.keys(out).length ? out : undefined;
-    }
-    return deepEqual(config, defaults) ? undefined : config;
-  }
-
-  /**
-   * Signature for entities matching predicate(entityId): id + friendly_name + icon per row,
-   * so picker labels update when attributes change. Same locale prefix as editorStatesSignature.
-   */
-  function editorFilteredStatesSignature(hass, language, predicate) {
-    const states = hass?.states || {};
-    const ids = [];
-    for (const id of Object.keys(states)) {
-      if (!predicate(id)) {
-        continue;
-      }
-      ids.push(id);
-    }
-    ids.sort();
-
-    const rows = new Array(ids.length);
-    for (let index = 0; index < ids.length; index += 1) {
-      const id = ids[index];
-      const state = states[id];
-      rows[index] = `${id}:${String(state?.attributes?.friendly_name ?? "")}:${String(state?.attributes?.icon ?? "")}`;
-    }
-
-    const tag =
-      typeof window !== "undefined" && window.NodaliaI18n && typeof hass !== "undefined"
-        ? window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language))
-        : "";
-    return `${tag}|${rows.join("|")}`;
-  }
-
-  /**
-   * Full hass.states signature: every entity as id + friendly_name + icon (sorted by id),
-   * plus locale tag — same shape as editorFilteredStatesSignature. Editors that list entities
-   * re-render when labels or icons change, not only when the entity count changes.
-   */
-  function editorStatesSignature(hass, language) {
-    return editorFilteredStatesSignature(hass, language, () => true);
-  }
-
-  /**
-   * BCP-47 locale for `String.prototype.localeCompare` in editors and entity-id tie-break sorts,
-   * aligned with `resolveLanguage` / card `language` the same way as `editorFilteredStatesSignature`.
-   */
-  function editorSortLocale(hass, language) {
-    if (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage && window.NodaliaI18n?.localeTag) {
-      return window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(hass, language ?? "auto"));
-    }
-    const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language;
-    const s = String(raw || "").trim();
-    return s || "en";
-  }
-
-  /**
-   * Accepts either the webhook id (`my_hook`) or a pasted `/api/webhook/...` path / full URL.
-   */
-  function normalizeHomeAssistantWebhookId(webhookId) {
-    const raw = String(webhookId ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-    if (/^https?:\/\//i.test(raw)) {
-      try {
-        const u = new URL(raw);
-        const m = /\/api\/webhook\/([^/]+)/.exec(u.pathname);
-        return m ? decodeURIComponent(m[1]) : "";
-      } catch (_err) {
-        return "";
-      }
-    }
-    const pathSeg = raw.match(/(?:^|\/)api\/webhook\/([^/?#]+)/i);
-    if (pathSeg) {
-      return decodeURIComponent(pathSeg[1]);
-    }
-    return raw;
-  }
-
-  /**
-   * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
-   * Does not rely on the signed-in user's permission to call `input_text.set_value`;
-   * an automation triggered by the webhook runs with normal HA privileges.
-   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
-   *
-   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
-   * often returns **401** in the HA frontend because API routes expect the bearer/session
-   * from `fetchWithAuth`, not cookies alone.
-   */
-  function postHomeAssistantWebhook(webhookId, body, hass) {
-    const id = normalizeHomeAssistantWebhookId(webhookId);
-    if (!id) {
-      return Promise.resolve(false);
-    }
-    const payload = body && typeof body === "object" ? body : {};
-    const path = `/api/webhook/${encodeURIComponent(id)}`;
-
-    const authFetch = hass?.auth?.fetchWithAuth;
-    if (typeof authFetch === "function") {
-      return authFetch(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }).then(
-        res => res.ok,
-        () => false,
-      );
-    }
-
-    if (typeof fetch !== "function") {
-      return Promise.resolve(false);
-    }
-    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
-    if (!origin) {
-      return Promise.resolve(false);
-    }
-    const url = `${origin}${path}`;
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "same-origin",
-    }    ).then(
-      res => res.ok,
-      () => false,
-    );
-  }
-
-  /**
-   * Log once per blocked `domain.service` when `security.strict_service_actions` denylists user actions.
-   */
-  function warnStrictServiceDenied(cardLabel, serviceValue) {
-    const service = String(serviceValue || "").trim();
-    if (!service) {
-      return;
-    }
-    if (typeof console === "undefined" || typeof console.warn !== "function") {
-      return;
-    }
-    console.warn(
-      `${String(cardLabel || "Nodalia card")}: service blocked by strict_service_actions — not listed under security.allowed_services or security.allowed_service_domains: ${service}`,
-    );
-  }
-
-  function getEntityFriendlyName(hass, entityId) {
-    const id = String(entityId || "").trim();
-    if (!id || !hass?.states?.[id]) {
-      return "";
-    }
-    return String(hass.states[id].attributes?.friendly_name || "").trim();
-  }
-
-  /**
-   * When `name` is empty (or still matches the previous entity id/label), copy the entity friendly name.
-   */
-  function applyDefaultConfigNameFromEntity(config, hass, options = {}) {
-    if (!config || !isObject(config)) {
-      return config;
-    }
-    const entityId = String(config.entity || "").trim();
-    if (!entityId || !hass?.states?.[entityId]) {
-      return config;
-    }
-    const fallback = getEntityFriendlyName(hass, entityId) || entityId;
-    const currentName = String(config.name ?? "").trim();
-    const previousEntity = String(options.previousEntity ?? "").trim();
-    const previousFriendly = previousEntity
-      ? (getEntityFriendlyName(hass, previousEntity) || previousEntity)
-      : "";
-    const shouldApply =
-      !currentName
-      || (previousEntity && (currentName === previousEntity || currentName === previousFriendly));
-    if (shouldApply) {
-      config.name = fallback;
-    }
-    return config;
-  }
-
-  function dedupeCustomCardsArray(cards) {
-    if (!Array.isArray(cards)) {
-      return [];
-    }
-    const seen = new Set();
-    for (let index = cards.length - 1; index >= 0; index -= 1) {
-      const type = String(cards[index]?.type || "").trim();
-      if (!type) {
-        continue;
-      }
-      if (seen.has(type)) {
-        cards.splice(index, 1);
-        continue;
-      }
-      seen.add(type);
-    }
-    return cards;
-  }
-
-  function ensureCustomCardsDeduped() {
-    if (typeof window === "undefined") {
-      return null;
-    }
-    window.customCards = dedupeCustomCardsArray(window.customCards || []);
-    return window.customCards;
-  }
-
-  /**
-   * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
-   * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
-   * other front-end code that may also touch the shared array.
-   */
-  function registerCustomCard(metadata) {
-    if (typeof window === "undefined" || !metadata || typeof metadata !== "object") {
-      return;
-    }
-    const cards = ensureCustomCardsDeduped();
-    if (!cards) {
-      return;
-    }
-    const type = String(metadata.type || "").trim();
-    if (type) {
-      for (let index = cards.length - 1; index >= 0; index -= 1) {
-        if (String(cards[index]?.type || "").trim() === type) {
-          cards.splice(index, 1);
-        }
-      }
-    }
-    cards.push(metadata);
-  }
-
-  /**
-   * Normalize and validate user-provided action URLs.
-   * Allows http/https and same-origin relative paths by default.
-   */
-  function sanitizeActionUrl(value, options = {}) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-    const allowRelative = options.allowRelative !== false;
-    const allowHash = options.allowHash === true;
-    if (allowHash && raw.startsWith("#")) {
-      return raw;
-    }
-    if (allowRelative && (/^\/(?!\/)/.test(raw) || raw.startsWith("./") || raw.startsWith("../"))) {
-      return raw;
-    }
-    try {
-      const base =
-        typeof window !== "undefined" && window.location
-          ? window.location.origin
-          : "https://example.invalid";
-      const parsed = new URL(raw, base);
-      const protocol = String(parsed.protocol || "").toLowerCase();
-      if (protocol !== "http:" && protocol !== "https:") {
-        return "";
-      }
-      if (allowRelative && typeof window !== "undefined" && window.location && parsed.origin === window.location.origin) {
-        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-      }
-      return parsed.toString();
-    } catch (_error) {
-      return "";
-    }
-  }
-
-  function copyDatasetExcept(control, host, skipKeys) {
-    const skip = new Set(skipKeys || []);
-    Object.entries(host.dataset || {}).forEach(([key, value]) => {
-      if (skip.has(key)) {
-        return;
-      }
-      control.dataset[key] = value;
-    });
-  }
-
-  /** Latest callbacks for reused picker controls (listeners call into this). */
-  const pickerCallbackState = new WeakMap();
-  const pickerControlsWithListeners = new WeakSet();
-
-  function dispatchPickerChange(ev) {
-    const control = ev.currentTarget;
-    const s = pickerCallbackState.get(control);
-    if (s && typeof s.onShadowInput === "function") {
-      s.onShadowInput(ev);
-    }
-  }
-
-  function dispatchPickerValueChanged(ev) {
-    const control = ev.currentTarget;
-    const s = pickerCallbackState.get(control);
-    if (!s) {
-      return;
-    }
-    const fn = s.onShadowValueChanged || s.onShadowInput;
-    if (typeof fn === "function") {
-      fn(ev);
-    }
-  }
-
-  /**
-   * Mount or update ha-entity-picker / ha-selector / text input without recreating each render.
-   */
-  function mountEntityPickerHost(host, options) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const hass = options.hass;
-    const field = options.field || host.dataset.field || "entity";
-    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
-    const placeholder =
-      options.placeholder !== undefined ? String(options.placeholder) : String(host.dataset.placeholder || "");
-    const onShadowInput = options.onShadowInput;
-    const onShadowValueChanged = options.onShadowValueChanged;
-    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
-
-    const usePicker = typeof customElements !== "undefined" && customElements.get("ha-entity-picker");
-    const useSelector = typeof customElements !== "undefined" && customElements.get("ha-selector");
-
-    let desired = "input";
-    if (usePicker) {
-      desired = "picker";
-    } else if (useSelector) {
-      desired = "selector";
-    }
-
-    let control = host.firstElementChild;
-    const tag = control?.tagName || "";
-    const matches =
-      control &&
-      ((desired === "picker" && tag === "HA-ENTITY-PICKER")
-        || (desired === "selector" && tag === "HA-SELECTOR")
-        || (desired === "input" && tag === "INPUT"));
-
-    if (!matches) {
-      host.replaceChildren();
-      if (usePicker) {
-        control = document.createElement("ha-entity-picker");
-        control.allowCustomEntity = true;
-      } else if (useSelector) {
-        control = document.createElement("ha-selector");
-        control.selector = { entity: {} };
-      } else {
-        control = document.createElement("input");
-        control.type = "text";
-      }
-
-      control.dataset.field = field;
-      if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
-      }
-
-      if ("hass" in control) {
-        control.hass = hass;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-      if (placeholder && "placeholder" in control) {
-        control.placeholder = placeholder;
-      }
-
-      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-      if (!pickerControlsWithListeners.has(control)) {
-        pickerControlsWithListeners.add(control);
-        if (control.tagName === "INPUT") {
-          control.addEventListener("change", dispatchPickerChange);
-        } else {
-          control.addEventListener("value-changed", dispatchPickerValueChanged);
-        }
-      }
-
-      host.appendChild(control);
-      return;
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-    if ("hass" in control) {
-      control.hass = hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control && control.value !== nextValue) {
-      control.value = nextValue;
-    }
-  }
-
-  /**
-   * Visual editor: preset radios for `styles.chip_border_radius` (capsule / soft / rounded / square).
-   * Callers pass translated labels and their `escapeHtml` (card-local).
-   */
-  function renderEditorChipBorderRadiusHtml(options) {
-    const esc = options?.escapeHtml;
-    if (typeof esc !== "function") {
-      return "";
-    }
-    const fieldRaw = String(options?.field ?? "styles.chip_border_radius").trim();
-    const field = fieldRaw || "styles.chip_border_radius";
-    const current = String(options?.value ?? "").trim() || "999px";
-    const tHeading = esc(String(options?.tHeading ?? "Chip corner radius"));
-    const labels = options?.labels ?? {};
-    const tPill = esc(String(labels.pill ?? "Capsule"));
-    const tSoft = esc(String(labels.soft ?? "Soft"));
-    const tRound = esc(String(labels.round ?? "Rounded"));
-    const tSquare = esc(String(labels.square ?? "Square"));
-    const STANDARD = [
-      { v: "999px", l: tPill },
-      { v: "12px", l: tSoft },
-      { v: "8px", l: tRound },
-      { v: "4px", l: tSquare },
-    ];
-    const inStandard = STANDARD.some(p => p.v === current);
-    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
-    const group = `nodalia-cbr-${Math.random().toString(36).slice(2, 11)}`;
-    const optionsHtml = presets
-      .map(p => {
-        const checked = current === p.v ? " checked" : "";
-        return `
-      <label class="editor-chip-radius__option">
-        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
-        <span>${p.l}</span>
-      </label>`;
-      })
-      .join("");
-    return `
-    <div class="editor-field editor-field--full editor-chip-radius">
-      <span>${tHeading}</span>
-      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
-        ${optionsHtml}
-      </div>
-    </div>`;
-  }
-
-  /**
-   * Visual editor: preset radios for `styles.card.border_radius` (rounded card corners).
-   * Uses the same Capsule / Soft / Rounded / Square labels as chip presets; values are tuned for ha-card scale.
-   */
-  function renderEditorCardBorderRadiusHtml(options) {
-    const esc = options?.escapeHtml;
-    if (typeof esc !== "function") {
-      return "";
-    }
-    const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
-    const field = fieldRaw || "styles.card.border_radius";
-    const current = String(options?.value ?? "").trim() || "28px";
-    const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
-    const labels = options?.labels ?? {};
-    const tPill = esc(String(labels.pill ?? "Capsule"));
-    const tSoft = esc(String(labels.soft ?? "Soft"));
-    const tRound = esc(String(labels.round ?? "Rounded"));
-    const tSquare = esc(String(labels.square ?? "Square"));
-    const STANDARD = [
-      { v: "28px", l: tPill },
-      { v: "20px", l: tSoft },
-      { v: "14px", l: tRound },
-      { v: "8px", l: tSquare },
-    ];
-    const inStandard = STANDARD.some(p => p.v === current);
-    const presets = inStandard ? STANDARD : [{ v: current, l: esc(current) }, ...STANDARD];
-    const group = `nodalia-cbr-card-${Math.random().toString(36).slice(2, 11)}`;
-    const optionsHtml = presets
-      .map(p => {
-        const checked = current === p.v ? " checked" : "";
-        return `
-      <label class="editor-chip-radius__option">
-        <input type="radio" name="${esc(group)}" data-field="${esc(field)}" data-value-type="string" value="${esc(p.v)}"${checked} />
-        <span>${p.l}</span>
-      </label>`;
-      })
-      .join("");
-    return `
-    <div class="editor-field editor-field--full editor-chip-radius">
-      <span>${tHeading}</span>
-      <div class="editor-chip-radius__options" role="radiogroup" aria-label="${tHeading}">
-        ${optionsHtml}
-      </div>
-    </div>`;
-  }
-
-  /**
-   * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
-   * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
-   * card's click handler can ignore the following click (synthetic after pointerup).
-   */
-  function bindHostPointerHoldGesture(host, options) {
-    if (!(host instanceof HTMLElement)) {
-      return () => {};
-    }
-    if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
-      return () => {};
-    }
-    const holdMs = Number.isFinite(Number(options.holdMs)) && Number(options.holdMs) > 0
-      ? Math.round(Number(options.holdMs))
-      : 500;
-    const moveTol = Number.isFinite(Number(options.moveTolerancePx)) && Number(options.moveTolerancePx) > 0
-      ? Number(options.moveTolerancePx)
-      : 12;
-    const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
-    const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
-      ? options.markHoldConsumedClick
-      : () => {};
-
-    let timer = null;
-    let active = null;
-
-    /** Match capture + passive flags used on add (required for removeEventListener). */
-    function clearWindowListeners() {
-      window.removeEventListener("pointerup", onWindowPointerUp, true);
-      window.removeEventListener("pointercancel", onWindowPointerUp, true);
-      window.removeEventListener("pointermove", onWindowPointerMove, { capture: true });
-    }
-
-    function resetTracking() {
-      if (timer) {
-        window.clearTimeout(timer);
-        timer = null;
-      }
-      clearWindowListeners();
-      active = null;
-    }
-
-    function onWindowPointerMove(ev) {
-      if (!active || ev.pointerId !== active.pointerId) {
-        return;
-      }
-      const dx = ev.clientX - active.x;
-      const dy = ev.clientY - active.y;
-      if (Math.hypot(dx, dy) > moveTol) {
-        resetTracking();
-      }
-    }
-
-    function onWindowPointerUp(ev) {
-      if (!active || ev.pointerId !== active.pointerId) {
-        return;
-      }
-      resetTracking();
-    }
-
-    function onPointerDownCapture(ev) {
-      if (!(ev instanceof PointerEvent)) {
-        return;
-      }
-      if (typeof ev.button === "number" && ev.button !== 0) {
-        return;
-      }
-      /** Drop stale tracking before zone checks so a lost `pointerup` (e.g. HA dialog stopping propagation on bubble) cannot brick the next hold. */
-      resetTracking();
-      const zone = options.resolveZone(ev);
-      if (!zone) {
-        return;
-      }
-      if (shouldBeginHold(zone, ev) !== true) {
-        return;
-      }
-      active = {
-        pointerId: ev.pointerId,
-        x: ev.clientX,
-        y: ev.clientY,
-        zone,
-      };
-      timer = window.setTimeout(() => {
-        timer = null;
-        if (!active || active.pointerId !== ev.pointerId) {
-          return;
-        }
-        const z = active.zone;
-        resetTracking();
-        options.onHold(z);
-        markHoldConsumedClick();
-      }, holdMs);
-      /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
-      window.addEventListener("pointerup", onWindowPointerUp, true);
-      window.addEventListener("pointercancel", onWindowPointerUp, true);
-      window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
-    }
-
-    host.addEventListener("pointerdown", onPointerDownCapture, true);
-    return () => {
-      host.removeEventListener("pointerdown", onPointerDownCapture, true);
-      resetTracking();
-    };
-  }
-
-  function mountIconPickerHost(host, options) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const hass = options.hass;
-    const nextValue = options.value !== undefined ? String(options.value) : String(host.dataset.value || "");
-    const placeholder = options.placeholder !== undefined ? options.placeholder : host.dataset.placeholder || "";
-    const onShadowInput = options.onShadowInput;
-    const onShadowValueChanged = options.onShadowValueChanged;
-    const copyDatasetFromHost = options.copyDatasetFromHost !== false;
-
-    const useIconPicker = typeof customElements !== "undefined" && customElements.get("ha-icon-picker");
-
-    let desired = useIconPicker ? "icon" : "input";
-    let control = host.firstElementChild;
-    const tag = control?.tagName || "";
-    const matches =
-      control && ((desired === "icon" && tag === "HA-ICON-PICKER") || (desired === "input" && tag === "INPUT"));
-
-    if (!matches) {
-      host.replaceChildren();
-      if (useIconPicker) {
-        control = document.createElement("ha-icon-picker");
-      } else {
-        control = document.createElement("input");
-        control.type = "text";
-      }
-
-      if (copyDatasetFromHost) {
-        copyDatasetExcept(control, host, ["mountedControl", "value", "placeholder", "field"]);
-      }
-
-      if ("hass" in control) {
-        control.hass = hass;
-      }
-      if (placeholder && "placeholder" in control) {
-        control.placeholder = placeholder;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-
-      pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-      if (!pickerControlsWithListeners.has(control)) {
-        pickerControlsWithListeners.add(control);
-        if (control.tagName === "INPUT") {
-          control.addEventListener("change", dispatchPickerChange);
-        } else {
-          control.addEventListener("value-changed", dispatchPickerValueChanged);
-        }
-      }
-
-      host.appendChild(control);
-      return;
-    }
-
-    pickerCallbackState.set(control, { onShadowInput, onShadowValueChanged });
-    if ("hass" in control) {
-      control.hass = hass;
-    }
-    if (placeholder && "placeholder" in control) {
-      control.placeholder = placeholder;
-    }
-    if ("value" in control && control.value !== nextValue) {
-      control.value = nextValue;
-    }
-  }
-
-  const api = {
-    isObject,
-    deepClone,
-    deepEqual,
-    stripEqualToDefaults,
-    editorStatesSignature,
-    editorFilteredStatesSignature,
-    editorSortLocale,
-    sanitizeActionUrl,
-    mountEntityPickerHost,
-    mountIconPickerHost,
-    postHomeAssistantWebhook,
-    warnStrictServiceDenied,
-    registerCustomCard,
-    renderEditorChipBorderRadiusHtml,
-    renderEditorCardBorderRadiusHtml,
-    bindHostPointerHoldGesture,
-    getEntityFriendlyName,
-    applyDefaultConfigNameFromEntity,
-  };
-
-  if (typeof window !== "undefined") {
-    ensureCustomCardsDeduped();
-    window.NodaliaUtils = api;
-  }
-})();
-
-// </nodalia-standalone-utils>
-
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.1.2";
+const CARD_VERSION = "1.1.3";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -2323,6 +1529,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
+    this._wasCleaningSessionActive = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -2470,6 +1677,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
+    this._wasCleaningSessionActive = false;
     this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._ensurePersistedCleaningSessionStateLoaded();
@@ -2483,6 +1691,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._ensurePersistedCleaningSessionStateLoaded();
       const nextSignature = this._getRenderSignature(hass);
       if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        this._lastRenderSignature = nextSignature;
         return;
       }
       this._updateCalibration();
@@ -3718,6 +2927,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]);
     const isReportedCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
     const isCleaningSessionActive = this._isCleaningSessionActive(state, persistedSession);
+    const wasCleaningSessionActive = this._wasCleaningSessionActive;
+    this._wasCleaningSessionActive = isCleaningSessionActive;
     const hadTrackedCleaningSession = Boolean(
       this._activeCleaningSessionMode ||
       persistedSession?.mode ||
@@ -3729,6 +2940,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       persistedSession?.pendingStartAt ||
       this._getPendingRoomCleaningResumeState(persistedSession).roomIds.length
     );
+    const preserveInteractiveSelection = ["rooms", "zone", "goto"].includes(this._activeMode);
 
     if (this._attemptPendingRoomCleaningResume(state, persistedSession)) {
       return;
@@ -3765,7 +2977,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._clearCleaningSessionPendingStart();
       this._clearPendingRoomCleaningResume();
       this._roomCleaningResumeInFlight = false;
-      if (hadTrackedCleaningSession) {
+      if (wasCleaningSessionActive && hadTrackedCleaningSession && !preserveInteractiveSelection) {
         this._selectedRoomIds = [];
         this._selectedPredefinedZoneIds = [];
         this._manualZones = [];
@@ -3871,17 +3083,24 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const sharedSessionState = sharedSessionEntityId ? hass?.states?.[sharedSessionEntityId] || null : null;
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
     const currentRoomId = this._getCurrentVacuumRoomId(state);
-    const suctionDescriptor = this._getModeDescriptor("suction", state);
-    const mopDescriptor = this._getModeDescriptor("mop", state);
-    const mopModeDescriptor = this._getMopModeDescriptor(state);
-    const dockControlDescriptors = this._getDockControlDescriptors(state);
-    const dockSettingDescriptors = this._getDockSettingDescriptors(state);
-    const routineSignature = this._getRoutineItems(state)
-      .map(item => {
-        const routineState = item.entity ? hass?.states?.[item.entity] || null : null;
-        return `${item.entity || item.service || item.label}:${String(routineState?.state || "")}:${String(routineState?.last_updated || "")}`;
-      })
-      .join("|");
+    const displayModeId = this._getDisplayCleaningModeId();
+    const needsModeDescriptorSignature = this._activeUtilityPanel === "modes"
+      || this._activeUtilityPanel === "dock"
+      || ["rooms", "zone", "goto"].includes(this._activeMode)
+      || ["rooms", "zone", "goto"].includes(displayModeId);
+    const suctionDescriptor = needsModeDescriptorSignature ? this._getModeDescriptor("suction", state) : null;
+    const mopDescriptor = needsModeDescriptorSignature ? this._getModeDescriptor("mop", state) : null;
+    const mopModeDescriptor = needsModeDescriptorSignature ? this._getMopModeDescriptor(state) : null;
+    const dockControlDescriptors = needsModeDescriptorSignature ? this._getDockControlDescriptors(state) : [];
+    const dockSettingDescriptors = needsModeDescriptorSignature ? this._getDockSettingDescriptors(state) : [];
+    const routineSignature = this._activeMode === "routines" || this._activeUtilityPanel === "modes"
+      ? this._getRoutineItems(state)
+        .map(item => {
+          const routineState = item.entity ? hass?.states?.[item.entity] || null : null;
+          return `${item.entity || item.service || item.label}:${String(routineState?.state || "")}:${String(routineState?.last_updated || "")}`;
+        })
+        .join("|")
+      : "";
 
     return JSON.stringify({
       vacuum: {
@@ -3974,6 +3193,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _getRoutineItems(state = this._getVacuumState()) {
     return normalizeRoutineItems(this._config?.routines)
       .filter(item => this._isMenuItemVisible(item, state));
+  }
+
+  _getDisplayCleaningModeId() {
+    return ["rooms", "zone", "goto"].includes(this._activeMode)
+      ? this._activeMode
+      : (this._activeCleaningSessionMode || this._activeMode || "all");
+  }
+
+  _resolveDisplayMode(modes = this._getAvailableModes(), strings = this._advanceVacuumStrings()) {
+    const preferredModeId = this._getDisplayCleaningModeId();
+    const modeLabels = strings?.modeLabels || MODE_LABELS;
+    return modes.find(mode => mode.id === preferredModeId)
+      || (["rooms", "zone", "goto"].includes(preferredModeId)
+        ? {
+            id: preferredModeId,
+            label: modeLabels[preferredModeId] || MODE_LABELS[preferredModeId],
+            icon: preferredModeId === "rooms"
+              ? "mdi:floor-plan"
+              : preferredModeId === "zone"
+                ? "mdi:vector-rectangle"
+                : "mdi:map-marker",
+          }
+        : null)
+      || modes[0]
+      || { id: "all", label: modeLabels.all || MODE_LABELS.all, icon: "mdi:home" };
   }
 
   _getAvailableModes() {
@@ -5954,9 +5198,22 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _setActiveMode(modeId) {
-    if (!modeId || modeId === this._activeMode) {
+    if (!modeId) {
       return;
     }
+
+    if (modeId === this._activeMode) {
+      if (modeId === "zone" && !this._isCleaningSessionActive(this._getVacuumState())) {
+        this._activeUtilityPanel = null;
+        this._persistCurrentCleaningSessionState(this._activeMode, {
+          markSelectionChange: true,
+        });
+        this._triggerHaptic("selection");
+        this._render();
+      }
+      return;
+    }
+
     this._activeMode = modeId;
     this._transientZoneReturnMode = "";
     this._activeUtilityPanel = null;
@@ -7303,11 +6560,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderMapTools() {
+    const advanceVacuumStrings = this._advanceVacuumStrings();
     const state = this._getVacuumState();
     const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
     const isCleaningSessionActive = this._isCleaningSessionActive(state);
     const mapStatusIndicator = this._getMapStatusIndicator(state);
-    const showAddZoneButton = hasZoneMode && (this._activeMode === "zone" || isCleaningSessionActive);
+    const displayModeId = this._getDisplayCleaningModeId();
+    const showAddZoneButton = hasZoneMode && (displayModeId === "zone" || isCleaningSessionActive);
     const canAddZone = this._manualZones.length < this._getManualZoneCountLimit();
     return `
       <div class="advance-vacuum-card__map-tools">
@@ -7591,6 +6850,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const previousImageSrc = previousImage?.getAttribute("src") || "";
 
       const config = this._config || normalizeConfig({});
+      const advanceVacuumGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+        this._hass,
+        config.entity,
+        { cardClass: "advance-vacuum-card" },
+      );
+      if (advanceVacuumGuard) {
+        this.shadowRoot.innerHTML = advanceVacuumGuard;
+        this._lastRenderSignature = `guard:${config.entity || ""}`;
+        return;
+      }
       const state = this._getVacuumState();
       const accentColor = this._getAccentColor(state);
       const advanceVacuumStrings = this._advanceVacuumStrings();
@@ -7603,23 +6872,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const predefinedZones = this._getPredefinedZones();
       const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
       const modes = this._getAvailableModes();
-      const preferredModeId = ["rooms", "zone", "goto"].includes(this._activeMode)
-        ? this._activeMode
-        : (this._activeCleaningSessionMode || this._activeMode || "all");
-      const currentMode = modes.find(mode => mode.id === preferredModeId)
-        || (["rooms", "zone", "goto"].includes(preferredModeId)
-          ? {
-              id: preferredModeId,
-              label: advanceVacuumStrings?.modeLabels?.[preferredModeId] || MODE_LABELS[preferredModeId],
-              icon: preferredModeId === "rooms"
-                ? "mdi:floor-plan"
-                : preferredModeId === "zone"
-                  ? "mdi:vector-rectangle"
-                  : "mdi:map-marker",
-            }
-          : null)
-        || modes[0]
-        || { id: "all", label: advanceVacuumStrings?.modeLabels?.all || MODE_LABELS.all, icon: "mdi:home" };
+      const currentMode = this._resolveDisplayMode(modes, advanceVacuumStrings);
+      const isCleaningSessionActive = this._isCleaningSessionActive(state);
       const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
       const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
       const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
@@ -7649,7 +6903,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
       const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
       const gotoColor = styles.map.goto_color || "#f6b73c";
-      const isCleaningSessionActive = this._isCleaningSessionActive(state);
       const isRoomSelectionMode = currentMode.id === "rooms";
       const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
       const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
@@ -7677,7 +6930,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
       const isRoutinesMode = currentMode.id === "routines";
       const showPrimaryActionButton = !isRoutinesMode;
-      const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || currentMode.id !== "all");
+      const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || this._activeMode !== "all");
       const showDockMenuButton = !isRoutinesMode && (dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0);
       const utilityPanelMarkup = isRoutinesMode
         ? ""
@@ -8720,8 +7973,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
-                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, currentMode.id) : ""}
-                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, currentMode.id) : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, this._activeMode) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, this._activeMode) : ""}
                 <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
@@ -8802,7 +8055,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           </div>
         </div>
 
-        ${this._renderRoomFallbackList(rooms, currentMode.id)}
+        ${this._renderRoomFallbackList(rooms, this._activeMode)}
 
         <div class="advance-vacuum-card__footer">
 
@@ -8812,7 +8065,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__modes">
                 <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
                 ${modes.map(mode => `
-                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === currentMode.id ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === currentMode.id ? "true" : "false"}">
+                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === this._activeMode ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === this._activeMode ? "true" : "false"}">
                     ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>

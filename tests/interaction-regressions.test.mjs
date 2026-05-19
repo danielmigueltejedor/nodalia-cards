@@ -28,6 +28,10 @@ function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "e
   return sandbox.window.NodaliaI18n;
 }
 
+function loadNodaliaUtils(sandbox) {
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+}
+
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -72,6 +76,7 @@ function loadClimateCardClass() {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
   vm.runInContext(read("nodalia-climate-card.js"), sandbox);
   return registry.get("nodalia-climate-card");
 }
@@ -120,6 +125,7 @@ function loadPowerFlowCardClass() {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
   vm.runInContext(read("nodalia-power-flow-card.js"), sandbox);
   return registry.get("nodalia-power-flow-card");
 }
@@ -721,14 +727,85 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
     assert.match(source, /this\._optimisticToggleTimer = 0;/);
     assert.match(source, /_getActualState\(hass = this\._hass\)/);
     assert.match(source, /_buildOptimisticToggleState\(actualState = this\._getActualState\(\)\)/);
-    assert.match(source, /_syncOptimisticToggleState\(this\._getActualState\(\)\)/);
+    assert.match(source, /_syncOptimisticToggleState/);
     assert.match(source, /_nodalia_optimistic_toggle/);
     assert.match(source, /_scheduleOptimisticToggleTimeout\(\)/);
   });
 
+  assert.match(read("nodalia-fan-card.js"), /_syncOptimisticToggleState\(actualState\)/);
+  assert.match(read("nodalia-humidifier-card.js"), /_syncOptimisticToggleState\(actualState\)/);
+
   assert.match(read("nodalia-fan-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
   assert.match(read("nodalia-humidifier-card.js"), /this\._startOptimisticToggle\(turnOff \? "off" : "on", actualState\)/);
+
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /const attrs = turningOn\s*\?\s*\{ \.\.\.\(actualState\?\.attributes \|\| \{\}\), \.\.\.\(snapshot\.attributes \|\| \{\}\) \}/,
+    );
+  }
   assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
+});
+
+test("fan and humidifier cards use optimistic visual settle and slider fill during power-on", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /OPTIMISTIC_VISUAL_SETTLE_MS/);
+    assert.match(source, /_lastKnownOnState = new Map\(\)/);
+    assert.match(source, /_shouldUseOptimisticVisualSettle/);
+    assert.match(source, /_startOptimisticVisualSettle/);
+    assert.match(source, /powerAnimationState === "powering-up"/);
+    assert.match(source, /const fillElapsed = now - Number\(this\._powerTransition\.startedAt\)/);
+    assert.match(source, /percentageFillDelay = -clamp\(fillElapsed|humidityFillDelay = -clamp\(fillElapsed/);
+    assert.doesNotMatch(source, /FillDelayBase/);
+  }
+});
+
+test("fan and humidifier skip redundant renders during active power transitions", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /_isTransitionAnimationActive/);
+    assert.match(source, /_shouldSkipRenderForUnchangedSignature/);
+    assert.match(source, /this\._optimisticToggle && this\._isTransitionAnimationActive\(\)/);
+  }
+});
+
+test("device cards skip redundant set hass work when render signature is unchanged", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-light-card.js"]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /let nextSignature = this\._getRenderSignature\(\);[\s\S]*!this\._optimisticToggle|!hasPendingOptimistic/,
+    );
+    assert.match(source, /nextSignature = this\._getRenderSignature\(\);/);
+  }
+
+  const entity = read("nodalia-entity-card.js");
+  assert.match(
+    entity,
+    /let nextSignature = this\._getRenderSignature\(\);[\s\S]*!this\._optimisticToggle/,
+  );
+});
+
+test("resize observers skip full render when signature is unchanged", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-light-card.js", "nodalia-entity-card.js"]) {
+    const source = read(file);
+    assert.match(source, /const signature = this\._getRenderSignature\(\);/);
+    assert.match(source, /if \(signature === this\._lastRenderSignature\) \{\s*return;\s*\}/);
+  }
+});
+
+test("fan and humidifier slider empty animation stays in sync while controls leave", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /controlsAnimationState === "leaving"/);
+    assert.match(source, /EmptyDuration = shouldAnimate.*Empty/);
+    assert.match(source, /EmptyDelay = -clamp\(now - Number\(this\._controlsTransition\.startedAt\)/);
+    assert.match(source, /@keyframes (fan-card-percentage-empty|humidifier-card-humidity-empty)/);
+    assert.match(source, /transform: scaleX\(calc\(var\(--(percentage|humidity)-target/);
+    assert.match(source, /var\(--(fan|humidifier)-card-(percentage|humidity)-empty-delay/);
+  }
 });
 
 test("fan and humidifier animations keep progress across fast state confirmations", () => {
@@ -883,6 +960,68 @@ test("numeric display cards use Home Assistant locale instead of hardcoded Spani
     assert.match(source, /getHassLocaleTag\(hass, language = "auto"\)/);
     assert.match(source, /window\.NodaliaI18n\?\.localeTag/);
   });
+});
+
+test("climate render signature tracks temperature drafts", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /hasTemperatureDraft: Boolean\(/);
+  assert.match(source, /this\._draftTemperature\.has\(entityId\) \|\| this\._draftTempRange\.has\(entityId\)/);
+});
+
+test("fan and humidifier re-render when optimistic toggle is confirmed during animation", () => {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /const optimisticJustConfirmed = hadOptimisticToggle && !this\._optimisticToggle/);
+    assert.match(source, /&& !optimisticJustConfirmed/);
+  }
+});
+
+test("fan and humidifier visual settle waits for non-zero published values", () => {
+  const fan = read("nodalia-fan-card.js");
+  const humidifier = read("nodalia-humidifier-card.js");
+  assert.match(fan, /_hasPublishedPercentage\(actualState\)[\s\S]*percentage > 0/);
+  assert.match(humidifier, /_hasPublishedHumidity\(actualState\)[\s\S]*humidity > 0/);
+  assert.match(humidifier, /targetHumidity > 0/);
+});
+
+test("fav and vacuum resize observers skip render when signature is unchanged", () => {
+  const fav = read("nodalia-fav-card.js");
+  const vacuum = read("nodalia-vacuum-card.js");
+  assert.match(fav, /const signature = this\._getRenderSignature\(\);\s*if \(signature === this\._lastRenderSignature\)/);
+  assert.match(vacuum, /const signature = this\._getRenderSignature\(\);\s*if \(signature === this\._lastRenderSignature\)/);
+});
+
+test("power flow caches tracked entity stamp for render signature", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
+  assert.match(source, /trackedStates: this\._trackedEntitiesStamp/);
+});
+
+test("advance vacuum map display follows cleaning session mode", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /_getDisplayCleaningModeId\(\)/);
+  assert.match(source, /_resolveDisplayMode\(/);
+  assert.match(source, /const currentMode = this\._resolveDisplayMode\(modes, advanceVacuumStrings\)/);
+  assert.match(source, /\$\{currentMode\.id === "rooms" \? rooms\.map/);
+  assert.match(source, /advance-vacuum-card__mode-button \$\{mode\.id === this\._activeMode/);
+});
+
+test("fan off-state memory ignores zero percentage", () => {
+  const source = read("nodalia-fan-card.js");
+  assert.match(source, /rememberedPercentage > 0/);
+});
+
+test("humidifier off-state memory ignores zero humidity", () => {
+  const source = read("nodalia-humidifier-card.js");
+  assert.match(source, /rememberedHumidity > 0/);
+});
+
+test("notifications tracked entity stamp is cached between hass updates", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
+  assert.match(source, /_trackedEntitiesStamp/);
+  assert.match(source, /parts\.push\(this\._trackedEntitiesStamp\)/);
+  assert.doesNotMatch(source, /tracked\.forEach\(entityId =>/);
 });
 
 test("notifications entrance animation does not rearm on list refreshes", () => {

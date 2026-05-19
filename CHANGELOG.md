@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, and completed **`1.1.2-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, and completed **`1.1.3-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
@@ -19,6 +19,44 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Security and service-action hardening.
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
+
+## [1.1.3] - 2026-05-19
+### Interaction Polish & Dashboard Performance
+
+Stable **`1.1.3`** patch release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.3.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Fan / humidifier:** light-style optimistic power toggles, fluid expand/collapse on power on/off (slider fill/empty synced with controls), and no redundant `set hass` re-renders during active transitions.
+- **Performance:** three audit passes — render-signature caches, resize/`set hass` short-circuits, tracked-entity stamp caches (notifications, power flow), and climate draft sync gating on busy dashboards.
+- **Advance vacuum:** zone mode and map tools fixes; map overlays follow active cleaning session mode when the user stays on **All** or **Routines**.
+- **Editors & guards:** Lovelace **`hui-warning`** / **`ha-alert`** for missing entities; collapsible **Tap actions** sections; **double-tap** on entity, fan, and weather cards; broader editor i18n.
+
+### Added
+
+- **`nodalia-utils.js`:** `renderLovelaceEntityGuardCardHtml`, `renderEditorCollapsibleSectionHeaderHtml`, `scheduleCardZoneTap` / `cancelCardZoneTap`.
+- **`nodalia-entity-card.js` / `nodalia-fan-card.js` / `nodalia-weather-card.js`:** **`double_tap_action`** (and icon variants where applicable).
+- **Visual editors:** collapsible tap/hold/double-tap sections across climate, weather, person, graph, power-flow, fav, circular gauge, and related cards.
+
+### Fixed
+
+- **`nodalia-advance-vacuum-card.js`:** manual **Zone** mode; shared cleaning session no longer clears selections while docked; map tools i18n; display mode follows active cleaning session on the map.
+- **`nodalia-utils.js`:** entity guard waits for Home Assistant state hydration; accepts entities known via `hass.entities`.
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** optimistic turn-on/off with visual settle; slider fill/empty animations; last-known on-state not stored at **0%** / **0** humidity; power-on expand no longer restarts on every `hass` tick.
+- **`nodalia-humidifier-card.js` editor:** missing `</section>` after aux block.
+- **`nodalia-notifications-card.js`:** empty-state copy; vacuum **`water_empty`** i18n; mobile notify only marks successful deliveries.
+- **`nodalia-fan-card.js` / `nodalia-entity-card.js` / `nodalia-media-player.js`:** editor **Tap actions** toggle visibility.
+
+### Changed
+
+- **Bundle:** shared helpers only in **`nodalia-utils.js`** (standalone embed stripped from card sources in the HACS bundle).
+- **Performance:** fan, humidifier, light, entity — skip optimistic sync and resize re-renders when signature unchanged; alarm/vacuum/fav/climate/power-flow/notifications/weather optimizations (see **`docs/performance-audit.md`**).
+- **Editor i18n:** tap/hold/double-tap labels for climate, weather, light, entity (all locales).
+- **Release metadata:** promote the **`1.1.3-alpha.*`** line to stable **`1.1.3`**.
+
+Per-alpha notes for **`1.1.3-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+---
 
 ## [1.1.2] - 2026-05-15
 
