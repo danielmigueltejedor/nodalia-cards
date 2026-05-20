@@ -834,8 +834,8 @@ class NodaliaLightCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     let nextSignature = this._getRenderSignature();
-    const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !hasPendingOptimistic) {
+    const hadPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !hadPendingOptimistic) {
       return;
     }
 
@@ -844,8 +844,9 @@ class NodaliaLightCard extends HTMLElement {
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
     nextSignature = this._getRenderSignature();
+    const optimisticJustConfirmed = hadPendingOptimistic && !this._optimisticTurnOn && !this._optimisticTurnOff;
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed) {
       return;
     }
 

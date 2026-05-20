@@ -130,6 +130,88 @@ function loadPowerFlowCardClass() {
   return registry.get("nodalia-power-flow-card");
 }
 
+function loadLightCardClass() {
+  const registry = new Map();
+  class FakeShadowRoot {
+    constructor() {
+      this.innerHTML = "";
+    }
+
+    addEventListener() {}
+    querySelector() { return null; }
+    querySelectorAll() { return []; }
+  }
+
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = new FakeShadowRoot();
+      return this.shadowRoot;
+    }
+
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  class FakeResizeObserver {
+    observe() {}
+    disconnect() {}
+  }
+
+  const timers = new Set();
+  const sandbox = {
+    cancelAnimationFrame(id) { clearTimeout(id); },
+    clearTimeout(id) {
+      timers.delete(id);
+      clearTimeout(id);
+    },
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLInputElement: class {},
+    localStorage: {
+      getItem() { return null; },
+      setItem() {},
+    },
+    navigator: {},
+    requestAnimationFrame(callback) {
+      const id = setTimeout(callback, 0);
+      timers.add(id);
+      return id;
+    },
+    ResizeObserver: FakeResizeObserver,
+    setTimeout(callback, delay) {
+      const id = setTimeout(callback, delay);
+      timers.add(id);
+      return id;
+    },
+    ShadowRoot: FakeShadowRoot,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-light-card.js"), sandbox);
+  return registry.get("nodalia-light-card");
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -167,6 +249,60 @@ test("light card power-down skips expanded controls shell when panel was collaps
   const source = read("nodalia-light-card.js");
   assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
   assert.match(source, /stale `_lastControlsMarkup` would otherwise force a full-height shell/);
+});
+
+test("light card rerenders when an optimistic power state is confirmed", () => {
+  const LightCard = loadLightCardClass();
+  assert.ok(LightCard, "light card custom element should register");
+
+  const card = new LightCard();
+  const entityId = "light.kitchen";
+  const onState = {
+    entity_id: entityId,
+    state: "on",
+    attributes: {
+      brightness: 128,
+      friendly_name: "Kitchen",
+      supported_color_modes: ["brightness"],
+    },
+    last_changed: "2026-05-20T10:00:00Z",
+    last_updated: "2026-05-20T10:00:00Z",
+  };
+
+  card._config = {
+    entity: entityId,
+    haptics: { enabled: false },
+    security: {},
+    styles: {},
+  };
+  card._hass = { states: { [entityId]: onState } };
+  card._optimisticTurnOff = {
+    entityId,
+    expiresAt: Date.now() + 1000,
+    stateSnapshot: card._createStateSnapshot(onState),
+  };
+  card.shadowRoot.innerHTML = "<ha-card></ha-card>";
+  card._lastRenderSignature = card._getRenderSignature();
+
+  let renderCount = 0;
+  card._render = () => {
+    renderCount += 1;
+    card._lastRenderSignature = card._getRenderSignature();
+  };
+
+  card.hass = {
+    states: {
+      [entityId]: {
+        ...onState,
+        state: "off",
+        last_changed: "2026-05-20T10:00:01Z",
+        last_updated: "2026-05-20T10:00:01Z",
+      },
+    },
+  };
+
+  assert.equal(card._optimisticTurnOff, null);
+  assert.equal(renderCount, 1);
 });
 
 test("nav media/popup entrance animations are transition-driven", () => {
