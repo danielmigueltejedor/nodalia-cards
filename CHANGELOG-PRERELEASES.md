@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.11] - 2026-05-20
+
+Eleventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.11`**.
+
+### Fixed
+- **Light card:** render signature now includes optimistic UI phase (`opt:` / `pwr:`) so "Turning on" / "Apagando" clear when HA confirms; stale power transition cleared on confirm.
+- **Visual layout editor:** block resize handles track pointer on `window` (reliable drag outside handle).
+
 ## [1.2.0-alpha.10] - 2026-05-20
 
 Tenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.10`**.

@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.2.0--alpha.10-2ea44f)
+![Package](https://img.shields.io/badge/package-1.2.0--alpha.11-2ea44f)
 ![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -50,7 +50,7 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.1.x
 
-**Prerelease `1.2.0-alpha.10`** (alpha branch) — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0-alpha.10.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Stable **`1.1.3`** is on **`main`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md) and [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Prerelease `1.2.0-alpha.11`** (alpha branch) — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0-alpha.11.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Stable **`1.1.3`** is on **`main`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md) and [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## 🧠 Notifications Card
 
@@ -268,7 +268,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.0-alpha.10.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.0-alpha.11.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

@@ -367,6 +367,8 @@
       this._onCanvasPointerMove = this._onCanvasPointerMove.bind(this);
       this._onCanvasPointerUp = this._onCanvasPointerUp.bind(this);
       this._onHandlePointerDown = this._onHandlePointerDown.bind(this);
+      this._onHandlePointerMove = this._onHandlePointerMove.bind(this);
+      this._onHandlePointerUp = this._onHandlePointerUp.bind(this);
       this._onPaletteDragStart = this._onPaletteDragStart.bind(this);
       this._onCanvasDragOver = this._onCanvasDragOver.bind(this);
       this._onCanvasDrop = this._onCanvasDrop.bind(this);
@@ -840,9 +842,6 @@
       this._handlesAbort = new AbortController();
       const { signal } = this._handlesAbort;
       handlesLayer.addEventListener("pointerdown", this._onHandlePointerDown, { signal });
-      handlesLayer.addEventListener("pointermove", this._onHandlePointerMove, { signal });
-      handlesLayer.addEventListener("pointerup", this._onHandlePointerUp, { signal });
-      handlesLayer.addEventListener("pointercancel", this._onHandlePointerUp, { signal });
     }
 
     /** Returns block id under pointer in stage coordinates, or "" if none. */
@@ -1254,18 +1253,21 @@
       event.stopPropagation();
       this._selectItem(id);
       this._hideContextMenu();
-      handle.setPointerCapture?.(event.pointerId);
+      const captureTarget = handle;
+      captureTarget.setPointerCapture?.(event.pointerId);
       this._resize = {
         id,
         edge,
         pointerId: event.pointerId,
-        originX: item.x,
-        originY: item.y,
-        originW: item.w,
-        originH: item.h,
+        captureTarget,
       };
       const frame = this._getLiveStage()?.querySelector(`.nodalia-vlayout-frame[data-vlayout-id="${id}"]`);
       frame?.classList.add("is-resizing");
+      if (typeof window !== "undefined") {
+        window.addEventListener("pointermove", this._onHandlePointerMove);
+        window.addEventListener("pointerup", this._onHandlePointerUp);
+        window.addEventListener("pointercancel", this._onHandlePointerUp);
+      }
     }
 
     _onHandlePointerMove(event) {
@@ -1292,17 +1294,26 @@
       this._scheduleFrameUpdate();
     }
 
+    _detachResizeWindowListeners() {
+      if (typeof window === "undefined") {
+        return;
+      }
+      window.removeEventListener("pointermove", this._onHandlePointerMove);
+      window.removeEventListener("pointerup", this._onHandlePointerUp);
+      window.removeEventListener("pointercancel", this._onHandlePointerUp);
+    }
+
     _onHandlePointerUp(event) {
       if (!this._resize || event.pointerId !== this._resize.pointerId) {
         return;
       }
       const item = this._getItem(this._resize.id);
-      const handle = event.target.closest("[data-vlayout-handle]");
       try {
-        handle?.releasePointerCapture?.(event.pointerId);
+        this._resize.captureTarget?.releasePointerCapture?.(event.pointerId);
       } catch (_error) {
         // ignore
       }
+      this._detachResizeWindowListeners();
       this._getLiveStage()?.querySelectorAll(".nodalia-vlayout-frame.is-resizing").forEach(node => {
         node.classList.remove("is-resizing");
       });
@@ -1668,6 +1679,8 @@
 
     destroy() {
       this._hideContextMenu();
+      this._detachResizeWindowListeners();
+      this._resize = null;
       this._canvasAbort?.abort();
       this._handlesAbort?.abort();
       if (this._liveSyncTimer) {

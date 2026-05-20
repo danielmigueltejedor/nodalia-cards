@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.10";
+const CARD_VERSION = "1.2.0-alpha.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -817,12 +817,13 @@ class NodaliaLightCard extends HTMLElement {
       }
 
       const signature = this._getRenderSignature();
-      if (signature === this._lastRenderSignature) {
+      const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
+      if (signature === this._lastRenderSignature && !hasPendingOptimistic) {
         return;
       }
 
       this._lastRenderSignature = signature;
-      this._render();
+      this._applyHassRenderUpdate();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -959,8 +960,69 @@ class NodaliaLightCard extends HTMLElement {
     }, safeDelay);
   }
 
+  _getOptimisticUiStamp(actualState = this._getActualState()) {
+    const displayState = this._getState();
+    const attrs = displayState?.attributes || {};
+    if (attrs._nodalia_optimistic_on === true) {
+      return "on";
+    }
+    if (attrs._nodalia_optimistic_off === true) {
+      return "off";
+    }
+    if (this._shouldUseOptimisticVisualSettle(actualState)) {
+      return "settle";
+    }
+    if (this._optimisticTurnOn || this._optimisticTurnOff) {
+      return "pending";
+    }
+    return "";
+  }
+
+  _isPowerTransitionActive() {
+    return Boolean(this._powerTransition?.endsAt > Date.now());
+  }
+
+  _shouldSkipRenderForUnchangedSignature(signatureUnchanged) {
+    if (!signatureUnchanged || !this.shadowRoot?.innerHTML) {
+      return false;
+    }
+
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return true;
+    }
+
+    const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
+    return Boolean(hasPendingOptimistic && this._isPowerTransitionActive());
+  }
+
+  _clearStalePowerTransitionAfterOptimisticConfirm(actualState) {
+    if (!this._powerTransition || !actualState) {
+      return;
+    }
+
+    const confirmedOn = actualState.state === "on";
+    const confirmedOff = actualState.state === "off";
+    if (
+      (this._powerTransition.state === "powering-up" && confirmedOn)
+      || (this._powerTransition.state === "powering-down" && confirmedOff)
+    ) {
+      this._powerTransition = null;
+    }
+  }
+
+  _applyHassRenderUpdate() {
+    if (this._activeSliderDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
+    this._render();
+  }
+
   set hass(hass) {
     this._hass = hass;
+    const actualState = this._getActualState();
     let nextSignature = this._getRenderSignature();
     const signatureUnchanged = Boolean(
       this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
@@ -972,7 +1034,6 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     const hadPendingOptimistic = hasPendingOptimistic;
-    const actualState = this._getActualState();
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
@@ -981,18 +1042,24 @@ class NodaliaLightCard extends HTMLElement {
       && !this._optimisticTurnOn
       && !this._optimisticTurnOff;
 
+    if (optimisticJustConfirmed) {
+      this._clearStalePowerTransitionAfterOptimisticConfirm(actualState);
+      nextSignature = this._getRenderSignature();
+    }
+
+    if (
+      this._shouldSkipRenderForUnchangedSignature(signatureUnchanged)
+      && !optimisticJustConfirmed
+    ) {
+      return;
+    }
+
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed) {
       return;
     }
 
     this._lastRenderSignature = nextSignature;
-
-    if (this._activeSliderDrag) {
-      this._pendingRenderAfterDrag = true;
-      return;
-    }
-
-    this._render();
+    this._applyHassRenderUpdate();
   }
 
   getCardSize() {
@@ -1010,10 +1077,13 @@ class NodaliaLightCard extends HTMLElement {
 
   _getRenderSignature(state = this._getState()) {
     const entityId = this._config?.entity || "";
+    const actualState = this._getActualState();
     const attrs = state?.attributes || {};
     return [
       `e:${entityId}`,
       `s:${String(state?.state || "")}`,
+      `opt:${this._getOptimisticUiStamp(actualState)}`,
+      `pwr:${this._isPowerTransitionActive() ? this._powerTransition.state : ""}`,
       `n:${String(attrs.friendly_name || "")}`,
       `i:${String(attrs.icon || "")}`,
       `sep:${this._config?.show_entity_picture ? 1 : 0}`,
@@ -4994,7 +5064,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.10.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.11.js or newer.");
       }
       return;
     }

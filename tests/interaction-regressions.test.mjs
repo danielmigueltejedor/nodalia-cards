@@ -858,11 +858,15 @@ test("device cards skip redundant set hass work when render signature is unchang
 });
 
 test("resize observers skip full render when signature is unchanged", () => {
-  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-light-card.js", "nodalia-entity-card.js"]) {
+  for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-entity-card.js"]) {
     const source = read(file);
     assert.match(source, /const signature = this\._getRenderSignature\(\);/);
     assert.match(source, /if \(signature === this\._lastRenderSignature\) \{\s*return;\s*\}/);
   }
+
+  const light = read("nodalia-light-card.js");
+  assert.match(light, /const signature = this\._getRenderSignature\(\);/);
+  assert.match(light, /signature === this\._lastRenderSignature && !hasPendingOptimistic/);
 });
 
 test("fan and humidifier slider empty animation stays in sync while controls leave", () => {
@@ -1054,6 +1058,9 @@ test("light card re-renders when optimistic power toggle is confirmed with uncha
     /const optimisticJustConfirmed = hadPendingOptimistic[\s\S]*!this\._optimisticTurnOn[\s\S]*!this\._optimisticTurnOff/,
   );
   assert.match(source, /&& !optimisticJustConfirmed/);
+  assert.match(source, /_getOptimisticUiStamp/);
+  assert.match(source, /`opt:\$\{this\._getOptimisticUiStamp\(actualState\)\}`/);
+  assert.match(source, /_clearStalePowerTransitionAfterOptimisticConfirm/);
 });
 
 test("fan and humidifier visual settle waits for non-zero published values", () => {
