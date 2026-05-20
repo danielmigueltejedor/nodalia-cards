@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.8";
+const CARD_VERSION = "1.2.0-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4986,7 +4986,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.8.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.9.js or newer.");
       }
       return;
     }
@@ -4998,8 +4998,10 @@ class NodaliaLightCardEditor extends HTMLElement {
       layoutApi.attachEditorOverlay(this, {
         title: this._editorLabel("ed.light.visual_layout_title"),
         hint: this._editorLabel("ed.light.visual_layout_hint"),
+        shortcutsHint: this._editorLabel("ed.light.visual_layout_shortcuts"),
         saveLabel: this._editorLabel("ed.light.visual_layout_save"),
         resetLabel: this._editorLabel("ed.light.visual_layout_reset"),
+        cancelLabel: this._editorLabel("ed.light.visual_layout_cancel"),
         paletteTitle: this._editorLabel("ed.light.visual_layout_palette"),
         catalog: LIGHT_VISUAL_LAYOUT_CATALOG,
         layout,

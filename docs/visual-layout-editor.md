@@ -29,6 +29,8 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 | Drag snaps back on release | `findOpenCell` not using `preferX`/`preferY` |
 | YAML missing `visual_layout` | Save path not calling `serializeLayoutForSave` or strip removing it |
 | Preview wider than dashboard | `previewWidthPx` not matching `hui-card-preview` width |
+| Context menu sliders do nothing | Missing `_applyContextMenuInput` (regression guard in tests) |
+| Resize handles missing | Block catalog needs `props.resize: true`; handles render on selected frame |
 
 ## Adding another card type
 

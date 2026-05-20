@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.9] - 2026-05-20
+
+Ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.9`**.
+
+### Changed
+- **Visual layout editor**: resize handles on selection, palette drag-and-drop onto the live preview, drop cell indicator, keyboard shortcuts (arrows, Delete, Escape), Cancel button, refreshed dialog UI, `requestAnimationFrame` frame updates for smoother drag.
+
+### Fixed
+- **Context menu** width/height/color/radius sliders now apply (`_applyContextMenuInput`).
+
 ## [1.2.0-alpha.8] - 2026-05-18
 
 Eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.8`**.
