@@ -1045,6 +1045,17 @@ test("fan and humidifier re-render when optimistic toggle is confirmed during an
   }
 });
 
+test("light card re-renders when optimistic power toggle is confirmed with unchanged signature", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /const hasPendingOptimistic = Boolean\(this\._optimisticTurnOn \|\| this\._optimisticTurnOff\)/);
+  assert.match(source, /const hadPendingOptimistic = hasPendingOptimistic/);
+  assert.match(
+    source,
+    /const optimisticJustConfirmed = hadPendingOptimistic[\s\S]*!this\._optimisticTurnOn[\s\S]*!this\._optimisticTurnOff/,
+  );
+  assert.match(source, /&& !optimisticJustConfirmed/);
+});
+
 test("fan and humidifier visual settle waits for non-zero published values", () => {
   const fan = read("nodalia-fan-card.js");
   const humidifier = read("nodalia-humidifier-card.js");

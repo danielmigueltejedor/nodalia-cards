@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.9";
+const CARD_VERSION = "1.2.0-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -962,18 +962,26 @@ class NodaliaLightCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     let nextSignature = this._getRenderSignature();
+    const signatureUnchanged = Boolean(
+      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+    );
     const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !hasPendingOptimistic) {
+
+    if (signatureUnchanged && !hasPendingOptimistic) {
       return;
     }
 
+    const hadPendingOptimistic = hasPendingOptimistic;
     const actualState = this._getActualState();
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
     nextSignature = this._getRenderSignature();
+    const optimisticJustConfirmed = hadPendingOptimistic
+      && !this._optimisticTurnOn
+      && !this._optimisticTurnOff;
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed) {
       return;
     }
 
@@ -4986,7 +4994,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.9.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.10.js or newer.");
       }
       return;
     }

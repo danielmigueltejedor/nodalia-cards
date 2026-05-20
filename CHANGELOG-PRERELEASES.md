@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.10] - 2026-05-20
+
+Tenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.10`**.
+
+### Fixed
+- **Light card:** power toggle no longer leaves "Turning on" / "Apagando" labels stuck after Home Assistant confirms the state when the render signature is unchanged (`optimisticJustConfirmed` forces a refresh).
+
 ## [1.2.0-alpha.9] - 2026-05-20
 
 Ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.9`**.
