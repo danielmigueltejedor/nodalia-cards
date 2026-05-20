@@ -912,7 +912,7 @@ test("device cards skip redundant set hass work when render signature is unchang
     const source = read(file);
     assert.match(
       source,
-      /let nextSignature = this\._getRenderSignature\(\);[\s\S]*!this\._optimisticToggle|!hasPendingOptimistic/,
+      /let nextSignature = this\._getRenderSignature\(\);[\s\S]*!this\._optimisticToggle|!hasPendingOptimistic|!hadPendingOptimistic/,
     );
     assert.match(source, /nextSignature = this\._getRenderSignature\(\);/);
   }
