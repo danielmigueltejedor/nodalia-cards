@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.11";
+const CARD_VERSION = "1.2.0-alpha.12";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4616,8 +4616,14 @@ class NodaliaLightCard extends HTMLElement {
           user-select: none;
         }
 
+        :host([data-vlayout-editing]) .light-card__visual-item[style*="--block-tint"] {
+          background: color-mix(in srgb, var(--block-tint) 10%, transparent);
+          border-radius: 12px;
+          outline: none;
+        }
+
         :host([data-vlayout-editing]) .light-card__visual-item[style*="--block-tint"] .light-card__icon {
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-tint) 40%, transparent);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-tint) 35%, transparent);
         }
 
         :host([data-vlayout-editing]) .light-card__visual-item[data-vlayout-id="icon"] .light-card__icon {
@@ -4630,8 +4636,6 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__visual-item[style*="--block-tint"] {
           border-radius: 14px;
-          outline: 1px solid color-mix(in srgb, var(--block-tint) 28%, transparent);
-          outline-offset: 2px;
         }
 
         .light-card__visual-item .light-card__icon {
@@ -5064,7 +5068,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.11.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.12.js or newer.");
       }
       return;
     }

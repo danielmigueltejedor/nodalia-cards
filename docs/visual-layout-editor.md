@@ -31,6 +31,7 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 | Preview wider than dashboard | `previewWidthPx` not matching `hui-card-preview` width |
 | Context menu sliders do nothing | Missing `_applyContextMenuInput` (regression guard in tests) |
 | Resize handles missing | Block catalog needs `props.resize: true`; handles render on selected frame |
+| Orange boxes obscure card | Selection uses grid item bounds; properties via right-click menu, not sidebar |
 
 ## Adding another card type
 

@@ -425,6 +425,8 @@
   "ed.light.visibility_section_hint": "要在卡片内显示哪些区块。",
   "ed.light.visual_layout_hint": "Drag blocks on the live preview. Use corner handles or the sidebar to resize. Palette blocks can be dragged onto the card. Save writes YAML — no manual editing needed.",
   "ed.light.visual_layout_shortcuts": "Drag to move · Handles or sidebar to resize · Palette drag to add · Arrows nudge · Del removes · Right-click properties",
+  "ed.light.vlayout_ctx_diameter": "Diameter (cells)",
+  "ed.light.vlayout_ctx_tints": "Tint colors",
   "ed.light.visual_layout_cancel": "Cancel",
   "ed.light.visual_layout_palette": "Available blocks",
   "ed.light.visual_layout_reset": "Reset to default",

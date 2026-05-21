@@ -58,6 +58,17 @@
   const DEFAULT_ROWS = 10;
   /** Ignore micro-movements so click-to-select does not start a drag. */
   const DRAG_THRESHOLD_PX = 6;
+  /** Quick tint presets in the right-click menu (accent colors). */
+  const TINT_SWATCHES = [
+    "#6da8ff",
+    "#ff8a4c",
+    "#34c759",
+    "#ff453a",
+    "#bf5af2",
+    "#ffd60a",
+    "#64d2ff",
+    "#ac8e68",
+  ];
 
   function clampInt(value, min, max) {
     const numeric = Math.round(Number(value));
@@ -407,6 +418,38 @@
       return this._host.querySelector(".nodalia-vlayout-live-stage");
     }
 
+    /** Bounds of one placed block in stage coordinates (matches what the user sees on the card). */
+    _getItemStageRect(item) {
+      const stage = this._getLiveStage();
+      if (!stage || !item) {
+        return null;
+      }
+      const node = this._cardEl?.shadowRoot?.querySelector(
+        `.light-card__visual-item[data-vlayout-id="${item.id}"]`,
+      );
+      if (node) {
+        const stageRect = stage.getBoundingClientRect();
+        const nodeRect = node.getBoundingClientRect();
+        const left = nodeRect.left - stageRect.left;
+        const top = nodeRect.top - stageRect.top;
+        const width = nodeRect.width;
+        const height = nodeRect.height;
+        return {
+          left,
+          top,
+          width,
+          height,
+          right: left + width,
+          bottom: top + height,
+        };
+      }
+      return this._cellRectFromGrid(item);
+    }
+
+    _isCircularBlock(blockId) {
+      return getBlockFrameDef(this._catalog, blockId).shape === "circle";
+    }
+
     /**
      * Pushes the in-memory draft into the preview card via `setConfig`.
      * Called after drag end and property edits (debounced via `_scheduleLiveSync`).
@@ -555,17 +598,44 @@
         return;
       }
       const kind = target.dataset?.vlayoutCtx;
-      if (kind === "color" && this._blockSupports(blockId, "color")) {
+      if (kind === "swatch-color" && this._blockSupports(blockId, "color")) {
+        item.color = String(target.dataset?.vlayoutColor || "").trim();
+        if (!item.color) {
+          delete item.color;
+        }
+        const colorInput = this._contextMenuEl?.querySelector('[data-vlayout-ctx="color"]');
+        if (colorInput instanceof HTMLInputElement) {
+          colorInput.value = item.color || "#6da8ff";
+        }
+      } else if (kind === "color" && this._blockSupports(blockId, "color")) {
         item.color = String(target.value || "").trim();
         if (!item.color) {
           delete item.color;
         }
+      } else if (kind === "diameter" && this._isCircularBlock(blockId)) {
+        const size = clampInt(target.value, 1, Math.min(this._draft.columns, this._draft.rows));
+        item.w = size;
+        item.h = size;
+        item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+        item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+        const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-ctx-diameter-value]");
+        if (valueNode) {
+          valueNode.textContent = `${size}`;
+        }
       } else if (kind === "w") {
         item.w = clampInt(target.value, 1, this._draft.columns);
         item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+        if (this._isCircularBlock(blockId)) {
+          item.h = item.w;
+          item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+        }
       } else if (kind === "h") {
         item.h = clampInt(target.value, 1, this._draft.rows);
         item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+        if (this._isCircularBlock(blockId)) {
+          item.w = item.h;
+          item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+        }
       } else if (kind === "radius" && blockId === "icon") {
         item.radius = clampInt(target.value, 0, 999);
         const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-ctx-radius-value]");
@@ -580,7 +650,7 @@
       item.y = open.y;
       this._applyItemStyleToDom(item);
       this._scheduleFrameUpdate();
-      this._renderSidebar();
+      this._refreshChrome();
       this._scheduleLiveSync();
       this._notifyChange();
     }
@@ -619,7 +689,7 @@
       } else {
         this._renderCanvas();
       }
-      this._renderSidebar();
+      this._refreshChrome();
       this._scheduleFrameUpdate();
       this._notifyChange();
     }
@@ -668,10 +738,19 @@
         return null;
       }
       const { rect, cols, rows, gap, pad, cellW, cellH } = metrics;
-      const relX = clientX - rect.left - pad;
-      const relY = clientY - rect.top - pad;
-      let x = Math.floor(relX / (cellW + gap));
-      let y = Math.floor(relY / (cellH + gap));
+      let x;
+      let y;
+      if (this._isLiveMode()) {
+        const relX = clientX - rect.left;
+        const relY = clientY - rect.top;
+        x = Math.floor((relX / Math.max(1, rect.width)) * cols);
+        y = Math.floor((relY / Math.max(1, rect.height)) * rows);
+      } else {
+        const relX = clientX - rect.left - pad;
+        const relY = clientY - rect.top - pad;
+        x = Math.floor(relX / (cellW + gap));
+        y = Math.floor(relY / (cellH + gap));
+      }
       if (item) {
         x = clampInt(x, 0, cols - item.w);
         y = clampInt(y, 0, rows - item.h);
@@ -756,28 +835,16 @@
       handlesLayer.innerHTML = "";
       this._frameRects = [];
 
-      this._draft.items
-        .filter(item => item.visible !== false)
-        .forEach(item => {
-          const itemNode = this._cardEl.shadowRoot?.querySelector(
-            `.light-card__visual-item[data-vlayout-id="${item.id}"]`,
-          );
-          if (!itemNode) {
-            return;
-          }
-          const focusEl = getBlockFocusElement(itemNode, item.id, this._catalog);
-          if (!focusEl) {
+      const visibleItems = this._draft.items.filter(entry => entry.visible !== false);
+      visibleItems.forEach(item => {
+          const cellRect = this._getItemStageRect(item);
+          if (!cellRect) {
             return;
           }
           const frameDef = getBlockFrameDef(this._catalog, item.id);
-          const pad = frameDef.pad ?? 4;
-          const focusRect = focusEl.getBoundingClientRect();
-          const left = focusRect.left - stageRect.left - pad;
-          const top = focusRect.top - stageRect.top - pad;
-          const width = focusRect.width + pad * 2;
-          const height = focusRect.height + pad * 2;
           const shape = frameDef.shape || "rounded";
           const radius = item.radius ?? frameDef.radius ?? (shape === "circle" ? 9999 : 12);
+          const { left, top, width, height } = cellRect;
 
           const frame = document.createElement("div");
           frame.className = `nodalia-vlayout-frame nodalia-vlayout-frame--${shape}`;
@@ -789,6 +856,8 @@
           frame.style.borderRadius = shape === "circle" ? "50%" : `${radius}px`;
           if (item.id === this._selectedId) {
             frame.classList.add("is-selected");
+          } else {
+            frame.classList.add("is-idle");
           }
           if (item.color) {
             frame.style.setProperty("--frame-tint", item.color);
@@ -817,14 +886,14 @@
               handle.dataset.vlayoutId = item.id;
               handle.setAttribute("aria-label", edge === "se" ? "Resize" : edge === "e" ? "Width" : "Height");
               if (edge === "e") {
-                handle.style.left = `${left + width - 5}px`;
-                handle.style.top = `${top + height / 2 - 5}px`;
+                handle.style.left = `${left + width - 6}px`;
+                handle.style.top = `${top + height / 2 - 6}px`;
               } else if (edge === "s") {
-                handle.style.left = `${left + width / 2 - 5}px`;
-                handle.style.top = `${top + height - 5}px`;
+                handle.style.left = `${left + width / 2 - 6}px`;
+                handle.style.top = `${top + height - 6}px`;
               } else {
-                handle.style.left = `${left + width - 5}px`;
-                handle.style.top = `${top + height - 5}px`;
+                handle.style.left = `${left + width - 6}px`;
+                handle.style.top = `${top + height - 6}px`;
               }
               handlesLayer.appendChild(handle);
             });
@@ -844,20 +913,29 @@
       handlesLayer.addEventListener("pointerdown", this._onHandlePointerDown, { signal });
     }
 
-    /** Returns block id under pointer in stage coordinates, or "" if none. */
+    /** Returns block id under pointer (top-most grid item), or "" if none. */
     _hitTestBlockAt(clientX, clientY) {
       const stage = this._getLiveStage();
-      if (!stage) {
+      if (!stage || !this._cardEl?.shadowRoot) {
         return "";
       }
-      const stageRect = stage.getBoundingClientRect();
-      const x = clientX - stageRect.left;
-      const y = clientY - stageRect.top;
-      const hit = this._frameRects.find(rect => (
-        x >= rect.left
-        && x <= rect.right
-        && y >= rect.top
-        && y <= rect.bottom
+      const nodes = [...this._cardEl.shadowRoot.querySelectorAll(".light-card__visual-item[data-vlayout-id]")]
+        .map(node => {
+          const id = node.dataset.vlayoutId;
+          const item = this._getItem(id);
+          if (!item || item.visible === false) {
+            return null;
+          }
+          const rect = node.getBoundingClientRect();
+          return { id, rect, area: rect.width * rect.height };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.area - b.area);
+      const hit = nodes.find(entry => (
+        clientX >= entry.rect.left
+        && clientX <= entry.rect.right
+        && clientY >= entry.rect.top
+        && clientY <= entry.rect.bottom
       ));
       return hit?.id || "";
     }
@@ -876,6 +954,26 @@
       }
     }
 
+    _positionContextMenu(menu, clientX, clientY) {
+      const margin = 8;
+      menu.style.visibility = "hidden";
+      menu.style.left = "0";
+      menu.style.top = "0";
+      document.body.appendChild(menu);
+      const rect = menu.getBoundingClientRect();
+      let left = clientX + 4;
+      let top = clientY + 4;
+      if (left + rect.width > window.innerWidth - margin) {
+        left = Math.max(margin, clientX - rect.width - 4);
+      }
+      if (top + rect.height > window.innerHeight - margin) {
+        top = Math.max(margin, clientY - rect.height - 4);
+      }
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+      menu.style.visibility = "";
+    }
+
     _showContextMenu(clientX, clientY, blockId) {
       this._hideContextMenu();
       const item = this._getItem(blockId);
@@ -883,18 +981,65 @@
         return;
       }
 
-      const colorField = this._blockSupports(blockId, "color")
-        ? `<label class="nodalia-vlayout-context-menu__field">
+      const isCircle = this._isCircularBlock(blockId);
+      const swatches = this._blockSupports(blockId, "color")
+        ? `<div class="nodalia-vlayout-context-menu__swatches" role="group" aria-label="${this._propsLabel("ed.light.vlayout_ctx_tints", "Tint colors")}">
+            ${TINT_SWATCHES.map(color => `
+              <button
+                type="button"
+                class="nodalia-vlayout-swatch${item.color === color ? " is-active" : ""}"
+                style="--swatch:${color}"
+                data-vlayout-ctx="swatch-color"
+                data-vlayout-color="${color}"
+                title="${color}"
+              ></button>
+            `).join("")}
+          </div>
+          <label class="nodalia-vlayout-context-menu__field nodalia-vlayout-context-menu__field--color">
             <span>${this._propsLabel("ed.light.vlayout_props_color", "Accent color")}</span>
             <input type="color" data-vlayout-ctx="color" value="${item.color || "#6da8ff"}" />
           </label>`
         : "";
 
+      const sizeFields = isCircle
+        ? `<label class="nodalia-vlayout-context-menu__field">
+            <span class="nodalia-vlayout-context-menu__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_ctx_diameter", "Diameter (cells)")}</span>
+              <output data-vlayout-ctx-diameter-value>${Math.max(item.w, item.h)}</output>
+            </span>
+            <input
+              type="range"
+              min="1"
+              max="${Math.min(this._draft.columns, this._draft.rows)}"
+              step="1"
+              data-vlayout-ctx="diameter"
+              value="${Math.max(item.w, item.h)}"
+            />
+          </label>`
+        : `
+          <label class="nodalia-vlayout-context-menu__field">
+            <span class="nodalia-vlayout-context-menu__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_props_width", "Width (columns)")}</span>
+              <output data-vlayout-ctx-w-value>${item.w}</output>
+            </span>
+            <input type="range" min="1" max="${this._draft.columns}" step="1" data-vlayout-ctx="w" value="${item.w}" />
+          </label>
+          <label class="nodalia-vlayout-context-menu__field">
+            <span class="nodalia-vlayout-context-menu__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_props_height", "Height (rows)")}</span>
+              <output data-vlayout-ctx-h-value>${item.h}</output>
+            </span>
+            <input type="range" min="1" max="${this._draft.rows}" step="1" data-vlayout-ctx="h" value="${item.h}" />
+          </label>
+        `;
+
       const radiusField = blockId === "icon"
         ? `<label class="nodalia-vlayout-context-menu__field">
-            <span>${this._propsLabel("ed.light.vlayout_props_radius", "Corner radius")}</span>
+            <span class="nodalia-vlayout-context-menu__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_props_radius", "Icon corner radius")}</span>
+              <output data-vlayout-ctx-radius-value>${item.radius ?? 50}px</output>
+            </span>
             <input type="range" min="0" max="80" step="1" data-vlayout-ctx="radius" value="${item.radius ?? 50}" />
-            <span data-vlayout-ctx-radius-value>${item.radius ?? 50}px</span>
           </label>`
         : "";
 
@@ -902,27 +1047,32 @@
       menu.className = "nodalia-vlayout-context-menu";
       menu.innerHTML = `
         <div class="nodalia-vlayout-context-menu__title">${this._label(blockId)}</div>
-        ${colorField}
-        <label class="nodalia-vlayout-context-menu__field">
-          <span>${this._propsLabel("ed.light.vlayout_props_width", "Width (columns)")}</span>
-          <input type="range" min="1" max="${this._draft.columns}" step="1" data-vlayout-ctx="w" value="${item.w}" />
-        </label>
-        <label class="nodalia-vlayout-context-menu__field">
-          <span>${this._propsLabel("ed.light.vlayout_props_height", "Height (rows)")}</span>
-          <input type="range" min="1" max="${this._draft.rows}" step="1" data-vlayout-ctx="h" value="${item.h}" />
-        </label>
+        ${swatches}
+        ${sizeFields}
         ${radiusField}
-        <button type="button" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
+        <button type="button" class="nodalia-vlayout-context-menu__remove" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
       `;
 
-      const margin = 12;
-      const maxLeft = Math.max(margin, window.innerWidth - 280 - margin);
-      const maxTop = Math.max(margin, window.innerHeight - 320 - margin);
-      menu.style.left = `${Math.min(clientX, maxLeft)}px`;
-      menu.style.top = `${Math.min(clientY, maxTop)}px`;
-
       menu.addEventListener("input", event => {
+        const target = event.target;
+        if (target instanceof HTMLInputElement) {
+          const kind = target.dataset?.vlayoutCtx;
+          if (kind === "w") {
+            const out = menu.querySelector("[data-vlayout-ctx-w-value]");
+            if (out) {
+              out.textContent = target.value;
+            }
+          } else if (kind === "h") {
+            const out = menu.querySelector("[data-vlayout-ctx-h-value]");
+            if (out) {
+              out.textContent = target.value;
+            }
+          }
+        }
         this._applyContextMenuInput(event.target);
+        menu.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
+          btn.classList.toggle("is-active", btn.dataset.vlayoutColor === this._getItem(blockId)?.color);
+        });
       });
       menu.addEventListener("click", event => {
         if (event.target.closest("[data-vlayout-ctx-remove]")) {
@@ -936,12 +1086,12 @@
           }
           this._hideContextMenu();
           this._scheduleLiveSync();
-          this._renderSidebar();
+          this._refreshChrome();
           this._notifyChange();
         }
       });
 
-      document.body.appendChild(menu);
+      this._positionContextMenu(menu, clientX, clientY);
       this._contextMenuEl = menu;
       document.addEventListener("pointerdown", this._onDocumentPointerDown, true);
     }
@@ -1008,6 +1158,43 @@
           <button type="button" class="nodalia-vlayout-remove-block" data-vlayout-remove="${item.id}">
             ${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}
           </button>
+        </div>
+      `;
+    }
+
+    _refreshChrome() {
+      if (this._isLiveMode()) {
+        this._renderPaletteDock();
+      } else {
+        this._renderSidebar();
+      }
+    }
+
+    _renderPaletteDock() {
+      const dock = this._host.querySelector(".nodalia-vlayout-palette-dock");
+      if (!dock) {
+        return;
+      }
+      const palette = Object.keys(this._catalog)
+        .filter(id => !this._draft.items.some(item => item.id === id && item.visible !== false))
+        .map(id => `
+          <button
+            type="button"
+            class="nodalia-vlayout-palette__item"
+            data-vlayout-add="${id}"
+            data-vlayout-palette-drag="${id}"
+            draggable="true"
+          >
+            <span class="nodalia-vlayout-palette__grip" aria-hidden="true">⠿</span>
+            <span class="nodalia-vlayout-palette__label">${this._label(id)}</span>
+          </button>
+        `)
+        .join("");
+
+      dock.innerHTML = `
+        <div class="nodalia-vlayout-palette-dock__label">${this._options.paletteTitle || "Available blocks"}</div>
+        <div class="nodalia-vlayout-palette nodalia-vlayout-palette--dock">
+          ${palette || `<span class="nodalia-vlayout-muted">${this._propsLabel("ed.light.vlayout_palette_empty", "All blocks placed")}</span>`}
         </div>
       `;
     }
@@ -1130,11 +1317,11 @@
         this._host.innerHTML = `
           <div class="nodalia-vlayout-workspace nodalia-vlayout-workspace--live">
             <div class="nodalia-vlayout-live-host"></div>
-            <aside class="nodalia-vlayout-sidebar"></aside>
+            <div class="nodalia-vlayout-palette-dock"></div>
           </div>
         `;
         this._mountLiveCard();
-        this._renderSidebar();
+        this._renderPaletteDock();
         return;
       }
 
@@ -1289,6 +1476,11 @@
       if (edge === "s" || edge === "se") {
         item.h = clampInt(pointerCell.y + 1 - item.y, 1, this._draft.rows - item.y);
       }
+      if (this._isCircularBlock(item.id)) {
+        const size = Math.max(item.w, item.h);
+        item.w = clampInt(size, 1, this._draft.columns - item.x);
+        item.h = clampInt(size, 1, this._draft.rows - item.y);
+      }
       this._applyItemStyleToDom(item);
       this._updateDropIndicator(item);
       this._scheduleFrameUpdate();
@@ -1331,7 +1523,7 @@
       this._resize = null;
       this._updateDropIndicator(null);
       this._scheduleFrameUpdate();
-      this._renderSidebar();
+      this._refreshChrome();
     }
 
     mount() {
@@ -1352,7 +1544,7 @@
       if (this._isLiveMode()) {
         this._scheduleFrameUpdate();
       }
-      this._renderSidebar();
+      this._refreshChrome();
     }
 
     _resizeItem(item, deltaW, deltaH) {
@@ -1369,7 +1561,7 @@
       item.x = open.x;
       item.y = open.y;
       this._applyItemStyleToDom(item);
-      this._renderSidebar();
+      this._refreshChrome();
       this._scheduleLiveSync();
       this._notifyChange();
     }
@@ -1538,7 +1730,7 @@
       item.y = open.y;
       this._applyItemStyleToDom(item);
       this._scheduleFrameUpdate();
-      this._renderSidebar();
+      this._refreshChrome();
       this._scheduleLiveSync();
       this._notifyChange();
     }
@@ -1582,7 +1774,7 @@
         } else {
           this._renderCanvas();
         }
-        this._renderSidebar();
+        this._refreshChrome();
         this._scheduleFrameUpdate();
         this._notifyChange();
         return;
@@ -1616,7 +1808,7 @@
           item.x = 0;
           item.w = this._draft.columns;
           this._applyItemStyleToDom(item);
-          this._renderSidebar();
+          this._refreshChrome();
           this._scheduleLiveSync();
           this._notifyChange();
           return;
@@ -1650,7 +1842,7 @@
         } else {
           this._renderCanvas();
         }
-        this._renderSidebar();
+        this._refreshChrome();
         this._notifyChange();
         return;
       }
@@ -1672,7 +1864,7 @@
         } else {
           this._renderCanvas();
         }
-        this._renderSidebar();
+        this._refreshChrome();
         this._notifyChange();
       }
     }
@@ -1826,27 +2018,42 @@
       min-height: 420px;
     }
     .nodalia-vlayout-workspace--live {
-      grid-template-columns: minmax(0, 1fr) 288px;
-      min-height: 380px;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+      min-height: 420px;
     }
     .nodalia-vlayout-live-host {
       align-items: stretch;
-      background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-      border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-      border-radius: 16px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
       display: flex;
       justify-content: center;
-      min-height: 320px;
+      min-height: 360px;
       overflow: auto;
-      padding: 12px;
+      padding: 8px 4px 4px;
+    }
+    .nodalia-vlayout-palette-dock {
+      border-top: 1px solid var(--divider-color);
+      display: grid;
+      gap: 8px;
+      padding: 10px 4px 2px;
+    }
+    .nodalia-vlayout-palette-dock__label {
+      color: var(--secondary-text-color);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .nodalia-vlayout-palette--dock {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .nodalia-vlayout-palette--dock .nodalia-vlayout-palette__item {
+      width: auto;
     }
     .nodalia-vlayout-grid-guide {
-      border: 1px dashed color-mix(in srgb, var(--primary-color) 22%, transparent);
-      border-radius: 12px;
-      box-sizing: border-box;
-      pointer-events: none;
-      position: absolute;
-      z-index: 1;
+      display: none;
     }
     .nodalia-vlayout-drop-indicator {
       background: color-mix(in srgb, var(--primary-color) 16%, transparent);
@@ -1881,21 +2088,25 @@
       z-index: 4;
     }
     .nodalia-vlayout-frame {
-      border: 2px dashed color-mix(in srgb, var(--primary-color) 55%, transparent);
+      border: 1px dashed color-mix(in srgb, var(--primary-text-color) 28%, transparent);
       box-sizing: border-box;
       pointer-events: none;
       position: absolute;
-      transition: border-color 120ms ease;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .nodalia-vlayout-frame.is-idle {
+      opacity: 0.35;
     }
     .nodalia-vlayout-frame.is-selected {
-      border-color: var(--primary-color);
-      border-style: solid;
+      border: 2px solid var(--primary-color);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 30%, transparent);
+      opacity: 1;
     }
     .nodalia-vlayout-frame.is-dragging,
     .nodalia-vlayout-frame.is-resizing {
       border-style: solid;
-      opacity: 0.92;
-      box-shadow: 0 8px 24px color-mix(in srgb, var(--primary-color) 25%, transparent);
+      opacity: 1;
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--primary-color) 22%, transparent);
     }
     .nodalia-vlayout-handles {
       inset: 0;
@@ -1910,13 +2121,13 @@
       border-radius: 999px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
       cursor: pointer;
-      height: 10px;
+      height: 12px;
       margin: 0;
       padding: 0;
       pointer-events: auto;
       position: absolute;
       touch-action: none;
-      width: 10px;
+      width: 12px;
       z-index: 7;
     }
     .nodalia-vlayout-handle--e {
@@ -1933,12 +2144,13 @@
     }
     .nodalia-vlayout-context-menu {
       background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
-      border: 1px solid var(--divider-color);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
       border-radius: 14px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
       display: grid;
       gap: 10px;
-      min-width: 240px;
+      max-width: min(280px, calc(100vw - 24px));
+      min-width: 220px;
       padding: 12px;
       position: fixed;
       z-index: 2147483647;
@@ -1947,15 +2159,53 @@
       font-size: 13px;
       font-weight: 700;
     }
+    .nodalia-vlayout-context-menu__swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .nodalia-vlayout-swatch {
+      appearance: none;
+      background: var(--swatch);
+      border: 2px solid color-mix(in srgb, var(--primary-text-color) 18%, transparent);
+      border-radius: 999px;
+      cursor: pointer;
+      height: 22px;
+      margin: 0;
+      padding: 0;
+      width: 22px;
+    }
+    .nodalia-vlayout-swatch.is-active {
+      border-color: var(--primary-text-color);
+      box-shadow: 0 0 0 2px var(--primary-color);
+    }
     .nodalia-vlayout-context-menu__field {
       display: grid;
       gap: 6px;
     }
-    .nodalia-vlayout-context-menu__field span {
+    .nodalia-vlayout-context-menu__field-head {
+      align-items: center;
+      display: flex;
       font-size: 11px;
       font-weight: 600;
+      justify-content: space-between;
     }
-    .nodalia-vlayout-context-menu button {
+    .nodalia-vlayout-context-menu__field-head output {
+      color: var(--secondary-text-color);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nodalia-vlayout-context-menu__field input[type="range"] {
+      accent-color: var(--primary-color);
+      width: 100%;
+    }
+    .nodalia-vlayout-context-menu__field--color input[type="color"] {
+      border: 0;
+      height: 32px;
+      padding: 0;
+      width: 100%;
+    }
+    .nodalia-vlayout-context-menu__remove {
       appearance: none;
       background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
       border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);

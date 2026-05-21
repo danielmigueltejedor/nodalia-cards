@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.12] - 2026-05-21
+
+Twelfth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.12`**.
+
+### Changed
+- **Visual layout editor:** full-width live card preview (WYSIWYG); palette dock at bottom; subtle selection on real block bounds.
+- **Right-click menu** opens under the cursor with tint swatches, width/height sliders, and diameter control for circular blocks (icon).
+
 ## [1.2.0-alpha.11] - 2026-05-20
 
 Eleventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.11`**.
