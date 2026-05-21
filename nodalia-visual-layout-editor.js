@@ -487,6 +487,23 @@
       return deepClone(this._ensurePreviewConfig() || {});
     }
 
+    /** Re-read `hass` and re-render the live preview (entity state, on/off layout). */
+    refreshPreviewHass() {
+      if (!this._isLiveMode() || !this._cardEl) {
+        return;
+      }
+      const hass = typeof this._livePreview?.getHass === "function"
+        ? this._livePreview.getHass()
+        : this._livePreview?.hass;
+      if (hass !== undefined && this._cardEl._lastRenderSignature !== undefined) {
+        this._cardEl._lastRenderSignature = "";
+      }
+      if (hass !== undefined) {
+        this._cardEl.hass = hass;
+      }
+      this._syncLiveCardConfig();
+    }
+
     _syncLiveCardConfig() {
       if (!this._isLiveMode() || !this._cardEl) {
         return;
@@ -498,8 +515,11 @@
       // Expanded while on so sliders/sections are visible; off respects `auto_expand` from config.
       previewConfig.auto_expand = entityOn ? true : previewConfig.auto_expand === true;
       this._previewConfig = previewConfig;
-      if (this._livePreview.hass !== undefined) {
-        this._cardEl.hass = this._livePreview.hass;
+      const hass = typeof this._livePreview?.getHass === "function"
+        ? this._livePreview.getHass()
+        : this._livePreview?.hass;
+      if (hass !== undefined) {
+        this._cardEl.hass = hass;
       }
       this._cardEl.setAttribute("data-vlayout-editing", "true");
       this._cardEl.setConfig(previewConfig);
@@ -666,84 +686,93 @@
     }
 
     _applyContextMenuInput(target) {
-      const blockId = this._selectedId;
-      const item = this._getItem(blockId);
-      if (!item || !(target instanceof HTMLElement)) {
+      if (!(target instanceof HTMLElement)) {
         return;
       }
+      const blockId = this._selectedId;
       const kind = target.dataset?.vlayoutCtx;
-      const useStyles = Boolean(this._styleHandlers?.applyColor);
-      if (kind === "swatch-color" && this._blockSupports(blockId, "color")) {
+      const stylePath = String(target.dataset?.vlayoutStylePath || "").trim();
+      const useStyles = Boolean(this._styleHandlers?.applyStylePath);
+
+      if (kind === "style-swatch" && stylePath && useStyles) {
         const color = String(target.dataset?.vlayoutColor || "").trim();
-        if (useStyles) {
-          this._previewConfig = this._styleHandlers.applyColor(this._ensurePreviewConfig(), blockId, color);
-        } else {
-          item.color = color;
-          if (!item.color) {
-            delete item.color;
-          }
-        }
-        const colorInput = this._contextMenuEl?.querySelector('[data-vlayout-ctx="color"]');
+        this._previewConfig = this._styleHandlers.applyStylePath(this._ensurePreviewConfig(), stylePath, color);
+        const colorInput = this._contextMenuEl?.querySelector(`[data-vlayout-style-path="${stylePath}"][data-vlayout-ctx="style-color"]`);
         if (colorInput instanceof HTMLInputElement) {
           colorInput.value = color || "#6da8ff";
         }
-      } else if (kind === "color" && this._blockSupports(blockId, "color")) {
-        const color = String(target.value || "").trim();
-        if (useStyles) {
-          this._previewConfig = this._styleHandlers.applyColor(this._ensurePreviewConfig(), blockId, color);
-        } else {
-          item.color = color;
-          if (!item.color) {
-            delete item.color;
-          }
-        }
-      } else if (kind === "diameter" && this._isCircularBlock(blockId)) {
-        const size = clampInt(target.value, 1, Math.min(this._draft.columns, this._draft.rows));
-        item.w = size;
-        item.h = size;
-        item.x = clampInt(item.x, 0, this._draft.columns - item.w);
-        item.y = clampInt(item.y, 0, this._draft.rows - item.h);
-        const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-ctx-diameter-value]");
+      } else if (kind === "style-color" && stylePath && useStyles) {
+        this._previewConfig = this._styleHandlers.applyStylePath(
+          this._ensurePreviewConfig(),
+          stylePath,
+          String(target.value || "").trim(),
+        );
+      } else if (kind === "style-text" && stylePath && useStyles) {
+        this._previewConfig = this._styleHandlers.applyStylePath(
+          this._ensurePreviewConfig(),
+          stylePath,
+          String(target.value || "").trim(),
+        );
+      } else if (kind === "style-preset" && stylePath && useStyles && target instanceof HTMLInputElement && target.checked) {
+        this._previewConfig = this._styleHandlers.applyStylePath(
+          this._ensurePreviewConfig(),
+          stylePath,
+          String(target.value || "").trim(),
+        );
+      } else if (kind === "style-icon-radius" && stylePath && useStyles) {
+        const pct = clampInt(target.value, 0, 100);
+        this._previewConfig = this._styleHandlers.applyStylePath(this._ensurePreviewConfig(), stylePath, `${pct}%`);
+        const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-style-radius-value]");
         if (valueNode) {
-          valueNode.textContent = `${size}`;
-        }
-      } else if (kind === "w") {
-        item.w = clampInt(target.value, 1, this._draft.columns);
-        item.x = clampInt(item.x, 0, this._draft.columns - item.w);
-        if (this._isCircularBlock(blockId)) {
-          item.h = item.w;
-          item.y = clampInt(item.y, 0, this._draft.rows - item.h);
-        }
-      } else if (kind === "h") {
-        item.h = clampInt(target.value, 1, this._draft.rows);
-        item.y = clampInt(item.y, 0, this._draft.rows - item.h);
-        if (this._isCircularBlock(blockId)) {
-          item.w = item.h;
-          item.x = clampInt(item.x, 0, this._draft.columns - item.w);
-        }
-      } else if (kind === "radius" && blockId === "icon") {
-        const radius = clampInt(target.value, 0, 100);
-        if (useStyles && this._styleHandlers?.applyRadius) {
-          this._previewConfig = this._styleHandlers.applyRadius(this._ensurePreviewConfig(), blockId, radius);
-        } else {
-          item.radius = radius;
-        }
-        const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-ctx-radius-value]");
-        if (valueNode) {
-          valueNode.textContent = `${radius}%`;
+          valueNode.textContent = `${pct}%`;
         }
       } else {
+        const item = this._getItem(blockId);
+        if (!item) {
+          return;
+        }
+        if (kind === "diameter" && this._isCircularBlock(blockId)) {
+          const size = clampInt(target.value, 1, Math.min(this._draft.columns, this._draft.rows));
+          item.w = size;
+          item.h = size;
+          item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+          item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+          const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-ctx-diameter-value]");
+          if (valueNode) {
+            valueNode.textContent = `${size}`;
+          }
+        } else if (kind === "w") {
+          item.w = clampInt(target.value, 1, this._draft.columns);
+          item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+          if (this._isCircularBlock(blockId)) {
+            item.h = item.w;
+            item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+          }
+        } else if (kind === "h") {
+          item.h = clampInt(target.value, 1, this._draft.rows);
+          item.y = clampInt(item.y, 0, this._draft.rows - item.h);
+          if (this._isCircularBlock(blockId)) {
+            item.w = item.h;
+            item.x = clampInt(item.x, 0, this._draft.columns - item.w);
+          }
+        } else {
+          return;
+        }
+        if (kind === "w" || kind === "h" || kind === "diameter") {
+          const open = findOpenCell(this._draft, item, item.id);
+          item.x = open.x;
+          item.y = open.y;
+          this._applyItemStyleToDom(item);
+          this._scheduleFrameUpdate();
+        }
+        this._syncControlOutputs();
+        this._refreshChrome();
+        this._scheduleLiveSync();
+        this._notifyChange();
         return;
       }
-      if (kind === "w" || kind === "h" || kind === "diameter") {
-        const open = findOpenCell(this._draft, item, item.id);
-        item.x = open.x;
-        item.y = open.y;
-        this._applyItemStyleToDom(item);
-        this._scheduleFrameUpdate();
-      }
+
       this._syncControlOutputs();
-      this._renderInspector();
       this._refreshChrome();
       this._scheduleLiveSync();
       this._notifyChange();
@@ -1098,42 +1127,34 @@
       return this._getItem(blockId)?.radius ?? 50;
     }
 
-    _getBlockControlsMarkup(blockId) {
-      const item = this._getItem(blockId);
-      if (!item) {
-        return "";
-      }
-      const blockColor = this._readBlockColor(blockId);
-      const blockRadius = this._readBlockRadius(blockId);
-      const isCircle = this._isCircularBlock(blockId);
-      const swatches = this._blockSupports(blockId, "color")
-        ? `<div class="nodalia-vlayout-controls__swatches" role="group" aria-label="${this._propsLabel("ed.light.vlayout_ctx_tints", "Tint colors")}">
-            ${TINT_SWATCHES.map(color => `
-              <button
-                type="button"
-                class="nodalia-vlayout-swatch${blockColor === color ? " is-active" : ""}"
-                style="--swatch:${color}"
-                data-vlayout-ctx="swatch-color"
-                data-vlayout-color="${color}"
-                title="${color}"
-              ></button>
-            `).join("")}
-          </div>
-          <label class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--color">
-            <span>${this._propsLabel("ed.light.vlayout_props_color", "Accent color")}</span>
-            <input type="color" data-vlayout-ctx="color" value="${blockColor}" />
-          </label>`
-        : "";
+    _getStylePanelContext() {
+      const hass = typeof this._livePreview?.getHass === "function"
+        ? this._livePreview.getHass()
+        : this._livePreview?.hass;
+      return {
+        labelFor: (key, fallback) => this._propsLabel(key, fallback),
+        tintSwatches: TINT_SWATCHES,
+        hass,
+      };
+    }
 
-      const sizeFields = isCircle
-        ? `<label class="nodalia-vlayout-controls__field">
+    _buildLayoutControlsMarkup(blockId, item, layoutControls) {
+      const controls = new Set(layoutControls || []);
+      const parts = [];
+
+      if (controls.has("diameter") && this._isCircularBlock(blockId)) {
+        parts.push(`
+          <label class="nodalia-vlayout-controls__field">
             <span class="nodalia-vlayout-controls__field-head">
               <span>${this._propsLabel("ed.light.vlayout_ctx_diameter", "Diameter (cells)")}</span>
               <output data-vlayout-ctx-diameter-value>${Math.max(item.w, item.h)}</output>
             </span>
             <input type="range" min="1" max="${Math.min(this._draft.columns, this._draft.rows)}" step="1" data-vlayout-ctx="diameter" value="${Math.max(item.w, item.h)}" />
-          </label>`
-        : `
+          </label>
+        `);
+      }
+      if (controls.has("w")) {
+        parts.push(`
           <label class="nodalia-vlayout-controls__field">
             <span class="nodalia-vlayout-controls__field-head">
               <span>${this._propsLabel("ed.light.vlayout_props_width", "Width")}</span>
@@ -1141,6 +1162,10 @@
             </span>
             <input type="range" min="1" max="${this._draft.columns}" step="1" data-vlayout-ctx="w" value="${item.w}" />
           </label>
+        `);
+      }
+      if (controls.has("h")) {
+        parts.push(`
           <label class="nodalia-vlayout-controls__field">
             <span class="nodalia-vlayout-controls__field-head">
               <span>${this._propsLabel("ed.light.vlayout_props_height", "Height")}</span>
@@ -1148,58 +1173,104 @@
             </span>
             <input type="range" min="1" max="${this._draft.rows}" step="1" data-vlayout-ctx="h" value="${item.h}" />
           </label>
-        `;
+        `);
+      }
 
-      const radiusField = blockId === "icon"
-        ? `<label class="nodalia-vlayout-controls__field">
-            <span class="nodalia-vlayout-controls__field-head">
-              <span>${this._propsLabel("ed.light.vlayout_props_radius", "Icon radius")}</span>
-              <output data-vlayout-ctx-radius-value>${item.radius ?? 50}px</output>
-            </span>
-            <input type="range" min="0" max="100" step="1" data-vlayout-ctx="radius" value="${blockRadius}" />
-          </label>`
+      return parts.join("");
+    }
+
+    _getBlockControlsMarkup(blockId) {
+      const item = this._getItem(blockId);
+      if (!item) {
+        return "";
+      }
+
+      const panelCtx = this._getStylePanelContext();
+      const panelSpec = this._styleHandlers?.getBlockPanelSpec
+        ? this._styleHandlers.getBlockPanelSpec(this._ensurePreviewConfig(), blockId, panelCtx)
+        : { layout: ["w", "h"], stylePaths: [], contentVisible: true };
+
+      const layoutMarkup = this._buildLayoutControlsMarkup(blockId, item, panelSpec.layout);
+      const styleFields = panelSpec.stylePaths.length && this._styleHandlers?.renderStyleFieldsForBlock
+        ? this._styleHandlers.renderStyleFieldsForBlock(
+            this._ensurePreviewConfig(),
+            blockId,
+            panelCtx,
+          )
+        : "";
+
+      const hiddenHint = panelSpec.contentVisible === false
+        ? `<p class="nodalia-vlayout-controls__hint">${this._propsLabel("ed.light.vlayout_block_hidden_hint", "This block is hidden with the current card settings or light state. You can still move it on the grid.")}</p>`
+        : "";
+
+      const layoutSection = layoutMarkup
+        ? `
+        <div class="nodalia-vlayout-controls__section">${this._propsLabel("ed.light.vlayout_section_layout", "Layout")}</div>
+        <div class="nodalia-vlayout-controls__grid nodalia-vlayout-controls__grid--layout">
+          ${layoutMarkup}
+          <button type="button" class="nodalia-vlayout-controls__remove" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
+        </div>`
+        : `
+        <div class="nodalia-vlayout-controls__grid nodalia-vlayout-controls__grid--layout">
+          <button type="button" class="nodalia-vlayout-controls__remove" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
+        </div>`;
+
+      const stylesSection = styleFields
+        ? `
+        <div class="nodalia-vlayout-controls__section">${this._propsLabel("ed.light.vlayout_section_styles", "Styles")}</div>
+        <div class="nodalia-vlayout-controls__grid nodalia-vlayout-controls__grid--styles">
+          ${styleFields}
+        </div>`
         : "";
 
       return `
         <div class="nodalia-vlayout-controls__title">${this._label(blockId)}</div>
-        <div class="nodalia-vlayout-controls__grid">
-          ${swatches}
-          ${sizeFields}
-          ${radiusField}
-          <button type="button" class="nodalia-vlayout-controls__remove" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
+        ${hiddenHint}
+        ${layoutSection}
+        ${stylesSection}
+      `;
+    }
+
+    _getCardControlsMarkup() {
+      const styleFields = this._styleHandlers?.renderCardStyleFields
+        ? this._styleHandlers.renderCardStyleFields(
+            this._ensurePreviewConfig(),
+            this._getStylePanelContext(),
+          )
+        : "";
+      return `
+        <div class="nodalia-vlayout-controls__title">${this._propsLabel("ed.light.vlayout_card_styles_title", "Card")}</div>
+        <div class="nodalia-vlayout-controls__grid nodalia-vlayout-controls__grid--styles">
+          ${styleFields}
         </div>
       `;
     }
 
     _syncControlOutputs() {
       const item = this._getItem(this._selectedId);
-      if (!item) {
+      const root = this._contextMenuEl;
+      if (!item || !root) {
         return;
       }
-      const roots = [
-        this._host.querySelector(".nodalia-vlayout-inspector"),
-        this._contextMenuEl,
-      ].filter(Boolean);
-      roots.forEach(root => {
-        const wOut = root.querySelector("[data-vlayout-ctx-w-value]");
-        const hOut = root.querySelector("[data-vlayout-ctx-h-value]");
-        const dOut = root.querySelector("[data-vlayout-ctx-diameter-value]");
-        const rOut = root.querySelector("[data-vlayout-ctx-radius-value]");
-        if (wOut) {
-          wOut.textContent = String(item.w);
-        }
-        if (hOut) {
-          hOut.textContent = String(item.h);
-        }
-        if (dOut) {
-          dOut.textContent = String(Math.max(item.w, item.h));
-        }
-        if (rOut) {
-          rOut.textContent = `${item.radius ?? 50}px`;
-        }
-        root.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
-          btn.classList.toggle("is-active", btn.dataset.vlayoutColor === this._readBlockColor(this._selectedId));
-        });
+      const wOut = root.querySelector("[data-vlayout-ctx-w-value]");
+      const hOut = root.querySelector("[data-vlayout-ctx-h-value]");
+      const dOut = root.querySelector("[data-vlayout-ctx-diameter-value]");
+      if (wOut) {
+        wOut.textContent = String(item.w);
+      }
+      if (hOut) {
+        hOut.textContent = String(item.h);
+      }
+      if (dOut) {
+        dOut.textContent = String(Math.max(item.w, item.h));
+      }
+      const previewConfig = this._ensurePreviewConfig();
+      root.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
+        const path = String(btn.dataset?.vlayoutStylePath || "").trim();
+        const current = path && this._styleHandlers?.readStylePath
+          ? this._styleHandlers.readStylePath(previewConfig, path)
+          : "";
+        btn.classList.toggle("is-active", btn.dataset.vlayoutColor === current);
       });
     }
 
@@ -1237,35 +1308,6 @@
       root.dataset.vlayoutControlsBound = "true";
       root.addEventListener("input", this._onControlsInput);
       root.addEventListener("click", this._onControlsClick);
-    }
-
-    _bindInspectorDelegation() {
-      const host = this._host.querySelector(".nodalia-vlayout-inspector");
-      if (!host || host.dataset.vlayoutInspectorBound === "true") {
-        return;
-      }
-      host.dataset.vlayoutInspectorBound = "true";
-      host.addEventListener("input", this._onControlsInput);
-      host.addEventListener("click", this._onControlsClick);
-    }
-
-    _renderInspector() {
-      const host = this._host.querySelector(".nodalia-vlayout-inspector");
-      if (!host) {
-        return;
-      }
-      const item = this._getItem(this._selectedId);
-      if (!item) {
-        host.innerHTML = `
-          <div class="nodalia-vlayout-inspector__empty">
-            ${this._propsLabel("ed.light.vlayout_inspector_hint", "Select a block on the card, or right-click for the same controls.")}
-          </div>
-        `;
-        host.classList.remove("has-selection");
-        return;
-      }
-      host.classList.add("has-selection");
-      host.innerHTML = `<div class="nodalia-vlayout-controls nodalia-vlayout-controls--inspector">${this._getBlockControlsMarkup(item.id)}</div>`;
     }
 
     _positionContextMenu(menu, clientX, clientY) {
@@ -1306,12 +1348,30 @@
       document.addEventListener("pointerdown", this._onDocumentPointerDown, true);
     }
 
+    _showCardContextMenu(clientX, clientY) {
+      if (!this._styleHandlers?.renderCardStyleFields) {
+        return;
+      }
+      this._hideContextMenu();
+      this._selectedId = "";
+      const menu = document.createElement("div");
+      menu.className = "nodalia-vlayout-context-menu nodalia-vlayout-context-menu--card";
+      menu.innerHTML = `<div class="nodalia-vlayout-controls nodalia-vlayout-controls--menu">${this._getCardControlsMarkup()}</div>`;
+      this._bindControlsRoot(menu.querySelector(".nodalia-vlayout-controls"));
+      this._positionContextMenu(menu, clientX, clientY);
+      this._contextMenuEl = menu;
+      this._contextMenuSuppressUntil = Date.now() + 450;
+      document.addEventListener("pointerdown", this._onDocumentPointerDown, true);
+    }
+
     _onHitContextMenu(event) {
       event.preventDefault();
       event.stopPropagation();
       const blockId = this._hitTestBlockAt(event.clientX, event.clientY);
       if (blockId) {
         this._openBlockProperties(event.clientX, event.clientY, blockId);
+      } else {
+        this._showCardContextMenu(event.clientX, event.clientY);
       }
     }
 
@@ -1372,7 +1432,6 @@
 
     _refreshChrome() {
       if (this._isLiveMode()) {
-        this._renderInspector();
         this._renderPaletteDock();
       } else {
         this._renderSidebar();
@@ -1528,12 +1587,10 @@
         this._host.innerHTML = `
           <div class="nodalia-vlayout-workspace nodalia-vlayout-workspace--live">
             <div class="nodalia-vlayout-live-host"></div>
-            <div class="nodalia-vlayout-inspector"></div>
             <div class="nodalia-vlayout-palette-dock"></div>
           </div>
         `;
         this._mountLiveCard();
-        this._bindInspectorDelegation();
         this._refreshChrome();
         return;
       }
@@ -1760,7 +1817,6 @@
       this._syncAllPlacedDom();
       if (this._isLiveMode()) {
         this._scheduleFrameUpdate();
-        this._renderInspector();
       }
       this._refreshChrome();
     }
@@ -2272,7 +2328,7 @@
     }
     .nodalia-vlayout-workspace--live {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) auto auto;
+      grid-template-rows: minmax(0, 1fr) auto;
       min-height: 480px;
     }
     .nodalia-vlayout-live-host {
@@ -2287,17 +2343,43 @@
       padding: 8px 4px 4px;
       width: 100%;
     }
-    .nodalia-vlayout-inspector {
-      background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-      border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-      border-radius: 14px;
-      margin-top: 4px;
-      padding: 10px 12px;
-    }
-    .nodalia-vlayout-inspector__empty {
+    .nodalia-vlayout-controls__section {
       color: var(--secondary-text-color);
-      font-size: 12px;
-      line-height: 1.45;
+      font-size: 10px;
+      font-weight: 700;
+      grid-column: 1 / -1;
+      letter-spacing: 0.04em;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+    .nodalia-vlayout-controls__hint {
+      color: var(--secondary-text-color);
+      font-size: 10px;
+      line-height: 1.4;
+      margin: 0;
+    }
+    .nodalia-vlayout-radius-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .nodalia-vlayout-radius-preset {
+      align-items: center;
+      background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      font-size: 11px;
+      gap: 4px;
+      padding: 4px 8px;
+    }
+    .nodalia-vlayout-radius-preset:has(input:checked) {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 35%, transparent);
+    }
+    .nodalia-vlayout-radius-preset input {
+      margin: 0;
     }
     .nodalia-vlayout-controls__grid {
       align-items: end;
@@ -2827,7 +2909,7 @@
         event.preventDefault();
         surface._powerPreview?.toggle?.().then?.(() => {
           surface._updatePowerToggleButton(dialog);
-          surface._scheduleLiveSync();
+          surface.refreshPreviewHass();
         });
         return;
       }
@@ -2854,6 +2936,29 @@
     return { dialog, surface, close };
   }
 
+  /**
+   * Polls Home Assistant until `entityId` reaches `desiredState` (or timeout).
+   * Used after `turn_on` / `turn_off` so the live preview matches HA.
+   */
+  async function waitForEntityState(hass, entityId, desiredState, options = {}) {
+    const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 6000;
+    const intervalMs = Number(options.intervalMs) > 0 ? Number(options.intervalMs) : 80;
+    const deadline = Date.now() + timeoutMs;
+    const target = String(desiredState || "").trim().toLowerCase();
+    const id = String(entityId || "").trim();
+    if (!hass?.states || !id || !target) {
+      return false;
+    }
+    while (Date.now() < deadline) {
+      const current = String(hass.states[id]?.state || "").trim().toLowerCase();
+      if (current === target) {
+        return true;
+      }
+      await new Promise(resolve => window.setTimeout(resolve, intervalMs));
+    }
+    return String(hass.states[id]?.state || "").trim().toLowerCase() === target;
+  }
+
   /** Public surface attached to `window.NodaliaVisualLayout` (see file header for contract). */
   const api = {
     DEFAULT_COLUMNS,
@@ -2870,6 +2975,7 @@
     cellHasCollision,
     createSurface: (host, options) => new VisualLayoutSurface(host, options),
     attachEditorOverlay,
+    waitForEntityState,
     ensureOverlayStyles,
     openOverlayDialog,
   };

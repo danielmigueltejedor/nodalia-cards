@@ -17,13 +17,13 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 1. User opens **Open visual layout editor** in the light card editor.
 2. `attachEditorOverlay` opens a `<dialog>` and creates `VisualLayoutSurface` with `livePreview`.
 3. Draft layout lives in `surface.layout` (`this._draft`) — **positions only** (`x`, `y`, `w`, `h`, `id`).
-4. Tint and icon shape write to **`styles`** via per-card `styleHandlers` (light card: `styles.icon.background`, `styles.slider_color`, `styles.control.accent_background`, `styles.icon.border_radius`).
+4. Right-click a block for **layout** (only the controls that block uses: e.g. icon → diameter + `styles.icon.*`; presets → accent colors when visible) and **styles** filtered per block. Blocks hidden by config or off-state show layout + a hint only. Right-click empty preview area for **card** styles.
 5. **Save layout** → `serializeLayoutForSave(..., { positionOnly: true })` + merged `styles` from preview config → `_commitVisualLayout` → Lovelace YAML.
 6. Legacy `color` / `radius` on layout items are migrated into `styles` on load and stripped from YAML on save.
 
 ## Power preview
 
-When the entity domain supports `turn_on` / `turn_off`, the dialog header shows a toggle that calls HA services. While **on**, the preview forces `auto_expand: true` so sliders and sections are visible for layout. While **off**, `auto_expand` from card config applies (compact vs expanded off-state).
+When the entity domain supports `turn_on` / `turn_off`, the dialog header shows a toggle that calls HA services, waits for the entity state to update, then calls `refreshPreviewHass()` so the live card re-renders. The card editor also calls `refreshPreviewHass()` on every `set hass` while the overlay is open. While **on**, the preview forces `auto_expand: true` so sliders and sections are visible for layout. While **off**, `auto_expand` from card config applies (compact vs expanded off-state).
 
 ## Debugging checklist
 
@@ -37,6 +37,7 @@ When the entity domain supports `turn_on` / `turn_off`, the dialog header shows 
 | Preview wider than dashboard | `previewWidthPx` not matching `hui-card-preview` width |
 | Context menu sliders do nothing | Missing `_applyContextMenuInput` or `styleHandlers` not passed |
 | Off-state preview always expanded | `auto_expand: true` forced while entity is on only |
+| Power button toggles entity but preview unchanged | Missing `waitForEntityState` after service call or `refreshPreviewHass` not wired |
 | Resize handles missing | Block catalog needs `props.resize: true`; handles render on selected frame |
 
 ## Adding another card type

@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.16] - 2026-05-21
+
+Sixteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.16`**.
+
+### Changed
+- **Visual layout editor:** removed the bottom inspector bar; only the block palette dock remains under the preview.
+- **Right-click properties** write to native **`styles.*`** fields (card background/border/radius/shadow/padding, icon, chips, sliders — same paths as the Styles section in the card editor). Right-click empty preview opens card-level styles.
+- **Per-block context menu** shows only layout and style controls that apply to that block (hidden blocks show position + hint only).
+
+### Fixed
+- **Power preview** refreshes the live card after `turn_on` / `turn_off` when HA state updates.
+
+## [1.2.0-alpha.15] - 2026-05-21
+
+Fifteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.15`**.
+
+### Fixed
+- **Visual layout editor:** power toggle waits for entity state and re-renders the live preview (also on editor `hass` updates).
+
 ## [1.2.0-alpha.14] - 2026-05-21
 
 Fourteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.14`**.

@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.14";
+const CARD_VERSION = "1.2.0-alpha.16";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -231,12 +231,194 @@ const LIGHT_VISUAL_LAYOUT_CATALOG = {
   },
 };
 
-/** Maps layout block ids to Lovelace `styles.*` paths for tint (not stored in visual_layout YAML). */
-const LIGHT_VLAYOUT_STYLE_COLOR_PATHS = {
-  icon: "styles.icon.background",
-  sliders: "styles.slider_color",
-  chips: "styles.control.accent_background",
+/** Radius presets — same values as `NodaliaUtils.renderEditor*BorderRadiusHtml`. */
+const LIGHT_VLAYOUT_CARD_RADIUS_PRESETS = [
+  { value: "28px", labelKey: "ed.entity.chip_radius_pill" },
+  { value: "20px", labelKey: "ed.entity.chip_radius_soft" },
+  { value: "14px", labelKey: "ed.entity.chip_radius_round" },
+  { value: "8px", labelKey: "ed.entity.chip_radius_square" },
+];
+const LIGHT_VLAYOUT_CHIP_RADIUS_PRESETS = [
+  { value: "999px", labelKey: "ed.entity.chip_radius_pill" },
+  { value: "12px", labelKey: "ed.entity.chip_radius_soft" },
+  { value: "8px", labelKey: "ed.entity.chip_radius_round" },
+  { value: "4px", labelKey: "ed.entity.chip_radius_square" },
+];
+
+/** Style fields shown in the visual layout context menu (written to `styles` in YAML). */
+const LIGHT_VLAYOUT_STYLE_FIELD_GROUPS = {
+  card: [
+    { kind: "color", path: "styles.card.background", labelKey: "ed.entity.style_card_bg" },
+    { kind: "text", path: "styles.card.border", labelKey: "ed.entity.style_card_border" },
+    { kind: "radius_presets", path: "styles.card.border_radius", presetSet: "card", labelKey: "ed.entity.style_card_radius_presets" },
+    { kind: "text", path: "styles.card.box_shadow", labelKey: "ed.entity.style_card_shadow" },
+    { kind: "text", path: "styles.card.padding", labelKey: "ed.entity.style_card_padding" },
+    { kind: "text", path: "styles.card.gap", labelKey: "ed.entity.style_card_gap" },
+  ],
+  icon: [
+    { kind: "color", path: "styles.icon.background", labelKey: "ed.entity.style_accent_bg", swatches: true },
+    { kind: "icon_radius_percent", path: "styles.icon.border_radius", labelKey: "ed.light.vlayout_props_radius" },
+    { kind: "text", path: "styles.icon.size", labelKey: "ed.entity.style_main_button_size" },
+    { kind: "color", path: "styles.icon.off_color", labelKey: "ed.entity.style_icon_off" },
+  ],
+  title: [
+    { kind: "text", path: "styles.title_size", labelKey: "ed.entity.style_title_size" },
+  ],
+  chips: [
+    { kind: "color", path: "styles.control.accent_background", labelKey: "ed.entity.style_accent_bg", swatches: true },
+    { kind: "color", path: "styles.control.accent_color", labelKey: "ed.entity.style_accent_color" },
+    { kind: "text", path: "styles.control.size", labelKey: "ed.vacuum.style_button_size" },
+    { kind: "text", path: "styles.chip_height", labelKey: "ed.entity.style_chip_height" },
+    { kind: "text", path: "styles.chip_font_size", labelKey: "ed.entity.style_chip_font" },
+    { kind: "text", path: "styles.chip_padding", labelKey: "ed.entity.style_chip_padding" },
+    { kind: "radius_presets", path: "styles.chip_border_radius", presetSet: "chip", labelKey: "ed.entity.style_chip_radius" },
+  ],
+  sliders: [
+    { kind: "color", path: "styles.slider_color", labelKey: "ed.light.slider_color", swatches: true },
+    { kind: "text", path: "styles.slider_wrap_height", labelKey: "ed.light.slider_wrap_height" },
+    { kind: "text", path: "styles.slider_height", labelKey: "ed.light.slider_height" },
+    { kind: "text", path: "styles.slider_thumb_size", labelKey: "ed.light.slider_thumb_size" },
+  ],
 };
+
+/** Per-block context menu: layout controls and `styles.*` paths that affect this block only. */
+const LIGHT_VLAYOUT_BLOCK_PANEL = {
+  icon: {
+    layout: ["diameter"],
+    stylePaths: [
+      "styles.icon.background",
+      "styles.icon.border_radius",
+      "styles.icon.size",
+      "styles.icon.off_color",
+    ],
+  },
+  title: {
+    layout: ["w", "h"],
+    stylePaths: ["styles.title_size"],
+  },
+  chips: {
+    layout: ["w", "h"],
+    stylePaths: [
+      "styles.control.accent_background",
+      "styles.control.accent_color",
+      "styles.chip_height",
+      "styles.chip_font_size",
+      "styles.chip_padding",
+      "styles.chip_border_radius",
+    ],
+  },
+  sliders: {
+    layout: ["w", "h"],
+    stylePaths: [
+      "styles.slider_color",
+      "styles.slider_wrap_height",
+      "styles.slider_height",
+      "styles.slider_thumb_size",
+      "styles.control.size",
+    ],
+  },
+  brightness_presets: {
+    layout: ["w", "h"],
+    stylePaths: ["styles.control.accent_background", "styles.control.accent_color"],
+  },
+  temperature_presets: {
+    layout: ["w", "h"],
+    stylePaths: ["styles.control.accent_background", "styles.control.accent_color"],
+  },
+  color_presets: {
+    layout: ["w", "h"],
+    stylePaths: [],
+  },
+  temperature_section: {
+    layout: ["w", "h"],
+    stylePaths: ["styles.control.accent_background", "styles.control.accent_color"],
+  },
+  color_section: {
+    layout: ["w", "h"],
+    stylePaths: [],
+  },
+};
+
+const LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH = (() => {
+  const index = new Map();
+  Object.values(LIGHT_VLAYOUT_STYLE_FIELD_GROUPS).forEach(fields => {
+    fields.forEach(field => index.set(field.path, field));
+  });
+  return index;
+})();
+
+function lightVlayoutPreviewIsOn(hass, entityId) {
+  const id = String(entityId || "").trim();
+  return id ? hass?.states?.[id]?.state === "on" : false;
+}
+
+/** Mirrors `_render` visibility for each visual-layout block in the live preview. */
+function evaluateLightVlayoutBlockContent(config, hass, blockId) {
+  const entityId = config?.entity;
+  const isOn = lightVlayoutPreviewIsOn(hass, entityId);
+  const expanded = isOn || config?.auto_expand === true;
+
+  switch (blockId) {
+    case "icon":
+    case "title":
+    case "chips":
+      return true;
+    case "sliders":
+      return isOn && expanded;
+    case "brightness_presets":
+      return isOn && expanded && config?.show_quick_brightness !== false;
+    case "temperature_presets":
+      return (
+        isOn
+        && expanded
+        && config?.show_quick_temperature_presets === true
+        && config?.show_temperature_controls !== false
+      );
+    case "color_presets":
+      return (
+        isOn
+        && expanded
+        && config?.show_quick_color_presets === true
+        && config?.show_color_controls !== false
+      );
+    case "temperature_section":
+      return isOn && expanded && config?.show_temperature_controls !== false;
+    case "color_section":
+      return isOn && expanded && config?.show_color_controls !== false;
+    default:
+      return false;
+  }
+}
+
+function getLightVlayoutBlockPanelSpec(config, blockId, hass) {
+  const panel = LIGHT_VLAYOUT_BLOCK_PANEL[blockId];
+  if (!panel) {
+    return { layout: [], stylePaths: [], contentVisible: false };
+  }
+  const contentVisible = evaluateLightVlayoutBlockContent(config, hass, blockId);
+  return {
+    layout: panel.layout || [],
+    stylePaths: contentVisible ? (panel.stylePaths || []) : [],
+    contentVisible,
+  };
+}
+
+function getLightVlayoutPrimaryColorPath(blockId) {
+  const paths = LIGHT_VLAYOUT_BLOCK_PANEL[blockId]?.stylePaths || [];
+  for (const path of paths) {
+    const field = LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH.get(path);
+    if (field?.kind === "color" && field.swatches) {
+      return path;
+    }
+  }
+  for (const path of paths) {
+    const field = LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH.get(path);
+    if (field?.kind === "color") {
+      return path;
+    }
+  }
+  return "";
+}
 
 const LIGHT_VLAYOUT_POWER_TOGGLE_DOMAINS = new Set([
   "light",
@@ -264,7 +446,7 @@ function migrateVisualLayoutItemStylesIntoConfig(config) {
   const next = deepClone(config);
   const items = Array.isArray(next.visual_layout?.items) ? next.visual_layout.items : [];
   items.forEach(item => {
-    const colorPath = LIGHT_VLAYOUT_STYLE_COLOR_PATHS[item.id];
+    const colorPath = getLightVlayoutPrimaryColorPath(item.id);
     if (colorPath && item.color) {
       setByPath(next, colorPath, String(item.color).trim());
       delete item.color;
@@ -283,6 +465,111 @@ function migrateVisualLayoutItemStylesIntoConfig(config) {
   return next;
 }
 
+function escapeVlayoutAttr(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+function readLightVlayoutIconRadiusPercent(config) {
+  const raw = String(getByPath(config, "styles.icon.border_radius") ?? "50%");
+  const match = raw.match(/(\d+)/);
+  return match ? clamp(Number(match[1]), 0, 100) : 50;
+}
+
+function renderLightVlayoutSingleStyleField(config, field, labelFor, tintSwatches) {
+  if (!field) {
+    return "";
+  }
+    const label = labelFor(field.labelKey, field.labelKey);
+    const path = field.path;
+    const current = String(getByPath(config, path) ?? "").trim();
+
+    if (field.kind === "color") {
+      const swatchMarkup = field.swatches && Array.isArray(tintSwatches)
+        ? `<div class="nodalia-vlayout-controls__swatches" role="group">
+            ${tintSwatches.map(color => `
+              <button
+                type="button"
+                class="nodalia-vlayout-swatch${current === color ? " is-active" : ""}"
+                style="--swatch:${escapeVlayoutAttr(color)}"
+                data-vlayout-ctx="style-swatch"
+                data-vlayout-style-path="${escapeVlayoutAttr(path)}"
+                data-vlayout-color="${escapeVlayoutAttr(color)}"
+                title="${escapeVlayoutAttr(color)}"
+              ></button>
+            `).join("")}
+          </div>`
+        : "";
+      const pickerValue = /^#[0-9a-f]{6}$/i.test(current) ? current : "#6da8ff";
+      return `
+        ${swatchMarkup}
+        <label class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--color">
+          <span>${escapeVlayoutAttr(label)}</span>
+          <input type="color" data-vlayout-ctx="style-color" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(pickerValue)}" />
+        </label>
+      `;
+    }
+
+    if (field.kind === "icon_radius_percent") {
+      const pct = readLightVlayoutIconRadiusPercent(config);
+      return `
+        <label class="nodalia-vlayout-controls__field">
+          <span class="nodalia-vlayout-controls__field-head">
+            <span>${escapeVlayoutAttr(label)}</span>
+            <output data-vlayout-style-radius-value>${pct}%</output>
+          </span>
+          <input type="range" min="0" max="100" step="1" data-vlayout-ctx="style-icon-radius" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${pct}" />
+        </label>
+      `;
+    }
+
+    if (field.kind === "radius_presets") {
+      const presets = field.presetSet === "card"
+        ? LIGHT_VLAYOUT_CARD_RADIUS_PRESETS
+        : LIGHT_VLAYOUT_CHIP_RADIUS_PRESETS;
+      const groupName = `vlayout-radius-${field.presetSet}-${path.replace(/\./g, "-")}`;
+      const options = presets.map(preset => {
+        const checked = current === preset.value ? " checked" : "";
+        return `
+          <label class="nodalia-vlayout-radius-preset">
+            <input type="radio" name="${escapeVlayoutAttr(groupName)}" data-vlayout-ctx="style-preset" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(preset.value)}"${checked} />
+            <span>${escapeVlayoutAttr(labelFor(preset.labelKey, preset.labelKey))}</span>
+          </label>
+        `;
+      }).join("");
+      const yamlHint = field.presetSet === "card"
+        ? labelFor("ed.entity.style_card_radius_yaml_hint", "Custom YAML")
+        : "";
+      return `
+        <div class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--presets">
+          <span class="nodalia-vlayout-controls__field-head">${escapeVlayoutAttr(label)}</span>
+          <div class="nodalia-vlayout-radius-presets" role="radiogroup">${options}</div>
+          ${yamlHint ? `<p class="nodalia-vlayout-controls__hint">${escapeVlayoutAttr(yamlHint)}</p>` : ""}
+        </div>
+      `;
+    }
+
+  return `
+    <label class="nodalia-vlayout-controls__field">
+      <span>${escapeVlayoutAttr(label)}</span>
+      <input type="text" data-vlayout-ctx="style-text" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(current)}" />
+    </label>
+  `;
+}
+
+function renderLightVlayoutStyleFieldsHtml(config, groupKey, labelFor, tintSwatches, stylePaths) {
+  const fields = Array.isArray(stylePaths) && stylePaths.length
+    ? stylePaths.map(path => LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH.get(path)).filter(Boolean)
+    : LIGHT_VLAYOUT_STYLE_FIELD_GROUPS[groupKey] || [];
+  if (!fields.length) {
+    return "";
+  }
+
+  return fields.map(field => renderLightVlayoutSingleStyleField(config, field, labelFor, tintSwatches)).join("");
+}
+
 function createLightVisualLayoutStyleHandlers() {
   return {
     migrateLayoutIntoConfig: migrateVisualLayoutItemStylesIntoConfig,
@@ -298,15 +585,48 @@ function createLightVisualLayoutStyleHandlers() {
         }),
       };
     },
+    readStylePath(config, path) {
+      return String(getByPath(config, path) ?? "").trim();
+    },
+    applyStylePath(config, path, value) {
+      const next = deepClone(config);
+      setByPath(next, path, String(value ?? "").trim());
+      return next;
+    },
+    getBlockPanelSpec(config, blockId, ctx) {
+      const hass = ctx?.hass;
+      return getLightVlayoutBlockPanelSpec(config, blockId, hass);
+    },
+    renderStyleFieldsForBlock(config, blockId, ctx) {
+      const spec = getLightVlayoutBlockPanelSpec(config, blockId, ctx?.hass);
+      if (!spec.stylePaths.length) {
+        return "";
+      }
+      return renderLightVlayoutStyleFieldsHtml(
+        config,
+        "",
+        ctx?.labelFor || ((_key, fallback) => fallback),
+        ctx?.tintSwatches,
+        spec.stylePaths,
+      );
+    },
+    renderCardStyleFields(config, ctx) {
+      return renderLightVlayoutStyleFieldsHtml(
+        config,
+        "card",
+        ctx?.labelFor || ((_key, fallback) => fallback),
+        ctx?.tintSwatches,
+      );
+    },
     readColor(config, blockId) {
-      const path = LIGHT_VLAYOUT_STYLE_COLOR_PATHS[blockId];
+      const path = getLightVlayoutPrimaryColorPath(blockId);
       if (!path) {
         return "";
       }
       return String(getByPath(config, path) ?? "").trim();
     },
     applyColor(config, blockId, color) {
-      const path = LIGHT_VLAYOUT_STYLE_COLOR_PATHS[blockId];
+      const path = getLightVlayoutPrimaryColorPath(blockId);
       if (!path) {
         return config;
       }
@@ -318,9 +638,7 @@ function createLightVisualLayoutStyleHandlers() {
       if (blockId !== "icon") {
         return 50;
       }
-      const raw = String(config.styles?.icon?.border_radius ?? "50%");
-      const match = raw.match(/(\d+)/);
-      return match ? clamp(Number(match[1]), 0, 100) : 50;
+      return readLightVlayoutIconRadiusPercent(config);
     },
     applyRadius(config, blockId, value) {
       if (blockId !== "icon") {
@@ -4817,6 +5135,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._showAnimationSection = false;
     this._showTapActionsSection = false;
     this._pendingEditorControlTags = new Set();
+    this._vlayoutSurface = null;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -4835,6 +5154,7 @@ class NodaliaLightCardEditor extends HTMLElement {
 
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
+    this._vlayoutSurface?.refreshPreviewHass?.();
 
     if (!shouldRender) {
       return;
@@ -5187,7 +5507,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.14.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.16.js or newer.");
       }
       return;
     }
@@ -5201,7 +5521,7 @@ class NodaliaLightCardEditor extends HTMLElement {
       && Boolean(this._hass?.callService);
 
     try {
-      layoutApi.attachEditorOverlay(this, {
+      const { surface } = layoutApi.attachEditorOverlay(this, {
         title: this._editorLabel("ed.light.visual_layout_title"),
         hint: this._editorLabel("ed.light.visual_layout_hint"),
         shortcutsHint: this._editorLabel("ed.light.visual_layout_shortcuts"),
@@ -5212,9 +5532,13 @@ class NodaliaLightCardEditor extends HTMLElement {
         catalog: LIGHT_VISUAL_LAYOUT_CATALOG,
         layout,
         styleHandlers: createLightVisualLayoutStyleHandlers(),
+        onClose: () => {
+          this._vlayoutSurface = null;
+        },
         livePreview: {
           cardTag: CARD_TAG,
           hass: this._hass,
+          getHass: () => this._hass,
           previewWidthPx: this._getVisualLayoutPreviewWidth(),
           getConfig: () => deepClone(this._config),
           powerPreview: supportsPowerToggle
@@ -5225,8 +5549,12 @@ class NodaliaLightCardEditor extends HTMLElement {
                 labelOff: this._editorLabel("ed.light.vlayout_power_off") || "Turn on preview",
                 toggle: async () => {
                   const on = this._hass?.states?.[entityId]?.state === "on";
+                  const targetState = on ? "off" : "on";
                   const service = on ? "turn_off" : "turn_on";
                   await this._hass.callService(entityDomain, service, { entity_id: entityId });
+                  if (layoutApi.waitForEntityState) {
+                    await layoutApi.waitForEntityState(this._hass, entityId, targetState);
+                  }
                 },
               }
             : null,
@@ -5236,6 +5564,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           this._commitVisualLayout(savedLayout, previewConfig);
         },
       });
+      this._vlayoutSurface = surface;
     } catch (error) {
       console.error("[Nodalia] failed to open visual layout editor", error);
       if (typeof window !== "undefined" && typeof window.alert === "function") {
