@@ -296,7 +296,8 @@
    * Produces the object stored in Lovelace YAML on "Save layout".
    * Always sets `enabled: true` and omits `visible` (removed blocks are excluded from items).
    */
-  function serializeLayoutForSave(layout) {
+  function serializeLayoutForSave(layout, options = {}) {
+    const positionOnly = options.positionOnly === true;
     return {
       enabled: true,
       columns: layout.columns,
@@ -305,11 +306,13 @@
         .filter(item => item.visible !== false)
         .map(item => {
           const out = { id: item.id, x: item.x, y: item.y, w: item.w, h: item.h };
-          if (item.color) {
-            out.color = item.color;
-          }
-          if (item.radius !== undefined) {
-            out.radius = item.radius;
+          if (!positionOnly) {
+            if (item.color) {
+              out.color = item.color;
+            }
+            if (item.radius !== undefined) {
+              out.radius = item.radius;
+            }
           }
           return out;
         }),
@@ -392,6 +395,8 @@
       this._contextMenuEl = null;
       this._contextMenuSuppressUntil = 0;
       this._overlayRoot = options.overlayRoot || null;
+      this._styleHandlers = options.styleHandlers || null;
+      this._previewConfig = null;
       this._onHitContextMenu = this._onHitContextMenu.bind(this);
       this._onDocumentPointerDown = this._onDocumentPointerDown.bind(this);
       this._onAuxClick = this._onAuxClick.bind(this);
@@ -460,15 +465,39 @@
      * Called after drag end and property edits (debounced via `_scheduleLiveSync`).
      * `auto_expand: true` keeps sliders visible so the preview matches a typical dashboard card.
      */
+    _ensurePreviewConfig() {
+      if (!this._previewConfig && typeof this._livePreview?.getConfig === "function") {
+        let base = deepClone(this._livePreview.getConfig() || {});
+        if (this._styleHandlers?.migrateLayoutIntoConfig) {
+          base = this._styleHandlers.migrateLayoutIntoConfig(base);
+        }
+        this._previewConfig = base;
+        if (this._styleHandlers?.stripLayoutDecorations) {
+          this._draft = normalizeLayout(
+            this._styleHandlers.stripLayoutDecorations(this._draft),
+            this._catalog,
+            this._options,
+          );
+        }
+      }
+      return this._previewConfig;
+    }
+
+    getPreviewConfig() {
+      return deepClone(this._ensurePreviewConfig() || {});
+    }
+
     _syncLiveCardConfig() {
       if (!this._isLiveMode() || !this._cardEl) {
         return;
       }
-      const base = this._livePreview.getConfig() || {};
-      const previewConfig = deepClone(base);
+      const previewConfig = deepClone(this._ensurePreviewConfig() || this._livePreview.getConfig() || {});
       previewConfig.visual_layout = deepClone(this._draft);
       previewConfig.visual_layout.enabled = true;
-      previewConfig.auto_expand = true;
+      const entityOn = this._isPreviewEntityOn();
+      // Expanded while on so sliders/sections are visible; off respects `auto_expand` from config.
+      previewConfig.auto_expand = entityOn ? true : previewConfig.auto_expand === true;
+      this._previewConfig = previewConfig;
       if (this._livePreview.hass !== undefined) {
         this._cardEl.hass = this._livePreview.hass;
       }
@@ -482,7 +511,27 @@
       });
     }
 
+    _isPreviewEntityOn() {
+      if (!this._powerPreview?.supportsToggle) {
+        return true;
+      }
+      return typeof this._powerPreview.isOn === "function"
+        ? this._powerPreview.isOn()
+        : Boolean(this._powerPreview.isOn);
+    }
+
     /** Let the preview grow with the real card (sliders, presets, sections). */
+    _updatePowerToggleButton(dialog) {
+      const btn = dialog?.querySelector("[data-vlayout-toggle-power]");
+      if (!btn || !this._powerPreview?.supportsToggle) {
+        return;
+      }
+      const isOn = this._isPreviewEntityOn();
+      btn.textContent = isOn ? this._powerPreview.labelOn : this._powerPreview.labelOff;
+      btn.setAttribute("aria-pressed", isOn ? "true" : "false");
+      btn.classList.toggle("is-on", isOn);
+    }
+
     _fitLiveStageHeight() {
       if (!this._isLiveMode() || !this._cardEl) {
         return;
@@ -623,19 +672,30 @@
         return;
       }
       const kind = target.dataset?.vlayoutCtx;
+      const useStyles = Boolean(this._styleHandlers?.applyColor);
       if (kind === "swatch-color" && this._blockSupports(blockId, "color")) {
-        item.color = String(target.dataset?.vlayoutColor || "").trim();
-        if (!item.color) {
-          delete item.color;
+        const color = String(target.dataset?.vlayoutColor || "").trim();
+        if (useStyles) {
+          this._previewConfig = this._styleHandlers.applyColor(this._ensurePreviewConfig(), blockId, color);
+        } else {
+          item.color = color;
+          if (!item.color) {
+            delete item.color;
+          }
         }
         const colorInput = this._contextMenuEl?.querySelector('[data-vlayout-ctx="color"]');
         if (colorInput instanceof HTMLInputElement) {
-          colorInput.value = item.color || "#6da8ff";
+          colorInput.value = color || "#6da8ff";
         }
       } else if (kind === "color" && this._blockSupports(blockId, "color")) {
-        item.color = String(target.value || "").trim();
-        if (!item.color) {
-          delete item.color;
+        const color = String(target.value || "").trim();
+        if (useStyles) {
+          this._previewConfig = this._styleHandlers.applyColor(this._ensurePreviewConfig(), blockId, color);
+        } else {
+          item.color = color;
+          if (!item.color) {
+            delete item.color;
+          }
         }
       } else if (kind === "diameter" && this._isCircularBlock(blockId)) {
         const size = clampInt(target.value, 1, Math.min(this._draft.columns, this._draft.rows));
@@ -662,19 +722,26 @@
           item.x = clampInt(item.x, 0, this._draft.columns - item.w);
         }
       } else if (kind === "radius" && blockId === "icon") {
-        item.radius = clampInt(target.value, 0, 999);
+        const radius = clampInt(target.value, 0, 100);
+        if (useStyles && this._styleHandlers?.applyRadius) {
+          this._previewConfig = this._styleHandlers.applyRadius(this._ensurePreviewConfig(), blockId, radius);
+        } else {
+          item.radius = radius;
+        }
         const valueNode = this._contextMenuEl?.querySelector("[data-vlayout-ctx-radius-value]");
         if (valueNode) {
-          valueNode.textContent = `${item.radius}px`;
+          valueNode.textContent = `${radius}%`;
         }
       } else {
         return;
       }
-      const open = findOpenCell(this._draft, item, item.id);
-      item.x = open.x;
-      item.y = open.y;
-      this._applyItemStyleToDom(item);
-      this._scheduleFrameUpdate();
+      if (kind === "w" || kind === "h" || kind === "diameter") {
+        const open = findOpenCell(this._draft, item, item.id);
+        item.x = open.x;
+        item.y = open.y;
+        this._applyItemStyleToDom(item);
+        this._scheduleFrameUpdate();
+      }
       this._syncControlOutputs();
       this._renderInspector();
       this._refreshChrome();
@@ -798,12 +865,12 @@
       }
       node.style.gridColumn = `${item.x + 1} / span ${item.w}`;
       node.style.gridRow = `${item.y + 1} / span ${item.h}`;
-      if (item.color) {
+      if (!this._styleHandlers?.readColor && item.color) {
         node.style.setProperty("--block-tint", item.color);
       } else {
         node.style.removeProperty("--block-tint");
       }
-      if (item.id === "icon" && item.radius !== undefined) {
+      if (!this._styleHandlers?.readRadius && item.id === "icon" && item.radius !== undefined) {
         node.style.setProperty("--vlayout-icon-radius", `${item.radius}px`);
       } else if (item.id === "icon") {
         node.style.removeProperty("--vlayout-icon-radius");
@@ -1017,18 +1084,34 @@
       }
     }
 
+    _readBlockColor(blockId) {
+      if (this._styleHandlers?.readColor) {
+        return this._styleHandlers.readColor(this._ensurePreviewConfig(), blockId) || "#6da8ff";
+      }
+      return this._getItem(blockId)?.color || "#6da8ff";
+    }
+
+    _readBlockRadius(blockId) {
+      if (this._styleHandlers?.readRadius) {
+        return this._styleHandlers.readRadius(this._ensurePreviewConfig(), blockId) ?? 50;
+      }
+      return this._getItem(blockId)?.radius ?? 50;
+    }
+
     _getBlockControlsMarkup(blockId) {
       const item = this._getItem(blockId);
       if (!item) {
         return "";
       }
+      const blockColor = this._readBlockColor(blockId);
+      const blockRadius = this._readBlockRadius(blockId);
       const isCircle = this._isCircularBlock(blockId);
       const swatches = this._blockSupports(blockId, "color")
         ? `<div class="nodalia-vlayout-controls__swatches" role="group" aria-label="${this._propsLabel("ed.light.vlayout_ctx_tints", "Tint colors")}">
             ${TINT_SWATCHES.map(color => `
               <button
                 type="button"
-                class="nodalia-vlayout-swatch${item.color === color ? " is-active" : ""}"
+                class="nodalia-vlayout-swatch${blockColor === color ? " is-active" : ""}"
                 style="--swatch:${color}"
                 data-vlayout-ctx="swatch-color"
                 data-vlayout-color="${color}"
@@ -1038,7 +1121,7 @@
           </div>
           <label class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--color">
             <span>${this._propsLabel("ed.light.vlayout_props_color", "Accent color")}</span>
-            <input type="color" data-vlayout-ctx="color" value="${item.color || "#6da8ff"}" />
+            <input type="color" data-vlayout-ctx="color" value="${blockColor}" />
           </label>`
         : "";
 
@@ -1073,7 +1156,7 @@
               <span>${this._propsLabel("ed.light.vlayout_props_radius", "Icon radius")}</span>
               <output data-vlayout-ctx-radius-value>${item.radius ?? 50}px</output>
             </span>
-            <input type="range" min="0" max="80" step="1" data-vlayout-ctx="radius" value="${item.radius ?? 50}" />
+            <input type="range" min="0" max="100" step="1" data-vlayout-ctx="radius" value="${blockRadius}" />
           </label>`
         : "";
 
@@ -1115,7 +1198,7 @@
           rOut.textContent = `${item.radius ?? 50}px`;
         }
         root.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
-          btn.classList.toggle("is-active", btn.dataset.vlayoutColor === item.color);
+          btn.classList.toggle("is-active", btn.dataset.vlayoutColor === this._readBlockColor(this._selectedId));
         });
       });
     }
@@ -2120,6 +2203,29 @@
       font-size: 12px;
       margin-top: 2px;
     }
+    .nodalia-vlayout-overlay__header-actions {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+    }
+    .nodalia-vlayout-power-toggle {
+      appearance: none;
+      background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+      border-radius: 999px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 34px;
+      padding: 0 14px;
+    }
+    .nodalia-vlayout-power-toggle.is-on {
+      background: color-mix(in srgb, var(--primary-color) 22%, transparent);
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
     .nodalia-vlayout-overlay__close {
       appearance: none;
       background: transparent;
@@ -2634,6 +2740,10 @@
     ensureOverlayStyles();
 
     const layout = resolveEditorLayout(options.layout, options.catalog, options);
+    const powerPreview = options.livePreview?.powerPreview;
+    const powerToggleMarkup = powerPreview?.supportsToggle
+      ? `<button type="button" class="nodalia-vlayout-power-toggle" data-vlayout-toggle-power aria-pressed="${powerPreview.isOn ? "true" : "false"}">${powerPreview.isOn ? powerPreview.labelOn : powerPreview.labelOff}</button>`
+      : "";
     const panelMarkup = `
       <div class="nodalia-vlayout-overlay__panel">
         <header class="nodalia-vlayout-overlay__header">
@@ -2641,7 +2751,10 @@
             <div class="nodalia-vlayout-overlay__title">${options.title || "Visual layout"}</div>
             <div class="nodalia-vlayout-overlay__hint">${options.hint || "Drag blocks on the live card preview. Save writes YAML."}</div>
           </div>
-          <button type="button" class="nodalia-vlayout-overlay__close" data-vlayout-close aria-label="Close">×</button>
+          <div class="nodalia-vlayout-overlay__header-actions">
+            ${powerToggleMarkup}
+            <button type="button" class="nodalia-vlayout-overlay__close" data-vlayout-close aria-label="Close">×</button>
+          </div>
         </header>
         <div class="nodalia-vlayout-overlay__body"></div>
         <footer class="nodalia-vlayout-overlay__footer">
@@ -2673,10 +2786,13 @@
       renderBlockPreview: options.renderBlockPreview,
       paletteTitle: options.paletteTitle,
       overlayRoot: dialog,
+      styleHandlers: options.styleHandlers,
       livePreview: options.livePreview,
       onChange: options.onDraftChange,
     });
+    surface._powerPreview = powerPreview || null;
     surface.mount();
+    surface._updatePowerToggleButton(dialog);
     dialog.tabIndex = -1;
     window.requestAnimationFrame(() => dialog.focus());
 
@@ -2707,11 +2823,19 @@
         options.onDraftChange?.(resetLayout);
         return;
       }
+      if (event.target.closest("[data-vlayout-toggle-power]")) {
+        event.preventDefault();
+        surface._powerPreview?.toggle?.().then?.(() => {
+          surface._updatePowerToggleButton(dialog);
+          surface._scheduleLiveSync();
+        });
+        return;
+      }
       if (event.target.closest("[data-vlayout-save]")) {
         event.preventDefault();
         event.stopPropagation();
-        const saved = serializeLayoutForSave(surface.layout);
-        options.onSave?.(saved);
+        const saved = serializeLayoutForSave(surface.layout, { positionOnly: Boolean(options.styleHandlers) });
+        options.onSave?.(saved, surface.getPreviewConfig());
         close();
         return;
       }

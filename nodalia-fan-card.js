@@ -19,7 +19,7 @@
  */
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.0-alpha.13";
+const CARD_VERSION = "1.2.0-alpha.14";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

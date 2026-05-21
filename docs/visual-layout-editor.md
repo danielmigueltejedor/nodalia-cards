@@ -16,9 +16,14 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 
 1. User opens **Open visual layout editor** in the light card editor.
 2. `attachEditorOverlay` opens a `<dialog>` and creates `VisualLayoutSurface` with `livePreview`.
-3. Draft layout lives in `surface.layout` (`this._draft`).
-4. **Save layout** → `serializeLayoutForSave` → light card `_commitVisualLayout` → `config-changed` event → Lovelace YAML.
-5. Dashboard card reads `visual_layout` in `normalizeConfig` and renders via `_renderVisualLayoutGrid`.
+3. Draft layout lives in `surface.layout` (`this._draft`) — **positions only** (`x`, `y`, `w`, `h`, `id`).
+4. Tint and icon shape write to **`styles`** via per-card `styleHandlers` (light card: `styles.icon.background`, `styles.slider_color`, `styles.control.accent_background`, `styles.icon.border_radius`).
+5. **Save layout** → `serializeLayoutForSave(..., { positionOnly: true })` + merged `styles` from preview config → `_commitVisualLayout` → Lovelace YAML.
+6. Legacy `color` / `radius` on layout items are migrated into `styles` on load and stripped from YAML on save.
+
+## Power preview
+
+When the entity domain supports `turn_on` / `turn_off`, the dialog header shows a toggle that calls HA services. While **on**, the preview forces `auto_expand: true` so sliders and sections are visible for layout. While **off**, `auto_expand` from card config applies (compact vs expanded off-state).
 
 ## Debugging checklist
 
@@ -28,14 +33,16 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 | Card toggles on tap | Missing `data-vlayout-editing` guard on `_onShadowClick` / pointer |
 | Drag snaps back on release | `findOpenCell` not using `preferX`/`preferY` |
 | YAML missing `visual_layout` | Save path not calling `serializeLayoutForSave` or strip removing it |
+| Tint not in YAML after save | Expected — check `styles.*` paths, not `visual_layout.items[].color` |
 | Preview wider than dashboard | `previewWidthPx` not matching `hui-card-preview` width |
-| Context menu sliders do nothing | Missing `_applyContextMenuInput` (regression guard in tests) |
+| Context menu sliders do nothing | Missing `_applyContextMenuInput` or `styleHandlers` not passed |
+| Off-state preview always expanded | `auto_expand: true` forced while entity is on only |
 | Resize handles missing | Block catalog needs `props.resize: true`; handles render on selected frame |
-| Orange boxes obscure card | Selection uses grid item bounds; properties via right-click menu, not sidebar |
 
 ## Adding another card type
 
 1. Define `MY_CARD_VISUAL_LAYOUT_CATALOG` (copy shape from light card).
-2. Build `blocksById` at runtime and call `renderPlacedBlocks`.
-3. Wire editor button to `attachEditorOverlay` with `catalog` + `livePreview`.
-4. Extend `BLOCK_FOCUS_SELECTORS` in the visual layout module (or move selectors into per-card catalog).
+2. Implement `styleHandlers` (`migrateLayoutIntoConfig`, `readColor`, `applyColor`, …) mapping block ids to `styles` paths.
+3. Build `blocksById` at runtime and call `renderPlacedBlocks`.
+4. Wire editor button to `attachEditorOverlay` with `catalog` + `livePreview` + `styleHandlers`.
+5. Extend `BLOCK_FOCUS_SELECTORS` in the visual layout module (or move selectors into per-card catalog).

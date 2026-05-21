@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.13";
+const CARD_VERSION = "1.2.0-alpha.14";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -125,6 +125,7 @@ const DEFAULT_CONFIG = {
     icon: {
       size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      border_radius: "50%",
       color: "var(--primary-text-color)",
       on_color: "var(--warning-color, #f6b73c)",
       off_color: "var(--primary-text-color)",
@@ -229,6 +230,114 @@ const LIGHT_VISUAL_LAYOUT_CATALOG = {
     frame: { shape: "rounded", pad: 8, radius: 16 },
   },
 };
+
+/** Maps layout block ids to Lovelace `styles.*` paths for tint (not stored in visual_layout YAML). */
+const LIGHT_VLAYOUT_STYLE_COLOR_PATHS = {
+  icon: "styles.icon.background",
+  sliders: "styles.slider_color",
+  chips: "styles.control.accent_background",
+};
+
+const LIGHT_VLAYOUT_POWER_TOGGLE_DOMAINS = new Set([
+  "light",
+  "fan",
+  "switch",
+  "humidifier",
+  "cover",
+  "climate",
+  "input_boolean",
+]);
+
+function getByPath(target, path) {
+  const parts = String(path || "").split(".");
+  let cursor = target;
+  for (const key of parts) {
+    if (cursor === undefined || cursor === null) {
+      return undefined;
+    }
+    cursor = cursor[key];
+  }
+  return cursor;
+}
+
+function migrateVisualLayoutItemStylesIntoConfig(config) {
+  const next = deepClone(config);
+  const items = Array.isArray(next.visual_layout?.items) ? next.visual_layout.items : [];
+  items.forEach(item => {
+    const colorPath = LIGHT_VLAYOUT_STYLE_COLOR_PATHS[item.id];
+    if (colorPath && item.color) {
+      setByPath(next, colorPath, String(item.color).trim());
+      delete item.color;
+    }
+    if (item.id === "icon" && item.radius !== undefined) {
+      if (!isObject(next.styles)) {
+        next.styles = {};
+      }
+      if (!isObject(next.styles.icon)) {
+        next.styles.icon = {};
+      }
+      next.styles.icon.border_radius = `${clamp(Math.round(Number(item.radius)), 0, 100)}%`;
+      delete item.radius;
+    }
+  });
+  return next;
+}
+
+function createLightVisualLayoutStyleHandlers() {
+  return {
+    migrateLayoutIntoConfig: migrateVisualLayoutItemStylesIntoConfig,
+    stripLayoutDecorations(layout) {
+      return {
+        ...layout,
+        items: (layout.items || []).map(item => {
+          const out = { id: item.id, x: item.x, y: item.y, w: item.w, h: item.h };
+          if (item.visible === false) {
+            out.visible = false;
+          }
+          return out;
+        }),
+      };
+    },
+    readColor(config, blockId) {
+      const path = LIGHT_VLAYOUT_STYLE_COLOR_PATHS[blockId];
+      if (!path) {
+        return "";
+      }
+      return String(getByPath(config, path) ?? "").trim();
+    },
+    applyColor(config, blockId, color) {
+      const path = LIGHT_VLAYOUT_STYLE_COLOR_PATHS[blockId];
+      if (!path) {
+        return config;
+      }
+      const next = deepClone(config);
+      setByPath(next, path, String(color || "").trim());
+      return next;
+    },
+    readRadius(config, blockId) {
+      if (blockId !== "icon") {
+        return 50;
+      }
+      const raw = String(config.styles?.icon?.border_radius ?? "50%");
+      const match = raw.match(/(\d+)/);
+      return match ? clamp(Number(match[1]), 0, 100) : 50;
+    },
+    applyRadius(config, blockId, value) {
+      if (blockId !== "icon") {
+        return config;
+      }
+      const next = deepClone(config);
+      if (!isObject(next.styles)) {
+        next.styles = {};
+      }
+      if (!isObject(next.styles.icon)) {
+        next.styles.icon = {};
+      }
+      next.styles.icon.border_radius = `${clamp(Math.round(Number(value)), 0, 100)}%`;
+      return next;
+    },
+  };
+}
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -701,6 +810,11 @@ function normalizeConfig(rawConfig) {
       config.visual_layout || {},
       LIGHT_VISUAL_LAYOUT_CATALOG,
     );
+    const migratedLayoutStyles = migrateVisualLayoutItemStylesIntoConfig(config);
+    config.visual_layout = migratedLayoutStyles.visual_layout;
+    if (migratedLayoutStyles.styles) {
+      config.styles = migratedLayoutStyles.styles;
+    }
   } else {
     config.visual_layout = {
       enabled: false,
@@ -3769,8 +3883,9 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__icon {
           background: ${isOn
-            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
-            : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
+            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, ${styles.icon.background || "var(--primary-text-color)"} 72%, transparent))`
+            : (styles.icon.background || "color-mix(in srgb, var(--primary-text-color) 6%, transparent)")};
+          border-radius: ${escapeHtml(String(styles.icon.border_radius || "50%"))};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
           cursor: pointer;
@@ -4891,7 +5006,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const visualLayout = this._config?.visual_layout;
     if (visualLayout?.enabled) {
       const serialized = window.NodaliaVisualLayout?.serializeLayoutForSave
-        ? window.NodaliaVisualLayout.serializeLayoutForSave(visualLayout)
+        ? window.NodaliaVisualLayout.serializeLayoutForSave(visualLayout, { positionOnly: true })
         : { ...visualLayout, enabled: true };
       outgoing = { ...outgoing, visual_layout: serialized };
     }
@@ -5016,9 +5131,10 @@ class NodaliaLightCardEditor extends HTMLElement {
    * Uses a dedicated path instead of generic `_emitConfig` so `visual_layout` is never stripped
    * and `type` is preserved for Lovelace.
    */
-  _commitVisualLayout(savedLayout) {
+  _commitVisualLayout(savedLayout, previewConfig) {
+    const base = previewConfig ? deepClone(previewConfig) : deepClone(this._config);
     const merged = normalizeConfig({
-      ...deepClone(this._config),
+      ...base,
       visual_layout: savedLayout,
     });
     this._config = merged;
@@ -5030,9 +5146,12 @@ class NodaliaLightCardEditor extends HTMLElement {
       ...stripped,
       type: merged.type || CARD_TAG,
       visual_layout: window.NodaliaVisualLayout?.serializeLayoutForSave
-        ? window.NodaliaVisualLayout.serializeLayoutForSave(merged.visual_layout)
+        ? window.NodaliaVisualLayout.serializeLayoutForSave(merged.visual_layout, { positionOnly: true })
         : { ...merged.visual_layout, enabled: true },
     };
+    if (merged.styles) {
+      outgoing.styles = merged.styles;
+    }
 
     const focusState = this._captureFocusState();
     fireEvent(this, "config-changed", { config: outgoing });
@@ -5068,7 +5187,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.13.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.14.js or newer.");
       }
       return;
     }
@@ -5076,6 +5195,11 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layout = layoutApi.resolveEditorLayout
       ? layoutApi.resolveEditorLayout(this._config?.visual_layout || {}, LIGHT_VISUAL_LAYOUT_CATALOG)
       : layoutApi.normalizeLayout(this._config?.visual_layout || {}, LIGHT_VISUAL_LAYOUT_CATALOG);
+    const entityId = String(this._config?.entity || "").trim();
+    const entityDomain = entityId.includes(".") ? entityId.split(".")[0] : "";
+    const supportsPowerToggle = LIGHT_VLAYOUT_POWER_TOGGLE_DOMAINS.has(entityDomain)
+      && Boolean(this._hass?.callService);
+
     try {
       layoutApi.attachEditorOverlay(this, {
         title: this._editorLabel("ed.light.visual_layout_title"),
@@ -5087,15 +5211,29 @@ class NodaliaLightCardEditor extends HTMLElement {
         paletteTitle: this._editorLabel("ed.light.visual_layout_palette"),
         catalog: LIGHT_VISUAL_LAYOUT_CATALOG,
         layout,
+        styleHandlers: createLightVisualLayoutStyleHandlers(),
         livePreview: {
           cardTag: CARD_TAG,
           hass: this._hass,
           previewWidthPx: this._getVisualLayoutPreviewWidth(),
           getConfig: () => deepClone(this._config),
+          powerPreview: supportsPowerToggle
+            ? {
+                supportsToggle: true,
+                isOn: () => this._hass?.states?.[entityId]?.state === "on",
+                labelOn: this._editorLabel("ed.light.vlayout_power_on") || "Turn off preview",
+                labelOff: this._editorLabel("ed.light.vlayout_power_off") || "Turn on preview",
+                toggle: async () => {
+                  const on = this._hass?.states?.[entityId]?.state === "on";
+                  const service = on ? "turn_off" : "turn_on";
+                  await this._hass.callService(entityDomain, service, { entity_id: entityId });
+                },
+              }
+            : null,
         },
         labelFor: (key, fallback) => this._editorLabel(key) || fallback,
-        onSave: savedLayout => {
-          this._commitVisualLayout(savedLayout);
+        onSave: (savedLayout, previewConfig) => {
+          this._commitVisualLayout(savedLayout, previewConfig);
         },
       });
     } catch (error) {

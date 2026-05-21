@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.14] - 2026-05-21
+
+Fourteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.14`**.
+
+### Added
+- **Visual layout editor:** header power toggle (light, fan, humidifier, switch, cover, climate, …) to preview on/off; off-state respects `auto_expand` from card config.
+- **Style handlers:** tint swatches and icon diameter write to **`styles`** (not `visual_layout.items`).
+
+### Changed
+- **Save layout** stores grid positions only (`x`, `y`, `w`, `h`); legacy `color` / `radius` on items migrate into `styles` on load.
+
 ## [1.2.0-alpha.13] - 2026-05-21
 
 Thirteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.13`**.

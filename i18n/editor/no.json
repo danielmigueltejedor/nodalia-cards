@@ -428,6 +428,8 @@
   "ed.light.vlayout_ctx_diameter": "Diameter (cells)",
   "ed.light.vlayout_ctx_tints": "Tint colors",
   "ed.light.vlayout_inspector_hint": "Click a block on the card. Sliders below adjust tint and size; right-click opens the same panel at the cursor.",
+  "ed.light.vlayout_power_on": "Turn off (preview)",
+  "ed.light.vlayout_power_off": "Turn on (preview)",
   "ed.light.visual_layout_cancel": "Cancel",
   "ed.light.visual_layout_palette": "Available blocks",
   "ed.light.visual_layout_reset": "Reset to default",
