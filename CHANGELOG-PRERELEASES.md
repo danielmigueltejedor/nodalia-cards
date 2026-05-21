@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.17] - 2026-05-20
+
+Seventeenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.17`**.
+
+### Changed
+- **Visual layout editor:** pixel-based style fields in the right-click menu use range sliders with live value readout (padding, gaps, icon size, chips, sliders, etc.).
+- **Visual layout editor:** removed the quick tint color swatch row from the **Styles** context menu (swatches did not apply changes); accent colors are set with the native color picker only.
+
 ## [1.2.0-alpha.16] - 2026-05-21
 
 Sixteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.16`**.
@@ -18,7 +26,7 @@ Sixteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.16`**.
 - **Per-block context menu** shows only layout and style controls that apply to that block (hidden blocks show position + hint only).
 
 ### Fixed
-- **Power preview** refreshes the live card after `turn_on` / `turn_off` when HA state updates.
+- **Power preview** refreshes the live card only when using the header power toggle (not on every HA `hass` update); preview entrance animations disabled while editing layout.
 
 ## [1.2.0-alpha.15] - 2026-05-21
 

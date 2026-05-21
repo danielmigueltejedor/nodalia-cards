@@ -58,18 +58,6 @@
   const DEFAULT_ROWS = 10;
   /** Ignore micro-movements so click-to-select does not start a drag. */
   const DRAG_THRESHOLD_PX = 6;
-  /** Quick tint presets in the right-click menu (accent colors). */
-  const TINT_SWATCHES = [
-    "#6da8ff",
-    "#ff8a4c",
-    "#34c759",
-    "#ff453a",
-    "#bf5af2",
-    "#ffd60a",
-    "#64d2ff",
-    "#ac8e68",
-  ];
-
   function clampInt(value, min, max) {
     const numeric = Math.round(Number(value));
     if (!Number.isFinite(numeric)) {
@@ -487,7 +475,10 @@
       return deepClone(this._ensurePreviewConfig() || {});
     }
 
-    /** Re-read `hass` and re-render the live preview (entity state, on/off layout). */
+    /**
+     * Refreshes the live preview after the header power toggle (on/off).
+     * Not called on every editor `set hass` — HA updates too often and caused flicker.
+     */
     refreshPreviewHass() {
       if (!this._isLiveMode() || !this._cardEl) {
         return;
@@ -495,9 +486,7 @@
       const hass = typeof this._livePreview?.getHass === "function"
         ? this._livePreview.getHass()
         : this._livePreview?.hass;
-      if (hass !== undefined && this._cardEl._lastRenderSignature !== undefined) {
-        this._cardEl._lastRenderSignature = "";
-      }
+      this._cardEl._animateContentOnNextRender = false;
       if (hass !== undefined) {
         this._cardEl.hass = hass;
       }
@@ -694,19 +683,31 @@
       const stylePath = String(target.dataset?.vlayoutStylePath || "").trim();
       const useStyles = Boolean(this._styleHandlers?.applyStylePath);
 
-      if (kind === "style-swatch" && stylePath && useStyles) {
-        const color = String(target.dataset?.vlayoutColor || "").trim();
-        this._previewConfig = this._styleHandlers.applyStylePath(this._ensurePreviewConfig(), stylePath, color);
-        const colorInput = this._contextMenuEl?.querySelector(`[data-vlayout-style-path="${stylePath}"][data-vlayout-ctx="style-color"]`);
-        if (colorInput instanceof HTMLInputElement) {
-          colorInput.value = color || "#6da8ff";
-        }
-      } else if (kind === "style-color" && stylePath && useStyles) {
+      if (kind === "style-color" && stylePath && useStyles) {
         this._previewConfig = this._styleHandlers.applyStylePath(
           this._ensurePreviewConfig(),
           stylePath,
           String(target.value || "").trim(),
         );
+      } else if (kind === "style-size" && stylePath && useStyles) {
+        const spec = this._styleHandlers?.getSizeSliderSpec?.(stylePath);
+        if (spec) {
+          const px = clampInt(target.value, spec.min, spec.max);
+          const formatted = this._styleHandlers.formatSizeSliderValue
+            ? this._styleHandlers.formatSizeSliderValue(px, stylePath)
+            : `${px}${spec.unit || "px"}`;
+          this._previewConfig = this._styleHandlers.applyStylePath(
+            this._ensurePreviewConfig(),
+            stylePath,
+            formatted,
+          );
+          const valueNode = this._contextMenuEl?.querySelector(
+            `[data-vlayout-style-size-value][data-vlayout-style-path="${stylePath}"]`,
+          );
+          if (valueNode) {
+            valueNode.textContent = formatted;
+          }
+        }
       } else if (kind === "style-text" && stylePath && useStyles) {
         this._previewConfig = this._styleHandlers.applyStylePath(
           this._ensurePreviewConfig(),
@@ -1133,7 +1134,6 @@
         : this._livePreview?.hass;
       return {
         labelFor: (key, fallback) => this._propsLabel(key, fallback),
-        tintSwatches: TINT_SWATCHES,
         hass,
       };
     }
@@ -1264,14 +1264,6 @@
       if (dOut) {
         dOut.textContent = String(Math.max(item.w, item.h));
       }
-      const previewConfig = this._ensurePreviewConfig();
-      root.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
-        const path = String(btn.dataset?.vlayoutStylePath || "").trim();
-        const current = path && this._styleHandlers?.readStylePath
-          ? this._styleHandlers.readStylePath(previewConfig, path)
-          : "";
-        btn.classList.toggle("is-active", btn.dataset.vlayoutColor === current);
-      });
     }
 
     _onControlsInput(event) {
@@ -2395,12 +2387,6 @@
       font-weight: 700;
       grid-column: 1 / -1;
     }
-    .nodalia-vlayout-controls__swatches {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      grid-column: 1 / -1;
-    }
     .nodalia-vlayout-controls__field {
       display: grid;
       gap: 6px;
@@ -2553,26 +2539,6 @@
     .nodalia-vlayout-context-menu__title {
       font-size: 13px;
       font-weight: 700;
-    }
-    .nodalia-vlayout-context-menu__swatches {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .nodalia-vlayout-swatch {
-      appearance: none;
-      background: var(--swatch);
-      border: 2px solid color-mix(in srgb, var(--primary-text-color) 18%, transparent);
-      border-radius: 999px;
-      cursor: pointer;
-      height: 22px;
-      margin: 0;
-      padding: 0;
-      width: 22px;
-    }
-    .nodalia-vlayout-swatch.is-active {
-      border-color: var(--primary-text-color);
-      box-shadow: 0 0 0 2px var(--primary-color);
     }
     .nodalia-vlayout-context-menu__field {
       display: grid;

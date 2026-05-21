@@ -23,7 +23,7 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 
 ## Power preview
 
-When the entity domain supports `turn_on` / `turn_off`, the dialog header shows a toggle that calls HA services, waits for the entity state to update, then calls `refreshPreviewHass()` so the live card re-renders. The card editor also calls `refreshPreviewHass()` on every `set hass` while the overlay is open. While **on**, the preview forces `auto_expand: true` so sliders and sections are visible for layout. While **off**, `auto_expand` from card config applies (compact vs expanded off-state).
+When the entity domain supports `turn_on` / `turn_off`, the dialog header shows a toggle that calls HA services, waits for the entity state to update, then calls `refreshPreviewHass()` once so the live card re-renders (on/off layout). The preview is **not** refreshed on every HA `hass` poll (that caused constant flicker). While **on**, the preview forces `auto_expand: true` so sliders and sections are visible for layout. While **off**, `auto_expand` from card config applies (compact vs expanded off-state).
 
 ## Debugging checklist
 

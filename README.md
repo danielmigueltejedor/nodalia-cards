@@ -50,7 +50,7 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.1.x
 
-**Prerelease `1.2.0-alpha.16`** (alpha branch) — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0-alpha.16.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Stable **`1.1.3`** is on **`main`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md) and [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Prerelease `1.2.0-alpha.17`** (alpha branch) — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0-alpha.17.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Stable **`1.1.3`** is on **`main`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md) and [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## 🧠 Notifications Card
 
@@ -268,7 +268,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.0-alpha.16.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.0-alpha.17.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

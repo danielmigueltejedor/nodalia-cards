@@ -24,7 +24,7 @@
  */
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.16";
+const CARD_VERSION = "1.2.0-alpha.17";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -245,6 +245,20 @@ const LIGHT_VLAYOUT_CHIP_RADIUS_PRESETS = [
   { value: "4px", labelKey: "ed.entity.chip_radius_square" },
 ];
 
+/** Range sliders for CSS lengths in the visual layout context menu (`px` written to YAML). */
+const LIGHT_VLAYOUT_SIZE_SLIDER_BY_PATH = {
+  "styles.card.padding": { min: 4, max: 32, step: 1, unit: "px", fallback: 14 },
+  "styles.card.gap": { min: 4, max: 28, step: 1, unit: "px", fallback: 12 },
+  "styles.icon.size": { min: 24, max: 72, step: 1, unit: "px", fallback: 38 },
+  "styles.title_size": { min: 8, max: 24, step: 1, unit: "px", fallback: 12 },
+  "styles.control.size": { min: 24, max: 56, step: 1, unit: "px", fallback: 36 },
+  "styles.chip_height": { min: 18, max: 44, step: 1, unit: "px", fallback: 24 },
+  "styles.chip_font_size": { min: 8, max: 18, step: 1, unit: "px", fallback: 11 },
+  "styles.slider_wrap_height": { min: 32, max: 120, step: 2, unit: "px", fallback: 56 },
+  "styles.slider_height": { min: 8, max: 32, step: 1, unit: "px", fallback: 16 },
+  "styles.slider_thumb_size": { min: 16, max: 48, step: 1, unit: "px", fallback: 28 },
+};
+
 /** Style fields shown in the visual layout context menu (written to `styles` in YAML). */
 const LIGHT_VLAYOUT_STYLE_FIELD_GROUPS = {
   card: [
@@ -252,32 +266,32 @@ const LIGHT_VLAYOUT_STYLE_FIELD_GROUPS = {
     { kind: "text", path: "styles.card.border", labelKey: "ed.entity.style_card_border" },
     { kind: "radius_presets", path: "styles.card.border_radius", presetSet: "card", labelKey: "ed.entity.style_card_radius_presets" },
     { kind: "text", path: "styles.card.box_shadow", labelKey: "ed.entity.style_card_shadow" },
-    { kind: "text", path: "styles.card.padding", labelKey: "ed.entity.style_card_padding" },
-    { kind: "text", path: "styles.card.gap", labelKey: "ed.entity.style_card_gap" },
+    { kind: "size_slider", path: "styles.card.padding", labelKey: "ed.entity.style_card_padding" },
+    { kind: "size_slider", path: "styles.card.gap", labelKey: "ed.entity.style_card_gap" },
   ],
   icon: [
-    { kind: "color", path: "styles.icon.background", labelKey: "ed.entity.style_accent_bg", swatches: true },
+    { kind: "color", path: "styles.icon.background", labelKey: "ed.entity.style_accent_bg" },
     { kind: "icon_radius_percent", path: "styles.icon.border_radius", labelKey: "ed.light.vlayout_props_radius" },
-    { kind: "text", path: "styles.icon.size", labelKey: "ed.entity.style_main_button_size" },
+    { kind: "size_slider", path: "styles.icon.size", labelKey: "ed.entity.style_main_button_size" },
     { kind: "color", path: "styles.icon.off_color", labelKey: "ed.entity.style_icon_off" },
   ],
   title: [
-    { kind: "text", path: "styles.title_size", labelKey: "ed.entity.style_title_size" },
+    { kind: "size_slider", path: "styles.title_size", labelKey: "ed.entity.style_title_size" },
   ],
   chips: [
-    { kind: "color", path: "styles.control.accent_background", labelKey: "ed.entity.style_accent_bg", swatches: true },
+    { kind: "color", path: "styles.control.accent_background", labelKey: "ed.entity.style_accent_bg" },
     { kind: "color", path: "styles.control.accent_color", labelKey: "ed.entity.style_accent_color" },
-    { kind: "text", path: "styles.control.size", labelKey: "ed.vacuum.style_button_size" },
-    { kind: "text", path: "styles.chip_height", labelKey: "ed.entity.style_chip_height" },
-    { kind: "text", path: "styles.chip_font_size", labelKey: "ed.entity.style_chip_font" },
+    { kind: "size_slider", path: "styles.chip_height", labelKey: "ed.entity.style_chip_height" },
+    { kind: "size_slider", path: "styles.chip_font_size", labelKey: "ed.entity.style_chip_font" },
     { kind: "text", path: "styles.chip_padding", labelKey: "ed.entity.style_chip_padding" },
     { kind: "radius_presets", path: "styles.chip_border_radius", presetSet: "chip", labelKey: "ed.entity.style_chip_radius" },
   ],
   sliders: [
-    { kind: "color", path: "styles.slider_color", labelKey: "ed.light.slider_color", swatches: true },
-    { kind: "text", path: "styles.slider_wrap_height", labelKey: "ed.light.slider_wrap_height" },
-    { kind: "text", path: "styles.slider_height", labelKey: "ed.light.slider_height" },
-    { kind: "text", path: "styles.slider_thumb_size", labelKey: "ed.light.slider_thumb_size" },
+    { kind: "color", path: "styles.slider_color", labelKey: "ed.light.slider_color" },
+    { kind: "size_slider", path: "styles.slider_wrap_height", labelKey: "ed.light.slider_wrap_height" },
+    { kind: "size_slider", path: "styles.slider_height", labelKey: "ed.light.slider_height" },
+    { kind: "size_slider", path: "styles.slider_thumb_size", labelKey: "ed.light.slider_thumb_size" },
+    { kind: "size_slider", path: "styles.control.size", labelKey: "ed.vacuum.style_button_size" },
   ],
 };
 
@@ -407,12 +421,6 @@ function getLightVlayoutPrimaryColorPath(blockId) {
   const paths = LIGHT_VLAYOUT_BLOCK_PANEL[blockId]?.stylePaths || [];
   for (const path of paths) {
     const field = LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH.get(path);
-    if (field?.kind === "color" && field.swatches) {
-      return path;
-    }
-  }
-  for (const path of paths) {
-    const field = LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH.get(path);
     if (field?.kind === "color") {
       return path;
     }
@@ -478,39 +486,37 @@ function readLightVlayoutIconRadiusPercent(config) {
   return match ? clamp(Number(match[1]), 0, 100) : 50;
 }
 
-function renderLightVlayoutSingleStyleField(config, field, labelFor, tintSwatches) {
+function readLightVlayoutSizeSliderPx(config, path, spec) {
+  const raw = String(getByPath(config, path) ?? "").trim();
+  const match = raw.match(/(-?\d+(?:\.\d+)?)/);
+  const parsed = match ? Number(match[1]) : Number(spec?.fallback ?? 0);
+  const min = Number(spec?.min ?? 0);
+  const max = Number(spec?.max ?? 100);
+  return clamp(Math.round(parsed), min, max);
+}
+
+function formatLightVlayoutSizeSliderValue(px, spec) {
+  const unit = String(spec?.unit || "px");
+  return `${Math.round(Number(px))}${unit}`;
+}
+
+function renderLightVlayoutSingleStyleField(config, field, labelFor) {
   if (!field) {
     return "";
   }
-    const label = labelFor(field.labelKey, field.labelKey);
-    const path = field.path;
-    const current = String(getByPath(config, path) ?? "").trim();
+  const label = labelFor(field.labelKey, field.labelKey);
+  const path = field.path;
+  const current = String(getByPath(config, path) ?? "").trim();
 
-    if (field.kind === "color") {
-      const swatchMarkup = field.swatches && Array.isArray(tintSwatches)
-        ? `<div class="nodalia-vlayout-controls__swatches" role="group">
-            ${tintSwatches.map(color => `
-              <button
-                type="button"
-                class="nodalia-vlayout-swatch${current === color ? " is-active" : ""}"
-                style="--swatch:${escapeVlayoutAttr(color)}"
-                data-vlayout-ctx="style-swatch"
-                data-vlayout-style-path="${escapeVlayoutAttr(path)}"
-                data-vlayout-color="${escapeVlayoutAttr(color)}"
-                title="${escapeVlayoutAttr(color)}"
-              ></button>
-            `).join("")}
-          </div>`
-        : "";
-      const pickerValue = /^#[0-9a-f]{6}$/i.test(current) ? current : "#6da8ff";
-      return `
-        ${swatchMarkup}
-        <label class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--color">
-          <span>${escapeVlayoutAttr(label)}</span>
-          <input type="color" data-vlayout-ctx="style-color" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(pickerValue)}" />
-        </label>
-      `;
-    }
+  if (field.kind === "color") {
+    const pickerValue = /^#[0-9a-f]{6}$/i.test(current) ? current : "#6da8ff";
+    return `
+      <label class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--color">
+        <span>${escapeVlayoutAttr(label)}</span>
+        <input type="color" data-vlayout-ctx="style-color" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(pickerValue)}" />
+      </label>
+    `;
+  }
 
     if (field.kind === "icon_radius_percent") {
       const pct = readLightVlayoutIconRadiusPercent(config);
@@ -551,15 +557,45 @@ function renderLightVlayoutSingleStyleField(config, field, labelFor, tintSwatche
       `;
     }
 
-  return `
-    <label class="nodalia-vlayout-controls__field">
-      <span>${escapeVlayoutAttr(label)}</span>
-      <input type="text" data-vlayout-ctx="style-text" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(current)}" />
-    </label>
-  `;
+  if (field.kind === "size_slider") {
+    const spec = LIGHT_VLAYOUT_SIZE_SLIDER_BY_PATH[path];
+    if (!spec) {
+      return "";
+    }
+    const px = readLightVlayoutSizeSliderPx(config, path, spec);
+    const outputId = `vlayout-size-${path.replace(/\./g, "-")}`;
+    return `
+      <label class="nodalia-vlayout-controls__field">
+        <span class="nodalia-vlayout-controls__field-head">
+          <span>${escapeVlayoutAttr(label)}</span>
+          <output data-vlayout-style-size-value data-vlayout-style-path="${escapeVlayoutAttr(path)}" id="${escapeVlayoutAttr(outputId)}">${px}${escapeVlayoutAttr(spec.unit)}</output>
+        </span>
+        <input
+          type="range"
+          min="${spec.min}"
+          max="${spec.max}"
+          step="${spec.step}"
+          data-vlayout-ctx="style-size"
+          data-vlayout-style-path="${escapeVlayoutAttr(path)}"
+          value="${px}"
+        />
+      </label>
+    `;
+  }
+
+  if (field.kind === "text") {
+    return `
+      <label class="nodalia-vlayout-controls__field">
+        <span>${escapeVlayoutAttr(label)}</span>
+        <input type="text" data-vlayout-ctx="style-text" data-vlayout-style-path="${escapeVlayoutAttr(path)}" value="${escapeVlayoutAttr(current)}" />
+      </label>
+    `;
+  }
+
+  return "";
 }
 
-function renderLightVlayoutStyleFieldsHtml(config, groupKey, labelFor, tintSwatches, stylePaths) {
+function renderLightVlayoutStyleFieldsHtml(config, groupKey, labelFor, stylePaths) {
   const fields = Array.isArray(stylePaths) && stylePaths.length
     ? stylePaths.map(path => LIGHT_VLAYOUT_STYLE_FIELD_BY_PATH.get(path)).filter(Boolean)
     : LIGHT_VLAYOUT_STYLE_FIELD_GROUPS[groupKey] || [];
@@ -567,7 +603,7 @@ function renderLightVlayoutStyleFieldsHtml(config, groupKey, labelFor, tintSwatc
     return "";
   }
 
-  return fields.map(field => renderLightVlayoutSingleStyleField(config, field, labelFor, tintSwatches)).join("");
+  return fields.map(field => renderLightVlayoutSingleStyleField(config, field, labelFor)).join("");
 }
 
 function createLightVisualLayoutStyleHandlers() {
@@ -593,6 +629,16 @@ function createLightVisualLayoutStyleHandlers() {
       setByPath(next, path, String(value ?? "").trim());
       return next;
     },
+    getSizeSliderSpec(path) {
+      return LIGHT_VLAYOUT_SIZE_SLIDER_BY_PATH[path] || null;
+    },
+    formatSizeSliderValue(px, path) {
+      const spec = LIGHT_VLAYOUT_SIZE_SLIDER_BY_PATH[path];
+      if (!spec) {
+        return String(px);
+      }
+      return formatLightVlayoutSizeSliderValue(px, spec);
+    },
     getBlockPanelSpec(config, blockId, ctx) {
       const hass = ctx?.hass;
       return getLightVlayoutBlockPanelSpec(config, blockId, hass);
@@ -606,7 +652,6 @@ function createLightVisualLayoutStyleHandlers() {
         config,
         "",
         ctx?.labelFor || ((_key, fallback) => fallback),
-        ctx?.tintSwatches,
         spec.stylePaths,
       );
     },
@@ -615,7 +660,6 @@ function createLightVisualLayoutStyleHandlers() {
         config,
         "card",
         ctx?.labelFor || ((_key, fallback) => fallback),
-        ctx?.tintSwatches,
       );
     },
     readColor(config, blockId) {
@@ -1370,7 +1414,8 @@ class NodaliaLightCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
+    // Visual layout live preview: avoid entrance/power flash on every layout or style tweak.
+    this._animateContentOnNextRender = !this.hasAttribute("data-vlayout-editing");
     this._render();
   }
 
@@ -5154,7 +5199,6 @@ class NodaliaLightCardEditor extends HTMLElement {
 
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
-    this._vlayoutSurface?.refreshPreviewHass?.();
 
     if (!shouldRender) {
       return;
@@ -5507,7 +5551,7 @@ class NodaliaLightCardEditor extends HTMLElement {
     const layoutApi = window.NodaliaVisualLayout;
     if (!layoutApi?.attachEditorOverlay) {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
-        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.16.js or newer.");
+        window.alert("Visual layout editor is not loaded. Reload the dashboard and confirm the resource is nodalia-cards-1.2.0-alpha.17.js or newer.");
       }
       return;
     }
