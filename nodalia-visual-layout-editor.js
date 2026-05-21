@@ -390,8 +390,13 @@
       this._frameRects = [];
       this._paletteDragId = "";
       this._contextMenuEl = null;
+      this._contextMenuSuppressUntil = 0;
+      this._overlayRoot = options.overlayRoot || null;
       this._onHitContextMenu = this._onHitContextMenu.bind(this);
       this._onDocumentPointerDown = this._onDocumentPointerDown.bind(this);
+      this._onAuxClick = this._onAuxClick.bind(this);
+      this._onControlsInput = this._onControlsInput.bind(this);
+      this._onControlsClick = this._onControlsClick.bind(this);
     }
 
     get layout() {
@@ -472,8 +477,28 @@
       window.requestAnimationFrame(() => {
         this._syncAllPlacedDom();
         this._scheduleFrameUpdate();
+        this._fitLiveStageHeight();
         this._bindCanvasListeners();
       });
+    }
+
+    /** Let the preview grow with the real card (sliders, presets, sections). */
+    _fitLiveStageHeight() {
+      if (!this._isLiveMode() || !this._cardEl) {
+        return;
+      }
+      const stage = this._getLiveStage();
+      const host = this._host.querySelector(".nodalia-vlayout-live-host");
+      const cardRoot = this._cardEl.shadowRoot?.querySelector(".light-card");
+      if (!stage || !host || !cardRoot) {
+        return;
+      }
+      const height = Math.ceil(cardRoot.getBoundingClientRect().height);
+      if (height > 0) {
+        const padded = height + 28;
+        stage.style.minHeight = `${padded}px`;
+        host.style.minHeight = `${padded + 16}px`;
+      }
     }
 
     /** Debounces full card re-renders while dragging or scrubbing sliders in the context menu. */
@@ -650,6 +675,8 @@
       item.y = open.y;
       this._applyItemStyleToDom(item);
       this._scheduleFrameUpdate();
+      this._syncControlOutputs();
+      this._renderInspector();
       this._refreshChrome();
       this._scheduleLiveSync();
       this._notifyChange();
@@ -841,24 +868,30 @@
           if (!cellRect) {
             return;
           }
+          if (item.id !== this._selectedId) {
+            return;
+          }
+
           const frameDef = getBlockFrameDef(this._catalog, item.id);
           const shape = frameDef.shape || "rounded";
           const radius = item.radius ?? frameDef.radius ?? (shape === "circle" ? 9999 : 12);
-          const { left, top, width, height } = cellRect;
+          let { left, top, width, height } = cellRect;
+          if (shape === "circle") {
+            const size = Math.min(width, height);
+            left += (width - size) / 2;
+            top += (height - size) / 2;
+            width = size;
+            height = size;
+          }
 
           const frame = document.createElement("div");
-          frame.className = `nodalia-vlayout-frame nodalia-vlayout-frame--${shape}`;
+          frame.className = `nodalia-vlayout-frame nodalia-vlayout-frame--${shape} is-selected`;
           frame.dataset.vlayoutId = item.id;
           frame.style.left = `${left}px`;
           frame.style.top = `${top}px`;
           frame.style.width = `${width}px`;
           frame.style.height = `${height}px`;
           frame.style.borderRadius = shape === "circle" ? "50%" : `${radius}px`;
-          if (item.id === this._selectedId) {
-            frame.classList.add("is-selected");
-          } else {
-            frame.classList.add("is-idle");
-          }
           if (item.color) {
             frame.style.setProperty("--frame-tint", item.color);
           }
@@ -949,9 +982,207 @@
     }
 
     _onDocumentPointerDown(event) {
+      if (Date.now() < this._contextMenuSuppressUntil) {
+        return;
+      }
       if (this._contextMenuEl && !event.target.closest(".nodalia-vlayout-context-menu")) {
         this._hideContextMenu();
       }
+    }
+
+    _getOverlayMount() {
+      if (this._overlayRoot instanceof HTMLElement) {
+        return this._overlayRoot;
+      }
+      return typeof document !== "undefined" ? document.body : null;
+    }
+
+    _openBlockProperties(clientX, clientY, blockId) {
+      if (!blockId) {
+        return;
+      }
+      this._selectItem(blockId);
+      this._showContextMenu(clientX, clientY, blockId);
+    }
+
+    _onAuxClick(event) {
+      if (!this._isLiveMode() || event.button !== 2) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const blockId = this._hitTestBlockAt(event.clientX, event.clientY);
+      if (blockId) {
+        this._openBlockProperties(event.clientX, event.clientY, blockId);
+      }
+    }
+
+    _getBlockControlsMarkup(blockId) {
+      const item = this._getItem(blockId);
+      if (!item) {
+        return "";
+      }
+      const isCircle = this._isCircularBlock(blockId);
+      const swatches = this._blockSupports(blockId, "color")
+        ? `<div class="nodalia-vlayout-controls__swatches" role="group" aria-label="${this._propsLabel("ed.light.vlayout_ctx_tints", "Tint colors")}">
+            ${TINT_SWATCHES.map(color => `
+              <button
+                type="button"
+                class="nodalia-vlayout-swatch${item.color === color ? " is-active" : ""}"
+                style="--swatch:${color}"
+                data-vlayout-ctx="swatch-color"
+                data-vlayout-color="${color}"
+                title="${color}"
+              ></button>
+            `).join("")}
+          </div>
+          <label class="nodalia-vlayout-controls__field nodalia-vlayout-controls__field--color">
+            <span>${this._propsLabel("ed.light.vlayout_props_color", "Accent color")}</span>
+            <input type="color" data-vlayout-ctx="color" value="${item.color || "#6da8ff"}" />
+          </label>`
+        : "";
+
+      const sizeFields = isCircle
+        ? `<label class="nodalia-vlayout-controls__field">
+            <span class="nodalia-vlayout-controls__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_ctx_diameter", "Diameter (cells)")}</span>
+              <output data-vlayout-ctx-diameter-value>${Math.max(item.w, item.h)}</output>
+            </span>
+            <input type="range" min="1" max="${Math.min(this._draft.columns, this._draft.rows)}" step="1" data-vlayout-ctx="diameter" value="${Math.max(item.w, item.h)}" />
+          </label>`
+        : `
+          <label class="nodalia-vlayout-controls__field">
+            <span class="nodalia-vlayout-controls__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_props_width", "Width")}</span>
+              <output data-vlayout-ctx-w-value>${item.w}</output>
+            </span>
+            <input type="range" min="1" max="${this._draft.columns}" step="1" data-vlayout-ctx="w" value="${item.w}" />
+          </label>
+          <label class="nodalia-vlayout-controls__field">
+            <span class="nodalia-vlayout-controls__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_props_height", "Height")}</span>
+              <output data-vlayout-ctx-h-value>${item.h}</output>
+            </span>
+            <input type="range" min="1" max="${this._draft.rows}" step="1" data-vlayout-ctx="h" value="${item.h}" />
+          </label>
+        `;
+
+      const radiusField = blockId === "icon"
+        ? `<label class="nodalia-vlayout-controls__field">
+            <span class="nodalia-vlayout-controls__field-head">
+              <span>${this._propsLabel("ed.light.vlayout_props_radius", "Icon radius")}</span>
+              <output data-vlayout-ctx-radius-value>${item.radius ?? 50}px</output>
+            </span>
+            <input type="range" min="0" max="80" step="1" data-vlayout-ctx="radius" value="${item.radius ?? 50}" />
+          </label>`
+        : "";
+
+      return `
+        <div class="nodalia-vlayout-controls__title">${this._label(blockId)}</div>
+        <div class="nodalia-vlayout-controls__grid">
+          ${swatches}
+          ${sizeFields}
+          ${radiusField}
+          <button type="button" class="nodalia-vlayout-controls__remove" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
+        </div>
+      `;
+    }
+
+    _syncControlOutputs() {
+      const item = this._getItem(this._selectedId);
+      if (!item) {
+        return;
+      }
+      const roots = [
+        this._host.querySelector(".nodalia-vlayout-inspector"),
+        this._contextMenuEl,
+      ].filter(Boolean);
+      roots.forEach(root => {
+        const wOut = root.querySelector("[data-vlayout-ctx-w-value]");
+        const hOut = root.querySelector("[data-vlayout-ctx-h-value]");
+        const dOut = root.querySelector("[data-vlayout-ctx-diameter-value]");
+        const rOut = root.querySelector("[data-vlayout-ctx-radius-value]");
+        if (wOut) {
+          wOut.textContent = String(item.w);
+        }
+        if (hOut) {
+          hOut.textContent = String(item.h);
+        }
+        if (dOut) {
+          dOut.textContent = String(Math.max(item.w, item.h));
+        }
+        if (rOut) {
+          rOut.textContent = `${item.radius ?? 50}px`;
+        }
+        root.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
+          btn.classList.toggle("is-active", btn.dataset.vlayoutColor === item.color);
+        });
+      });
+    }
+
+    _onControlsInput(event) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.dataset?.vlayoutCtx) {
+        return;
+      }
+      this._applyContextMenuInput(target);
+    }
+
+    _onControlsClick(event) {
+      if (!event.target.closest("[data-vlayout-ctx-remove]")) {
+        return;
+      }
+      event.preventDefault();
+      const blockId = this._selectedId;
+      const removeItem = this._getItem(blockId);
+      if (removeItem) {
+        removeItem.visible = false;
+      }
+      if (this._selectedId === blockId) {
+        this._selectedId = this._draft.items.find(entry => entry.visible !== false)?.id || "";
+      }
+      this._hideContextMenu();
+      this._scheduleLiveSync();
+      this._refreshChrome();
+      this._notifyChange();
+    }
+
+    _bindControlsRoot(root) {
+      if (!root || root.dataset.vlayoutControlsBound === "true") {
+        return;
+      }
+      root.dataset.vlayoutControlsBound = "true";
+      root.addEventListener("input", this._onControlsInput);
+      root.addEventListener("click", this._onControlsClick);
+    }
+
+    _bindInspectorDelegation() {
+      const host = this._host.querySelector(".nodalia-vlayout-inspector");
+      if (!host || host.dataset.vlayoutInspectorBound === "true") {
+        return;
+      }
+      host.dataset.vlayoutInspectorBound = "true";
+      host.addEventListener("input", this._onControlsInput);
+      host.addEventListener("click", this._onControlsClick);
+    }
+
+    _renderInspector() {
+      const host = this._host.querySelector(".nodalia-vlayout-inspector");
+      if (!host) {
+        return;
+      }
+      const item = this._getItem(this._selectedId);
+      if (!item) {
+        host.innerHTML = `
+          <div class="nodalia-vlayout-inspector__empty">
+            ${this._propsLabel("ed.light.vlayout_inspector_hint", "Select a block on the card, or right-click for the same controls.")}
+          </div>
+        `;
+        host.classList.remove("has-selection");
+        return;
+      }
+      host.classList.add("has-selection");
+      host.innerHTML = `<div class="nodalia-vlayout-controls nodalia-vlayout-controls--inspector">${this._getBlockControlsMarkup(item.id)}</div>`;
     }
 
     _positionContextMenu(menu, clientX, clientY) {
@@ -959,7 +1190,8 @@
       menu.style.visibility = "hidden";
       menu.style.left = "0";
       menu.style.top = "0";
-      document.body.appendChild(menu);
+      const mount = this._getOverlayMount();
+      mount?.appendChild(menu);
       const rect = menu.getBoundingClientRect();
       let left = clientX + 4;
       let top = clientY + 4;
@@ -976,123 +1208,18 @@
 
     _showContextMenu(clientX, clientY, blockId) {
       this._hideContextMenu();
-      const item = this._getItem(blockId);
-      if (!item) {
+      if (!this._getItem(blockId)) {
         return;
       }
 
-      const isCircle = this._isCircularBlock(blockId);
-      const swatches = this._blockSupports(blockId, "color")
-        ? `<div class="nodalia-vlayout-context-menu__swatches" role="group" aria-label="${this._propsLabel("ed.light.vlayout_ctx_tints", "Tint colors")}">
-            ${TINT_SWATCHES.map(color => `
-              <button
-                type="button"
-                class="nodalia-vlayout-swatch${item.color === color ? " is-active" : ""}"
-                style="--swatch:${color}"
-                data-vlayout-ctx="swatch-color"
-                data-vlayout-color="${color}"
-                title="${color}"
-              ></button>
-            `).join("")}
-          </div>
-          <label class="nodalia-vlayout-context-menu__field nodalia-vlayout-context-menu__field--color">
-            <span>${this._propsLabel("ed.light.vlayout_props_color", "Accent color")}</span>
-            <input type="color" data-vlayout-ctx="color" value="${item.color || "#6da8ff"}" />
-          </label>`
-        : "";
-
-      const sizeFields = isCircle
-        ? `<label class="nodalia-vlayout-context-menu__field">
-            <span class="nodalia-vlayout-context-menu__field-head">
-              <span>${this._propsLabel("ed.light.vlayout_ctx_diameter", "Diameter (cells)")}</span>
-              <output data-vlayout-ctx-diameter-value>${Math.max(item.w, item.h)}</output>
-            </span>
-            <input
-              type="range"
-              min="1"
-              max="${Math.min(this._draft.columns, this._draft.rows)}"
-              step="1"
-              data-vlayout-ctx="diameter"
-              value="${Math.max(item.w, item.h)}"
-            />
-          </label>`
-        : `
-          <label class="nodalia-vlayout-context-menu__field">
-            <span class="nodalia-vlayout-context-menu__field-head">
-              <span>${this._propsLabel("ed.light.vlayout_props_width", "Width (columns)")}</span>
-              <output data-vlayout-ctx-w-value>${item.w}</output>
-            </span>
-            <input type="range" min="1" max="${this._draft.columns}" step="1" data-vlayout-ctx="w" value="${item.w}" />
-          </label>
-          <label class="nodalia-vlayout-context-menu__field">
-            <span class="nodalia-vlayout-context-menu__field-head">
-              <span>${this._propsLabel("ed.light.vlayout_props_height", "Height (rows)")}</span>
-              <output data-vlayout-ctx-h-value>${item.h}</output>
-            </span>
-            <input type="range" min="1" max="${this._draft.rows}" step="1" data-vlayout-ctx="h" value="${item.h}" />
-          </label>
-        `;
-
-      const radiusField = blockId === "icon"
-        ? `<label class="nodalia-vlayout-context-menu__field">
-            <span class="nodalia-vlayout-context-menu__field-head">
-              <span>${this._propsLabel("ed.light.vlayout_props_radius", "Icon corner radius")}</span>
-              <output data-vlayout-ctx-radius-value>${item.radius ?? 50}px</output>
-            </span>
-            <input type="range" min="0" max="80" step="1" data-vlayout-ctx="radius" value="${item.radius ?? 50}" />
-          </label>`
-        : "";
-
       const menu = document.createElement("div");
       menu.className = "nodalia-vlayout-context-menu";
-      menu.innerHTML = `
-        <div class="nodalia-vlayout-context-menu__title">${this._label(blockId)}</div>
-        ${swatches}
-        ${sizeFields}
-        ${radiusField}
-        <button type="button" class="nodalia-vlayout-context-menu__remove" data-vlayout-ctx-remove>${this._propsLabel("ed.light.vlayout_props_remove", "Remove block")}</button>
-      `;
-
-      menu.addEventListener("input", event => {
-        const target = event.target;
-        if (target instanceof HTMLInputElement) {
-          const kind = target.dataset?.vlayoutCtx;
-          if (kind === "w") {
-            const out = menu.querySelector("[data-vlayout-ctx-w-value]");
-            if (out) {
-              out.textContent = target.value;
-            }
-          } else if (kind === "h") {
-            const out = menu.querySelector("[data-vlayout-ctx-h-value]");
-            if (out) {
-              out.textContent = target.value;
-            }
-          }
-        }
-        this._applyContextMenuInput(event.target);
-        menu.querySelectorAll(".nodalia-vlayout-swatch").forEach(btn => {
-          btn.classList.toggle("is-active", btn.dataset.vlayoutColor === this._getItem(blockId)?.color);
-        });
-      });
-      menu.addEventListener("click", event => {
-        if (event.target.closest("[data-vlayout-ctx-remove]")) {
-          event.preventDefault();
-          const removeItem = this._getItem(blockId);
-          if (removeItem) {
-            removeItem.visible = false;
-          }
-          if (this._selectedId === blockId) {
-            this._selectedId = this._draft.items.find(entry => entry.visible !== false)?.id || "";
-          }
-          this._hideContextMenu();
-          this._scheduleLiveSync();
-          this._refreshChrome();
-          this._notifyChange();
-        }
-      });
+      menu.innerHTML = `<div class="nodalia-vlayout-controls nodalia-vlayout-controls--menu">${this._getBlockControlsMarkup(blockId)}</div>`;
+      this._bindControlsRoot(menu.querySelector(".nodalia-vlayout-controls"));
 
       this._positionContextMenu(menu, clientX, clientY);
       this._contextMenuEl = menu;
+      this._contextMenuSuppressUntil = Date.now() + 450;
       document.addEventListener("pointerdown", this._onDocumentPointerDown, true);
     }
 
@@ -1100,11 +1227,9 @@
       event.preventDefault();
       event.stopPropagation();
       const blockId = this._hitTestBlockAt(event.clientX, event.clientY);
-      if (!blockId) {
-        return;
+      if (blockId) {
+        this._openBlockProperties(event.clientX, event.clientY, blockId);
       }
-      this._selectItem(blockId);
-      this._showContextMenu(event.clientX, event.clientY, blockId);
     }
 
     _renderPropertiesPanel() {
@@ -1164,6 +1289,7 @@
 
     _refreshChrome() {
       if (this._isLiveMode()) {
+        this._renderInspector();
         this._renderPaletteDock();
       } else {
         this._renderSidebar();
@@ -1304,7 +1430,9 @@
         stage.appendChild(framesLayer);
         host.appendChild(stage);
       }
-      stage.style.setProperty("--nodalia-vlayout-preview-width", `${width}px`);
+      const hostWidth = host.clientWidth || width;
+      const previewWidth = Math.max(300, Math.min(Math.round(hostWidth - 16), 560, width));
+      stage.style.setProperty("--nodalia-vlayout-preview-width", `${previewWidth}px`);
       if (!this._cardEl) {
         this._cardEl = document.createElement(tag);
         stage.insertBefore(this._cardEl, stage.firstChild);
@@ -1317,11 +1445,13 @@
         this._host.innerHTML = `
           <div class="nodalia-vlayout-workspace nodalia-vlayout-workspace--live">
             <div class="nodalia-vlayout-live-host"></div>
+            <div class="nodalia-vlayout-inspector"></div>
             <div class="nodalia-vlayout-palette-dock"></div>
           </div>
         `;
         this._mountLiveCard();
-        this._renderPaletteDock();
+        this._bindInspectorDelegation();
+        this._refreshChrome();
         return;
       }
 
@@ -1362,7 +1492,11 @@
       canvas.addEventListener("pointerup", this._onCanvasPointerUp, { signal });
       canvas.addEventListener("pointercancel", this._onCanvasPointerUp, { signal });
       if (this._isLiveMode()) {
+        const stage = this._getLiveStage();
         canvas.addEventListener("contextmenu", this._onHitContextMenu, { signal });
+        canvas.addEventListener("auxclick", this._onAuxClick, { signal });
+        stage?.addEventListener("contextmenu", this._onHitContextMenu, { signal });
+        stage?.addEventListener("auxclick", this._onAuxClick, { signal });
         canvas.addEventListener("dragover", this._onCanvasDragOver, { signal });
         canvas.addEventListener("drop", this._onCanvasDrop, { signal });
       }
@@ -1543,6 +1677,7 @@
       this._syncAllPlacedDom();
       if (this._isLiveMode()) {
         this._scheduleFrameUpdate();
+        this._renderInspector();
       }
       this._refreshChrome();
     }
@@ -1571,6 +1706,18 @@
      * grid mode uses `.nodalia-vlayout-placed` cells.
      */
     _onCanvasPointerDown(event) {
+      if (this._isLiveMode() && event.button === 2) {
+        event.preventDefault();
+        event.stopPropagation();
+        const blockId = this._hitTestBlockAt(event.clientX, event.clientY);
+        if (blockId) {
+          this._openBlockProperties(event.clientX, event.clientY, blockId);
+        } else {
+          this._selectItem("");
+          this._hideContextMenu();
+        }
+        return;
+      }
       if (this._isLiveMode() && typeof event.button === "number" && event.button !== 0) {
         return;
       }
@@ -2019,8 +2166,8 @@
     }
     .nodalia-vlayout-workspace--live {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) auto;
-      min-height: 420px;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      min-height: 480px;
     }
     .nodalia-vlayout-live-host {
       align-items: stretch;
@@ -2029,9 +2176,69 @@
       border-radius: 0;
       display: flex;
       justify-content: center;
-      min-height: 360px;
-      overflow: auto;
+      min-height: 280px;
+      overflow: visible;
       padding: 8px 4px 4px;
+      width: 100%;
+    }
+    .nodalia-vlayout-inspector {
+      background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+      border-radius: 14px;
+      margin-top: 4px;
+      padding: 10px 12px;
+    }
+    .nodalia-vlayout-inspector__empty {
+      color: var(--secondary-text-color);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .nodalia-vlayout-controls__grid {
+      align-items: end;
+      display: grid;
+      gap: 10px 14px;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+    .nodalia-vlayout-controls--menu .nodalia-vlayout-controls__grid {
+      grid-template-columns: 1fr;
+    }
+    .nodalia-vlayout-controls__title {
+      font-size: 12px;
+      font-weight: 700;
+      grid-column: 1 / -1;
+    }
+    .nodalia-vlayout-controls__swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      grid-column: 1 / -1;
+    }
+    .nodalia-vlayout-controls__field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+    .nodalia-vlayout-controls__field-head {
+      align-items: center;
+      display: flex;
+      font-size: 11px;
+      font-weight: 600;
+      justify-content: space-between;
+    }
+    .nodalia-vlayout-controls__field input[type="range"] {
+      accent-color: var(--primary-color);
+      width: 100%;
+    }
+    .nodalia-vlayout-controls__remove {
+      appearance: none;
+      background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+      border-radius: 10px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      font: inherit;
+      grid-column: 1 / -1;
+      min-height: 34px;
     }
     .nodalia-vlayout-palette-dock {
       border-top: 1px solid var(--divider-color);
@@ -2068,7 +2275,7 @@
     .nodalia-vlayout-live-stage {
       margin-inline: auto;
       position: relative;
-      width: var(--nodalia-vlayout-preview-width, 360px);
+      width: min(var(--nodalia-vlayout-preview-width, 360px), 100%);
       max-width: 100%;
     }
     .nodalia-vlayout-live-stage > nodalia-light-card {
@@ -2465,6 +2672,7 @@
       labelFor: options.labelFor,
       renderBlockPreview: options.renderBlockPreview,
       paletteTitle: options.paletteTitle,
+      overlayRoot: dialog,
       livePreview: options.livePreview,
       onChange: options.onDraftChange,
     });
@@ -2511,6 +2719,7 @@
     };
 
     dialog.addEventListener("click", onDialogClick, true);
+    dialog.addEventListener("contextmenu", event => surface._onHitContextMenu(event), true);
     dialog.addEventListener("input", event => surface.handleInput(event), true);
     dialog.addEventListener("keydown", event => surface.handleKeyDown(event));
     dialog.addEventListener("cancel", event => {

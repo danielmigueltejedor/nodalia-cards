@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.13] - 2026-05-21
+
+Thirteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.13`**.
+
+### Fixed
+- **Visual layout editor:** right-click / secondary-click opens the properties popup (`pointerdown` button 2, `auxclick`, menu mounted inside the dialog).
+- **Inspector bar** below the preview shows tint and size sliders when a block is selected (works even if the browser blocks context menus).
+
+### Changed
+- Selection outline only on the active block; circular blocks use a square frame; preview height follows full card content.
+
 ## [1.2.0-alpha.12] - 2026-05-21
 
 Twelfth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.12`**.

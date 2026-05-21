@@ -427,6 +427,7 @@
   "ed.light.visual_layout_shortcuts": "Arrastrar · Asas redimensionan · Clic derecho propiedades · Paleta abajo · Flechas · Supr quita",
   "ed.light.vlayout_ctx_diameter": "Diámetro (celdas)",
   "ed.light.vlayout_ctx_tints": "Colores de tinte",
+  "ed.light.vlayout_inspector_hint": "Haz clic en un bloque de la tarjeta. Los controles de abajo cambian tinte y tamaño; clic derecho abre el mismo panel bajo el cursor.",
   "ed.light.visual_layout_cancel": "Cancelar",
   "ed.light.visual_layout_palette": "Available blocks",
   "ed.light.visual_layout_reset": "Reset to default",
