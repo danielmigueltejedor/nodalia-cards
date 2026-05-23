@@ -20,6 +20,14 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
 
+## [1.1.4] - 2026-05-23
+
+### Fixed
+
+- **`nodalia-media-player.js`:** the card editor keeps the player row when the `media_player` entity is cleared, so you can pick another entity on the same slot. Runtime still hides players without a valid entity.
+
+Stable **`1.1.4`** patch release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.4.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
 ## [1.1.3] - 2026-05-19
 ### Interaction Polish & Dashboard Performance
 
