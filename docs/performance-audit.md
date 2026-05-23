@@ -3,7 +3,7 @@
 **Date:** 2026-05-18 (pass 1 + pass 2)  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
 **Target environment:** Home Assistant Core 2026.4+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
-**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.3.js` — rebuild after release)
+**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.4.js` — rebuild after release)
 
 ---
 
@@ -255,7 +255,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 - [ ] Navigation bar: editor pickers actualizan nombres al cambiar `hass`.
 
 ### Regresión HACS
-- [ ] Recurso `nodalia-cards-1.1.3.js` (o actual) carga una vez.
+- [ ] Recurso `nodalia-cards-1.1.4.js` (o actual) carga una vez.
 - [ ] `window.__NODALIA_BUNDLE__.pkgVersion` coincide con `package.json`.
 
 ---
