@@ -290,6 +290,11 @@ function compactConfig(value) {
     const compacted = {};
 
     Object.entries(value).forEach(([key, item]) => {
+      if (key === "entity" && item === "") {
+        compacted.entity = "";
+        return;
+      }
+
       const cleaned = compactConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
 
@@ -778,7 +783,7 @@ function normalizeConfig(rawConfig) {
     ];
   }
 
-  config.players = Array.isArray(config.players) ? config.players.filter(player => player?.entity) : [];
+  config.players = Array.isArray(config.players) ? config.players.filter(player => isObject(player)) : [];
   config.players = config.players.map(player => ({
     ...player,
     power_action_off: normalizePowerActionConfig(player.power_action_off),
@@ -5430,12 +5435,20 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
+    const normalizedPath = String(path || "").trim();
+    const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
+
+    if (isEntityField && (value === undefined || value === null || value === "")) {
+      setByPath(this._config, normalizedPath, "");
       return;
     }
 
-    setByPath(this._config, path, value);
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, normalizedPath);
+      return;
+    }
+
+    setByPath(this._config, normalizedPath, value);
   }
 
   _readFieldValue(input) {
@@ -5895,6 +5908,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     const field = host.dataset.field || "players.0.entity";
     const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
     const allowedDomains = String(host.dataset.domains || "")
       .split(",")
       .map(domain => domain.trim())
@@ -5908,6 +5922,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
       }
       control.allowCustomEntity = true;
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       control.selector = {
@@ -5917,6 +5934,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       };
     } else {
       control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = placeholder || this._editorLabel("ed.entity.quick_entity");
+      control.appendChild(emptyOption);
       this._getEntityOptions(field, allowedDomains).forEach(option => {
         const optionElement = document.createElement("option");
         optionElement.value = option.value;

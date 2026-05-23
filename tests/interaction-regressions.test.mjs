@@ -236,6 +236,14 @@ test("advanced vacuum skips remote write when serialized session still overflows
   assert.doesNotMatch(source, /if \(serialized\.length > maxLength\) \{[\s\S]*serialized = ""/);
 });
 
+test("media player editor keeps player row when entity is cleared", () => {
+  const source = read("nodalia-media-player.js");
+  assert.doesNotMatch(source, /config\.players = Array\.isArray\(config\.players\) \? config\.players\.filter\(player => player\?\.entity\)/);
+  assert.match(source, /if \(key === "entity" && item === ""\)/);
+  assert.match(source, /isEntityField && \(value === undefined \|\| value === null \|\| value === ""\)/);
+  assert.match(source, /return this\._getConfiguredPlayers\(\)\.filter\(player => \{[\s\S]*!player\?\.entity/);
+});
+
 test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /const mediaToggleBackgroundBase = sanitizeCssRuntimeValue\(config\.styles\.media_player\.background\)[\s\S]*"var\(--ha-card-background, var\(--card-background-color\)\)"/);
