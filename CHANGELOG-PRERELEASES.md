@@ -8,9 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.0-alpha.17] - 2026-05-20
+## [1.2.0-alpha.18] - 2026-05-20
 
-Seventeenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.17`**.
+Eighteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.18`**.
+
+### Added
+
+- **Visual layout editor:** header **Show grid** / **Hide grid** toggle overlays column and row guides on the live card preview (aligned to the real `visual_layout` grid).
+
+### Changed
+
+- **Visual layout editor:** context menu scrolls when long (sticky block title); **Esc** closes the menu even when focus is on a control; color pickers also listen to `change` for reliable updates.
+
+## [1.2.0-alpha.18] - 2026-05-20
+
+Seventeenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.18`**.
 
 ### Changed
 - **Visual layout editor:** pixel-based style fields in the right-click menu use range sliders with live value readout (padding, gaps, icon size, chips, sliders, etc.).

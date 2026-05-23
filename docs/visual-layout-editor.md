@@ -17,7 +17,7 @@ For the full card suite overview see [cards-architecture.md](./cards-architectur
 1. User opens **Open visual layout editor** in the light card editor.
 2. `attachEditorOverlay` opens a `<dialog>` and creates `VisualLayoutSurface` with `livePreview`.
 3. Draft layout lives in `surface.layout` (`this._draft`) — **positions only** (`x`, `y`, `w`, `h`, `id`).
-4. Right-click a block for **layout** (only the controls that block uses: e.g. icon → diameter + `styles.icon.*`; presets → accent colors when visible) and **styles** filtered per block. Blocks hidden by config or off-state show layout + a hint only. Right-click empty preview area for **card** styles.
+4. Right-click a block for **layout** (only the controls that block uses: e.g. icon → diameter + `styles.icon.*`; presets → accent colors when visible) and **styles** filtered per block. Blocks hidden by config or off-state show layout + a hint only. Right-click empty preview area for **card** styles. Long menus scroll; **Esc** closes the menu. Header **Show/Hide grid** overlays column/row guides on the live preview.
 5. **Save layout** → `serializeLayoutForSave(..., { positionOnly: true })` + merged `styles` from preview config → `_commitVisualLayout` → Lovelace YAML.
 6. Legacy `color` / `radius` on layout items are migrated into `styles` on load and stripped from YAML on save.
 

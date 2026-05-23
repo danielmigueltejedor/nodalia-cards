@@ -382,6 +382,7 @@
       this._paletteDragId = "";
       this._contextMenuEl = null;
       this._contextMenuSuppressUntil = 0;
+      this._gridGuideVisible = options.gridGuideVisible !== false;
       this._overlayRoot = options.overlayRoot || null;
       this._styleHandlers = options.styleHandlers || null;
       this._previewConfig = null;
@@ -672,6 +673,28 @@
       guide.style.height = `${gridRect.height}px`;
       guide.style.setProperty("--vlayout-cols", String(metrics.cols));
       guide.style.setProperty("--vlayout-rows", String(metrics.rows));
+      stage.classList.toggle("is-grid-guide-visible", this._gridGuideVisible);
+    }
+
+    _setGridGuideVisible(visible) {
+      this._gridGuideVisible = Boolean(visible);
+      const stage = this._getLiveStage();
+      if (stage) {
+        stage.classList.toggle("is-grid-guide-visible", this._gridGuideVisible);
+      }
+      this._updateGridGuide();
+    }
+
+    _updateGridGuideToggleButton(dialog) {
+      const btn = dialog?.querySelector("[data-vlayout-toggle-grid]");
+      if (!btn) {
+        return;
+      }
+      const labels = this._options?.gridGuideLabels || {};
+      const showLabel = labels.show || "Show grid";
+      const hideLabel = labels.hide || "Hide grid";
+      btn.textContent = this._gridGuideVisible ? hideLabel : showLabel;
+      btn.setAttribute("aria-pressed", this._gridGuideVisible ? "true" : "false");
     }
 
     _applyContextMenuInput(target) {
@@ -1299,6 +1322,7 @@
       }
       root.dataset.vlayoutControlsBound = "true";
       root.addEventListener("input", this._onControlsInput);
+      root.addEventListener("change", this._onControlsInput);
       root.addEventListener("click", this._onControlsClick);
     }
 
@@ -2017,6 +2041,12 @@
       if (!(event.target instanceof HTMLElement)) {
         return;
       }
+      if (event.key === "Escape" && this._contextMenuEl) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._hideContextMenu();
+        return;
+      }
       if (
         event.target.closest(".nodalia-vlayout-context-menu")
         || event.target.matches("input, textarea, select, button")
@@ -2025,9 +2055,6 @@
       }
       const item = this._getItem(this._selectedId);
       if (!item) {
-        if (event.key === "Escape") {
-          this._hideContextMenu();
-        }
         return;
       }
       const step = event.shiftKey ? 2 : 1;
@@ -2434,7 +2461,48 @@
       width: auto;
     }
     .nodalia-vlayout-grid-guide {
+      box-sizing: border-box;
       display: none;
+      opacity: 0.42;
+      pointer-events: none;
+      position: absolute;
+      z-index: 2;
+      background-image:
+        repeating-linear-gradient(
+          to right,
+          transparent,
+          transparent calc((100% / var(--vlayout-cols, 12)) - 1px),
+          color-mix(in srgb, var(--primary-color) 40%, transparent) calc((100% / var(--vlayout-cols, 12)) - 1px),
+          color-mix(in srgb, var(--primary-color) 40%, transparent) calc(100% / var(--vlayout-cols, 12))
+        ),
+        repeating-linear-gradient(
+          to bottom,
+          transparent,
+          transparent calc((100% / var(--vlayout-rows, 10)) - 1px),
+          color-mix(in srgb, var(--primary-color) 40%, transparent) calc((100% / var(--vlayout-rows, 10)) - 1px),
+          color-mix(in srgb, var(--primary-color) 40%, transparent) calc(100% / var(--vlayout-rows, 10))
+        );
+    }
+    .nodalia-vlayout-live-stage.is-grid-guide-visible .nodalia-vlayout-grid-guide {
+      display: block;
+    }
+    .nodalia-vlayout-grid-toggle {
+      appearance: none;
+      background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+      border-radius: 999px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 34px;
+      padding: 0 12px;
+      white-space: nowrap;
+    }
+    .nodalia-vlayout-grid-toggle[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 25%, transparent);
     }
     .nodalia-vlayout-drop-indicator {
       background: color-mix(in srgb, var(--primary-color) 16%, transparent);
@@ -2530,11 +2598,22 @@
       box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
       display: grid;
       gap: 10px;
-      max-width: min(280px, calc(100vw - 24px));
+      max-height: min(72vh, 520px);
+      max-width: min(300px, calc(100vw - 24px));
       min-width: 220px;
+      overflow: auto;
+      overscroll-behavior: contain;
       padding: 12px;
       position: fixed;
       z-index: 2147483647;
+    }
+    .nodalia-vlayout-context-menu .nodalia-vlayout-controls__title {
+      background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+      margin: -12px -12px 0;
+      padding: 12px 12px 8px;
+      position: sticky;
+      top: -12px;
+      z-index: 1;
     }
     .nodalia-vlayout-context-menu__title {
       font-size: 13px;
@@ -2792,6 +2871,10 @@
     const powerToggleMarkup = powerPreview?.supportsToggle
       ? `<button type="button" class="nodalia-vlayout-power-toggle" data-vlayout-toggle-power aria-pressed="${powerPreview.isOn ? "true" : "false"}">${powerPreview.isOn ? powerPreview.labelOn : powerPreview.labelOff}</button>`
       : "";
+    const gridGuideLabels = options.gridGuideLabels || null;
+    const gridToggleMarkup = gridGuideLabels
+      ? `<button type="button" class="nodalia-vlayout-grid-toggle" data-vlayout-toggle-grid aria-pressed="true">${gridGuideLabels.hide || "Hide grid"}</button>`
+      : "";
     const panelMarkup = `
       <div class="nodalia-vlayout-overlay__panel">
         <header class="nodalia-vlayout-overlay__header">
@@ -2800,6 +2883,7 @@
             <div class="nodalia-vlayout-overlay__hint">${options.hint || "Drag blocks on the live card preview. Save writes YAML."}</div>
           </div>
           <div class="nodalia-vlayout-overlay__header-actions">
+            ${gridToggleMarkup}
             ${powerToggleMarkup}
             <button type="button" class="nodalia-vlayout-overlay__close" data-vlayout-close aria-label="Close">×</button>
           </div>
@@ -2840,6 +2924,8 @@
     });
     surface._powerPreview = powerPreview || null;
     surface.mount();
+    surface._setGridGuideVisible(surface._gridGuideVisible);
+    surface._updateGridGuideToggleButton(dialog);
     surface._updatePowerToggleButton(dialog);
     dialog.tabIndex = -1;
     window.requestAnimationFrame(() => dialog.focus());
@@ -2869,6 +2955,12 @@
         const resetLayout = defaultLayoutFromCatalog(options.catalog, options.columns, options.rows);
         surface.setLayout(resetLayout);
         options.onDraftChange?.(resetLayout);
+        return;
+      }
+      if (event.target.closest("[data-vlayout-toggle-grid]")) {
+        event.preventDefault();
+        surface._setGridGuideVisible(!surface._gridGuideVisible);
+        surface._updateGridGuideToggleButton(dialog);
         return;
       }
       if (event.target.closest("[data-vlayout-toggle-power]")) {

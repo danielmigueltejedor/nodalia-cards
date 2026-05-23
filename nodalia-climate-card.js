@@ -22,7 +22,7 @@
  */
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0-alpha.17";
+const CARD_VERSION = "1.2.0-alpha.18";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
