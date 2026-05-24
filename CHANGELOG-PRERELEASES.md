@@ -23,9 +23,9 @@ Nineteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.19`**.
 - **Power Flow Card:** global **Escape** listener is registered only while the home details panel is open (not for the card’s whole lifetime).
 - **Power Flow Card:** overlay copy uses `NodaliaI18n.t` instead of raw `strings[key]`.
 
-## [1.2.0-alpha.19] - 2026-05-20
+## [1.2.0-alpha.18] - 2026-05-20
 
-Eighteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.19`**.
+Eighteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.18`**.
 
 ### Added
 
