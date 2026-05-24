@@ -725,5 +725,13 @@
     "check_clean_carouse": "Revisa el carrusel de limpieza",
     "audio_error": "Error de audio",
     "water_empty": "Depósito de agua vacío"
+  },
+  "powerFlow": {
+    "homeDetails": {
+      "title": "Dispositivos del hogar",
+      "hint": "Toca un dispositivo para más información",
+      "empty": "Aún no hay subdispositivos configurados.",
+      "close": "Cerrar"
+    }
   }
 }

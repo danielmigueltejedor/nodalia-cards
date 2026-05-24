@@ -895,6 +895,14 @@
         check_clean_carouse: "Check cleaning carousel",
         audio_error: "Audio error",
         water_empty: "Water tank empty"
+      },
+      powerFlow: {
+        homeDetails: {
+          title: "Home devices",
+          hint: "Tap a device for more info",
+          empty: "No sub-devices configured yet.",
+          close: "Close"
+        }
       }
     },
     de: {
@@ -3004,6 +3012,14 @@
         check_clean_carouse: "Revisa el carrusel de limpieza",
         audio_error: "Error de audio",
         water_empty: "Depósito de agua vacío"
+      },
+      powerFlow: {
+        homeDetails: {
+          title: "Dispositivos del hogar",
+          hint: "Toca un dispositivo para más información",
+          empty: "Aún no hay subdispositivos configurados.",
+          close: "Cerrar"
+        }
       }
     },
     fr: {
@@ -7940,6 +7956,36 @@
     return merged;
   }
 
+  const RUNTIME_UI_KEY_ALIASES = {
+    "power_flow.home_details_title": "powerFlow.homeDetails.title",
+    "power_flow.home_details_hint": "powerFlow.homeDetails.hint",
+    "power_flow.home_details_empty": "powerFlow.homeDetails.empty",
+    "power_flow.home_details_close": "powerFlow.homeDetails.close",
+  };
+
+  function lookupStringByPath(langPack, path) {
+    const parts = String(path || "").split(".").filter(Boolean);
+    let current = langPack;
+    for (const part of parts) {
+      if (!current || typeof current !== "object" || !(part in current)) {
+        return undefined;
+      }
+      current = current[part];
+    }
+    return typeof current === "string" && current.trim() ? current : undefined;
+  }
+
+  /** Public runtime lookup: resolves `ed.*`-style dotted keys against bundled locale packs. */
+  function t(key, hass, configLang, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const lookupKey = RUNTIME_UI_KEY_ALIASES[key] || key;
+    return (
+      lookupStringByPath(strings(lang), lookupKey)
+      || lookupStringByPath(PACK.en, lookupKey)
+      || String(fallback ?? "")
+    );
+  }
+
   function normalizeHumidifierModeKey(value) {
     return String(value ?? "")
       .normalize("NFD")
@@ -8504,6 +8550,7 @@
     normalizeTextKey,
     normalizeHumidifierModeKey,
     strings,
+    t,
     translateEntityState,
     translateWeatherCondition,
     translateWeatherForecastUi,

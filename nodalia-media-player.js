@@ -5939,6 +5939,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       };
     } else {
       control = document.createElement("select");
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      const entityLabel = this._editorLabel("ed.entity.quick_entity");
+      emptyOption.textContent = String(entityLabel || "Select entity");
+      control.appendChild(emptyOption);
       this._getEntityOptions(field, allowedDomains).forEach(option => {
         const optionElement = document.createElement("option");
         optionElement.value = option.value;

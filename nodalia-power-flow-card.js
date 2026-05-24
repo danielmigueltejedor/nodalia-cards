@@ -1049,6 +1049,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._onFlowVisibility = this._onFlowVisibility.bind(this);
     this._flowUnpauseRaf = 0;
     this._homeDetailsOpen = false;
+    this._homeDetailsKeydownBound = false;
     this._onDocKeyDown = this._onDocKeyDown.bind(this);
   }
 
@@ -1159,9 +1160,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
-    if (typeof document !== "undefined") {
-      document.addEventListener("keydown", this._onDocKeyDown);
-    }
     this._attachFlowViewportTracking();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
@@ -1173,9 +1171,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   disconnectedCallback() {
     this._clearFlowUnpauseRaf();
     this._detachFlowViewportTracking();
-    if (typeof document !== "undefined") {
-      document.removeEventListener("keydown", this._onDocKeyDown);
-    }
+    this._unbindHomeDetailsKeydown();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
@@ -1736,13 +1732,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _pfText(key, fallback) {
-    const resolved = window.NodaliaI18n?.strings?.[key];
-    return typeof resolved === "string" && resolved.trim() ? resolved : fallback;
+    const translate = window.NodaliaI18n?.t;
+    if (typeof translate === "function") {
+      return translate(key, this._hass, this._config?.language ?? "auto", fallback);
+    }
+    return String(fallback ?? "");
   }
 
   /**
    * Resolves tap on the home node: `home-details` opens the in-card panel, `more-info` uses
-   * `entities.home.entity`. `auto` matches `details` (panel always; empty state if no children).
+   * `entities.home.entity`. `auto` opens the panel when water/gas/individual sub-devices exist,
+   * otherwise more-info on the home entity (no action when neither applies).
    */
   _getHomeNodeAction() {
     if (this._config?.clickable_entities === false) {
@@ -1759,9 +1759,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (mode === "more_info") {
       return homeEntity ? "more-info" : "";
     }
-    // auto + details: always open the in-card panel (empty state when no sub-devices).
-    if (mode === "details" || mode === "auto") {
+    if (mode === "details") {
       return "home-details";
+    }
+    if (mode === "auto") {
+      if (childCount > 0) {
+        return "home-details";
+      }
+      return homeEntity ? "more-info" : "";
     }
     return "";
   }
@@ -1785,12 +1790,37 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return children;
   }
 
-  /** Toggles `_homeDetailsOpen` and re-renders; Escape handled in `_onDocKeyDown`. */
+  _bindHomeDetailsKeydown() {
+    if (
+      this._homeDetailsKeydownBound
+      || typeof document === "undefined"
+      || typeof document.addEventListener !== "function"
+    ) {
+      return;
+    }
+    document.addEventListener("keydown", this._onDocKeyDown);
+    this._homeDetailsKeydownBound = true;
+  }
+
+  _unbindHomeDetailsKeydown() {
+    if (
+      !this._homeDetailsKeydownBound
+      || typeof document === "undefined"
+      || typeof document.removeEventListener !== "function"
+    ) {
+      return;
+    }
+    document.removeEventListener("keydown", this._onDocKeyDown);
+    this._homeDetailsKeydownBound = false;
+  }
+
+  /** Toggles `_homeDetailsOpen` and re-renders; Escape handled while the panel is open. */
   _openHomeDetails() {
     if (this._homeDetailsOpen) {
       return;
     }
     this._homeDetailsOpen = true;
+    this._bindHomeDetailsKeydown();
     this._render();
   }
 
@@ -1799,6 +1829,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
     this._homeDetailsOpen = false;
+    this._unbindHomeDetailsKeydown();
     this._render();
   }
 
