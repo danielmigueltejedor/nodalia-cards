@@ -8,9 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.0-alpha.18] - 2026-05-20
+## [1.2.0-alpha.19] - 2026-05-24
 
-Eighteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.18`**.
+Nineteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.19`**.
+
+### Added
+
+- **Power Flow Card:** runtime i18n for the home details overlay (`powerFlow.homeDetails.*` in EN/ES).
+- **Media Player Card:** empty entity option in the editor quick-select (label fallback instead of `undefined`).
+
+### Fixed
+
+- **Power Flow Card:** `home_tap_action: auto` opens the details panel only when water/gas/individual sub-devices exist; otherwise **more-info** on the home entity (no tap when neither applies).
+- **Power Flow Card:** global **Escape** listener is registered only while the home details panel is open (not for the card’s whole lifetime).
+- **Power Flow Card:** overlay copy uses `NodaliaI18n.t` instead of raw `strings[key]`.
+
+## [1.2.0-alpha.19] - 2026-05-20
+
+Eighteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.19`**.
 
 ### Added
 
@@ -20,9 +35,9 @@ Eighteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.18`**.
 
 - **Visual layout editor:** context menu scrolls when long (sticky block title); **Esc** closes the menu even when focus is on a control; color pickers also listen to `change` for reliable updates.
 
-## [1.2.0-alpha.18] - 2026-05-20
+## [1.2.0-alpha.17] - 2026-05-20
 
-Seventeenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.18`**.
+Seventeenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.17`**.
 
 ### Changed
 - **Visual layout editor:** pixel-based style fields in the right-click menu use range sliders with live value readout (padding, gaps, icon size, chips, sliders, etc.).
