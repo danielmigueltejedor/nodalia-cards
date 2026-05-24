@@ -380,6 +380,7 @@
       this._frameRaf = null;
       this._frameRects = [];
       this._paletteDragId = "";
+      this._paletteThumbCards = [];
       this._contextMenuEl = null;
       this._contextMenuSuppressUntil = 0;
       this._gridGuideVisible = options.gridGuideVisible !== false;
@@ -612,17 +613,130 @@
       });
     }
 
+    _gridGapPx(style, axis = "column") {
+      if (!style) {
+        return 10;
+      }
+      const primary = axis === "row"
+        ? style.rowGap
+        : style.columnGap;
+      const parsed = Number.parseFloat(primary || style.gap || "10");
+      return Number.isFinite(parsed) ? parsed : 10;
+    }
+
+    /** Vertical/horizontal grid line positions (px) inside the live `.light-card__visual-grid`. */
+    _getColumnLinePositions(metrics) {
+      const grid = metrics?.canvas;
+      if (!grid) {
+        return [];
+      }
+      const style = typeof window !== "undefined" ? window.getComputedStyle(grid) : null;
+      const gap = this._gridGapPx(style, "column");
+      const cols = metrics.cols;
+      const padL = Number.parseFloat(style?.paddingLeft || "0") || 0;
+      const padR = Number.parseFloat(style?.paddingRight || "0") || 0;
+      const innerW = Math.max(1, grid.clientWidth - padL - padR);
+      const trackW = cols > 0 ? (innerW - gap * Math.max(0, cols - 1)) / cols : innerW;
+      const lines = [];
+      for (let i = 0; i <= cols; i += 1) {
+        lines.push(padL + i * trackW + Math.max(0, i) * gap);
+      }
+      return lines;
+    }
+
+    _getRowLinePositions(metrics) {
+      const grid = metrics?.canvas;
+      if (!grid) {
+        return [];
+      }
+      const style = typeof window !== "undefined" ? window.getComputedStyle(grid) : null;
+      const rows = metrics.rows;
+      const padT = Number.parseFloat(style?.paddingTop || "0") || 0;
+      const padB = Number.parseFloat(style?.paddingBottom || "0") || 0;
+      const innerH = Math.max(1, grid.clientHeight - padT - padB);
+      const gridRect = grid.getBoundingClientRect();
+      const anchors = new Array(rows + 1).fill(null);
+      anchors[0] = padT;
+      anchors[rows] = padT + innerH;
+
+      this._draft.items
+        .filter(entry => entry.visible !== false)
+        .forEach(item => {
+          const node = this._cardEl?.shadowRoot?.querySelector(
+            `.light-card__visual-item[data-vlayout-id="${item.id}"]`,
+          );
+          if (!node) {
+            return;
+          }
+          const nodeRect = node.getBoundingClientRect();
+          const relTop = nodeRect.top - gridRect.top;
+          const relBottom = nodeRect.bottom - gridRect.top;
+          const startRow = clampInt(item.y, 0, rows);
+          const endRow = clampInt(item.y + item.h, 0, rows);
+          if (anchors[startRow] == null || relTop < anchors[startRow]) {
+            anchors[startRow] = relTop;
+          }
+          if (anchors[endRow] == null || relBottom > anchors[endRow]) {
+            anchors[endRow] = relBottom;
+          }
+        });
+
+      let index = 0;
+      while (index <= rows) {
+        if (anchors[index] != null) {
+          index += 1;
+          continue;
+        }
+        let next = index;
+        while (next <= rows && anchors[next] == null) {
+          next += 1;
+        }
+        const prev = index - 1;
+        const y0 = prev >= 0 && anchors[prev] != null ? anchors[prev] : padT;
+        const y1 = next <= rows && anchors[next] != null ? anchors[next] : padT + innerH;
+        const span = Math.max(1, next - prev);
+        for (let fill = index; fill < next; fill += 1) {
+          anchors[fill] = y0 + ((fill - prev) / span) * (y1 - y0);
+        }
+        index = next;
+      }
+      return anchors;
+    }
+
     _cellRectFromGrid(item) {
       const metrics = this._getCanvasMetrics();
-      if (!metrics || !item) {
+      const stage = this._getLiveStage();
+      if (!metrics || !item || !stage) {
         return null;
       }
-      const { gap, pad, cellW, cellH } = metrics;
-      const left = pad + item.x * (cellW + gap);
-      const top = pad + item.y * (cellH + gap);
-      const width = item.w * cellW + (item.w - 1) * gap;
-      const height = item.h * cellH + (item.h - 1) * gap;
-      return { left, top, width, height, right: left + width, bottom: top + height };
+      const colLines = this._getColumnLinePositions(metrics);
+      const rowLines = this._getRowLinePositions(metrics);
+      const x0 = item.x;
+      const x1 = item.x + item.w;
+      const y0 = item.y;
+      const y1 = item.y + item.h;
+      if (
+        colLines[x0] == null
+        || colLines[x1] == null
+        || rowLines[y0] == null
+        || rowLines[y1] == null
+      ) {
+        return null;
+      }
+      const gridRect = metrics.canvas.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      const left = colLines[x0] + gridRect.left - stageRect.left;
+      const top = rowLines[y0] + gridRect.top - stageRect.top;
+      const width = colLines[x1] - colLines[x0];
+      const height = rowLines[y1] - rowLines[y0];
+      return {
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+      };
     }
 
     _updateDropIndicator(item) {
@@ -671,9 +785,35 @@
       guide.style.top = `${gridRect.top - stageRect.top}px`;
       guide.style.width = `${gridRect.width}px`;
       guide.style.height = `${gridRect.height}px`;
-      guide.style.setProperty("--vlayout-cols", String(metrics.cols));
-      guide.style.setProperty("--vlayout-rows", String(metrics.rows));
       stage.classList.toggle("is-grid-guide-visible", this._gridGuideVisible);
+
+      const colLines = this._getColumnLinePositions(metrics);
+      const rowLines = this._getRowLinePositions(metrics);
+      let linesRoot = guide.querySelector(".nodalia-vlayout-grid-guide__lines");
+      if (!linesRoot) {
+        linesRoot = document.createElement("div");
+        linesRoot.className = "nodalia-vlayout-grid-guide__lines";
+        guide.appendChild(linesRoot);
+      }
+      linesRoot.innerHTML = "";
+      colLines.forEach((x, index) => {
+        if (index === 0 || index === colLines.length - 1) {
+          return;
+        }
+        const line = document.createElement("div");
+        line.className = "nodalia-vlayout-grid-guide__line nodalia-vlayout-grid-guide__line--col";
+        line.style.left = `${x}px`;
+        linesRoot.appendChild(line);
+      });
+      rowLines.forEach((y, index) => {
+        if (index === 0 || index === rowLines.length - 1) {
+          return;
+        }
+        const line = document.createElement("div");
+        line.className = "nodalia-vlayout-grid-guide__line nodalia-vlayout-grid-guide__line--row";
+        line.style.top = `${y}px`;
+        linesRoot.appendChild(line);
+      });
     }
 
     _setGridGuideVisible(visible) {
@@ -888,10 +1028,31 @@
       let x;
       let y;
       if (this._isLiveMode()) {
-        const relX = clientX - rect.left;
-        const relY = clientY - rect.top;
-        x = Math.floor((relX / Math.max(1, rect.width)) * cols);
-        y = Math.floor((relY / Math.max(1, rect.height)) * rows);
+        const gridRect = metrics.canvas.getBoundingClientRect();
+        const relX = clientX - gridRect.left;
+        const relY = clientY - gridRect.top;
+        const colLines = this._getColumnLinePositions(metrics);
+        const rowLines = this._getRowLinePositions(metrics);
+        x = 0;
+        y = 0;
+        for (let col = 0; col < colLines.length - 1; col += 1) {
+          if (relX >= colLines[col] && relX < colLines[col + 1]) {
+            x = col;
+            break;
+          }
+          if (relX >= colLines[colLines.length - 1]) {
+            x = cols - 1;
+          }
+        }
+        for (let row = 0; row < rowLines.length - 1; row += 1) {
+          if (relY >= rowLines[row] && relY < rowLines[row + 1]) {
+            y = row;
+            break;
+          }
+          if (relY >= rowLines[rowLines.length - 1]) {
+            y = rows - 1;
+          }
+        }
       } else {
         const relX = clientX - rect.left - pad;
         const relY = clientY - rect.top - pad;
@@ -1454,13 +1615,95 @@
       }
     }
 
+    _buildPaletteBlockPreviewConfig(blockId) {
+      const config = deepClone(this._ensurePreviewConfig() || this._livePreview?.getConfig?.() || {});
+      const def = getCatalogDef(this._catalog, blockId)?.default || { x: 0, y: 0, w: 4, h: 1 };
+      const w = clampInt(def.w, 1, this._draft.columns);
+      const h = clampInt(def.h, 1, this._draft.rows);
+      config.visual_layout = {
+        enabled: true,
+        columns: this._draft.columns,
+        rows: Math.max(this._draft.rows, def.y + def.h, 4),
+        items: [{
+          id: blockId,
+          x: 0,
+          y: 0,
+          w,
+          h,
+          visible: true,
+        }],
+      };
+      config.auto_expand = true;
+      return config;
+    }
+
+    _disposePaletteThumbCards() {
+      if (!Array.isArray(this._paletteThumbCards)) {
+        this._paletteThumbCards = [];
+        return;
+      }
+      this._paletteThumbCards.forEach(card => {
+        if (card?.isConnected) {
+          card.remove();
+        }
+      });
+      this._paletteThumbCards = [];
+    }
+
+    _mountPaletteThumbs(blockIds) {
+      if (!this._isLiveMode() || !Array.isArray(blockIds) || !blockIds.length) {
+        return;
+      }
+      this._disposePaletteThumbCards();
+      const dock = this._host.querySelector(".nodalia-vlayout-palette-dock");
+      if (!dock) {
+        return;
+      }
+      const tag = this._livePreview.cardTag || "nodalia-light-card";
+      const hass = typeof this._livePreview?.getHass === "function"
+        ? this._livePreview.getHass()
+        : this._livePreview?.hass;
+      blockIds.forEach(blockId => {
+        const slot = dock.querySelector(`[data-vlayout-palette-thumb="${blockId}"]`);
+        if (!slot) {
+          return;
+        }
+        slot.innerHTML = "";
+        const wrap = document.createElement("div");
+        wrap.className = "nodalia-vlayout-palette__thumb-wrap";
+        const scaler = document.createElement("div");
+        scaler.className = "nodalia-vlayout-palette__thumb-scaler";
+        const card = document.createElement(tag);
+        card.className = "nodalia-vlayout-palette__mini-card";
+        card.setAttribute("data-vlayout-editing", "true");
+        const previewWidth = Math.round(
+          this._cardEl?.clientWidth
+          || this._livePreview?.previewWidthPx
+          || 360,
+        );
+        card.style.setProperty("--nodalia-vlayout-preview-width", `${previewWidth}px`);
+        if (hass !== undefined) {
+          card.hass = hass;
+        }
+        if (typeof card._animateContentOnNextRender !== "undefined") {
+          card._animateContentOnNextRender = false;
+        }
+        card.setConfig(this._buildPaletteBlockPreviewConfig(blockId));
+        scaler.appendChild(card);
+        wrap.appendChild(scaler);
+        slot.appendChild(wrap);
+        this._paletteThumbCards.push(card);
+      });
+    }
+
     _renderPaletteDock() {
       const dock = this._host.querySelector(".nodalia-vlayout-palette-dock");
       if (!dock) {
         return;
       }
-      const palette = Object.keys(this._catalog)
-        .filter(id => !this._draft.items.some(item => item.id === id && item.visible !== false))
+      const availableIds = Object.keys(this._catalog)
+        .filter(id => !this._draft.items.some(item => item.id === id && item.visible !== false));
+      const palette = availableIds
         .map(id => `
           <button
             type="button"
@@ -1470,6 +1713,7 @@
             draggable="true"
           >
             <span class="nodalia-vlayout-palette__grip" aria-hidden="true">⠿</span>
+            <span class="nodalia-vlayout-palette__thumb-host" data-vlayout-palette-thumb="${id}"></span>
             <span class="nodalia-vlayout-palette__label">${this._label(id)}</span>
           </button>
         `)
@@ -1481,6 +1725,9 @@
           ${palette || `<span class="nodalia-vlayout-muted">${this._propsLabel("ed.light.vlayout_palette_empty", "All blocks placed")}</span>`}
         </div>
       `;
+      if (availableIds.length) {
+        window.requestAnimationFrame(() => this._mountPaletteThumbs(availableIds));
+      }
     }
 
     _renderSidebar() {
@@ -2176,6 +2423,7 @@
 
     destroy() {
       this._hideContextMenu();
+      this._disposePaletteThumbCards();
       this._detachResizeWindowListeners();
       this._resize = null;
       this._canvasAbort?.abort();
@@ -2458,33 +2706,66 @@
       gap: 8px;
     }
     .nodalia-vlayout-palette--dock .nodalia-vlayout-palette__item {
+      flex-direction: column;
+      align-items: stretch;
+      max-width: 112px;
+      min-width: 96px;
+      padding: 8px;
       width: auto;
+    }
+    .nodalia-vlayout-palette__thumb-host {
+      display: block;
+      min-height: 52px;
+      width: 100%;
+    }
+    .nodalia-vlayout-palette__thumb-wrap {
+      border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+      border-radius: 10px;
+      height: 52px;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+    }
+    .nodalia-vlayout-palette__thumb-scaler {
+      pointer-events: none;
+      transform: scale(0.36);
+      transform-origin: top left;
+      width: min(var(--nodalia-vlayout-preview-width, 360px), 280px);
+    }
+    .nodalia-vlayout-palette__mini-card {
+      display: block;
+      pointer-events: none;
+      width: 100%;
     }
     .nodalia-vlayout-grid-guide {
       box-sizing: border-box;
       display: none;
-      opacity: 0.42;
       pointer-events: none;
       position: absolute;
       z-index: 2;
-      background-image:
-        repeating-linear-gradient(
-          to right,
-          transparent,
-          transparent calc((100% / var(--vlayout-cols, 12)) - 1px),
-          color-mix(in srgb, var(--primary-color) 40%, transparent) calc((100% / var(--vlayout-cols, 12)) - 1px),
-          color-mix(in srgb, var(--primary-color) 40%, transparent) calc(100% / var(--vlayout-cols, 12))
-        ),
-        repeating-linear-gradient(
-          to bottom,
-          transparent,
-          transparent calc((100% / var(--vlayout-rows, 10)) - 1px),
-          color-mix(in srgb, var(--primary-color) 40%, transparent) calc((100% / var(--vlayout-rows, 10)) - 1px),
-          color-mix(in srgb, var(--primary-color) 40%, transparent) calc(100% / var(--vlayout-rows, 10))
-        );
     }
     .nodalia-vlayout-live-stage.is-grid-guide-visible .nodalia-vlayout-grid-guide {
       display: block;
+    }
+    .nodalia-vlayout-grid-guide__lines {
+      inset: 0;
+      position: absolute;
+    }
+    .nodalia-vlayout-grid-guide__line {
+      background: color-mix(in srgb, var(--primary-color) 42%, transparent);
+      position: absolute;
+    }
+    .nodalia-vlayout-grid-guide__line--col {
+      bottom: 0;
+      top: 0;
+      transform: translateX(-0.5px);
+      width: 1px;
+    }
+    .nodalia-vlayout-grid-guide__line--row {
+      height: 1px;
+      left: 0;
+      right: 0;
+      transform: translateY(-0.5px);
     }
     .nodalia-vlayout-grid-toggle {
       appearance: none;
@@ -2798,6 +3079,7 @@
     .nodalia-vlayout-palette__item {
       align-items: center;
       display: flex;
+      flex-direction: row;
       gap: 8px;
       text-align: left;
       width: 100%;
@@ -2812,7 +3094,14 @@
     }
     .nodalia-vlayout-palette__label {
       flex: 1;
+      font-size: 10px;
+      line-height: 1.25;
       min-width: 0;
+      text-align: center;
+    }
+    .nodalia-vlayout-palette--dock .nodalia-vlayout-palette__label {
+      flex: none;
+      width: 100%;
     }
     .nodalia-vlayout-remove-block {
       margin-top: 4px;

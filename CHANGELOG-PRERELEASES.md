@@ -8,9 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.0-alpha.19] - 2026-05-24
+## [1.2.0-alpha.20] - 2026-05-24
 
-Nineteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.19`**.
+Twentieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.20`**.
+
+### Fixed
+
+- **Visual layout editor:** grid overlay lines follow the real card grid (column `fr` tracks + row boundaries from placed blocks), so guides align with icons and blocks without changing the live preview layout.
+- **Visual layout editor:** drop indicator and pointer cell snapping use the same measured grid.
+
+### Changed
+
+- **Visual layout editor:** palette dock shows a scaled live card thumbnail for each removed block (same markup/styles as the preview), not only a text label.
+
+## [1.2.0-alpha.20] - 2026-05-24
+
+Nineteenth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.20`**.
 
 ### Added
 
