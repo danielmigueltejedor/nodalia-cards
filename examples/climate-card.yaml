@@ -6,3 +6,8 @@ show_current_temperature_chip: true
 show_humidity_chip: true
 show_mode_buttons: true
 show_step_controls: true
+show_schedule_button: true
+# Webhook that persists the schedule and creates Home Assistant automations (see examples/climate-setpoint-schedule-webhook.yaml).
+setpoint_schedule_webhook: nodalia_climate_setpoint_schedule
+# Optional override; default is input_text.nodalia_climate_schedule_<slug>
+setpoint_schedule_helper: input_text.nodalia_climate_schedule_living_room

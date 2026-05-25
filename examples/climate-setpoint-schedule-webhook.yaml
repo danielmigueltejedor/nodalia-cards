@@ -1,0 +1,51 @@
+# Automation for Nodalia Climate Card `setpoint_schedule_webhook`.
+#
+# 1. Copy `climate-setpoint-schedule-helpers.yaml` into your HA config (or create the input_text).
+# 2. Set webhook_id `nodalia_climate_setpoint_schedule` in the climate card editor.
+# 3. Optional: enable `shell_command` + `automation.reload` below to write per-slot automations from
+#    `trigger.json.automation_yaml_bundle` (see `climate-setpoint-schedule-shell.yaml`).
+
+alias: "Nodalia Climate | Sync setpoint schedule"
+mode: parallel
+max_exceeded: silent
+
+trigger:
+  - trigger: webhook
+    webhook_id: nodalia_climate_setpoint_schedule
+    allowed_methods:
+      - POST
+    local_only: true
+
+action:
+  - variables:
+      entity_id: "{{ trigger.json.entity_id | default('') }}"
+      storage_entity: "{{ trigger.json.storage_entity_id | default('') }}"
+      schedule_json: "{{ trigger.json.storage_state | default('{}') }}"
+      specs: "{{ trigger.json.automation_specs | default([]) }}"
+      prefix: "{{ trigger.json.automation_id_prefix | default('nodalia_climate_') }}"
+
+  - if:
+      - condition: template
+        value_template: "{{ storage_entity != '' }}"
+    then:
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ storage_entity }}"
+        data:
+          value: "{{ schedule_json }}"
+
+  - action: event.fire
+    event_type: nodalia_climate_setpoint_schedule_updated
+    event_data:
+      entity_id: "{{ entity_id }}"
+      storage_entity_id: "{{ storage_entity }}"
+      slot_count: "{{ specs | length }}"
+      automation_id_prefix: "{{ prefix }}"
+
+  # Optional: call your own script to create/replace automations from `automation_specs` or
+  # `automation_yaml_bundle`. Example:
+  # - action: script.nodalia_climate_install_setpoint_schedule_automations
+  #   data:
+  #     entity_id: "{{ entity_id }}"
+  #     automation_specs: "{{ specs }}"
+  #     automation_yaml_bundle: "{{ trigger.json.automation_yaml_bundle | default('') }}"

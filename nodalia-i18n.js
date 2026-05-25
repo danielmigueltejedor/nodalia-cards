@@ -664,7 +664,38 @@
           dialNoSetpoint: "Indoor temperature; thermostat has no active target yet",
           togglePower: "Turn on or off"
         },
-        dialNoSetpointHint: "No active setpoint"
+        dialNoSetpointHint: "No active setpoint",
+        schedule: {
+          openButton: "Weekly setpoint schedule",
+          popupTitle: "Weekly schedule",
+          popupHint: "Define time blocks and target temperatures, then save. A configured webhook syncs automations in Home Assistant—no need to save the dashboard.",
+          enabledLabel: "Enable schedule",
+          addSlot: "Add block",
+          emptyDay: "No blocks",
+          cancel: "Cancel",
+          save: "Save schedule",
+          saving: "Saving…",
+          close: "Close",
+          start: "Start",
+          end: "End",
+          temperature: "Setpoint",
+          remove: "Remove",
+          errors: {
+            webhookMissing: "Configure a setpoint schedule webhook in the card editor.",
+            entityMissing: "Select a climate entity first.",
+            dualRangeUnsupported: "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
+            webhookFailed: "Could not sync the schedule. Check the webhook and Home Assistant logs.",
+          },
+          day: {
+            mon: "Mon",
+            tue: "Tue",
+            wed: "Wed",
+            thu: "Thu",
+            fri: "Fri",
+            sat: "Sat",
+            sun: "Sun",
+          },
+        },
       },
       graphCard: {
         emptyHistory: "No history available"
@@ -2773,7 +2804,38 @@
           dialNoSetpoint: "Temperatura interior; el termostato no tiene consigna activa",
           togglePower: "Encender o apagar"
         },
-        dialNoSetpointHint: "Sin consigna activa"
+        dialNoSetpointHint: "Sin consigna activa",
+        schedule: {
+          openButton: "Horario semanal de consignas",
+          popupTitle: "Horario semanal",
+          popupHint: "Define franjas y consignas y pulsa Guardar. Un webhook configurado sincroniza las automatizaciones en Home Assistant sin guardar el dashboard.",
+          enabledLabel: "Activar horario",
+          addSlot: "Añadir franja",
+          emptyDay: "Sin franjas",
+          cancel: "Cancelar",
+          save: "Guardar horario",
+          saving: "Guardando…",
+          close: "Cerrar",
+          start: "Inicio",
+          end: "Fin",
+          temperature: "Consigna",
+          remove: "Quitar",
+          errors: {
+            webhookMissing: "Configura el webhook de horario en el editor de la tarjeta.",
+            entityMissing: "Selecciona primero una entidad climate.",
+            dualRangeUnsupported: "El horario semanal no está disponible con rango dual heat/cool.",
+            webhookFailed: "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
+          },
+          day: {
+            mon: "Lun",
+            tue: "Mar",
+            wed: "Mié",
+            thu: "Jue",
+            fri: "Vie",
+            sat: "Sáb",
+            sun: "Dom",
+          },
+        },
       },
       graphCard: {
         emptyHistory: "Sin historial disponible"
@@ -8144,6 +8206,30 @@
     return ccLoc.dialNoSetpointHint ?? ccEn.dialNoSetpointHint ?? "No active setpoint";
   }
 
+  function translateClimateSchedule(hass, configLang, key, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const parts = String(key || "").split(".").filter(Boolean);
+    const read = root => {
+      let cursor = root;
+      for (const part of parts) {
+        if (!cursor || typeof cursor !== "object" || !(part in cursor)) {
+          return null;
+        }
+        cursor = cursor[part];
+      }
+      return typeof cursor === "string" ? cursor : null;
+    };
+    const localized = read(strings(lang).climateCard?.schedule);
+    if (localized) {
+      return localized;
+    }
+    const english = read(strings("en").climateCard?.schedule);
+    if (english) {
+      return english;
+    }
+    return fallback;
+  }
+
   function translateHumidifierDeviceState(hass, configLang, rawValue) {
     const lang = resolveLanguage(hass, configLang);
     const k = normalizeTextKey(rawValue);
@@ -8515,6 +8601,7 @@
     translateCommonAria,
     translateClimateDialAria,
     translateClimateDialNoSetpointHint,
+    translateClimateSchedule,
     translateHumidifierDeviceState,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,
