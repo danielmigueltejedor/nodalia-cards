@@ -413,13 +413,18 @@ test("notifications translate vacuum cleaning state in smart messages", () => {
 test("climate card is registered and shipped in the HACS bundle", () => {
   const source = read("nodalia-climate-card.js");
   const build = read("scripts/build-bundle.mjs");
-  const pkg = read("package.json");
+  const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
+  const bundle = read(`nodalia-cards-${pkg.version}.js`);
   assert.match(source, /const CARD_TAG = "nodalia-climate-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
   assert.match(build, /nodalia-climate-card\.js/);
-  assert.match(pkg, /"nodalia-climate-card\.js"/);
+  assert.ok(pkg.files.includes("nodalia-climate-card.js"), "nodalia-climate-card.js should be published");
   assert.match(readme, /custom:nodalia-climate-card/);
+  assert.match(source, /"show_schedule_button", config\.show_schedule_button/);
+  assert.match(source, /"setpoint_schedule_webhook", config\.setpoint_schedule_webhook/);
+  assert.match(bundle, /show_schedule_button/);
+  assert.match(bundle, /setpoint_schedule_webhook/);
 });
 
 test("cover card is registered and shipped in the HACS bundle", () => {

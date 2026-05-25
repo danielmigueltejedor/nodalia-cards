@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.23] - 2026-05-25
+
+Twenty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.23`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and **`CARD_VERSION`** on **`nodalia-climate-card.js`**.
+
+### Added
+
+- **`nodalia-climate-card.js`:** weekly **setpoint schedule** composer (calendar-style popup, bottom-left **`mdi:calendar-clock`** button). Draft lives in memory; optional **`input_text`** helper for reload between sessions. **Save** calls a configurable **`setpoint_schedule_webhook`** (payload includes **`schedule`**, **`automation_specs`**, **`automation_yaml_bundle`**, etc.) — no Lovelace **`config-changed`** persistence for the grid.
+- **Visual editor:** **Visibility** toggle **`show_schedule_button`**; **Setpoint schedule** section (**webhook ID**, **helper entity**, **`security.allow_webhooks_for_non_admin`**). Editor strings **`ed.climate.schedule_*`** in all **`i18n/editor/*.json`** locales.
+- **Examples:** **`examples/climate-setpoint-schedule-*.yaml`** and **`examples/climate-card.yaml`** webhook/helper notes.
+
+### Fixed
+
+- **HACS bundle:** **`nodalia-cards-1.2.0-alpha.21.js`** was built before the schedule editor landed, so the visual editor never showed schedule options. Rebuilt self-contained loader **`nodalia-cards-1.2.0-alpha.23.js`** from current sources.
+- **`nodalia-editor-ui.js`:** regenerated (**`pnpm i18n:gen-editor`**) so schedule labels resolve instead of raw **`ed.climate.schedule_*`** keys.
+- **`scripts/validate-editor-i18n.mjs`:** fails if **`nodalia-editor-ui.js`** is missing any **`en.json`** key (reminder to run **`i18n:gen-editor`** before release).
+
+### Changed
+
+- **Release metadata:** bump the **`1.2.0`** line to **`1.2.0-alpha.23`**; smoke test asserts the versioned HACS bundle ships **`show_schedule_button`** / **`setpoint_schedule_webhook`** editor fields.
+
 ## [1.2.0-alpha.21] - 2026-05-24
 
 Twenty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.21`**.
