@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.25] - 2026-05-25
+
+Twenty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.25`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.25.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **Climate schedule agenda:** dragging resize grips no longer collapses blocks to the minimum — timeline DOM stays live during drag (patch in place, single re-render on release).
+- **Climate schedule editor:** manual **start/end/setpoint** edits no longer tear down the popup or reload the Lovelace view (**`change`** instead of **`input`**, **Enter** suppressed, no full re-render while typing).
+
+### Changed
+
+- **Climate schedule button:** when **±** step controls are visible, **`mdi:calendar-clock`** sits centered between **−** and **+** with the same size and style as step buttons; without step controls it stays on the dial corner at step size.
+
 ## [1.2.0-alpha.24] - 2026-05-25
 
 Twenty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.24`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.24.js`**, and **`CARD_VERSION`** on bundled card modules.
