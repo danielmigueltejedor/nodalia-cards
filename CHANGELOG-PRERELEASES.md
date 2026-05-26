@@ -12,7 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.2.0-alpha.26] - 2026-05-26
 
-Twenty-sixth **** ****: release channel **** on ****, ****, ****, ****, ****, and **** on bundled card modules.
+Twenty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.26`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.26.js`**, and **`CARD_VERSION`** on bundled card modules.
 
 ### Fixed
 
