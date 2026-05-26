@@ -831,6 +831,45 @@
     "el": "Helper αποθήκευσης (προαιρετικό)",
     "ro": "Helper stocare (opțional)"
   },
+  "ed.climate.schedule_week_starts_on": {
+    "en": "First day of week (agenda)",
+    "es": "Primer día de la semana (agenda)",
+    "zh": "每周首日（日程）",
+    "de": "Erster Wochentag (Agenda)",
+    "fr": "Premier jour de la semaine (agenda)",
+    "it": "Primo giorno della settimana (agenda)",
+    "nl": "Eerste dag van de week (agenda)",
+    "pt": "Primeiro dia da semana (agenda)",
+    "ru": "Первый день недели (расписание)",
+    "el": "Πρώτη ημέρα εβδομάδας (ατζέντα)",
+    "ro": "Prima zi a săptămânii (agendă)"
+  },
+  "ed.climate.schedule_week_starts_monday": {
+    "en": "Monday",
+    "es": "Lunes",
+    "zh": "周一",
+    "de": "Montag",
+    "fr": "Lundi",
+    "it": "Lunedì",
+    "nl": "Maandag",
+    "pt": "Segunda-feira",
+    "ru": "Понедельник",
+    "el": "Δευτέρα",
+    "ro": "Luni"
+  },
+  "ed.climate.schedule_week_starts_sunday": {
+    "en": "Sunday",
+    "es": "Domingo",
+    "zh": "周日",
+    "de": "Sonntag",
+    "fr": "Dimanche",
+    "it": "Domenica",
+    "nl": "Zondag",
+    "pt": "Domingo",
+    "ru": "Воскресенье",
+    "el": "Κυριακή",
+    "ro": "Duminică"
+  },
   "ed.climate.styles_hint_legacy": {
     "en": "Nodalia look and circular dial visuals.",
     "es": "Ajustes visuales del look Nodalia y el dial circular.",

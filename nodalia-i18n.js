@@ -668,7 +668,7 @@
         schedule: {
           openButton: "Weekly setpoint schedule",
           popupTitle: "Weekly schedule",
-          popupHint: "Define time blocks and target temperatures, then save. A configured webhook syncs automations in Home Assistant—no need to save the dashboard.",
+          popupHint: "Drag blocks on each day, resize the edges, or edit times manually. Save syncs automations through your webhook—no dashboard save.",
           enabledLabel: "Enable schedule",
           addSlot: "Add block",
           emptyDay: "No blocks",
@@ -2808,7 +2808,7 @@
         schedule: {
           openButton: "Horario semanal de consignas",
           popupTitle: "Horario semanal",
-          popupHint: "Define franjas y consignas y pulsa Guardar. Un webhook configurado sincroniza las automatizaciones en Home Assistant sin guardar el dashboard.",
+          popupHint: "Arrastra los bloques en cada día, redimensiona los bordes o edita las horas a mano. Al guardar, el webhook sincroniza las automatizaciones sin guardar el panel.",
           enabledLabel: "Activar horario",
           addSlot: "Añadir franja",
           emptyDay: "Sin franjas",

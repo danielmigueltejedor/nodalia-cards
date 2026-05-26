@@ -425,6 +425,9 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /"setpoint_schedule_webhook", config\.setpoint_schedule_webhook/);
   assert.match(bundle, /show_schedule_button/);
   assert.match(bundle, /setpoint_schedule_webhook/);
+  assert.match(source, /climate-schedule-expanded/);
+  assert.match(source, /position:\s*fixed/);
+  assert.match(source, /setpoint_schedule_week_starts_on/);
 });
 
 test("cover card is registered and shipped in the HACS bundle", () => {

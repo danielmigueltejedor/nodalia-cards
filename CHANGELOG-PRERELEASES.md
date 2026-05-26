@@ -17,6 +17,7 @@ Twenty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.23`** on **
 ### Added
 
 - **`nodalia-climate-card.js`:** weekly **setpoint schedule** composer (calendar-style popup, bottom-left **`mdi:calendar-clock`** button). Draft lives in memory; optional **`input_text`** helper for reload between sessions. **Save** calls a configurable **`setpoint_schedule_webhook`** (payload includes **`schedule`**, **`automation_specs`**, **`automation_yaml_bundle`**, etc.) — no Lovelace **`config-changed`** persistence for the grid.
+- **Schedule agenda UX:** fullscreen overlay (**`climate-schedule-expanded`**, like Calendar Card), one row per weekday with a horizontal **24h timeline**, **+** to add a block in the largest free gap (full day when empty), **drag** to move, **edge grips** to resize, and manual **start/end/setpoint** fields for the selected block. **`setpoint_schedule_week_starts_on`** (`monday` / `sunday`) in the visual editor.
 - **Visual editor:** **Visibility** toggle **`show_schedule_button`**; **Setpoint schedule** section (**webhook ID**, **helper entity**, **`security.allow_webhooks_for_non_admin`**). Editor strings **`ed.climate.schedule_*`** in all **`i18n/editor/*.json`** locales.
 - **Examples:** **`examples/climate-setpoint-schedule-*.yaml`** and **`examples/climate-card.yaml`** webhook/helper notes.
 
