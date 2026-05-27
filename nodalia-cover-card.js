@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.0-alpha.26";
+const CARD_VERSION = "1.2.0-alpha.27";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -1163,13 +1163,21 @@ class NodaliaCoverCard extends HTMLElement {
   _applySliderValue(slider, rawValue, options = {}) {
     const nextValue = clamp(Math.round(Number(rawValue)), 0, 100);
     if (!Number.isFinite(nextValue)) return;
+    const sliderKind = String(slider.dataset.coverControl || "").trim();
     slider.style.setProperty("--percentage", String(nextValue));
     slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+    const chip = this.shadowRoot?.querySelector(`[data-cover-chip="${escapeSelectorValue(sliderKind)}"]`);
+    if (chip instanceof HTMLElement) {
+      chip.textContent =
+        sliderKind === "tilt"
+          ? this._coverTiltChipText(nextValue)
+          : `${nextValue}%`;
+    }
     if (options.commit !== true) return;
     this._triggerHaptic("selection");
-    if (slider.dataset.coverControl === "position") {
+    if (sliderKind === "position") {
       this._callCover("set_cover_position", { position: nextValue });
-    } else if (slider.dataset.coverControl === "tilt") {
+    } else if (sliderKind === "tilt") {
       this._callCover("set_cover_tilt_position", { tilt_position: nextValue });
     }
   }
@@ -1242,8 +1250,8 @@ class NodaliaCoverCard extends HTMLElement {
     const openCloseIcons = resolveOpenCloseControlIcons(config.open_close_icons, state.attributes?.device_class);
     const chips = [];
     if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
-    if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip">${Math.round(position)}%</span>`);
-    if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
+    if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip" data-cover-chip="position">${Math.round(position)}%</span>`);
+    if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip" data-cover-chip="tilt">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
     const coverUiMode = this._coverControlsViewMode === "arrows" ? "arrows" : "slider";
     const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
     const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");

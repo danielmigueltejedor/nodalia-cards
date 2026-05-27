@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.27] - 2026-05-27
+
+Twenty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.27`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.27.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** position/tilt chips now update optimistically while dragging sliders (`data-cover-chip="position"` / `data-cover-chip="tilt"` + `_applySliderValue` UI patch), so feedback is immediate before Home Assistant confirms.
+
 ## [1.2.0-alpha.26] - 2026-05-26
 
 Twenty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.26`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.26.js`**, and **`CARD_VERSION`** on bundled card modules.
