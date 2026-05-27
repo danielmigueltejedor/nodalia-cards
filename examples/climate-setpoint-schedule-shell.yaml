@@ -1,4 +1,5 @@
 # Optional: write per-slot automations from the webhook payload and reload automations.
+# Guide: docs/climate-setpoint-schedule.md
 # Requires shell access to `/config` (Home Assistant OS / Supervised).
 #
 # Add to configuration.yaml:

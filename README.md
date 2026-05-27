@@ -182,7 +182,7 @@ Major internal improvements:
 - `custom:nodalia-graph-card`
 - `custom:nodalia-power-flow-card`
 - `custom:nodalia-cover-card`
-- `custom:nodalia-climate-card`
+- `custom:nodalia-climate-card` — weekly setpoint schedule via webhook: [`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`
@@ -242,6 +242,20 @@ type: custom:nodalia-calendar-card
 calendars:
   - entity: calendar.home
 ```
+
+---
+
+## Climate Card (setpoint schedule)
+
+```yaml
+type: custom:nodalia-climate-card
+entity: climate.living_room
+show_schedule_button: true
+setpoint_schedule_webhook: nodalia_climate_setpoint_schedule
+setpoint_schedule_helper: input_text.climate_schedule_dormitorios
+```
+
+Full setup (helpers, webhook automation, applying temperatures): **[`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)**. Example YAML: [`examples/climate-setpoint-schedule-webhook.yaml`](./examples/climate-setpoint-schedule-webhook.yaml).
 
 ---
 

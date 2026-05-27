@@ -793,17 +793,17 @@
     "ro": "Program consigne"
   },
   "ed.climate.schedule_section_hint": {
-    "en": "Webhook that persists the weekly schedule and creates or updates Home Assistant automations. Optional helper entity stores JSON between sessions.",
-    "es": "Webhook que guarda el horario semanal y crea o actualiza automatizaciones en Home Assistant. El helper opcional guarda el JSON entre sesiones.",
-    "zh": "Webhook 保存周计划并创建或更新 Home Assistant 自动化。可选 helper 在会话间存储 JSON。",
-    "de": "Webhook speichert den Wochenplan und erstellt oder aktualisiert Home-Assistant-Automationen. Optionaler Helper speichert JSON zwischen Sitzungen.",
-    "fr": "Webhook qui enregistre le planning hebdomadaire et crée ou met à jour les automatisations Home Assistant. Helper optionnel pour le JSON entre sessions.",
-    "it": "Webhook che salva il programma settimanale e crea o aggiorna le automazioni Home Assistant. Helper opzionale per il JSON tra le sessioni.",
-    "nl": "Webhook die het weekschema bewaart en Home Assistant-automatiseringen aanmaakt of bijwerkt. Optionele helper bewaart JSON tussen sessies.",
-    "pt": "Webhook que guarda o horário semanal e cria ou atualiza automatizações no Home Assistant. Helper opcional guarda JSON entre sessões.",
-    "ru": "Webhook сохраняет недельное расписание и создаёт или обновляет автоматизации Home Assistant. Опциональный helper хранит JSON между сессиями.",
-    "el": "Webhook που αποθηκεύει το εβδομαδιαίο πρόγραμμα και δημιουργεί ή ενημερώνει automations στο Home Assistant. Προαιρετικό helper για JSON μεταξύ συνεδριών.",
-    "ro": "Webhook care salvează programul săptămânal și creează sau actualizează automatizările Home Assistant. Helper opțional stochează JSON între sesiuni."
+    "en": "Requires a schedule webhook automation in Home Assistant and an input_text helper (create in YAML first). The webhook stores the weekly JSON; Path A or Path B applies setpoints at the scheduled times.",
+    "es": "Requiere una automatización webhook en Home Assistant y un helper input_text (créalo antes en YAML). El webhook guarda el JSON semanal; Path A o Path B aplican las consignas a la hora programada.",
+    "zh": "需要 Home Assistant 中的计划 webhook 自动化和 input_text helper（请先在 YAML 中创建）。Webhook 保存每周 JSON；Path A 或 Path B 在计划时间应用设定点。",
+    "de": "Erfordert eine Webhook-Automation in Home Assistant und einen input_text-Helper (zuerst in YAML anlegen). Der Webhook speichert das Wochen-JSON; Path A oder Path B wenden die Sollwerte zur geplanten Zeit an.",
+    "fr": "Nécessite une automatisation webhook dans Home Assistant et un helper input_text (à créer d'abord en YAML). Le webhook enregistre le JSON hebdomadaire ; Path A ou Path B applique les consignes aux heures prévues.",
+    "it": "Richiede un'automazione webhook in Home Assistant e un helper input_text (createlo prima in YAML). Il webhook salva il JSON settimanale; Path A o Path B applicano i setpoint agli orari programmati.",
+    "nl": "Vereist een webhook-automatisering in Home Assistant en een input_text-helper (eerst in YAML aanmaken). De webhook slaat de week-JSON op; Path A of Path B past setpoints toe op het geplande tijdstip.",
+    "pt": "Requer uma automatização webhook no Home Assistant e um helper input_text (crie primeiro em YAML). O webhook guarda o JSON semanal; Path A ou Path B aplicam as consignas nos horários programados.",
+    "ru": "Требуется webhook-автоматизация в Home Assistant и helper input_text (сначала создайте в YAML). Webhook сохраняет недельный JSON; Path A или Path B применяют уставки по расписанию.",
+    "el": "Απαιτεί webhook automation στο Home Assistant και input_text helper (δημιουργήστε πρώτα σε YAML). Το webhook αποθηκεύει το εβδομαδιαίο JSON· Path A ή Path B εφαρμόζουν τις consigna στις προγραμματισμένες ώρες.",
+    "ro": "Necesită o automatizare webhook în Home Assistant și un helper input_text (creați-l mai întâi în YAML). Webhook-ul salvează JSON-ul săptămânal; Path A sau Path B aplică consignele la orele programate."
   },
   "ed.climate.schedule_webhook": {
     "en": "Schedule webhook ID",
@@ -819,17 +819,17 @@
     "ro": "ID webhook program"
   },
   "ed.climate.schedule_helper": {
-    "en": "Schedule storage helper (optional)",
-    "es": "Helper de almacenamiento (opcional)",
-    "zh": "计划存储 helper（可选）",
-    "de": "Helper zur Speicherung (optional)",
-    "fr": "Helper de stockage (optionnel)",
-    "it": "Helper di archiviazione (opzionale)",
-    "nl": "Opslag-helper (optioneel)",
-    "pt": "Helper de armazenamento (opcional)",
-    "ru": "Helper хранения (необязательно)",
-    "el": "Helper αποθήκευσης (προαιρετικό)",
-    "ro": "Helper stocare (opțional)"
+    "en": "Schedule storage helper (required)",
+    "es": "Helper input_text (obligatorio)",
+    "zh": "计划存储 helper（必填）",
+    "de": "Speicher-Helper input_text (Pflicht)",
+    "fr": "Helper input_text (obligatoire)",
+    "it": "Helper input_text (obbligatorio)",
+    "nl": "Opslag-helper input_text (verplicht)",
+    "pt": "Helper input_text (obrigatório)",
+    "ru": "Helper input_text (обязательно)",
+    "el": "Helper input_text (υποχρεωτικό)",
+    "ro": "Helper input_text (obligatoriu)"
   },
   "ed.climate.schedule_week_starts_on": {
     "en": "First day of week (agenda)",

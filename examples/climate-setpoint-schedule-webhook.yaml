@@ -1,4 +1,5 @@
 # Automation for Nodalia Climate Card `setpoint_schedule_webhook`.
+# Full guide: docs/climate-setpoint-schedule.md
 #
 # 1. Copy `climate-setpoint-schedule-helpers.yaml` into your HA config (or create the input_text).
 # 2. Set webhook_id `nodalia_climate_setpoint_schedule` in the climate card editor.
@@ -16,7 +17,7 @@ trigger:
       - POST
     local_only: true
 
-action:
+actions:
   - variables:
       entity_id: "{{ trigger.json.entity_id | default('') }}"
       storage_entity: "{{ trigger.json.storage_entity_id | default('') }}"
@@ -34,8 +35,7 @@ action:
         data:
           value: "{{ schedule_json }}"
 
-  - action: event.fire
-    event_type: nodalia_climate_setpoint_schedule_updated
+  - event: nodalia_climate_setpoint_schedule_updated
     event_data:
       entity_id: "{{ entity_id }}"
       storage_entity_id: "{{ storage_entity }}"
