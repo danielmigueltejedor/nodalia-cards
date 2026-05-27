@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.2.0-alpha.27";
+const CARD_VERSION = "1.2.0-alpha.28";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1983,6 +1983,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._draftHumidity.set(this._config.entity, nextValue);
     this._updateHumidityPreview(nextValue);
 
+    const chip = this.shadowRoot?.querySelector('[data-humidifier-chip="humidity"]');
+    if (chip instanceof HTMLElement) {
+      chip.textContent = `${Math.round(nextValue)}%`;
+    }
+
     if (commit) {
       this._triggerHaptic("selection");
       this._commitHumidity(nextValue);
@@ -2385,7 +2390,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     if (config.show_target_humidity_chip !== false && supportsHumidity) {
-      chips.push(`<div class="humidifier-card__chip">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
+      chips.push(`<div class="humidifier-card__chip" data-humidifier-chip="humidity">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
     }
 
     if (config.show_mode_chip !== false && currentMode) {

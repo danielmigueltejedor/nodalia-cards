@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.27";
+const CARD_VERSION = "1.2.0-alpha.28";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2296,6 +2296,13 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
+  _patchLightActiveChip(sliderKind, text) {
+    const chip = this.shadowRoot?.querySelector(`[data-light-chip="${escapeSelectorValue(sliderKind)}"]`);
+    if (chip instanceof HTMLElement) {
+      chip.textContent = text;
+    }
+  }
+
   _applySliderValue(slider, value, options = {}) {
     const commit = options.commit === true;
 
@@ -2304,6 +2311,7 @@ class NodaliaLightCard extends HTMLElement {
         const nextValue = clamp(Number(value), 1, 100);
         this._draftBrightness.set(this._config.entity, nextValue);
         this._updateBrightnessPreview(nextValue);
+        this._patchLightActiveChip("brightness", `${Math.round(nextValue)}%`);
         if (commit) {
           this._triggerHaptic("selection");
           this._commitBrightness(nextValue);
@@ -2317,6 +2325,7 @@ class NodaliaLightCard extends HTMLElement {
         const nextKelvin = this._temperatureSliderValueToKelvin(nextValue, state);
         this._draftTemperature.set(this._config.entity, nextKelvin);
         this._updateTemperaturePreview(nextValue, state);
+        this._patchLightActiveChip("temperature", `${nextKelvin}K`);
         if (commit) {
           this._triggerHaptic("selection");
           this._commitTemperaturePreset(nextKelvin);
@@ -2328,6 +2337,7 @@ class NodaliaLightCard extends HTMLElement {
         const nextValue = clamp(Math.round(Number(value)), 0, 360);
         this._draftHue.set(this._config.entity, nextValue);
         this._updateColorPreview(nextValue);
+        this._patchLightActiveChip("color", `${nextValue}°`);
         if (commit) {
           this._triggerHaptic("selection");
           this._commitColorHue(nextValue, state);
@@ -2990,7 +3000,7 @@ class NodaliaLightCard extends HTMLElement {
         activeValueChipMarkup = `
           <span class="light-card__active-chip-shell ${modeTransition ? `light-card__active-chip-shell--${modeTransition.phase}` : ""}">
             <span class="light-card__active-chip-inner">
-              <span class="light-card__chip">${escapeHtml(activeValueChip)}</span>
+              <span class="light-card__chip" data-light-chip="${escapeHtml(displayedControlMode)}">${escapeHtml(activeValueChip)}</span>
             </span>
           </span>
         `;

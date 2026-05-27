@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.0-alpha.27";
+const CARD_VERSION = "1.2.0-alpha.28";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1825,6 +1825,11 @@ class NodaliaFanCard extends HTMLElement {
     this._draftPercentage.set(this._config.entity, nextValue);
     this._updatePercentagePreview(nextValue);
 
+    const chip = this.shadowRoot?.querySelector('[data-fan-chip="percentage"]');
+    if (chip instanceof HTMLElement) {
+      chip.textContent = `${Math.round(nextValue)}%`;
+    }
+
     if (commit) {
       this._triggerHaptic("selection");
       this._commitPercentage(nextValue);
@@ -2235,7 +2240,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     if (isOn && config.show_percentage_chip !== false && supportsPercentage) {
-      chips.push(`<span class="fan-card__chip">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
+      chips.push(`<span class="fan-card__chip" data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
     }
 
     if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
