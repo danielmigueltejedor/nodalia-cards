@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.30] - 2026-05-27
+
+Thirtieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.30`**.
+
+### Changed
+
+- **`nodalia-climate-card.js`:** setpoint schedule **`input_text`** storage now auto-picks the smallest fit: **v3 binary base64** (~**40–45 blocks** in 255 chars), **v2 packed integers** (~22–27, Path B friendly), or **v1** arrays; still reads legacy verbose JSON.
+
 ## [1.2.0-alpha.29] - 2026-05-27
 
 Twenty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.29`**.

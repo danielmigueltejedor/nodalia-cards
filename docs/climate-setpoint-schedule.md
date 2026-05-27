@@ -76,7 +76,7 @@ input_text:
   climate_schedule_dormitorios:
     name: Nodalia consignas — Dormitorios
     max: 255
-    initial: '{"v":1,"s":[]}'
+    initial: '{"v":3,"b":"","n":0}'
 ```
 
 Card config:
@@ -187,30 +187,45 @@ There is **no** automatic trigger at `end`. When a block ends, the setpoint does
 
 ### Compact storage format
 
-`storage_state` written to `input_text` uses **version 1** (not the verbose `schedule` object in the webhook):
+`storage_state` in `input_text` is **not** the verbose webhook `schedule` object. The card picks the smallest encoding that fits in **255 characters**:
+
+| Version | Shape | ~Capacity |
+|---------|--------|-----------|
+| **3** (default for many blocks) | `{"v":3,"b":"<base64>","n":12}` | **~40–45 blocks** |
+| **2** | `{"v":2,"s":[67207708,…]}` | ~22–27 blocks (Path B friendly) |
+| **1** (legacy compact) | `{"v":1,"s":[[0,140,965,21]]}` | ~14–18 blocks |
+| Verbose JSON | `{"enabled":true,"slots":[…]}` | ~2–3 blocks (still read on load) |
+
+**Version 3 (binary base64)** — 4 bytes per block (times quantized to 5 minutes, same as the agenda):
 
 ```json
-{"v":1,"s":[[0,140,965,21],[1,480,1320,19]]}
+{"v":3,"b":"BAGCHA==","n":1}
 ```
 
 | Field | Meaning |
 |-------|---------|
-| `v` | Storage format version (`1`) |
-| `e` | Optional; `0` = schedule disabled (omitted when enabled) |
-| `s` | Slot rows: `[dayIndex, startMinutes, endMinutes, temperature]` |
-| row `[..., 0]` | Optional 5th value `0` = slot disabled |
+| `v` | `3` |
+| `b` | Base64 blob: each block = 4-byte packed uint32 |
+| `n` | Block count (for decode) |
+| `e` | Optional; `0` = schedule disabled |
 
-`dayIndex`: `0` = Monday … `6` = Sunday (same order as the card agenda with week starting Monday). Times are **minutes from midnight** (`02:20` → `140`, `16:05` → `965`).
+Packed bits per block: `start/5` (9 bits) · `end/5` (9 bits) · `day` 0–6 (3 bits) · `disabled` (1 bit) · `temp−5` (8 bits).
 
-Example — your single Monday block:
+Example — Monday 02:20–16:05 @ 21 °C:
 
-| Legacy (~118 chars) | Compact (~28 chars) |
-|---------------------|---------------------|
-| `{"enabled":true,"slots":[{"id":"slot_…","day":"mon","start":"02:20","end":"16:05","temperature":21,"enabled":true}]}` | `{"v":1,"s":[[0,140,965,21]]}` |
+| Verbose (~118 chars) | v1 (~28 chars) | **v3 (~28 chars)** |
+|----------------------|----------------|---------------------|
+| full JSON with `id`, `day`, … | `{"v":1,"s":[[0,140,965,21]]}` | `{"v":3,"b":"BAGCHA==","n":1}` |
 
-Rough capacity in 255 chars: **about 14–18 slots** (vs ~2–3 with legacy JSON). The card still sends the full `schedule` object in the webhook for automations; only `input_text` uses the compact form.
+**Version 2** — array of packed integers (easier for [Path B](#path-b-single-automation-active-slot) templates):
 
-Older verbose JSON in `input_text` continues to load until the next save.
+```json
+{"v":2,"s":[67207708]}
+```
+
+Unpack in templates: `startQ = p & 511` is wrong — use `(p & 511)` for start/5, `((p >> 9) & 511) * 5` for minutes, etc. (see Path B example below).
+
+Re-save from the card to migrate older `v:1` or verbose JSON to `v:3`.
 
 ---
 
@@ -238,6 +253,8 @@ Best when you cannot use `shell_command` or prefer one automation reading the st
 
 The card’s UI uses “active slot” rules: on a given weekday, among slots where **now** is between `start` and `end`, the slot with the **latest** `start` wins.
 
+> **Storage v:3 (binary):** fits **~40 blocks** in `input_text`, but Home Assistant templates cannot decode base64 easily. For large schedules, use **[Path A](#path-a-per-slot-automations-on-disk)** (recommended) or apply on save via the webhook `schedule` / `automation_specs` payload. Path B below supports **v:1**, **v:2**, and legacy verbose JSON (re-save once to get v:2/v:3 for persistence; use Path A to apply if you have v:3).
+
 Example automation (adjust `entity_id` and `storage`):
 
 ```yaml
@@ -263,7 +280,7 @@ actions:
   - if:
       - condition: template
         value_template: >-
-          {% if parsed.v == 1 %}
+          {% if parsed.v in [1, 2, 3] %}
             {{ parsed.e | default(1) != 0 }}
           {% else %}
             {{ parsed.enabled | default(true) }}
@@ -273,7 +290,25 @@ actions:
           active: >-
             {% set ns = namespace(slot=none, start=-1) %}
             {% set day_names = ['mon','tue','wed','thu','fri','sat','sun'] %}
-            {% if parsed.v == 1 %}
+            {% if parsed.v == 2 %}
+              {% for p in parsed.s | default([]) %}
+                {% set pi = p | int %}
+                {% set start_m = (pi & 511) * 5 %}
+                {% set end_m = ((pi >> 9) & 511) * 5 %}
+                {% set slot_day = day_names[(pi >> 18) & 7] %}
+                {% if ((pi >> 21) & 1) == 0 and slot_day == today_key %}
+                  {% if start_m <= end_m %}
+                    {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
+                  {% else %}
+                    {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+                  {% endif %}
+                  {% if in_range and start_m > ns.start %}
+                    {% set ns.slot = {'temperature': ((pi >> 22) & 255) + 5} %}
+                    {% set ns.start = start_m %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% elif parsed.v == 1 %}
               {% for row in parsed.s | default([]) %}
                 {% if row | length >= 4 and (row[4] | default(1)) != 0 %}
                   {% set slot_day = day_names[row[0] | int] %}
@@ -323,7 +358,7 @@ actions:
               temperature: "{{ active.temperature }}"
 ```
 
-Runs every minute and immediately when the schedule is saved. Supports compact `v: 1` storage and legacy verbose JSON.
+Runs every minute and immediately when the schedule is saved. Supports **v:1**, **v:2**, and legacy verbose JSON. For **v:3** binary storage, use [Path A](#path-a-per-slot-automations-on-disk).
 
 ---
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0-alpha.29";
+const CARD_VERSION = "1.2.0-alpha.30";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -774,9 +774,126 @@ function normalizeSetpointScheduleConfig(rawSchedule) {
 }
 
 const SETPOINT_SCHEDULE_STORAGE_VERSION = 1;
+const SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED = 2;
+const SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY = 3;
+const SETPOINT_SCHEDULE_INPUT_TEXT_MAX = 255;
+/** Times in storage are quantized to this many minutes (matches agenda snap). */
+const SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM = SCHEDULE_TIMELINE_SNAP_MINUTES;
 
 function buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins) {
   return `c${dayIdx}_${startMins}_${endMins}`;
+}
+
+function quantizeSetpointScheduleStorageMinutes(minutes) {
+  return clamp(
+    Math.round(Number(minutes) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM) * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM,
+    0,
+    SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1,
+  );
+}
+
+function packSetpointScheduleSlot(dayIdx, startMins, endMins, temperature, enabled = true) {
+  const startQ = clamp(Math.floor(quantizeSetpointScheduleStorageMinutes(startMins) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 0, 287);
+  let endQ = clamp(Math.floor(quantizeSetpointScheduleStorageMinutes(endMins) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 0, 287);
+  if (endQ <= startQ) {
+    endQ = Math.min(startQ + Math.ceil(SCHEDULE_MIN_BLOCK_MINUTES / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 287);
+  }
+
+  const day = clamp(Number(dayIdx), 0, 6);
+  const temp = clamp(Math.round(Number(temperature)) - 5, 0, 255);
+  const disabled = enabled === false ? 1 : 0;
+
+  return (
+    startQ |
+    (endQ << 9) |
+    (day << 18) |
+    (disabled << 21) |
+    (temp << 22)
+  ) >>> 0;
+}
+
+function unpackSetpointSchedulePacked(packedValue) {
+  const packed = Number(packedValue) >>> 0;
+  const startQ = packed & 0x1FF;
+  const endQ = (packed >> 9) & 0x1FF;
+  const dayIdx = (packed >> 18) & 7;
+  const disabled = (packed >> 21) & 1;
+  const temperature = ((packed >> 22) & 0xFF) + 5;
+  const startMins = startQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
+  let endMins = endQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
+  if (endMins <= startMins) {
+    endMins = Math.min(startMins + SCHEDULE_MIN_BLOCK_MINUTES, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+  }
+
+  return {
+    id: buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins),
+    day: SETPOINT_SCHEDULE_DAY_ORDER[dayIdx] || "mon",
+    start: formatScheduleClockMinutes(startMins),
+    end: formatScheduleClockMinutes(endMins),
+    temperature,
+    enabled: disabled !== 1,
+  };
+}
+
+function encodeSetpointScheduleBinaryBase64(slots) {
+  const bytes = new Uint8Array(slots.length * 4);
+  slots.forEach((slot, index) => {
+    const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+    const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
+    const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
+    const packed = packSetpointScheduleSlot(dayIdx, startMins, endMins, slot.temperature, slot.enabled);
+    const offset = index * 4;
+    bytes[offset] = (packed >>> 24) & 0xFF;
+    bytes[offset + 1] = (packed >>> 16) & 0xFF;
+    bytes[offset + 2] = (packed >>> 8) & 0xFF;
+    bytes[offset + 3] = packed & 0xFF;
+  });
+
+  if (typeof btoa === "function") {
+    let binary = "";
+    bytes.forEach(byte => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  return "";
+}
+
+function decodeSetpointScheduleBinaryBase64(base64Value, slotCountHint = null) {
+  const raw = String(base64Value ?? "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  let bytes;
+  if (typeof atob === "function") {
+    const binary = atob(raw);
+    bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  } else {
+    return [];
+  }
+
+  const slotCount = Number.isFinite(Number(slotCountHint)) && Number(slotCountHint) > 0
+    ? Number(slotCountHint)
+    : Math.floor(bytes.length / 4);
+
+  const slots = [];
+  for (let index = 0; index < slotCount; index += 1) {
+    const offset = index * 4;
+    if (offset + 3 >= bytes.length) {
+      break;
+    }
+    const packed = (
+      (bytes[offset] << 24) |
+      (bytes[offset + 1] << 16) |
+      (bytes[offset + 2] << 8) |
+      bytes[offset + 3]
+    ) >>> 0;
+    slots.push(unpackSetpointSchedulePacked(packed));
+  }
+
+  return slots;
 }
 
 function decodeSetpointScheduleStorageState(rawState) {
@@ -789,6 +906,20 @@ function decodeSetpointScheduleStorageState(rawState) {
     const parsed = JSON.parse(trimmed);
     if (!isObject(parsed)) {
       return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+    }
+
+    if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY && typeof parsed.b === "string") {
+      const enabled = parsed.e !== 0;
+      const slots = decodeSetpointScheduleBinaryBase64(parsed.b, parsed.n);
+      return normalizeSetpointScheduleConfig({ enabled, slots });
+    }
+
+    if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED && Array.isArray(parsed.s)) {
+      const enabled = parsed.e !== 0;
+      const slots = parsed.s
+        .map(value => unpackSetpointSchedulePacked(value))
+        .filter(Boolean);
+      return normalizeSetpointScheduleConfig({ enabled, slots });
     }
 
     if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION && Array.isArray(parsed.s)) {
@@ -831,6 +962,36 @@ function decodeSetpointScheduleStorageState(rawState) {
 
 function encodeSetpointScheduleStorageState(schedule) {
   const normalized = normalizeSetpointScheduleConfig(schedule);
+  const candidates = [];
+
+  if (normalized.slots.length > 0) {
+    const packed = normalized.slots.map(slot => {
+      const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+      const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
+      const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
+      return packSetpointScheduleSlot(dayIdx, startMins, endMins, slot.temperature, slot.enabled);
+    });
+
+    const binaryPayload = {
+      v: SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY,
+      b: encodeSetpointScheduleBinaryBase64(normalized.slots),
+      n: normalized.slots.length,
+    };
+    if (normalized.enabled === false) {
+      binaryPayload.e = 0;
+    }
+    candidates.push(JSON.stringify(binaryPayload));
+
+    const packedPayload = {
+      v: SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED,
+      s: packed,
+    };
+    if (normalized.enabled === false) {
+      packedPayload.e = 0;
+    }
+    candidates.push(JSON.stringify(packedPayload));
+  }
+
   const rows = normalized.slots.map(slot => {
     const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
     const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
@@ -842,14 +1003,29 @@ function encodeSetpointScheduleStorageState(schedule) {
     return row;
   });
 
-  const payload = {
+  const legacyCompactPayload = {
     v: SETPOINT_SCHEDULE_STORAGE_VERSION,
     s: rows,
   };
   if (normalized.enabled === false) {
-    payload.e = 0;
+    legacyCompactPayload.e = 0;
   }
-  return JSON.stringify(payload);
+  candidates.push(JSON.stringify(legacyCompactPayload));
+
+  if (!normalized.slots.length) {
+    const emptyPayload = { v: SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY, b: "", n: 0 };
+    if (normalized.enabled === false) {
+      emptyPayload.e = 0;
+    }
+    candidates.push(JSON.stringify(emptyPayload));
+  }
+
+  const withinLimit = candidates.filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
+  if (withinLimit.length) {
+    return withinLimit.sort((left, right) => left.length - right.length)[0];
+  }
+
+  return candidates.sort((left, right) => left.length - right.length)[0];
 }
 
 function normalizeSetpointScheduleWeekStartsOn(value) {
