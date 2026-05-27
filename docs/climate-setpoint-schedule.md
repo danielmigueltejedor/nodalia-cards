@@ -76,7 +76,7 @@ input_text:
   climate_schedule_dormitorios:
     name: Nodalia consignas — Dormitorios
     max: 255
-    initial: '{"enabled":true,"slots":[]}'
+    initial: '{"v":1,"s":[]}'
 ```
 
 Card config:
@@ -87,7 +87,7 @@ setpoint_schedule_helper: input_text.climate_schedule_dormitorios
 
 Without this entity, the webhook cannot persist the JSON and the schedule is lost on reload. [Path B](#path-b-single-automation-active-slot) also reads from this helper.
 
-> **255 character limit:** Home Assistant `input_text` values are capped at **255 characters**. A full week with many slots may exceed this. Use fewer/shorter slots or [Path A](#path-a-per-slot-automations-on-disk) (automations on disk) when the JSON grows too large.
+> **255 character limit:** Home Assistant `input_text` values are capped at **255 characters**. The card saves a **compact format** (`v: 1`) so more slots fit; legacy verbose JSON is still read if already stored. See [Compact storage format](#compact-storage-format). If you outgrow 255 chars, use [Path A](#path-a-per-slot-automations-on-disk).
 
 ### 2. Webhook automation
 
@@ -185,6 +185,33 @@ There is **no** automatic trigger at `end`. When a block ends, the setpoint does
 
 `automation_specs` is a JSON array of automation objects (id, alias, trigger, condition, action). `automation_yaml_bundle` is the same list as YAML text ready to write to a file.
 
+### Compact storage format
+
+`storage_state` written to `input_text` uses **version 1** (not the verbose `schedule` object in the webhook):
+
+```json
+{"v":1,"s":[[0,140,965,21],[1,480,1320,19]]}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `v` | Storage format version (`1`) |
+| `e` | Optional; `0` = schedule disabled (omitted when enabled) |
+| `s` | Slot rows: `[dayIndex, startMinutes, endMinutes, temperature]` |
+| row `[..., 0]` | Optional 5th value `0` = slot disabled |
+
+`dayIndex`: `0` = Monday … `6` = Sunday (same order as the card agenda with week starting Monday). Times are **minutes from midnight** (`02:20` → `140`, `16:05` → `965`).
+
+Example — your single Monday block:
+
+| Legacy (~118 chars) | Compact (~28 chars) |
+|---------------------|---------------------|
+| `{"enabled":true,"slots":[{"id":"slot_…","day":"mon","start":"02:20","end":"16:05","temperature":21,"enabled":true}]}` | `{"v":1,"s":[[0,140,965,21]]}` |
+
+Rough capacity in 255 chars: **about 14–18 slots** (vs ~2–3 with legacy JSON). The card still sends the full `schedule` object in the webhook for automations; only `input_text` uses the compact form.
+
+Older verbose JSON in `input_text` continues to load until the next save.
+
 ---
 
 ## Path A: Per-slot automations on disk
@@ -217,7 +244,7 @@ Example automation (adjust `entity_id` and `storage`):
 alias: "Nodalia Climate | Apply active setpoint (living room)"
 mode: single
 
-trigger:
+triggers:
   - trigger: time_pattern
     minutes: "/1"
   - trigger: event
@@ -228,36 +255,62 @@ trigger:
 variables:
   entity_id: climate.living_room
   storage: input_text.nodalia_climate_schedule_living_room
-  schedule: "{{ states(storage) | from_json(default={}) }}"
-  slots: "{{ schedule.slots | default([]) }}"
+  parsed: "{{ states(storage) | from_json(default={}) }}"
   today_key: "{{ ['mon','tue','wed','thu','fri','sat','sun'][now().weekday()] }}"
   minutes_now: "{{ now().hour * 60 + now().minute }}"
 
-action:
+actions:
   - if:
       - condition: template
-        value_template: "{{ schedule.enabled | default(true) }}"
+        value_template: >-
+          {% if parsed.v == 1 %}
+            {{ parsed.e | default(1) != 0 }}
+          {% else %}
+            {{ parsed.enabled | default(true) }}
+          {% endif %}
     then:
       - variables:
           active: >-
             {% set ns = namespace(slot=none, start=-1) %}
-            {% for slot in slots if slot.enabled | default(true) %}
-              {% if slot.day == today_key %}
-                {% set start_parts = slot.start.split(':') %}
-                {% set end_parts = slot.end.split(':') %}
-                {% set start_m = start_parts[0] | int * 60 + start_parts[1] | int %}
-                {% set end_m = end_parts[0] | int * 60 + end_parts[1] | int %}
-                {% if start_m <= end_m %}
-                  {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
-                {% else %}
-                  {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+            {% set day_names = ['mon','tue','wed','thu','fri','sat','sun'] %}
+            {% if parsed.v == 1 %}
+              {% for row in parsed.s | default([]) %}
+                {% if row | length >= 4 and (row[4] | default(1)) != 0 %}
+                  {% set slot_day = day_names[row[0] | int] %}
+                  {% set start_m = row[1] | int %}
+                  {% set end_m = row[2] | int %}
+                  {% if slot_day == today_key %}
+                    {% if start_m <= end_m %}
+                      {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
+                    {% else %}
+                      {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+                    {% endif %}
+                    {% if in_range and start_m > ns.start %}
+                      {% set ns.slot = {'temperature': row[3] | float} %}
+                      {% set ns.start = start_m %}
+                    {% endif %}
+                  {% endif %}
                 {% endif %}
-                {% if in_range and start_m > ns.start %}
-                  {% set ns.slot = slot %}
-                  {% set ns.start = start_m %}
+              {% endfor %}
+            {% else %}
+              {% for slot in parsed.slots | default([]) if slot.enabled | default(true) %}
+                {% if slot.day == today_key %}
+                  {% set start_parts = slot.start.split(':') %}
+                  {% set end_parts = slot.end.split(':') %}
+                  {% set start_m = start_parts[0] | int * 60 + start_parts[1] | int %}
+                  {% set end_m = end_parts[0] | int * 60 + end_parts[1] | int %}
+                  {% if start_m <= end_m %}
+                    {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
+                  {% else %}
+                    {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+                  {% endif %}
+                  {% if in_range and start_m > ns.start %}
+                    {% set ns.slot = slot %}
+                    {% set ns.start = start_m %}
+                  {% endif %}
                 {% endif %}
-              {% endif %}
-            {% endfor %}
+              {% endfor %}
+            {% endif %}
             {{ ns.slot }}
       - if:
           - condition: template
@@ -270,7 +323,7 @@ action:
               temperature: "{{ active.temperature }}"
 ```
 
-Runs every minute and immediately when the schedule is saved.
+Runs every minute and immediately when the schedule is saved. Supports compact `v: 1` storage and legacy verbose JSON.
 
 ---
 

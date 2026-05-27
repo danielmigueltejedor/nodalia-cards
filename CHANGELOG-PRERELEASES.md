@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.29] - 2026-05-27
+
+Twenty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.29`**.
+
+### Changed
+
+- **`nodalia-climate-card.js`:** setpoint schedules saved to **`input_text`** use compact storage format **`v:1`** (`[dayIndex, startMinutes, endMinutes, temperature]`) so ~14–18 slots fit in the 255-character HA limit; legacy verbose JSON still loads on read.
+
+### Fixed
+
+- **Docs / examples:** climate setpoint schedule webhook uses script action **`event:`** (not unknown **`event.fire`**); Path B automation supports compact **`v:1`** storage.
+
 ## [1.2.0-alpha.28] - 2026-05-27
 
 Twenty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.28`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.28.js`**, and **`CARD_VERSION`** on bundled card modules.

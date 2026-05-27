@@ -6,4 +6,4 @@ input_text:
   climate_schedule_dormitorios:
     name: Nodalia consignas — Dormitorios
     max: 255
-    initial: '{"enabled":true,"slots":[]}'
+    initial: '{"v":1,"s":[]}'

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0-alpha.28";
+const CARD_VERSION = "1.2.0-alpha.29";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -773,6 +773,85 @@ function normalizeSetpointScheduleConfig(rawSchedule) {
   };
 }
 
+const SETPOINT_SCHEDULE_STORAGE_VERSION = 1;
+
+function buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins) {
+  return `c${dayIdx}_${startMins}_${endMins}`;
+}
+
+function decodeSetpointScheduleStorageState(rawState) {
+  const trimmed = String(rawState ?? "").trim();
+  if (!trimmed || trimmed === "unknown" || trimmed === "unavailable") {
+    return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!isObject(parsed)) {
+      return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+    }
+
+    if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION && Array.isArray(parsed.s)) {
+      const enabled = parsed.e !== 0;
+      const slots = parsed.s
+        .map((row, index) => {
+          if (!Array.isArray(row) || row.length < 4) {
+            return null;
+          }
+
+          const dayIdx = clamp(Number(row[0]), 0, SETPOINT_SCHEDULE_DAY_ORDER.length - 1);
+          const startMins = clamp(Number(row[1]), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          let endMins = clamp(Number(row[2]), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          const temperature = Number(row[3]);
+          const slotEnabled = row[4] === undefined || Number(row[4]) !== 0;
+
+          if (endMins <= startMins) {
+            endMins = Math.min(startMins + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          }
+
+          return {
+            id: buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins),
+            day: SETPOINT_SCHEDULE_DAY_ORDER[dayIdx] || SETPOINT_SCHEDULE_DAY_ORDER[index % 7],
+            start: formatScheduleClockMinutes(startMins),
+            end: formatScheduleClockMinutes(endMins),
+            temperature: Number.isFinite(temperature) ? temperature : 21,
+            enabled: slotEnabled,
+          };
+        })
+        .filter(Boolean);
+
+      return normalizeSetpointScheduleConfig({ enabled, slots });
+    }
+
+    return normalizeSetpointScheduleConfig(parsed);
+  } catch (_error) {
+    return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+  }
+}
+
+function encodeSetpointScheduleStorageState(schedule) {
+  const normalized = normalizeSetpointScheduleConfig(schedule);
+  const rows = normalized.slots.map(slot => {
+    const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+    const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
+    const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
+    const row = [dayIdx, startMins, endMins, slot.temperature];
+    if (slot.enabled === false) {
+      row.push(0);
+    }
+    return row;
+  });
+
+  const payload = {
+    v: SETPOINT_SCHEDULE_STORAGE_VERSION,
+    s: rows,
+  };
+  if (normalized.enabled === false) {
+    payload.e = 0;
+  }
+  return JSON.stringify(payload);
+}
+
 function normalizeSetpointScheduleWeekStartsOn(value) {
   const key = String(value ?? "monday").trim().toLowerCase();
   return key === "sunday" ? "sunday" : "monday";
@@ -1002,7 +1081,7 @@ function buildClimateSetpointScheduleWebhookBody(options = {}) {
   const storageEntityId = String(options.storageEntityId ?? "").trim();
   const friendlyName = String(options.friendlyName ?? "").trim();
   const automationSpecs = buildClimateSetpointScheduleAutomationSpecs(entityId, schedule, friendlyName);
-  const storageState = JSON.stringify(schedule);
+  const storageState = encodeSetpointScheduleStorageState(schedule);
   const automationYamlBundle = buildClimateSetpointScheduleAutomationsYaml(entityId, schedule, friendlyName);
 
   return {
@@ -1413,11 +1492,7 @@ class NodaliaClimateCard extends HTMLElement {
     );
     const rawState = storageEntityId ? String(this._hass?.states?.[storageEntityId]?.state ?? "").trim() : "";
     if (rawState && rawState !== "unknown" && rawState !== "unavailable") {
-      try {
-        return normalizeSetpointScheduleConfig(JSON.parse(rawState));
-      } catch (_error) {
-        // Fall through to legacy/empty draft.
-      }
+      return decodeSetpointScheduleStorageState(rawState);
     }
 
     const legacy = this._config?.setpoint_schedule;
