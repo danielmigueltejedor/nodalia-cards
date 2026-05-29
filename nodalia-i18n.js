@@ -451,6 +451,12 @@
         emptyBody: "Configure `entity` to show the card.",
         defaultName: "Person"
       },
+      scenes: {
+        emptyTitle: "Nodalia Scenes Card",
+        emptyBody: "Add scene entities in the card editor.",
+        defaultName: "Scenes",
+        unavailable: "Unavailable"
+      },
       entityCard: {
         binarySensor: {
           doorOpen: "Open",
@@ -664,38 +670,7 @@
           dialNoSetpoint: "Indoor temperature; thermostat has no active target yet",
           togglePower: "Turn on or off"
         },
-        dialNoSetpointHint: "No active setpoint",
-        schedule: {
-          openButton: "Weekly setpoint schedule",
-          popupTitle: "Weekly schedule",
-          popupHint: "Drag blocks on each day, resize the edges, or edit times manually. Save syncs automations through your webhook—no dashboard save.",
-          enabledLabel: "Enable schedule",
-          addSlot: "Add block",
-          emptyDay: "No blocks",
-          cancel: "Cancel",
-          save: "Save schedule",
-          saving: "Saving…",
-          close: "Close",
-          start: "Start",
-          end: "End",
-          temperature: "Setpoint",
-          remove: "Remove",
-          errors: {
-            webhookMissing: "Configure a setpoint schedule webhook in the card editor.",
-            entityMissing: "Select a climate entity first.",
-            dualRangeUnsupported: "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
-            webhookFailed: "Could not sync the schedule. Check the webhook and Home Assistant logs.",
-          },
-          day: {
-            mon: "Mon",
-            tue: "Tue",
-            wed: "Wed",
-            thu: "Thu",
-            fri: "Fri",
-            sat: "Sat",
-            sun: "Sun",
-          },
-        },
+        dialNoSetpointHint: "No active setpoint"
       },
       graphCard: {
         emptyHistory: "No history available"
@@ -2804,38 +2779,7 @@
           dialNoSetpoint: "Temperatura interior; el termostato no tiene consigna activa",
           togglePower: "Encender o apagar"
         },
-        dialNoSetpointHint: "Sin consigna activa",
-        schedule: {
-          openButton: "Horario semanal de consignas",
-          popupTitle: "Horario semanal",
-          popupHint: "Arrastra los bloques en cada día, redimensiona los bordes o edita las horas a mano. Al guardar, el webhook sincroniza las automatizaciones sin guardar el panel.",
-          enabledLabel: "Activar horario",
-          addSlot: "Añadir franja",
-          emptyDay: "Sin franjas",
-          cancel: "Cancelar",
-          save: "Guardar horario",
-          saving: "Guardando…",
-          close: "Cerrar",
-          start: "Inicio",
-          end: "Fin",
-          temperature: "Consigna",
-          remove: "Quitar",
-          errors: {
-            webhookMissing: "Configura el webhook de horario en el editor de la tarjeta.",
-            entityMissing: "Selecciona primero una entidad climate.",
-            dualRangeUnsupported: "El horario semanal no está disponible con rango dual heat/cool.",
-            webhookFailed: "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
-          },
-          day: {
-            mon: "Lun",
-            tue: "Mar",
-            wed: "Mié",
-            thu: "Jue",
-            fri: "Vie",
-            sat: "Sáb",
-            sun: "Dom",
-          },
-        },
+        dialNoSetpointHint: "Sin consigna activa"
       },
       graphCard: {
         emptyHistory: "Sin historial disponible"

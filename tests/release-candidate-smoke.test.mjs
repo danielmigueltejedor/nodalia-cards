@@ -45,6 +45,7 @@ test("card sources use nodalia-utils.js instead of inlined duplicate helpers", (
     "nodalia-fav-card.js",
     "nodalia-insignia-card.js",
     "nodalia-person-card.js",
+    "nodalia-scenes-card.js",
     "nodalia-weather-card.js",
     "nodalia-notifications-card.js",
     "nodalia-vacuum-card.js",
@@ -428,6 +429,24 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /climate-schedule-expanded/);
   assert.match(source, /position:\s*fixed/);
   assert.match(source, /setpoint_schedule_week_starts_on/);
+});
+
+test("scenes card is registered and shipped in the HACS bundle", () => {
+  const source = read("nodalia-scenes-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const sync = read("scripts/sync-standalone-embed.mjs");
+  const pkg = JSON.parse(read("package.json"));
+  const readme = read("README.md");
+  const bundle = read(`nodalia-cards-${pkg.version}.js`);
+  assert.match(source, /const CARD_TAG = "nodalia-scenes-card"/);
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
+  assert.match(source, /callService\("scene", "turn_on"/);
+  assert.match(source, /show_active/);
+  assert.match(build, /nodalia-scenes-card\.js/);
+  assert.match(sync, /nodalia-scenes-card\.js/);
+  assert.ok(pkg.files.includes("nodalia-scenes-card.js"), "nodalia-scenes-card.js should be published");
+  assert.match(readme, /custom:nodalia-scenes-card/);
+  assert.match(bundle, /callService\("scene","turn_on"/);
 });
 
 test("cover card is registered and shipped in the HACS bundle", () => {

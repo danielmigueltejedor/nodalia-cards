@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.31] - 2026-05-29
+
+Thirty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.31`**.
+
+### Added
+
+- **`nodalia-scenes-card.js`:** new Lovelace card for Home Assistant **`scene.*`** entities — grid or list layout, tap to **`scene.turn_on`**, optional more-info / hold actions, active-scene highlight, visual editor, haptics, and styles.
+
 ## [1.2.0-alpha.30] - 2026-05-27
 
 Thirtieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.30`**.

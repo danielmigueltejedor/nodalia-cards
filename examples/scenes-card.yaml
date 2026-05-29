@@ -1,0 +1,14 @@
+type: custom:nodalia-scenes-card
+name: Living room scenes
+layout: grid
+columns: 3
+show_active: true
+tap_action: activate
+hold_action: more-info
+scenes:
+  - entity: scene.living_room_relax
+  - entity: scene.living_room_movie
+    name: Movie night
+    icon: mdi:movie-open
+  - entity: scene.living_room_bright
+    icon: mdi:brightness-7
