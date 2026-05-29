@@ -287,6 +287,12 @@
     "emptyBody": "Configure `entity` to show the card.",
     "defaultName": "Persona"
   },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Add scene entities in the card editor.",
+    "defaultName": "Scenes",
+    "unavailable": "Unavailable"
+  },
   "entityCard": {
     "binarySensor": {
       "doorOpen": "Abierta",
@@ -727,13 +733,5 @@
     "check_clean_carouse": "Revisa el carrusel de limpieza",
     "audio_error": "Error de audio",
     "water_empty": "Water tank empty"
-  },
-  "powerFlow": {
-    "homeDetails": {
-      "title": "Home devices",
-      "hint": "Tap a device for more info",
-      "empty": "No sub-devices configured yet.",
-      "close": "Close"
-    }
   }
 }
