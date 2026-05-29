@@ -291,7 +291,8 @@
     "emptyTitle": "Nodalia Scenes Card",
     "emptyBody": "Add scene entities in the card editor.",
     "defaultName": "Scenes",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "active": "Active"
   },
   "entityCard": {
     "binarySensor": {
