@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.36] - 2026-05-29
+
+Thirty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.36`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** clearer active-scene feedback — accent badge, icon dot, dimmed inactive buttons, and safer last-changed detection (no false highlight on ambiguous timestamps).
+
 ## [1.2.0-alpha.35] - 2026-05-29
 
 Thirty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.35`**.

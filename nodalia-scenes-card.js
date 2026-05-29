@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.35";
+const CARD_VERSION = "1.2.0-alpha.36";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -573,6 +573,7 @@ class NodaliaScenesCard extends HTMLElement {
         emptyBody: "Add scene entities in the card editor.",
         defaultName: "Scenes",
         unavailable: "Unavailable",
+        active: "Active",
       };
     }
     const lang = NI.resolveLanguage(this._hass, this._config?.language);
@@ -582,6 +583,7 @@ class NodaliaScenesCard extends HTMLElement {
       emptyBody: scenes.emptyBody || "Add scene entities in the card editor.",
       defaultName: scenes.defaultName || "Scenes",
       unavailable: scenes.unavailable || "Unavailable",
+      active: scenes.active || "Active",
     };
   }
 
@@ -607,12 +609,25 @@ class NodaliaScenesCard extends HTMLElement {
     }
     let bestEntity = "";
     let bestTs = 0;
+    let tieCount = 0;
     entries.forEach(entry => {
-      if (Number.isFinite(entry.lastChanged) && entry.lastChanged >= bestTs) {
-        bestTs = entry.lastChanged;
+      const ts = Number.isFinite(entry.lastChanged) ? entry.lastChanged : 0;
+      if (ts <= 0) {
+        return;
+      }
+      if (ts > bestTs) {
+        bestTs = ts;
         bestEntity = entry.entity;
+        tieCount = 1;
+        return;
+      }
+      if (ts === bestTs) {
+        tieCount += 1;
       }
     });
+    if (!bestEntity || tieCount > 1) {
+      return "";
+    }
     return bestEntity;
   }
 
@@ -742,11 +757,15 @@ class NodaliaScenesCard extends HTMLElement {
   }
 
   _renderSceneButton(entry, activeEntity, styles, ui) {
-    const isActive = entry.entity === activeEntity;
+    const showActive = this._config?.show_active !== false;
+    const isActive = showActive && entry.entity === activeEntity;
     const isList = this._config?.layout === "list";
     const iconSize = parseSizeToPixels(styles.icon.size, 44);
     const listIconSize = Math.max(38, iconSize - 4);
     const bubbleSize = isList ? listIconSize : iconSize;
+    const activeBadge = isActive
+      ? `<span class="scenes-card__button-active-badge ${isList ? "scenes-card__button-active-badge--trail" : ""}">${escapeHtml(ui.active)}</span>`
+      : "";
     return `
       <button
         type="button"
@@ -755,21 +774,25 @@ class NodaliaScenesCard extends HTMLElement {
         data-unavailable="${entry.unavailable ? "true" : "false"}"
         ${entry.unavailable ? "disabled" : ""}
         aria-pressed="${isActive ? "true" : "false"}"
-        aria-label="${escapeHtml(entry.label)}"
+        aria-label="${escapeHtml(isActive ? `${entry.label} (${ui.active})` : entry.label)}"
         style="--scene-bubble-size: ${bubbleSize}px;"
       >
-        <span class="scenes-card__button-icon ${isActive ? "scenes-card__button-icon--active" : ""}">
-          ${
-            entry.picture
-              ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
-              : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
-          }
+        <span class="scenes-card__button-icon-wrap">
+          <span class="scenes-card__button-icon ${isActive ? "scenes-card__button-icon--active" : ""}">
+            ${
+              entry.picture
+                ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
+            }
+          </span>
+          ${isActive ? `<span class="scenes-card__button-icon-dot" aria-hidden="true"></span>` : ""}
         </span>
         <span class="scenes-card__button-copy">
           <span class="scenes-card__button-label">${escapeHtml(entry.label)}</span>
           ${entry.unavailable ? `<span class="scenes-card__button-state">${escapeHtml(ui.unavailable)}</span>` : ""}
+          ${!isList ? activeBadge : ""}
         </span>
-        ${isActive && isList ? `<span class="scenes-card__button-active-dot" aria-hidden="true"></span>` : ""}
+        ${isList ? activeBadge : ""}
       </button>
     `;
   }
@@ -983,6 +1006,59 @@ class NodaliaScenesCard extends HTMLElement {
           box-shadow: ${styles.active.glow};
         }
 
+        .scenes-card--has-active .scenes-card__button:not(.scenes-card__button--active):not(:disabled) {
+          filter: saturate(0.9);
+          opacity: 0.78;
+        }
+
+        .scenes-card--has-active .scenes-card__button:not(.scenes-card__button--active):not(:disabled):hover {
+          filter: none;
+          opacity: 1;
+        }
+
+        .scenes-card__button--active .scenes-card__button-label {
+          color: var(--scenes-accent);
+        }
+
+        .scenes-card__button-icon-wrap {
+          display: inline-flex;
+          flex: 0 0 auto;
+          position: relative;
+        }
+
+        .scenes-card__button-icon-dot {
+          background: var(--scenes-accent);
+          border: 2px solid color-mix(in srgb, var(--scenes-accent) 18%, var(--ha-card-background, var(--card-background-color, #fff)));
+          border-radius: 999px;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--scenes-accent) 24%, transparent);
+          height: 11px;
+          position: absolute;
+          right: -1px;
+          top: -1px;
+          width: 11px;
+        }
+
+        .scenes-card__button-active-badge {
+          background: color-mix(in srgb, var(--scenes-accent) 14%, transparent);
+          border: 1px solid color-mix(in srgb, var(--scenes-accent) 28%, transparent);
+          border-radius: 999px;
+          color: var(--scenes-accent);
+          display: inline-flex;
+          font-size: 9px;
+          font-weight: 800;
+          justify-content: center;
+          letter-spacing: 0.06em;
+          line-height: 1;
+          padding: 4px 8px;
+          text-transform: uppercase;
+          width: fit-content;
+        }
+
+        .scenes-card__button-active-badge--trail {
+          flex: 0 0 auto;
+          margin-left: auto;
+        }
+
         .scenes-card__button.is-pressing {
           animation: scenes-card-button-bounce var(--scenes-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
@@ -1061,15 +1137,6 @@ class NodaliaScenesCard extends HTMLElement {
           font-weight: 700;
           letter-spacing: 0.02em;
           text-transform: uppercase;
-        }
-
-        .scenes-card__button-active-dot {
-          background: var(--scenes-accent);
-          border-radius: 999px;
-          box-shadow: 0 0 0 3px color-mix(in srgb, var(--scenes-accent) 22%, transparent);
-          flex: 0 0 auto;
-          height: 8px;
-          width: 8px;
         }
 
         @keyframes scenes-card-fade-up {

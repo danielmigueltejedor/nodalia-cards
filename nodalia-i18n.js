@@ -455,7 +455,8 @@
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Add scene entities in the card editor.",
         defaultName: "Scenes",
-        unavailable: "Unavailable"
+        unavailable: "Unavailable",
+        active: "Active"
       },
       entityCard: {
         binarySensor: {
@@ -2565,6 +2566,13 @@
         emptyTitle: "Nodalia Person Card",
         emptyBody: "Configure `entity` to show the card.",
         defaultName: "Persona"
+      },
+      scenes: {
+        emptyTitle: "Nodalia Scenes Card",
+        emptyBody: "Añade entidades escena en el editor de la tarjeta.",
+        defaultName: "Escenas",
+        unavailable: "No disponible",
+        active: "Activa"
       },
       entityCard: {
         binarySensor: {

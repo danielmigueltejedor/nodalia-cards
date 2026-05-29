@@ -285,6 +285,13 @@
     "emptyBody": "Configure `entity` to show the card.",
     "defaultName": "Persona"
   },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Añade entidades escena en el editor de la tarjeta.",
+    "defaultName": "Escenas",
+    "unavailable": "No disponible",
+    "active": "Activa"
+  },
   "entityCard": {
     "binarySensor": {
       "doorOpen": "Abierta",
