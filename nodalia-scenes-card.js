@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.32";
+const CARD_VERSION = "1.2.0-alpha.33";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -136,6 +136,21 @@ function compactConfig(value) {
     return undefined;
   }
   return value;
+}
+
+function getByPath(target, path) {
+  const parts = String(path || "").split(".");
+  let cursor = target;
+  for (const key of parts) {
+    if (!key) {
+      return undefined;
+    }
+    if (!isObject(cursor) && !Array.isArray(cursor)) {
+      return undefined;
+    }
+    cursor = cursor[key];
+  }
+  return cursor;
 }
 
 function setByPath(target, path, value) {
@@ -858,8 +873,10 @@ class NodaliaScenesCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
+    this._config = normalizeConfig(STUB_CONFIG, { keepEmpty: true });
     this._hass = null;
+    this._entityOptionsSignature = "";
+    this._pendingEditorControlTags = new Set();
     this._showStyleSection = false;
     this._showActionsSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -871,14 +888,156 @@ class NodaliaScenesCardEditor extends HTMLElement {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
-  setConfig(config) {
-    this._config = normalizeConfig(config || {}, { keepEmpty: true });
+  set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender =
+      !this._hass ||
+      nextSignature !== this._entityOptionsSignature ||
+      !this.shadowRoot?.innerHTML;
+
+    this._hass = hass;
+    this._entityOptionsSignature = nextSignature;
+
+    if (!shouldRender) {
+      this._syncMountedPickerHass();
+      return;
+    }
+
+    const focusState = this._captureFocusState();
     this._render();
+    this._restoreFocusState(focusState);
   }
 
-  set hass(hass) {
-    this._hass = hass;
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = normalizeConfig(config || {}, { keepEmpty: true });
     this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return window.NodaliaUtils?.editorFilteredStatesSignature?.(
+      hass,
+      this._config?.language,
+      id => id.startsWith("scene."),
+    ) ?? "";
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+          return;
+        }
+
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
+  }
+
+  _syncMountedPickerHass() {
+    if (!this._hass || !this.shadowRoot) {
+      return;
+    }
+
+    this.shadowRoot.querySelectorAll("ha-entity-picker[data-field], ha-icon-picker[data-field]").forEach(control => {
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+    });
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (
+      !(
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+
+    const dataset = activeElement.dataset || {};
+    const selector = dataset.field
+      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
+      : null;
+
+    if (!selector) {
+      return null;
+    }
+
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number" &&
+      typeof activeElement.selectionEnd === "number";
+
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+
+    const canRestoreSelection =
+      focusState.type !== "checkbox" &&
+      typeof focusState.selectionStart === "number" &&
+      typeof focusState.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function";
+
+    if (!canRestoreSelection) {
+      return;
+    }
+
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Ignore unsupported inputs.
+    }
   }
 
   _editorLabel(s) {
@@ -890,9 +1049,11 @@ class NodaliaScenesCardEditor extends HTMLElement {
   }
 
   _emitConfig() {
+    const focusState = this._captureFocusState();
     const nextConfig = deepClone(this._config);
     this._config = normalizeConfig(nextConfig, { keepEmpty: true });
     this._render();
+    this._restoreFocusState(focusState);
     const base = window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig;
     const exportConfig = {
       ...base,
@@ -944,8 +1105,16 @@ class NodaliaScenesCardEditor extends HTMLElement {
       return;
     }
     event.stopPropagation();
+    const field = control.dataset.field;
     const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-    this._setFieldValue(control.dataset.field, nextValue);
+    const previousValue = getByPath(this._config, field);
+    if (String(nextValue ?? "") === String(previousValue ?? "")) {
+      return;
+    }
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+    this._setFieldValue(field, nextValue);
     this._config = normalizeConfig(this._config, { keepEmpty: true });
     this._emitConfig();
   }
@@ -955,12 +1124,14 @@ class NodaliaScenesCardEditor extends HTMLElement {
     if (toggleButton) {
       event.preventDefault();
       event.stopPropagation();
+      const focusState = this._captureFocusState();
       if (toggleButton.dataset.editorToggle === "styles") {
         this._showStyleSection = !this._showStyleSection;
       } else if (toggleButton.dataset.editorToggle === "actions") {
         this._showActionsSection = !this._showActionsSection;
       }
       this._render();
+      this._restoreFocusState(focusState);
       return;
     }
 
@@ -1050,17 +1221,16 @@ class NodaliaScenesCardEditor extends HTMLElement {
   _renderEntityPickerField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder || "";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
-          data-mounted-control="entity"
+          data-mounted-control="scene-entity"
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
-          data-placeholder="${escapeHtml(placeholder)}"
-          data-include-domains="scene"
+          data-placeholder="${escapeHtml(options.placeholder || "")}"
         ></div>
       </label>
     `;
@@ -1069,33 +1239,71 @@ class NodaliaScenesCardEditor extends HTMLElement {
   _renderIconPickerField(label, field, value, options = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder || "mdi:palette-outline";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     return `
-      <label class="editor-field editor-field--full">
+      <div class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
-        <div
-          class="editor-control-host"
-          data-mounted-control="icon-picker"
+        <ha-icon-picker
           data-field="${escapeHtml(field)}"
           data-value="${escapeHtml(inputValue)}"
-          data-placeholder="${escapeHtml(placeholder)}"
-        ></div>
-      </label>
+          value="${escapeHtml(inputValue)}"
+          ${placeholder}
+        ></ha-icon-picker>
+      </div>
     `;
   }
 
-  _mountEntityPicker(host) {
-    window.NodaliaUtils?.mountEntityPickerHost?.(host, {
-      hass: this._hass ?? this.hass,
-      onShadowValueChanged: this._onShadowValueChanged.bind(this),
-    });
-  }
+  _mountSceneEntityPicker(host) {
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
 
-  _mountIconPicker(host) {
-    window.NodaliaUtils?.mountIconPickerHost?.(host, {
-      hass: this._hass ?? this.hass,
-      onShadowValueChanged: this._onShadowValueChanged.bind(this),
-    });
+    const field = host.dataset.field || "entity";
+    const nextValue = host.dataset.value || "";
+    const placeholder = host.dataset.placeholder || "";
+    let control = null;
+
+    if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      control.includeDomains = ["scene"];
+      control.allowCustomEntity = true;
+      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("scene.");
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
+    } else if (customElements.get("ha-selector")) {
+      control = document.createElement("ha-selector");
+      control.selector = {
+        entity: {
+          domain: "scene",
+        },
+      };
+    } else {
+      control = document.createElement("input");
+      control.type = "text";
+      if (placeholder) {
+        control.placeholder = placeholder;
+      }
+    }
+
+    control.dataset.field = field;
+    control.dataset.value = nextValue;
+
+    if ("hass" in control) {
+      control.hass = this._hass;
+    }
+
+    if ("value" in control) {
+      control.value = nextValue;
+    }
+
+    if (control.tagName !== "INPUT") {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    } else {
+      control.addEventListener("change", this._onShadowInput);
+    }
+
+    host.replaceChildren(control);
   }
 
   _renderSceneEditorCard(item, index, total) {
@@ -1371,8 +1579,13 @@ class NodaliaScenesCardEditor extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
-    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="scene-entity"]').forEach(host => this._mountSceneEntityPicker(host));
+    this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(control => {
+      control.hass = this._hass;
+      control.value = control.dataset.value || "";
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    });
+    this._ensureEditorControlsReady();
   }
 }
 

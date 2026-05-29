@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.33] - 2026-05-29
+
+Thirty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.33`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** visual editor entity picker no longer closes immediately — `set hass` skips redundant re-renders, scene domain picker matches other Nodalia cards, and duplicate `value-changed` events are ignored.
+
 ## [1.2.0-alpha.32] - 2026-05-29
 
 Thirty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.32`**.
