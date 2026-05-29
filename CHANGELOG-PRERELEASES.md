@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.32] - 2026-05-29
+
+Thirty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.32`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** visual editor **Add scene** keeps draft rows while you pick an entity; empty drafts are no longer stripped before render.
+
 ## [1.2.0-alpha.31] - 2026-05-29
 
 Thirty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.31`**.
