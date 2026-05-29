@@ -287,6 +287,12 @@
     "emptyBody": "Ορίστε `entity` για να εμφανιστεί αυτή η κάρτα.",
     "defaultName": "Άτομο"
   },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Add scene entities in the card editor.",
+    "defaultName": "Scenes",
+    "unavailable": "Unavailable"
+  },
   "entityCard": {
     "binarySensor": {
       "doorOpen": "Ανοιχτή",
@@ -727,13 +733,5 @@
     "check_clean_carouse": "Check cleaning carousel",
     "audio_error": "Audio error",
     "water_empty": "Water tank empty"
-  },
-  "powerFlow": {
-    "homeDetails": {
-      "title": "Home devices",
-      "hint": "Tap a device for more info",
-      "empty": "No sub-devices configured yet.",
-      "close": "Close"
-    }
   }
 }
