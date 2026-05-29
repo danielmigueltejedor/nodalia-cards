@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.34] - 2026-05-29
+
+Thirty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.34`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** card UI aligned with the Nodalia bundle — gradient surface, icon bubble header, scene buttons with inset shadows and active-state tint, list-mode active dot, and updated default styling tokens.
+
 ## [1.2.0-alpha.33] - 2026-05-29
 
 Thirty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.33`**.

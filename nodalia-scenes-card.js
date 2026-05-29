@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.33";
+const CARD_VERSION = "1.2.0-alpha.34";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -39,25 +39,32 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      border_radius: "24px",
+      border: "1px solid var(--divider-color)",
+      border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
+      padding: "14px",
       gap: "12px",
     },
     button: {
-      min_height: "72px",
-      border_radius: "18px",
+      min_height: "68px",
+      border_radius: "20px",
       gap: "8px",
-      icon_size: "28px",
-      label_size: "13px",
+      icon_size: "24px",
+      label_size: "12px",
+    },
+    icon: {
+      size: "44px",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      color: "var(--primary-text-color)",
+      on_color: "var(--info-color, #71c0ff)",
     },
     active: {
-      border_color: "var(--primary-color)",
-      background: "color-mix(in srgb, var(--primary-color) 14%, transparent)",
-      glow: "0 10px 24px color-mix(in srgb, var(--primary-color) 18%, rgba(0, 0, 0, 0.12))",
+      border_color: "color-mix(in srgb, var(--primary-color) 34%, var(--divider-color))",
+      background: "linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 18%, transparent) 0%, color-mix(in srgb, var(--primary-color) 8%, transparent) 100%)",
+      glow: "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent), 0 14px 30px color-mix(in srgb, var(--primary-color) 18%, rgba(0, 0, 0, 0.16))",
     },
-    title_size: "18px",
+    chip_border_radius: "999px",
+    title_size: "15px",
   },
 };
 
@@ -249,6 +256,7 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
   const defaults = DEFAULT_CONFIG.styles;
   const card = styles?.card || {};
   const button = styles?.button || {};
+  const icon = styles?.icon || {};
   const active = styles?.active || {};
   return {
     card: {
@@ -266,11 +274,18 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
       label_size: sanitizeCssValue(button.label_size, defaults.button.label_size),
       min_height: sanitizeCssValue(button.min_height, defaults.button.min_height),
     },
+    icon: {
+      background: sanitizeCssValue(icon.background, defaults.icon.background),
+      color: sanitizeCssValue(icon.color, defaults.icon.color),
+      on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
+      size: sanitizeCssValue(icon.size, defaults.icon.size),
+    },
     active: {
       background: sanitizeCssValue(active.background, defaults.active.background),
       border_color: sanitizeCssValue(active.border_color, defaults.active.border_color),
       glow: sanitizeCssValue(active.glow, defaults.active.glow),
     },
+    chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
     title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
   };
 }
@@ -614,7 +629,24 @@ class NodaliaScenesCard extends HTMLElement {
 
   _renderEmptyState() {
     const ui = this._scenesUiCopy();
+    const styles = getSafeStyles(this._config?.styles);
     return `
+      <style>
+        :host { display: block; }
+        * { box-sizing: border-box; }
+        ha-card {
+          background: ${styles.card.background};
+          border: ${styles.card.border};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow};
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 8px;
+          padding: 16px;
+        }
+        .scenes-card__empty-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+        .scenes-card__empty-text { color: var(--secondary-text-color); font-size: 13px; line-height: 1.5; }
+      </style>
       <ha-card class="scenes-card scenes-card--empty">
         <div class="scenes-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
         <div class="scenes-card__empty-text">${escapeHtml(ui.emptyBody)}</div>
@@ -625,6 +657,9 @@ class NodaliaScenesCard extends HTMLElement {
   _renderSceneButton(entry, activeEntity, styles, ui) {
     const isActive = entry.entity === activeEntity;
     const isList = this._config?.layout === "list";
+    const iconSize = parseSizeToPixels(styles.icon.size, 44);
+    const listIconSize = Math.max(38, iconSize - 4);
+    const bubbleSize = isList ? listIconSize : iconSize;
     return `
       <button
         type="button"
@@ -634,16 +669,20 @@ class NodaliaScenesCard extends HTMLElement {
         ${entry.unavailable ? "disabled" : ""}
         aria-pressed="${isActive ? "true" : "false"}"
         aria-label="${escapeHtml(entry.label)}"
+        style="--scene-bubble-size: ${bubbleSize}px;"
       >
-        <span class="scenes-card__button-icon">
+        <span class="scenes-card__button-icon ${isActive ? "scenes-card__button-icon--active" : ""}">
           ${
             entry.picture
               ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
               : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
           }
         </span>
-        <span class="scenes-card__button-label">${escapeHtml(entry.label)}</span>
-        ${entry.unavailable ? `<span class="scenes-card__button-state">${escapeHtml(ui.unavailable)}</span>` : ""}
+        <span class="scenes-card__button-copy">
+          <span class="scenes-card__button-label">${escapeHtml(entry.label)}</span>
+          ${entry.unavailable ? `<span class="scenes-card__button-state">${escapeHtml(ui.unavailable)}</span>` : ""}
+        </span>
+        ${isActive && isList ? `<span class="scenes-card__button-active-dot" aria-hidden="true"></span>` : ""}
       </button>
     `;
   }
@@ -670,6 +709,16 @@ class NodaliaScenesCard extends HTMLElement {
     const isGrid = config.layout !== "list";
     const columns = clamp(Math.round(Number(config.columns) || 3), 1, 6);
     const shouldAnimate = animations.enabled && this._animateContentOnNextRender;
+    const accentColor = "var(--primary-color, #71c0ff)";
+    const hasActiveScene = Boolean(activeEntity);
+    const chipBorderRadius = escapeHtml(styles.chip_border_radius);
+    const configuredBorder = String(styles.card.border || "").trim();
+    const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
+    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} ${hasActiveScene ? "16" : "10"}%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} ${hasActiveScene ? "8" : "4"}%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+    const cardBorder = !configuredBorder || configuredBorder === defaultBorder
+      ? `1px solid color-mix(in srgb, ${accentColor} ${hasActiveScene ? "28" : "14"}%, var(--divider-color))`
+      : configuredBorder;
+    const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} ${hasActiveScene ? "12" : "6"}%, rgba(0, 0, 0, 0.16))`;
     if (shouldAnimate) {
       this._animateContentOnNextRender = false;
     }
@@ -679,27 +728,48 @@ class NodaliaScenesCard extends HTMLElement {
         :host {
           --scenes-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --scenes-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --scenes-accent: ${accentColor};
           display: block;
         }
 
         * { box-sizing: border-box; }
 
         ha-card {
-          background: ${styles.card.background};
-          border: ${styles.card.border};
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--scenes-accent) 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0) 42%),
+            ${cardBackground};
+          border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
-          box-shadow: ${styles.card.box_shadow};
+          box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: grid;
           gap: ${styles.card.gap};
           overflow: hidden;
           padding: ${styles.card.padding};
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        ha-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--scenes-accent) 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0));
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .scenes-card__header,
+        .scenes-card__grid {
+          position: relative;
+          z-index: 1;
         }
 
         .scenes-card__header {
           align-items: center;
           display: flex;
-          gap: 8px;
+          gap: 10px;
           min-width: 0;
         }
 
@@ -707,15 +777,58 @@ class NodaliaScenesCard extends HTMLElement {
           animation: scenes-card-fade-up calc(var(--scenes-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
+        .scenes-card__brand {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .scenes-card__brand-icon {
+          align-items: center;
+          background: color-mix(in srgb, var(--scenes-accent) 14%, ${styles.icon.background});
+          border: 1px solid color-mix(in srgb, var(--scenes-accent) 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+            0 8px 18px color-mix(in srgb, var(--scenes-accent) 10%, rgba(0, 0, 0, 0.12));
+          color: ${styles.icon.on_color};
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 34px;
+          justify-content: center;
+          width: 34px;
+        }
+
+        .scenes-card__brand-icon ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
         .scenes-card__title {
           font-size: ${styles.title_size};
           font-weight: 700;
           letter-spacing: -0.02em;
-          line-height: 1.2;
+          line-height: 1.15;
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .scenes-card__count-chip {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: ${chipBorderRadius};
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 0 auto;
+          font-size: 11px;
+          font-weight: 700;
+          height: 22px;
+          margin-inline-start: auto;
+          padding: 0 9px;
         }
 
         .scenes-card__grid {
@@ -730,22 +843,32 @@ class NodaliaScenesCard extends HTMLElement {
         }
 
         .scenes-card__button {
+          -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          background:
+            linear-gradient(
+              135deg,
+              color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+              color-mix(in srgb, var(--primary-text-color) 2%, transparent)
+            );
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: ${styles.button.border_radius};
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.08);
           color: var(--primary-text-color);
           cursor: pointer;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
           justify-content: center;
           min-height: ${styles.button.min_height};
           min-width: 0;
           padding: 12px 10px;
           position: relative;
           text-align: center;
+          touch-action: manipulation;
           transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
           width: 100%;
         }
@@ -753,14 +876,21 @@ class NodaliaScenesCard extends HTMLElement {
         .scenes-card__button--list {
           align-items: center;
           flex-direction: row;
+          gap: 12px;
           justify-content: flex-start;
-          min-height: 56px;
+          min-height: 58px;
           padding: 10px 14px;
           text-align: left;
         }
 
         .scenes-card__button:hover:not(:disabled) {
-          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          background:
+            linear-gradient(
+              135deg,
+              color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+              color-mix(in srgb, var(--primary-text-color) 4%, transparent)
+            );
+          border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
         }
 
         .scenes-card__button--active {
@@ -780,17 +910,29 @@ class NodaliaScenesCard extends HTMLElement {
 
         .scenes-card__button-icon {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          background: ${styles.icon.background};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+            0 8px 18px rgba(0, 0, 0, 0.1);
+          color: ${styles.icon.color};
           display: inline-flex;
           flex: 0 0 auto;
-          height: calc(${styles.button.icon_size} + 16px);
+          height: var(--scene-bubble-size);
           justify-content: center;
-          width: calc(${styles.button.icon_size} + 16px);
+          overflow: hidden;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+          width: var(--scene-bubble-size);
         }
 
-        .scenes-card__button--list .scenes-card__button-icon {
-          margin-right: 4px;
+        .scenes-card__button-icon--active {
+          background: color-mix(in srgb, var(--scenes-accent) 16%, ${styles.icon.background});
+          border-color: color-mix(in srgb, var(--scenes-accent) 30%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 10px 22px color-mix(in srgb, var(--scenes-accent) 18%, rgba(0, 0, 0, 0.14));
+          color: ${styles.icon.on_color};
         }
 
         .scenes-card__button-icon ha-icon {
@@ -804,9 +946,20 @@ class NodaliaScenesCard extends HTMLElement {
           width: 100%;
         }
 
+        .scenes-card__button-copy {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .scenes-card__button--list .scenes-card__button-copy {
+          flex: 1 1 auto;
+        }
+
         .scenes-card__button-label {
           font-size: ${styles.button.label_size};
           font-weight: 700;
+          letter-spacing: -0.01em;
           line-height: 1.25;
           max-width: 100%;
           overflow: hidden;
@@ -815,31 +968,24 @@ class NodaliaScenesCard extends HTMLElement {
         }
 
         .scenes-card__button--list .scenes-card__button-label {
-          flex: 1 1 auto;
-          min-width: 0;
           white-space: normal;
         }
 
         .scenes-card__button-state {
           color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .scenes-card--empty {
-          display: grid;
-          gap: 8px;
-        }
-
-        .scenes-card__empty-title {
-          font-size: 15px;
+          font-size: 10px;
           font-weight: 700;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
         }
 
-        .scenes-card__empty-text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
+        .scenes-card__button-active-dot {
+          background: var(--scenes-accent);
+          border-radius: 999px;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--scenes-accent) 22%, transparent);
+          flex: 0 0 auto;
+          height: 8px;
+          width: 8px;
         }
 
         @keyframes scenes-card-fade-up {
@@ -853,11 +999,17 @@ class NodaliaScenesCard extends HTMLElement {
           100% { transform: scale(1); }
         }
       </style>
-      <ha-card class="scenes-card">
+      <ha-card class="scenes-card ${hasActiveScene ? "scenes-card--has-active" : ""}">
         ${
           showTitle
             ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
-                <div class="scenes-card__title">${escapeHtml(title)}</div>
+                <div class="scenes-card__brand">
+                  <span class="scenes-card__brand-icon" aria-hidden="true">
+                    <ha-icon icon="mdi:palette-outline"></ha-icon>
+                  </span>
+                  <div class="scenes-card__title">${escapeHtml(title)}</div>
+                </div>
+                <span class="scenes-card__count-chip">${entries.length}</span>
               </div>`
             : ""
         }
@@ -1561,6 +1713,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
               ${this._renderTextField("ed.scenes.columns", "styles.button.min_height", config.styles?.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
               ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", config.styles?.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
               ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", config.styles?.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
+              ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
               ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
                 label: this._editorLabel("ed.weather.style_card_radius"),
                 field: "styles.card.border_radius",
