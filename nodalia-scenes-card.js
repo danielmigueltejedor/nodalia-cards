@@ -260,22 +260,16 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
   };
 }
 
-function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const layout = normalizeTextKey(config.layout);
-  config.layout = layout === "list" ? "list" : "grid";
-  config.columns = clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6);
-  const tap = normalizeTextKey(config.tap_action);
-  config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
-  const hold = normalizeTextKey(config.hold_action);
-  config.hold_action = HOLD_ACTIONS.has(hold) ? hold : "more-info";
-  if (!Array.isArray(config.scenes)) {
-    config.scenes = [];
+function normalizeSceneRows(rawScenes, options = {}) {
+  const keepEmpty = options.keepEmpty === true;
+  if (!Array.isArray(rawScenes)) {
+    return [];
   }
-  config.scenes = config.scenes
+
+  const rows = rawScenes
     .map(item => {
       if (typeof item === "string") {
-        return { entity: String(item).trim() };
+        return { entity: String(item).trim(), name: "", icon: "" };
       }
       if (!isObject(item)) {
         return null;
@@ -286,7 +280,21 @@ function normalizeConfig(rawConfig) {
         icon: String(item.icon || "").trim(),
       };
     })
-    .filter(item => item && item.entity);
+    .filter(item => item !== null);
+
+  return keepEmpty ? rows : rows.filter(item => item.entity);
+}
+
+function normalizeConfig(rawConfig, options = {}) {
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const layout = normalizeTextKey(config.layout);
+  config.layout = layout === "list" ? "list" : "grid";
+  config.columns = clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6);
+  const tap = normalizeTextKey(config.tap_action);
+  config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
+  const hold = normalizeTextKey(config.hold_action);
+  config.hold_action = HOLD_ACTIONS.has(hold) ? hold : "more-info";
+  config.scenes = normalizeSceneRows(config.scenes, options);
   return config;
 }
 
@@ -864,7 +872,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = normalizeConfig(config || {});
+    this._config = normalizeConfig(config || {}, { keepEmpty: true });
     this._render();
   }
 
@@ -883,10 +891,15 @@ class NodaliaScenesCardEditor extends HTMLElement {
 
   _emitConfig() {
     const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._config = normalizeConfig(nextConfig, { keepEmpty: true });
     this._render();
+    const base = window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig;
+    const exportConfig = {
+      ...base,
+      scenes: normalizeSceneRows(nextConfig.scenes, { keepEmpty: false }),
+    };
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig),
+      config: compactConfig(exportConfig),
     });
   }
 
@@ -919,7 +932,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     }
     event.stopPropagation();
     this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(this._config);
+    this._config = normalizeConfig(this._config, { keepEmpty: true });
     if (event.type === "change") {
       this._emitConfig();
     }
@@ -933,7 +946,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     event.stopPropagation();
     const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
     this._setFieldValue(control.dataset.field, nextValue);
-    this._config = normalizeConfig(this._config);
+    this._config = normalizeConfig(this._config, { keepEmpty: true });
     this._emitConfig();
   }
 
