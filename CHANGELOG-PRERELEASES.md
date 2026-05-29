@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.39] - 2026-05-29
+
+Thirty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.39`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** default tint is now a warm scene gold (`#c9a86c`) instead of theme primary blue; each scene supports an optional `color` field and a visual-editor color picker, with the card chrome following the active scene tint.
+
+## [1.2.0-alpha.38] - 2026-05-29
+
+Thirty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.38`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** scene taps no longer jump the Lovelace dashboard — scene tiles are non-focusable div controls, active-state updates happen in-place without a full re-render, and parent scroll positions (including `#view`) are captured and restored after interaction.
+
 ## [1.2.0-alpha.37] - 2026-05-29
 
 Thirty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.37`**.

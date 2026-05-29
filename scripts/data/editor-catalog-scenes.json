@@ -116,6 +116,19 @@
     "el": "Προσαρμοσμένο εικονίδιο",
     "ro": "Pictogramă personalizată"
   },
+  "ed.scenes.scene_color": {
+    "en": "Scene tint",
+    "es": "Tono de la escena",
+    "zh": "场景色调",
+    "de": "Szenen-Tönung",
+    "fr": "Teinte de la scène",
+    "it": "Tinta scena",
+    "nl": "Scènetint",
+    "pt": "Tom da cena",
+    "ru": "Оттенок сцены",
+    "el": "Απόχρωση σκηνής",
+    "ro": "Nuanță scenă"
+  },
   "ed.scenes.scene_name": {
     "en": "Label override",
     "es": "Etiqueta personalizada",
@@ -337,6 +350,19 @@
     "el": "Αφαίρεση σκηνής",
     "ro": "Elimină scena"
   },
+  "ed.scenes.styles_accent": {
+    "en": "Default scene tint",
+    "es": "Tono predeterminado",
+    "zh": "默认场景色调",
+    "de": "Standard-Szenen-Tönung",
+    "fr": "Teinte par défaut",
+    "it": "Tinta predefinita",
+    "nl": "Standaard scènetint",
+    "pt": "Tom predefinido",
+    "ru": "Оттенок по умолчанию",
+    "el": "Προεπιλεγμένη απόχρωση",
+    "ro": "Nuanță implicită"
+  },
   "ed.scenes.styles_card_section": {
     "en": "Card surface",
     "es": "Superficie de la tarjeta",
@@ -429,8 +455,8 @@
     "ro": "Scenă activă"
   },
   "ed.scenes.styles_active_hint": {
-    "en": "Border, background, and glow applied to the last activated scene button.",
-    "es": "Borde, fondo y resplandor de la última escena activada.",
+    "en": "Optional global active-state CSS overrides. Each scene can also set its own tint in the Scenes section.",
+    "es": "Anulaciones CSS globales opcionales del estado activo. Cada escena también puede definir su tono en la sección Escenas.",
     "zh": "应用于上次激活场景按钮的边框、背景与光晕。",
     "de": "Rahmen, Hintergrund und Leuchten der zuletzt aktivierten Szene.",
     "fr": "Bordure, arrière-plan et lueur du dernier bouton de scène activé.",
