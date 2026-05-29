@@ -678,6 +678,21 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
   assert.equal(editorLabels["ed.fan.style_slider_wrap_height"], "Slider container height");
 });
 
+test("scenes card scene buttons avoid focus-driven dashboard scroll jumps", () => {
+  const source = read("nodalia-scenes-card.js");
+  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onShadowPointerDown\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onShadowMouseDown\)/);
+  assert.match(
+    source,
+    /_onShadowPointerDown\(event\) \{[\s\S]*this\._findSceneButtonFromEvent\(event\)[\s\S]*event\.preventDefault\(\)/,
+  );
+  assert.match(source, /overflow-anchor: none/);
+  assert.match(source, /touch-action: manipulation/);
+  assert.match(source, /scenes-card__button-active-badge--hidden/);
+  assert.match(source, /requestAnimationFrame\(\(\) => this\._render\(\)\)/);
+  assert.doesNotMatch(source, /button\.blur\(\)/);
+});
+
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
   const source = read("nodalia-cover-card.js");
   assert.match(source, /_isCardTapAction\(action\) \{\s*return action === "body" \|\| action === "icon";\s*\}/);

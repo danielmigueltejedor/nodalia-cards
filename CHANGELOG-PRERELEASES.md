@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.37] - 2026-05-29
+
+Thirty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.37`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** tapping a scene no longer scrolls the dashboard — scene buttons suppress native focus on pointer/touch down, reserve active-badge space to avoid layout jumps, and defer the optimistic re-render to the next animation frame.
+
 ## [1.2.0-alpha.36] - 2026-05-29
 
 Thirty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.36`**.

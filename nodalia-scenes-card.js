@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.36";
+const CARD_VERSION = "1.2.0-alpha.37";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -493,7 +493,15 @@ class NodaliaScenesCard extends HTMLElement {
     this._optimisticActiveEntity = "";
     this._suppressNextSceneTap = false;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -678,6 +686,10 @@ class NodaliaScenesCard extends HTMLElement {
     this._triggerHaptic("success");
     this._hass.callService("scene", "turn_on", { entity_id: entityId });
     this._lastRenderSignature = "";
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => this._render());
+      return;
+    }
     this._render();
   }
 
@@ -706,6 +718,43 @@ class NodaliaScenesCard extends HTMLElement {
       return;
     }
     this._activateScene(entityId);
+  }
+
+  _findSceneButtonFromEvent(event) {
+    const button = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
+    if (!button || button.dataset.unavailable === "true") {
+      return null;
+    }
+    return button;
+  }
+
+  _onShadowPointerDown(event) {
+    const button = this._findSceneButtonFromEvent(event);
+    if (!button) {
+      return;
+    }
+    if (typeof event.button === "number" && event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+  }
+
+  _onShadowMouseDown(event) {
+    const button = this._findSceneButtonFromEvent(event);
+    if (!button || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+  }
+
+  _onShadowTouchStart(event) {
+    const button = this._findSceneButtonFromEvent(event);
+    if (!button) {
+      return;
+    }
+    event.preventDefault();
   }
 
   _onShadowClick(event) {
@@ -763,8 +812,8 @@ class NodaliaScenesCard extends HTMLElement {
     const iconSize = parseSizeToPixels(styles.icon.size, 44);
     const listIconSize = Math.max(38, iconSize - 4);
     const bubbleSize = isList ? listIconSize : iconSize;
-    const activeBadge = isActive
-      ? `<span class="scenes-card__button-active-badge ${isList ? "scenes-card__button-active-badge--trail" : ""}">${escapeHtml(ui.active)}</span>`
+    const activeBadge = showActive
+      ? `<span class="scenes-card__button-active-badge ${isList ? "scenes-card__button-active-badge--trail" : ""} ${isActive ? "" : "scenes-card__button-active-badge--hidden"}" ${isActive ? "" : 'aria-hidden="true"'}">${escapeHtml(ui.active)}</span>`
       : "";
     return `
       <button
@@ -847,6 +896,7 @@ class NodaliaScenesCard extends HTMLElement {
           --scenes-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           --scenes-accent: ${accentColor};
           display: block;
+          overflow-anchor: none;
         }
 
         * { box-sizing: border-box; }
@@ -862,8 +912,10 @@ class NodaliaScenesCard extends HTMLElement {
           display: grid;
           gap: ${styles.card.gap};
           overflow: hidden;
+          overflow-anchor: none;
           padding: ${styles.card.padding};
           position: relative;
+          touch-action: manipulation;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
@@ -1057,6 +1109,12 @@ class NodaliaScenesCard extends HTMLElement {
         .scenes-card__button-active-badge--trail {
           flex: 0 0 auto;
           margin-left: auto;
+        }
+
+        .scenes-card__button-active-badge--hidden {
+          opacity: 0;
+          pointer-events: none;
+          user-select: none;
         }
 
         .scenes-card__button.is-pressing {
