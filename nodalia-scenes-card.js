@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.34";
+const CARD_VERSION = "1.2.0-alpha.35";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -51,6 +51,8 @@ const DEFAULT_CONFIG = {
       gap: "8px",
       icon_size: "24px",
       label_size: "12px",
+      background: "",
+      border: "",
     },
     icon: {
       size: "44px",
@@ -198,6 +200,89 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function resolveEditorColorValue(value) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue || typeof document === "undefined") {
+    return "";
+  }
+  const probe = document.createElement("span");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.color = "";
+  probe.style.color = rawValue;
+  if (!probe.style.color) {
+    return rawValue;
+  }
+  (document.body || document.documentElement).appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved || rawValue;
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalized = String(field || "");
+  if (normalized.endsWith("icon.on_color")) {
+    return DEFAULT_CONFIG.styles.icon.on_color;
+  }
+  if (normalized.endsWith("icon.color")) {
+    return DEFAULT_CONFIG.styles.icon.color;
+  }
+  if (normalized.endsWith("icon.background")) {
+    return DEFAULT_CONFIG.styles.icon.background;
+  }
+  if (normalized.endsWith("active.border_color")) {
+    return DEFAULT_CONFIG.styles.active.border_color;
+  }
+  if (normalized.endsWith("active.background")) {
+    return DEFAULT_CONFIG.styles.active.background;
+  }
+  if (normalized.endsWith("button.background")) {
+    return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
+  }
+  if (normalized.endsWith("card.background")) {
+    return DEFAULT_CONFIG.styles.card.background;
+  }
+  return DEFAULT_CONFIG.styles.icon.on_color;
+}
+
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
@@ -268,6 +353,8 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
       padding: sanitizeCssValue(card.padding, defaults.card.padding),
     },
     button: {
+      background: sanitizeCssValue(button.background, defaults.button.background),
+      border: sanitizeCssValue(button.border, defaults.button.border),
       border_radius: sanitizeCssValue(button.border_radius, defaults.button.border_radius),
       gap: sanitizeCssValue(button.gap, defaults.button.gap),
       icon_size: sanitizeCssValue(button.icon_size, defaults.button.icon_size),
@@ -714,6 +801,13 @@ class NodaliaScenesCard extends HTMLElement {
     const chipBorderRadius = escapeHtml(styles.chip_border_radius);
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
+    const buttonBackground = String(styles.button.background || "").trim()
+      || "linear-gradient(135deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), color-mix(in srgb, var(--primary-text-color) 2%, transparent))";
+    const buttonBorder = String(styles.button.border || "").trim()
+      || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    const buttonHoverBackground = String(styles.button.background || "").trim()
+      ? buttonBackground
+      : "linear-gradient(135deg, color-mix(in srgb, var(--primary-text-color) 8%, transparent), color-mix(in srgb, var(--primary-text-color) 4%, transparent))";
     const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} ${hasActiveScene ? "16" : "10"}%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} ${hasActiveScene ? "8" : "4"}%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = !configuredBorder || configuredBorder === defaultBorder
       ? `1px solid color-mix(in srgb, ${accentColor} ${hasActiveScene ? "28" : "14"}%, var(--divider-color))`
@@ -846,13 +940,8 @@ class NodaliaScenesCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background:
-            linear-gradient(
-              135deg,
-              color-mix(in srgb, var(--primary-text-color) 5%, transparent),
-              color-mix(in srgb, var(--primary-text-color) 2%, transparent)
-            );
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: ${buttonBackground};
+          border: ${buttonBorder};
           border-radius: ${styles.button.border_radius};
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
@@ -884,12 +973,7 @@ class NodaliaScenesCard extends HTMLElement {
         }
 
         .scenes-card__button:hover:not(:disabled) {
-          background:
-            linear-gradient(
-              135deg,
-              color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-              color-mix(in srgb, var(--primary-text-color) 4%, transparent)
-            );
+          background: ${buttonHoverBackground};
           border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
         }
 
@@ -1233,6 +1317,9 @@ class NodaliaScenesCardEditor extends HTMLElement {
       const numeric = Number(input.value);
       return Number.isFinite(numeric) ? numeric : input.value;
     }
+    if (valueType === "color") {
+      return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+    }
     return input.value;
   }
 
@@ -1367,6 +1454,34 @@ class NodaliaScenesCardEditor extends HTMLElement {
           `).join("")}
         </select>
       </label>
+    `;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const tColorCustom = this._editorLabel("ed.person.custom_color");
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml(tColorCustom)}">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(tLabel)}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>
     `;
   }
 
@@ -1515,6 +1630,93 @@ class NodaliaScenesCardEditor extends HTMLElement {
           outline: none;
           padding: 10px 12px;
           width: 100%;
+        }
+        .editor-color-field {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          min-height: 46px;
+        }
+        .editor-color-picker {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 40px;
+          justify-content: center;
+          position: relative;
+          width: 40px;
+        }
+        .editor-color-picker input {
+          cursor: pointer;
+          inset: 0;
+          opacity: 0;
+          padding: 0;
+          position: absolute;
+        }
+        .editor-color-picker:hover,
+        .editor-color-picker:focus-within {
+          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+        }
+        .editor-color-swatch {
+          --editor-swatch: #71c0ff;
+          background:
+            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+          background-position: center;
+          background-size: cover, 10px 10px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          border-radius: 999px;
+          display: block;
+          height: 22px;
+          width: 22px;
+        }
+        .editor-styles-subgroup {
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+        .editor-styles-subgroup__title {
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .editor-styles-subgroup__hint {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.45;
+          margin-top: -4px;
+        }
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
         }
         .editor-toggle {
           align-items: center;
@@ -1707,23 +1909,67 @@ class NodaliaScenesCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
             <div class="editor-grid editor-grid--stacked">
-              ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
-              ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
-              ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
-              ${this._renderTextField("ed.scenes.columns", "styles.button.min_height", config.styles?.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
-              ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", config.styles?.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
-              ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", config.styles?.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
-              ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
-              ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-                label: this._editorLabel("ed.weather.style_card_radius"),
-                field: "styles.card.border_radius",
-                value: config.styles?.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
-              })}
-              ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-                label: this._editorLabel("ed.weather.style_chip_radius"),
-                field: "styles.button.border_radius",
-                value: config.styles?.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
-              })}
+              <div class="editor-styles-subgroup editor-field--full">
+                <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_card_section"))}</div>
+                <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_card_hint"))}</div>
+                ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles?.card?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles?.card?.border, { fullWidth: true })}
+                ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
+                ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+                ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
+                ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
+                  escapeHtml,
+                  field: "styles.card.border_radius",
+                  value: config.styles?.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
+                  tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+                  labels: {
+                    pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                    soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                    round: this._editorLabel("ed.entity.chip_radius_round"),
+                    square: this._editorLabel("ed.entity.chip_radius_square"),
+                  },
+                })}
+              </div>
+
+              <div class="editor-styles-subgroup editor-field--full">
+                <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_icon_section"))}</div>
+                <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_icon_hint"))}</div>
+                ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
+                ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles?.icon?.background, { fullWidth: true })}
+                ${this._renderColorField("ed.person.style_avatar_color", "styles.icon.color", config.styles?.icon?.color, { fullWidth: true })}
+                ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles?.icon?.on_color, { fullWidth: true })}
+              </div>
+
+              <div class="editor-styles-subgroup editor-field--full">
+                <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_buttons_section"))}</div>
+                <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_buttons_hint"))}</div>
+                ${this._renderColorField("ed.scenes.style_button_bg", "styles.button.background", config.styles?.button?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_button_border", "styles.button.border", config.styles?.button?.border, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_button_min_height", "styles.button.min_height", config.styles?.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
+                ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", config.styles?.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
+                ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", config.styles?.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
+                ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
+                ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                  escapeHtml,
+                  field: "styles.button.border_radius",
+                  value: config.styles?.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
+                  tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+                  labels: {
+                    pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                    soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                    round: this._editorLabel("ed.entity.chip_radius_round"),
+                    square: this._editorLabel("ed.entity.chip_radius_square"),
+                  },
+                })}
+              </div>
+
+              <div class="editor-styles-subgroup editor-field--full">
+                <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_active_section"))}</div>
+                <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_active_hint"))}</div>
+                ${this._renderColorField("ed.scenes.style_active_border", "styles.active.border_color", config.styles?.active?.border_color, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_active_bg", "styles.active.background", config.styles?.active?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_active_glow", "styles.active.glow", config.styles?.active?.glow, { fullWidth: true })}
+              </div>
             </div>
           `
               : ""

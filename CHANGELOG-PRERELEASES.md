@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.35] - 2026-05-29
+
+Thirty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.35`**.
+
+### Added
+
+- **`nodalia-scenes-card.js`:** visual editor style section now includes color pickers for card, icon bubble, scene buttons, and active-state border — grouped like other Nodalia cards, with text fields for CSS borders, shadows, and gradients.
+
 ## [1.2.0-alpha.34] - 2026-05-29
 
 Thirty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.34`**.
