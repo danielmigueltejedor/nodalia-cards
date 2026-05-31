@@ -292,7 +292,8 @@
     "emptyBody": "Add scene entities in the card editor.",
     "defaultName": "Scenes",
     "unavailable": "Unavailable",
-    "active": "Active"
+    "subtitle": "Tap a mood to launch",
+    "moods": "moods"
   },
   "entityCard": {
     "binarySensor": {
