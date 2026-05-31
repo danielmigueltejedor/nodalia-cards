@@ -1,7 +1,8 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.39";
+const CARD_VERSION = "1.2.0-alpha.40";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
+const SCENE_LAUNCH_DURATION = 920;
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -22,7 +23,6 @@ const DEFAULT_CONFIG = {
   layout: "grid",
   columns: 3,
   show_title: true,
-  show_active: true,
   use_entity_icon: true,
   use_entity_picture: false,
   tap_action: "activate",
@@ -36,6 +36,7 @@ const DEFAULT_CONFIG = {
     enabled: true,
     content_duration: 420,
     button_bounce_duration: 320,
+    launch_duration: SCENE_LAUNCH_DURATION,
   },
   styles: {
     accent: DEFAULT_SCENE_ACCENT,
@@ -48,8 +49,8 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     button: {
-      min_height: "68px",
-      border_radius: "20px",
+      min_height: "88px",
+      border_radius: "22px",
       gap: "8px",
       icon_size: "24px",
       label_size: "12px",
@@ -61,11 +62,6 @@ const DEFAULT_CONFIG = {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: DEFAULT_SCENE_ACCENT,
-    },
-    active: {
-      border_color: "",
-      background: "",
-      glow: "",
     },
     chip_border_radius: "999px",
     title_size: "15px",
@@ -270,12 +266,6 @@ function getEditorColorFallbackValue(field) {
   if (normalized.endsWith("icon.background")) {
     return DEFAULT_CONFIG.styles.icon.background;
   }
-  if (normalized.endsWith("active.border_color")) {
-    return DEFAULT_SCENE_ACCENT;
-  }
-  if (normalized.endsWith("active.background")) {
-    return DEFAULT_SCENE_ACCENT;
-  }
   if (normalized.endsWith("button.background")) {
     return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
   }
@@ -444,7 +434,6 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
   const card = styles?.card || {};
   const button = styles?.button || {};
   const icon = styles?.icon || {};
-  const active = styles?.active || {};
   return {
     accent: getDefaultSceneAccent(styles),
     card: {
@@ -469,11 +458,6 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
       color: sanitizeCssValue(icon.color, defaults.icon.color),
       on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
       size: sanitizeCssValue(icon.size, defaults.icon.size),
-    },
-    active: {
-      background: sanitizeCssValue(active.background, defaults.active.background),
-      border_color: sanitizeCssValue(active.border_color, defaults.active.border_color),
-      glow: sanitizeCssValue(active.glow, defaults.active.glow),
     },
     chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
     title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
@@ -575,7 +559,6 @@ function resolveSceneEntries(config, hass) {
         accent,
         index,
         unavailable: !state || isUnavailableState(state),
-        lastChanged: state?.last_changed ? Date.parse(state.last_changed) : 0,
       };
     })
     .filter(Boolean);
@@ -597,7 +580,7 @@ class NodaliaScenesCard extends HTMLElement {
     this._hass = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
-    this._optimisticActiveEntity = "";
+    this._launchAnimationTimers = new Map();
     this._suppressNextSceneTap = false;
     this._interactionScrollSnapshot = null;
     this._sceneInteractionScrollUntil = 0;
@@ -640,6 +623,8 @@ class NodaliaScenesCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
+    this._launchAnimationTimers?.forEach(timer => window.clearTimeout(timer));
+    this._launchAnimationTimers?.clear();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -677,6 +662,7 @@ class NodaliaScenesCard extends HTMLElement {
       enabled: animations.enabled !== false,
       contentDuration: clamp(Math.round(Number(animations.content_duration) || 420), 0, 2000),
       buttonBounceDuration: clamp(Math.round(Number(animations.button_bounce_duration) || 320), 0, 1200),
+      launchDuration: clamp(Math.round(Number(animations.launch_duration) || SCENE_LAUNCH_DURATION), 240, 2400),
     };
   }
 
@@ -688,7 +674,8 @@ class NodaliaScenesCard extends HTMLElement {
         emptyBody: "Add scene entities in the card editor.",
         defaultName: "Scenes",
         unavailable: "Unavailable",
-        active: "Active",
+        subtitle: "Tap a mood to launch",
+        moods: "moods",
       };
     }
     const lang = NI.resolveLanguage(this._hass, this._config?.language);
@@ -698,52 +685,18 @@ class NodaliaScenesCard extends HTMLElement {
       emptyBody: scenes.emptyBody || "Add scene entities in the card editor.",
       defaultName: scenes.defaultName || "Scenes",
       unavailable: scenes.unavailable || "Unavailable",
-      active: scenes.active || "Active",
+      subtitle: scenes.subtitle || "Tap a mood to launch",
+      moods: scenes.moods || "moods",
     };
   }
 
   _getRenderSignature() {
     const entries = resolveSceneEntries(this._config, this._hass);
-    const active = this._getActiveSceneEntity(entries);
     return [
       CARD_VERSION,
       JSON.stringify(this._config),
-      entries.map(entry => `${entry.entity}:${entry.unavailable}:${entry.lastChanged}:${entry.accent}`).join("|"),
-      active,
-      this._optimisticActiveEntity,
+      entries.map(entry => `${entry.entity}:${entry.unavailable}:${entry.accent}`).join("|"),
     ].join("::");
-  }
-
-  _getActiveSceneEntity(entries) {
-    if (this._config?.show_active === false) {
-      return "";
-    }
-    const optimistic = String(this._optimisticActiveEntity || "").trim();
-    if (optimistic && entries.some(entry => entry.entity === optimistic)) {
-      return optimistic;
-    }
-    let bestEntity = "";
-    let bestTs = 0;
-    let tieCount = 0;
-    entries.forEach(entry => {
-      const ts = Number.isFinite(entry.lastChanged) ? entry.lastChanged : 0;
-      if (ts <= 0) {
-        return;
-      }
-      if (ts > bestTs) {
-        bestTs = ts;
-        bestEntity = entry.entity;
-        tieCount = 1;
-        return;
-      }
-      if (ts === bestTs) {
-        tieCount += 1;
-      }
-    });
-    if (!bestEntity || tieCount > 1) {
-      return "";
-    }
-    return bestEntity;
   }
 
   _canRunHoldAction(entityId) {
@@ -768,14 +721,38 @@ class NodaliaScenesCard extends HTMLElement {
     }
   }
 
-  _triggerPressAnimation(button) {
-    if (!(button instanceof HTMLElement)) {
+  _triggerPressAnimation(tile) {
+    if (!(tile instanceof HTMLElement)) {
       return;
     }
-    button.classList.remove("is-pressing");
-    void button.offsetWidth;
-    button.classList.add("is-pressing");
-    window.setTimeout(() => button.classList.remove("is-pressing"), this._getAnimationSettings().buttonBounceDuration);
+    tile.classList.remove("is-pressing");
+    void tile.offsetWidth;
+    tile.classList.add("is-pressing");
+    window.setTimeout(
+      () => tile.classList.remove("is-pressing"),
+      this._getAnimationSettings().buttonBounceDuration,
+    );
+  }
+
+  _triggerLaunchAnimation(tile) {
+    if (!(tile instanceof HTMLElement)) {
+      return;
+    }
+    const duration = this._getAnimationSettings().launchDuration;
+    const existingTimer = this._launchAnimationTimers.get(tile);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+    tile.classList.remove("scenes-card__tile--launching");
+    void tile.offsetWidth;
+    tile.classList.add("scenes-card__tile--launching");
+    this._launchAnimationTimers.set(
+      tile,
+      window.setTimeout(() => {
+        tile.classList.remove("scenes-card__tile--launching");
+        this._launchAnimationTimers.delete(tile);
+      }, duration),
+    );
   }
 
   _openMoreInfo(entityId) {
@@ -805,90 +782,15 @@ class NodaliaScenesCard extends HTMLElement {
     }
   }
 
-  _syncActiveSceneUi() {
-    const root = this.shadowRoot;
-    if (!root) {
-      return false;
-    }
-
-    const config = this._config || {};
-    const entries = resolveSceneEntries(config, this._hass);
-    const ui = this._scenesUiCopy();
-    const showActive = config.show_active !== false;
-    const activeEntity = this._getActiveSceneEntity(entries);
-    const hasActiveScene = Boolean(activeEntity);
-    const isList = config.layout === "list";
-    const card = root.querySelector("ha-card.scenes-card");
-
-    if (!card) {
-      return false;
-    }
-
-    card.classList.toggle("scenes-card--has-active", hasActiveScene);
-
-    const activeNode = root.querySelector(".scenes-card__button--active");
-    const cardAccent = activeNode?.style.getPropertyValue("--scene-accent")?.trim()
-      || getDefaultSceneAccent(getSafeStyles(config));
-    this.style.setProperty("--scenes-accent", cardAccent);
-
-    root.querySelectorAll("[data-scene-entity]").forEach(node => {
-      if (!(node instanceof HTMLElement)) {
-        return;
-      }
-
-      const entityId = String(node.dataset.sceneEntity || "");
-      const entry = entries.find(item => item.entity === entityId);
-      if (!entry) {
-        return;
-      }
-
-      const isActive = showActive && entityId === activeEntity;
-      node.classList.toggle("scenes-card__button--active", isActive);
-      node.setAttribute("aria-pressed", isActive ? "true" : "false");
-      node.setAttribute(
-        "aria-label",
-        isActive ? `${entry.label} (${ui.active})` : entry.label,
-      );
-
-      node.querySelector(".scenes-card__button-icon")
-        ?.classList.toggle("scenes-card__button-icon--active", isActive);
-
-      const wrap = node.querySelector(".scenes-card__button-icon-wrap");
-      let dot = node.querySelector(".scenes-card__button-icon-dot");
-      if (isActive && wrap && !dot) {
-        wrap.insertAdjacentHTML("beforeend", '<span class="scenes-card__button-icon-dot" aria-hidden="true"></span>');
-      } else if (!isActive && dot) {
-        dot.remove();
-      }
-
-      const badge = node.querySelector(".scenes-card__button-active-badge");
-      if (badge && showActive) {
-        badge.classList.toggle("scenes-card__button-active-badge--hidden", !isActive);
-        if (isActive) {
-          badge.removeAttribute("aria-hidden");
-        } else {
-          badge.setAttribute("aria-hidden", "true");
-        }
-      }
-    });
-
-    this._lastRenderSignature = this._getRenderSignature();
-    return true;
-  }
-
   _activateScene(entityId) {
     if (!this._hass || !entityId) {
       return;
     }
-    this._optimisticActiveEntity = entityId;
     this._triggerHaptic("success");
     this._hass.callService("scene", "turn_on", { entity_id: entityId });
-    const scrollSnapshot = this._interactionScrollSnapshot || this._captureDashboardScrollSnapshot();
-    if (!this._syncActiveSceneUi()) {
-      this._lastRenderSignature = "";
-      this._render();
-    }
-    this._scheduleDashboardScrollRestore(scrollSnapshot);
+    const tile = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
+    this._triggerLaunchAnimation(tile);
+    this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
   }
 
   _performTapAction(entityId) {
@@ -1016,44 +918,38 @@ class NodaliaScenesCard extends HTMLElement {
     `;
   }
 
-  _renderSceneButton(entry, activeEntity, styles, ui) {
-    const showActive = this._config?.show_active !== false;
-    const isActive = showActive && entry.entity === activeEntity;
-    const isList = this._config?.layout === "list";
+  _renderSceneTile(entry, styles, ui, isList) {
     const iconSize = parseSizeToPixels(styles.icon.size, 44);
-    const listIconSize = Math.max(38, iconSize - 4);
-    const bubbleSize = isList ? listIconSize : iconSize;
-    const activeBadge = showActive
-      ? `<span class="scenes-card__button-active-badge ${isList ? "scenes-card__button-active-badge--trail" : ""} ${isActive ? "" : "scenes-card__button-active-badge--hidden"}" ${isActive ? "" : 'aria-hidden="true"'}">${escapeHtml(ui.active)}</span>`
-      : "";
+    const listIconSize = Math.max(42, iconSize - 2);
+    const bubbleSize = isList ? listIconSize : Math.max(46, iconSize + 2);
+    const tileClass = isList ? "scenes-card__tile scenes-card__tile--list" : "scenes-card__tile scenes-card__tile--grid";
     return `
       <div
         role="button"
         tabindex="-1"
-        class="scenes-card__button ${isActive ? "scenes-card__button--active" : ""} ${isList ? "scenes-card__button--list" : ""}"
+        class="${tileClass}"
         data-scene-entity="${escapeHtml(entry.entity)}"
         data-unavailable="${entry.unavailable ? "true" : "false"}"
         ${entry.unavailable ? 'aria-disabled="true"' : ""}
-        aria-pressed="${isActive ? "true" : "false"}"
-        aria-label="${escapeHtml(isActive ? `${entry.label} (${ui.active})` : entry.label)}"
+        aria-label="${escapeHtml(entry.label)}"
         style="--scene-accent: ${escapeHtml(entry.accent)}; --scene-bubble-size: ${bubbleSize}px;"
       >
-        <span class="scenes-card__button-icon-wrap">
-          <span class="scenes-card__button-icon ${isActive ? "scenes-card__button-icon--active" : ""}">
+        <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
+        <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
+        <span class="scenes-card__tile-launch" aria-hidden="true"></span>
+        <span class="scenes-card__tile-body">
+          <span class="scenes-card__tile-icon">
             ${
               entry.picture
                 ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
                 : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
             }
           </span>
-          ${isActive ? `<span class="scenes-card__button-icon-dot" aria-hidden="true"></span>` : ""}
+          <span class="scenes-card__tile-copy">
+            <span class="scenes-card__tile-label">${escapeHtml(entry.label)}</span>
+            ${entry.unavailable ? `<span class="scenes-card__tile-state">${escapeHtml(ui.unavailable)}</span>` : `<span class="scenes-card__tile-hint">${escapeHtml(ui.subtitle)}</span>`}
+          </span>
         </span>
-        <span class="scenes-card__button-copy">
-          <span class="scenes-card__button-label">${escapeHtml(entry.label)}</span>
-          ${entry.unavailable ? `<span class="scenes-card__button-state">${escapeHtml(ui.unavailable)}</span>` : ""}
-          ${!isList ? activeBadge : ""}
-        </span>
-        ${isList ? activeBadge : ""}
       </div>
     `;
   }
@@ -1074,36 +970,23 @@ class NodaliaScenesCard extends HTMLElement {
     const ui = this._scenesUiCopy();
     const styles = getSafeStyles(config.styles);
     const animations = this._getAnimationSettings();
-    const activeEntity = this._getActiveSceneEntity(entries);
     const showTitle = config.show_title !== false;
     const title = String(config.name || "").trim() || ui.defaultName;
-    const isGrid = config.layout !== "list";
+    const isList = config.layout === "list";
+    const isGrid = !isList;
     const columns = clamp(Math.round(Number(config.columns) || 3), 1, 6);
     const shouldAnimate = animations.enabled && this._animateContentOnNextRender;
-    const activeEntry = entries.find(entry => entry.entity === activeEntity);
-    const accentColor = activeEntry?.accent || styles.accent;
-    const hasActiveScene = Boolean(activeEntity);
+    const accentColor = styles.accent;
     const chipBorderRadius = escapeHtml(styles.chip_border_radius);
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
-    const buttonBackground = String(styles.button.background || "").trim()
-      || "linear-gradient(135deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), color-mix(in srgb, var(--primary-text-color) 2%, transparent))";
-    const buttonBorder = String(styles.button.border || "").trim()
-      || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
-    const buttonHoverBackground = String(styles.button.background || "").trim()
-      ? buttonBackground
-      : "linear-gradient(135deg, color-mix(in srgb, var(--primary-text-color) 8%, transparent), color-mix(in srgb, var(--primary-text-color) 4%, transparent))";
-    const activeButtonBackground = String(styles.active.background || "").trim()
-      || "linear-gradient(135deg, color-mix(in srgb, var(--scene-accent) 18%, transparent) 0%, color-mix(in srgb, var(--scene-accent) 8%, transparent) 100%)";
-    const activeButtonBorder = String(styles.active.border_color || "").trim()
-      || "color-mix(in srgb, var(--scene-accent) 34%, var(--divider-color))";
-    const activeButtonGlow = String(styles.active.glow || "").trim()
-      || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent), 0 14px 30px color-mix(in srgb, var(--scene-accent) 18%, rgba(0, 0, 0, 0.16))";
-    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} ${hasActiveScene ? "16" : "10"}%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} ${hasActiveScene ? "8" : "4"}%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 48%, ${styles.card.background} 100%)`;
     const cardBorder = !configuredBorder || configuredBorder === defaultBorder
-      ? `1px solid color-mix(in srgb, ${accentColor} ${hasActiveScene ? "28" : "14"}%, var(--divider-color))`
+      ? `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`
       : configuredBorder;
-    const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} ${hasActiveScene ? "12" : "6"}%, rgba(0, 0, 0, 0.16))`;
+    const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
+    const tileBorderRadius = styles.button.border_radius;
+    const tileMinHeight = styles.button.min_height;
     if (shouldAnimate) {
       this._animateContentOnNextRender = false;
     }
@@ -1113,6 +996,7 @@ class NodaliaScenesCard extends HTMLElement {
         :host {
           --scenes-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --scenes-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --scenes-card-launch-duration: ${animations.enabled ? animations.launchDuration : 0}ms;
           --scenes-accent: ${accentColor};
           display: block;
           overflow-anchor: none;
@@ -1122,7 +1006,8 @@ class NodaliaScenesCard extends HTMLElement {
 
         ha-card {
           background:
-            linear-gradient(180deg, color-mix(in srgb, var(--scenes-accent) 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0) 42%),
+            radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--scenes-accent) 16%, transparent), transparent 58%),
+            radial-gradient(90% 70% at 100% 0%, color-mix(in srgb, var(--scenes-accent) 10%, transparent), transparent 52%),
             ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -1135,11 +1020,10 @@ class NodaliaScenesCard extends HTMLElement {
           padding: ${styles.card.padding};
           position: relative;
           touch-action: manipulation;
-          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
         ha-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--scenes-accent) 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0));
+          background: linear-gradient(180deg, color-mix(in srgb, var(--scenes-accent) 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0) 46%);
           border-radius: inherit;
           content: "";
           inset: 0;
@@ -1157,7 +1041,7 @@ class NodaliaScenesCard extends HTMLElement {
         .scenes-card__header {
           align-items: center;
           display: flex;
-          gap: 10px;
+          gap: 12px;
           min-width: 0;
         }
 
@@ -1168,36 +1052,56 @@ class NodaliaScenesCard extends HTMLElement {
         .scenes-card__brand {
           align-items: center;
           display: flex;
-          gap: 10px;
+          flex: 1 1 auto;
+          gap: 12px;
           min-width: 0;
         }
 
         .scenes-card__brand-icon {
           align-items: center;
-          background: color-mix(in srgb, var(--scenes-accent) 14%, ${styles.icon.background});
-          border: 1px solid color-mix(in srgb, var(--scenes-accent) 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          background:
+            radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--scenes-accent) 36%, transparent), transparent 62%),
+            color-mix(in srgb, var(--scenes-accent) 14%, ${styles.icon.background});
+          border: 1px solid color-mix(in srgb, var(--scenes-accent) 28%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            0 8px 18px color-mix(in srgb, var(--scenes-accent) 10%, rgba(0, 0, 0, 0.12));
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 10px 22px color-mix(in srgb, var(--scenes-accent) 16%, rgba(0, 0, 0, 0.14));
           color: ${styles.icon.on_color};
           display: inline-flex;
           flex: 0 0 auto;
-          height: 34px;
+          height: 38px;
           justify-content: center;
-          width: 34px;
+          width: 38px;
         }
 
         .scenes-card__brand-icon ha-icon {
-          --mdc-icon-size: 18px;
+          --mdc-icon-size: 20px;
+        }
+
+        .scenes-card__title-wrap {
+          display: grid;
+          gap: 2px;
+          min-width: 0;
         }
 
         .scenes-card__title {
           font-size: ${styles.title_size};
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          line-height: 1.15;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          line-height: 1.1;
           min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .scenes-card__subtitle {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+          line-height: 1.25;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -1205,18 +1109,19 @@ class NodaliaScenesCard extends HTMLElement {
 
         .scenes-card__count-chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: color-mix(in srgb, var(--scenes-accent) 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border: 1px solid color-mix(in srgb, var(--scenes-accent) 22%, transparent);
           border-radius: ${chipBorderRadius};
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          color: var(--secondary-text-color);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          color: color-mix(in srgb, var(--scenes-accent) 72%, var(--primary-text-color));
           display: inline-flex;
           flex: 0 0 auto;
-          font-size: 11px;
-          font-weight: 700;
-          height: 22px;
-          margin-inline-start: auto;
-          padding: 0 9px;
+          font-size: 10px;
+          font-weight: 800;
+          height: 24px;
+          letter-spacing: 0.05em;
+          padding: 0 10px;
+          text-transform: uppercase;
         }
 
         .scenes-card__grid {
@@ -1230,220 +1135,263 @@ class NodaliaScenesCard extends HTMLElement {
           animation-delay: 40ms;
         }
 
-        .scenes-card__button {
+        .scenes-card__tile {
           -webkit-tap-highlight-color: transparent;
-          align-items: center;
           appearance: none;
-          background: ${buttonBackground};
-          border: ${buttonBorder};
-          border-radius: ${styles.button.border_radius};
+          border: 1px solid color-mix(in srgb, var(--scene-accent) 26%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: ${tileBorderRadius};
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.08);
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+            0 14px 30px color-mix(in srgb, var(--scene-accent) 14%, rgba(0, 0, 0, 0.16));
           color: var(--primary-text-color);
           cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          justify-content: center;
-          min-height: ${styles.button.min_height};
+          display: block;
+          isolation: isolate;
+          min-height: ${tileMinHeight};
           min-width: 0;
-          padding: 12px 10px;
+          overflow: hidden;
           position: relative;
-          text-align: center;
           touch-action: manipulation;
-          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
           width: 100%;
         }
 
-        .scenes-card__button--list {
+        .scenes-card__tile::after {
+          background:
+            linear-gradient(145deg,
+              color-mix(in srgb, var(--scene-accent) 28%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%,
+              color-mix(in srgb, var(--scene-accent) 10%, transparent) 46%,
+              color-mix(in srgb, var(--primary-text-color) 3%, transparent) 100%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .scenes-card__tile-ambient {
+          background:
+            radial-gradient(ellipse 90% 70% at 18% 8%, color-mix(in srgb, var(--scene-accent) 42%, transparent), transparent 68%),
+            radial-gradient(ellipse 70% 55% at 92% 88%, color-mix(in srgb, var(--scene-accent) 22%, transparent), transparent 72%);
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 1;
+        }
+
+        .scenes-card__tile-shimmer {
+          background: linear-gradient(115deg, transparent 36%, color-mix(in srgb, var(--primary-text-color) 10%, transparent) 50%, transparent 64%);
+          inset: 0;
+          opacity: 0.35;
+          pointer-events: none;
+          position: absolute;
+          z-index: 2;
+        }
+
+        .scenes-card__tile-launch {
+          border-radius: inherit;
+          box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--scene-accent) 0%, transparent);
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 4;
+        }
+
+        .scenes-card__tile-body {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          height: 100%;
+          justify-content: center;
+          min-height: inherit;
+          padding: 14px 12px 12px;
+          position: relative;
+          z-index: 3;
+        }
+
+        .scenes-card__tile--list .scenes-card__tile-body {
           align-items: center;
           flex-direction: row;
-          gap: 12px;
+          gap: 14px;
           justify-content: flex-start;
-          min-height: 58px;
-          padding: 10px 14px;
+          min-height: 64px;
+          padding: 12px 16px 12px 18px;
           text-align: left;
         }
 
-        .scenes-card__button:hover:not([aria-disabled="true"]) {
-          background: ${buttonHoverBackground};
-          border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-        }
-
-        .scenes-card__button--active {
-          background: ${activeButtonBackground};
-          border-color: ${activeButtonBorder};
-          box-shadow: ${activeButtonGlow};
-        }
-
-        .scenes-card--has-active .scenes-card__button:not(.scenes-card__button--active):not([aria-disabled="true"]) {
-          filter: saturate(0.9);
-          opacity: 0.78;
-        }
-
-        .scenes-card--has-active .scenes-card__button:not(.scenes-card__button--active):not([aria-disabled="true"]):hover {
-          filter: none;
-          opacity: 1;
-        }
-
-        .scenes-card__button--active .scenes-card__button-label {
-          color: var(--scene-accent);
-        }
-
-        .scenes-card__button-icon-wrap {
-          display: inline-flex;
-          flex: 0 0 auto;
-          position: relative;
-        }
-
-        .scenes-card__button-icon-dot {
-          background: var(--scene-accent);
-          border: 2px solid color-mix(in srgb, var(--scene-accent) 18%, var(--ha-card-background, var(--card-background-color, #fff)));
-          border-radius: 999px;
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--scene-accent) 24%, transparent);
-          height: 11px;
+        .scenes-card__tile--list::before {
+          background: linear-gradient(180deg, var(--scene-accent), color-mix(in srgb, var(--scene-accent) 42%, transparent));
+          border-radius: 999px 0 0 999px;
+          bottom: 10px;
+          content: "";
+          left: 0;
           position: absolute;
-          right: -1px;
-          top: -1px;
-          width: 11px;
+          top: 10px;
+          width: 4px;
+          z-index: 5;
         }
 
-        .scenes-card__button-active-badge {
-          background: color-mix(in srgb, var(--scene-accent) 14%, transparent);
-          border: 1px solid color-mix(in srgb, var(--scene-accent) 28%, transparent);
-          border-radius: 999px;
-          color: var(--scene-accent);
-          display: inline-flex;
-          font-size: 9px;
-          font-weight: 800;
-          justify-content: center;
-          letter-spacing: 0.06em;
-          line-height: 1;
-          padding: 4px 8px;
-          text-transform: uppercase;
-          width: fit-content;
+        .scenes-card__tile:hover:not([aria-disabled="true"]) {
+          border-color: color-mix(in srgb, var(--scene-accent) 40%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 18px 36px color-mix(in srgb, var(--scene-accent) 20%, rgba(0, 0, 0, 0.2));
+          transform: translateY(-1px);
         }
 
-        .scenes-card__button-active-badge--trail {
-          flex: 0 0 auto;
-          margin-left: auto;
+        .scenes-card__tile.is-pressing {
+          animation: scenes-card-tile-bounce var(--scenes-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
-        .scenes-card__button-active-badge--hidden {
-          opacity: 0;
-          pointer-events: none;
-          user-select: none;
+        .scenes-card__tile--launching {
+          animation: scenes-card-tile-launch var(--scenes-card-launch-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        .scenes-card__button.is-pressing {
-          animation: scenes-card-button-bounce var(--scenes-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        .scenes-card__tile--launching .scenes-card__tile-launch {
+          animation: scenes-card-tile-launch-ring var(--scenes-card-launch-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
-        .scenes-card__button[aria-disabled="true"] {
+        .scenes-card__tile--launching .scenes-card__tile-shimmer {
+          animation: scenes-card-tile-shimmer var(--scenes-card-launch-duration) ease-out both;
+        }
+
+        .scenes-card__tile[aria-disabled="true"] {
           cursor: default;
+          filter: grayscale(0.35);
           opacity: 0.55;
           pointer-events: none;
         }
 
-        .scenes-card__button-icon {
+        .scenes-card__tile-icon {
           align-items: center;
-          background: color-mix(in srgb, var(--scene-accent) 14%, ${styles.icon.background});
-          border: 1px solid color-mix(in srgb, var(--scene-accent) 18%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
+          backdrop-filter: blur(10px);
+          background:
+            radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--scene-accent) 34%, transparent), transparent 58%),
+            color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--scene-accent) 32%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
           border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            0 8px 18px color-mix(in srgb, var(--scene-accent) 10%, rgba(0, 0, 0, 0.1));
-          color: color-mix(in srgb, var(--scene-accent) 68%, ${styles.icon.color});
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+            0 12px 24px color-mix(in srgb, var(--scene-accent) 22%, rgba(0, 0, 0, 0.18));
+          color: var(--scene-accent);
           display: inline-flex;
           flex: 0 0 auto;
           height: var(--scene-bubble-size);
           justify-content: center;
           overflow: hidden;
-          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
           width: var(--scene-bubble-size);
         }
 
-        .scenes-card__button-icon--active {
-          background: color-mix(in srgb, var(--scene-accent) 24%, ${styles.icon.background});
-          border-color: color-mix(in srgb, var(--scene-accent) 36%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
-            0 10px 22px color-mix(in srgb, var(--scene-accent) 22%, rgba(0, 0, 0, 0.14));
-          color: var(--scene-accent);
-        }
-
-        .scenes-card__button-icon ha-icon {
+        .scenes-card__tile-icon ha-icon {
           --mdc-icon-size: ${styles.button.icon_size};
+          filter: drop-shadow(0 2px 8px color-mix(in srgb, var(--scene-accent) 28%, transparent));
         }
 
-        .scenes-card__button-icon img {
+        .scenes-card__tile-icon img {
           border-radius: inherit;
           height: 100%;
           object-fit: cover;
           width: 100%;
         }
 
-        .scenes-card__button-copy {
+        .scenes-card__tile-copy {
           display: grid;
-          gap: 3px;
+          gap: 4px;
           min-width: 0;
+          width: 100%;
         }
 
-        .scenes-card__button--list .scenes-card__button-copy {
+        .scenes-card__tile--list .scenes-card__tile-copy {
           flex: 1 1 auto;
         }
 
-        .scenes-card__button-label {
+        .scenes-card__tile-label {
           font-size: ${styles.button.label_size};
-          font-weight: 700;
-          letter-spacing: -0.01em;
-          line-height: 1.25;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
           max-width: 100%;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .scenes-card__button--list .scenes-card__button-label {
+        .scenes-card__tile--list .scenes-card__tile-label {
+          font-size: calc(${styles.button.label_size} + 1px);
           white-space: normal;
         }
 
-        .scenes-card__button-state {
-          color: var(--secondary-text-color);
+        .scenes-card__tile-hint,
+        .scenes-card__tile-state {
+          color: color-mix(in srgb, var(--scene-accent) 62%, var(--secondary-text-color));
           font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.02em;
+          letter-spacing: 0.03em;
+          line-height: 1.25;
+          opacity: 0.92;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .scenes-card__tile-state {
+          color: var(--error-color, #ff4d4f);
+          opacity: 1;
           text-transform: uppercase;
         }
 
         @keyframes scenes-card-fade-up {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes scenes-card-button-bounce {
+        @keyframes scenes-card-tile-bounce {
           0% { transform: scale(1); }
-          40% { transform: scale(0.96); }
+          40% { transform: scale(0.965); }
           100% { transform: scale(1); }
         }
+
+        @keyframes scenes-card-tile-launch {
+          0% { filter: brightness(1) saturate(1); transform: scale(1); }
+          18% { filter: brightness(1.14) saturate(1.08); transform: scale(0.975); }
+          55% { filter: brightness(1.06) saturate(1.04); transform: scale(1.01); }
+          100% { filter: brightness(1) saturate(1); transform: scale(1); }
+        }
+
+        @keyframes scenes-card-tile-launch-ring {
+          0% { box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--scene-accent) 0%, transparent); opacity: 0.95; }
+          35% { box-shadow: inset 0 0 0 10px color-mix(in srgb, var(--scene-accent) 34%, transparent); opacity: 1; }
+          100% { box-shadow: inset 0 0 0 24px transparent; opacity: 0; }
+        }
+
+        @keyframes scenes-card-tile-shimmer {
+          0% { opacity: 0.2; transform: translateX(-30%); }
+          35% { opacity: 0.65; }
+          100% { opacity: 0.25; transform: translateX(30%); }
+        }
       </style>
-      <ha-card class="scenes-card ${hasActiveScene ? "scenes-card--has-active" : ""}">
+      <ha-card class="scenes-card">
         ${
           showTitle
             ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
                 <div class="scenes-card__brand">
                   <span class="scenes-card__brand-icon" aria-hidden="true">
-                    <ha-icon icon="mdi:palette-outline"></ha-icon>
+                    <ha-icon icon="mdi:palette-swatch-variant"></ha-icon>
                   </span>
-                  <div class="scenes-card__title">${escapeHtml(title)}</div>
+                  <div class="scenes-card__title-wrap">
+                    <div class="scenes-card__title">${escapeHtml(title)}</div>
+                    <div class="scenes-card__subtitle">${escapeHtml(ui.subtitle)}</div>
+                  </div>
                 </div>
-                <span class="scenes-card__count-chip">${entries.length}</span>
+                <span class="scenes-card__count-chip">${entries.length} ${escapeHtml(ui.moods)}</span>
               </div>`
             : ""
         }
         <div class="scenes-card__grid ${shouldAnimate ? "scenes-card__grid--entering" : ""}">
-          ${entries.map(entry => this._renderSceneButton(entry, activeEntity, styles, ui)).join("")}
+          ${entries.map(entry => this._renderSceneTile(entry, styles, ui, isList)).join("")}
         </div>
       </ha-card>
     `;
@@ -2160,7 +2108,6 @@ class NodaliaScenesCardEditor extends HTMLElement {
               { fullWidth: true },
             )}
             ${this._renderTextField("ed.scenes.columns", "columns", config.columns, { type: "number", valueType: "number" })}
-            ${this._renderCheckboxField("ed.scenes.show_active", "show_active", config.show_active !== false)}
             ${this._renderCheckboxField("ed.scenes.use_entity_icon", "use_entity_icon", config.use_entity_icon !== false)}
             ${this._renderCheckboxField("ed.scenes.show_entity_picture", "use_entity_picture", config.use_entity_picture === true)}
           </div>
@@ -2317,11 +2264,9 @@ class NodaliaScenesCardEditor extends HTMLElement {
               </div>
 
               <div class="editor-styles-subgroup editor-field--full">
-                <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_active_section"))}</div>
-                <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_active_hint"))}</div>
-                ${this._renderColorField("ed.scenes.style_active_border", "styles.active.border_color", config.styles?.active?.border_color, { fullWidth: true })}
-                ${this._renderTextField("ed.scenes.style_active_bg", "styles.active.background", config.styles?.active?.background, { fullWidth: true })}
-                ${this._renderTextField("ed.scenes.style_active_glow", "styles.active.glow", config.styles?.active?.glow, { fullWidth: true })}
+                <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_launch_section"))}</div>
+                <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_launch_hint"))}</div>
+                ${this._renderTextField("ed.scenes.launch_duration", "animations.launch_duration", config.animations?.launch_duration || DEFAULT_CONFIG.animations.launch_duration, { type: "number", valueType: "number" })}
               </div>
             </div>
           `
@@ -2352,7 +2297,7 @@ if (!customElements.get(EDITOR_TAG)) {
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Scenes Card",
-  description: "Tarjeta de escenas de Home Assistant con rejilla o lista de botones",
+  description: "Cinematic Home Assistant scene moods with per-scene tints and launch feedback",
   preview: true,
   documentationURL: "https://github.com/danielmigueltejedor/nodalia-cards",
 });

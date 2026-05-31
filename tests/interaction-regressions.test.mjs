@@ -685,12 +685,13 @@ test("scenes card scene buttons avoid focus-driven dashboard scroll jumps", () =
   assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onShadowTouchStart, \{ passive: false, capture: true \}\)/);
   assert.match(source, /role="button"/);
   assert.match(source, /tabindex="-1"/);
-  assert.match(source, /_syncActiveSceneUi\(\)/);
+  assert.match(source, /_triggerLaunchAnimation/);
   assert.match(source, /collectDashboardScrollSnapshot/);
   assert.match(source, /scheduleDashboardScrollRestore/);
   assert.match(source, /overflow-anchor: none/);
-  assert.match(source, /scenes-card__button-active-badge--hidden/);
-  assert.doesNotMatch(source, /requestAnimationFrame\(\(\) => this\._render\(\)\)/);
+  assert.match(source, /scenes-card__tile--launching/);
+  assert.doesNotMatch(source, /show_active/);
+  assert.doesNotMatch(source, /_syncActiveSceneUi/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {

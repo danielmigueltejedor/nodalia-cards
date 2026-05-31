@@ -456,7 +456,8 @@
         emptyBody: "Add scene entities in the card editor.",
         defaultName: "Scenes",
         unavailable: "Unavailable",
-        active: "Active"
+        subtitle: "Tap a mood to launch",
+        moods: "moods"
       },
       entityCard: {
         binarySensor: {
@@ -2572,7 +2573,8 @@
         emptyBody: "Añade entidades escena en el editor de la tarjeta.",
         defaultName: "Escenas",
         unavailable: "No disponible",
-        active: "Activa"
+        subtitle: "Toca un ambiente para lanzarlo",
+        moods: "ambientes"
       },
       entityCard: {
         binarySensor: {

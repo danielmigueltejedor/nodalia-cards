@@ -1,12 +1,13 @@
 type: custom:nodalia-scenes-card
-name: Living room scenes
+name: Living room moods
 layout: grid
 columns: 3
-show_active: true
 tap_action: activate
 hold_action: more-info
 styles:
   accent: "#c9a86c"
+animations:
+  launch_duration: 920
 scenes:
   - entity: scene.living_room_relax
     color: "#d4a574"

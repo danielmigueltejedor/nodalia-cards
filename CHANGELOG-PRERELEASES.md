@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.40] - 2026-05-29
+
+Fortieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.40`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** premium mood-tile redesign — per-scene gradient atmospheres, glass icon bubbles, cinematic header, and a launch-moment animation on tap instead of the unreliable persistent active-scene highlight.
+
+### Removed
+
+- **`show_active`** and **`styles.active`** — Home Assistant does not expose a trustworthy on/off scene state; replaced by a brief launch glow/shimmer feedback.
+
 ## [1.2.0-alpha.39] - 2026-05-29
 
 Thirty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.39`**.

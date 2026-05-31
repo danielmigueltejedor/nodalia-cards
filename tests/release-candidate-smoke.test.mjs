@@ -441,7 +441,7 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /const CARD_TAG = "nodalia-scenes-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
   assert.match(source, /callService\("scene", "turn_on"/);
-  assert.match(source, /show_active/);
+  assert.match(source, /_triggerLaunchAnimation/);
   assert.match(build, /nodalia-scenes-card\.js/);
   assert.match(sync, /nodalia-scenes-card\.js/);
   assert.ok(pkg.files.includes("nodalia-scenes-card.js"), "nodalia-scenes-card.js should be published");
