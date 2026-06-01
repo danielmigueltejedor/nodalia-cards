@@ -915,9 +915,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   _getCodeValue(state) {
     if (this._shouldShowCodeInput(state)) {
       const manualCode = String(this._codeInput || "").trim();
-      if (manualCode) {
-        return manualCode;
-      }
+      return manualCode;
     }
 
     const helperEntityId = String(this._config?.code_entity || "").trim();
@@ -1079,6 +1077,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const code = this._getCodeValue(state);
     if (code) {
       payload.code = code;
+    } else if (this._shouldShowCodeInput(state)) {
+      this._showNativePinErrorChip();
+      return;
     }
 
     const usedManualCode = this._shouldShowCodeInput(state) && String(this._codeInput || "").trim() !== "";

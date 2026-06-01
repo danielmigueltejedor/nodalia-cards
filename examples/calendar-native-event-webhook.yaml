@@ -19,6 +19,15 @@ triggers:
 actions:
   - variables:
       d: "{{ trigger.json.service_data | default(trigger.json.data, true) }}"
+      # Keep this list aligned with the calendars configured in the card.
+      allowed_calendar_entities:
+        - calendar.family
+
+  - if:
+      - condition: template
+        value_template: "{{ d.entity_id not in allowed_calendar_entities }}"
+    then:
+      - stop: "Calendar entity is not allowed for this webhook."
 
   - choose:
       - conditions:

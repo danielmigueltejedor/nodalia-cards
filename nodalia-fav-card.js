@@ -1191,9 +1191,7 @@ class NodaliaFavCard extends HTMLElement {
   _getAlarmCodeValue(state) {
     if (this._shouldShowAlarmCodeInput(state)) {
       const manualCode = String(this._alarmCodeInput || "").trim();
-      if (manualCode) {
-        return manualCode;
-      }
+      return manualCode;
     }
 
     const helperEntityId = String(this._config?.alarm_code_entity || "").trim();
@@ -1225,6 +1223,8 @@ class NodaliaFavCard extends HTMLElement {
     const code = this._getAlarmCodeValue(state);
     if (code) {
       payload.code = code;
+    } else if (this._shouldShowAlarmCodeInput(state)) {
+      return;
     }
 
     this._triggerHaptic();

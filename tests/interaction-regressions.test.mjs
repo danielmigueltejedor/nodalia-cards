@@ -169,6 +169,13 @@ test("light card power-down skips expanded controls shell when panel was collaps
   assert.match(source, /stale `_lastControlsMarkup` would otherwise force a full-height shell/);
 });
 
+test("light optimistic turn-on timeout flushes queued control changes", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /if \(!remaining \|\| typeof window === "undefined"\) \{\s*this\._flushOptimisticTurnOnQueue\(\);/);
+  assert.match(source, /if \(!this\._isOptimisticTurnOnPending\(this\._getActualState\(\)\)\) \{[\s\S]*this\._flushOptimisticTurnOnQueue\(\);\s*this\._clearOptimisticTurnOnState/);
+  assert.match(source, /if \(!this\._isOptimisticTurnOnPending\(actualState\)\) \{\s*this\._flushOptimisticTurnOnQueue\(\);/);
+});
+
 test("nav media/popup entrance animations are transition-driven", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /_lastMediaToggleVisible/);
@@ -262,6 +269,15 @@ test("notifications mobile sent state only marks successful deliveries", () => {
 test("calendar native webhook failures show composer errors", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
+});
+
+test("calendar native webhooks are admin-gated and scoped to available calendars", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin:\s*false/);
+  assert.match(source, /normalized\.security\.allow_webhooks_for_non_admin\s*=\s*normalized\.security\.allow_webhooks_for_non_admin === true/);
+  assert.match(source, /const allowedCalendarIds = this\._getAvailableNativeCalendarIds\(\);\s*if \(!allowedCalendarIds\.includes\(calendarId\)\)/);
+  assert.match(source, /include_entities: allowedCalendarIds/);
+  assert.match(source, /control\.entityFilter = isAllowedCalendar/);
 });
 
 test("i18n automatic language prefers HA profile locale over stale legacy language", () => {
@@ -922,6 +938,16 @@ test("alarm panel PIN input keeps masked text visible across themes", () => {
   assert.match(source, /alarm-card__chip--pin-error/);
   assert.match(source, /_showNativePinErrorChip/);
   assert.match(source, /_nativePinErrorLabel/);
+});
+
+test("alarm cards require manual PIN when the PIN field is visible", () => {
+  const alarm = read("nodalia-alarm-panel-card.js");
+  assert.match(alarm, /if \(this\._shouldShowCodeInput\(state\)\) \{\s*const manualCode = String\(this\._codeInput \|\| ""\)\.trim\(\);\s*return manualCode;\s*\}/);
+  assert.match(alarm, /} else if \(this\._shouldShowCodeInput\(state\)\) \{\s*this\._showNativePinErrorChip\(\);\s*return;/);
+
+  const fav = read("nodalia-fav-card.js");
+  assert.match(fav, /if \(this\._shouldShowAlarmCodeInput\(state\)\) \{\s*const manualCode = String\(this\._alarmCodeInput \|\| ""\)\.trim\(\);\s*return manualCode;\s*\}/);
+  assert.match(fav, /} else if \(this\._shouldShowAlarmCodeInput\(state\)\) \{\s*return;\s*\}/);
 });
 
 test("calendar card reuses date/time formatters during render", () => {

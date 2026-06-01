@@ -32,7 +32,7 @@ const DEFAULT_CONFIG = {
   weather_entity: "",
   native_event_webhook: "",
   security: {
-    allow_webhooks_for_non_admin: true,
+    allow_webhooks_for_non_admin: false,
   },
   tint_auto: true,
   haptics: {
@@ -269,7 +269,7 @@ function normalizeConfig(config) {
     normalized.security.allow_webhooks_for_non_admin = !legacyRequireAdmin;
   }
   normalized.security.allow_webhooks_for_non_admin =
-    normalized.security.allow_webhooks_for_non_admin !== false;
+    normalized.security.allow_webhooks_for_non_admin === true;
   normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
@@ -2458,6 +2458,11 @@ class NodaliaCalendarCard extends HTMLElement {
       this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
       return;
     }
+    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
+    if (!allowedCalendarIds.includes(calendarId)) {
+      this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
+      return;
+    }
     if (!title) {
       this._setComposerError("native", this._uiText("errors.enterTitle", "Enter a title."));
       return;
@@ -4009,10 +4014,12 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const nextValue = this._nativeComposerCalendarValue || "";
+    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
+    const isAllowedCalendar = stateObj => allowedCalendarIds.includes(String(stateObj?.entity_id || "").trim());
     let control = null;
     if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = { entity: { domain: "calendar" } };
+      control.selector = { entity: { domain: "calendar", include_entities: allowedCalendarIds } };
       control.addEventListener("value-changed", event => {
         this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
       });
@@ -4020,15 +4027,18 @@ class NodaliaCalendarCard extends HTMLElement {
       control = document.createElement("ha-entity-picker");
       control.includeDomains = ["calendar"];
       control.allowCustomEntity = false;
-      control.entityFilter = stateObj =>
-        String(stateObj?.entity_id || "").startsWith("calendar.");
+      control.entityFilter = isAllowedCalendar;
       control.addEventListener("value-changed", event => {
         this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
       });
     } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = "calendar.ejemplo";
+      control = document.createElement("select");
+      allowedCalendarIds.forEach(entityId => {
+        const option = document.createElement("option");
+        option.value = entityId;
+        option.textContent = this._getCalendarEntityLabel(entityId);
+        control.appendChild(option);
+      });
       control.addEventListener("change", () => {
         this._nativeComposerCalendarValue = String(control.value || "").trim();
       });
