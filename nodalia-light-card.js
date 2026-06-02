@@ -839,13 +839,15 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    const hadPendingOptimistic = hasPendingOptimistic;
     const actualState = this._getActualState();
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
     nextSignature = this._getRenderSignature();
+    const optimisticJustConfirmed = hadPendingOptimistic && !this._optimisticTurnOn && !this._optimisticTurnOff;
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed) {
       return;
     }
 

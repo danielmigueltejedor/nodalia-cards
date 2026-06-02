@@ -81,6 +81,64 @@ function loadClimateCardClass() {
   return registry.get("nodalia-climate-card");
 }
 
+function loadLightCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  const localStorage = {
+    getItem() { return null; },
+    setItem() {},
+  };
+  const sandbox = {
+    clearTimeout() {},
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    localStorage,
+    navigator: {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    setTimeout() { return 1; },
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-light-card.js"), sandbox);
+  return registry.get("nodalia-light-card");
+}
+
 function loadPowerFlowCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -167,6 +225,49 @@ test("light card power-down skips expanded controls shell when panel was collaps
   const source = read("nodalia-light-card.js");
   assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
   assert.match(source, /stale `_lastControlsMarkup` would otherwise force a full-height shell/);
+});
+
+test("light card re-renders when optimistic turn-off is confirmed with unchanged signature", () => {
+  const LightCard = loadLightCardClass();
+  const entityId = "light.kitchen";
+  const makeState = state => ({
+    entity_id: entityId,
+    state,
+    attributes: {
+      friendly_name: "Kitchen",
+      brightness: 180,
+      supported_color_modes: ["brightness"],
+      supported_features: 0,
+    },
+  });
+  const makeHass = state => ({
+    states: {
+      [entityId]: makeState(state),
+    },
+  });
+
+  const card = new LightCard();
+  let renderCount = 0;
+  card._render = function renderStub() {
+    renderCount += 1;
+    this.shadowRoot.innerHTML = "<div>rendered</div>";
+    this._lastRenderSignature = this._getRenderSignature();
+  };
+
+  card.setConfig({ entity: entityId });
+  card.hass = makeHass("on");
+  assert.equal(renderCount, 2);
+
+  card._startOptimisticTurnOff(card._getActualState());
+  card.hass = makeHass("on");
+  assert.equal(renderCount, 3);
+  const optimisticOffSignature = card._lastRenderSignature;
+
+  card.hass = makeHass("off");
+
+  assert.equal(card._optimisticTurnOff, null);
+  assert.equal(card._lastRenderSignature, optimisticOffSignature);
+  assert.equal(renderCount, 4);
 });
 
 test("nav media/popup entrance animations are transition-driven", () => {
