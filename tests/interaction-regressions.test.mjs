@@ -712,6 +712,16 @@ test("calendar native composer validates configured calendars and defaults webho
   assert.match(source, /if \(configuredIds\.length\) \{[\s\S]*document\.createElement\("select"\)/);
 });
 
+test("power flow card supports home device popup and consumption chips", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /consumption_chips:/);
+  assert.match(source, /_renderHomeDevicePopup/);
+  assert.match(source, /_getNodeInteractionAction/);
+  assert.match(source, /home-popup/);
+  assert.match(source, /power-flow-card__home-popup-body/);
+  assert.match(source, /_renderConsumptionChips/);
+});
+
 test("alarm panel requires manual PIN when the code field is visible", () => {
   const source = read("nodalia-alarm-panel-card.js");
   assert.match(

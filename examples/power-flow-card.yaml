@@ -23,6 +23,20 @@ entities:
       name: Living Room Plug
       icon: mdi:power-plug
       color: "#42a5f5"
+    - entity: sensor.office_plug_power
+      name: Office Plug
+      icon: mdi:desk
+      color: "#7fd0c8"
+
+# Optional day/month energy totals (kWh) shown as header chips
+consumption_chips:
+  day_entity: sensor.home_energy_today
+  month_entity: sensor.home_energy_month
+  day_label: Today
+  month_label: Month
+
+# Tap Home to open the left-to-right device breakdown popup
+show_home_device_popup: true
 
 display_zero_lines:
   mode: show

@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.42] - 2026-05-29
+
+Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
+
+### Added
+
+- **`nodalia-power-flow-card.js`:** home device breakdown popup — tap Home (when individual devices are configured) for a left-to-right layout with Casa on the left and plug/device flows on the right; optional day/month consumption total sensors as header status chips; visual editor fields for `consumption_chips` and `show_home_device_popup`.
+
 ## [1.2.0-alpha.41] - 2026-05-29
 
 Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
