@@ -35,8 +35,6 @@ function loadNodaliaUtils(sandbox) {
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
-    addEventListener() {}
-
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
@@ -50,8 +48,6 @@ function loadClimateCardClass() {
     dispatchEvent() {
       return true;
     }
-
-    removeEventListener() {}
   }
 
   const sandbox = {
@@ -88,6 +84,8 @@ function loadClimateCardClass() {
 function loadLightCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
+    addEventListener() {}
+
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
@@ -101,6 +99,8 @@ function loadLightCardClass() {
     dispatchEvent() {
       return true;
     }
+
+    removeEventListener() {}
   }
 
   const localStorage = {
