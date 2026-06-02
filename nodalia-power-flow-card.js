@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.42";
+const CARD_VERSION = "1.2.0-alpha.43";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -300,6 +300,19 @@ function getByPath(target, path) {
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
+
+function moveItem(list, fromIndex, toIndex) {
+  if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
+    return;
+  }
+  if (fromIndex >= list.length || toIndex >= list.length) {
+    return;
+  }
+  const [item] = list.splice(fromIndex, 1);
+  list.splice(toIndex, 0, item);
+}
+
+const POWER_FLOW_ENTITY_DOMAINS = ["sensor", "number", "input_number"];
 
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
@@ -5057,10 +5070,11 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _getPowerEntityOptions(path = "entity") {
+  _getPowerEntityOptions(path = "entity", domains = POWER_FLOW_ENTITY_DOMAINS) {
+    const normalizedDomains = arrayFromMaybe(domains).map(domain => String(domain).trim()).filter(Boolean);
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
-      .filter(([entityId]) => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .filter(([entityId]) => !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`)))
       .map(([entityId, state]) => {
         const friendlyName = String(state?.attributes?.friendly_name || "").trim();
         return {
@@ -5275,22 +5289,69 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
 
-    if (!toggleButton) {
+    if (toggleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (toggleButton.dataset.editorToggle === "styles") {
+        this._showStyleSection = !this._showStyleSection;
+        this._render();
+      } else if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      } else if (toggleButton.dataset.editorToggle === "tap_actions") {
+        this._showTapActionsSection = !this._showTapActionsSection;
+        this._render();
+      }
+      return;
+    }
+
+    const actionButton = event.composedPath().find(node => node instanceof HTMLButtonElement && node.dataset?.action);
+    if (!actionButton) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
+    const action = actionButton.dataset.action;
+    const index = Number(actionButton.dataset.index);
+    if (!Array.isArray(this._config.entities)) {
+      this._config.entities = {};
+    }
+    if (!Array.isArray(this._config.entities.individual)) {
+      this._config.entities.individual = [];
+    }
 
-    if (toggleButton.dataset.editorToggle === "styles") {
-      this._showStyleSection = !this._showStyleSection;
-      this._render();
-    } else if (toggleButton.dataset.editorToggle === "animations") {
-      this._showAnimationSection = !this._showAnimationSection;
-      this._render();
-    } else if (toggleButton.dataset.editorToggle === "tap_actions") {
-      this._showTapActionsSection = !this._showTapActionsSection;
-      this._render();
+    if (action === "add-individual") {
+      this._config.entities.individual.push({
+        entity: "",
+        name: "",
+        icon: "mdi:power-plug",
+        color: "",
+      });
+      this._emitConfig();
+      return;
+    }
+
+    if (!Number.isInteger(index) || index < 0 || index >= this._config.entities.individual.length) {
+      return;
+    }
+
+    if (action === "remove-individual") {
+      this._config.entities.individual.splice(index, 1);
+      this._emitConfig();
+      return;
+    }
+
+    if (action === "move-individual-up") {
+      moveItem(this._config.entities.individual, index, index - 1);
+      this._emitConfig();
+      return;
+    }
+
+    if (action === "move-individual-down") {
+      moveItem(this._config.entities.individual, index, index + 1);
+      this._emitConfig();
     }
   }
 
@@ -5433,6 +5494,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
+    const domains = arrayFromMaybe(options.domains).length
+      ? arrayFromMaybe(options.domains)
+      : POWER_FLOW_ENTITY_DOMAINS;
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -5441,6 +5505,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           class="editor-control-host"
           data-mounted-control="entity"
           data-field="${escapeHtml(field)}"
+          data-domains="${escapeHtml(domains.join(","))}"
           data-value="${escapeHtml(inputValue)}"
           data-placeholder="${escapeHtml(placeholder)}"
         ></div>
@@ -5480,33 +5545,37 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
+    const domains = String(host.dataset.domains || POWER_FLOW_ENTITY_DOMAINS.join(","))
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
     let control = null;
 
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["sensor", "number", "input_number"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => {
-        const entityId = String(stateObj?.entity_id || "");
-        return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
-      };
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
-      }
-    } else if (customElements.get("ha-selector")) {
+    if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       control.selector = {
         entity: {
-          domain: ["sensor", "number", "input_number"],
+          domain: domains.length === 1 ? domains[0] : domains,
         },
       };
+    } else if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      if (domains.length) {
+        control.includeDomains = domains;
+        control.entityFilter = stateObj =>
+          domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      control.allowCustomEntity = true;
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
       emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
-      this._getPowerEntityOptions(field).forEach(option => {
+      this._getPowerEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
         optionElement.value = option.value;
         optionElement.textContent = option.displayLabel;
@@ -5525,10 +5594,50 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       control.value = nextValue;
     }
 
+    if (control.tagName === "SELECT") {
+      control.addEventListener("change", this._onShadowInput);
+    } else {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
     host.replaceChildren(control);
   }
 
+  _renderIndividualEditorCard(item, index, total) {
+    const entry = item || {};
+    return `
+      <div class="power-flow-individual-card">
+        <div class="power-flow-individual-card__header">
+          <div class="power-flow-individual-card__title">${escapeHtml(this._editorLabel("ed.power_flow.individual_row_title"))} ${index + 1}</div>
+          <div class="power-flow-individual-card__actions">
+            <button type="button" data-action="move-individual-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" data-action="move-individual-down" data-index="${index}" ${index >= total - 1 ? "disabled" : ""}>↓</button>
+            <button type="button" class="danger" data-action="remove-individual" data-index="${index}">${escapeHtml(this._editorLabel("ed.power_flow.remove_individual"))}</button>
+          </div>
+        </div>
+        ${this._renderEntityPickerField("ed.power_flow.individual_entity", `entities.individual.${index}.entity`, entry.entity, {
+          placeholder: "sensor.smart_plug_power",
+          fullWidth: true,
+          domains: ["sensor", "number", "input_number"],
+        })}
+        ${this._renderTextField("ed.entity.name", `entities.individual.${index}.name`, entry.name, { fullWidth: true })}
+        ${this._renderIconPickerField("ed.entity.icon", `entities.individual.${index}.icon`, entry.icon, { placeholder: "mdi:power-plug" })}
+        ${this._renderColorField("ed.power_flow.node_color", `entities.individual.${index}.color`, entry.color, { fullWidth: true })}
+      </div>
+    `;
+  }
+
   _renderNodeSection(titleKey, hintKey, prefix, values) {
+    const isGrid = prefix === "entities.grid";
+    const gridExportFields = isGrid ? `
+          ${this._renderEntityPickerField("ed.power_flow.node_grid_export_entity", `${prefix}.export_entity`, values.export_entity, {
+            placeholder: "sensor.grid_feed_in",
+            fullWidth: true,
+            domains: ["sensor", "number", "input_number"],
+          })}
+          ${this._renderTextField("ed.power_flow.node_grid_export_color", `${prefix}.export_color`, values.export_color || NODE_DEFAULTS.grid.export_color, { placeholder: NODE_DEFAULTS.grid.export_color })}
+          ${this._renderCheckboxField("ed.power_flow.node_grid_export_when_negative", `${prefix}.export_when_negative`, values.export_when_negative !== false)}
+    ` : "";
     return `
       <section class="editor-section">
         <div class="editor-section__header">
@@ -5539,15 +5648,18 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           ${this._renderEntityPickerField("ed.entity.entity_main", `${prefix}.entity`, values.entity, {
             placeholder: "sensor.mi_sensor",
             fullWidth: true,
+            domains: ["sensor", "number", "input_number"],
           })}
           ${this._renderTextField("ed.entity.name", `${prefix}.name`, values.name)}
           ${this._renderIconPickerField("ed.entity.icon", `${prefix}.icon`, values.icon, {
             placeholder: "mdi:flash",
           })}
           ${this._renderColorField("ed.power_flow.node_color", `${prefix}.color`, values.color)}
+          ${gridExportFields}
           ${this._renderEntityPickerField("ed.power_flow.node_secondary_entity", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, {
             placeholder: "sensor.mi_secundaria",
             fullWidth: true,
+            domains: ["sensor", "number", "input_number"],
           })}
           ${this._renderTextField("ed.power_flow.node_secondary_attribute", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, {
             placeholder: "battery_level",
@@ -5580,6 +5692,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const battery = resolveNodeConfig("battery", config);
     const water = resolveNodeConfig("water", config);
     const gas = resolveNodeConfig("gas", config);
+    const individuals = resolveIndividualConfigs(config);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -5711,6 +5824,58 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         .editor-field textarea {
           min-height: 120px;
           resize: vertical;
+        }
+
+        .power-flow-individual-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .power-flow-individual-card {
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 16px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .power-flow-individual-card__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .power-flow-individual-card__title {
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .power-flow-individual-card__actions {
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .power-flow-individual-card__actions button {
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 10px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          min-height: 32px;
+          padding: 0 10px;
+        }
+
+        .power-flow-individual-card__actions button.danger {
+          color: var(--error-color, #ff4d4f);
+        }
+
+        .power-flow-individual-card__actions button:disabled {
+          cursor: default;
+          opacity: 0.45;
         }
 
         .editor-color-field {
@@ -5929,13 +6094,14 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.individuals_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.individuals_hint"))}</div>
           </div>
-          <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextareaField("ed.power_flow.individuals_entities", "entities.individual", this._serializeIndividuals(), {
-              valueType: "individuals",
-              rows: 5,
-              placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
-            })}
+          <div class="power-flow-individual-list">
+            ${
+              individuals.length
+                ? individuals.map((item, index) => this._renderIndividualEditorCard(item, index, individuals.length)).join("")
+                : `<div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.individuals_empty"))}</div>`
+            }
           </div>
+          <button type="button" data-action="add-individual">${escapeHtml(this._editorLabel("ed.power_flow.add_individual"))}</button>
         </section>
 
         <section class="editor-section">
@@ -5944,9 +6110,17 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.consumption_chips_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextField("ed.power_flow.consumption_day_entity", "consumption_chips.day_entity", config.consumption_chips?.day_entity, { placeholder: "sensor.home_energy_today", fullWidth: true })}
+            ${this._renderEntityPickerField("ed.power_flow.consumption_day_entity", "consumption_chips.day_entity", config.consumption_chips?.day_entity, {
+              placeholder: "sensor.home_energy_today",
+              fullWidth: true,
+              domains: ["sensor"],
+            })}
             ${this._renderTextField("ed.power_flow.consumption_day_label", "consumption_chips.day_label", config.consumption_chips?.day_label, { placeholder: "Today", fullWidth: true })}
-            ${this._renderTextField("ed.power_flow.consumption_month_entity", "consumption_chips.month_entity", config.consumption_chips?.month_entity, { placeholder: "sensor.home_energy_month", fullWidth: true })}
+            ${this._renderEntityPickerField("ed.power_flow.consumption_month_entity", "consumption_chips.month_entity", config.consumption_chips?.month_entity, {
+              placeholder: "sensor.home_energy_month",
+              fullWidth: true,
+              domains: ["sensor"],
+            })}
             ${this._renderTextField("ed.power_flow.consumption_month_label", "consumption_chips.month_label", config.consumption_chips?.month_label, { placeholder: "Month", fullWidth: true })}
           </div>
         </section>

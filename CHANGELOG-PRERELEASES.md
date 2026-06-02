@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.43] - 2026-05-29
+
+Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.
+
+### Added
+
+- **`nodalia-power-flow-card.js`:** home device breakdown popup, optional day/month consumption chips on the card header, and visual-editor support for individual power devices.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** native HA entity selectors in the visual editor; card-based individual device rows with add/remove/reorder.
+- **`nodalia-scenes-card.js`:** bundled at this release channel (launch animation polish from alpha.41).
+
 ## [1.2.0-alpha.42] - 2026-05-29
 
 Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
@@ -17,6 +30,10 @@ Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
 ### Added
 
 - **`nodalia-power-flow-card.js`:** home device breakdown popup — tap Home (when individual devices are configured) for a left-to-right layout with Casa on the left and plug/device flows on the right; optional day/month consumption total sensors as header status chips; visual editor fields for `consumption_chips` and `show_home_device_popup`.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** visual editor uses native Home Assistant `ha-selector` / `ha-entity-picker` for all entity fields, a card-based individual-device editor (no manual entity IDs), and merged editor i18n for consumption chip labels.
 
 ## [1.2.0-alpha.41] - 2026-05-29
 

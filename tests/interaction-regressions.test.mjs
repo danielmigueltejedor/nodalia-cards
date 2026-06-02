@@ -720,6 +720,17 @@ test("power flow card supports home device popup and consumption chips", () => {
   assert.match(source, /home-popup/);
   assert.match(source, /power-flow-card__home-popup-body/);
   assert.match(source, /_renderConsumptionChips/);
+  assert.match(source, /customElements\.get\("ha-selector"\)/);
+  assert.match(source, /_renderIndividualEditorCard/);
+  assert.match(source, /data-action="add-individual"/);
+});
+
+test("power flow editor catalog includes consumption chip translations", () => {
+  const en = JSON.parse(read("i18n/editor/en.json"));
+  assert.ok(en["ed.power_flow.consumption_chips_title"]);
+  assert.ok(en["ed.power_flow.add_individual"]);
+  const editorUi = read("nodalia-editor-ui.js");
+  assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
 test("alarm panel requires manual PIN when the code field is visible", () => {
