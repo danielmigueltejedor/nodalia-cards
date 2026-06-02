@@ -690,8 +690,35 @@ test("scenes card scene buttons avoid focus-driven dashboard scroll jumps", () =
   assert.match(source, /scheduleDashboardScrollRestore/);
   assert.match(source, /overflow-anchor: none/);
   assert.match(source, /scenes-card__tile--launching/);
+  assert.match(source, /scenes-card__tile-burst/);
+  assert.match(source, /scenes-card__tile-icon--launching/);
   assert.doesNotMatch(source, /show_active/);
   assert.doesNotMatch(source, /_syncActiveSceneUi/);
+});
+
+test("light card flushes optimistic turn-on queue before timeout clear", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(
+    source,
+    /this\._optimisticTurnOnTimer = window\.setTimeout\(\(\) => \{[\s\S]*this\._flushOptimisticTurnOnQueue\(\);[\s\S]*this\._clearOptimisticTurnOnState\(\{ clearDrafts: true \}\)/,
+  );
+});
+
+test("calendar native composer validates configured calendars and defaults webhooks to admin-only", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin: false/);
+  assert.match(source, /allowedCalendarIds\.includes\(calendarId\)/);
+  assert.match(source, /allowed_calendar_ids: allowedCalendarIds/);
+  assert.match(source, /if \(configuredIds\.length\) \{[\s\S]*document\.createElement\("select"\)/);
+});
+
+test("alarm panel requires manual PIN when the code field is visible", () => {
+  const source = read("nodalia-alarm-panel-card.js");
+  assert.match(
+    source,
+    /if \(this\._shouldShowCodeInput\(state\)\) \{[\s\S]*return String\(this\._codeInput \|\| ""\)\.trim\(\);[\s\S]*\}[\s\S]*const helperEntityId/,
+  );
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {

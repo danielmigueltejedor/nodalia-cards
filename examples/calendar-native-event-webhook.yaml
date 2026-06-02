@@ -2,6 +2,12 @@
 #
 # Use webhook_id `nodalia_calendar_create_event` in the card editor.
 #
+# Security:
+# - Set `security.allow_webhooks_for_non_admin: true` only if non-admin household
+#   members must create events from the card (default is admin-only).
+# - Restrict `entity_id` to the same calendars configured on the card YAML.
+#   The webhook body includes `allowed_calendar_ids` for convenience.
+#
 # Important:
 # Do not map unused calendar fields to empty strings.
 # Home Assistant treats empty date fields as present and may reject timed events.
@@ -19,6 +25,11 @@ triggers:
 actions:
   - variables:
       d: "{{ trigger.json.service_data | default(trigger.json.data, true) }}"
+      allowed: "{{ trigger.json.allowed_calendar_ids | default([], true) }}"
+
+  - condition: template
+    value_template: >
+      {{ d.entity_id is string and d.entity_id in allowed }}
 
   - choose:
       - conditions:

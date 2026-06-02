@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.41] - 2026-05-29
+
+Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`:** optimistic turn-on timeout now flushes queued brightness/color/temperature changes before clearing pending state (no silent drop while the entity still reports `off`).
+- **`nodalia-calendar-card.js`:** native-event webhook submissions validate against `_getAvailableNativeCalendarIds()`; the composer picker is scoped to configured calendars; webhooks default to admin-only (`security.allow_webhooks_for_non_admin` defaults to `false`).
+- **`nodalia-alarm-panel-card.js`:** when the PIN field is visible, empty submissions no longer fall back to stored/helper codes (blocks one-click arm/disarm on shared dashboards).
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** richer launch feedback on scene tap — accent burst, outer glow ring, icon pulse, and earlier press animation on pointer/touch down.
+- **`examples/calendar-native-event-webhook.yaml`:** documents admin-only default and `allowed_calendar_ids` allowlist validation.
+
 ## [1.2.0-alpha.40] - 2026-05-29
 
 Fortieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.40`**.

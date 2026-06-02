@@ -1,8 +1,8 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.40";
+const CARD_VERSION = "1.2.0-alpha.41";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
-const SCENE_LAUNCH_DURATION = 920;
+const SCENE_LAUNCH_DURATION = 1080;
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -744,12 +744,22 @@ class NodaliaScenesCard extends HTMLElement {
       window.clearTimeout(existingTimer);
     }
     tile.classList.remove("scenes-card__tile--launching");
+    const icon = tile.querySelector(".scenes-card__tile-icon");
+    if (icon instanceof HTMLElement) {
+      icon.classList.remove("scenes-card__tile-icon--launching");
+    }
     void tile.offsetWidth;
     tile.classList.add("scenes-card__tile--launching");
+    if (icon instanceof HTMLElement) {
+      icon.classList.add("scenes-card__tile-icon--launching");
+    }
     this._launchAnimationTimers.set(
       tile,
       window.setTimeout(() => {
         tile.classList.remove("scenes-card__tile--launching");
+        if (icon instanceof HTMLElement) {
+          icon.classList.remove("scenes-card__tile-icon--launching");
+        }
         this._launchAnimationTimers.delete(tile);
       }, duration),
     );
@@ -846,9 +856,11 @@ class NodaliaScenesCard extends HTMLElement {
     }
     if (event.pointerType === "touch") {
       this._rememberSceneInteractionScroll(button);
+      this._triggerPressAnimation(button);
       return;
     }
     this._prepareSceneInteraction(event, button);
+    this._triggerPressAnimation(button);
   }
 
   _onShadowMouseDown(event) {
@@ -865,6 +877,7 @@ class NodaliaScenesCard extends HTMLElement {
       return;
     }
     this._rememberSceneInteractionScroll(button);
+    this._triggerPressAnimation(button);
   }
 
   _onShadowClick(event) {
@@ -936,6 +949,7 @@ class NodaliaScenesCard extends HTMLElement {
       >
         <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
         <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
+        <span class="scenes-card__tile-burst" aria-hidden="true"></span>
         <span class="scenes-card__tile-launch" aria-hidden="true"></span>
         <span class="scenes-card__tile-body">
           <span class="scenes-card__tile-icon">
@@ -1189,6 +1203,16 @@ class NodaliaScenesCard extends HTMLElement {
           z-index: 2;
         }
 
+        .scenes-card__tile-burst {
+          background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--scene-accent) 52%, transparent), transparent 68%);
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+          transform: scale(0.72);
+          z-index: 3;
+        }
+
         .scenes-card__tile-launch {
           border-radius: inherit;
           box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--scene-accent) 0%, transparent);
@@ -1247,15 +1271,24 @@ class NodaliaScenesCard extends HTMLElement {
         }
 
         .scenes-card__tile--launching {
-          animation: scenes-card-tile-launch var(--scenes-card-launch-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: scenes-card-tile-launch var(--scenes-card-launch-duration) cubic-bezier(0.18, 0.92, 0.22, 1) both;
+          z-index: 2;
+        }
+
+        .scenes-card__tile--launching .scenes-card__tile-burst {
+          animation: scenes-card-tile-burst var(--scenes-card-launch-duration) cubic-bezier(0.2, 0.9, 0.28, 1) both;
         }
 
         .scenes-card__tile--launching .scenes-card__tile-launch {
-          animation: scenes-card-tile-launch-ring var(--scenes-card-launch-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: scenes-card-tile-launch-ring var(--scenes-card-launch-duration) cubic-bezier(0.18, 0.92, 0.22, 1) both;
         }
 
         .scenes-card__tile--launching .scenes-card__tile-shimmer {
           animation: scenes-card-tile-shimmer var(--scenes-card-launch-duration) ease-out both;
+        }
+
+        .scenes-card__tile-icon--launching {
+          animation: scenes-card-tile-icon-launch calc(var(--scenes-card-launch-duration) * 0.72) cubic-bezier(0.2, 0.9, 0.28, 1) both;
         }
 
         .scenes-card__tile[aria-disabled="true"] {
@@ -1350,27 +1383,68 @@ class NodaliaScenesCard extends HTMLElement {
 
         @keyframes scenes-card-tile-bounce {
           0% { transform: scale(1); }
-          40% { transform: scale(0.965); }
+          32% { transform: scale(0.958); }
+          68% { transform: scale(1.012); }
           100% { transform: scale(1); }
         }
 
         @keyframes scenes-card-tile-launch {
-          0% { filter: brightness(1) saturate(1); transform: scale(1); }
-          18% { filter: brightness(1.14) saturate(1.08); transform: scale(0.975); }
-          55% { filter: brightness(1.06) saturate(1.04); transform: scale(1.01); }
-          100% { filter: brightness(1) saturate(1); transform: scale(1); }
+          0% {
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+              0 0 0 0 color-mix(in srgb, var(--scene-accent) 0%, transparent);
+            filter: brightness(1) saturate(1);
+            transform: scale(1);
+          }
+          16% {
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+              0 0 0 6px color-mix(in srgb, var(--scene-accent) 24%, transparent),
+              0 20px 42px color-mix(in srgb, var(--scene-accent) 28%, rgba(0, 0, 0, 0.22));
+            filter: brightness(1.16) saturate(1.1);
+            transform: scale(0.968);
+          }
+          48% {
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+              0 0 0 14px color-mix(in srgb, var(--scene-accent) 10%, transparent),
+              0 14px 30px color-mix(in srgb, var(--scene-accent) 18%, rgba(0, 0, 0, 0.16));
+            filter: brightness(1.08) saturate(1.05);
+            transform: scale(1.018);
+          }
+          100% {
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+              0 0 0 0 transparent,
+              0 12px 24px color-mix(in srgb, var(--scene-accent) 12%, rgba(0, 0, 0, 0.12));
+            filter: brightness(1) saturate(1);
+            transform: scale(1);
+          }
+        }
+
+        @keyframes scenes-card-tile-burst {
+          0% { opacity: 0; transform: scale(0.72); }
+          22% { opacity: 0.95; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.18); }
         }
 
         @keyframes scenes-card-tile-launch-ring {
           0% { box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--scene-accent) 0%, transparent); opacity: 0.95; }
-          35% { box-shadow: inset 0 0 0 10px color-mix(in srgb, var(--scene-accent) 34%, transparent); opacity: 1; }
-          100% { box-shadow: inset 0 0 0 24px transparent; opacity: 0; }
+          28% { box-shadow: inset 0 0 0 12px color-mix(in srgb, var(--scene-accent) 42%, transparent); opacity: 1; }
+          100% { box-shadow: inset 0 0 0 28px transparent; opacity: 0; }
         }
 
         @keyframes scenes-card-tile-shimmer {
-          0% { opacity: 0.2; transform: translateX(-30%); }
-          35% { opacity: 0.65; }
-          100% { opacity: 0.25; transform: translateX(30%); }
+          0% { opacity: 0.15; transform: translateX(-42%) skewX(-8deg); }
+          30% { opacity: 0.78; }
+          100% { opacity: 0.2; transform: translateX(42%) skewX(-8deg); }
+        }
+
+        @keyframes scenes-card-tile-icon-launch {
+          0% { transform: scale(1); }
+          24% { transform: scale(1.12); }
+          58% { transform: scale(0.98); }
+          100% { transform: scale(1); }
         }
       </style>
       <ha-card class="scenes-card">

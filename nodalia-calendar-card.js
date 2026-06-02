@@ -32,7 +32,7 @@ const DEFAULT_CONFIG = {
   weather_entity: "",
   native_event_webhook: "",
   security: {
-    allow_webhooks_for_non_admin: true,
+    allow_webhooks_for_non_admin: false,
   },
   tint_auto: true,
   haptics: {
@@ -264,12 +264,14 @@ function normalizeConfig(config) {
   delete normalized.quick_reminder_webhook;
   normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
   normalized.security = normalized.security || {};
-  const legacyRequireAdmin = normalized.security.require_admin_for_webhooks === true;
   if (normalized.security.allow_webhooks_for_non_admin === undefined) {
-    normalized.security.allow_webhooks_for_non_admin = !legacyRequireAdmin;
+    normalized.security.allow_webhooks_for_non_admin =
+      normalized.security.require_admin_for_webhooks === true
+        ? false
+        : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
   }
   normalized.security.allow_webhooks_for_non_admin =
-    normalized.security.allow_webhooks_for_non_admin !== false;
+    normalized.security.allow_webhooks_for_non_admin === true;
   normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
@@ -2390,9 +2392,11 @@ class NodaliaCalendarCard extends HTMLElement {
     const eventData = calendarEvent && typeof calendarEvent === "object" ? Object.fromEntries(
       Object.entries(calendarEvent).filter(([, value]) => value !== "" && value !== null && value !== undefined),
     ) : null;
+    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
     return {
       type: "calendar_create_event",
       event_kind: eventKind,
+      allowed_calendar_ids: allowedCalendarIds,
       service: "calendar.create_event",
       target: calendarId ? { entity_id: [calendarId] } : {},
       data: serviceData,
@@ -2456,6 +2460,14 @@ class NodaliaCalendarCard extends HTMLElement {
     ).trim();
     if (!calendarId) {
       this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
+      return;
+    }
+    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
+    if (!allowedCalendarIds.includes(calendarId)) {
+      this._setComposerError(
+        "native",
+        this._uiText("errors.calendarNotAllowed", "That calendar is not available on this card."),
+      );
       return;
     }
     if (!title) {
@@ -4008,9 +4020,29 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!(host instanceof HTMLElement)) {
       return;
     }
-    const nextValue = this._nativeComposerCalendarValue || "";
+    const calendarIds = this._getAvailableNativeCalendarIds();
+    const configuredIds = (this._config?.calendars || [])
+      .map(entry => String(entry?.entity || "").trim())
+      .filter(Boolean);
+    const nextValue = calendarIds.includes(this._nativeComposerCalendarValue)
+      ? this._nativeComposerCalendarValue
+      : calendarIds[0] || "";
+    this._nativeComposerCalendarValue = nextValue;
     let control = null;
-    if (customElements.get("ha-selector")) {
+
+    if (configuredIds.length) {
+      control = document.createElement("select");
+      control.className = "calendar-composer__select";
+      calendarIds.forEach(calendarId => {
+        const option = document.createElement("option");
+        option.value = calendarId;
+        option.textContent = this._getCalendarEntityLabel(calendarId) || calendarId;
+        control.appendChild(option);
+      });
+      control.addEventListener("change", () => {
+        this._nativeComposerCalendarValue = String(control.value || "").trim();
+      });
+    } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       control.selector = { entity: { domain: "calendar" } };
       control.addEventListener("value-changed", event => {
@@ -5435,7 +5467,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderCheckboxField(
               "ed.calendar.allow_webhooks_non_admin",
               "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin !== false,
+              config.security?.allow_webhooks_for_non_admin === true,
             )}
           </div>
         </section>

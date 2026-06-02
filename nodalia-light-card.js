@@ -1341,6 +1341,9 @@ class NodaliaLightCard extends HTMLElement {
 
     const remaining = Math.max(0, this._optimisticTurnOn.expiresAt - Date.now());
     if (!remaining || typeof window === "undefined") {
+      if (this._isOptimisticTurnOnPending(this._getActualState())) {
+        this._flushOptimisticTurnOnQueue();
+      }
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
       return;
@@ -1353,6 +1356,7 @@ class NodaliaLightCard extends HTMLElement {
         return;
       }
 
+      this._flushOptimisticTurnOnQueue();
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
     }, remaining);
