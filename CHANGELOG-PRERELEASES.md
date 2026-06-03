@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.50] - 2026-05-29
+
+Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** visual editor no longer wipes `entities.grid` / `home` / `solar` / `battery` when adding or removing individual devices — the handler wrongly treated `entities` as an array and reset the whole object on every individual action, which broke the main flow diagram and made remove appear to do nothing.
+
 ## [1.2.0-alpha.49] - 2026-05-29
 
 Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.

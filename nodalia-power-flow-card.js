@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.49";
+const CARD_VERSION = "1.2.0-alpha.50";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -5512,7 +5512,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     event.stopPropagation();
     const action = actionButton.dataset.action;
     const index = Number(actionButton.dataset.index);
-    if (!Array.isArray(this._config.entities)) {
+    if (!isObject(this._config.entities)) {
       this._config.entities = {};
     }
     if (!Array.isArray(this._config.entities.individual)) {

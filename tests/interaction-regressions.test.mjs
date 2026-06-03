@@ -784,6 +784,17 @@ test("power flow card supports home device popup and consumption chips", () => {
   assert.match(source, /data-action="add-individual"/);
 });
 
+test("power flow visual editor individual actions keep energy branch entities", () => {
+  const source = read("nodalia-power-flow-card.js");
+  const editorStart = source.indexOf("class NodaliaPowerFlowCardVisualEditor");
+  assert.ok(editorStart >= 0, "visual editor class should exist");
+  const clickStart = source.indexOf("_onShadowClick(event)", editorStart);
+  assert.ok(clickStart > editorStart, "visual editor click handler should exist");
+  const clickBlock = source.slice(clickStart, clickStart + 2200);
+  assert.match(clickBlock, /if \(!isObject\(this\._config\.entities\)\)/);
+  assert.doesNotMatch(clickBlock, /if \(!Array\.isArray\(this\._config\.entities\)\)/);
+});
+
 test("power flow editor catalog includes consumption chip translations", () => {
   const en = JSON.parse(read("i18n/editor/en.json"));
   assert.ok(en["ed.power_flow.consumption_chips_title"]);
