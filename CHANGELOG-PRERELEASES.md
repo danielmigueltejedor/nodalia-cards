@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.44] - 2026-05-29
+
+Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** home device popup now opens on tap and renders individual devices even when they are hidden from the main diagram.
+- **`nodalia-power-flow-card.js`:** popup mode no longer breaks the flow layout (individual devices are excluded from diagram layout counting).
+- **`nodalia-power-flow-card.js`:** visual editor keeps draft individual rows when adding a device so native entity selectors stay usable before save.
+
 ## [1.2.0-alpha.43] - 2026-05-29
 
 Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.

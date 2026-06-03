@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.43";
+const CARD_VERSION = "1.2.0-alpha.44";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -796,22 +796,33 @@ function isEntitySourceConfigured(entity) {
 }
 
 function resolveIndividualConfigs(config) {
+  return sanitizeIndividualEntries(config).filter(item => item.entity);
+}
+
+function sanitizeIndividualEntries(config) {
   return arrayFromMaybe(config?.entities?.individual)
     .filter(isObject)
     .map((item, index) => ({
       entity: String(item.entity || "").trim(),
       name: String(item.name || "").trim(),
-      icon: String(item.icon || "mdi:flash").trim(),
+      icon: String(item.icon || "mdi:flash").trim() || "mdi:flash",
       color: String(item.color || ["#f29f05", "#42a5f5", "#7fd0c8", "#f56aa0"][index % 4]).trim(),
       secondary_info: isObject(item.secondary_info) ? item.secondary_info : {},
-    }))
-    .filter(item => item.entity);
+    }));
+}
+
+function getDiagramIndividualCount(config) {
+  const configuredCount = resolveIndividualConfigs(config).length;
+  if (configuredCount && config?.show_home_device_popup !== false) {
+    return 0;
+  }
+  return configuredCount;
 }
 
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   merged.entities = merged.entities || {};
-  merged.entities.individual = resolveIndividualConfigs(merged);
+  merged.entities.individual = sanitizeIndividualEntries(merged);
   merged.consumption_chips = {
     ...DEFAULT_CONFIG.consumption_chips,
     ...(isObject(merged.consumption_chips) ? merged.consumption_chips : {}),
@@ -844,7 +855,7 @@ function getFlowLayoutFlagsFromConfig(config) {
   const hasSolar = activeTopKinds.includes("solar");
   const hasBattery = activeTopKinds.includes("battery");
   const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
-  const individualCount = resolveIndividualConfigs(c).length;
+  const individualCount = getDiagramIndividualCount(c);
   return {
     hasGrid,
     hasSolar,
@@ -1183,6 +1194,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       document.removeEventListener("keydown", this._onHomePopupKeydown);
     }
     this._homePopupOpen = false;
+    this._syncHomePopupHostState();
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -1194,6 +1206,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._homePopupOpen = false;
+    this._syncHomePopupHostState();
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._invalidateTrackedEntityStampCache();
     this._lastRenderSignature = "";
@@ -1213,7 +1226,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    const individualCount = resolveIndividualConfigs(this._config).length;
+    const individualCount = getDiagramIndividualCount(this._config);
     const topCount = [
       resolveNodeConfig("grid", this._config),
       resolveNodeConfig("solar", this._config),
@@ -1233,7 +1246,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   getGridOptions() {
-    const individualCount = resolveIndividualConfigs(this._config).length;
+    const individualCount = getDiagramIndividualCount(this._config);
     const topCount = [
       resolveNodeConfig("grid", this._config),
       resolveNodeConfig("solar", this._config),
@@ -1955,10 +1968,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
+    const showIndividualsOnDiagram = this._shouldShowIndividualsOnDiagram();
     this._layoutPreset = getLayoutPreset({
       top: flowFlags.topCount,
       bottom: bottomUtilities,
-      individual: individualConfigs.length,
+      individual: showIndividualsOnDiagram ? individualConfigs.length : 0,
     });
 
     const hasBottom = bottomUtilities > 0;
@@ -1969,9 +1983,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
       battery: this._resolveNodeDescriptor("battery", null, 0, 0, hasBottom, flowFlags),
       water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, hasBottom, flowFlags),
       gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, hasBottom, flowFlags),
-      individual: individualConfigs.map((config, index) =>
-        this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
-      ),
+      individual: showIndividualsOnDiagram
+        ? individualConfigs.map((config, index) =>
+          this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+        )
+        : [],
     };
 
     if (!nodes.home.entityId) {
@@ -2303,9 +2319,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : "";
 
     if (node.kind === "home") {
+      const homeInteractive = nodeAction === "home-popup";
       return `
-        <div class="${nodeClassName}" style="left:${node.position.x}%; top:${node.position.y}%; --node-enter-delay:${enterDelay}ms;">
+        <div
+          class="${nodeClassName}${homeInteractive ? " power-flow-card__node--home-interactive" : ""}"
+          style="left:${node.position.x}%; top:${node.position.y}%; --node-enter-delay:${enterDelay}ms;"
+          ${homeInteractive ? 'data-node-action="home-popup" role="button" tabindex="0"' : ""}
+        >
           <button
+            type="button"
             class="power-flow-card__bubble power-flow-card__bubble--home ${isClickable ? "is-clickable" : ""}"
             data-node-entity="${escapeHtml(node.entityId)}"
             data-node-action="${escapeHtml(nodeAction)}"
@@ -2402,12 +2424,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return this._config?.show_home_device_popup !== false && resolveIndividualConfigs(this._config).length > 0;
   }
 
+  _shouldShowIndividualsOnDiagram() {
+    return resolveIndividualConfigs(this._config).length > 0 && this._config?.show_home_device_popup === false;
+  }
+
+  _syncHomePopupHostState() {
+    this.toggleAttribute("data-home-popup-open", this._homePopupOpen === true);
+  }
+
   _getNodeInteractionAction(node) {
-    if (this._config?.clickable_entities === false || !node?.entityId) {
-      return "";
-    }
     if (node.kind === "home" && this._shouldUseHomeDevicePopup()) {
       return "home-popup";
+    }
+    if (this._config?.clickable_entities === false || !node?.entityId) {
+      return "";
     }
     return "more-info";
   }
@@ -2425,6 +2455,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
     this._homePopupOpen = true;
+    this._syncHomePopupHostState();
     this._lastRenderSignature = "";
     this._render();
   }
@@ -2434,6 +2465,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
     this._homePopupOpen = false;
+    this._syncHomePopupHostState();
     this._lastRenderSignature = "";
     this._render();
   }
@@ -2580,9 +2612,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _renderHomeDevicePopup(nodes) {
-    if (!this._homePopupOpen || !nodes.individual.length) {
+    if (!this._homePopupOpen) {
       return "";
     }
+
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
+    const bottomUtilities = flowFlags.bottomUtilities;
+    const hasBottom = bottomUtilities > 0;
+    const individualConfigs = resolveIndividualConfigs(this._config);
+    if (!individualConfigs.length) {
+      return "";
+    }
+
+    const popupIndividuals = individualConfigs.map((config, index) =>
+      this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+    );
 
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const home = nodes.home;
@@ -2594,9 +2638,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const maxMagnitude = Math.max(
       1,
       this._toFlowMagnitude(home.value, home.unit),
-      ...nodes.individual.map(node => this._toFlowMagnitude(node.value, node.unit)),
+      ...popupIndividuals.map(node => this._toFlowMagnitude(node.value, node.unit)),
     );
-    const deviceCountLabel = `${nodes.individual.length} ${nodes.individual.length === 1 ? "device" : "devices"}`;
+    const deviceCountLabel = `${popupIndividuals.length} ${popupIndividuals.length === 1 ? "device" : "devices"}`;
     const consumptionChips = this._renderConsumptionChips();
 
     return `
@@ -2658,7 +2702,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
               ${this._config?.show_labels === false ? "" : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(home.label)}</span>`}
             </div>
             <div class="power-flow-card__home-popup-devices">
-              ${nodes.individual.map((node, index) => this._renderHomePopupDeviceRow(node, {
+              ${popupIndividuals.map((node, index) => this._renderHomePopupDeviceRow(node, {
                 maxMagnitude,
                 enterDelay: 40 + (index * 36),
               })).join("")}
@@ -3050,6 +3094,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: block;
           height: auto;
           min-height: 0;
+          position: relative;
+        }
+
+        :host([data-home-popup-open]) {
+          overflow: visible;
+          z-index: 6;
+        }
+
+        :host([data-home-popup-open]) ha-card {
+          overflow: visible !important;
         }
 
         * {
@@ -3176,6 +3230,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card--home-popup-open {
           overflow: visible;
+        }
+
+        .power-flow-card__node--home-interactive {
+          cursor: pointer;
         }
 
         .power-flow-card__home-popup {
@@ -4367,8 +4425,14 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(nextConfig));
     this._render();
     this._restoreFocusState(focusState);
+
+    const persisted = deepClone(this._config);
+    if (Array.isArray(persisted.entities?.individual)) {
+      persisted.entities.individual = sanitizeIndividualEntries(persisted).filter(item => item.entity);
+    }
+
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -5181,8 +5245,14 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(nextConfig));
     this._render();
     this._restoreFocusState(focusState);
+
+    const persisted = deepClone(this._config);
+    if (Array.isArray(persisted.entities?.individual)) {
+      persisted.entities.individual = sanitizeIndividualEntries(persisted).filter(item => item.entity);
+    }
+
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -5329,7 +5399,10 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         icon: "mdi:power-plug",
         color: "",
       });
-      this._emitConfig();
+      this._setEditorConfig();
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
       return;
     }
 
@@ -5692,7 +5765,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const battery = resolveNodeConfig("battery", config);
     const water = resolveNodeConfig("water", config);
     const gas = resolveNodeConfig("gas", config);
-    const individuals = resolveIndividualConfigs(config);
+    const individuals = sanitizeIndividualEntries(config);
 
     this.shadowRoot.innerHTML = `
       <style>
