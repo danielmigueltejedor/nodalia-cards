@@ -1758,6 +1758,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
@@ -8198,6 +8201,11 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._onEditorClick = this._onEditorClick.bind(this);
     this.shadowRoot.addEventListener("value-changed", this._onValueChanged);
     this.shadowRoot.addEventListener("click", this._onEditorClick);
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("value-changed", this._onValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onEditorClick);
   }
 
   setConfig(config) {

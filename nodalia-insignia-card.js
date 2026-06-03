@@ -1328,6 +1328,13 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+  }
+
   setConfig(config) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});

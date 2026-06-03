@@ -718,7 +718,11 @@ test("power flow card supports home device popup and consumption chips", () => {
   assert.match(source, /_renderHomeDevicePopup/);
   assert.match(source, /_getNodeInteractionAction/);
   assert.match(source, /home-popup/);
-  assert.match(source, /power-flow-card__home-popup-body/);
+  assert.match(source, /power-flow-card__home-popup-list/);
+  assert.match(source, /power-flow-card__home-device-badge/);
+  assert.match(source, /getDiagramIndividualCount/);
+  assert.match(source, /showIndividualsOnDiagram/);
+  assert.match(source, /editor-actions/);
   assert.match(source, /_renderConsumptionChips/);
   assert.match(source, /customElements\.get\("ha-selector"\)/);
   assert.match(source, /_renderIndividualEditorCard/);

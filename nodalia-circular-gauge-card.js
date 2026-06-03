@@ -1032,6 +1032,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
@@ -1904,6 +1907,13 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {

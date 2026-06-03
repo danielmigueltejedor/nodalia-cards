@@ -687,6 +687,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     window.removeEventListener("location-changed", this._onLocationChange);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    this._mediaBrowserRequestToken += 1;
+    this._mediaBrowserState = null;
     if (this._popupPositionFrame) {
       cancelAnimationFrame(this._popupPositionFrame);
       this._popupPositionFrame = null;
@@ -706,6 +708,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (!this.isConnected) {
+      return;
+    }
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
@@ -2019,7 +2024,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     try {
       const rootNode = await this._fetchMediaBrowserNode(entityId);
 
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2040,7 +2045,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2087,7 +2092,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         mediaContentId,
       );
 
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2103,7 +2108,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -4366,6 +4371,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {

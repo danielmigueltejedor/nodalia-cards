@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.45] - 2026-05-29
+
+Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.
+
+### Fixed
+
+- **Visual editors (suite-wide):** `disconnectedCallback` removes shadow DOM listeners so reopening the card editor does not stack duplicate handlers.
+- **Cards with entry animations:** timer/`requestAnimationFrame` callbacks bail out when the element is disconnected (light, climate, cover, fan, humidifier, graph, vacuum, and related cards).
+- **`nodalia-navigation-bar.js`:** browser media session token cleared on disconnect; async work and `set hass` guarded when the bar is not connected.
+- **`nodalia-calendar-card.js`:** native event composer tracks `dataset.nativeMounted` when color/repeat fields change.
+- **`nodalia-scenes-card.js`:** dashboard scroll restore and press-animation timers cancelled on disconnect (no stale DOM updates after leaving the view).
+
+### Added
+
+- **`package.json`:** `npm run validate` — syntax check, i18n validation, tests, and bundle build in one command.
+
 ## [1.2.0-alpha.44] - 2026-05-29
 
 Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.

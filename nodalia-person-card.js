@@ -771,6 +771,9 @@ class NodaliaPersonCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }

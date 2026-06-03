@@ -4080,9 +4080,10 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const input = this.shadowRoot.querySelector('[data-native-field="color"]');
-    if (!(input instanceof HTMLInputElement)) {
+    if (!(input instanceof HTMLInputElement) || input.dataset.nativeMounted === "color") {
       return;
     }
+    input.dataset.nativeMounted = "color";
     const sync = () => {
       const swatch = input.closest(".editor-color-picker")?.querySelector(".editor-color-swatch");
       if (swatch instanceof HTMLElement) {
@@ -4099,9 +4100,10 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const repeatSelect = this.shadowRoot.querySelector('[data-native-field="repeatKind"]');
-    if (!(repeatSelect instanceof HTMLSelectElement)) {
+    if (!(repeatSelect instanceof HTMLSelectElement) || repeatSelect.dataset.nativeMounted === "repeat") {
       return;
     }
+    repeatSelect.dataset.nativeMounted = "repeat";
     const sync = () => {
       const customRow = this.shadowRoot?.querySelector('[data-native-field-group="repeatCustom"]');
       if (customRow instanceof HTMLElement) {
@@ -4372,6 +4374,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
   }
 
   set hass(hass) {
