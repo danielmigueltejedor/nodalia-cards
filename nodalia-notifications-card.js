@@ -3404,17 +3404,37 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
   }
 
-  disconnectedCallback() {
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
     this.shadowRoot.removeEventListener("change", this._onShadowInput);
     this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {

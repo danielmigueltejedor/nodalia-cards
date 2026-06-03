@@ -178,6 +178,17 @@ test("nav media/popup entrance animations are transition-driven", () => {
   assert.match(source, /playMediaToggleEntrance = .*?!this\._lastMediaToggleVisible/);
 });
 
+test("visual editors reattach shadow listeners on reconnect", () => {
+  const source = read("nodalia-light-card.js");
+  const editorStart = source.indexOf("class NodaliaLightCardEditor");
+  const attachStart = source.indexOf("_attachEditorShadowListeners", editorStart);
+  const editorCtorBlock = source.slice(editorStart, attachStart);
+
+  assert.match(source, /_attachEditorShadowListeners\(/);
+  assert.match(source, /connectedCallback\(\) \{\s*\n\s*this\._attachEditorShadowListeners\(\)/);
+  assert.doesNotMatch(editorCtorBlock, /shadowRoot\.addEventListener/);
+});
+
 test("service-security controls are exposed in visual editors", () => {
   const files = [
     "nodalia-insignia-card.js",

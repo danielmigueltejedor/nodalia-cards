@@ -6682,16 +6682,34 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._showTapActionsSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
   }
 
   disconnectedCallback() {
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {

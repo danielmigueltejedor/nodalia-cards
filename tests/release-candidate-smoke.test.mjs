@@ -21,6 +21,13 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
 
+  const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
+  const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
+  assert.ok(manifest.includes(`"splitCoreFile": "${expectedCoreFile}"`));
+  assert.ok(manifest.includes(`"splitSuiteFile": "${expectedSuiteFile}"`));
+  assert.ok(fs.existsSync(path.join(root, expectedCoreFile)), `${expectedCoreFile} should exist after bundle`);
+  assert.ok(fs.existsSync(path.join(root, expectedSuiteFile)), `${expectedSuiteFile} should exist after bundle`);
+
   pkg.files.forEach(file => {
     assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
   });
@@ -687,9 +694,13 @@ test("HACS bundle entrypoint is self-contained and still emits diagnostics", () 
   assert.match(source, /nodalia-cards\.bundle\.js/);
   assert.match(source, /nodalia-cards\.manifest\.js/);
   assert.match(source, /versionedLoaderFile = `nodalia-cards-\$\{pkg\.version\}\.js`/);
-  assert.match(source, /fs\.writeFileSync\(versionedLoaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{versionedInlineLoaderFooter\}\\n`\)/);
-  assert.match(source, /fs\.writeFileSync\(loaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{inlineLoaderFooter\}\\n`\)/);
+  assert.match(source, /coreFile = `nodalia-cards-core-\$\{pkg\.version\}\.js`/);
+  assert.match(source, /suiteFile = `nodalia-cards-suite-\$\{pkg\.version\}\.js`/);
+  assert.match(source, /fs\.writeFileSync\(path\.join\(root, versionedLoaderFile\), `\$\{fullBody\}/);
+  assert.match(source, /fs\.writeFileSync\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
   assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);
   assert.match(source, /window\.__NODALIA_BUNDLE__/);
+  assert.match(source, /window\.__NODALIA_CORE__/);
+  assert.match(source, /window\.__NODALIA_SUITE__/);
 });

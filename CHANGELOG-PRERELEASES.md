@@ -10,6 +10,39 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.48] - 2026-05-29
+
+Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.
+
+### Fixed
+
+- **Visual editors (suite-wide):** Lovelace briefly disconnects the config panel when opening entity/icon pickers; `disconnectedCallback` had removed click/input listeners without re-attaching them on reconnect, so editor buttons and toggles stopped responding. Listeners now mount in `connectedCallback` via `_attachEditorShadowListeners()`.
+
+## [1.2.0-alpha.47] - 2026-05-29
+
+Forty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.47`**.
+
+### Added
+
+- **Bundle split (optional):** `nodalia-cards-core-{version}.js` (shared i18n/utils) + `nodalia-cards-suite-{version}.js` (all cards). HACS default remains the single self-contained `nodalia-cards-{version}.js`. Load **core first**, then **suite**, as two Lovelace resources when you want a smaller initial download.
+
+### Changed
+
+- **`nodalia-navigation-bar.js`:** when popup/browser/expand state is unchanged, route badges and the media player region update in-place instead of rebuilding the full shadow DOM on every `set hass`.
+
+## [1.2.0-alpha.46] - 2026-05-29
+
+Forty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.46`**.
+
+### Changed
+
+- **`nodalia-advance-vacuum-card.js`:** HA-driven render signature stamp cache — skips rebuilding mode/dock/routine descriptor payloads on every `set hass` when tracked entities and UI scope are unchanged.
+- **`nodalia-graph-card.js`:** chart hover updates tooltip, guide line, and hover dots in-place instead of full `innerHTML` repaints while scrubbing the timeline.
+
+### Fixed
+
+- **Repo hygiene:** removed accidental Finder duplicate artifacts (`* 2.js`, `* 2.mjs`, `* 2.yaml`, `* 2.json`).
+
 ## [1.2.0-alpha.45] - 2026-05-29
 
 Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.

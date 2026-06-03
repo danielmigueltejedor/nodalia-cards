@@ -8199,13 +8199,32 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._onInputChange = this._onInputChange.bind(this);
     this._onValueChanged = this._onValueChanged.bind(this);
     this._onEditorClick = this._onEditorClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("value-changed", this._onValueChanged);
     this.shadowRoot.addEventListener("click", this._onEditorClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("value-changed", this._onValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onEditorClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
   }
 
   disconnectedCallback() {
-    this.shadowRoot.removeEventListener("value-changed", this._onValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onEditorClick);
+    this._detachEditorShadowListeners();
   }
 
   setConfig(config) {
