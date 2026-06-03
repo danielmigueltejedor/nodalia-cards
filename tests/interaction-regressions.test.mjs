@@ -621,6 +621,50 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.ok(exportLines.includes("solar-grid"));
   assert.ok(!exportLines.includes("grid"));
 
+  const buildIndividualPopupCard = () => {
+    const card = new PowerFlowCard();
+    card._config = {
+      show_home_device_popup: true,
+      entities: {
+        home: { entity: "sensor.home", color: "#ffffff" },
+        grid: { entity: "sensor.grid", color: "#6da8ff", export_color: "#44d07b" },
+        solar: { entity: "sensor.solar", color: "#f6b73c" },
+        battery: { entity: "sensor.battery", color: "#61c97a" },
+        water: {},
+        gas: {},
+        individual: [{ entity: "sensor.plug", name: "Plug", icon: "mdi:power-plug", color: "#f29f05" }],
+      },
+      display_zero_lines: { mode: "hide", transparency: 50, grey_color: [189, 189, 189] },
+      show_secondary_info: true,
+      show_values: true,
+      show_labels: true,
+    };
+    card._hass = {
+      states: {
+        "sensor.home": { state: "500", attributes: { unit_of_measurement: "W", friendly_name: "Home" } },
+        "sensor.grid": { state: "200", attributes: { unit_of_measurement: "W", friendly_name: "Grid" } },
+        "sensor.solar": { state: "300", attributes: { unit_of_measurement: "W", friendly_name: "Solar" } },
+        "sensor.battery": { state: "-50", attributes: { unit_of_measurement: "W", friendly_name: "Battery" } },
+        "sensor.plug": { state: "100", attributes: { unit_of_measurement: "W", friendly_name: "Plug" } },
+      },
+    };
+    return card;
+  };
+
+  const popupCard = buildIndividualPopupCard();
+  const popupNodes = popupCard._getNodes();
+  assert.equal(popupNodes.individual.length, 0, "individual devices stay off the main diagram when home popup is enabled");
+  assert.equal(popupNodes._layoutPreset, "compact");
+  assert.equal(popupNodes.grid.entityId, "sensor.grid");
+  assert.equal(popupNodes.solar.entityId, "sensor.solar");
+  assert.equal(popupNodes.battery.entityId, "sensor.battery");
+  assert.equal(popupCard._shouldUseHomeDevicePopup(), true);
+  assert.equal(popupCard._shouldShowIndividualsOnDiagram(), false);
+  assert.equal(popupCard._shouldRenderDiagramNode("grid", popupNodes.grid), true);
+  assert.equal(popupCard._shouldRenderDiagramNode("solar", popupNodes.solar), true);
+  assert.equal(popupCard._shouldRenderDiagramNode("battery", popupNodes.battery), true);
+  assert.ok(popupCard._buildLines(popupNodes).some(line => line.id === "grid" || line.id === "solar" || line.id === "battery"));
+
   const buildMeasuredCard = ({ grid = 0, solar = 0, battery = 0 }) => {
     const card = new PowerFlowCard();
     card._config = {

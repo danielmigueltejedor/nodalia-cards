@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.49] - 2026-05-29
+
+Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** configured individual devices no longer affect the main flow diagram layout when `show_home_device_popup` is active; grid/solar/battery branches keep rendering from YAML even if entity resolution hiccups during config updates.
+- **`nodalia-power-flow-card.js`:** render signature now includes the energy-branch layout config so adding or editing individual devices triggers a full diagram refresh.
+- **Release artifacts:** keep only the current versioned HACS bundles (`1.2.0-alpha.49`); `npm run bundle` now removes stale `nodalia-cards-*-alpha.*.js` files automatically.
+
 ## [1.2.0-alpha.48] - 2026-05-29
 
 Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.

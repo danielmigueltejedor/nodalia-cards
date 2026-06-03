@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.45";
+const CARD_VERSION = "1.2.0-alpha.49";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1230,40 +1230,22 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    const individualCount = getDiagramIndividualCount(this._config);
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
-    const bottomCount = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const layoutPreset = getLayoutPreset({
-      top: topCount,
-      bottom: bottomCount,
-      individual: individualCount,
+      top: flowFlags.topCount,
+      bottom: flowFlags.bottomUtilities,
+      individual: flowFlags.individualCount,
     });
 
     return layoutPreset === "simple" ? 4 : 4;
   }
 
   getGridOptions() {
-    const individualCount = getDiagramIndividualCount(this._config);
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
-    const bottomCount = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const layoutPreset = getLayoutPreset({
-      top: topCount,
-      bottom: bottomCount,
-      individual: individualCount,
+      top: flowFlags.topCount,
+      bottom: flowFlags.bottomUtilities,
+      individual: flowFlags.individualCount,
     });
 
     const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
@@ -1754,6 +1736,31 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
   }
 
+  _getLayoutConfigStamp() {
+    const branchStamp = ["grid", "solar", "battery", "home", "water", "gas"].map(kind => {
+      const cfg = resolveNodeConfig(kind, this._config);
+      const entity = cfg?.entity;
+      if (typeof entity === "string") {
+        return `${kind}:${entity.trim()}`;
+      }
+      if (isObject(entity)) {
+        return `${kind}:${String(entity.entity || "").trim()}|${String(entity.consumption || "").trim()}|${String(entity.production || "").trim()}`;
+      }
+      if (kind === "grid") {
+        return `${kind}:${String(cfg?.export_entity || "").trim()}`;
+      }
+      return `${kind}:`;
+    }).join(";");
+    const individualStamp = resolveIndividualConfigs(this._config)
+      .map(entry => `${entry.entity}|${entry.name}|${entry.icon}|${entry.color}`)
+      .join(";");
+    return [
+      branchStamp,
+      individualStamp,
+      isHomeDevicePopupEnabled(this._config) ? "popup:1" : "popup:0",
+    ].join("::");
+  }
+
   _getRenderSignature(hass = this._hass) {
     if (!this._trackedEntitiesStamp && hass) {
       this._syncTrackedEntitiesStamp(hass);
@@ -1768,8 +1775,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
       show_labels: this._config?.show_labels !== false,
       homePopupOpen: this._homePopupOpen === true,
       consumptionChips: `${chips.day_entity || ""}|${chips.month_entity || ""}`,
+      layoutConfig: this._getLayoutConfigStamp(),
       trackedStates: this._trackedEntitiesStamp,
     });
+  }
+
+  _isDiagramBranchConfigured(kind) {
+    const cfg = resolveNodeConfig(kind, this._config);
+    if (kind === "grid") {
+      return isEntitySourceConfigured(cfg?.entity) || Boolean(String(cfg?.export_entity || "").trim());
+    }
+    return isEntitySourceConfigured(cfg?.entity);
+  }
+
+  _shouldRenderDiagramNode(kind, node) {
+    return Boolean(node?.entityId) || this._isDiagramBranchConfigured(kind);
   }
 
   /**
@@ -1975,11 +1995,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
-    const showIndividualsOnDiagram = this._shouldShowIndividualsOnDiagram();
+    const diagramIndividualCount = getDiagramIndividualCount(this._config);
+    const showIndividualsOnDiagram = diagramIndividualCount > 0;
     this._layoutPreset = getLayoutPreset({
       top: flowFlags.topCount,
       bottom: bottomUtilities,
-      individual: showIndividualsOnDiagram ? individualConfigs.length : 0,
+      individual: diagramIndividualCount,
     });
 
     const hasBottom = bottomUtilities > 0;
@@ -4322,27 +4343,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.home),
                   })}
-                  ${nodes.grid.entityId ? this._renderNode(nodes.grid, {
+                  ${this._shouldRenderDiagramNode("grid", nodes.grid) ? this._renderNode(nodes.grid, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.grid),
                   }) : ""}
-                  ${nodes.solar.entityId ? this._renderNode(nodes.solar, {
+                  ${this._shouldRenderDiagramNode("solar", nodes.solar) ? this._renderNode(nodes.solar, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.solar),
                   }) : ""}
-                  ${nodes.battery.entityId ? this._renderNode(nodes.battery, {
+                  ${this._shouldRenderDiagramNode("battery", nodes.battery) ? this._renderNode(nodes.battery, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.battery),
                   }) : ""}
-                  ${nodes.water.entityId ? this._renderNode(nodes.water, {
+                  ${this._shouldRenderDiagramNode("water", nodes.water) ? this._renderNode(nodes.water, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.water),
                   }) : ""}
-                  ${nodes.gas.entityId ? this._renderNode(nodes.gas, {
+                  ${this._shouldRenderDiagramNode("gas", nodes.gas) ? this._renderNode(nodes.gas, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.gas),
