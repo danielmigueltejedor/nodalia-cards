@@ -575,6 +575,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
     this._optimisticVisualSettle = null;
+    this._optimisticVisualSettleTimer = 0;
     this._lastKnownOnState = new Map();
     this._draftHumidity = new Map();
     this._modePanelOpen = false;
@@ -680,6 +681,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   connectedCallback() {
     this._resizeObserver?.observe(this);
     this._scheduleOptimisticToggleTimeout();
+    this._scheduleOptimisticVisualSettleTimeout();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -710,6 +712,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
     this._clearOptimisticToggleTimer();
+    this._clearOptimisticVisualSettleState();
   }
 
   setConfig(config) {
@@ -719,7 +722,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     if (previousEntity && previousEntity !== this._config.entity) {
       this._draftHumidity.delete(previousEntity);
       this._lastKnownOnState.delete(previousEntity);
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       this._clearOptimisticToggleState();
     }
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -808,9 +811,11 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
+    const modeEntityId = this._config?.mode_entity || "";
     const helperEntityId = this._config?.fan_mode_entity || "";
     const actualState = entityId ? hass?.states?.[entityId] || null : null;
     const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
+    const modeEntityState = modeEntityId ? hass?.states?.[modeEntityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
     return JSON.stringify({
@@ -827,6 +832,11 @@ class NodaliaHumidifierCard extends HTMLElement {
       maxHumidity: Number(attrs.max_humidity ?? -1),
       mode: String(attrs.mode || ""),
       availableModes: Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
+      modeEntityId,
+      modeEntityState: String(modeEntityState?.state || ""),
+      modeEntityOptions: Array.isArray(modeEntityState?.attributes?.options)
+        ? modeEntityState.attributes.options.join("|")
+        : "",
       helperEntityId,
       helperState: String(helperState?.state || ""),
       compact: Boolean(this._isCompactLayout),
@@ -984,15 +994,17 @@ class NodaliaHumidifierCard extends HTMLElement {
   _startOptimisticVisualSettle(actualState, optimisticState) {
     const entityId = this._config?.entity || "";
     if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return;
     }
 
+    this._clearOptimisticVisualSettleTimer();
     this._optimisticVisualSettle = {
       entityId,
       expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
       stateSnapshot: this._createStateSnapshot(optimisticState),
     };
+    this._scheduleOptimisticVisualSettleTimeout();
   }
 
   _hasPublishedHumidity(actualState) {
@@ -1011,17 +1023,17 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return false;
     }
 
     if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return false;
     }
 
     if (this._hasPublishedHumidity(actualState)) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return false;
     }
 
@@ -1054,6 +1066,39 @@ class NodaliaHumidifierCard extends HTMLElement {
       ...actualState,
       attributes: attrs,
     };
+  }
+
+  _clearOptimisticVisualSettleTimer() {
+    if (this._optimisticVisualSettleTimer) {
+      window.clearTimeout(this._optimisticVisualSettleTimer);
+      this._optimisticVisualSettleTimer = 0;
+    }
+  }
+
+  _clearOptimisticVisualSettleState() {
+    this._clearOptimisticVisualSettleTimer();
+    this._optimisticVisualSettle = null;
+  }
+
+  _scheduleOptimisticVisualSettleTimeout() {
+    this._clearOptimisticVisualSettleTimer();
+    if (!this._optimisticVisualSettle || !this.isConnected || typeof window === "undefined") {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
+    this._optimisticVisualSettleTimer = window.setTimeout(() => {
+      this._optimisticVisualSettleTimer = 0;
+      const hadVisualSettle = Boolean(this._optimisticVisualSettle);
+      if (!this._shouldUseOptimisticVisualSettle(this._getActualState())) {
+        if (hadVisualSettle) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+        return;
+      }
+      this._scheduleOptimisticVisualSettleTimeout();
+    }, remaining);
   }
 
   _clearOptimisticToggleTimer() {
@@ -1120,7 +1165,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       : actualState;
 
     this._clearOptimisticToggleState();
-    this._optimisticVisualSettle = null;
+    this._clearOptimisticVisualSettleState();
     this._optimisticToggle = {
       entityId,
       expectedState,

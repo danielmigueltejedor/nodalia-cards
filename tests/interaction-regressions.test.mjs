@@ -130,6 +130,86 @@ function loadPowerFlowCardClass() {
   return registry.get("nodalia-power-flow-card");
 }
 
+function loadDeviceCardClass(file, tag, { now = 1000 } = {}) {
+  const registry = new Map();
+  const timers = [];
+  const clearedTimers = [];
+  let timerId = 0;
+
+  class FakeHTMLElement {
+    constructor() {
+      this.clientWidth = 0;
+      this.isConnected = false;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  const RealDate = Date;
+  const sandbox = {
+    __now: now,
+    cancelAnimationFrame() {},
+    clearTimeout(id) { clearedTimers.push(id); },
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLInputElement: class extends FakeHTMLElement {},
+    navigator: {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    setTimeout(fn, delay) {
+      const id = ++timerId;
+      timers.push({ id, fn, delay });
+      return id;
+    },
+    window: null,
+  };
+  sandbox.Date = class extends RealDate {
+    static now() {
+      return sandbox.__now;
+    }
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read(file), sandbox);
+  return {
+    Card: registry.get(tag),
+    clearedTimers,
+    sandbox,
+    timers,
+  };
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -761,13 +841,125 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
     const source = read(file);
     assert.match(source, /OPTIMISTIC_VISUAL_SETTLE_MS/);
     assert.match(source, /_lastKnownOnState = new Map\(\)/);
+    assert.match(source, /_optimisticVisualSettleTimer = 0/);
     assert.match(source, /_shouldUseOptimisticVisualSettle/);
     assert.match(source, /_startOptimisticVisualSettle/);
+    assert.match(source, /_scheduleOptimisticVisualSettleTimeout/);
     assert.match(source, /powerAnimationState === "powering-up"/);
     assert.match(source, /const fillElapsed = now - Number\(this\._powerTransition\.startedAt\)/);
     assert.match(source, /percentageFillDelay = -clamp\(fillElapsed|humidityFillDelay = -clamp\(fillElapsed/);
     assert.doesNotMatch(source, /FillDelayBase/);
   }
+});
+
+test("fan and humidifier visual settle expiry forces render when HA still publishes zero", () => {
+  const cases = [
+    {
+      file: "nodalia-fan-card.js",
+      tag: "nodalia-fan-card",
+      entity: "fan.office",
+      currentAttrs: { percentage: 0, percentage_step: 1 },
+      settledAttrs: { percentage: 55, percentage_step: 1 },
+      readValue: card => card._getPercentage(card._getState()),
+      rememberedValue: 55,
+      actualValue: 0,
+    },
+    {
+      file: "nodalia-humidifier-card.js",
+      tag: "nodalia-humidifier-card",
+      entity: "humidifier.office",
+      currentAttrs: { humidity: 0, target_humidity: 0, min_humidity: 0, max_humidity: 100 },
+      settledAttrs: { humidity: 45, target_humidity: 45, min_humidity: 0, max_humidity: 100 },
+      readValue: card => card._getHumidity(card._getState()),
+      rememberedValue: 45,
+      actualValue: 0,
+    },
+  ];
+
+  for (const scenario of cases) {
+    const { Card, sandbox, timers } = loadDeviceCardClass(scenario.file, scenario.tag);
+    assert.ok(Card, `${scenario.tag} custom element should register`);
+
+    const actualState = {
+      entity_id: scenario.entity,
+      state: "on",
+      attributes: scenario.currentAttrs,
+    };
+    const optimisticState = {
+      entity_id: scenario.entity,
+      state: "on",
+      attributes: scenario.settledAttrs,
+    };
+
+    const card = new Card();
+    card.isConnected = true;
+    card._config = { entity: scenario.entity, haptics: { enabled: false } };
+    card._hass = { states: { [scenario.entity]: actualState } };
+    card._lastRenderSignature = "unchanged-before-expiry";
+    let renders = 0;
+    card._render = () => {
+      renders += 1;
+    };
+
+    card._startOptimisticVisualSettle(actualState, optimisticState);
+    assert.equal(timers.length, 1);
+    assert.equal(timers[0].delay, 420);
+    assert.equal(scenario.readValue(card), scenario.rememberedValue);
+
+    sandbox.__now = 1500;
+    timers[0].fn();
+
+    assert.equal(renders, 1);
+    assert.equal(card._optimisticVisualSettle, null);
+    assert.equal(card._lastRenderSignature, "");
+    assert.equal(scenario.readValue(card), scenario.actualValue);
+  }
+});
+
+test("humidifier render signature tracks external mode entity state", () => {
+  const { Card } = loadDeviceCardClass("nodalia-humidifier-card.js", "nodalia-humidifier-card");
+  assert.ok(Card, "humidifier card custom element should register");
+
+  const buildHass = mode => ({
+    states: {
+      "humidifier.bedroom": {
+        entity_id: "humidifier.bedroom",
+        state: "on",
+        attributes: {
+          humidity: 40,
+          target_humidity: 40,
+          min_humidity: 0,
+          max_humidity: 100,
+          mode: "Normal",
+          available_modes: ["Normal", "Sleep"],
+        },
+      },
+      "select.bedroom_mode": {
+        entity_id: "select.bedroom_mode",
+        state: mode,
+        attributes: { options: ["Auto", "Sleep"] },
+      },
+    },
+  });
+
+  const card = new Card();
+  card._config = {
+    entity: "humidifier.bedroom",
+    mode_entity: "select.bedroom_mode",
+    haptics: { enabled: false },
+  };
+  card._hass = buildHass("Auto");
+  card.shadowRoot.innerHTML = "<div></div>";
+  card._lastRenderSignature = card._getRenderSignature();
+  let renders = 0;
+  card._render = () => {
+    renders += 1;
+  };
+
+  card.hass = buildHass("Sleep");
+
+  assert.equal(renders, 1);
+  assert.equal(card._getCurrentMode(card._getActualState()), "Sleep");
 });
 
 test("fan and humidifier skip redundant renders during active power transitions", () => {

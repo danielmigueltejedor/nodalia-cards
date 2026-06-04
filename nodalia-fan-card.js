@@ -572,6 +572,7 @@ class NodaliaFanCard extends HTMLElement {
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
     this._optimisticVisualSettle = null;
+    this._optimisticVisualSettleTimer = 0;
     this._lastKnownOnState = new Map();
     this._draftPercentage = new Map();
     this._presetPanelOpen = false;
@@ -675,6 +676,7 @@ class NodaliaFanCard extends HTMLElement {
   connectedCallback() {
     this._resizeObserver?.observe(this);
     this._scheduleOptimisticToggleTimeout();
+    this._scheduleOptimisticVisualSettleTimeout();
   }
 
   disconnectedCallback() {
@@ -694,6 +696,7 @@ class NodaliaFanCard extends HTMLElement {
     this._presetPanelTransition = null;
     this._pendingDragUpdate = null;
     this._clearOptimisticToggleTimer();
+    this._clearOptimisticVisualSettleState();
   }
 
   setConfig(config) {
@@ -703,7 +706,7 @@ class NodaliaFanCard extends HTMLElement {
     if (previousEntity && previousEntity !== this._config.entity) {
       this._draftPercentage.delete(previousEntity);
       this._lastKnownOnState.delete(previousEntity);
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       this._clearOptimisticToggleState();
     }
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -963,15 +966,17 @@ class NodaliaFanCard extends HTMLElement {
   _startOptimisticVisualSettle(actualState, optimisticState) {
     const entityId = this._config?.entity || "";
     if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return;
     }
 
+    this._clearOptimisticVisualSettleTimer();
     this._optimisticVisualSettle = {
       entityId,
       expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
       stateSnapshot: this._createStateSnapshot(optimisticState),
     };
+    this._scheduleOptimisticVisualSettleTimeout();
   }
 
   _hasPublishedPercentage(actualState) {
@@ -985,17 +990,17 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return false;
     }
 
     if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return false;
     }
 
     if (this._hasPublishedPercentage(actualState)) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettleState();
       return false;
     }
 
@@ -1022,6 +1027,39 @@ class NodaliaFanCard extends HTMLElement {
       ...actualState,
       attributes: attrs,
     };
+  }
+
+  _clearOptimisticVisualSettleTimer() {
+    if (this._optimisticVisualSettleTimer) {
+      window.clearTimeout(this._optimisticVisualSettleTimer);
+      this._optimisticVisualSettleTimer = 0;
+    }
+  }
+
+  _clearOptimisticVisualSettleState() {
+    this._clearOptimisticVisualSettleTimer();
+    this._optimisticVisualSettle = null;
+  }
+
+  _scheduleOptimisticVisualSettleTimeout() {
+    this._clearOptimisticVisualSettleTimer();
+    if (!this._optimisticVisualSettle || !this.isConnected || typeof window === "undefined") {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
+    this._optimisticVisualSettleTimer = window.setTimeout(() => {
+      this._optimisticVisualSettleTimer = 0;
+      const hadVisualSettle = Boolean(this._optimisticVisualSettle);
+      if (!this._shouldUseOptimisticVisualSettle(this._getActualState())) {
+        if (hadVisualSettle) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+        return;
+      }
+      this._scheduleOptimisticVisualSettleTimeout();
+    }, remaining);
   }
 
   _clearOptimisticToggleTimer() {
@@ -1088,7 +1126,7 @@ class NodaliaFanCard extends HTMLElement {
       : actualState;
 
     this._clearOptimisticToggleState();
-    this._optimisticVisualSettle = null;
+    this._clearOptimisticVisualSettleState();
     this._optimisticToggle = {
       entityId,
       expectedState,
