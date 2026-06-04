@@ -759,6 +759,13 @@ test("light card flushes optimistic turn-on queue before timeout clear", () => {
   );
 });
 
+test("light card allows confirmation render when optimistic toggle clears with unchanged signature", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /const hadPendingOptimistic = hasPendingOptimistic/);
+  assert.match(source, /const optimisticJustConfirmed = hadPendingOptimistic/);
+  assert.match(source, /&& !optimisticJustConfirmed/);
+});
+
 test("calendar native composer validates configured calendars and defaults webhooks to admin-only", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /allow_webhooks_for_non_admin: false/);
@@ -777,6 +784,8 @@ test("power flow card supports home device popup and consumption chips", () => {
   assert.match(source, /power-flow-card__home-popup-node/);
   assert.match(source, /power-flow-card__home-popup-body/);
   assert.match(source, /position:\s*fixed/);
+  assert.match(source, /transform:\s*translate\(-50%, -50%\)/);
+  assert.match(source, /max-height:\s*min\(88vh/);
   assert.match(source, /getDiagramIndividualCount/);
   assert.match(source, /showIndividualsOnDiagram/);
   assert.match(source, /editor-actions/);
@@ -896,6 +905,11 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
   for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
     const source = read(file);
     assert.match(source, /OPTIMISTIC_VISUAL_SETTLE_MS/);
+    assert.match(source, /_optimisticVisualSettleTimer = 0/);
+    assert.match(source, /_syncOptimisticVisualSettle/);
+    assert.match(source, /_scheduleOptimisticVisualSettleTimeout/);
+    assert.match(source, /_clearOptimisticVisualSettle/);
+    assert.match(source, /visualSettleChanged/);
     assert.match(source, /_lastKnownOnState = new Map\(\)/);
     assert.match(source, /_shouldUseOptimisticVisualSettle/);
     assert.match(source, /_startOptimisticVisualSettle/);
@@ -1126,6 +1140,13 @@ test("fan and humidifier visual settle waits for non-zero published values", () 
   assert.match(fan, /_hasPublishedPercentage\(actualState\)[\s\S]*percentage > 0/);
   assert.match(humidifier, /_hasPublishedHumidity\(actualState\)[\s\S]*humidity > 0/);
   assert.match(humidifier, /targetHumidity > 0/);
+});
+
+test("humidifier render signature includes mode_entity helper state", () => {
+  const source = read("nodalia-humidifier-card.js");
+  assert.match(source, /modeEntityId/);
+  assert.match(source, /modeEntityState/);
+  assert.match(source, /modeEntityOptions/);
 });
 
 test("fav and vacuum resize observers skip render when signature is unchanged", () => {

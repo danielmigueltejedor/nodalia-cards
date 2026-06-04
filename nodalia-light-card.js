@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0-alpha.53";
+const CARD_VERSION = "1.2.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -836,19 +836,27 @@ class NodaliaLightCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    const actualState = this._getActualState();
     let nextSignature = this._getRenderSignature();
     const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !hasPendingOptimistic) {
+    const signatureUnchanged = Boolean(
+      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+    );
+
+    if (signatureUnchanged && !hasPendingOptimistic) {
       return;
     }
 
-    const actualState = this._getActualState();
+    const hadPendingOptimistic = hasPendingOptimistic;
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
     nextSignature = this._getRenderSignature();
+    const optimisticJustConfirmed = hadPendingOptimistic
+      && !this._optimisticTurnOn
+      && !this._optimisticTurnOff;
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (signatureUnchanged && !optimisticJustConfirmed) {
       return;
     }
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.53";
+const CARD_VERSION = "1.2.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3277,21 +3277,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
             linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.03) 100%),
             ${styles.card.background};
           border: 1px solid color-mix(in srgb, var(--home-popup-accent) 18%, var(--divider-color));
-          border-radius: 0;
+          border-radius: 16px;
           box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
           color: var(--primary-text-color);
-          display: flex;
-          flex-direction: column;
-          inset: 0;
+          display: grid;
+          gap: 10px;
+          grid-template-rows: auto minmax(0, 1fr);
           isolation: isolate;
+          left: 50%;
+          max-height: min(88vh, 780px);
+          max-width: min(calc(100vw - 24px), 640px);
           overflow: hidden;
-          padding:
-            max(14px, calc(env(safe-area-inset-top, 0px) + 10px))
-            max(14px, calc(env(safe-area-inset-right, 0px) + 10px))
-            max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px))
-            max(14px, calc(env(safe-area-inset-left, 0px) + 10px));
+          padding: 14px;
           position: absolute;
-          width: 100%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(calc(100vw - 24px), 640px);
+          z-index: 1;
         }
 
         .power-flow-card__home-popup-panel--entrance {
@@ -3301,11 +3303,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         @keyframes power-flow-card-home-popup-in {
           0% {
             opacity: 0;
-            transform: translateY(12px) scale(0.985);
+            transform: translate(-50%, -48%) scale(0.985);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translate(-50%, -50%) scale(1);
           }
         }
 
@@ -3361,8 +3363,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__home-popup-body {
           display: grid;
-          flex: 1 1 auto;
           gap: 12px;
+          max-height: min(76vh, 680px);
           min-height: 0;
           overflow: auto;
           overscroll-behavior: contain;

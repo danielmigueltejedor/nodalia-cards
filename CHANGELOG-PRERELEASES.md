@@ -10,13 +10,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.55] - 2026-05-29
+
+Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`:** `set hass` now re-renders when an optimistic turn-on/turn-off is confirmed by Home Assistant even if the render signature is unchanged, matching fan/humidifier behavior so power transitions and controls do not stay stale.
+
+## [1.2.0-alpha.54] - 2026-05-29
+
+Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** optimistic visual-settle no longer leaves slider/humidity stuck after HA confirms `on` but keeps publishing `0` — an expiry timer and `set hass` sync clear settle state and force a render when the window ends.
+- **`nodalia-humidifier-card.js`:** `mode_entity` helper state and options are now part of the render signature so external mode changes refresh the active mode UI.
+
+## [1.2.0-alpha.56] - 2026-05-29
+
+Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home device popup uses the calendar/climate pattern again — fixed viewport overlay outside the card, centered rounded panel (not full-screen), with scrollable content when there are many devices.
+
 ## [1.2.0-alpha.53] - 2026-05-29
 
 Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
 
 ### Changed
 
-- **`nodalia-power-flow-card.js`:** home device popup is now a full-viewport fixed overlay (same pattern as the calendar card), rendered outside the card surface, with a scrollable body so all devices and chips stay visible on small screens.
+- **`nodalia-power-flow-card.js`:** home device popup is rendered outside the card surface as a fixed overlay with a scrollable body (superseded by **alpha.56** centered-panel layout).
 
 ## [1.2.0-alpha.52] - 2026-05-29
 

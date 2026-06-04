@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.0-alpha.53";
+const CARD_VERSION = "1.2.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -572,6 +572,7 @@ class NodaliaFanCard extends HTMLElement {
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
     this._optimisticVisualSettle = null;
+    this._optimisticVisualSettleTimer = 0;
     this._lastKnownOnState = new Map();
     this._draftPercentage = new Map();
     this._presetPanelOpen = false;
@@ -675,6 +676,7 @@ class NodaliaFanCard extends HTMLElement {
   connectedCallback() {
     this._resizeObserver?.observe(this);
     this._scheduleOptimisticToggleTimeout();
+    this._scheduleOptimisticVisualSettleTimeout();
   }
 
   disconnectedCallback() {
@@ -694,6 +696,7 @@ class NodaliaFanCard extends HTMLElement {
     this._presetPanelTransition = null;
     this._pendingDragUpdate = null;
     this._clearOptimisticToggleTimer();
+    this._clearOptimisticVisualSettleTimer();
   }
 
   setConfig(config) {
@@ -703,7 +706,7 @@ class NodaliaFanCard extends HTMLElement {
     if (previousEntity && previousEntity !== this._config.entity) {
       this._draftPercentage.delete(previousEntity);
       this._lastKnownOnState.delete(previousEntity);
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       this._clearOptimisticToggleState();
     }
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -716,12 +719,13 @@ class NodaliaFanCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const actualState = this._getActualState();
+    const visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
     let nextSignature = this._getRenderSignature();
     const signatureUnchanged = Boolean(
       this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
     );
 
-    if (signatureUnchanged && !this._optimisticToggle) {
+    if (signatureUnchanged && !this._optimisticToggle && !visualSettleChanged) {
       return;
     }
 
@@ -734,6 +738,7 @@ class NodaliaFanCard extends HTMLElement {
     if (
       signatureUnchanged
       && !optimisticJustConfirmed
+      && !visualSettleChanged
       && this._shouldSkipRenderForUnchangedSignature()
     ) {
       return;
@@ -744,6 +749,7 @@ class NodaliaFanCard extends HTMLElement {
       && nextSignature === this._lastRenderSignature
       && !optimisticJustConfirmed
       && !this._optimisticToggle
+      && !visualSettleChanged
     ) {
       return;
     }
@@ -963,7 +969,7 @@ class NodaliaFanCard extends HTMLElement {
   _startOptimisticVisualSettle(actualState, optimisticState) {
     const entityId = this._config?.entity || "";
     if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return;
     }
 
@@ -972,6 +978,7 @@ class NodaliaFanCard extends HTMLElement {
       expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
       stateSnapshot: this._createStateSnapshot(optimisticState),
     };
+    this._scheduleOptimisticVisualSettleTimeout();
   }
 
   _hasPublishedPercentage(actualState) {
@@ -985,17 +992,17 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return false;
     }
 
     if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return false;
     }
 
     if (this._hasPublishedPercentage(actualState)) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return false;
     }
 
@@ -1029,6 +1036,53 @@ class NodaliaFanCard extends HTMLElement {
       window.clearTimeout(this._optimisticToggleTimer);
       this._optimisticToggleTimer = 0;
     }
+  }
+
+  _clearOptimisticVisualSettleTimer() {
+    if (this._optimisticVisualSettleTimer) {
+      window.clearTimeout(this._optimisticVisualSettleTimer);
+      this._optimisticVisualSettleTimer = 0;
+    }
+  }
+
+  _clearOptimisticVisualSettle() {
+    this._clearOptimisticVisualSettleTimer();
+    this._optimisticVisualSettle = null;
+  }
+
+  _syncOptimisticVisualSettle(actualState = this._getActualState()) {
+    const hadSettle = Boolean(this._optimisticVisualSettle);
+    this._shouldUseOptimisticVisualSettle(actualState);
+    const hasSettle = Boolean(this._optimisticVisualSettle);
+    if (hasSettle) {
+      this._scheduleOptimisticVisualSettleTimeout();
+    } else {
+      this._clearOptimisticVisualSettleTimer();
+    }
+    return hadSettle !== hasSettle;
+  }
+
+  _scheduleOptimisticVisualSettleTimeout() {
+    this._clearOptimisticVisualSettleTimer();
+    if (!this._optimisticVisualSettle || !this.isConnected || typeof window === "undefined") {
+      return;
+    }
+
+    const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
+    this._optimisticVisualSettleTimer = window.setTimeout(() => {
+      this._optimisticVisualSettleTimer = 0;
+      const nextActualState = this._getActualState();
+      if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
+        this._scheduleOptimisticVisualSettleTimeout();
+        return;
+      }
+      this._lastRenderSignature = "";
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+      this._render();
+    }, remaining);
   }
 
   _clearOptimisticToggleState() {
@@ -1088,7 +1142,7 @@ class NodaliaFanCard extends HTMLElement {
       : actualState;
 
     this._clearOptimisticToggleState();
-    this._optimisticVisualSettle = null;
+    this._clearOptimisticVisualSettle();
     this._optimisticToggle = {
       entityId,
       expectedState,
