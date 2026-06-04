@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.53] - 2026-05-29
+
+Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home device popup is now a full-viewport fixed overlay (same pattern as the calendar card), rendered outside the card surface, with a scrollable body so all devices and chips stay visible on small screens.
+
 ## [1.2.0-alpha.52] - 2026-05-29
 
 Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
