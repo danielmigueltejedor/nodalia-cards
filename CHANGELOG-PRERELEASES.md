@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.52] - 2026-05-29
+
+Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** removed the home individual-device hint chip — opening the popup by tapping Home is enough.
+- **`nodalia-power-flow-card.js`:** home device popup now reuses the card’s own node language (gradient bubbles, label/value chips) instead of generic row containers.
+
 ## [1.2.0-alpha.51] - 2026-05-29
 
 Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.

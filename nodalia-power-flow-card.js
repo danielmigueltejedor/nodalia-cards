@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0-alpha.51";
+const CARD_VERSION = "1.2.0-alpha.52";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2376,7 +2376,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           </button>
           <div class="power-flow-card__node-info ${infoClass}">
             ${labelMarkup}
-            ${homeInteractive ? this._renderHomeDeviceHintChip() : ""}
             ${secondaryMarkup}
           </div>
         </div>
@@ -2451,29 +2450,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   _shouldShowIndividualsOnDiagram() {
     return resolveIndividualConfigs(this._config).length > 0 && !isHomeDevicePopupEnabled(this._config);
-  }
-
-  _getConfiguredIndividualCount() {
-    return resolveIndividualConfigs(this._config).length;
-  }
-
-  _getHomeDeviceHintLabel(count = this._getConfiguredIndividualCount()) {
-    const safeCount = Math.max(0, Number(count) || 0);
-    return safeCount === 1 ? "1 device" : `${safeCount} devices`;
-  }
-
-  _renderHomeDeviceHintChip() {
-    if (!this._shouldUseHomeDevicePopup()) {
-      return "";
-    }
-
-    const label = this._getHomeDeviceHintLabel();
-    return `
-      <span class="power-flow-card__chip power-flow-card__chip--home-devices" aria-hidden="true" title="${escapeHtml(label)}">
-        <span>${escapeHtml(label)}</span>
-        <ha-icon icon="mdi:chevron-down"></ha-icon>
-      </span>
-    `;
   }
 
   _syncHomePopupHostState() {
@@ -2604,41 +2580,54 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   _renderHomePopupDeviceRow(node, options = {}) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const deviceSize = Math.round(Math.max(36, parseSizeToPixels(styles.icon?.individual_size, 40) - 4));
+    const iconStyles = styles.icon || DEFAULT_CONFIG.styles.icon;
+    const deviceSize = Math.round(Math.max(38, parseSizeToPixels(iconStyles.individual_size, 40)));
+    const chipHeight = Math.max(22, parseSizeToPixels(styles.chip_height, 24));
+    const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+    const chipPadding = styles.chip_padding || "0 10px";
+    const secondarySize = Math.max(10, parseSizeToPixels(styles.secondary_size, 11));
     const deviceClickable = this._config?.clickable_entities !== false && node.entityId;
     const unavailableBadge = this._config?.show_unavailable_badge !== false && node.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
-    const valueText = this._config?.show_values === false || node.unavailable
-      ? (node.unavailable ? "--" : "")
-      : `${node.valueText}${node.unitText ? ` ${node.unitText}` : ""}`.trim();
+    const labelMarkup = this._config?.show_labels === false
+      ? ""
+      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
+    const valueMarkup = this._config?.show_values === false || node.unavailable
+      ? (node.unavailable ? `<span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};"><span>--</span></span>` : "")
+      : `
+          <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};">
+            <span>${escapeHtml(node.valueText)}</span>
+            ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
+          </span>
+        `;
     const secondaryMarkup = node.secondary
-      ? `<span class="power-flow-card__home-popup-item-meta">${escapeHtml(node.secondary)}</span>`
+      ? `<span class="power-flow-card__node-secondary">${escapeHtml(node.secondary)}</span>`
       : "";
 
     return `
-      <button
-        type="button"
-        class="power-flow-card__home-popup-item ${deviceClickable ? "is-clickable" : ""}"
-        data-node-entity="${escapeHtml(node.entityId)}"
-        data-node-action="${deviceClickable ? "more-info" : ""}"
-        style="--device-enter-delay:${options.enterDelay || 0}ms;"
-        title="${escapeHtml(node.label)}"
+      <div
+        class="power-flow-card__home-popup-node power-flow-card__home-popup-node--entering"
+        role="listitem"
+        style="--chip-height:${chipHeight}px; --chip-font-size:${chipFontSize}px; --chip-padding:${escapeHtml(chipPadding)}; --secondary-size:${secondarySize}px; --device-enter-delay:${options.enterDelay || 0}ms;"
       >
-        <span class="power-flow-card__home-popup-item-icon" style="--node-size:${deviceSize}px; --node-tint:${escapeHtml(node.color)};">
+        <button
+          type="button"
+          class="power-flow-card__bubble power-flow-card__bubble--individual ${deviceClickable ? "is-clickable" : ""}"
+          data-node-entity="${escapeHtml(node.entityId)}"
+          data-node-action="${deviceClickable ? "more-info" : ""}"
+          style="--node-size:${deviceSize}px; --node-tint:${escapeHtml(node.color)};"
+          title="${escapeHtml(node.label)}"
+        >
           ${unavailableBadge}
           <ha-icon icon="${escapeHtml(node.icon)}"></ha-icon>
-        </span>
-        <span class="power-flow-card__home-popup-item-copy">
-          ${this._config?.show_labels === false ? "" : `<span class="power-flow-card__home-popup-item-label">${escapeHtml(node.label)}</span>`}
+        </button>
+        <div class="power-flow-card__node-info power-flow-card__node-info--popup">
+          ${labelMarkup}
+          ${valueMarkup}
           ${secondaryMarkup}
-        </span>
-        ${
-          valueText
-            ? `<span class="power-flow-card__home-popup-item-value">${escapeHtml(valueText)}</span>`
-            : `<span class="power-flow-card__home-popup-item-value power-flow-card__home-popup-item-value--empty"></span>`
-        }
-      </button>
+        </div>
+      </div>
     `;
   }
 
@@ -2676,6 +2665,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ? ""
       : `${home.valueText}${home.unitText ? ` ${home.unitText}` : ""}`.trim();
 
+    const homeSummarySize = Math.round(Math.max(72, parseSizeToPixels(styles.icon?.home_size, 96) * 0.68));
+    const homeSummaryLabel = this._config?.show_labels === false
+      ? ""
+      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(home.label)}</span>`;
+
     return `
       <div class="power-flow-card__home-popup" data-home-popup role="dialog" aria-modal="true" aria-label="${escapeHtml(home.label)}">
         <button type="button" class="power-flow-card__home-popup-backdrop" data-home-popup-action="close" aria-label="Close"></button>
@@ -2707,22 +2701,32 @@ class NodaliaPowerFlowCard extends HTMLElement {
             </div>
           </div>
           ${consumptionChips ? `<div class="power-flow-card__home-popup-chips">${consumptionChips}</div>` : ""}
-          <button
-            type="button"
-            class="power-flow-card__home-popup-summary ${homeClickable ? "is-clickable" : ""}"
-            data-node-entity="${escapeHtml(home.entityId)}"
-            data-node-action="${homeClickable ? "more-info" : ""}"
-            title="${escapeHtml(home.label)}"
-          >
-            <span class="power-flow-card__home-popup-summary-icon" style="--node-tint:${escapeHtml(home.color)};">
+          <div class="power-flow-card__home-popup-summary">
+            <button
+              type="button"
+              class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
+              data-node-entity="${escapeHtml(home.entityId)}"
+              data-node-action="${homeClickable ? "more-info" : ""}"
+              style="--node-size:${homeSummarySize}px; --node-tint:${escapeHtml(home.color)};"
+              title="${escapeHtml(home.label)}"
+            >
               ${homeUnavailableBadge}
-              <ha-icon icon="${escapeHtml(home.icon)}"></ha-icon>
-            </span>
-            <span class="power-flow-card__home-popup-summary-copy">
-              <span class="power-flow-card__home-popup-summary-label">${escapeHtml(home.label)}</span>
-              ${homeSummaryValue ? `<span class="power-flow-card__home-popup-summary-value">${escapeHtml(homeSummaryValue)}</span>` : ""}
-            </span>
-          </button>
+              <span class="power-flow-card__home-icon-wrap">
+                <ha-icon icon="${escapeHtml(home.icon)}"></ha-icon>
+              </span>
+              ${
+                homeSummaryValue
+                  ? `
+                    <span class="power-flow-card__home-value">
+                      <span class="power-flow-card__home-value-number">${escapeHtml(home.valueText)}</span>
+                      ${home.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(home.unitText)}</span>` : ""}
+                    </span>
+                  `
+                  : ""
+              }
+            </button>
+            ${homeSummaryLabel}
+          </div>
           <div class="power-flow-card__home-popup-list" role="list">
             ${popupIndividuals.map((node, index) => this._renderHomePopupDeviceRow(node, {
               maxMagnitude,
@@ -2772,7 +2776,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           <div></div>
           <div class="power-flow-card__simple-column power-flow-card__simple-column--home power-flow-card__simple-column--home-top">
             ${this._renderSimpleLabelChip(nodes.home)}
-            ${homePopupAction === "home-popup" ? this._renderHomeDeviceHintChip() : ""}
           </div>
         </div>
 
@@ -3226,30 +3229,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
           font-weight: 800;
         }
 
-        .power-flow-card__chip--home-devices {
-          color: var(--secondary-text-color);
-          cursor: inherit;
-          font-weight: 600;
-          gap: 2px;
-          max-width: none;
-          pointer-events: none;
-        }
-
-        .power-flow-card__chip--home-devices ha-icon {
-          --mdc-icon-size: calc(var(--chip-font-size, 10px) + 3px);
-          opacity: 0.72;
-        }
-
-        .power-flow-card__node--home-interactive .power-flow-card__chip--home-devices {
-          color: color-mix(in srgb, var(--primary-text-color) 78%, var(--secondary-text-color));
+        .power-flow-card__node--home-interactive {
+          cursor: pointer;
         }
 
         .power-flow-card--home-popup-open {
           overflow: visible;
-        }
-
-        .power-flow-card__node--home-interactive {
-          cursor: pointer;
         }
 
         .power-flow-card__home-popup {
@@ -3333,150 +3318,53 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__home-popup-summary {
           align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 22px;
-          color: inherit;
-          cursor: default;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: auto minmax(0, 1fr);
-          padding: 12px 14px;
-          text-align: left;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          justify-content: center;
+          padding: 2px 0 6px;
           width: 100%;
         }
 
-        .power-flow-card__home-popup-summary.is-clickable {
-          cursor: pointer;
-        }
-
-        .power-flow-card__home-popup-summary-icon {
-          align-items: center;
-          background:
-            radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--node-tint) 34%, transparent), transparent 58%),
-            color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--node-tint) 28%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
-          border-radius: 16px;
-          color: var(--node-tint);
-          display: inline-flex;
-          height: 48px;
-          justify-content: center;
-          position: relative;
-          width: 48px;
-        }
-
-        .power-flow-card__home-popup-summary-icon ha-icon {
-          --mdc-icon-size: 24px;
-        }
-
-        .power-flow-card__home-popup-summary-copy {
-          display: grid;
-          gap: 3px;
-          min-width: 0;
-        }
-
-        .power-flow-card__home-popup-summary-label {
-          font-size: 13px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-        }
-
-        .power-flow-card__home-popup-summary-value {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-variant-numeric: tabular-nums;
-          font-weight: 700;
+        .power-flow-card__home-popup-summary .power-flow-card__bubble--home {
+          width: auto;
         }
 
         .power-flow-card__home-popup-list {
           display: grid;
-          gap: 8px;
+          gap: 12px 10px;
+          grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+          justify-items: center;
           min-height: 0;
           overflow: auto;
-          padding-right: 2px;
+          padding: 2px 2px 2px 0;
         }
 
-        .power-flow-card__home-popup-item {
+        .power-flow-card__home-popup-node {
           align-items: center;
-          animation: power-flow-card-fade-up 360ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: var(--device-enter-delay, 0ms);
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 18px;
-          color: inherit;
-          cursor: default;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: auto minmax(0, 1fr) auto;
-          padding: 10px 12px;
-          text-align: left;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          max-width: 100%;
+          min-width: 0;
           width: 100%;
         }
 
-        .power-flow-card__home-popup-item.is-clickable {
-          cursor: pointer;
+        .power-flow-card__home-popup-node--entering {
+          animation: power-flow-card-fade-up 360ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: var(--device-enter-delay, 0ms);
         }
 
-        .power-flow-card__home-popup-item-icon {
+        .power-flow-card__home-popup-node .power-flow-card__node-info--popup {
           align-items: center;
-          background:
-            radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--node-tint) 28%, transparent), transparent 58%),
-            color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--node-tint) 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
-          border-radius: 999px;
-          color: var(--node-tint);
-          display: inline-flex;
-          height: var(--node-size, 36px);
-          justify-content: center;
-          position: relative;
-          width: var(--node-size, 36px);
+          gap: 4px;
+          max-width: 100%;
+          position: static;
+          transform: none;
         }
 
-        .power-flow-card__home-popup-item-icon ha-icon {
-          --mdc-icon-size: calc(var(--node-size, 36px) * 0.52);
-        }
-
-        .power-flow-card__home-popup-item-copy {
-          display: grid;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .power-flow-card__home-popup-item-label {
-          font-size: 13px;
-          font-weight: 700;
-          letter-spacing: -0.01em;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .power-flow-card__home-popup-item-meta {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .power-flow-card__home-popup-item-value {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 999px;
-          display: inline-flex;
-          font-size: 11px;
-          font-variant-numeric: tabular-nums;
-          font-weight: 700;
-          height: var(--chip-height, 22px);
-          padding: 0 10px;
-          white-space: nowrap;
-        }
-
-        .power-flow-card__home-popup-item-value--empty {
-          min-width: 12px;
+        .power-flow-card__home-popup-node .power-flow-card__chip {
+          max-width: 100%;
         }
 
         @media (max-width: 520px) {
