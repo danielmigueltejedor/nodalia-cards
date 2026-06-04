@@ -874,7 +874,7 @@ test("fan and humidifier visual settle expiry forces render when HA still publis
       entity: "humidifier.office",
       currentAttrs: { humidity: 0, target_humidity: 0, min_humidity: 0, max_humidity: 100 },
       settledAttrs: { humidity: 45, target_humidity: 45, min_humidity: 0, max_humidity: 100 },
-      readValue: card => card._getHumidity(card._getState()),
+      readValue: card => card._getTargetHumidity(card._getState()),
       rememberedValue: 45,
       actualValue: 0,
     },
