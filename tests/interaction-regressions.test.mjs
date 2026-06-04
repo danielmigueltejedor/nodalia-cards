@@ -142,6 +142,8 @@ function loadDeviceCardClass(file, tag, { now = 1000 } = {}) {
       this.isConnected = false;
     }
 
+    addEventListener() {}
+
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
@@ -155,6 +157,8 @@ function loadDeviceCardClass(file, tag, { now = 1000 } = {}) {
     dispatchEvent() {
       return true;
     }
+
+    removeEventListener() {}
   }
 
   const RealDate = Date;
