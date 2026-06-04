@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.51] - 2026-05-29
+
+Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home individual-device hint moved out of the Home bubble into a subtle chip under the label (`1 device` / `N devices` + chevron) so it no longer overlaps the consumption value or clashes with the card palette.
+- **`nodalia-power-flow-card.js`:** home device popup restyled to match the main card — same background, softer borders, circular device icons, and chip-style value pills instead of orange accent bars.
+
 ## [1.2.0-alpha.50] - 2026-05-29
 
 Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
