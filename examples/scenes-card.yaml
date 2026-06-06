@@ -1,0 +1,20 @@
+type: custom:nodalia-scenes-card
+name: Living room moods
+layout: grid
+columns: 3
+tap_action: activate
+hold_action: more-info
+styles:
+  accent: "#c9a86c"
+animations:
+  launch_duration: 920
+scenes:
+  - entity: scene.living_room_relax
+    color: "#d4a574"
+  - entity: scene.living_room_movie
+    name: Movie night
+    icon: mdi:movie-open
+    color: "#8b7cf6"
+  - entity: scene.living_room_bright
+    icon: mdi:brightness-7
+    color: "#f0c040"

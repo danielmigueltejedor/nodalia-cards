@@ -475,7 +475,38 @@
       "dialTargetSlider": "Température cible",
       "dialNoSetpoint": "Température intérieure ; pas de consigne active sur le thermostat"
     },
-    "dialNoSetpointHint": "Pas de consigne active"
+    "dialNoSetpointHint": "Pas de consigne active",
+    "schedule": {
+      "openButton": "Planning hebdomadaire des consignes",
+      "popupTitle": "Planning hebdomadaire",
+      "popupHint": "Définissez des plages horaires et des consignes, puis enregistrez pour synchroniser avec Home Assistant via votre webhook.",
+      "enabledLabel": "Activer le planning",
+      "addSlot": "Ajouter une plage",
+      "emptyDay": "Aucune plage",
+      "cancel": "Annuler",
+      "save": "Enregistrer le planning",
+      "saving": "Enregistrement…",
+      "start": "Début",
+      "end": "Fin",
+      "temperature": "Consigne",
+      "remove": "Supprimer",
+      "close": "Fermer",
+      "day": {
+        "mon": "Lundi",
+        "tue": "Mardi",
+        "wed": "Mercredi",
+        "thu": "Jeudi",
+        "fri": "Vendredi",
+        "sat": "Samedi",
+        "sun": "Dimanche"
+      },
+      "errors": {
+        "webhookMissing": "Configurez le webhook de planning dans l’éditeur de la carte.",
+        "entityMissing": "Sélectionnez d’abord une entité climate.",
+        "webhookFailed": "Impossible de synchroniser le planning. Vérifiez le webhook et les journaux Home Assistant.",
+        "dualRangeUnsupported": "Le planning hebdomadaire n’est pas disponible tant que le thermostat utilise une plage dual chauffage/refroidissement."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Aucun historique disponible"

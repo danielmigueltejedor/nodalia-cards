@@ -475,7 +475,38 @@
       "dialTargetSlider": "Temperatura target",
       "dialNoSetpoint": "Temperatura interna; nessun setpoint attivo sul termostato"
     },
-    "dialNoSetpointHint": "Nessun setpoint attivo"
+    "dialNoSetpointHint": "Nessun setpoint attivo",
+    "schedule": {
+      "openButton": "Programma settimanale consigne",
+      "popupTitle": "Programma settimanale",
+      "popupHint": "Definisci fasce orarie e temperature target, poi salva per sincronizzare con Home Assistant tramite il webhook.",
+      "enabledLabel": "Attiva programma",
+      "addSlot": "Aggiungi fascia",
+      "emptyDay": "Nessuna fascia",
+      "cancel": "Annulla",
+      "save": "Salva programma",
+      "saving": "Salvataggio…",
+      "start": "Inizio",
+      "end": "Fine",
+      "temperature": "Consigna",
+      "remove": "Rimuovi",
+      "close": "Chiudi",
+      "day": {
+        "mon": "Lunedì",
+        "tue": "Martedì",
+        "wed": "Mercoledì",
+        "thu": "Giovedì",
+        "fri": "Venerdì",
+        "sat": "Sabato",
+        "sun": "Domenica"
+      },
+      "errors": {
+        "webhookMissing": "Configura il webhook del programma nell’editor della scheda.",
+        "entityMissing": "Seleziona prima un’entità climate.",
+        "webhookFailed": "Impossibile sincronizzare il programma. Controlla webhook e log di Home Assistant.",
+        "dualRangeUnsupported": "Il programma settimanale non è disponibile mentre il termostato usa un intervallo dual heat/cool."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Nessuno storico disponibile"

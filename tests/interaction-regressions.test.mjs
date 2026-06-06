@@ -8,8 +8,17 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "es-ES", includeEditor = false } = {}) {
+function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "es-ES", localStorageSelectedLanguage = null, includeEditor = false } = {}) {
+  const storage = new Map();
+  if (localStorageSelectedLanguage != null) {
+    storage.set("selectedLanguage", JSON.stringify(localStorageSelectedLanguage));
+  }
   const sandbox = {
+    localStorage: {
+      getItem(key) {
+        return storage.has(key) ? storage.get(key) : null;
+      },
+    },
     document: {
       documentElement: { getAttribute(name) { return name === "lang" ? docLang : ""; } },
       querySelector(selector) {
@@ -178,6 +187,28 @@ test("nav media/popup entrance animations are transition-driven", () => {
   assert.match(source, /playMediaToggleEntrance = .*?!this\._lastMediaToggleVisible/);
 });
 
+test("visual editors reattach shadow listeners on reconnect", () => {
+  const editorFiles = [
+    ["nodalia-light-card.js", "NodaliaLightCardEditor"],
+    ["nodalia-fan-card.js", "NodaliaFanCardEditor"],
+    ["nodalia-humidifier-card.js", "NodaliaHumidifierCardEditor"],
+    ["nodalia-cover-card.js", "NodaliaCoverCardEditor"],
+    ["nodalia-climate-card.js", "NodaliaClimateCardEditor"],
+  ];
+
+  editorFiles.forEach(([file, editorClass]) => {
+    const source = read(file);
+    const editorStart = source.indexOf(`class ${editorClass}`);
+    assert.ok(editorStart >= 0, `${file} should define ${editorClass}`);
+    const attachStart = source.indexOf("_attachEditorShadowListeners", editorStart);
+    const editorCtorBlock = source.slice(editorStart, attachStart);
+
+    assert.match(source, /_attachEditorShadowListeners\(/);
+    assert.match(source, /connectedCallback\(\) \{\s*\n\s*this\._attachEditorShadowListeners\(\)/);
+    assert.doesNotMatch(editorCtorBlock, /shadowRoot\.addEventListener/);
+  });
+});
+
 test("service-security controls are exposed in visual editors", () => {
   const files = [
     "nodalia-insignia-card.js",
@@ -262,6 +293,29 @@ test("notifications mobile sent state only marks successful deliveries", () => {
 test("calendar native webhook failures show composer errors", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
+});
+
+test("i18n person home aliases translate with active language", () => {
+  const i18n = loadI18nRuntime({ localStorageSelectedLanguage: "en" });
+  const state = { entity_id: "person.example", state: "en_casa", attributes: {} };
+  assert.equal(
+    i18n.translateEntityState("en", state, 2, (v, u, d) => `${v}${u}`, (v) => String(v), () => null),
+    "Home",
+  );
+  assert.equal(
+    i18n.translateEntityState("es", { ...state, state: "casa" }, 2, (v, u, d) => `${v}${u}`, (v) => String(v), () => null),
+    "En casa",
+  );
+});
+
+test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
+  const i18n = loadI18nRuntime({
+    rootHass: { language: "es" },
+    localStorageSelectedLanguage: "en",
+  });
+
+  assert.equal(i18n.resolveLanguage(null, "auto"), "en");
+  assert.equal(i18n.resolveLanguage({ language: "es" }, "auto"), "en");
 });
 
 test("i18n automatic language prefers HA profile locale over stale legacy language", () => {
@@ -610,6 +664,50 @@ test("power flow derives grid import, export, and battery charge paths from home
   assert.ok(exportLines.includes("solar-grid"));
   assert.ok(!exportLines.includes("grid"));
 
+  const buildIndividualPopupCard = () => {
+    const card = new PowerFlowCard();
+    card._config = {
+      show_home_device_popup: true,
+      entities: {
+        home: { entity: "sensor.home", color: "#ffffff" },
+        grid: { entity: "sensor.grid", color: "#6da8ff", export_color: "#44d07b" },
+        solar: { entity: "sensor.solar", color: "#f6b73c" },
+        battery: { entity: "sensor.battery", color: "#61c97a" },
+        water: {},
+        gas: {},
+        individual: [{ entity: "sensor.plug", name: "Plug", icon: "mdi:power-plug", color: "#f29f05" }],
+      },
+      display_zero_lines: { mode: "hide", transparency: 50, grey_color: [189, 189, 189] },
+      show_secondary_info: true,
+      show_values: true,
+      show_labels: true,
+    };
+    card._hass = {
+      states: {
+        "sensor.home": { state: "500", attributes: { unit_of_measurement: "W", friendly_name: "Home" } },
+        "sensor.grid": { state: "200", attributes: { unit_of_measurement: "W", friendly_name: "Grid" } },
+        "sensor.solar": { state: "300", attributes: { unit_of_measurement: "W", friendly_name: "Solar" } },
+        "sensor.battery": { state: "-50", attributes: { unit_of_measurement: "W", friendly_name: "Battery" } },
+        "sensor.plug": { state: "100", attributes: { unit_of_measurement: "W", friendly_name: "Plug" } },
+      },
+    };
+    return card;
+  };
+
+  const popupCard = buildIndividualPopupCard();
+  const popupNodes = popupCard._getNodes();
+  assert.equal(popupNodes.individual.length, 0, "individual devices stay off the main diagram when home popup is enabled");
+  assert.equal(popupNodes._layoutPreset, "compact");
+  assert.equal(popupNodes.grid.entityId, "sensor.grid");
+  assert.equal(popupNodes.solar.entityId, "sensor.solar");
+  assert.equal(popupNodes.battery.entityId, "sensor.battery");
+  assert.equal(popupCard._shouldUseHomeDevicePopup(), true);
+  assert.equal(popupCard._shouldShowIndividualsOnDiagram(), false);
+  assert.equal(popupCard._shouldRenderDiagramNode("grid", popupNodes.grid), true);
+  assert.equal(popupCard._shouldRenderDiagramNode("solar", popupNodes.solar), true);
+  assert.equal(popupCard._shouldRenderDiagramNode("battery", popupNodes.battery), true);
+  assert.ok(popupCard._buildLines(popupNodes).some(line => line.id === "grid" || line.id === "solar" || line.id === "battery"));
+
   const buildMeasuredCard = ({ grid = 0, solar = 0, battery = 0 }) => {
     const card = new PowerFlowCard();
     card._config = {
@@ -676,6 +774,96 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
   assert.equal(editorLabels["ed.fan.style_slider_color"], "Slider color");
   assert.equal(editorLabels["ed.fan.style_slider_height"], "Slider thickness");
   assert.equal(editorLabels["ed.fan.style_slider_wrap_height"], "Slider container height");
+});
+
+test("scenes card scene buttons avoid focus-driven dashboard scroll jumps", () => {
+  const source = read("nodalia-scenes-card.js");
+  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onShadowPointerDown, true\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onShadowMouseDown, true\)/);
+  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onShadowTouchStart, \{ passive: false, capture: true \}\)/);
+  assert.match(source, /role="button"/);
+  assert.match(source, /tabindex="-1"/);
+  assert.match(source, /_triggerLaunchAnimation/);
+  assert.match(source, /collectDashboardScrollSnapshot/);
+  assert.match(source, /scheduleDashboardScrollRestore/);
+  assert.match(source, /overflow-anchor: none/);
+  assert.match(source, /scenes-card__tile--launching/);
+  assert.match(source, /scenes-card__tile-burst/);
+  assert.match(source, /scenes-card__tile-icon--launching/);
+  assert.doesNotMatch(source, /show_active/);
+  assert.doesNotMatch(source, /_syncActiveSceneUi/);
+});
+
+test("light card flushes optimistic turn-on queue before timeout clear", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(
+    source,
+    /this\._optimisticTurnOnTimer = window\.setTimeout\(\(\) => \{[\s\S]*this\._flushOptimisticTurnOnQueue\(\);[\s\S]*this\._clearOptimisticTurnOnState\(\{ clearDrafts: true \}\)/,
+  );
+});
+
+test("light card allows confirmation render when optimistic toggle clears with unchanged signature", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /const hadPendingOptimistic = hasPendingOptimistic/);
+  assert.match(source, /const optimisticJustConfirmed = hadPendingOptimistic/);
+  assert.match(source, /&& !optimisticJustConfirmed/);
+});
+
+test("calendar native composer validates configured calendars and defaults webhooks to admin-only", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin: false/);
+  assert.match(source, /allowedCalendarIds\.includes\(calendarId\)/);
+  assert.match(source, /allowed_calendar_ids: allowedCalendarIds/);
+  assert.match(source, /if \(configuredIds\.length\) \{[\s\S]*document\.createElement\("select"\)/);
+});
+
+test("power flow card supports home device popup and consumption chips", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /consumption_chips:/);
+  assert.match(source, /_renderHomeDevicePopup/);
+  assert.match(source, /_getNodeInteractionAction/);
+  assert.match(source, /home-popup/);
+  assert.match(source, /power-flow-card__home-popup-list/);
+  assert.match(source, /power-flow-card__home-popup-node/);
+  assert.match(source, /power-flow-card__home-popup-body/);
+  assert.match(source, /position:\s*fixed/);
+  assert.match(source, /transform:\s*translate\(-50%, -50%\)/);
+  assert.match(source, /max-height:\s*min\(88vh/);
+  assert.match(source, /getDiagramIndividualCount/);
+  assert.match(source, /showIndividualsOnDiagram/);
+  assert.match(source, /editor-actions/);
+  assert.match(source, /_renderConsumptionChips/);
+  assert.match(source, /customElements\.get\("ha-selector"\)/);
+  assert.match(source, /_renderIndividualEditorCard/);
+  assert.match(source, /data-action="add-individual"/);
+});
+
+test("power flow visual editor individual actions keep energy branch entities", () => {
+  const source = read("nodalia-power-flow-card.js");
+  const editorStart = source.indexOf("class NodaliaPowerFlowCardVisualEditor");
+  assert.ok(editorStart >= 0, "visual editor class should exist");
+  const clickStart = source.indexOf("_onShadowClick(event)", editorStart);
+  assert.ok(clickStart > editorStart, "visual editor click handler should exist");
+  const clickBlock = source.slice(clickStart, clickStart + 2200);
+  assert.match(clickBlock, /if \(!isObject\(this\._config\.entities\)\)/);
+  assert.doesNotMatch(clickBlock, /if \(!Array\.isArray\(this\._config\.entities\)\)/);
+});
+
+test("power flow editor catalog includes consumption chip translations", () => {
+  const en = JSON.parse(read("i18n/editor/en.json"));
+  assert.ok(en["ed.power_flow.consumption_chips_title"]);
+  assert.ok(en["ed.power_flow.add_individual"]);
+  const editorUi = read("nodalia-editor-ui.js");
+  assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
+});
+
+test("alarm panel requires manual PIN when the code field is visible", () => {
+  const source = read("nodalia-alarm-panel-card.js");
+  assert.match(
+    source,
+    /if \(this\._shouldShowCodeInput\(state\)\) \{[\s\S]*return String\(this\._codeInput \|\| ""\)\.trim\(\);[\s\S]*\}[\s\S]*const helperEntityId/,
+  );
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
@@ -760,6 +948,11 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
   for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
     const source = read(file);
     assert.match(source, /OPTIMISTIC_VISUAL_SETTLE_MS/);
+    assert.match(source, /_optimisticVisualSettleTimer = 0/);
+    assert.match(source, /_syncOptimisticVisualSettle/);
+    assert.match(source, /_scheduleOptimisticVisualSettleTimeout/);
+    assert.match(source, /_clearOptimisticVisualSettle/);
+    assert.match(source, /visualSettleChanged/);
     assert.match(source, /_lastKnownOnState = new Map\(\)/);
     assert.match(source, /_shouldUseOptimisticVisualSettle/);
     assert.match(source, /_startOptimisticVisualSettle/);
@@ -863,6 +1056,61 @@ test("cover card switches open/close arrow orientation by device class and open_
   assert.match(source, /coverDeviceClassPrefersHorizontalOpenClose/);
   assert.match(source, /"ed\.cover\.open_close_icons"/);
   assert.match(source, /escapeHtml\(openCloseIcons\.open\)/);
+});
+
+test("climate schedule save posts webhook without requiring live climate state", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /climateAction === "schedule-save"[\s\S]*void this\._submitScheduleComposer\(\)/);
+  assert.match(source, /climateAction === "schedule-save"[\s\S]*return;/);
+  assert.doesNotMatch(
+    source,
+    /climateAction === "schedule-save"[\s\S]{0,120}const state = this\._getState\(\)/,
+  );
+  assert.match(source, /_flushScheduleComposerFocusedField\(\)/);
+  assert.match(source, /domPatchById\.get\(slot\.id\)/);
+  assert.match(source, /window\.NodaliaUtils\.postHomeAssistantWebhook/);
+});
+
+test("climate card defaults webhook access to admin-only", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin: false/);
+  assert.match(source, /allow_webhooks_for_non_admin === true/);
+  assert.match(source, /isUnsafeConfigPathKey/);
+});
+
+test("climate schedule composer keeps agenda scroll position across re-renders", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /_captureScheduleAgendaScrollState\(\)/);
+  assert.match(source, /_restoreScheduleAgendaScrollState\(savedScheduleAgendaScrollTop\)/);
+  assert.match(source, /_syncRenderSignature\(\)/);
+  assert.match(source, /this\._patchScheduleBlockDom\(slotId\);[\s\S]*this\._syncRenderSignature\(\)/);
+});
+
+test("slider bubble chrome does not trigger card body tap", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function isNodaliaSliderChromeHit\(/);
+  assert.match(utils, /nodaliaTapShield/);
+  assert.match(utils, /__controls-shell/);
+  for (const card of ["nodalia-light-card.js", "nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-cover-card.js"]) {
+    const source = read(card);
+    assert.match(source, /isNodaliaSliderChromeHit\?\.\(event\)/);
+    assert.match(source, /data-nodalia-tap-shield="true"/);
+    assert.match(source, /<ha-card[\s\S]{0,320}data-(?:light|fan|humidifier|cover)-action="body"/);
+    assert.doesNotMatch(source, /__hero" data-(?:light|fan|humidifier|cover)-action="body"/);
+    assert.match(
+      source,
+      /(?:body|icon)[\s\S]{0,220}isNodaliaSliderChromeHit\?\.\(event\)/,
+      `${card} should ignore slider chrome only for body/icon taps`,
+    );
+  }
+});
+
+test("entity card toggle uses homeassistant.toggle for cover and lock entities", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /_isHomeAssistantToggleable\(state\)/);
+  assert.match(source, /_canToggleEntity\(/);
+  assert.match(source, /callService\("homeassistant", "toggle", \{\s*entity_id: entityId,/);
+  assert.match(source, /tapAction === "toggle"[\s\S]*_canToggleEntity\(this\._getActualState\(\)\)/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {
@@ -990,6 +1238,13 @@ test("fan and humidifier visual settle waits for non-zero published values", () 
   assert.match(fan, /_hasPublishedPercentage\(actualState\)[\s\S]*percentage > 0/);
   assert.match(humidifier, /_hasPublishedHumidity\(actualState\)[\s\S]*humidity > 0/);
   assert.match(humidifier, /targetHumidity > 0/);
+});
+
+test("humidifier render signature includes mode_entity helper state", () => {
+  const source = read("nodalia-humidifier-card.js");
+  assert.match(source, /modeEntityId/);
+  assert.match(source, /modeEntityState/);
+  assert.match(source, /modeEntityOptions/);
 });
 
 test("fav and vacuum resize observers skip render when signature is unchanged", () => {

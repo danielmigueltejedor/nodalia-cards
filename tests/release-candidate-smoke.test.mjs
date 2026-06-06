@@ -21,6 +21,13 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
 
+  const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
+  const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
+  assert.ok(manifest.includes(`"splitCoreFile": "${expectedCoreFile}"`));
+  assert.ok(manifest.includes(`"splitSuiteFile": "${expectedSuiteFile}"`));
+  assert.ok(fs.existsSync(path.join(root, expectedCoreFile)), `${expectedCoreFile} should exist after bundle`);
+  assert.ok(fs.existsSync(path.join(root, expectedSuiteFile)), `${expectedSuiteFile} should exist after bundle`);
+
   pkg.files.forEach(file => {
     assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
   });
@@ -45,6 +52,7 @@ test("card sources use nodalia-utils.js instead of inlined duplicate helpers", (
     "nodalia-fav-card.js",
     "nodalia-insignia-card.js",
     "nodalia-person-card.js",
+    "nodalia-scenes-card.js",
     "nodalia-weather-card.js",
     "nodalia-notifications-card.js",
     "nodalia-vacuum-card.js",
@@ -413,13 +421,39 @@ test("notifications translate vacuum cleaning state in smart messages", () => {
 test("climate card is registered and shipped in the HACS bundle", () => {
   const source = read("nodalia-climate-card.js");
   const build = read("scripts/build-bundle.mjs");
-  const pkg = read("package.json");
+  const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
+  const bundle = read(`nodalia-cards-${pkg.version}.js`);
   assert.match(source, /const CARD_TAG = "nodalia-climate-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
   assert.match(build, /nodalia-climate-card\.js/);
-  assert.match(pkg, /"nodalia-climate-card\.js"/);
+  assert.ok(pkg.files.includes("nodalia-climate-card.js"), "nodalia-climate-card.js should be published");
   assert.match(readme, /custom:nodalia-climate-card/);
+  assert.match(source, /"show_schedule_button", config\.show_schedule_button/);
+  assert.match(source, /"setpoint_schedule_webhook", config\.setpoint_schedule_webhook/);
+  assert.match(bundle, /show_schedule_button/);
+  assert.match(bundle, /setpoint_schedule_webhook/);
+  assert.match(source, /climate-schedule-expanded/);
+  assert.match(source, /position:\s*fixed/);
+  assert.match(source, /setpoint_schedule_week_starts_on/);
+});
+
+test("scenes card is registered and shipped in the HACS bundle", () => {
+  const source = read("nodalia-scenes-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const sync = read("scripts/sync-standalone-embed.mjs");
+  const pkg = JSON.parse(read("package.json"));
+  const readme = read("README.md");
+  const bundle = read(`nodalia-cards-${pkg.version}.js`);
+  assert.match(source, /const CARD_TAG = "nodalia-scenes-card"/);
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
+  assert.match(source, /callService\("scene", "turn_on"/);
+  assert.match(source, /_triggerLaunchAnimation/);
+  assert.match(build, /nodalia-scenes-card\.js/);
+  assert.match(sync, /nodalia-scenes-card\.js/);
+  assert.ok(pkg.files.includes("nodalia-scenes-card.js"), "nodalia-scenes-card.js should be published");
+  assert.match(readme, /custom:nodalia-scenes-card/);
+  assert.match(bundle, /callService\("scene","turn_on"/);
 });
 
 test("cover card is registered and shipped in the HACS bundle", () => {
@@ -660,9 +694,13 @@ test("HACS bundle entrypoint is self-contained and still emits diagnostics", () 
   assert.match(source, /nodalia-cards\.bundle\.js/);
   assert.match(source, /nodalia-cards\.manifest\.js/);
   assert.match(source, /versionedLoaderFile = `nodalia-cards-\$\{pkg\.version\}\.js`/);
-  assert.match(source, /fs\.writeFileSync\(versionedLoaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{versionedInlineLoaderFooter\}\\n`\)/);
-  assert.match(source, /fs\.writeFileSync\(loaderPath, `\$\{body\}\\n\$\{footer\}\\n\$\{inlineLoaderFooter\}\\n`\)/);
+  assert.match(source, /coreFile = `nodalia-cards-core-\$\{pkg\.version\}\.js`/);
+  assert.match(source, /suiteFile = `nodalia-cards-suite-\$\{pkg\.version\}\.js`/);
+  assert.match(source, /fs\.writeFileSync\(path\.join\(root, versionedLoaderFile\), `\$\{fullBody\}/);
+  assert.match(source, /fs\.writeFileSync\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
   assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);
   assert.match(source, /window\.__NODALIA_BUNDLE__/);
+  assert.match(source, /window\.__NODALIA_CORE__/);
+  assert.match(source, /window\.__NODALIA_SUITE__/);
 });

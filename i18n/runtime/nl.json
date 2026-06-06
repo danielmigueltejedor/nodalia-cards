@@ -475,7 +475,38 @@
       "dialTargetSlider": "Doeltemperatuur",
       "dialNoSetpoint": "Kamertemperatuur; thermostaat heeft geen actieve setpoint"
     },
-    "dialNoSetpointHint": "Geen actieve setpoint"
+    "dialNoSetpointHint": "Geen actieve setpoint",
+    "schedule": {
+      "openButton": "Weekschema setpoints",
+      "popupTitle": "Weekschema",
+      "popupHint": "Definieer tijdsblokken en doeltemperaturen en sla op om via je webhook te synchroniseren met Home Assistant.",
+      "enabledLabel": "Schema inschakelen",
+      "addSlot": "Blok toevoegen",
+      "emptyDay": "Geen blokken",
+      "cancel": "Annuleren",
+      "save": "Schema opslaan",
+      "saving": "Opslaan…",
+      "start": "Start",
+      "end": "Einde",
+      "temperature": "Setpoint",
+      "remove": "Verwijderen",
+      "close": "Sluiten",
+      "day": {
+        "mon": "Maandag",
+        "tue": "Dinsdag",
+        "wed": "Woensdag",
+        "thu": "Donderdag",
+        "fri": "Vrijdag",
+        "sat": "Zaterdag",
+        "sun": "Zondag"
+      },
+      "errors": {
+        "webhookMissing": "Configureer een webhook voor het weekschema in de kaarteditor.",
+        "entityMissing": "Selecteer eerst een climate-entiteit.",
+        "webhookFailed": "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
+        "dualRangeUnsupported": "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Geen geschiedenis beschikbaar"

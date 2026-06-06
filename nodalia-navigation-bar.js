@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.1.4";
+const CARD_VERSION = "1.2.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -361,8 +361,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -378,6 +385,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -687,6 +697,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     window.removeEventListener("location-changed", this._onLocationChange);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    this._mediaBrowserRequestToken += 1;
+    this._mediaBrowserState = null;
     if (this._popupPositionFrame) {
       cancelAnimationFrame(this._popupPositionFrame);
       this._popupPositionFrame = null;
@@ -706,6 +718,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
   set hass(hass) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (!this.isConnected) {
+      return;
+    }
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
@@ -2019,7 +2034,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     try {
       const rootNode = await this._fetchMediaBrowserNode(entityId);
 
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2040,7 +2055,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2087,7 +2102,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         mediaContentId,
       );
 
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2103,7 +2118,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -4363,9 +4378,34 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     this._showAnimationSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {

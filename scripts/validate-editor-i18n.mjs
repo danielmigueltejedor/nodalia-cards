@@ -41,7 +41,24 @@ for (const name of fs.readdirSync(dir)) {
   }
 }
 
+const editorUiPath = path.join(root, "nodalia-editor-ui.js");
+if (fs.existsSync(editorUiPath)) {
+  const editorUi = fs.readFileSync(editorUiPath, "utf8");
+  for (const k of enKeys) {
+    if (!editorUi.includes(k)) {
+      console.error(`Missing key in nodalia-editor-ui.js (run npm run i18n:gen-editor): ${k}`);
+      failed = true;
+    }
+  }
+} else {
+  console.warn("validate-editor-i18n: no nodalia-editor-ui.js — skip embedded catalog check.");
+}
+
 if (failed) {
   process.exit(1);
 }
-console.log("validate-editor-i18n: OK —", enKeys.size, "keys checked across locale files.");
+console.log(
+  "validate-editor-i18n: OK —",
+  enKeys.size,
+  "keys checked across locale files and nodalia-editor-ui.js.",
+);

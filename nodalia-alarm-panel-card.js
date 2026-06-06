@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.1.4";
+const CARD_VERSION = "1.2.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -194,8 +194,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -211,6 +218,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -914,10 +924,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _getCodeValue(state) {
     if (this._shouldShowCodeInput(state)) {
-      const manualCode = String(this._codeInput || "").trim();
-      if (manualCode) {
-        return manualCode;
-      }
+      return String(this._codeInput || "").trim();
     }
 
     const helperEntityId = String(this._config?.code_entity || "").trim();
@@ -1021,6 +1028,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
@@ -1076,12 +1086,19 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       entity_id: this._config.entity,
     };
 
+    const requiresManualPin = this._shouldShowCodeInput(state);
+    const manualPin = String(this._codeInput || "").trim();
+    if (requiresManualPin && !manualPin) {
+      this._triggerHaptic("warning");
+      return;
+    }
+
     const code = this._getCodeValue(state);
     if (code) {
       payload.code = code;
     }
 
-    const usedManualCode = this._shouldShowCodeInput(state) && String(this._codeInput || "").trim() !== "";
+    const usedManualCode = requiresManualPin && manualPin !== "";
 
     this._triggerHaptic();
 
@@ -1785,19 +1802,38 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
   }
 
-  disconnectedCallback() {
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
     this.shadowRoot.removeEventListener("change", this._onShadowInput);
     this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.removeEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
     if (this._emitConfigTimer) {
       window.clearTimeout(this._emitConfigTimer);
       this._emitConfigTimer = 0;

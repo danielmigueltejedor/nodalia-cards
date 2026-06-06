@@ -475,7 +475,38 @@
       "dialTargetSlider": "Solltemperatur",
       "dialNoSetpoint": "Raumtemperatur; kein aktives Soll am Thermostat"
     },
-    "dialNoSetpointHint": "Kein aktives Soll"
+    "dialNoSetpointHint": "Kein aktives Soll",
+    "schedule": {
+      "openButton": "Wochen-Sollwertplan",
+      "popupTitle": "Wochenplan",
+      "popupHint": "Definiere Zeitblöcke und Solltemperaturen und speichere, um über deinen Webhook mit Home Assistant zu synchronisieren.",
+      "enabledLabel": "Wochenplan aktivieren",
+      "addSlot": "Block hinzufügen",
+      "emptyDay": "Keine Blöcke",
+      "cancel": "Abbrechen",
+      "save": "Plan speichern",
+      "saving": "Speichern…",
+      "start": "Beginn",
+      "end": "Ende",
+      "temperature": "Sollwert",
+      "remove": "Entfernen",
+      "close": "Schließen",
+      "day": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      },
+      "errors": {
+        "webhookMissing": "Konfiguriere einen Webhook für den Sollwert-Wochenplan im Karten-Editor.",
+        "entityMissing": "Wähle zuerst eine Climate-Entität.",
+        "webhookFailed": "Plan konnte nicht synchronisiert werden. Prüfe Webhook und Home-Assistant-Protokolle.",
+        "dualRangeUnsupported": "Wochenpläne sind nicht verfügbar, solange das Thermostat einen dualen Heiz-/Kühlbereich nutzt."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Kein Verlauf verfügbar"

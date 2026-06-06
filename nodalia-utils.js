@@ -22,6 +22,7 @@
     "bindHostPointerHoldGesture",
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
+    "isNodaliaSliderChromeHit",
     "renderLovelaceEntityGuardCardHtml",
     "renderLovelaceEntityGuardForEntities",
     "renderEditorCollapsibleToggleHtml",
@@ -39,6 +40,42 @@
 
   function isObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function isUnsafeConfigPathKey(key) {
+    return key === "__proto__" || key === "constructor" || key === "prototype";
+  }
+
+  function setByPath(target, path, value) {
+    const parts = String(path || "").split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+        cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+      }
+      cursor = cursor[key];
+    }
+    cursor[parts[parts.length - 1]] = value;
+  }
+
+  function deleteByPath(target, path) {
+    const parts = String(path || "").split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+        return;
+      }
+      cursor = cursor[key];
+    }
+    delete cursor[parts[parts.length - 1]];
   }
 
   function deepClone(value) {
@@ -193,12 +230,37 @@
    * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
    * Does not rely on the signed-in user's permission to call `input_text.set_value`;
    * an automation triggered by the webhook runs with normal HA privileges.
-   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
    *
-   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
-   * often returns **401** in the HA frontend because API routes expect the bearer/session
-   * from `fetchWithAuth`, not cookies alone.
+   * From Lovelace, prefer the authenticated WebSocket command `webhook/handle` when
+   * `hass.callWS` is available — it reliably triggers automations even when HTTP POST
+   * would return 200 without firing (e.g. `local_only` webhooks via remote/Nabu Casa).
+   * Falls back to same-origin POST, then `hass.auth.fetchWithAuth`.
    */
+  function postHomeAssistantWebhookViaWebSocket(hass, webhookId, payloadJson) {
+    if (typeof hass?.callWS !== "function") {
+      return Promise.resolve(false);
+    }
+
+    return Promise.resolve(
+      hass.callWS({
+        type: "webhook/handle",
+        webhook_id: webhookId,
+        method: "POST",
+        body: payloadJson,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ).then(
+      result => {
+        const status = Number(result?.status);
+        if (Number.isFinite(status)) {
+          return status >= 200 && status < 300;
+        }
+        return result != null;
+      },
+      () => false,
+    );
+  }
+
   function postHomeAssistantWebhook(webhookId, body, hass) {
     const id = normalizeHomeAssistantWebhookId(webhookId);
     if (!id) {
@@ -206,36 +268,51 @@
     }
     const payload = body && typeof body === "object" ? body : {};
     const path = `/api/webhook/${encodeURIComponent(id)}`;
+    const payloadJson = JSON.stringify(payload);
 
-    const authFetch = hass?.auth?.fetchWithAuth;
-    if (typeof authFetch === "function") {
-      return authFetch(path, {
+    const postSameOrigin = () => {
+      if (typeof fetch !== "function") {
+        return Promise.resolve(false);
+      }
+      const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+      if (!origin) {
+        return Promise.resolve(false);
+      }
+      return fetch(`${origin}${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payloadJson,
+        credentials: "same-origin",
       }).then(
         res => res.ok,
         () => false,
       );
+    };
+
+    const postViaAuthFetch = () => {
+      const authFetch = hass?.auth?.fetchWithAuth;
+      if (typeof authFetch !== "function") {
+        return postSameOrigin();
+      }
+      return authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payloadJson,
+      }).then(
+        res => (res.ok ? true : postSameOrigin()),
+        () => postSameOrigin(),
+      );
+    };
+
+    const postViaHttp = () => postSameOrigin().then(ok => (ok ? true : postViaAuthFetch()));
+
+    if (hass && typeof hass.callWS === "function") {
+      return postHomeAssistantWebhookViaWebSocket(hass, id, payloadJson).then(
+        ok => (ok ? true : postViaHttp()),
+      );
     }
 
-    if (typeof fetch !== "function") {
-      return Promise.resolve(false);
-    }
-    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
-    if (!origin) {
-      return Promise.resolve(false);
-    }
-    const url = `${origin}${path}`;
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "same-origin",
-    }    ).then(
-      res => res.ok,
-      () => false,
-    );
+    return postViaHttp();
   }
 
   /**
@@ -741,6 +818,39 @@
     host._nodaliaZoneTap = null;
   }
 
+  const NODALIA_SLIDER_CHROME_CLASS_MARKERS = [
+    "__slider-wrap",
+    "__slider-shell",
+    "__slider-track",
+    "__slider-thumb",
+    "__active-chip-shell",
+    "__controls-shell",
+    "__controls-inner",
+  ];
+
+  /** Slider / controls chrome must not trigger card-body tap (toggle). */
+  function isNodaliaSliderChromeHit(event) {
+    const path = typeof event?.composedPath === "function" ? event.composedPath() : [];
+    for (const node of path) {
+      if (!(node instanceof Element)) {
+        continue;
+      }
+      if (node instanceof HTMLElement && node.dataset?.nodaliaTapShield === "true") {
+        return true;
+      }
+      const className = typeof node.className === "string"
+        ? node.className
+        : String(node.getAttribute?.("class") || "");
+      if (
+        className &&
+        NODALIA_SLIDER_CHROME_CLASS_MARKERS.some(marker => className.includes(marker))
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function scheduleCardZoneTap(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -951,6 +1061,9 @@
 
   const api = {
     isObject,
+    isUnsafeConfigPathKey,
+    setByPath,
+    deleteByPath,
     deepClone,
     deepEqual,
     stripEqualToDefaults,
@@ -968,6 +1081,7 @@
     bindHostPointerHoldGesture,
     cancelCardZoneTap,
     scheduleCardZoneTap,
+    isNodaliaSliderChromeHit,
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
     renderEditorCollapsibleToggleHtml,

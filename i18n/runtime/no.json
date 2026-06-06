@@ -52,5 +52,38 @@
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
     "audio_error": "Audio error"
+  },
+  "climateCard": {
+    "schedule": {
+      "openButton": "Ukentlig setpoint-plan",
+      "popupTitle": "Ukeplan",
+      "popupHint": "Definer tidsblokker og måltemperaturer, og lagre for å synkronisere med Home Assistant via webhooken.",
+      "enabledLabel": "Aktiver plan",
+      "addSlot": "Legg til blokk",
+      "emptyDay": "Ingen blokker",
+      "cancel": "Avbryt",
+      "save": "Lagre plan",
+      "saving": "Lagrer…",
+      "start": "Start",
+      "end": "Slutt",
+      "temperature": "Setpoint",
+      "remove": "Fjern",
+      "close": "Lukk",
+      "day": {
+        "mon": "Mandag",
+        "tue": "Tirsdag",
+        "wed": "Onsdag",
+        "thu": "Torsdag",
+        "fri": "Fredag",
+        "sat": "Lørdag",
+        "sun": "Søndag"
+      },
+      "errors": {
+        "webhookMissing": "Konfigurer webhook for setpoint-plan i korteditoren.",
+        "entityMissing": "Velg en climate-entitet først.",
+        "webhookFailed": "Kunne ikke synkronisere planen. Sjekk webhook og Home Assistant-logger.",
+        "dualRangeUnsupported": "Ukeplaner støttes ikke mens termostaten bruker dual varme/kjøle-område."
+      }
+    }
   }
 }

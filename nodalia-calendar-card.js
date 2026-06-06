@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.1.4";
+const CARD_VERSION = "1.2.0";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -32,7 +32,7 @@ const DEFAULT_CONFIG = {
   weather_entity: "",
   native_event_webhook: "",
   security: {
-    allow_webhooks_for_non_admin: true,
+    allow_webhooks_for_non_admin: false,
   },
   tint_auto: true,
   haptics: {
@@ -264,12 +264,14 @@ function normalizeConfig(config) {
   delete normalized.quick_reminder_webhook;
   normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
   normalized.security = normalized.security || {};
-  const legacyRequireAdmin = normalized.security.require_admin_for_webhooks === true;
   if (normalized.security.allow_webhooks_for_non_admin === undefined) {
-    normalized.security.allow_webhooks_for_non_admin = !legacyRequireAdmin;
+    normalized.security.allow_webhooks_for_non_admin =
+      normalized.security.require_admin_for_webhooks === true
+        ? false
+        : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
   }
   normalized.security.allow_webhooks_for_non_admin =
-    normalized.security.allow_webhooks_for_non_admin !== false;
+    normalized.security.allow_webhooks_for_non_admin === true;
   normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
   normalized.max_visible_events = Math.min(
     12,
@@ -1540,7 +1542,7 @@ class NodaliaCalendarCard extends HTMLElement {
       }
       if (!calendarIds.length) {
         this._events = [];
-        await this._refreshWeatherForecastByDay();
+        await this._refreshWeatherForecastByDay(refreshRunId);
         this._loading = false;
         this._error = "";
         this._renderIfChanged(true);
@@ -1582,7 +1584,7 @@ class NodaliaCalendarCard extends HTMLElement {
           return;
         }
         this._events = all;
-        await this._refreshWeatherForecastByDay();
+        await this._refreshWeatherForecastByDay(refreshRunId);
       } catch (_error) {
         if (refreshRunId !== this._refreshRunId) {
           return;
@@ -2178,10 +2180,13 @@ class NodaliaCalendarCard extends HTMLElement {
       .flatMap(forecastType => this._tagForecastRows(this._weatherForecastEvents?.[forecastType]?.forecast, forecastType));
   }
 
-  async _refreshWeatherForecastByDay() {
+  async _refreshWeatherForecastByDay(refreshRunId = this._refreshRunId) {
     const entityId = this._getWeatherEntityId();
     if (!entityId || !this._hass?.states?.[entityId]) {
       this._weatherForecastByDay = new Map();
+      return;
+    }
+    if (refreshRunId !== this._refreshRunId) {
       return;
     }
     const stateObj = this._hass.states[entityId];
@@ -2221,6 +2226,9 @@ class NodaliaCalendarCard extends HTMLElement {
       }
     }
     const forecastRows = this._selectBestForecastRows(forecastCandidates);
+    if (refreshRunId !== this._refreshRunId) {
+      return;
+    }
     this._applyWeatherForecastRows(forecastRows);
   }
 
@@ -2390,9 +2398,11 @@ class NodaliaCalendarCard extends HTMLElement {
     const eventData = calendarEvent && typeof calendarEvent === "object" ? Object.fromEntries(
       Object.entries(calendarEvent).filter(([, value]) => value !== "" && value !== null && value !== undefined),
     ) : null;
+    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
     return {
       type: "calendar_create_event",
       event_kind: eventKind,
+      allowed_calendar_ids: allowedCalendarIds,
       service: "calendar.create_event",
       target: calendarId ? { entity_id: [calendarId] } : {},
       data: serviceData,
@@ -2456,6 +2466,14 @@ class NodaliaCalendarCard extends HTMLElement {
     ).trim();
     if (!calendarId) {
       this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
+      return;
+    }
+    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
+    if (!allowedCalendarIds.includes(calendarId)) {
+      this._setComposerError(
+        "native",
+        this._uiText("errors.calendarNotAllowed", "That calendar is not available on this card."),
+      );
       return;
     }
     if (!title) {
@@ -4008,9 +4026,29 @@ class NodaliaCalendarCard extends HTMLElement {
     if (!(host instanceof HTMLElement)) {
       return;
     }
-    const nextValue = this._nativeComposerCalendarValue || "";
+    const calendarIds = this._getAvailableNativeCalendarIds();
+    const configuredIds = (this._config?.calendars || [])
+      .map(entry => String(entry?.entity || "").trim())
+      .filter(Boolean);
+    const nextValue = calendarIds.includes(this._nativeComposerCalendarValue)
+      ? this._nativeComposerCalendarValue
+      : calendarIds[0] || "";
+    this._nativeComposerCalendarValue = nextValue;
     let control = null;
-    if (customElements.get("ha-selector")) {
+
+    if (configuredIds.length) {
+      control = document.createElement("select");
+      control.className = "calendar-composer__select";
+      calendarIds.forEach(calendarId => {
+        const option = document.createElement("option");
+        option.value = calendarId;
+        option.textContent = this._getCalendarEntityLabel(calendarId) || calendarId;
+        control.appendChild(option);
+      });
+      control.addEventListener("change", () => {
+        this._nativeComposerCalendarValue = String(control.value || "").trim();
+      });
+    } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       control.selector = { entity: { domain: "calendar" } };
       control.addEventListener("value-changed", event => {
@@ -4048,9 +4086,10 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const input = this.shadowRoot.querySelector('[data-native-field="color"]');
-    if (!(input instanceof HTMLInputElement)) {
+    if (!(input instanceof HTMLInputElement) || input.dataset.nativeMounted === "color") {
       return;
     }
+    input.dataset.nativeMounted = "color";
     const sync = () => {
       const swatch = input.closest(".editor-color-picker")?.querySelector(".editor-color-swatch");
       if (swatch instanceof HTMLElement) {
@@ -4067,9 +4106,10 @@ class NodaliaCalendarCard extends HTMLElement {
       return;
     }
     const repeatSelect = this.shadowRoot.querySelector('[data-native-field="repeatKind"]');
-    if (!(repeatSelect instanceof HTMLSelectElement)) {
+    if (!(repeatSelect instanceof HTMLSelectElement) || repeatSelect.dataset.nativeMounted === "repeat") {
       return;
     }
+    repeatSelect.dataset.nativeMounted = "repeat";
     const sync = () => {
       const customRow = this.shadowRoot?.querySelector('[data-native-field-group="repeatCustom"]');
       if (customRow instanceof HTMLElement) {
@@ -4336,10 +4376,36 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {
@@ -5435,7 +5501,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderCheckboxField(
               "ed.calendar.allow_webhooks_non_admin",
               "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin !== false,
+              config.security?.allow_webhooks_for_non_admin === true,
             )}
           </div>
         </section>

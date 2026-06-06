@@ -285,6 +285,14 @@
     "emptyBody": "Configure `entity` to show the card.",
     "defaultName": "Persona"
   },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Añade entidades escena en el editor de la tarjeta.",
+    "defaultName": "Escenas",
+    "unavailable": "No disponible",
+    "subtitle": "Toca un ambiente para lanzarlo",
+    "moods": "ambientes"
+  },
   "entityCard": {
     "binarySensor": {
       "doorOpen": "Abierta",
@@ -498,7 +506,38 @@
       "dialNoSetpoint": "Temperatura interior; el termostato no tiene consigna activa",
       "togglePower": "Encender o apagar"
     },
-    "dialNoSetpointHint": "Sin consigna activa"
+    "dialNoSetpointHint": "Sin consigna activa",
+    "schedule": {
+      "openButton": "Horario semanal de consignas",
+      "popupTitle": "Horario semanal",
+      "popupHint": "Define franjas horarias y consignas, luego guarda para sincronizar con Home Assistant mediante tu webhook.",
+      "enabledLabel": "Activar horario",
+      "addSlot": "Añadir franja",
+      "emptyDay": "Sin franjas",
+      "cancel": "Cancelar",
+      "save": "Guardar horario",
+      "saving": "Guardando…",
+      "start": "Inicio",
+      "end": "Fin",
+      "temperature": "Consigna",
+      "remove": "Eliminar",
+      "close": "Cerrar",
+      "day": {
+        "mon": "Lunes",
+        "tue": "Martes",
+        "wed": "Miércoles",
+        "thu": "Jueves",
+        "fri": "Viernes",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      },
+      "errors": {
+        "webhookMissing": "Configura el webhook de horario en el editor de la tarjeta.",
+        "entityMissing": "Selecciona primero una entidad climate.",
+        "webhookFailed": "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
+        "dualRangeUnsupported": "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Sin historial disponible"

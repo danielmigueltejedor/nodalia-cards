@@ -1,12 +1,431 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), and completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), and completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable).
+
+Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.2.0-alpha.61] - 2026-06-06
+
+Sixty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.61`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`**, **fan / humidifier / cover cards:** card-body tap works again anywhere on the card — **`data-*-action="body"`** restored on **`ha-card`**. Slider-bubble chrome is ignored only for body/icon toggles, so control buttons and slider padding no longer block power toggle or steal taps from the card body.
+
+## [1.2.0-alpha.60] - 2026-06-06
+
+Sixtieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.60`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** home device popup no longer clips long device names — list uses full-width rows (icon + text) with wrapping labels instead of a narrow multi-column grid.
+
+## [1.2.0-alpha.59] - 2026-06-06
+
+Fifty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.59`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** the setpoint schedule popup no longer jumps scroll to the top when adding blocks or editing fields on a weekday far down the agenda — agenda **`scrollTop`** is restored after re-renders, and the render signature stays in sync after in-place slot patches so Home Assistant state updates do not force extra full redraws while the popup is open.
+- **`nodalia-utils.js`**, **light / fan / humidifier / cover cards:** taps on slider bubble chrome no longer trigger card-body toggle — body tap moved from **`ha-card`** to the **hero** row only, controls block is **`data-nodalia-tap-shield`**, and post-drag ghost clicks are suppressed.
+
+### Changed
+
+- **Docs / examples:** [`docs/climate-setpoint-schedule.md`](docs/climate-setpoint-schedule.md) quick-start guide, **`YOUR_*`** placeholders, and generic automation YAML (`climate-setpoint-schedule-*.yaml`) so each thermostat is copy-paste with clear values to replace.
+- **i18n:** `climateCard.schedule` runtime strings (popup, days, errors) in all **`i18n/runtime/*`** locales; Norwegian editor schedule labels translated in **`i18n/editor/no.json`**.
+
+## [1.2.0-alpha.58] - 2026-06-06
+
+Fifty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.58`**.
+
+### Fixed
+
+- **`nodalia-utils.js`:** webhook saves from Lovelace now prefer Home Assistant’s authenticated WebSocket command **`webhook/handle`** (`hass.callWS`) before HTTP POST. This reliably triggers automations from the dashboard; plain HTTP can return **200** without firing when the webhook trigger has **`local_only: true`** (common with remote / Nabu Casa URLs). **Docs/examples now recommend `local_only: false`** on the webhook automation when remote access is used.
+
+### Added
+
+- **Tests:** regression ensuring **`postHomeAssistantWebhook`** uses **`webhook/handle`** when **`hass.callWS`** is available.
+
+## [1.2.0-alpha.57] - 2026-06-06
+
+Fifty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.57`**.
+
+### Fixed
+
+- **`nodalia-entity-card.js` / `nodalia-fav-card.js`:** explicit **`toggle`** tap actions now call **`homeassistant.toggle`** for cover, lock, and other non–on/off entities instead of silently doing nothing.
+- **`nodalia-i18n.js`:** automatic language resolution reads Home Assistant profile language from **`localStorage.selectedLanguage`** before stale **`hass.language`**, fixing cards stuck in Spanish when the UI profile is English; person states **`en_casa`** / **`casa`** map to the active locale’s home label.
+- **`nodalia-climate-card.js`:** weekly setpoint schedule **Save** no longer depends on a live climate state, merges timeline drag and manual time edits into the draft before POST, syncs focused time fields on blur, and defers re-renders during agenda drag so the webhook payload matches edited consignas.
+- **`nodalia-utils.js`:** **`postHomeAssistantWebhook`** falls back to same-origin **`fetch`** when **`fetchWithAuth`** returns a non-OK response, so local webhook automations trigger reliably from Lovelace.
+
+### Added
+
+- **Tests:** regressions for entity-card toggle domains, i18n **`localStorage`** language, person home aliases, climate schedule save routing, and webhook **`fetchWithAuth`** fallback.
+
+## [1.2.0-alpha.56] - 2026-05-29
+
+Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home device popup follows the calendar/climate expanded pattern — fixed viewport overlay rendered outside the card, blurred backdrop, centered rounded panel (up to ~640×780px), and scrollable body when there are many individual devices or consumption chips. Replaces the full-screen panel from **alpha.53**.
+
+## [1.2.0-alpha.55] - 2026-05-29
+
+Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`:** `set hass` now re-renders when an optimistic turn-on/turn-off is confirmed by Home Assistant even if the render signature is unchanged, matching fan/humidifier behavior so power transitions and controls do not stay stale.
+
+### Added
+
+- **Tests:** VM regression in `tests/light-optimistic-toggle.test.mjs` for optimistic turn-off confirmation with unchanged signature.
+
+## [1.2.0-alpha.54] - 2026-05-29
+
+Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
+
+### Fixed
+
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** optimistic visual-settle no longer leaves slider/humidity stuck after HA confirms `on` but keeps publishing `0` — a dedicated expiry timer, centralized cleanup, and `set hass` sync force a render when the settle window ends.
+- **`nodalia-humidifier-card.js`:** `mode_entity` helper state and option list are now part of the render signature so external mode changes refresh the active mode button and label.
+
+### Added
+
+- **Tests:** VM regressions in `tests/fan-humidifier-optimistic-settle.test.mjs` for visual-settle expiry and `mode_entity` signature updates.
+
+## [1.2.0-alpha.53] - 2026-05-29
+
+Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home device popup moved outside the card as a fixed overlay with a scrollable body (first pass used a full-screen panel; layout refined in **alpha.56**).
+
+## [1.2.0-alpha.52] - 2026-05-29
+
+Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** removed the home individual-device hint chip — tapping the Home node to open the popup is sufficient.
+- **`nodalia-power-flow-card.js`:** home device popup items reuse the card’s diagram node language (gradient bubbles, label/value chips) instead of generic row containers.
+
+## [1.2.0-alpha.51] - 2026-05-29
+
+Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home individual-device hint moved out of the Home bubble into a subtle chip under the label so it no longer overlapped the consumption value (chip removed again in **alpha.52**).
+- **`nodalia-power-flow-card.js`:** first pass restyling the home device popup toward the main card palette (superseded by **alpha.52** node layout).
+
+## [1.2.0-alpha.50] - 2026-05-29
+
+Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** visual editor no longer wipes `entities.grid` / `home` / `solar` / `battery` when adding or removing individual devices — the handler wrongly treated `entities` as an array and reset the whole object on every individual action, which broke the main flow diagram and made remove appear to do nothing.
+
+## [1.2.0-alpha.49] - 2026-05-29
+
+Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** configured individual devices no longer affect the main flow diagram layout when `show_home_device_popup` is active; grid/solar/battery branches keep rendering from YAML even if entity resolution hiccups during config updates.
+- **`nodalia-power-flow-card.js`:** render signature now includes the energy-branch layout config so adding or editing individual devices triggers a full diagram refresh.
+- **Release artifacts:** keep only the current versioned HACS bundles (`1.2.0-alpha.49`); `npm run bundle` now removes stale `nodalia-cards-*-alpha.*.js` files automatically.
+
+## [1.2.0-alpha.48] - 2026-05-29
+
+Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.
+
+### Fixed
+
+- **Visual editors (suite-wide):** Lovelace briefly disconnects the config panel when opening entity/icon pickers; `disconnectedCallback` had removed click/input listeners without re-attaching them on reconnect, so editor buttons and toggles stopped responding. Listeners now mount in `connectedCallback` via `_attachEditorShadowListeners()`.
+
+## [1.2.0-alpha.47] - 2026-05-29
+
+Forty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.47`**.
+
+### Added
+
+- **Bundle split (optional):** `nodalia-cards-core-{version}.js` (shared i18n/utils) + `nodalia-cards-suite-{version}.js` (all cards). HACS default remains the single self-contained `nodalia-cards-{version}.js`. Load **core first**, then **suite**, as two Lovelace resources when you want a smaller initial download.
+
+### Changed
+
+- **`nodalia-navigation-bar.js`:** when popup/browser/expand state is unchanged, route badges and the media player region update in-place instead of rebuilding the full shadow DOM on every `set hass`.
+
+## [1.2.0-alpha.46] - 2026-05-29
+
+Forty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.46`**.
+
+### Changed
+
+- **`nodalia-advance-vacuum-card.js`:** HA-driven render signature stamp cache — skips rebuilding mode/dock/routine descriptor payloads on every `set hass` when tracked entities and UI scope are unchanged.
+- **`nodalia-graph-card.js`:** chart hover updates tooltip, guide line, and hover dots in-place instead of full `innerHTML` repaints while scrubbing the timeline.
+
+### Fixed
+
+- **Repo hygiene:** removed accidental Finder duplicate artifacts (`* 2.js`, `* 2.mjs`, `* 2.yaml`, `* 2.json`).
+
+## [1.2.0-alpha.45] - 2026-05-29
+
+Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.
+
+### Fixed
+
+- **Visual editors (suite-wide):** `disconnectedCallback` removes shadow DOM listeners so reopening the card editor does not stack duplicate handlers.
+- **Cards with entry animations:** timer/`requestAnimationFrame` callbacks bail out when the element is disconnected (light, climate, cover, fan, humidifier, graph, vacuum, and related cards).
+- **`nodalia-navigation-bar.js`:** browser media session token cleared on disconnect; async work and `set hass` guarded when the bar is not connected.
+- **`nodalia-calendar-card.js`:** native event composer tracks `dataset.nativeMounted` when color/repeat fields change.
+- **`nodalia-scenes-card.js`:** dashboard scroll restore and press-animation timers cancelled on disconnect (no stale DOM updates after leaving the view).
+
+### Added
+
+- **`package.json`:** `npm run validate` — syntax check, i18n validation, tests, and bundle build in one command.
+
+## [1.2.0-alpha.44] - 2026-05-29
+
+Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** home device popup now opens on tap and renders individual devices even when they are hidden from the main diagram.
+- **`nodalia-power-flow-card.js`:** popup mode no longer breaks the flow layout (individual devices are excluded from diagram layout counting).
+- **`nodalia-power-flow-card.js`:** visual editor keeps draft individual rows when adding a device so native entity selectors stay usable before save.
+
+## [1.2.0-alpha.43] - 2026-05-29
+
+Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.
+
+### Added
+
+- **`nodalia-power-flow-card.js`:** home device breakdown popup, optional day/month consumption chips on the card header, and visual-editor support for individual power devices.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** native HA entity selectors in the visual editor; card-based individual device rows with add/remove/reorder.
+- **`nodalia-scenes-card.js`:** bundled at this release channel (launch animation polish from alpha.41).
+
+## [1.2.0-alpha.42] - 2026-05-29
+
+Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
+
+### Added
+
+- **`nodalia-power-flow-card.js`:** home device breakdown popup — tap Home (when individual devices are configured) for a left-to-right layout with Casa on the left and plug/device flows on the right; optional day/month consumption total sensors as header status chips; visual editor fields for `consumption_chips` and `show_home_device_popup`.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** visual editor uses native Home Assistant `ha-selector` / `ha-entity-picker` for all entity fields, a card-based individual-device editor (no manual entity IDs), and merged editor i18n for consumption chip labels.
+
+## [1.2.0-alpha.41] - 2026-05-29
+
+Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`:** optimistic turn-on timeout now flushes queued brightness/color/temperature changes before clearing pending state (no silent drop while the entity still reports `off`).
+- **`nodalia-calendar-card.js`:** native-event webhook submissions validate against `_getAvailableNativeCalendarIds()`; the composer picker is scoped to configured calendars; webhooks default to admin-only (`security.allow_webhooks_for_non_admin` defaults to `false`).
+- **`nodalia-alarm-panel-card.js`:** when the PIN field is visible, empty submissions no longer fall back to stored/helper codes (blocks one-click arm/disarm on shared dashboards).
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** richer launch feedback on scene tap — accent burst, outer glow ring, icon pulse, and earlier press animation on pointer/touch down.
+- **`examples/calendar-native-event-webhook.yaml`:** documents admin-only default and `allowed_calendar_ids` allowlist validation.
+
+## [1.2.0-alpha.40] - 2026-05-29
+
+Fortieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.40`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** premium mood-tile redesign — per-scene gradient atmospheres, glass icon bubbles, cinematic header, and a launch-moment animation on tap instead of the unreliable persistent active-scene highlight.
+
+### Removed
+
+- **`show_active`** and **`styles.active`** — Home Assistant does not expose a trustworthy on/off scene state; replaced by a brief launch glow/shimmer feedback.
+
+## [1.2.0-alpha.39] - 2026-05-29
+
+Thirty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.39`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** default tint is now a warm scene gold (`#c9a86c`) instead of theme primary blue; each scene supports an optional `color` field and a visual-editor color picker, with the card chrome following the active scene tint.
+
+## [1.2.0-alpha.38] - 2026-05-29
+
+Thirty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.38`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** scene taps no longer jump the Lovelace dashboard — scene tiles are non-focusable div controls, active-state updates happen in-place without a full re-render, and parent scroll positions (including `#view`) are captured and restored after interaction.
+
+## [1.2.0-alpha.37] - 2026-05-29
+
+Thirty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.37`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** tapping a scene no longer scrolls the dashboard — scene buttons suppress native focus on pointer/touch down, reserve active-badge space to avoid layout jumps, and defer the optimistic re-render to the next animation frame.
+
+## [1.2.0-alpha.36] - 2026-05-29
+
+Thirty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.36`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** clearer active-scene feedback — accent badge, icon dot, dimmed inactive buttons, and safer last-changed detection (no false highlight on ambiguous timestamps).
+
+## [1.2.0-alpha.35] - 2026-05-29
+
+Thirty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.35`**.
+
+### Added
+
+- **`nodalia-scenes-card.js`:** visual editor style section now includes color pickers for card, icon bubble, scene buttons, and active-state border — grouped like other Nodalia cards, with text fields for CSS borders, shadows, and gradients.
+
+## [1.2.0-alpha.34] - 2026-05-29
+
+Thirty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.34`**.
+
+### Changed
+
+- **`nodalia-scenes-card.js`:** card UI aligned with the Nodalia bundle — gradient surface, icon bubble header, scene buttons with inset shadows and active-state tint, list-mode active dot, and updated default styling tokens.
+
+## [1.2.0-alpha.33] - 2026-05-29
+
+Thirty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.33`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** visual editor entity picker no longer closes immediately — `set hass` skips redundant re-renders, scene domain picker matches other Nodalia cards, and duplicate `value-changed` events are ignored.
+
+## [1.2.0-alpha.32] - 2026-05-29
+
+Thirty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.32`**.
+
+### Fixed
+
+- **`nodalia-scenes-card.js`:** visual editor **Add scene** keeps draft rows while you pick an entity; empty drafts are no longer stripped before render.
+
+## [1.2.0-alpha.31] - 2026-05-29
+
+Thirty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.31`**.
+
+### Added
+
+- **`nodalia-scenes-card.js`:** new Lovelace card for Home Assistant **`scene.*`** entities — grid or list layout, tap to **`scene.turn_on`**, optional more-info / hold actions, active-scene highlight, visual editor, haptics, and styles.
+
+## [1.2.0-alpha.30] - 2026-05-27
+
+Thirtieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.30`**.
+
+### Changed
+
+- **`nodalia-climate-card.js`:** setpoint schedule **`input_text`** storage now auto-picks the smallest fit: **v3 binary base64** (~**40–45 blocks** in 255 chars), **v2 packed integers** (~22–27, Path B friendly), or **v1** arrays; still reads legacy verbose JSON.
+
+## [1.2.0-alpha.29] - 2026-05-27
+
+Twenty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.29`**.
+
+### Changed
+
+- **`nodalia-climate-card.js`:** setpoint schedules saved to **`input_text`** use compact storage format **`v:1`** (`[dayIndex, startMinutes, endMinutes, temperature]`) so ~14–18 slots fit in the 255-character HA limit; legacy verbose JSON still loads on read.
+
+### Fixed
+
+- **Docs / examples:** climate setpoint schedule webhook uses script action **`event:`** (not unknown **`event.fire`**); Path B automation supports compact **`v:1`** storage.
+
+## [1.2.0-alpha.28] - 2026-05-27
+
+Twenty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.28`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.28.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-fan-card.js`**, **`nodalia-humidifier-card.js`**, **`nodalia-light-card.js`:** percentage/humidity/active value chips update optimistically while dragging sliders (same `data-*-chip` + `_applySliderValue` patch as cover), so feedback is immediate before Home Assistant confirms.
+
+## [1.2.0-alpha.27] - 2026-05-27
+
+Twenty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.27`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.27.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-cover-card.js`:** position/tilt chips now update optimistically while dragging sliders (`data-cover-chip="position"` / `data-cover-chip="tilt"` + `_applySliderValue` UI patch), so feedback is immediate before Home Assistant confirms.
+
+## [1.2.0-alpha.26] - 2026-05-26
+
+Twenty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.26`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.26.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **Climate schedule popup (mobile):** the fullscreen schedule overlay stays **centered** on small screens instead of behaving like a bottom sheet.
+
+## [1.2.0-alpha.25] - 2026-05-25
+
+Twenty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.25`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.25.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **Climate schedule agenda:** dragging resize grips no longer collapses blocks to the minimum — timeline DOM stays live during drag (patch in place, single re-render on release).
+- **Climate schedule editor:** manual **start/end/setpoint** edits no longer tear down the popup or reload the Lovelace view (**`change`** instead of **`input`**, **Enter** suppressed, no full re-render while typing).
+
+### Changed
+
+- **Climate schedule button:** when **±** step controls are visible, **`mdi:calendar-clock`** sits centered between **−** and **+** with the same size and style as step buttons; without step controls it stays on the dial corner at step size.
+
+## [1.2.0-alpha.24] - 2026-05-25
+
+Twenty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.24`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, **`nodalia-cards-1.2.0-alpha.24.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Added
+
+- **Climate schedule agenda:** fullscreen overlay **`climate-schedule-expanded`** (Calendar Card pattern, not clipped inside the card). One row per weekday with a horizontal **24h timeline**, **+** to add a block in the largest free gap (full day when empty), **drag** to move, **edge grips** to resize, and manual **start/end/setpoint** for the selected block.
+- **Visual editor:** **`setpoint_schedule_week_starts_on`** (`monday` / `sunday`) for agenda row order; editor keys **`ed.climate.schedule_week_starts_*`**.
+
+### Changed
+
+- **Release metadata:** bump the **`1.2.0`** line to **`1.2.0-alpha.24`**; smoke test covers **`climate-schedule-expanded`** and **`setpoint_schedule_week_starts_on`** in source and HACS bundle.
+
+## [1.2.0-alpha.23] - 2026-05-25
+
+Twenty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.23`**.
+
+### Added
+
+- **`nodalia-climate-card.js`:** weekly **setpoint schedule** composer (bottom-left **`mdi:calendar-clock`** button). Draft lives in memory; optional **`input_text`** helper for reload between sessions. **Save** calls **`setpoint_schedule_webhook`** (payload includes **`schedule`**, **`automation_specs`**, **`automation_yaml_bundle`**, etc.) — no Lovelace **`config-changed`** persistence for the grid.
+- **Visual editor:** **Visibility** toggle **`show_schedule_button`**; **Setpoint schedule** section (**webhook ID**, **helper entity**, **`security.allow_webhooks_for_non_admin`**). Editor strings **`ed.climate.schedule_*`** in all **`i18n/editor/*.json`** locales.
+- **Examples:** **`examples/climate-setpoint-schedule-*.yaml`** and **`examples/climate-card.yaml`** webhook/helper notes.
+
+### Fixed
+
+- **HACS bundle:** **`nodalia-cards-1.2.0-alpha.21.js`** was built before the schedule editor landed, so the visual editor never showed schedule options. Rebuilt self-contained loader **`nodalia-cards-1.2.0-alpha.23.js`** from current sources.
+- **`nodalia-editor-ui.js`:** regenerated (**`pnpm i18n:gen-editor`**) so schedule labels resolve instead of raw **`ed.climate.schedule_*`** keys.
+- **`scripts/validate-editor-i18n.mjs`:** fails if **`nodalia-editor-ui.js`** is missing any **`en.json`** key (reminder to run **`i18n:gen-editor`** before release).
+
+### Changed
+
+- **Release metadata:** bump to **`1.2.0-alpha.23`**; smoke test asserts the versioned HACS bundle ships **`show_schedule_button`** / **`setpoint_schedule_webhook`** editor fields.
+
+## [1.2.0-alpha.21] - 2026-05-24
+
+Twenty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.21`**.
+
+Restart of the **`1.2.0-alpha.*`** line from stable **`1.1.4`** (`main`). No visual layout editor in this build.
+
+### Changed
+
+- **Release channel:** codebase and bundle match **`main`** at **1.1.4** (including media player editor fix). Next alphas focus on smaller features (e.g. climate setpoint schedule popup).
 
 ## [1.1.3-alpha.9] - 2026-05-18
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.1.4";
+const CARD_VERSION = "1.2.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -78,6 +78,13 @@ const DEFAULT_CONFIG = {
   },
   dashboard_link: "",
   dashboard_link_label: "Energy",
+  consumption_chips: {
+    day_entity: "",
+    month_entity: "",
+    day_label: "",
+    month_label: "",
+  },
+  show_home_device_popup: true,
   show_header: true,
   show_dashboard_link_button: true,
   show_labels: true,
@@ -241,8 +248,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -258,6 +272,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -293,6 +310,19 @@ function getByPath(target, path) {
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
+
+function moveItem(list, fromIndex, toIndex) {
+  if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
+    return;
+  }
+  if (fromIndex >= list.length || toIndex >= list.length) {
+    return;
+  }
+  const [item] = list.splice(fromIndex, 1);
+  list.splice(toIndex, 0, item);
+}
+
+const POWER_FLOW_ENTITY_DOMAINS = ["sensor", "number", "input_number"];
 
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
@@ -776,22 +806,46 @@ function isEntitySourceConfigured(entity) {
 }
 
 function resolveIndividualConfigs(config) {
+  return sanitizeIndividualEntries(config).filter(item => item.entity);
+}
+
+function sanitizeIndividualEntries(config) {
   return arrayFromMaybe(config?.entities?.individual)
     .filter(isObject)
     .map((item, index) => ({
       entity: String(item.entity || "").trim(),
       name: String(item.name || "").trim(),
-      icon: String(item.icon || "mdi:flash").trim(),
+      icon: String(item.icon || "mdi:flash").trim() || "mdi:flash",
       color: String(item.color || ["#f29f05", "#42a5f5", "#7fd0c8", "#f56aa0"][index % 4]).trim(),
       secondary_info: isObject(item.secondary_info) ? item.secondary_info : {},
-    }))
-    .filter(item => item.entity);
+    }));
+}
+
+function getDiagramIndividualCount(config) {
+  const configuredCount = resolveIndividualConfigs(config).length;
+  if (configuredCount && isHomeDevicePopupEnabled(config)) {
+    return 0;
+  }
+  return configuredCount;
+}
+
+function isHomeDevicePopupEnabled(config) {
+  return config?.show_home_device_popup !== false;
 }
 
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   merged.entities = merged.entities || {};
-  merged.entities.individual = resolveIndividualConfigs(merged);
+  merged.entities.individual = sanitizeIndividualEntries(merged);
+  merged.consumption_chips = {
+    ...DEFAULT_CONFIG.consumption_chips,
+    ...(isObject(merged.consumption_chips) ? merged.consumption_chips : {}),
+  };
+  merged.consumption_chips.day_entity = String(merged.consumption_chips.day_entity ?? "").trim();
+  merged.consumption_chips.month_entity = String(merged.consumption_chips.month_entity ?? "").trim();
+  merged.consumption_chips.day_label = String(merged.consumption_chips.day_label ?? "").trim();
+  merged.consumption_chips.month_label = String(merged.consumption_chips.month_label ?? "").trim();
+  merged.show_home_device_popup = merged.show_home_device_popup !== false;
   return merged;
 }
 
@@ -815,7 +869,7 @@ function getFlowLayoutFlagsFromConfig(config) {
   const hasSolar = activeTopKinds.includes("solar");
   const hasBattery = activeTopKinds.includes("battery");
   const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter(item => item.entity).length;
-  const individualCount = resolveIndividualConfigs(c).length;
+  const individualCount = getDiagramIndividualCount(c);
   return {
     hasGrid,
     hasSolar,
@@ -1019,6 +1073,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onHomePopupKeydown = this._onHomePopupKeydown.bind(this);
+    this._homePopupOpen = false;
     this._flowViewportVisible = true;
     this._flowViewportObserver = null;
     this._onFlowViewport = this._onFlowViewport.bind(this);
@@ -1133,6 +1189,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    if (typeof document !== "undefined") {
+      document.addEventListener("keydown", this._onHomePopupKeydown);
+    }
     this._attachFlowViewportTracking();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
@@ -1145,6 +1204,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._clearFlowUnpauseRaf();
     this._detachFlowViewportTracking();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    if (typeof document !== "undefined") {
+      document.removeEventListener("keydown", this._onHomePopupKeydown);
+    }
+    this._homePopupOpen = false;
+    this._syncHomePopupHostState();
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -1155,6 +1219,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._homePopupOpen = false;
+    this._syncHomePopupHostState();
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._invalidateTrackedEntityStampCache();
     this._lastRenderSignature = "";
@@ -1174,40 +1240,22 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    const individualCount = resolveIndividualConfigs(this._config).length;
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
-    const bottomCount = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const layoutPreset = getLayoutPreset({
-      top: topCount,
-      bottom: bottomCount,
-      individual: individualCount,
+      top: flowFlags.topCount,
+      bottom: flowFlags.bottomUtilities,
+      individual: flowFlags.individualCount,
     });
 
     return layoutPreset === "simple" ? 4 : 4;
   }
 
   getGridOptions() {
-    const individualCount = resolveIndividualConfigs(this._config).length;
-    const topCount = [
-      resolveNodeConfig("grid", this._config),
-      resolveNodeConfig("solar", this._config),
-      resolveNodeConfig("battery", this._config),
-    ].filter(item => item.entity).length;
-    const bottomCount = [
-      resolveNodeConfig("water", this._config),
-      resolveNodeConfig("gas", this._config),
-    ].filter(item => item.entity).length;
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const layoutPreset = getLayoutPreset({
-      top: topCount,
-      bottom: bottomCount,
-      individual: individualCount,
+      top: flowFlags.topCount,
+      bottom: flowFlags.bottomUtilities,
+      individual: flowFlags.individualCount,
     });
 
     const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
@@ -1256,6 +1304,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
@@ -1611,6 +1662,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
       }
     };
 
+    const chips = config.consumption_chips || {};
+    [chips.day_entity, chips.month_entity].forEach(entityId => {
+      const value = String(entityId || "").trim();
+      if (value) {
+        entityIds.add(value);
+      }
+    });
+
     ["grid", "home", "solar", "battery", "water", "gas"].forEach(kind => {
       registerNodeEntity(resolveNodeConfig(kind, config));
     });
@@ -1687,19 +1746,60 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
   }
 
+  _getLayoutConfigStamp() {
+    const branchStamp = ["grid", "solar", "battery", "home", "water", "gas"].map(kind => {
+      const cfg = resolveNodeConfig(kind, this._config);
+      const entity = cfg?.entity;
+      if (typeof entity === "string") {
+        return `${kind}:${entity.trim()}`;
+      }
+      if (isObject(entity)) {
+        return `${kind}:${String(entity.entity || "").trim()}|${String(entity.consumption || "").trim()}|${String(entity.production || "").trim()}`;
+      }
+      if (kind === "grid") {
+        return `${kind}:${String(cfg?.export_entity || "").trim()}`;
+      }
+      return `${kind}:`;
+    }).join(";");
+    const individualStamp = resolveIndividualConfigs(this._config)
+      .map(entry => `${entry.entity}|${entry.name}|${entry.icon}|${entry.color}`)
+      .join(";");
+    return [
+      branchStamp,
+      individualStamp,
+      isHomeDevicePopupEnabled(this._config) ? "popup:1" : "popup:0",
+    ].join("::");
+  }
+
   _getRenderSignature(hass = this._hass) {
     if (!this._trackedEntitiesStamp && hass) {
       this._syncTrackedEntitiesStamp(hass);
     }
 
+    const chips = this._config?.consumption_chips || {};
     return JSON.stringify({
       title: this._config?.title || this._config?.name || "",
       dashboard_link: this._config?.dashboard_link || "",
       show_header: this._config?.show_header !== false,
       show_values: this._config?.show_values !== false,
       show_labels: this._config?.show_labels !== false,
+      homePopupOpen: this._homePopupOpen === true,
+      consumptionChips: `${chips.day_entity || ""}|${chips.month_entity || ""}`,
+      layoutConfig: this._getLayoutConfigStamp(),
       trackedStates: this._trackedEntitiesStamp,
     });
+  }
+
+  _isDiagramBranchConfigured(kind) {
+    const cfg = resolveNodeConfig(kind, this._config);
+    if (kind === "grid") {
+      return isEntitySourceConfigured(cfg?.entity) || Boolean(String(cfg?.export_entity || "").trim());
+    }
+    return isEntitySourceConfigured(cfg?.entity);
+  }
+
+  _shouldRenderDiagramNode(kind, node) {
+    return Boolean(node?.entityId) || this._isDiagramBranchConfigured(kind);
   }
 
   /**
@@ -1905,10 +2005,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
+    const diagramIndividualCount = getDiagramIndividualCount(this._config);
+    const showIndividualsOnDiagram = diagramIndividualCount > 0;
     this._layoutPreset = getLayoutPreset({
       top: flowFlags.topCount,
       bottom: bottomUtilities,
-      individual: individualConfigs.length,
+      individual: diagramIndividualCount,
     });
 
     const hasBottom = bottomUtilities > 0;
@@ -1919,9 +2021,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
       battery: this._resolveNodeDescriptor("battery", null, 0, 0, hasBottom, flowFlags),
       water: this._resolveNodeDescriptor("water", null, 0, bottomUtilities, hasBottom, flowFlags),
       gas: this._resolveNodeDescriptor("gas", null, 1, bottomUtilities, hasBottom, flowFlags),
-      individual: individualConfigs.map((config, index) =>
-        this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
-      ),
+      individual: showIndividualsOnDiagram
+        ? individualConfigs.map((config, index) =>
+          this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+        )
+        : [],
     };
 
     if (!nodes.home.entityId) {
@@ -2221,6 +2325,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
     const isClickable = this._config?.clickable_entities !== false && node.entityId;
+    const nodeAction = this._getNodeInteractionAction(node);
     const nodeClassName = [
       "power-flow-card__node",
       `power-flow-card__node--${escapeHtml(node.kind)}`,
@@ -2249,12 +2354,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : "";
 
     if (node.kind === "home") {
+      const homeInteractive = nodeAction === "home-popup";
       return `
-        <div class="${nodeClassName}" style="left:${node.position.x}%; top:${node.position.y}%; --node-enter-delay:${enterDelay}ms;">
+        <div
+          class="${nodeClassName}${homeInteractive ? " power-flow-card__node--home-interactive" : ""}"
+          style="left:${node.position.x}%; top:${node.position.y}%; --node-enter-delay:${enterDelay}ms;"
+          ${homeInteractive ? 'data-node-action="home-popup" role="button" tabindex="0"' : ""}
+        >
           <button
+            type="button"
             class="power-flow-card__bubble power-flow-card__bubble--home ${isClickable ? "is-clickable" : ""}"
             data-node-entity="${escapeHtml(node.entityId)}"
-            data-node-action="${isClickable ? "more-info" : ""}"
+            data-node-action="${escapeHtml(nodeAction)}"
             style="--node-size:${scaledNodeSize}px; --node-tint:${escapeHtml(color)};"
             title="${escapeHtml(node.label)}"
           >
@@ -2343,6 +2454,313 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : "mdi:transmission-tower-export";
   }
 
+  _shouldUseHomeDevicePopup() {
+    return isHomeDevicePopupEnabled(this._config) && resolveIndividualConfigs(this._config).length > 0;
+  }
+
+  _shouldShowIndividualsOnDiagram() {
+    return resolveIndividualConfigs(this._config).length > 0 && !isHomeDevicePopupEnabled(this._config);
+  }
+
+  _syncHomePopupHostState() {
+    this.toggleAttribute("data-home-popup-open", this._homePopupOpen === true);
+  }
+
+  _getNodeInteractionAction(node) {
+    if (node.kind === "home" && this._shouldUseHomeDevicePopup()) {
+      return "home-popup";
+    }
+    if (this._config?.clickable_entities === false || !node?.entityId) {
+      return "";
+    }
+    return "more-info";
+  }
+
+  _onHomePopupKeydown(event) {
+    if (!this._homePopupOpen || event.key !== "Escape") {
+      return;
+    }
+    event.preventDefault();
+    this._closeHomeDevicePopup();
+  }
+
+  _openHomeDevicePopup() {
+    if (!this._shouldUseHomeDevicePopup()) {
+      return;
+    }
+    this._homePopupOpen = true;
+    this._syncHomePopupHostState();
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _closeHomeDevicePopup() {
+    if (!this._homePopupOpen) {
+      return;
+    }
+    this._homePopupOpen = false;
+    this._syncHomePopupHostState();
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _formatConsumptionChipValue(value, unit = "") {
+    const numeric = Number(value);
+    const locale = this._getLocaleTag();
+    if (!Number.isFinite(numeric)) {
+      return { value: "--", unit: unit || "" };
+    }
+
+    const unitKey = normalizeTextKey(unit);
+    if (["kwh", "mwh"].includes(unitKey)) {
+      const decimals = Math.abs(numeric) >= 100 ? 0 : Math.abs(numeric) >= 10 ? 1 : 2;
+      return {
+        value: formatRawValue(numeric, decimals, locale),
+        unit: unit || "kWh",
+      };
+    }
+    if (["wh", "watt", "watts"].includes(unitKey) && Math.abs(numeric) >= 1000) {
+      return {
+        value: formatRawValue(numeric / 1000, Math.abs(numeric) >= 10000 ? 0 : 1, locale),
+        unit: "kWh",
+      };
+    }
+
+    return formatDisplayValue(numeric, unit, locale);
+  }
+
+  _resolveConsumptionChip(period) {
+    const chips = this._config?.consumption_chips || {};
+    const entityId = String(chips[`${period}_entity`] || "").trim();
+    if (!entityId) {
+      return null;
+    }
+
+    const state = this._hass?.states?.[entityId];
+    const unavailable = !state || isUnavailableState(state);
+    const unit = String(
+      state?.attributes?.unit_of_measurement
+      || state?.attributes?.native_unit_of_measurement
+      || "",
+    ).trim();
+    const parsed = parseNumber(state?.state);
+    const display = this._formatConsumptionChipValue(parsed, unit);
+    const defaultLabel = period === "day" ? "Today" : "Month";
+    const label = String(chips[`${period}_label`] || "").trim() || defaultLabel;
+    const icon = period === "day" ? "mdi:calendar-today" : "mdi:calendar-month";
+
+    return {
+      period,
+      entityId,
+      label,
+      icon,
+      unavailable,
+      valueText: display.value,
+      unitText: display.unit,
+      clickable: this._config?.clickable_entities !== false,
+    };
+  }
+
+  _renderConsumptionChips() {
+    const chips = ["day", "month"]
+      .map(period => this._resolveConsumptionChip(period))
+      .filter(Boolean);
+
+    if (!chips.length) {
+      return "";
+    }
+
+    return `
+      <div class="power-flow-card__status-chips" role="group" aria-label="Consumption totals">
+        ${chips.map(chip => `
+          <span
+            class="power-flow-card__chip power-flow-card__chip--stat ${chip.clickable ? "is-clickable" : ""}"
+            ${chip.clickable ? `data-node-entity="${escapeHtml(chip.entityId)}" data-node-action="more-info"` : ""}
+            title="${escapeHtml(chip.label)}"
+          >
+            <ha-icon icon="${escapeHtml(chip.icon)}"></ha-icon>
+            <span class="power-flow-card__chip-stat-label">${escapeHtml(chip.label)}</span>
+            <span class="power-flow-card__chip-stat-value">${escapeHtml(chip.unavailable ? "--" : chip.valueText)}</span>
+            ${chip.unitText && !chip.unavailable ? `<span class="power-flow-card__chip-unit">${escapeHtml(chip.unitText)}</span>` : ""}
+          </span>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  _renderHomePopupDeviceRow(node, options = {}) {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const iconStyles = styles.icon || DEFAULT_CONFIG.styles.icon;
+    const deviceSize = Math.round(Math.max(38, parseSizeToPixels(iconStyles.individual_size, 40)));
+    const chipHeight = Math.max(22, parseSizeToPixels(styles.chip_height, 24));
+    const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+    const chipPadding = styles.chip_padding || "0 10px";
+    const secondarySize = Math.max(10, parseSizeToPixels(styles.secondary_size, 11));
+    const deviceClickable = this._config?.clickable_entities !== false && node.entityId;
+    const unavailableBadge = this._config?.show_unavailable_badge !== false && node.unavailable
+      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
+      : "";
+    const labelMarkup = this._config?.show_labels === false
+      ? ""
+      : `<span class="power-flow-card__home-popup-device-name">${escapeHtml(node.label)}</span>`;
+    const valueMarkup = this._config?.show_values === false || node.unavailable
+      ? (node.unavailable ? `<span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};"><span>--</span></span>` : "")
+      : `
+          <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};">
+            <span>${escapeHtml(node.valueText)}</span>
+            ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
+          </span>
+        `;
+    const secondaryMarkup = node.secondary
+      ? `<span class="power-flow-card__node-secondary">${escapeHtml(node.secondary)}</span>`
+      : "";
+
+    return `
+      <div
+        class="power-flow-card__home-popup-node power-flow-card__home-popup-node--entering"
+        role="listitem"
+        style="--chip-height:${chipHeight}px; --chip-font-size:${chipFontSize}px; --chip-padding:${escapeHtml(chipPadding)}; --secondary-size:${secondarySize}px; --device-enter-delay:${options.enterDelay || 0}ms;"
+      >
+        <button
+          type="button"
+          class="power-flow-card__bubble power-flow-card__bubble--individual ${deviceClickable ? "is-clickable" : ""}"
+          data-node-entity="${escapeHtml(node.entityId)}"
+          data-node-action="${deviceClickable ? "more-info" : ""}"
+          style="--node-size:${deviceSize}px; --node-tint:${escapeHtml(node.color)};"
+          title="${escapeHtml(node.label)}"
+        >
+          ${unavailableBadge}
+          <ha-icon icon="${escapeHtml(node.icon)}"></ha-icon>
+        </button>
+        <div class="power-flow-card__node-info power-flow-card__node-info--popup">
+          ${labelMarkup}
+          ${valueMarkup}
+          ${secondaryMarkup}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderHomeDevicePopup(nodes) {
+    if (!this._homePopupOpen) {
+      return "";
+    }
+
+    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
+    const bottomUtilities = flowFlags.bottomUtilities;
+    const hasBottom = bottomUtilities > 0;
+    const individualConfigs = resolveIndividualConfigs(this._config);
+    if (!individualConfigs.length) {
+      return "";
+    }
+
+    const popupIndividuals = individualConfigs.map((config, index) =>
+      this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags),
+    );
+
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const home = nodes.home;
+    const homeClickable = this._config?.clickable_entities !== false && home.entityId;
+    const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && home.unavailable
+      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
+      : "";
+    const maxMagnitude = Math.max(
+      1,
+      this._toFlowMagnitude(home.value, home.unit),
+      ...popupIndividuals.map(node => this._toFlowMagnitude(node.value, node.unit)),
+    );
+    const deviceCountLabel = `${popupIndividuals.length} ${popupIndividuals.length === 1 ? "device" : "devices"}`;
+    const consumptionChips = this._renderConsumptionChips();
+    const homeSummaryValue = this._config?.show_values === false
+      ? ""
+      : `${home.valueText}${home.unitText ? ` ${home.unitText}` : ""}`.trim();
+    const animations = this._getAnimationSettings();
+
+    const homeSummarySize = Math.round(Math.max(72, parseSizeToPixels(styles.icon?.home_size, 96) * 0.68));
+    const homeSummaryLabel = this._config?.show_labels === false
+      ? ""
+      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(home.label)}</span>`;
+
+    return `
+      <div
+        class="power-flow-card__home-popup is-open"
+        data-home-popup
+        style="--home-popup-accent:${escapeHtml(home.color)};"
+        aria-hidden="false"
+      >
+        <button type="button" class="power-flow-card__home-popup-backdrop" data-home-popup-action="close" aria-label="Close"></button>
+        <div
+          class="power-flow-card__home-popup-panel ${animations.enabled ? "power-flow-card__home-popup-panel--entrance" : ""}"
+          role="dialog"
+          aria-modal="true"
+          aria-label="${escapeHtml(home.label)}"
+        >
+          <div class="power-flow-card__home-popup-header">
+            <div class="power-flow-card__home-popup-heading">
+              <div class="power-flow-card__home-popup-title">${escapeHtml(home.label)}</div>
+              <div class="power-flow-card__home-popup-subtitle">${escapeHtml(deviceCountLabel)}</div>
+            </div>
+            <div class="power-flow-card__home-popup-actions">
+              ${
+                homeClickable
+                  ? `
+                    <button
+                      type="button"
+                      class="power-flow-card__home-popup-icon-button"
+                      data-node-entity="${escapeHtml(home.entityId)}"
+                      data-node-action="more-info"
+                      title="More info"
+                    >
+                      <ha-icon icon="mdi:information-outline"></ha-icon>
+                    </button>
+                  `
+                  : ""
+              }
+              <button type="button" class="power-flow-card__home-popup-icon-button" data-home-popup-action="close" title="Close">
+                <ha-icon icon="mdi:close"></ha-icon>
+              </button>
+            </div>
+          </div>
+          <div class="power-flow-card__home-popup-body">
+            ${consumptionChips ? `<div class="power-flow-card__home-popup-chips">${consumptionChips}</div>` : ""}
+            <div class="power-flow-card__home-popup-summary">
+              <button
+                type="button"
+                class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
+                data-node-entity="${escapeHtml(home.entityId)}"
+                data-node-action="${homeClickable ? "more-info" : ""}"
+                style="--node-size:${homeSummarySize}px; --node-tint:${escapeHtml(home.color)};"
+                title="${escapeHtml(home.label)}"
+              >
+                ${homeUnavailableBadge}
+                <span class="power-flow-card__home-icon-wrap">
+                  <ha-icon icon="${escapeHtml(home.icon)}"></ha-icon>
+                </span>
+                ${
+                  homeSummaryValue
+                    ? `
+                      <span class="power-flow-card__home-value">
+                        <span class="power-flow-card__home-value-number">${escapeHtml(home.valueText)}</span>
+                        ${home.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(home.unitText)}</span>` : ""}
+                      </span>
+                    `
+                    : ""
+                }
+              </button>
+              ${homeSummaryLabel}
+            </div>
+            <div class="power-flow-card__home-popup-list" role="list">
+              ${popupIndividuals.map((node, index) => this._renderHomePopupDeviceRow(node, {
+                maxMagnitude,
+                enterDelay: 40 + (index * 36),
+              })).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   _renderSimpleLayout(nodes, lines, options = {}) {
     const animateEntrance = options.animateEntrance === true;
     const sourceNode = this._getSimpleSourceNode(nodes);
@@ -2359,6 +2777,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const lineEndOffset = Math.max(30, Math.round(homeSize * 0.38));
     const sourceClickable = this._config?.clickable_entities !== false && sourceNode.entityId;
     const homeClickable = this._config?.clickable_entities !== false && nodes.home.entityId;
+    const homePopupAction = this._getNodeInteractionAction(nodes.home);
     const sourceUnavailableBadge = this._config?.show_unavailable_badge !== false && sourceNode.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
@@ -2420,7 +2839,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             <button
               class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(nodes.home.entityId)}"
-              data-node-action="${homeClickable ? "more-info" : ""}"
+              data-node-action="${escapeHtml(homePopupAction)}"
               style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)};"
               title="${escapeHtml(nodes.home.label)}"
             >
@@ -2471,6 +2890,16 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
+    const homePopupClose = event.composedPath().find(
+      node => node instanceof HTMLElement && node.dataset?.homePopupAction === "close",
+    );
+    if (homePopupClose) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closeHomeDevicePopup();
+      return;
+    }
+
     const dashboardButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dashboardAction === "navigate");
     if (dashboardButton) {
       event.preventDefault();
@@ -2481,7 +2910,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    const nodeAction = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.nodeAction === "more-info");
+    const homePopupButton = event.composedPath().find(
+      node => node instanceof HTMLElement && node.dataset?.nodeAction === "home-popup",
+    );
+    if (homePopupButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._triggerPressAnimation(homePopupButton);
+      this._triggerHaptic("selection");
+      this._openHomeDevicePopup();
+      return;
+    }
+
+    const nodeAction = event.composedPath().find(
+      node => node instanceof HTMLElement && (node.dataset?.nodeAction === "more-info"),
+    );
     if (nodeAction && nodeAction.dataset?.nodeEntity) {
       event.preventDefault();
       event.stopPropagation();
@@ -2558,7 +3001,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const lines = this._buildLines(nodes);
     const dominantColor = this._getDominantColor(lines);
     const flowWidth = Math.max(1, parseSizeToPixels(styles.flow_width, 1.2));
-    const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || nodes.individual.length);
+    const diagramIndividualCount = getDiagramIndividualCount(this._config);
+    const showIndividualsOnDiagram = this._shouldShowIndividualsOnDiagram();
+    const hasLowerNodes = Boolean(nodes.water.entityId || nodes.gas.entityId || diagramIndividualCount > 0);
     const layoutPreset = nodes._layoutPreset || "full";
     const flowFlags = nodes._flowFlags || getFlowLayoutFlagsFromConfig(this._config);
     const flowDotBoost = 1 + Math.max(0, flowWidth - 1) * 0.065;
@@ -2580,7 +3025,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       && !nodes.solar.entityId
       && !nodes.battery.entityId
       && !hasLowerNodes
-      && !nodes.individual?.length;
+      && diagramIndividualCount === 0;
     const upperBandHubOnly =
       layoutPreset !== "simple"
       && Boolean(nodes.solar.entityId && nodes.grid.entityId && nodes.home.entityId)
@@ -2678,7 +3123,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
     const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
-    const hasHeader = this._config?.show_header !== false && (Boolean(titleText) || (showDashboardButton && layoutPreset !== "simple"));
+    const consumptionChipsMarkup = this._renderConsumptionChips();
+    const hasHeader = this._config?.show_header !== false && (
+      Boolean(titleText)
+      || Boolean(consumptionChipsMarkup)
+      || (showDashboardButton && layoutPreset !== "simple")
+    );
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -2690,6 +3140,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
           display: block;
           height: auto;
           min-height: 0;
+          position: relative;
+        }
+
+        :host([data-home-popup-open]) {
+          z-index: 120;
+        }
+
+        :host([data-home-popup-open]) ha-card {
+          overflow: hidden;
         }
 
         * {
@@ -2739,13 +3198,274 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__header {
+          display: grid;
+          gap: 8px;
+          isolation: isolate;
+          position: relative;
+          z-index: 4;
+        }
+
+        .power-flow-card__header-main {
           align-items: center;
           display: grid;
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .power-flow-card__status-chips,
+        .power-flow-card__home-popup-chips .power-flow-card__status-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .power-flow-card__chip--stat {
+          background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--primary-color) 12%, transparent) 0%,
+            color-mix(in srgb, var(--primary-text-color) 5%, transparent) 100%
+          );
+          border-color: color-mix(in srgb, var(--primary-color) 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          gap: 6px;
+          min-height: calc(var(--chip-height, 22px) + 2px);
+          padding-inline: 10px;
+        }
+
+        .power-flow-card__chip--stat.is-clickable {
+          cursor: pointer;
+        }
+
+        .power-flow-card__chip--stat ha-icon {
+          --mdc-icon-size: calc(var(--chip-font-size, 10px) + 4px);
+          color: var(--primary-color);
+          flex: 0 0 auto;
+        }
+
+        .power-flow-card__chip-stat-label {
+          color: var(--secondary-text-color);
+          font-weight: 600;
+        }
+
+        .power-flow-card__chip-stat-value {
+          font-variant-numeric: tabular-nums;
+          font-weight: 800;
+        }
+
+        .power-flow-card__node--home-interactive {
+          cursor: pointer;
+        }
+
+        .power-flow-card__home-popup {
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: fixed;
+          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
+          z-index: 120;
+        }
+
+        .power-flow-card__home-popup.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .power-flow-card__home-popup-backdrop {
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.32);
+          border: 0;
+          cursor: pointer;
+          inset: 0;
+          margin: 0;
+          padding: 0;
+          position: absolute;
+        }
+
+        .power-flow-card__home-popup-panel {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--home-popup-accent) 12%, transparent) 0%, transparent 42%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(0, 0, 0, 0.03) 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, var(--home-popup-accent) 18%, var(--divider-color));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 10px;
+          grid-template-rows: auto minmax(0, 1fr);
           isolation: isolate;
-          position: relative;
-          z-index: 4;
+          left: 50%;
+          max-height: min(88vh, 780px);
+          max-width: min(calc(100vw - 24px), 640px);
+          overflow: hidden;
+          padding: 14px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(calc(100vw - 24px), 640px);
+          z-index: 1;
+        }
+
+        .power-flow-card__home-popup-panel--entrance {
+          animation: power-flow-card-home-popup-in calc(var(--power-flow-card-content-duration) * 0.55) cubic-bezier(0.16, 0.84, 0.22, 1) both;
+        }
+
+        @keyframes power-flow-card-home-popup-in {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -48%) scale(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        .power-flow-card__home-popup-header {
+          align-items: flex-start;
+          display: flex;
+          flex: 0 0 auto;
+          gap: 10px;
+          justify-content: space-between;
+          padding-bottom: 4px;
+        }
+
+        .power-flow-card__home-popup-title {
+          font-size: calc(${Math.max(14, parseSizeToPixels(styles.title_size, 16))}px + 1px);
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+        }
+
+        .power-flow-card__home-popup-subtitle {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 600;
+          margin-top: 4px;
+        }
+
+        .power-flow-card__home-popup-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 6px;
+        }
+
+        .power-flow-card__home-popup-icon-button {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          width: 34px;
+        }
+
+        .power-flow-card__home-popup-icon-button ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .power-flow-card__home-popup-chips {
+          min-width: 0;
+        }
+
+        .power-flow-card__home-popup-body {
+          display: grid;
+          gap: 12px;
+          max-height: min(76vh, 680px);
+          min-height: 0;
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
+        }
+
+        .power-flow-card__home-popup-summary {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          justify-content: center;
+          padding: 2px 0 6px;
+          width: 100%;
+        }
+
+        .power-flow-card__home-popup-summary .power-flow-card__bubble--home {
+          width: auto;
+        }
+
+        .power-flow-card__home-popup-list {
+          border-top: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 2px;
+          min-width: 0;
+          padding-bottom: 4px;
+          padding-top: 12px;
+          width: 100%;
+        }
+
+        .power-flow-card__home-popup-node {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: auto minmax(0, 1fr);
+          max-width: 100%;
+          min-width: 0;
+          padding: 10px 12px;
+          width: 100%;
+        }
+
+        .power-flow-card__home-popup-node--entering {
+          animation: power-flow-card-fade-up 360ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: var(--device-enter-delay, 0ms);
+        }
+
+        .power-flow-card__home-popup-node .power-flow-card__bubble--individual {
+          flex-shrink: 0;
+        }
+
+        .power-flow-card__home-popup-node .power-flow-card__node-info--popup {
+          align-items: flex-start;
+          gap: 5px;
+          justify-content: center;
+          left: auto;
+          max-width: none;
+          min-width: 0;
+          position: static;
+          transform: none;
+          width: 100%;
+        }
+
+        .power-flow-card__home-popup-device-name {
+          color: var(--primary-text-color);
+          display: block;
+          font-size: calc(var(--chip-font-size, 11px) + 1px);
+          font-weight: 600;
+          line-height: 1.25;
+          min-width: 0;
+          overflow-wrap: anywhere;
+          text-align: left;
+          width: 100%;
+          word-break: break-word;
+        }
+
+        .power-flow-card__home-popup-node .power-flow-card__chip--value {
+          align-self: flex-start;
+          max-width: none;
+        }
+
+        .power-flow-card__home-popup-node .power-flow-card__node-secondary {
+          max-width: none;
+          text-align: left;
+          white-space: normal;
         }
 
         .power-flow-card__header--entering {
@@ -3538,17 +4258,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
           hasHeader
             ? `
               <div class="power-flow-card__header ${shouldAnimateEntrance ? "power-flow-card__header--entering" : ""}">
-                <div class="power-flow-card__title">${escapeHtml(titleText)}</div>
-                ${
-                  showDashboardButton && layoutPreset !== "simple"
-                    ? `
-                      <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energy")}">
-                        <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
-                        <span>${escapeHtml(this._config?.dashboard_link_label || "Energy")}</span>
-                      </button>
-                    `
-                    : ""
-                }
+                <div class="power-flow-card__header-main">
+                  <div class="power-flow-card__title">${escapeHtml(titleText)}</div>
+                  ${
+                    showDashboardButton && layoutPreset !== "simple"
+                      ? `
+                        <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energy")}">
+                          <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
+                          <span>${escapeHtml(this._config?.dashboard_link_label || "Energy")}</span>
+                        </button>
+                      `
+                      : ""
+                  }
+                </div>
+                ${consumptionChipsMarkup}
               </div>
             `
             : ""
@@ -3580,36 +4303,40 @@ class NodaliaPowerFlowCard extends HTMLElement {
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.home),
                   })}
-                  ${nodes.grid.entityId ? this._renderNode(nodes.grid, {
+                  ${this._shouldRenderDiagramNode("grid", nodes.grid) ? this._renderNode(nodes.grid, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.grid),
                   }) : ""}
-                  ${nodes.solar.entityId ? this._renderNode(nodes.solar, {
+                  ${this._shouldRenderDiagramNode("solar", nodes.solar) ? this._renderNode(nodes.solar, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.solar),
                   }) : ""}
-                  ${nodes.battery.entityId ? this._renderNode(nodes.battery, {
+                  ${this._shouldRenderDiagramNode("battery", nodes.battery) ? this._renderNode(nodes.battery, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.battery),
                   }) : ""}
-                  ${nodes.water.entityId ? this._renderNode(nodes.water, {
+                  ${this._shouldRenderDiagramNode("water", nodes.water) ? this._renderNode(nodes.water, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.water),
                   }) : ""}
-                  ${nodes.gas.entityId ? this._renderNode(nodes.gas, {
+                  ${this._shouldRenderDiagramNode("gas", nodes.gas) ? this._renderNode(nodes.gas, {
                     layoutPreset,
                     animateEntrance: shouldAnimateEntrance,
                     enterDelay: this._getNodeAnimationDelay(nodes.gas),
                   }) : ""}
-                  ${nodes.individual.map((node, index) => this._renderNode(node, {
-                    layoutPreset,
-                    animateEntrance: shouldAnimateEntrance,
-                    enterDelay: this._getNodeAnimationDelay(node, index),
-                  })).join("")}
+                  ${
+                    showIndividualsOnDiagram
+                      ? nodes.individual.map((node, index) => this._renderNode(node, {
+                        layoutPreset,
+                        animateEntrance: shouldAnimateEntrance,
+                        enterDelay: this._getNodeAnimationDelay(node, index),
+                      })).join("")
+                      : ""
+                  }
                   <svg class="power-flow-card__svg power-flow-card__svg--dots" viewBox="0 0 100 100" preserveAspectRatio="none" shape-rendering="geometricPrecision">
                     ${lines.map(line => this._renderFlowDots(line, flowDotOpts)).join("")}
                   </svg>
@@ -3618,6 +4345,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           }
         </div>
       </ha-card>
+      ${this._renderHomeDevicePopup(nodes)}
     `;
 
     this._syncFlowMotionPause();
@@ -3641,8 +4369,32 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._onShadowInput = this._onShadowInput.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {
@@ -3741,8 +4493,14 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(nextConfig));
     this._render();
     this._restoreFocusState(focusState);
+
+    const persisted = deepClone(this._config);
+    if (Array.isArray(persisted.entities?.individual)) {
+      persisted.entities.individual = sanitizeIndividualEntries(persisted).filter(item => item.entity);
+    }
+
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -4180,6 +4938,7 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.power_flow.show_secondary_info", "show_secondary_info", config.show_secondary_info !== false)}
             ${this._renderCheckboxField("ed.power_flow.clickable_entities", "clickable_entities", config.clickable_entities !== false)}
             ${this._renderCheckboxField("ed.power_flow.badge_unavailable", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_home_device_popup", "show_home_device_popup", config.show_home_device_popup !== false)}
           </div>
         </section>
 
@@ -4224,6 +4983,19 @@ class NodaliaPowerFlowCardEditor extends HTMLElement {
               rows: 5,
               placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
             })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.consumption_chips_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.consumption_chips_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderTextField("ed.power_flow.consumption_day_entity", "consumption_chips.day_entity", config.consumption_chips?.day_entity, { placeholder: "sensor.home_energy_today" })}
+            ${this._renderTextField("ed.power_flow.consumption_day_label", "consumption_chips.day_label", config.consumption_chips?.day_label, { placeholder: "Today" })}
+            ${this._renderTextField("ed.power_flow.consumption_month_entity", "consumption_chips.month_entity", config.consumption_chips?.month_entity, { placeholder: "sensor.home_energy_month" })}
+            ${this._renderTextField("ed.power_flow.consumption_month_label", "consumption_chips.month_label", config.consumption_chips?.month_label, { placeholder: "Month" })}
           </div>
         </section>
 
@@ -4351,17 +5123,36 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
   }
 
-  disconnectedCallback() {
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.removeEventListener("input", this._onShadowInput);
     this.shadowRoot.removeEventListener("change", this._onShadowInput);
     this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {
@@ -4430,10 +5221,11 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _getPowerEntityOptions(path = "entity") {
+  _getPowerEntityOptions(path = "entity", domains = POWER_FLOW_ENTITY_DOMAINS) {
+    const normalizedDomains = arrayFromMaybe(domains).map(domain => String(domain).trim()).filter(Boolean);
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
-      .filter(([entityId]) => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number."))
+      .filter(([entityId]) => !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`)))
       .map(([entityId, state]) => {
         const friendlyName = String(state?.attributes?.friendly_name || "").trim();
         return {
@@ -4540,8 +5332,14 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(nextConfig));
     this._render();
     this._restoreFocusState(focusState);
+
+    const persisted = deepClone(this._config);
+    if (Array.isArray(persisted.entities?.individual)) {
+      persisted.entities.individual = sanitizeIndividualEntries(persisted).filter(item => item.entity);
+    }
+
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -4648,22 +5446,72 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
 
-    if (!toggleButton) {
+    if (toggleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (toggleButton.dataset.editorToggle === "styles") {
+        this._showStyleSection = !this._showStyleSection;
+        this._render();
+      } else if (toggleButton.dataset.editorToggle === "animations") {
+        this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      } else if (toggleButton.dataset.editorToggle === "tap_actions") {
+        this._showTapActionsSection = !this._showTapActionsSection;
+        this._render();
+      }
+      return;
+    }
+
+    const actionButton = event.composedPath().find(node => node instanceof HTMLButtonElement && node.dataset?.action);
+    if (!actionButton) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
+    const action = actionButton.dataset.action;
+    const index = Number(actionButton.dataset.index);
+    if (!isObject(this._config.entities)) {
+      this._config.entities = {};
+    }
+    if (!Array.isArray(this._config.entities.individual)) {
+      this._config.entities.individual = [];
+    }
 
-    if (toggleButton.dataset.editorToggle === "styles") {
-      this._showStyleSection = !this._showStyleSection;
+    if (action === "add-individual") {
+      this._config.entities.individual.push({
+        entity: "",
+        name: "",
+        icon: "mdi:power-plug",
+        color: "",
+      });
+      this._setEditorConfig();
+      const focusState = this._captureFocusState();
       this._render();
-    } else if (toggleButton.dataset.editorToggle === "animations") {
-      this._showAnimationSection = !this._showAnimationSection;
-      this._render();
-    } else if (toggleButton.dataset.editorToggle === "tap_actions") {
-      this._showTapActionsSection = !this._showTapActionsSection;
-      this._render();
+      this._restoreFocusState(focusState);
+      return;
+    }
+
+    if (!Number.isInteger(index) || index < 0 || index >= this._config.entities.individual.length) {
+      return;
+    }
+
+    if (action === "remove-individual") {
+      this._config.entities.individual.splice(index, 1);
+      this._emitConfig();
+      return;
+    }
+
+    if (action === "move-individual-up") {
+      moveItem(this._config.entities.individual, index, index - 1);
+      this._emitConfig();
+      return;
+    }
+
+    if (action === "move-individual-down") {
+      moveItem(this._config.entities.individual, index, index + 1);
+      this._emitConfig();
     }
   }
 
@@ -4806,6 +5654,9 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
+    const domains = arrayFromMaybe(options.domains).length
+      ? arrayFromMaybe(options.domains)
+      : POWER_FLOW_ENTITY_DOMAINS;
 
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -4814,6 +5665,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           class="editor-control-host"
           data-mounted-control="entity"
           data-field="${escapeHtml(field)}"
+          data-domains="${escapeHtml(domains.join(","))}"
           data-value="${escapeHtml(inputValue)}"
           data-placeholder="${escapeHtml(placeholder)}"
         ></div>
@@ -4853,33 +5705,37 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
+    const domains = String(host.dataset.domains || POWER_FLOW_ENTITY_DOMAINS.join(","))
+      .split(",")
+      .map(domain => domain.trim())
+      .filter(Boolean);
     let control = null;
 
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["sensor", "number", "input_number"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => {
-        const entityId = String(stateObj?.entity_id || "");
-        return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
-      };
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
-      }
-    } else if (customElements.get("ha-selector")) {
+    if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       control.selector = {
         entity: {
-          domain: ["sensor", "number", "input_number"],
+          domain: domains.length === 1 ? domains[0] : domains,
         },
       };
+    } else if (customElements.get("ha-entity-picker")) {
+      control = document.createElement("ha-entity-picker");
+      if (domains.length) {
+        control.includeDomains = domains;
+        control.entityFilter = stateObj =>
+          domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      }
+      control.allowCustomEntity = true;
+      if (placeholder) {
+        control.setAttribute("placeholder", placeholder);
+      }
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
       emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
       control.appendChild(emptyOption);
-      this._getPowerEntityOptions(field).forEach(option => {
+      this._getPowerEntityOptions(field, domains).forEach(option => {
         const optionElement = document.createElement("option");
         optionElement.value = option.value;
         optionElement.textContent = option.displayLabel;
@@ -4898,10 +5754,50 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
       control.value = nextValue;
     }
 
+    if (control.tagName === "SELECT") {
+      control.addEventListener("change", this._onShadowInput);
+    } else {
+      control.addEventListener("value-changed", this._onShadowValueChanged);
+    }
+
     host.replaceChildren(control);
   }
 
+  _renderIndividualEditorCard(item, index, total) {
+    const entry = item || {};
+    return `
+      <div class="power-flow-individual-card">
+        <div class="power-flow-individual-card__header">
+          <div class="power-flow-individual-card__title">${escapeHtml(this._editorLabel("ed.power_flow.individual_row_title"))} ${index + 1}</div>
+          <div class="power-flow-individual-card__actions">
+            <button type="button" data-action="move-individual-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" data-action="move-individual-down" data-index="${index}" ${index >= total - 1 ? "disabled" : ""}>↓</button>
+            <button type="button" class="danger" data-action="remove-individual" data-index="${index}">${escapeHtml(this._editorLabel("ed.power_flow.remove_individual"))}</button>
+          </div>
+        </div>
+        ${this._renderEntityPickerField("ed.power_flow.individual_entity", `entities.individual.${index}.entity`, entry.entity, {
+          placeholder: "sensor.smart_plug_power",
+          fullWidth: true,
+          domains: ["sensor", "number", "input_number"],
+        })}
+        ${this._renderTextField("ed.entity.name", `entities.individual.${index}.name`, entry.name, { fullWidth: true })}
+        ${this._renderIconPickerField("ed.entity.icon", `entities.individual.${index}.icon`, entry.icon, { placeholder: "mdi:power-plug" })}
+        ${this._renderColorField("ed.power_flow.node_color", `entities.individual.${index}.color`, entry.color, { fullWidth: true })}
+      </div>
+    `;
+  }
+
   _renderNodeSection(titleKey, hintKey, prefix, values) {
+    const isGrid = prefix === "entities.grid";
+    const gridExportFields = isGrid ? `
+          ${this._renderEntityPickerField("ed.power_flow.node_grid_export_entity", `${prefix}.export_entity`, values.export_entity, {
+            placeholder: "sensor.grid_feed_in",
+            fullWidth: true,
+            domains: ["sensor", "number", "input_number"],
+          })}
+          ${this._renderTextField("ed.power_flow.node_grid_export_color", `${prefix}.export_color`, values.export_color || NODE_DEFAULTS.grid.export_color, { placeholder: NODE_DEFAULTS.grid.export_color })}
+          ${this._renderCheckboxField("ed.power_flow.node_grid_export_when_negative", `${prefix}.export_when_negative`, values.export_when_negative !== false)}
+    ` : "";
     return `
       <section class="editor-section">
         <div class="editor-section__header">
@@ -4912,15 +5808,18 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
           ${this._renderEntityPickerField("ed.entity.entity_main", `${prefix}.entity`, values.entity, {
             placeholder: "sensor.mi_sensor",
             fullWidth: true,
+            domains: ["sensor", "number", "input_number"],
           })}
           ${this._renderTextField("ed.entity.name", `${prefix}.name`, values.name)}
           ${this._renderIconPickerField("ed.entity.icon", `${prefix}.icon`, values.icon, {
             placeholder: "mdi:flash",
           })}
           ${this._renderColorField("ed.power_flow.node_color", `${prefix}.color`, values.color)}
+          ${gridExportFields}
           ${this._renderEntityPickerField("ed.power_flow.node_secondary_entity", `${prefix}.secondary_info.entity`, values.secondary_info?.entity, {
             placeholder: "sensor.mi_secundaria",
             fullWidth: true,
+            domains: ["sensor", "number", "input_number"],
           })}
           ${this._renderTextField("ed.power_flow.node_secondary_attribute", `${prefix}.secondary_info.attribute`, values.secondary_info?.attribute, {
             placeholder: "battery_level",
@@ -4953,6 +5852,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
     const battery = resolveNodeConfig("battery", config);
     const water = resolveNodeConfig("water", config);
     const gas = resolveNodeConfig("gas", config);
+    const individuals = sanitizeIndividualEntries(config);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -5084,6 +5984,98 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
         .editor-field textarea {
           min-height: 120px;
           resize: vertical;
+        }
+
+        .power-flow-individual-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .editor-empty-note {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .editor-actions {
+          display: flex;
+          justify-content: flex-start;
+        }
+
+        .editor-actions button,
+        .editor-section__toggle-button {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .editor-actions button:hover,
+        .editor-section__toggle-button:hover {
+          border-color: color-mix(in srgb, var(--primary-text-color) 16%, transparent);
+        }
+
+        button.danger {
+          color: var(--error-color, #ff4d4f);
+        }
+
+        button:disabled {
+          cursor: default;
+          opacity: 0.45;
+        }
+
+        .power-flow-individual-card {
+          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 16px;
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .power-flow-individual-card__header {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .power-flow-individual-card__title {
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .power-flow-individual-card__actions {
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .power-flow-individual-card__actions button {
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 10px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          min-height: 32px;
+          padding: 0 10px;
+        }
+
+        .power-flow-individual-card__actions button.danger {
+          color: var(--error-color, #ff4d4f);
+        }
+
+        .power-flow-individual-card__actions button:disabled {
+          cursor: default;
+          opacity: 0.45;
         }
 
         .editor-color-field {
@@ -5263,6 +6255,7 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.power_flow.show_secondary_info", "show_secondary_info", config.show_secondary_info !== false)}
             ${this._renderCheckboxField("ed.power_flow.clickable_entities", "clickable_entities", config.clickable_entities !== false)}
             ${this._renderCheckboxField("ed.power_flow.badge_unavailable", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+            ${this._renderCheckboxField("ed.power_flow.show_home_device_popup", "show_home_device_popup", config.show_home_device_popup !== false)}
           </div>
         </section>
 
@@ -5301,12 +6294,36 @@ class NodaliaPowerFlowCardVisualEditor extends HTMLElement {
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.individuals_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.individuals_hint"))}</div>
           </div>
+          <div class="power-flow-individual-list">
+            ${
+              individuals.length
+                ? individuals.map((item, index) => this._renderIndividualEditorCard(item, index, individuals.length)).join("")
+                : `<div class="editor-empty-note">${escapeHtml(this._editorLabel("ed.power_flow.individuals_empty"))}</div>`
+            }
+          </div>
+          <div class="editor-actions">
+            <button type="button" data-action="add-individual">${escapeHtml(this._editorLabel("ed.power_flow.add_individual"))}</button>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.power_flow.consumption_chips_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.power_flow.consumption_chips_hint"))}</div>
+          </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextareaField("ed.power_flow.individuals_entities", "entities.individual", this._serializeIndividuals(), {
-              valueType: "individuals",
-              rows: 5,
-              placeholder: "sensor.cargador_coche|Cargador|mdi:car-electric|#42a5f5",
+            ${this._renderEntityPickerField("ed.power_flow.consumption_day_entity", "consumption_chips.day_entity", config.consumption_chips?.day_entity, {
+              placeholder: "sensor.home_energy_today",
+              fullWidth: true,
+              domains: ["sensor"],
             })}
+            ${this._renderTextField("ed.power_flow.consumption_day_label", "consumption_chips.day_label", config.consumption_chips?.day_label, { placeholder: "Today", fullWidth: true })}
+            ${this._renderEntityPickerField("ed.power_flow.consumption_month_entity", "consumption_chips.month_entity", config.consumption_chips?.month_entity, {
+              placeholder: "sensor.home_energy_month",
+              fullWidth: true,
+              domains: ["sensor"],
+            })}
+            ${this._renderTextField("ed.power_flow.consumption_month_label", "consumption_chips.month_label", config.consumption_chips?.month_label, { placeholder: "Month", fullWidth: true })}
           </div>
         </section>
 

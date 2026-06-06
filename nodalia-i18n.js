@@ -49,6 +49,33 @@
    * Lovelace may pass a hass object with states but without i18n fields until a later update — fall back
    * to `document.querySelector("home-assistant")?.hass` so `language: auto` matches the profile.
    */
+  /**
+   * Home Assistant stores the profile language in localStorage (`selectedLanguage`, JSON string).
+   * That value is more reliable than the legacy `hass.language` field, which can reflect the
+   * server default (e.g. Spanish) while the user profile is English.
+   */
+  function profileLanguageFromLocalStorage() {
+    if (typeof localStorage === "undefined") {
+      return null;
+    }
+    try {
+      const raw = localStorage.getItem("selectedLanguage");
+      if (!raw) {
+        return null;
+      }
+      let parsed = raw;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (_err) {
+        // HA stores a JSON-encoded string; tolerate plain values.
+      }
+      const code = typeof parsed === "string" ? parsed : String(parsed ?? "").trim();
+      return code ? baseLang(code) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function effectiveHaLanguageCode(hass) {
     const fromProfileObject = h => {
       if (!h || typeof h !== "object") {
@@ -77,7 +104,8 @@
      * generic `language` field, which can lag behind the profile and leak Spanish labels into English UIs.
      */
     return (
-      fromProfileObject(rootHass)
+      profileLanguageFromLocalStorage()
+      || fromProfileObject(rootHass)
       || fromProfileObject(resolveHass(hass))
       || fromLegacyObject(rootHass)
       || fromLegacyObject(resolveHass(hass))
@@ -451,6 +479,14 @@
         emptyBody: "Configure `entity` to show the card.",
         defaultName: "Person"
       },
+      scenes: {
+        emptyTitle: "Nodalia Scenes Card",
+        emptyBody: "Add scene entities in the card editor.",
+        defaultName: "Scenes",
+        unavailable: "Unavailable",
+        subtitle: "Tap a mood to launch",
+        moods: "moods"
+      },
       entityCard: {
         binarySensor: {
           doorOpen: "Open",
@@ -664,7 +700,38 @@
           dialNoSetpoint: "Indoor temperature; thermostat has no active target yet",
           togglePower: "Turn on or off"
         },
-        dialNoSetpointHint: "No active setpoint"
+        dialNoSetpointHint: "No active setpoint",
+        schedule: {
+          openButton: "Weekly setpoint schedule",
+          popupTitle: "Weekly schedule",
+          popupHint: "Define time blocks and target temperatures, then save to sync Home Assistant automations through your webhook.",
+          enabledLabel: "Enable schedule",
+          addSlot: "Add block",
+          emptyDay: "No blocks",
+          cancel: "Cancel",
+          save: "Save schedule",
+          saving: "Saving…",
+          start: "Start",
+          end: "End",
+          temperature: "Setpoint",
+          remove: "Remove",
+          close: "Close",
+          day: {
+            mon: "Monday",
+            tue: "Tuesday",
+            wed: "Wednesday",
+            thu: "Thursday",
+            fri: "Friday",
+            sat: "Saturday",
+            sun: "Sunday"
+          },
+          errors: {
+            webhookMissing: "Configure a setpoint schedule webhook in the card editor.",
+            entityMissing: "Select a climate entity first.",
+            webhookFailed: "Could not sync the schedule. Check the webhook and Home Assistant logs.",
+            dualRangeUnsupported: "Weekly schedules are not supported while the thermostat uses a dual heat/cool range."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "No history available"
@@ -1370,7 +1437,38 @@
           dialTargetSlider: "Solltemperatur",
           dialNoSetpoint: "Raumtemperatur; kein aktives Soll am Thermostat"
         },
-        dialNoSetpointHint: "Kein aktives Soll"
+        dialNoSetpointHint: "Kein aktives Soll",
+        schedule: {
+          openButton: "Wochen-Sollwertplan",
+          popupTitle: "Wochenplan",
+          popupHint: "Definiere Zeitblöcke und Solltemperaturen und speichere, um über deinen Webhook mit Home Assistant zu synchronisieren.",
+          enabledLabel: "Wochenplan aktivieren",
+          addSlot: "Block hinzufügen",
+          emptyDay: "Keine Blöcke",
+          cancel: "Abbrechen",
+          save: "Plan speichern",
+          saving: "Speichern…",
+          start: "Beginn",
+          end: "Ende",
+          temperature: "Sollwert",
+          remove: "Entfernen",
+          close: "Schließen",
+          day: {
+            mon: "Montag",
+            tue: "Dienstag",
+            wed: "Mittwoch",
+            thu: "Donnerstag",
+            fri: "Freitag",
+            sat: "Samstag",
+            sun: "Sonntag"
+          },
+          errors: {
+            webhookMissing: "Konfiguriere einen Webhook für den Sollwert-Wochenplan im Karten-Editor.",
+            entityMissing: "Wähle zuerst eine Climate-Entität.",
+            webhookFailed: "Plan konnte nicht synchronisiert werden. Prüfe Webhook und Home-Assistant-Protokolle.",
+            dualRangeUnsupported: "Wochenpläne sind nicht verfügbar, solange das Thermostat einen dualen Heiz-/Kühlbereich nutzt."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Kein Verlauf verfügbar"
@@ -1924,7 +2022,38 @@
           dialTargetSlider: "Θερμοκρασία στόχος",
           dialNoSetpoint: "Εσωτερική θερμοκρασία· ο θερμοστάτης δεν έχει ενεργό στόχο"
         },
-        dialNoSetpointHint: "Χωρίς ενεργό στόχο"
+        dialNoSetpointHint: "Χωρίς ενεργό στόχο",
+        schedule: {
+          openButton: "Εβδομαδιαίο πρόγραμμα consigna",
+          popupTitle: "Εβδομαδιαίο πρόγραμμα",
+          popupHint: "Ορίστε χρονικά διαστήματα και θερμοκρασίες-στόχους και αποθηκεύστε για συγχρονισμό με το Home Assistant μέσω webhook.",
+          enabledLabel: "Ενεργοποίηση προγράμματος",
+          addSlot: "Προσθήκη διαστήματος",
+          emptyDay: "Χωρίς διαστήματα",
+          cancel: "Ακύρωση",
+          save: "Αποθήκευση προγράμματος",
+          saving: "Αποθήκευση…",
+          start: "Έναρξη",
+          end: "Λήξη",
+          temperature: "Consigna",
+          remove: "Αφαίρεση",
+          close: "Κλείσιμο",
+          day: {
+            mon: "Δευτέρα",
+            tue: "Τρίτη",
+            wed: "Τετάρτη",
+            thu: "Πέμπτη",
+            fri: "Παρασκευή",
+            sat: "Σάββατο",
+            sun: "Κυριακή"
+          },
+          errors: {
+            webhookMissing: "Ρυθμίστε το webhook προγράμματος στον επεξεργαστή της κάρτας.",
+            entityMissing: "Επιλέξτε πρώτα μια οντότητα climate.",
+            webhookFailed: "Αποτυχία συγχρονισμού προγράμματος. Ελέγξτε webhook και αρχεία καταγραφής Home Assistant.",
+            dualRangeUnsupported: "Το εβδομαδιαίο πρόγραμμα δεν είναι διαθέσιμο όσο το θερμοστάτιο χρησιμοποιεί διπλό εύρος θέρμανσης/ψύξης."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Δεν υπάρχει διαθέσιμο ιστορικό"
@@ -2560,6 +2689,14 @@
         emptyBody: "Configure `entity` to show the card.",
         defaultName: "Persona"
       },
+      scenes: {
+        emptyTitle: "Nodalia Scenes Card",
+        emptyBody: "Añade entidades escena en el editor de la tarjeta.",
+        defaultName: "Escenas",
+        unavailable: "No disponible",
+        subtitle: "Toca un ambiente para lanzarlo",
+        moods: "ambientes"
+      },
       entityCard: {
         binarySensor: {
           doorOpen: "Abierta",
@@ -2773,7 +2910,38 @@
           dialNoSetpoint: "Temperatura interior; el termostato no tiene consigna activa",
           togglePower: "Encender o apagar"
         },
-        dialNoSetpointHint: "Sin consigna activa"
+        dialNoSetpointHint: "Sin consigna activa",
+        schedule: {
+          openButton: "Horario semanal de consignas",
+          popupTitle: "Horario semanal",
+          popupHint: "Define franjas horarias y consignas, luego guarda para sincronizar con Home Assistant mediante tu webhook.",
+          enabledLabel: "Activar horario",
+          addSlot: "Añadir franja",
+          emptyDay: "Sin franjas",
+          cancel: "Cancelar",
+          save: "Guardar horario",
+          saving: "Guardando…",
+          start: "Inicio",
+          end: "Fin",
+          temperature: "Consigna",
+          remove: "Eliminar",
+          close: "Cerrar",
+          day: {
+            mon: "Lunes",
+            tue: "Martes",
+            wed: "Miércoles",
+            thu: "Jueves",
+            fri: "Viernes",
+            sat: "Sábado",
+            sun: "Domingo"
+          },
+          errors: {
+            webhookMissing: "Configura el webhook de horario en el editor de la tarjeta.",
+            entityMissing: "Selecciona primero una entidad climate.",
+            webhookFailed: "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
+            dualRangeUnsupported: "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Sin historial disponible"
@@ -3479,7 +3647,38 @@
           dialTargetSlider: "Température cible",
           dialNoSetpoint: "Température intérieure ; pas de consigne active sur le thermostat"
         },
-        dialNoSetpointHint: "Pas de consigne active"
+        dialNoSetpointHint: "Pas de consigne active",
+        schedule: {
+          openButton: "Planning hebdomadaire des consignes",
+          popupTitle: "Planning hebdomadaire",
+          popupHint: "Définissez des plages horaires et des consignes, puis enregistrez pour synchroniser avec Home Assistant via votre webhook.",
+          enabledLabel: "Activer le planning",
+          addSlot: "Ajouter une plage",
+          emptyDay: "Aucune plage",
+          cancel: "Annuler",
+          save: "Enregistrer le planning",
+          saving: "Enregistrement…",
+          start: "Début",
+          end: "Fin",
+          temperature: "Consigne",
+          remove: "Supprimer",
+          close: "Fermer",
+          day: {
+            mon: "Lundi",
+            tue: "Mardi",
+            wed: "Mercredi",
+            thu: "Jeudi",
+            fri: "Vendredi",
+            sat: "Samedi",
+            sun: "Dimanche"
+          },
+          errors: {
+            webhookMissing: "Configurez le webhook de planning dans l’éditeur de la carte.",
+            entityMissing: "Sélectionnez d’abord une entité climate.",
+            webhookFailed: "Impossible de synchroniser le planning. Vérifiez le webhook et les journaux Home Assistant.",
+            dualRangeUnsupported: "Le planning hebdomadaire n’est pas disponible tant que le thermostat utilise une plage dual chauffage/refroidissement."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Aucun historique disponible"
@@ -4169,7 +4368,38 @@
           dialTargetSlider: "Temperatura target",
           dialNoSetpoint: "Temperatura interna; nessun setpoint attivo sul termostato"
         },
-        dialNoSetpointHint: "Nessun setpoint attivo"
+        dialNoSetpointHint: "Nessun setpoint attivo",
+        schedule: {
+          openButton: "Programma settimanale consigne",
+          popupTitle: "Programma settimanale",
+          popupHint: "Definisci fasce orarie e temperature target, poi salva per sincronizzare con Home Assistant tramite il webhook.",
+          enabledLabel: "Attiva programma",
+          addSlot: "Aggiungi fascia",
+          emptyDay: "Nessuna fascia",
+          cancel: "Annulla",
+          save: "Salva programma",
+          saving: "Salvataggio…",
+          start: "Inizio",
+          end: "Fine",
+          temperature: "Consigna",
+          remove: "Rimuovi",
+          close: "Chiudi",
+          day: {
+            mon: "Lunedì",
+            tue: "Martedì",
+            wed: "Mercoledì",
+            thu: "Giovedì",
+            fri: "Venerdì",
+            sat: "Sabato",
+            sun: "Domenica"
+          },
+          errors: {
+            webhookMissing: "Configura il webhook del programma nell’editor della scheda.",
+            entityMissing: "Seleziona prima un’entità climate.",
+            webhookFailed: "Impossibile sincronizzare il programma. Controlla webhook e log di Home Assistant.",
+            dualRangeUnsupported: "Il programma settimanale non è disponibile mentre il termostato usa un intervallo dual heat/cool."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Nessuno storico disponibile"
@@ -4859,7 +5089,38 @@
           dialTargetSlider: "Doeltemperatuur",
           dialNoSetpoint: "Kamertemperatuur; thermostaat heeft geen actieve setpoint"
         },
-        dialNoSetpointHint: "Geen actieve setpoint"
+        dialNoSetpointHint: "Geen actieve setpoint",
+        schedule: {
+          openButton: "Weekschema setpoints",
+          popupTitle: "Weekschema",
+          popupHint: "Definieer tijdsblokken en doeltemperaturen en sla op om via je webhook te synchroniseren met Home Assistant.",
+          enabledLabel: "Schema inschakelen",
+          addSlot: "Blok toevoegen",
+          emptyDay: "Geen blokken",
+          cancel: "Annuleren",
+          save: "Schema opslaan",
+          saving: "Opslaan…",
+          start: "Start",
+          end: "Einde",
+          temperature: "Setpoint",
+          remove: "Verwijderen",
+          close: "Sluiten",
+          day: {
+            mon: "Maandag",
+            tue: "Dinsdag",
+            wed: "Woensdag",
+            thu: "Donderdag",
+            fri: "Vrijdag",
+            sat: "Zaterdag",
+            sun: "Zondag"
+          },
+          errors: {
+            webhookMissing: "Configureer een webhook voor het weekschema in de kaarteditor.",
+            entityMissing: "Selecteer eerst een climate-entiteit.",
+            webhookFailed: "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
+            dualRangeUnsupported: "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Geen geschiedenis beschikbaar"
@@ -5126,6 +5387,39 @@
         water_carriage_drop: "Water carriage dropped",
         check_clean_carouse: "Check cleaning carousel",
         audio_error: "Audio error"
+      },
+      climateCard: {
+        schedule: {
+          openButton: "Ukentlig setpoint-plan",
+          popupTitle: "Ukeplan",
+          popupHint: "Definer tidsblokker og måltemperaturer, og lagre for å synkronisere med Home Assistant via webhooken.",
+          enabledLabel: "Aktiver plan",
+          addSlot: "Legg til blokk",
+          emptyDay: "Ingen blokker",
+          cancel: "Avbryt",
+          save: "Lagre plan",
+          saving: "Lagrer…",
+          start: "Start",
+          end: "Slutt",
+          temperature: "Setpoint",
+          remove: "Fjern",
+          close: "Lukk",
+          day: {
+            mon: "Mandag",
+            tue: "Tirsdag",
+            wed: "Onsdag",
+            thu: "Torsdag",
+            fri: "Fredag",
+            sat: "Lørdag",
+            sun: "Søndag"
+          },
+          errors: {
+            webhookMissing: "Konfigurer webhook for setpoint-plan i korteditoren.",
+            entityMissing: "Velg en climate-entitet først.",
+            webhookFailed: "Kunne ikke synkronisere planen. Sjekk webhook og Home Assistant-logger.",
+            dualRangeUnsupported: "Ukeplaner støttes ikke mens termostaten bruker dual varme/kjøle-område."
+          }
+        }
       }
     },
     pt: {
@@ -5469,7 +5763,38 @@
           dialTargetSlider: "Temperatura alvo",
           dialNoSetpoint: "Temperatura interior; o termostato não tem setpoint ativo"
         },
-        dialNoSetpointHint: "Sem setpoint ativo"
+        dialNoSetpointHint: "Sem setpoint ativo",
+        schedule: {
+          openButton: "Horário semanal de consignas",
+          popupTitle: "Horário semanal",
+          popupHint: "Defina blocos horários e temperaturas alvo e guarde para sincronizar com o Home Assistant através do webhook.",
+          enabledLabel: "Ativar horário",
+          addSlot: "Adicionar bloco",
+          emptyDay: "Sem blocos",
+          cancel: "Cancelar",
+          save: "Guardar horário",
+          saving: "A guardar…",
+          start: "Início",
+          end: "Fim",
+          temperature: "Consigna",
+          remove: "Remover",
+          close: "Fechar",
+          day: {
+            mon: "Segunda-feira",
+            tue: "Terça-feira",
+            wed: "Quarta-feira",
+            thu: "Quinta-feira",
+            fri: "Sexta-feira",
+            sat: "Sábado",
+            sun: "Domingo"
+          },
+          errors: {
+            webhookMissing: "Configure o webhook de horário no editor do cartão.",
+            entityMissing: "Selecione primeiro uma entidade climate.",
+            webhookFailed: "Não foi possível sincronizar o horário. Verifique o webhook e os registos do Home Assistant.",
+            dualRangeUnsupported: "Horários semanais não estão disponíveis enquanto o termostato usa um intervalo dual calor/frio."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Sem histórico disponível"
@@ -6159,7 +6484,38 @@
           dialTargetSlider: "Temperatura țintă",
           dialNoSetpoint: "Temperatură interioară; termostatul nu are țintă activă"
         },
-        dialNoSetpointHint: "Fără țintă activă"
+        dialNoSetpointHint: "Fără țintă activă",
+        schedule: {
+          openButton: "Program săptămânal consigne",
+          popupTitle: "Program săptămânal",
+          popupHint: "Definește intervale orare și temperaturi țintă, apoi salvează pentru a sincroniza cu Home Assistant prin webhook.",
+          enabledLabel: "Activează programul",
+          addSlot: "Adaugă interval",
+          emptyDay: "Fără intervale",
+          cancel: "Anulează",
+          save: "Salvează programul",
+          saving: "Se salvează…",
+          start: "Început",
+          end: "Sfârșit",
+          temperature: "Consignă",
+          remove: "Elimină",
+          close: "Închide",
+          day: {
+            mon: "Luni",
+            tue: "Marți",
+            wed: "Miercuri",
+            thu: "Joi",
+            fri: "Vineri",
+            sat: "Sâmbătă",
+            sun: "Duminică"
+          },
+          errors: {
+            webhookMissing: "Configurează webhook-ul programului în editorul cardului.",
+            entityMissing: "Selectează mai întâi o entitate climate.",
+            webhookFailed: "Programul nu a putut fi sincronizat. Verifică webhook-ul și jurnalele Home Assistant.",
+            dualRangeUnsupported: "Programele săptămânale nu sunt disponibile cât timp termostatul folosește un interval dual încălzire/răcire."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "Nu există istoric disponibil"
@@ -6849,7 +7205,38 @@
           dialTargetSlider: "Заданная температура",
           dialNoSetpoint: "Комнатная температура; на термостате нет активной уставки"
         },
-        dialNoSetpointHint: "Нет активной уставки"
+        dialNoSetpointHint: "Нет активной уставки",
+        schedule: {
+          openButton: "Недельное расписание уставок",
+          popupTitle: "Недельное расписание",
+          popupHint: "Задайте временные блоки и целевые температуры, затем сохраните для синхронизации с Home Assistant через webhook.",
+          enabledLabel: "Включить расписание",
+          addSlot: "Добавить блок",
+          emptyDay: "Нет блоков",
+          cancel: "Отмена",
+          save: "Сохранить расписание",
+          saving: "Сохранение…",
+          start: "Начало",
+          end: "Конец",
+          temperature: "Уставка",
+          remove: "Удалить",
+          close: "Закрыть",
+          day: {
+            mon: "Понедельник",
+            tue: "Вторник",
+            wed: "Среда",
+            thu: "Четверг",
+            fri: "Пятница",
+            sat: "Суббота",
+            sun: "Воскресенье"
+          },
+          errors: {
+            webhookMissing: "Настройте webhook расписания в редакторе карточки.",
+            entityMissing: "Сначала выберите сущность climate.",
+            webhookFailed: "Не удалось синхронизировать расписание. Проверьте webhook и журналы Home Assistant.",
+            dualRangeUnsupported: "Недельное расписание недоступно, пока термостат использует двойной диапазон нагрева/охлаждения."
+          }
+        }
       },
       graphCard: {
         emptyHistory: "История недоступна"
@@ -7539,7 +7926,38 @@
           dialTargetSlider: "目标温度",
           dialNoSetpoint: "室内温度；恒温器尚无生效目标温度"
         },
-        dialNoSetpointHint: "尚无生效设定"
+        dialNoSetpointHint: "尚无生效设定",
+        schedule: {
+          openButton: "每周设定温度计划",
+          popupTitle: "每周计划",
+          popupHint: "定义时间段和目标温度，然后保存以通过 webhook 与 Home Assistant 同步。",
+          enabledLabel: "启用计划",
+          addSlot: "添加时段",
+          emptyDay: "无时段",
+          cancel: "取消",
+          save: "保存计划",
+          saving: "保存中…",
+          start: "开始",
+          end: "结束",
+          temperature: "设定温度",
+          remove: "删除",
+          close: "关闭",
+          day: {
+            mon: "周一",
+            tue: "周二",
+            wed: "周三",
+            thu: "周四",
+            fri: "周五",
+            sat: "周六",
+            sun: "周日"
+          },
+          errors: {
+            webhookMissing: "请在卡片编辑器中配置计划 webhook。",
+            entityMissing: "请先选择 climate 实体。",
+            webhookFailed: "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
+            dualRangeUnsupported: "恒温器使用双模式冷暖范围时，不支持每周计划。"
+          }
+        }
       },
       graphCard: {
         emptyHistory: "暂无历史数据"
@@ -8144,6 +8562,30 @@
     return ccLoc.dialNoSetpointHint ?? ccEn.dialNoSetpointHint ?? "No active setpoint";
   }
 
+  function translateClimateSchedule(hass, configLang, key, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const parts = String(key || "").split(".").filter(Boolean);
+    const read = root => {
+      let cursor = root;
+      for (const part of parts) {
+        if (!cursor || typeof cursor !== "object" || !(part in cursor)) {
+          return null;
+        }
+        cursor = cursor[part];
+      }
+      return typeof cursor === "string" ? cursor : null;
+    };
+    const localized = read(strings(lang).climateCard?.schedule);
+    if (localized) {
+      return localized;
+    }
+    const english = read(strings("en").climateCard?.schedule);
+    if (english) {
+      return english;
+    }
+    return fallback;
+  }
+
   function translateHumidifierDeviceState(hass, configLang, rawValue) {
     const lang = resolveLanguage(hass, configLang);
     const k = normalizeTextKey(rawValue);
@@ -8369,6 +8811,15 @@
     }
 
     const st = dict.states;
+
+    if (domain === "person") {
+      if (key === "casa" || key === "en_casa") {
+        return st.home;
+      }
+      if (key === "fuera") {
+        return st.not_home;
+      }
+    }
     switch (key) {
       case "on":
         return st.on;
@@ -8515,6 +8966,7 @@
     translateCommonAria,
     translateClimateDialAria,
     translateClimateDialNoSetpointHint,
+    translateClimateSchedule,
     translateHumidifierDeviceState,
     translateMeteoalarmTerm,
     translateAdvanceVacuumReportedState,

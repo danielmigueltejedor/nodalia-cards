@@ -1,0 +1,69 @@
+# Webhook automation — receives schedule saves from every Nodalia Climate Card.
+# Full guide: docs/climate-setpoint-schedule.md
+#
+# ─── Customize ───────────────────────────────────────────────────────────────
+# WEBHOOK_ID   Usually keep the default below. Must match `setpoint_schedule_webhook`
+#              on every climate card that uses this feature.
+#              Treat it like a password — do not publish it publicly.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# You only need ONE copy of this automation for the whole home.
+# Each card sends its own `entity_id` and `storage_entity_id` in the JSON payload.
+#
+# Setup order:
+#   1. helpers  → examples/climate-setpoint-schedule-helpers.yaml (one per room)
+#   2. this file → webhook automation (once)
+#   3. path-b   → examples/climate-setpoint-schedule-path-b.yaml (one per room)
+#      OR path-a → examples/climate-setpoint-schedule-shell.yaml (advanced)
+#
+# local_only: false — recommended when using HA remotely (Nabu Casa, mobile app).
+# Card 1.2.0+ also uses WebSocket webhook/handle from the dashboard.
+
+alias: "Nodalia Climate | Sync setpoint schedule"
+mode: parallel
+max_exceeded: silent
+
+trigger:
+  - trigger: webhook
+    webhook_id: nodalia_climate_setpoint_schedule
+    allowed_methods:
+      - POST
+    local_only: false
+
+actions:
+  - variables:
+      entity_id: "{{ trigger.json.entity_id | default('') }}"
+      storage_entity: "{{ trigger.json.storage_entity_id | default('') }}"
+      schedule_json: "{{ trigger.json.storage_state | default('{}') }}"
+      specs: "{{ trigger.json.automation_specs | default([]) }}"
+      prefix: "{{ trigger.json.automation_id_prefix | default('nodalia_climate_') }}"
+
+  - if:
+      - condition: template
+        value_template: "{{ storage_entity != '' }}"
+    then:
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ storage_entity }}"
+        data:
+          value: "{{ schedule_json }}"
+
+  - event: nodalia_climate_setpoint_schedule_updated
+    event_data:
+      entity_id: "{{ entity_id }}"
+      storage_entity_id: "{{ storage_entity }}"
+      slot_count: "{{ specs | length }}"
+      automation_id_prefix: "{{ prefix }}"
+
+  # Optional Path A: write per-slot automations to disk (requires shell_command):
+  # - action: shell_command.nodalia_climate_write_setpoint_schedule_automations
+  #   data:
+  #     value: "{{ trigger.json | tojson }}"
+  # - action: automation.reload
+  #
+  # Optional custom script:
+  # - action: script.your_install_climate_schedule
+  #   data:
+  #     entity_id: "{{ entity_id }}"
+  #     automation_specs: "{{ specs }}"
+  #     automation_yaml_bundle: "{{ trigger.json.automation_yaml_bundle | default('') }}"

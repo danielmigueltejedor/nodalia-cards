@@ -1,6 +1,21 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.1.4";
+const CARD_VERSION = "1.2.0";
+const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const SETPOINT_SCHEDULE_DAY_TO_JS = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
+const SETPOINT_SCHEDULE_MINUTES_PER_DAY = 24 * 60;
+const SCHEDULE_TIMELINE_SNAP_MINUTES = 5;
+const SCHEDULE_MIN_BLOCK_MINUTES = 15;
+/** Pixels before a block press counts as drag (vs tap-to-select). */
+const SCHEDULE_BLOCK_DRAG_THRESHOLD_PX = 6;
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -35,7 +50,15 @@ const DEFAULT_CONFIG = {
   show_humidity_chip: true,
   show_mode_buttons: true,
   show_step_controls: true,
+  show_schedule_button: true,
   show_unavailable_badge: true,
+  setpoint_schedule_webhook: "",
+  setpoint_schedule_helper: "",
+  /** `"monday"` (default) or `"sunday"` — first row in the schedule agenda. */
+  setpoint_schedule_week_starts_on: "monday",
+  security: {
+    allow_webhooks_for_non_admin: false,
+  },
   tap_action: "more-info",
   hold_action: "more-info",
   double_tap_action: "none",
@@ -206,8 +229,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -223,6 +253,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -671,6 +704,594 @@ const LEGACY_CLIMATE_DIAL_OFF_COLOR = "rgba(255, 255, 255, 0.28)";
 const LEGACY_CLIMATE_DIAL_TRACK_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
 const LEGACY_CLIMATE_DIAL_BACKGROUND = "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
 
+function createSetpointScheduleSlotId() {
+  return `slot_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function parseScheduleClockMinutes(value) {
+  const raw = String(value ?? "").trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) {
+    return null;
+  }
+
+  return (hours * 60) + minutes;
+}
+
+function formatScheduleClockMinutes(totalMinutes) {
+  const safe = clamp(Math.round(Number(totalMinutes) || 0), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+  const hours = Math.floor(safe / 60);
+  const minutes = safe % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function normalizeSetpointScheduleDay(value) {
+  const key = String(value ?? "").trim().toLowerCase();
+  if (SETPOINT_SCHEDULE_DAY_ORDER.includes(key)) {
+    return key;
+  }
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    const byIndex = SETPOINT_SCHEDULE_DAY_ORDER[numeric];
+    if (byIndex) {
+      return byIndex;
+    }
+    const jsMap = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    if (numeric >= 0 && numeric <= 6 && jsMap[numeric]) {
+      return jsMap[numeric];
+    }
+  }
+
+  return "mon";
+}
+
+function normalizeSetpointScheduleSlot(rawSlot, index = 0) {
+  const source = isObject(rawSlot) ? rawSlot : {};
+  const startMinutes = parseScheduleClockMinutes(source.start) ?? (7 * 60);
+  let endMinutes = parseScheduleClockMinutes(source.end) ?? (22 * 60);
+  if (endMinutes <= startMinutes) {
+    endMinutes = Math.min(startMinutes + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+  }
+
+  const temperature = Number(source.temperature);
+  return {
+    id: String(source.id || "").trim() || createSetpointScheduleSlotId(),
+    day: normalizeSetpointScheduleDay(source.day ?? SETPOINT_SCHEDULE_DAY_ORDER[index % 7]),
+    start: formatScheduleClockMinutes(startMinutes),
+    end: formatScheduleClockMinutes(endMinutes),
+    temperature: Number.isFinite(temperature) ? temperature : 21,
+    enabled: source.enabled !== false,
+  };
+}
+
+function normalizeSetpointScheduleConfig(rawSchedule) {
+  const schedule = isObject(rawSchedule) ? rawSchedule : {};
+  const slots = Array.isArray(schedule.slots)
+    ? schedule.slots.map((slot, index) => normalizeSetpointScheduleSlot(slot, index))
+    : [];
+
+  return {
+    enabled: schedule.enabled !== false,
+    slots,
+  };
+}
+
+const SETPOINT_SCHEDULE_STORAGE_VERSION = 1;
+const SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED = 2;
+const SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY = 3;
+const SETPOINT_SCHEDULE_INPUT_TEXT_MAX = 255;
+/** Times in storage are quantized to this many minutes (matches agenda snap). */
+const SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM = SCHEDULE_TIMELINE_SNAP_MINUTES;
+
+function buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins) {
+  return `c${dayIdx}_${startMins}_${endMins}`;
+}
+
+function quantizeSetpointScheduleStorageMinutes(minutes) {
+  return clamp(
+    Math.round(Number(minutes) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM) * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM,
+    0,
+    SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1,
+  );
+}
+
+function packSetpointScheduleSlot(dayIdx, startMins, endMins, temperature, enabled = true) {
+  const startQ = clamp(Math.floor(quantizeSetpointScheduleStorageMinutes(startMins) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 0, 287);
+  let endQ = clamp(Math.floor(quantizeSetpointScheduleStorageMinutes(endMins) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 0, 287);
+  if (endQ <= startQ) {
+    endQ = Math.min(startQ + Math.ceil(SCHEDULE_MIN_BLOCK_MINUTES / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 287);
+  }
+
+  const day = clamp(Number(dayIdx), 0, 6);
+  const temp = clamp(Math.round(Number(temperature)) - 5, 0, 255);
+  const disabled = enabled === false ? 1 : 0;
+
+  return (
+    startQ |
+    (endQ << 9) |
+    (day << 18) |
+    (disabled << 21) |
+    (temp << 22)
+  ) >>> 0;
+}
+
+function unpackSetpointSchedulePacked(packedValue) {
+  const packed = Number(packedValue) >>> 0;
+  const startQ = packed & 0x1FF;
+  const endQ = (packed >> 9) & 0x1FF;
+  const dayIdx = (packed >> 18) & 7;
+  const disabled = (packed >> 21) & 1;
+  const temperature = ((packed >> 22) & 0xFF) + 5;
+  const startMins = startQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
+  let endMins = endQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
+  if (endMins <= startMins) {
+    endMins = Math.min(startMins + SCHEDULE_MIN_BLOCK_MINUTES, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+  }
+
+  return {
+    id: buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins),
+    day: SETPOINT_SCHEDULE_DAY_ORDER[dayIdx] || "mon",
+    start: formatScheduleClockMinutes(startMins),
+    end: formatScheduleClockMinutes(endMins),
+    temperature,
+    enabled: disabled !== 1,
+  };
+}
+
+function encodeSetpointScheduleBinaryBase64(slots) {
+  const bytes = new Uint8Array(slots.length * 4);
+  slots.forEach((slot, index) => {
+    const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+    const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
+    const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
+    const packed = packSetpointScheduleSlot(dayIdx, startMins, endMins, slot.temperature, slot.enabled);
+    const offset = index * 4;
+    bytes[offset] = (packed >>> 24) & 0xFF;
+    bytes[offset + 1] = (packed >>> 16) & 0xFF;
+    bytes[offset + 2] = (packed >>> 8) & 0xFF;
+    bytes[offset + 3] = packed & 0xFF;
+  });
+
+  if (typeof btoa === "function") {
+    let binary = "";
+    bytes.forEach(byte => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  return "";
+}
+
+function decodeSetpointScheduleBinaryBase64(base64Value, slotCountHint = null) {
+  const raw = String(base64Value ?? "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  let bytes;
+  if (typeof atob === "function") {
+    const binary = atob(raw);
+    bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  } else {
+    return [];
+  }
+
+  const slotCount = Number.isFinite(Number(slotCountHint)) && Number(slotCountHint) > 0
+    ? Number(slotCountHint)
+    : Math.floor(bytes.length / 4);
+
+  const slots = [];
+  for (let index = 0; index < slotCount; index += 1) {
+    const offset = index * 4;
+    if (offset + 3 >= bytes.length) {
+      break;
+    }
+    const packed = (
+      (bytes[offset] << 24) |
+      (bytes[offset + 1] << 16) |
+      (bytes[offset + 2] << 8) |
+      bytes[offset + 3]
+    ) >>> 0;
+    slots.push(unpackSetpointSchedulePacked(packed));
+  }
+
+  return slots;
+}
+
+function decodeSetpointScheduleStorageState(rawState) {
+  const trimmed = String(rawState ?? "").trim();
+  if (!trimmed || trimmed === "unknown" || trimmed === "unavailable") {
+    return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!isObject(parsed)) {
+      return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+    }
+
+    if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY && typeof parsed.b === "string") {
+      const enabled = parsed.e !== 0;
+      const slots = decodeSetpointScheduleBinaryBase64(parsed.b, parsed.n);
+      return normalizeSetpointScheduleConfig({ enabled, slots });
+    }
+
+    if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED && Array.isArray(parsed.s)) {
+      const enabled = parsed.e !== 0;
+      const slots = parsed.s
+        .map(value => unpackSetpointSchedulePacked(value))
+        .filter(Boolean);
+      return normalizeSetpointScheduleConfig({ enabled, slots });
+    }
+
+    if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION && Array.isArray(parsed.s)) {
+      const enabled = parsed.e !== 0;
+      const slots = parsed.s
+        .map((row, index) => {
+          if (!Array.isArray(row) || row.length < 4) {
+            return null;
+          }
+
+          const dayIdx = clamp(Number(row[0]), 0, SETPOINT_SCHEDULE_DAY_ORDER.length - 1);
+          const startMins = clamp(Number(row[1]), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          let endMins = clamp(Number(row[2]), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          const temperature = Number(row[3]);
+          const slotEnabled = row[4] === undefined || Number(row[4]) !== 0;
+
+          if (endMins <= startMins) {
+            endMins = Math.min(startMins + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          }
+
+          return {
+            id: buildCompactSetpointScheduleSlotId(dayIdx, startMins, endMins),
+            day: SETPOINT_SCHEDULE_DAY_ORDER[dayIdx] || SETPOINT_SCHEDULE_DAY_ORDER[index % 7],
+            start: formatScheduleClockMinutes(startMins),
+            end: formatScheduleClockMinutes(endMins),
+            temperature: Number.isFinite(temperature) ? temperature : 21,
+            enabled: slotEnabled,
+          };
+        })
+        .filter(Boolean);
+
+      return normalizeSetpointScheduleConfig({ enabled, slots });
+    }
+
+    return normalizeSetpointScheduleConfig(parsed);
+  } catch (_error) {
+    return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+  }
+}
+
+function encodeSetpointScheduleStorageState(schedule) {
+  const normalized = normalizeSetpointScheduleConfig(schedule);
+  const candidates = [];
+
+  if (normalized.slots.length > 0) {
+    const packed = normalized.slots.map(slot => {
+      const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+      const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
+      const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
+      return packSetpointScheduleSlot(dayIdx, startMins, endMins, slot.temperature, slot.enabled);
+    });
+
+    const binaryPayload = {
+      v: SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY,
+      b: encodeSetpointScheduleBinaryBase64(normalized.slots),
+      n: normalized.slots.length,
+    };
+    if (normalized.enabled === false) {
+      binaryPayload.e = 0;
+    }
+    candidates.push(JSON.stringify(binaryPayload));
+
+    const packedPayload = {
+      v: SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED,
+      s: packed,
+    };
+    if (normalized.enabled === false) {
+      packedPayload.e = 0;
+    }
+    candidates.push(JSON.stringify(packedPayload));
+  }
+
+  const rows = normalized.slots.map(slot => {
+    const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+    const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
+    const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
+    const row = [dayIdx, startMins, endMins, slot.temperature];
+    if (slot.enabled === false) {
+      row.push(0);
+    }
+    return row;
+  });
+
+  const legacyCompactPayload = {
+    v: SETPOINT_SCHEDULE_STORAGE_VERSION,
+    s: rows,
+  };
+  if (normalized.enabled === false) {
+    legacyCompactPayload.e = 0;
+  }
+  candidates.push(JSON.stringify(legacyCompactPayload));
+
+  if (!normalized.slots.length) {
+    const emptyPayload = { v: SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY, b: "", n: 0 };
+    if (normalized.enabled === false) {
+      emptyPayload.e = 0;
+    }
+    candidates.push(JSON.stringify(emptyPayload));
+  }
+
+  const withinLimit = candidates.filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
+  if (withinLimit.length) {
+    return withinLimit.sort((left, right) => left.length - right.length)[0];
+  }
+
+  return candidates.sort((left, right) => left.length - right.length)[0];
+}
+
+function normalizeSetpointScheduleWeekStartsOn(value) {
+  const key = String(value ?? "monday").trim().toLowerCase();
+  return key === "sunday" ? "sunday" : "monday";
+}
+
+function getSetpointScheduleDayOrder(weekStartsOn) {
+  if (normalizeSetpointScheduleWeekStartsOn(weekStartsOn) === "sunday") {
+    return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  }
+  return [...SETPOINT_SCHEDULE_DAY_ORDER];
+}
+
+function snapScheduleTimelineMinutes(minutes) {
+  return clamp(
+    Math.round(Number(minutes) / SCHEDULE_TIMELINE_SNAP_MINUTES) * SCHEDULE_TIMELINE_SNAP_MINUTES,
+    0,
+    SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1,
+  );
+}
+
+function getSetpointScheduleBlockLayout(slot) {
+  const start = parseScheduleClockMinutes(slot.start) ?? 0;
+  let end = parseScheduleClockMinutes(slot.end) ?? start + 60;
+  if (end <= start) {
+    end = Math.min(start + SCHEDULE_MIN_BLOCK_MINUTES, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+  }
+  const span = Math.max(end - start, SCHEDULE_MIN_BLOCK_MINUTES);
+  const left = (start / SETPOINT_SCHEDULE_MINUTES_PER_DAY) * 100;
+  const width = (span / SETPOINT_SCHEDULE_MINUTES_PER_DAY) * 100;
+  return { start, end, left, width };
+}
+
+function findScheduleGapForDay(slots, day) {
+  const daySlots = (Array.isArray(slots) ? slots : [])
+    .filter(slot => slot.day === day && slot.enabled !== false)
+    .map(slot => {
+      const start = parseScheduleClockMinutes(slot.start) ?? 0;
+      const end = parseScheduleClockMinutes(slot.end) ?? start + 60;
+      return { start, end: Math.max(end, start + SCHEDULE_MIN_BLOCK_MINUTES) };
+    })
+    .sort((left, right) => left.start - right.start);
+
+  if (!daySlots.length) {
+    return {
+      start: 0,
+      end: SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1,
+    };
+  }
+
+  let best = { start: 0, end: 0, size: 0 };
+  let cursor = 0;
+  daySlots.forEach(slot => {
+    const gapSize = slot.start - cursor;
+    if (gapSize > best.size) {
+      best = { start: cursor, end: slot.start, size: gapSize };
+    }
+    cursor = Math.max(cursor, slot.end);
+  });
+
+  const tailSize = SETPOINT_SCHEDULE_MINUTES_PER_DAY - cursor;
+  if (tailSize > best.size) {
+    best = { start: cursor, end: SETPOINT_SCHEDULE_MINUTES_PER_DAY, size: tailSize };
+  }
+
+  if (best.size >= SCHEDULE_MIN_BLOCK_MINUTES) {
+    return {
+      start: best.start,
+      end: Math.max(best.start + SCHEDULE_MIN_BLOCK_MINUTES, best.end - 1),
+    };
+  }
+
+  const last = daySlots[daySlots.length - 1];
+  const start = clamp(last.end, 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - SCHEDULE_MIN_BLOCK_MINUTES);
+  return {
+    start,
+    end: Math.min(start + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1),
+  };
+}
+
+function scheduleMinutesFromTrackClientX(track, clientX) {
+  const rect = track.getBoundingClientRect();
+  if (!rect.width) {
+    return 0;
+  }
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  return snapScheduleTimelineMinutes(ratio * SETPOINT_SCHEDULE_MINUTES_PER_DAY);
+}
+
+function getActiveSetpointScheduleSlot(slots, date = new Date()) {
+  if (!Array.isArray(slots) || !slots.length) {
+    return null;
+  }
+
+  const jsDay = date.getDay();
+  const minutesNow = (date.getHours() * 60) + date.getMinutes();
+
+  let winner = null;
+  let winnerStart = -1;
+
+  slots.forEach(slot => {
+    if (slot?.enabled === false) {
+      return;
+    }
+    if (SETPOINT_SCHEDULE_DAY_TO_JS[slot.day] !== jsDay) {
+      return;
+    }
+
+    const start = parseScheduleClockMinutes(slot.start);
+    const end = parseScheduleClockMinutes(slot.end);
+    if (start === null || end === null) {
+      return;
+    }
+
+    const inRange = end > start
+      ? minutesNow >= start && minutesNow < end
+      : minutesNow >= start || minutesNow < end;
+    if (!inRange) {
+      return;
+    }
+
+    if (start > winnerStart) {
+      winner = slot;
+      winnerStart = start;
+    }
+  });
+
+  return winner;
+}
+
+const SETPOINT_SCHEDULE_HA_WEEKDAY = {
+  mon: ["mon"],
+  tue: ["tue"],
+  wed: ["wed"],
+  thu: ["thu"],
+  fri: ["fri"],
+  sat: ["sat"],
+  sun: ["sun"],
+};
+
+function getClimateScheduleStorageEntityId(entityId, configuredHelper = "") {
+  const custom = String(configuredHelper ?? "").trim();
+  if (custom) {
+    return custom;
+  }
+
+  const slug = String(entityId ?? "")
+    .trim()
+    .replace(/^climate\./, "")
+    .replace(/[^a-z0-9_]+/gi, "_")
+    .replace(/^_+|_+$/g, "");
+  return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
+}
+
+function buildClimateSetpointScheduleAutomationId(entityId, slotId) {
+  const base = `nodalia_climate_${String(entityId ?? "").replace(".", "_")}_${String(slotId ?? "")}`;
+  return base.replace(/[^a-z0-9_]/gi, "_").slice(0, 120);
+}
+
+function buildClimateSetpointScheduleAutomationSpecs(entityId, schedule, friendlyName = "") {
+  if (!String(entityId ?? "").trim() || schedule?.enabled === false) {
+    return [];
+  }
+
+  const label = String(friendlyName || entityId).trim();
+  return (Array.isArray(schedule?.slots) ? schedule.slots : [])
+    .filter(slot => slot?.enabled !== false)
+    .map(slot => {
+      const start = String(slot.start || "08:00").trim();
+      const at = /^\d{2}:\d{2}:\d{2}$/.test(start) ? start : `${start}:00`;
+      const weekday = SETPOINT_SCHEDULE_HA_WEEKDAY[slot.day] || [slot.day];
+      return {
+        id: buildClimateSetpointScheduleAutomationId(entityId, slot.id),
+        alias: `Nodalia | ${label} | ${slot.day} ${slot.start}-${slot.end}`,
+        description: "Managed by Nodalia Climate Card setpoint schedule webhook.",
+        mode: "single",
+        trigger: [{ platform: "time", at }],
+        condition: [{ condition: "time", weekday }],
+        action: [{
+          action: "climate.set_temperature",
+          target: { entity_id: entityId },
+          data: { temperature: slot.temperature },
+        }],
+      };
+    });
+}
+
+function yamlQuote(value) {
+  return `'${String(value ?? "").replace(/'/g, "''")}'`;
+}
+
+function buildClimateSetpointScheduleAutomationsYaml(entityId, schedule, friendlyName = "") {
+  const specs = buildClimateSetpointScheduleAutomationSpecs(entityId, schedule, friendlyName);
+  if (!specs.length) {
+    return "";
+  }
+
+  return specs
+    .map(spec => {
+      const triggerAt = spec.trigger?.[0]?.at || "08:00:00";
+      const weekday = spec.condition?.[0]?.weekday || ["mon"];
+      const temperature = spec.action?.[0]?.data?.temperature ?? 21;
+      const weekdayYaml = weekday.map(day => `        - ${day}`).join("\n");
+      return `- id: ${yamlQuote(spec.id)}
+  alias: ${yamlQuote(spec.alias)}
+  description: ${yamlQuote(spec.description)}
+  mode: single
+  trigger:
+    - platform: time
+      at: ${yamlQuote(triggerAt)}
+  condition:
+    - condition: time
+      weekday:
+${weekdayYaml}
+  action:
+    - action: climate.set_temperature
+      target:
+        entity_id: ${yamlQuote(entityId)}
+      data:
+        temperature: ${temperature}`;
+    })
+    .join("\n\n");
+}
+
+function buildClimateSetpointScheduleWebhookBody(options = {}) {
+  const entityId = String(options.entityId ?? "").trim();
+  const schedule = normalizeSetpointScheduleConfig(options.schedule);
+  const storageEntityId = String(options.storageEntityId ?? "").trim();
+  const friendlyName = String(options.friendlyName ?? "").trim();
+  const automationSpecs = buildClimateSetpointScheduleAutomationSpecs(entityId, schedule, friendlyName);
+  const storageState = encodeSetpointScheduleStorageState(schedule);
+  const automationYamlBundle = buildClimateSetpointScheduleAutomationsYaml(entityId, schedule, friendlyName);
+
+  return {
+    type: "climate_setpoint_schedule",
+    card: CARD_TAG,
+    card_version: options.cardVersion || CARD_VERSION,
+    entity_id: entityId,
+    friendly_name: friendlyName,
+    schedule,
+    storage_entity_id: storageEntityId,
+    storage_state: storageState,
+    automation_specs: automationSpecs,
+    automation_yaml_bundle: automationYamlBundle,
+    automation_id_prefix: entityId ? `nodalia_climate_${entityId.replace(".", "_")}_` : "nodalia_climate_",
+    ha_action: storageEntityId
+      ? {
+        action: "input_text.set_value",
+        target: { entity_id: storageEntityId },
+        data: { value: storageState },
+      }
+      : null,
+  };
+}
+
 function migrateLegacyClimateOffColors(styles) {
   if (!styles?.icon) {
     return;
@@ -708,6 +1329,17 @@ function normalizeConfig(rawConfig) {
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   migrateLegacyClimateOffColors(config.styles);
+  config.setpoint_schedule_webhook = String(config.setpoint_schedule_webhook ?? "").trim();
+  config.setpoint_schedule_helper = String(config.setpoint_schedule_helper ?? "").trim();
+  config.setpoint_schedule_week_starts_on = normalizeSetpointScheduleWeekStartsOn(
+    config.setpoint_schedule_week_starts_on,
+  );
+  config.show_schedule_button = config.show_schedule_button !== false;
+  config.security = config.security || {};
+  if (config.security.allow_webhooks_for_non_admin === undefined) {
+    config.security.allow_webhooks_for_non_admin = false;
+  }
+  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
   return config;
 }
 
@@ -790,6 +1422,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._dialDragFrame = 0;
     this._pendingDialDragPoint = null;
     this._pendingRenderAfterDrag = false;
+    this._pendingRenderAfterScheduleDrag = false;
     /** `null` | `"low"` | `"high"` — dual-range (`heat_cool`) thumb focus for step buttons; not persisted. */
     this._selectedRangeThumb = null;
     this._lastDualRangeModeKey = null;
@@ -809,7 +1442,25 @@ class NodaliaClimateCard extends HTMLElement {
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this._detachHostHold = () => {};
     this._suppressNextClimateTap = false;
+    this._scheduleComposerOpen = false;
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+    this._scheduleComposerError = "";
+    this._scheduleComposerSaving = false;
+    this._scheduleComposerSelectedSlotId = "";
+    this._activeScheduleDrag = null;
+    this._scheduleBlockDragPending = null;
+    this._onWindowSchedulePointerMove = this._onWindowSchedulePointerMove.bind(this);
+    this._onWindowSchedulePointerUp = this._onWindowSchedulePointerUp.bind(this);
+    this._onWindowScheduleBlockDragMove = this._onWindowScheduleBlockDragMove.bind(this);
+    this._onWindowScheduleBlockDragUp = this._onWindowScheduleBlockDragUp.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowBlur = this._onShadowBlur.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("blur", this._onShadowBlur, true);
+    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
@@ -828,6 +1479,20 @@ class NodaliaClimateCard extends HTMLElement {
                 return null;
               }
               if (path.some(node => node instanceof HTMLElement && node.dataset?.climateControl)) {
+                return null;
+              }
+              if (
+                path.some(
+                  node =>
+                    node instanceof HTMLElement &&
+                    (node.classList?.contains("climate-schedule-expanded") ||
+                      node.classList?.contains("climate-schedule-agenda__track") ||
+                      node.dataset?.scheduleBlockId ||
+                      node.dataset?.scheduleResize ||
+                      node.dataset?.climateScheduleField ||
+                      node.dataset?.climateScheduleBackdrop === "true"),
+                )
+              ) {
                 return null;
               }
               return path.some(node => node instanceof HTMLElement && node.dataset?.climateCard === "root")
@@ -861,6 +1526,10 @@ class NodaliaClimateCard extends HTMLElement {
     this._detachHostHold = () => {};
     window.NodaliaUtils?.cancelCardZoneTap?.(this);
     this._setDragWindowListeners(false);
+    this._setScheduleDragWindowListeners(false);
+    this._setScheduleBlockDragPendingListeners(false);
+    this._activeScheduleDrag = null;
+    this._scheduleBlockDragPending = null;
 
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
@@ -939,6 +1608,11 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if (this._activeScheduleDrag) {
+      this._pendingRenderAfterScheduleDrag = true;
+      return;
+    }
+
     this._render();
   }
 
@@ -972,7 +1646,819 @@ class NodaliaClimateCard extends HTMLElement {
       hasTemperatureDraft: Boolean(
         entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId)),
       ),
+      scheduleComposerOpen: this._scheduleComposerOpen === true,
+      scheduleDraft: this._scheduleComposerDraft,
+      scheduleComposerError: this._scheduleComposerError,
+      scheduleComposerSaving: this._scheduleComposerSaving === true,
+      showScheduleButton: this._config?.show_schedule_button !== false,
     });
+  }
+
+  _climateScheduleText(key, fallback = "") {
+    if (typeof window.NodaliaI18n?.translateClimateSchedule === "function") {
+      return window.NodaliaI18n.translateClimateSchedule(
+        this._hass,
+        this._config?.language ?? "auto",
+        key,
+        fallback,
+      );
+    }
+    return fallback;
+  }
+
+  _getScheduleComposerDraft() {
+    return normalizeSetpointScheduleConfig(this._scheduleComposerDraft);
+  }
+
+  _setScheduleComposerDraft(schedule, options = {}) {
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    if (options.render !== false) {
+      this._render();
+      return;
+    }
+
+    this._syncRenderSignature();
+  }
+
+  _syncRenderSignature() {
+    if (this._hass) {
+      this._lastRenderSignature = this._getRenderSignature(this._hass);
+    }
+  }
+
+  _captureScheduleAgendaScrollState() {
+    if (!this._scheduleComposerOpen || !this.shadowRoot) {
+      return null;
+    }
+
+    const agenda = this.shadowRoot.querySelector(".climate-schedule-agenda");
+    if (!(agenda instanceof HTMLElement)) {
+      return null;
+    }
+
+    return agenda.scrollTop;
+  }
+
+  _restoreScheduleAgendaScrollState(scrollTop) {
+    if (typeof scrollTop !== "number" || !Number.isFinite(scrollTop) || scrollTop <= 0) {
+      return;
+    }
+
+    const apply = () => {
+      const agenda = this.shadowRoot?.querySelector(".climate-schedule-agenda");
+      if (agenda instanceof HTMLElement) {
+        agenda.scrollTop = scrollTop;
+      }
+    };
+
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(apply);
+      });
+      return;
+    }
+
+    apply();
+  }
+
+  _loadScheduleDraftFromStorage() {
+    const storageEntityId = getClimateScheduleStorageEntityId(
+      this._config?.entity,
+      this._config?.setpoint_schedule_helper,
+    );
+    const rawState = storageEntityId ? String(this._hass?.states?.[storageEntityId]?.state ?? "").trim() : "";
+    if (rawState && rawState !== "unknown" && rawState !== "unavailable") {
+      return decodeSetpointScheduleStorageState(rawState);
+    }
+
+    const legacy = this._config?.setpoint_schedule;
+    if (legacy && (Array.isArray(legacy.slots) ? legacy.slots.length : 0) > 0) {
+      return normalizeSetpointScheduleConfig(legacy);
+    }
+
+    return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+  }
+
+  _openScheduleComposer() {
+    this._scheduleComposerError = "";
+    this._scheduleComposerSaving = false;
+    this._scheduleComposerDraft = this._loadScheduleDraftFromStorage();
+    this._scheduleComposerOpen = true;
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _closeScheduleComposer() {
+    this._scheduleComposerOpen = false;
+    this._scheduleComposerError = "";
+    this._scheduleComposerSaving = false;
+    this._scheduleComposerSelectedSlotId = "";
+    this._activeScheduleDrag = null;
+    this._scheduleBlockDragPending = null;
+    this._setScheduleDragWindowListeners(false);
+    this._setScheduleBlockDragPendingListeners(false);
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _setScheduleComposerError(message = "") {
+    this._scheduleComposerError = String(message ?? "").trim();
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _renderScheduleComposerErrorHtml() {
+    const message = String(this._scheduleComposerError || "").trim();
+    if (!message) {
+      return "";
+    }
+
+    return `
+      <div class="climate-schedule-expanded__error" role="alert" aria-live="polite">
+        <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+        <span>${escapeHtml(message)}</span>
+      </div>
+    `;
+  }
+
+  async _postScheduleWebhookPayload(webhookId, body) {
+    const id = String(webhookId ?? "").trim();
+    if (!id) {
+      return false;
+    }
+
+    if (
+      this._config?.security?.allow_webhooks_for_non_admin === false &&
+      !this._hass?.user?.is_admin
+    ) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Climate Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).",
+        );
+      }
+      return false;
+    }
+
+    const post =
+      typeof window !== "undefined" &&
+      window.NodaliaUtils &&
+      typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+        ? window.NodaliaUtils.postHomeAssistantWebhook
+        : null;
+    if (!post) {
+      return false;
+    }
+
+    try {
+      return Boolean(await post(id, body, this._hass));
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  _syncScheduleComposerDraftFromDom() {
+    if (!this.shadowRoot) {
+      return this._getScheduleComposerDraft();
+    }
+
+    const schedule = this._getScheduleComposerDraft();
+    schedule.enabled = Boolean(
+      this.shadowRoot.querySelector('[data-climate-schedule-field="enabled"]')?.checked,
+    );
+
+    const domPatchById = new Map();
+    this.shadowRoot.querySelectorAll("[data-schedule-slot-editor]").forEach(editor => {
+      const slotId = String(editor.getAttribute("data-schedule-slot-editor") || "").trim();
+      if (!slotId) {
+        return;
+      }
+
+      const start = String(editor.querySelector('[data-climate-schedule-field="start"]')?.value || "").trim();
+      const end = String(editor.querySelector('[data-climate-schedule-field="end"]')?.value || "").trim();
+      const temperatureRaw = Number(editor.querySelector('[data-climate-schedule-field="temperature"]')?.value);
+      domPatchById.set(slotId, {
+        start,
+        end,
+        temperature: temperatureRaw,
+      });
+    });
+
+    const mergedSlots = schedule.slots.map(slot => {
+      const patch = domPatchById.get(slot.id);
+      if (!patch) {
+        return slot;
+      }
+      domPatchById.delete(slot.id);
+      return normalizeSetpointScheduleSlot({
+        ...slot,
+        ...patch,
+      });
+    });
+
+    for (const [slotId, patch] of domPatchById) {
+      mergedSlots.push(
+        normalizeSetpointScheduleSlot({
+          id: slotId,
+          ...patch,
+        }),
+      );
+    }
+
+    schedule.slots = mergedSlots;
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    return this._scheduleComposerDraft;
+  }
+
+  _flushScheduleComposerFocusedField() {
+    const active = this.shadowRoot?.activeElement;
+    if (
+      !(active instanceof HTMLInputElement)
+      || !active.dataset?.climateScheduleField
+      || active.dataset.climateScheduleField === "enabled"
+    ) {
+      return;
+    }
+
+    const slotId = String(active.dataset.scheduleSlotId || "").trim();
+    const field = String(active.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    let value = active.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  async _submitScheduleComposer() {
+    if (!this.isConnected || !this._hass || !this.shadowRoot) {
+      return;
+    }
+
+    const webhookId = String(this._config?.setpoint_schedule_webhook || "").trim();
+    if (!webhookId) {
+      this._setScheduleComposerError(
+        this._climateScheduleText("errors.webhookMissing", "Configure a setpoint schedule webhook in the card editor."),
+      );
+      return;
+    }
+
+    const entityId = String(this._config?.entity || "").trim();
+    if (!entityId) {
+      this._setScheduleComposerError(
+        this._climateScheduleText("errors.entityMissing", "Select a climate entity first."),
+      );
+      return;
+    }
+
+    const state = this._getState();
+    if (state && this._isDualSetpointRange(state)) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.dualRangeUnsupported",
+          "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
+        ),
+      );
+      return;
+    }
+
+    this._flushScheduleComposerFocusedField();
+    const schedule = this._syncScheduleComposerDraftFromDom();
+    const storageEntityId = getClimateScheduleStorageEntityId(
+      entityId,
+      this._config?.setpoint_schedule_helper,
+    );
+    const body = buildClimateSetpointScheduleWebhookBody({
+      entityId,
+      schedule,
+      storageEntityId,
+      friendlyName: this._getClimateName(state),
+      cardVersion: CARD_VERSION,
+    });
+
+    this._scheduleComposerSaving = true;
+    this._scheduleComposerError = "";
+    this._lastRenderSignature = "";
+    this._render();
+
+    const ok = await this._postScheduleWebhookPayload(webhookId, body);
+    this._scheduleComposerSaving = false;
+
+    if (!this.isConnected || !this.shadowRoot) {
+      return;
+    }
+
+    if (!ok) {
+      this._setScheduleComposerError(
+        this._climateScheduleText("errors.webhookFailed", "Could not sync the schedule. Check the webhook and Home Assistant logs."),
+      );
+      return;
+    }
+
+    if (storageEntityId && typeof this._hass?.callService === "function") {
+      try {
+        await Promise.resolve(
+          this._hass.callService("input_text", "set_value", {
+            entity_id: storageEntityId,
+            value: body.storage_state,
+          }),
+        );
+      } catch (_error) {
+        // Webhook may already persist; ignore optimistic helper write failures.
+      }
+    }
+
+    this._scheduleComposerDraft = schedule;
+    this._triggerHaptic("success");
+    this._closeScheduleComposer();
+  }
+
+  _updateScheduleComposerSlot(slotId, patch = {}, options = {}) {
+    const schedule = this._getScheduleComposerDraft();
+    const index = schedule.slots.findIndex(slot => slot.id === slotId);
+    if (index === -1) {
+      return;
+    }
+
+    schedule.slots[index] = normalizeSetpointScheduleSlot({
+      ...schedule.slots[index],
+      ...patch,
+    });
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    if (options.render !== false) {
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+
+    this._patchScheduleBlockDom(slotId);
+    this._syncRenderSignature();
+  }
+
+  _getScheduleDayTrackElement(day) {
+    const dayKey = String(day ?? "").trim();
+    if (!dayKey || !this.shadowRoot) {
+      return null;
+    }
+
+    const track = this.shadowRoot.querySelector(`[data-schedule-day-track="${escapeSelectorValue(dayKey)}"]`);
+    return track instanceof HTMLElement ? track : null;
+  }
+
+  _patchScheduleBlockDom(slotId) {
+    if (!this.shadowRoot || !slotId) {
+      return;
+    }
+
+    const schedule = this._getScheduleComposerDraft();
+    const slot = schedule.slots.find(item => item.id === slotId);
+    if (!slot) {
+      return;
+    }
+
+    const layout = getSetpointScheduleBlockLayout(slot);
+    const block = this.shadowRoot.querySelector(
+      `[data-schedule-block-id="${escapeSelectorValue(slotId)}"]`,
+    );
+    if (block instanceof HTMLElement) {
+      block.style.setProperty("--block-left", `${layout.left.toFixed(3)}%`);
+      block.style.setProperty("--block-width", `${layout.width.toFixed(3)}%`);
+      const timeEl = block.querySelector(".climate-schedule-agenda__block-time");
+      const tempEl = block.querySelector(".climate-schedule-agenda__block-temp");
+      const tempLabel = formatTemperature(
+        slot.temperature,
+        this._getTemperatureStep(this._getState()),
+        true,
+        this._hass,
+      );
+      const rangeLabel = `${slot.start}–${slot.end}`;
+      if (timeEl) {
+        timeEl.textContent = rangeLabel;
+      }
+      if (tempEl) {
+        tempEl.textContent = tempLabel;
+      }
+      block.title = `${rangeLabel} · ${tempLabel}`;
+      block.setAttribute("aria-label", `${rangeLabel}, ${tempLabel}`);
+    }
+
+    const editor = this.shadowRoot.querySelector(
+      `[data-schedule-slot-editor="${escapeSelectorValue(slotId)}"]`,
+    );
+    if (editor instanceof HTMLElement) {
+      const startInput = editor.querySelector('[data-climate-schedule-field="start"]');
+      const endInput = editor.querySelector('[data-climate-schedule-field="end"]');
+      const tempInput = editor.querySelector('[data-climate-schedule-field="temperature"]');
+      const activeEl = this.shadowRoot?.activeElement;
+      if (startInput instanceof HTMLInputElement && activeEl !== startInput) {
+        startInput.value = slot.start;
+      }
+      if (endInput instanceof HTMLInputElement && activeEl !== endInput) {
+        endInput.value = slot.end;
+      }
+      if (tempInput instanceof HTMLInputElement && activeEl !== tempInput) {
+        tempInput.value = String(slot.temperature);
+      }
+    }
+  }
+
+  _syncScheduleComposerSelectionDom() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const selectedId = this._scheduleComposerSelectedSlotId;
+    this.shadowRoot.querySelectorAll("[data-schedule-block-id]").forEach(node => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      node.classList.toggle("is-selected", node.dataset.scheduleBlockId === selectedId);
+    });
+    this.shadowRoot.querySelectorAll("[data-schedule-slot-editor]").forEach(node => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      node.classList.toggle("is-visible", node.getAttribute("data-schedule-slot-editor") === selectedId);
+    });
+  }
+
+  _addScheduleComposerSlot(day = "mon") {
+    const schedule = this._getScheduleComposerDraft();
+    const gap = findScheduleGapForDay(schedule.slots, day);
+    const daySlots = schedule.slots.filter(slot => slot.day === day);
+    const fallbackTemp = daySlots.length ? daySlots[daySlots.length - 1].temperature : 21;
+    const slot = normalizeSetpointScheduleSlot({
+      day,
+      start: formatScheduleClockMinutes(gap.start),
+      end: formatScheduleClockMinutes(gap.end),
+      temperature: fallbackTemp,
+    });
+    schedule.slots.push(slot);
+    this._scheduleComposerSelectedSlotId = slot.id;
+    this._setScheduleComposerDraft(schedule);
+  }
+
+  _getScheduleComposerDayOrder() {
+    return getSetpointScheduleDayOrder(this._config?.setpoint_schedule_week_starts_on);
+  }
+
+  _setScheduleComposerSelectedSlot(slotId) {
+    this._scheduleComposerSelectedSlotId = String(slotId ?? "").trim();
+    if (this._scheduleComposerOpen && this.shadowRoot?.querySelector("[data-schedule-day-track]")) {
+      this._syncScheduleComposerSelectionDom();
+      return;
+    }
+
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _setScheduleBlockDragPendingListeners(active) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (active) {
+      if (this._scheduleBlockDragPendingListenersActive) {
+        return;
+      }
+      window.addEventListener("pointermove", this._onWindowScheduleBlockDragMove);
+      window.addEventListener("pointerup", this._onWindowScheduleBlockDragUp);
+      window.addEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+      this._scheduleBlockDragPendingListenersActive = true;
+      return;
+    }
+
+    if (!this._scheduleBlockDragPendingListenersActive) {
+      return;
+    }
+    window.removeEventListener("pointermove", this._onWindowScheduleBlockDragMove);
+    window.removeEventListener("pointerup", this._onWindowScheduleBlockDragUp);
+    window.removeEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+    this._scheduleBlockDragPendingListenersActive = false;
+  }
+
+  _onWindowScheduleBlockDragMove(event) {
+    const pending = this._scheduleBlockDragPending;
+    if (!pending) {
+      return;
+    }
+    if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = Math.abs(event.clientX - pending.startClientX);
+    const deltaY = Math.abs(event.clientY - pending.startClientY);
+    if (Math.max(deltaX, deltaY) < SCHEDULE_BLOCK_DRAG_THRESHOLD_PX) {
+      return;
+    }
+
+    this._scheduleBlockDragPending = null;
+    this._setScheduleBlockDragPendingListeners(false);
+    event.preventDefault();
+    this._startScheduleDrag({
+      slotId: pending.slotId,
+      mode: "move",
+      day: pending.day,
+      track: pending.track,
+      clientX: pending.startClientX,
+      pointerId: pending.pointerId,
+      event,
+    });
+    this._applyScheduleDragAtClientX(event.clientX);
+  }
+
+  _onWindowScheduleBlockDragUp(event) {
+    const pending = this._scheduleBlockDragPending;
+    if (!pending) {
+      return;
+    }
+    if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+      return;
+    }
+
+    this._scheduleBlockDragPending = null;
+    this._setScheduleBlockDragPendingListeners(false);
+  }
+
+  _setScheduleDragWindowListeners(active) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (active) {
+      if (this._scheduleDragListenersActive) {
+        return;
+      }
+      window.addEventListener("pointermove", this._onWindowSchedulePointerMove);
+      window.addEventListener("pointerup", this._onWindowSchedulePointerUp);
+      window.addEventListener("pointercancel", this._onWindowSchedulePointerUp);
+      this._scheduleDragListenersActive = true;
+      return;
+    }
+
+    if (!this._scheduleDragListenersActive) {
+      return;
+    }
+    window.removeEventListener("pointermove", this._onWindowSchedulePointerMove);
+    window.removeEventListener("pointerup", this._onWindowSchedulePointerUp);
+    window.removeEventListener("pointercancel", this._onWindowSchedulePointerUp);
+    this._scheduleDragListenersActive = false;
+  }
+
+  _applyScheduleDragAtClientX(clientX) {
+    const drag = this._activeScheduleDrag;
+    if (!drag?.slotId) {
+      return;
+    }
+
+    const track = this._getScheduleDayTrackElement(drag.day);
+    if (!track) {
+      return;
+    }
+
+    drag.track = track;
+
+    const schedule = this._getScheduleComposerDraft();
+    const slot = schedule.slots.find(item => item.id === drag.slotId);
+    if (!slot) {
+      return;
+    }
+
+    const pointerMinutes = scheduleMinutesFromTrackClientX(track, clientX);
+    const initialStart = drag.initialStart;
+    const initialEnd = drag.initialEnd;
+    const duration = Math.max(initialEnd - initialStart, SCHEDULE_MIN_BLOCK_MINUTES);
+    const dragPatch = {};
+
+    if (drag.mode === "move") {
+      let start = snapScheduleTimelineMinutes(pointerMinutes - drag.pointerOffsetMinutes);
+      let end = start + duration;
+      if (end > SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1) {
+        end = SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1;
+        start = Math.max(0, end - duration);
+      }
+      dragPatch.start = formatScheduleClockMinutes(start);
+      dragPatch.end = formatScheduleClockMinutes(end);
+    } else if (drag.mode === "resize-start") {
+      let start = snapScheduleTimelineMinutes(pointerMinutes);
+      const end = initialEnd;
+      if (end - start < SCHEDULE_MIN_BLOCK_MINUTES) {
+        start = Math.max(0, end - SCHEDULE_MIN_BLOCK_MINUTES);
+      }
+      dragPatch.start = formatScheduleClockMinutes(start);
+      dragPatch.end = formatScheduleClockMinutes(end);
+    } else if (drag.mode === "resize-end") {
+      const start = initialStart;
+      let end = snapScheduleTimelineMinutes(pointerMinutes);
+      if (end - start < SCHEDULE_MIN_BLOCK_MINUTES) {
+        end = Math.min(SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1, start + SCHEDULE_MIN_BLOCK_MINUTES);
+      }
+      dragPatch.start = formatScheduleClockMinutes(start);
+      dragPatch.end = formatScheduleClockMinutes(end);
+    }
+
+    if (!Object.keys(dragPatch).length) {
+      return;
+    }
+
+    this._updateScheduleComposerSlot(drag.slotId, dragPatch, { render: false });
+  }
+
+  _startScheduleDrag(options = {}) {
+    const {
+      slotId,
+      mode,
+      day,
+      track,
+      clientX,
+      pointerId = null,
+      event = null,
+    } = options;
+    const schedule = this._getScheduleComposerDraft();
+    const slot = schedule.slots.find(item => item.id === slotId);
+    const resolvedTrack = track instanceof HTMLElement ? track : this._getScheduleDayTrackElement(day || slot?.day);
+    if (!slot || !resolvedTrack) {
+      return false;
+    }
+
+    const layout = getSetpointScheduleBlockLayout(slot);
+    const pointerMinutes = scheduleMinutesFromTrackClientX(resolvedTrack, clientX);
+    this._activeScheduleDrag = {
+      slotId,
+      mode,
+      day: slot.day,
+      track: resolvedTrack,
+      pointerId,
+      initialStart: layout.start,
+      initialEnd: layout.end,
+      pointerOffsetMinutes: mode === "move" ? pointerMinutes - layout.start : 0,
+    };
+    this._scheduleComposerSelectedSlotId = slotId;
+    this._syncScheduleComposerSelectionDom();
+    this._setScheduleDragWindowListeners(true);
+
+    if (event && typeof resolvedTrack.setPointerCapture === "function" && event.pointerId != null) {
+      try {
+        resolvedTrack.setPointerCapture(event.pointerId);
+      } catch (_error) {
+        // Ignore capture failures on synthetic pointers.
+      }
+    }
+
+    return true;
+  }
+
+  _finishScheduleDrag(event = null) {
+    const drag = this._activeScheduleDrag;
+    if (!drag) {
+      return;
+    }
+
+    const track = drag.track instanceof HTMLElement ? drag.track : this._getScheduleDayTrackElement(drag.day);
+    if (
+      track instanceof HTMLElement &&
+      event?.pointerId != null &&
+      typeof track.releasePointerCapture === "function"
+    ) {
+      try {
+        if (track.hasPointerCapture?.(event.pointerId)) {
+          track.releasePointerCapture(event.pointerId);
+        }
+      } catch (_error) {
+        // Ignore release failures.
+      }
+    }
+
+    this._activeScheduleDrag = null;
+    this._setScheduleDragWindowListeners(false);
+    if (this._pendingRenderAfterScheduleDrag) {
+      this._pendingRenderAfterScheduleDrag = false;
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _onWindowSchedulePointerMove(event) {
+    const drag = this._activeScheduleDrag;
+    if (!drag) {
+      return;
+    }
+    if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    this._applyScheduleDragAtClientX(event.clientX);
+  }
+
+  _onWindowSchedulePointerUp(event) {
+    const drag = this._activeScheduleDrag;
+    if (!drag) {
+      return;
+    }
+    if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+      return;
+    }
+    this._applyScheduleDragAtClientX(event.clientX);
+    this._finishScheduleDrag(event);
+  }
+
+  _handleScheduleComposerPointerDown(event, path) {
+    if (!this._scheduleComposerOpen || event.button !== 0) {
+      return false;
+    }
+
+    if (
+      path.some(
+        node =>
+          node instanceof HTMLInputElement ||
+          node instanceof HTMLTextAreaElement ||
+          node instanceof HTMLSelectElement ||
+          node instanceof HTMLButtonElement,
+      )
+    ) {
+      return false;
+    }
+
+    const resizeHandle = path.find(
+      node => node instanceof HTMLElement && node.dataset?.scheduleResize,
+    );
+    if (resizeHandle) {
+      const slotId = String(resizeHandle.dataset.scheduleSlotId || "").trim();
+      const mode = String(resizeHandle.dataset.scheduleResize || "").trim();
+      const track = path.find(
+        node => node instanceof HTMLElement && node.dataset?.scheduleDayTrack,
+      );
+      const day = String(track?.dataset?.scheduleDayTrack || "").trim();
+      if (slotId && track && day && (mode === "start" || mode === "end")) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._scheduleBlockDragPending = null;
+        this._setScheduleBlockDragPendingListeners(false);
+        this._startScheduleDrag({
+          slotId,
+          mode: mode === "start" ? "resize-start" : "resize-end",
+          day,
+          track,
+          clientX: event.clientX,
+          pointerId: event.pointerId,
+          event,
+        });
+        return true;
+      }
+    }
+
+    const block = path.find(
+      node => node instanceof HTMLElement && node.dataset?.scheduleBlockId,
+    );
+    if (block) {
+      const slotId = String(block.dataset.scheduleBlockId || "").trim();
+      const track = path.find(
+        node => node instanceof HTMLElement && node.dataset?.scheduleDayTrack,
+      );
+      const day = String(track?.dataset?.scheduleDayTrack || "").trim();
+      if (slotId && track && day) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._setScheduleComposerSelectedSlot(slotId);
+        this._scheduleBlockDragPending = {
+          slotId,
+          day,
+          track,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          pointerId: event.pointerId,
+        };
+        this._setScheduleBlockDragPendingListeners(true);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  _removeScheduleComposerSlot(slotId) {
+    const schedule = this._getScheduleComposerDraft();
+    schedule.slots = schedule.slots.filter(slot => slot.id !== slotId);
+    if (this._scheduleComposerSelectedSlotId === slotId) {
+      this._scheduleComposerSelectedSlotId = "";
+    }
+    this._setScheduleComposerDraft(schedule);
+  }
+
+  _setScheduleComposerEnabled(enabled) {
+    const schedule = this._getScheduleComposerDraft();
+    schedule.enabled = enabled === true;
+    this._setScheduleComposerDraft(schedule);
   }
 
   getGridOptions() {
@@ -2070,6 +3556,9 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
@@ -2510,6 +3999,10 @@ class NodaliaClimateCard extends HTMLElement {
 
   _onShadowPointerDown(event) {
     const path = event.composedPath();
+
+    if (this._handleScheduleComposerPointerDown(event, path)) {
+      return;
+    }
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
     if (actionButton) {
       return;
@@ -2854,6 +4347,42 @@ class NodaliaClimateCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
 
+      const climateAction = actionButton.dataset.climateAction;
+      if (climateAction === "schedule-open" || climateAction === "schedule-close") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (climateAction === "schedule-open") {
+          this._triggerHaptic("selection");
+          if (event.detail === 0) {
+            this._triggerButtonBounce(actionButton);
+          }
+          this._openScheduleComposer();
+        } else {
+          this._closeScheduleComposer();
+        }
+        return;
+      }
+
+      if (climateAction === "schedule-save") {
+        this._triggerHaptic("selection");
+        void this._submitScheduleComposer();
+        return;
+      }
+
+      if (climateAction === "schedule-add") {
+        this._triggerHaptic("selection");
+        this._addScheduleComposerSlot(actionButton.dataset.scheduleDay || "mon");
+        return;
+      }
+
+      if (climateAction === "schedule-remove") {
+        if (actionButton.dataset.scheduleSlotId) {
+          this._triggerHaptic("selection");
+          this._removeScheduleComposerSlot(actionButton.dataset.scheduleSlotId);
+        }
+        return;
+      }
+
       const state = this._getState();
       if (!state) {
         return;
@@ -2863,7 +4392,7 @@ class NodaliaClimateCard extends HTMLElement {
         this._triggerButtonBounce(actionButton);
       }
 
-      switch (actionButton.dataset.climateAction) {
+      switch (climateAction) {
       case "toggle":
         this._selectedRangeThumb = null;
         this._triggerHaptic();
@@ -2888,8 +4417,30 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const scheduleBackdrop = path.find(
+      node => node instanceof HTMLElement && node.dataset?.climateScheduleBackdrop === "true",
+    );
+    if (scheduleBackdrop) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closeScheduleComposer();
+      return;
+    }
+
+    if (
+      path.some(
+        node => node instanceof HTMLElement && node.classList?.contains("climate-schedule-expanded"),
+      )
+    ) {
+      return;
+    }
+
     const cardRoot = path.find(node => node instanceof HTMLElement && node.dataset?.climateCard === "root");
     if (!cardRoot) {
+      return;
+    }
+
+    if (this._scheduleComposerOpen) {
       return;
     }
 
@@ -2938,6 +4489,388 @@ class NodaliaClimateCard extends HTMLElement {
     runTap();
   }
 
+  _onShadowKeyDown(event) {
+    if (!this._scheduleComposerOpen) {
+      return;
+    }
+
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    const target = event.composedPath()[0];
+    if (
+      target instanceof HTMLInputElement &&
+      (target.type === "time" || target.type === "number" || target.type === "text")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _onShadowInput(event) {
+    const input = event
+      .composedPath()
+      .find(node => (
+        node instanceof HTMLInputElement
+        || node instanceof HTMLSelectElement
+      ) && node.dataset?.climateScheduleField);
+
+    if (!input) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    if (input.dataset?.climateScheduleField === "enabled") {
+      if (event.type === "input") {
+        return;
+      }
+      this._setScheduleComposerEnabled(Boolean(input.checked));
+      return;
+    }
+
+    const slotId = String(input.dataset.scheduleSlotId || "").trim();
+    const field = String(input.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    if ((input.type === "time" || input.type === "number") && event.type === "input") {
+      return;
+    }
+
+    let value = input.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  _onShadowBlur(event) {
+    const input = event.composedPath()[0];
+    if (
+      !(input instanceof HTMLInputElement)
+      || !input.dataset?.climateScheduleField
+      || input.dataset.climateScheduleField === "enabled"
+    ) {
+      return;
+    }
+
+    const slotId = String(input.dataset.scheduleSlotId || "").trim();
+    const field = String(input.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    let value = input.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  _renderSetpointScheduleButtonHtml(options = {}) {
+    const scheduleLabel = this._climateScheduleText(
+      "openButton",
+      "Weekly setpoint schedule",
+    );
+    const placement = options.placement === "dial" ? "dial" : "steps";
+
+    return `
+      <button
+        type="button"
+        class="climate-card__schedule-button climate-card__schedule-button--${placement}"
+        data-climate-action="schedule-open"
+        aria-label="${escapeHtml(scheduleLabel)}"
+        title="${escapeHtml(scheduleLabel)}"
+      >
+        <ha-icon icon="mdi:calendar-clock"></ha-icon>
+      </button>
+    `;
+  }
+
+  _renderSetpointScheduleSlotEditorHtml(slot, options = {}) {
+    const {
+      startLabel,
+      endLabel,
+      tempLabel,
+      removeLabel,
+      minTemp,
+      maxTemp,
+      stepAttr,
+    } = options;
+    const selected = this._scheduleComposerSelectedSlotId === slot.id;
+
+    return `
+      <div class="climate-schedule-agenda__editor ${selected ? "is-visible" : ""}" data-schedule-slot-editor="${escapeHtml(slot.id)}">
+        <label class="climate-schedule-agenda__editor-field">
+          <span>${escapeHtml(startLabel)}</span>
+          <input
+            type="time"
+            value="${escapeHtml(slot.start)}"
+            data-climate-schedule-field="start"
+            data-schedule-slot-id="${escapeHtml(slot.id)}"
+          />
+        </label>
+        <label class="climate-schedule-agenda__editor-field">
+          <span>${escapeHtml(endLabel)}</span>
+          <input
+            type="time"
+            value="${escapeHtml(slot.end)}"
+            data-climate-schedule-field="end"
+            data-schedule-slot-id="${escapeHtml(slot.id)}"
+          />
+        </label>
+        <label class="climate-schedule-agenda__editor-field climate-schedule-agenda__editor-field--temp">
+          <span>${escapeHtml(tempLabel)}</span>
+          <input
+            type="number"
+            min="${minTemp}"
+            max="${maxTemp}"
+            step="${stepAttr}"
+            value="${escapeHtml(String(slot.temperature))}"
+            data-climate-schedule-field="temperature"
+            data-schedule-slot-id="${escapeHtml(slot.id)}"
+          />
+        </label>
+        <button
+          type="button"
+          class="climate-schedule-agenda__editor-remove"
+          data-climate-action="schedule-remove"
+          data-schedule-slot-id="${escapeHtml(slot.id)}"
+          aria-label="${escapeHtml(removeLabel)}"
+          title="${escapeHtml(removeLabel)}"
+        >
+          <ha-icon icon="mdi:delete-outline"></ha-icon>
+        </button>
+      </div>
+    `;
+  }
+
+  _renderSetpointScheduleDayAgendaRowHtml(day, slots, options = {}) {
+    const {
+      dayLabel,
+      addLabel,
+      emptyLabel,
+      accentColor,
+      temperatureStep,
+      hass,
+      startLabel,
+      endLabel,
+      tempLabel,
+      removeLabel,
+      minTemp,
+      maxTemp,
+      stepAttr,
+    } = options;
+    const daySlots = slots
+      .filter(slot => slot.day === day && slot.enabled !== false)
+      .sort((left, right) => {
+        const a = parseScheduleClockMinutes(left.start) ?? 0;
+        const b = parseScheduleClockMinutes(right.start) ?? 0;
+        return a - b;
+      });
+
+    const blocks = daySlots
+      .map(slot => {
+        const layout = getSetpointScheduleBlockLayout(slot);
+        const selected = this._scheduleComposerSelectedSlotId === slot.id;
+        const tempLabelShort = formatTemperature(slot.temperature, temperatureStep, true, hass);
+        return `
+          <div
+            class="climate-schedule-agenda__block ${selected ? "is-selected" : ""}"
+            data-schedule-block-id="${escapeHtml(slot.id)}"
+            style="--block-left:${layout.left.toFixed(3)}%;--block-width:${layout.width.toFixed(3)}%;"
+            title="${escapeHtml(`${slot.start}–${slot.end} · ${tempLabelShort}`)}"
+            aria-label="${escapeHtml(`${slot.start}–${slot.end}, ${tempLabelShort}`)}"
+          >
+            <span class="climate-schedule-agenda__block-grip climate-schedule-agenda__block-grip--start" data-schedule-resize="start" data-schedule-slot-id="${escapeHtml(slot.id)}" aria-hidden="true"></span>
+            <span class="climate-schedule-agenda__block-body">
+              <span class="climate-schedule-agenda__block-time">${escapeHtml(`${slot.start}–${slot.end}`)}</span>
+              <span class="climate-schedule-agenda__block-temp">${escapeHtml(tempLabelShort)}</span>
+            </span>
+            <span class="climate-schedule-agenda__block-grip climate-schedule-agenda__block-grip--end" data-schedule-resize="end" data-schedule-slot-id="${escapeHtml(slot.id)}" aria-hidden="true"></span>
+          </div>
+        `;
+      })
+      .join("");
+
+    const editors = daySlots
+      .map(slot => this._renderSetpointScheduleSlotEditorHtml(slot, {
+        startLabel,
+        endLabel,
+        tempLabel,
+        removeLabel,
+        minTemp,
+        maxTemp,
+        stepAttr,
+      }))
+      .join("");
+
+    return `
+      <div class="climate-schedule-agenda__row">
+        <div class="climate-schedule-agenda__row-head">
+          <span class="climate-schedule-agenda__day-label">${escapeHtml(dayLabel)}</span>
+          <button
+            type="button"
+            class="climate-schedule-agenda__day-add"
+            data-climate-action="schedule-add"
+            data-schedule-day="${escapeHtml(day)}"
+            aria-label="${escapeHtml(addLabel)}"
+            title="${escapeHtml(addLabel)}"
+          >
+            <ha-icon icon="mdi:plus"></ha-icon>
+          </button>
+        </div>
+        <div class="climate-schedule-agenda__timeline-wrap">
+          <div
+            class="climate-schedule-agenda__track"
+            data-schedule-day-track="${escapeHtml(day)}"
+            style="--schedule-accent:${escapeHtml(accentColor)};"
+          >
+            <div class="climate-schedule-agenda__track-grid" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="climate-schedule-agenda__blocks">
+              ${blocks || `<span class="climate-schedule-agenda__track-empty">${escapeHtml(emptyLabel)}</span>`}
+            </div>
+          </div>
+          <div class="climate-schedule-agenda__axis" aria-hidden="true">
+            <span>00</span>
+            <span>06</span>
+            <span>12</span>
+            <span>18</span>
+            <span>24</span>
+          </div>
+        </div>
+        ${editors}
+      </div>
+    `;
+  }
+
+  _renderScheduleComposerHtml(options = {}) {
+    const {
+      accentColor,
+      temperatureStep,
+      temperatureRange,
+      hass,
+    } = options;
+    const schedule = this._getScheduleComposerDraft();
+    const title = this._climateScheduleText("popupTitle", "Weekly schedule");
+    const hint = this._climateScheduleText(
+      "popupHint",
+      "Define time blocks and target temperatures, then save to sync Home Assistant automations through your webhook.",
+    );
+    const enabledLabel = this._climateScheduleText("enabledLabel", "Enable schedule");
+    const addLabel = this._climateScheduleText("addSlot", "Add block");
+    const emptyLabel = this._climateScheduleText("emptyDay", "No blocks");
+    const cancelLabel = this._climateScheduleText("cancel", "Cancel");
+    const saveLabel = this._climateScheduleText("save", "Save schedule");
+    const savingLabel = this._climateScheduleText("saving", "Saving…");
+    const startLabel = this._climateScheduleText("start", "Start");
+    const endLabel = this._climateScheduleText("end", "End");
+    const tempLabel = this._climateScheduleText("temperature", "Setpoint");
+    const removeLabel = this._climateScheduleText("remove", "Remove");
+    const minTemp = temperatureRange.min;
+    const maxTemp = temperatureRange.max;
+    const stepAttr = temperatureStep > 0 ? temperatureStep : 0.5;
+    const isSaving = this._scheduleComposerSaving === true;
+
+    const closeLabel = this._climateScheduleText("close", "Close");
+    const dayOrder = this._getScheduleComposerDayOrder();
+    const agendaRows = dayOrder
+      .map(day =>
+        this._renderSetpointScheduleDayAgendaRowHtml(day, schedule.slots, {
+          dayLabel: this._climateScheduleText(`day.${day}`, day),
+          addLabel,
+          emptyLabel,
+          accentColor,
+          temperatureStep,
+          hass,
+          startLabel,
+          endLabel,
+          tempLabel,
+          removeLabel,
+          minTemp,
+          maxTemp,
+          stepAttr,
+        }),
+      )
+      .join("");
+
+    return `
+      <div
+        class="climate-schedule-expanded ${this._scheduleComposerOpen ? "is-open" : ""}"
+        style="--climate-schedule-accent:${escapeHtml(accentColor)};"
+        aria-hidden="${this._scheduleComposerOpen ? "false" : "true"}"
+      >
+        <div class="climate-schedule-expanded__backdrop" data-climate-schedule-backdrop="true"></div>
+        <div
+          class="climate-schedule-expanded__panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="${escapeHtml(title)}"
+        >
+          <div class="climate-schedule-expanded__toolbar">
+            <div class="climate-schedule-expanded__toolbar-copy">
+              <div class="climate-schedule-expanded__title">${escapeHtml(title)}</div>
+              <div class="climate-schedule-expanded__hint">${escapeHtml(hint)}</div>
+            </div>
+            <button
+              type="button"
+              class="climate-schedule-expanded__close"
+              data-climate-action="schedule-close"
+              aria-label="${escapeHtml(closeLabel)}"
+              ${isSaving ? "disabled" : ""}
+            >
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
+          </div>
+          ${this._renderScheduleComposerErrorHtml()}
+          <label class="climate-schedule-expanded__enabled">
+            <input
+              type="checkbox"
+              ${schedule.enabled ? "checked" : ""}
+              data-climate-schedule-field="enabled"
+            />
+            <span class="climate-schedule-expanded__enabled-switch" aria-hidden="true"></span>
+            <span>${escapeHtml(enabledLabel)}</span>
+          </label>
+          <div class="climate-schedule-agenda">
+            ${agendaRows}
+          </div>
+          <div class="climate-schedule-expanded__actions">
+            <button
+              type="button"
+              class="climate-schedule-expanded__btn"
+              data-climate-action="schedule-close"
+              ${isSaving ? "disabled" : ""}
+            >
+              ${escapeHtml(cancelLabel)}
+            </button>
+            <button
+              type="button"
+              class="climate-schedule-expanded__btn climate-schedule-expanded__btn--primary"
+              data-climate-action="schedule-save"
+              ${isSaving ? "disabled" : ""}
+            >
+              ${escapeHtml(isSaving ? savingLabel : saveLabel)}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   _renderEmptyState() {
     return `
       <ha-card class="climate-card climate-card--empty">
@@ -2951,6 +4884,8 @@ class NodaliaClimateCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+
+    const savedScheduleAgendaScrollTop = this._captureScheduleAgendaScrollState();
 
     const config = this._config || normalizeConfig({});
     const styles = config.styles || DEFAULT_CONFIG.styles;
@@ -3310,6 +5245,21 @@ class NodaliaClimateCard extends HTMLElement {
     const dialCoolStroke = String(styles.dial.cool_color || "#71c0ff").trim();
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const showScheduleButton = config.show_schedule_button !== false;
+    const showScheduleInSteps = showScheduleButton && showStepControls;
+    const showScheduleOnDial = showScheduleButton && !showStepControls;
+    const scheduleButtonDialMarkup = showScheduleOnDial
+      ? this._renderSetpointScheduleButtonHtml({ placement: "dial" })
+      : "";
+    const scheduleButtonStepsMarkup = showScheduleInSteps
+      ? this._renderSetpointScheduleButtonHtml({ placement: "steps" })
+      : "";
+    const scheduleComposerMarkup = this._renderScheduleComposerHtml({
+      accentColor,
+      temperatureStep,
+      temperatureRange,
+      hass,
+    });
     const dialControlsStacked = modeDialButtonCount >= 3;
     const dialModeButtonFragments = [];
     if (!isOff) {
@@ -3595,6 +5545,519 @@ class NodaliaClimateCard extends HTMLElement {
           justify-content: center;
           min-height: 0;
           padding-top: ${showStepControls ? "0" : (tightLayout ? "0" : "2px")};
+          position: relative;
+        }
+
+        .climate-card__schedule-button {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 5%, transparent), transparent 60%),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: ${stepControlSize}px;
+          justify-content: center;
+          margin: 0;
+          outline: none;
+          padding: 0;
+          transform: translateZ(0);
+          transition:
+            background 160ms ease,
+            border-color 160ms ease,
+            box-shadow 160ms ease,
+            color 160ms ease,
+            transform 160ms ease;
+          width: ${stepControlSize}px;
+          will-change: transform;
+        }
+
+        .climate-card__schedule-button--dial {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          bottom: ${tightLayout ? "2px" : compactLayout ? "4px" : "6px"};
+          left: ${tightLayout ? "2px" : compactLayout ? "4px" : "6px"};
+          position: absolute;
+          z-index: 4;
+        }
+
+        .climate-card__schedule-button--steps {
+          position: relative;
+        }
+
+        .climate-card__schedule-button:hover {
+          transform: translateY(-1px);
+        }
+
+        .climate-card__schedule-button ha-icon {
+          --mdc-icon-size: calc(${stepControlSize}px * 0.42);
+          display: inline-flex;
+          height: calc(${stepControlSize}px * 0.42);
+          width: calc(${stepControlSize}px * 0.42);
+        }
+
+        .climate-schedule-expanded {
+          --climate-schedule-accent: var(--primary-color);
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: fixed;
+          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
+          z-index: 120;
+        }
+
+        .climate-schedule-expanded.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .climate-schedule-expanded__backdrop {
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.32);
+          inset: 0;
+          position: absolute;
+        }
+
+        .climate-schedule-expanded__panel {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--climate-schedule-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 94%, rgba(255, 255, 255, 0.02));
+          border: 1px solid color-mix(in srgb, var(--climate-schedule-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 12px;
+          isolation: isolate;
+          left: 50%;
+          max-height: min(92vh, 920px);
+          max-width: min(100vw - 24px, 920px);
+          overflow: hidden;
+          padding: 14px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(calc(100vw - 24px), 920px);
+          z-index: 1;
+        }
+
+        .climate-schedule-expanded__toolbar {
+          align-items: flex-start;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .climate-schedule-expanded__toolbar-copy {
+          display: grid;
+          flex: 1 1 auto;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .climate-schedule-expanded__title {
+          font-size: 16px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+
+        .climate-schedule-expanded__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .climate-schedule-expanded__close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 32px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 32px;
+        }
+
+        .climate-schedule-expanded__close ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-expanded__error {
+          align-items: flex-start;
+          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
+          border-radius: 10px;
+          color: var(--error-color, #db4437);
+          display: flex;
+          font-size: 12px;
+          gap: 8px;
+          line-height: 1.4;
+          padding: 8px 10px;
+        }
+
+        .climate-schedule-expanded__error ha-icon {
+          --mdc-icon-size: 16px;
+          flex: 0 0 auto;
+          margin-top: 1px;
+        }
+
+        .climate-schedule-expanded__enabled {
+          align-items: center;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 10px;
+          min-height: 34px;
+        }
+
+        .climate-schedule-expanded__enabled input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .climate-schedule-expanded__enabled-switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 22px;
+          position: relative;
+          width: 40px;
+        }
+
+        .climate-schedule-expanded__enabled-switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch::before {
+          transform: translateX(18px);
+        }
+
+        .climate-schedule-agenda {
+          display: grid;
+          gap: 12px;
+          max-height: min(58vh, 560px);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .climate-schedule-agenda__row {
+          display: grid;
+          gap: 8px;
+        }
+
+        .climate-schedule-agenda__row-head {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(72px, 92px) minmax(0, 1fr);
+        }
+
+        .climate-schedule-agenda__day-label {
+          font-size: 13px;
+          font-weight: 800;
+          text-transform: capitalize;
+        }
+
+        .climate-schedule-agenda__day-add {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 30px;
+          justify-content: center;
+          justify-self: end;
+          margin: 0;
+          padding: 0;
+          width: 30px;
+        }
+
+        .climate-schedule-agenda__day-add ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-agenda__timeline-wrap {
+          display: grid;
+          gap: 4px;
+          grid-column: 1 / -1;
+        }
+
+        .climate-schedule-agenda__track {
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          height: 56px;
+          overflow: hidden;
+          position: relative;
+          touch-action: none;
+          user-select: none;
+        }
+
+        .climate-schedule-agenda__track-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          height: 100%;
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .climate-schedule-agenda__track-grid span {
+          border-right: 1px dashed color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+        }
+
+        .climate-schedule-agenda__track-grid span:last-child {
+          border-right: 0;
+        }
+
+        .climate-schedule-agenda__blocks {
+          height: 100%;
+          inset: 0;
+          position: absolute;
+          z-index: 1;
+        }
+
+        .climate-schedule-agenda__track-empty {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 600;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          white-space: nowrap;
+        }
+
+        .climate-schedule-agenda__axis {
+          color: var(--secondary-text-color);
+          display: grid;
+          font-size: 10px;
+          font-weight: 700;
+          grid-template-columns: repeat(5, 1fr);
+          letter-spacing: 0.02em;
+          text-align: center;
+        }
+
+        .climate-schedule-agenda__block {
+          align-items: stretch;
+          background: color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 78%, transparent);
+          border: 1px solid color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 42%, transparent);
+          border-radius: 10px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          cursor: pointer;
+          display: grid;
+          grid-template-columns: 8px minmax(0, 1fr) 8px;
+          height: calc(100% - 8px);
+          left: var(--block-left, 0%);
+          min-width: 44px;
+          overflow: hidden;
+          position: absolute;
+          top: 4px;
+          touch-action: none;
+          width: var(--block-width, 20%);
+          z-index: 1;
+        }
+
+        .climate-schedule-agenda__block.is-selected {
+          border-color: color-mix(in srgb, var(--primary-text-color) 28%, var(--schedule-accent, var(--climate-schedule-accent)));
+          box-shadow:
+            0 0 0 2px color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 35%, transparent),
+            inset 0 1px 0 rgba(255, 255, 255, 0.24);
+          z-index: 2;
+        }
+
+        .climate-schedule-agenda__block:active {
+          cursor: grabbing;
+        }
+
+        .climate-schedule-agenda__block-grip {
+          cursor: ew-resize;
+          display: block;
+          flex: 0 0 10px;
+          min-height: 100%;
+          touch-action: none;
+          z-index: 2;
+        }
+
+        .climate-schedule-agenda__block-body {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          justify-content: center;
+          min-width: 0;
+          overflow: hidden;
+          padding: 0 2px;
+          pointer-events: none;
+        }
+
+        .climate-schedule-agenda__block-time {
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1.1;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-schedule-agenda__block-temp {
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.1;
+          opacity: 0.92;
+        }
+
+        .climate-schedule-agenda__editor {
+          display: none;
+          gap: 8px;
+          grid-column: 1 / -1;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+        }
+
+        .climate-schedule-agenda__editor.is-visible {
+          display: grid;
+        }
+
+        .climate-schedule-agenda__editor-field {
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .climate-schedule-agenda__editor-field--temp {
+          grid-column: 1 / -1;
+        }
+
+        .climate-schedule-agenda__editor-field > span {
+          color: var(--secondary-text-color);
+          font-size: 10px;
+          font-weight: 700;
+        }
+
+        .climate-schedule-agenda__editor-field input {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 10px;
+          color: var(--primary-text-color);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 6px 8px;
+          width: 100%;
+        }
+
+        .climate-schedule-agenda__editor-remove {
+          align-items: center;
+          appearance: none;
+          align-self: end;
+          background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 28%, transparent);
+          border-radius: 999px;
+          color: var(--error-color, #db4437);
+          cursor: pointer;
+          display: inline-flex;
+          height: 36px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 36px;
+        }
+
+        .climate-schedule-agenda__editor-remove ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-expanded__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .climate-schedule-expanded__btn {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 0 14px;
+        }
+
+        .climate-schedule-expanded__btn:disabled {
+          cursor: default;
+          opacity: 0.5;
+        }
+
+        .climate-schedule-expanded__btn--primary {
+          background: color-mix(in srgb, var(--climate-schedule-accent) 22%, transparent);
+          border-color: color-mix(in srgb, var(--climate-schedule-accent) 38%, var(--divider-color));
+        }
+
+        @media (max-width: 640px) {
+          .climate-schedule-expanded__panel {
+            border-radius: 14px;
+            max-height: 94vh;
+            max-width: min(100vw - 16px, 920px);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(calc(100vw - 16px), 920px);
+          }
+
+          .climate-schedule-agenda__row-head {
+            grid-template-columns: minmax(64px, 80px) minmax(0, 1fr);
+          }
         }
 
         .climate-card__dial {
@@ -4095,8 +6558,8 @@ class NodaliaClimateCard extends HTMLElement {
           transform: translateY(-1px);
         }
 
-        :is(.climate-card__icon, .climate-card__mode-button, .climate-card__step-button):active:not(:disabled),
-        :is(.climate-card__icon, .climate-card__mode-button, .climate-card__step-button).is-pressing:not(:disabled) {
+        :is(.climate-card__icon, .climate-card__schedule-button, .climate-card__mode-button, .climate-card__step-button):active:not(:disabled),
+        :is(.climate-card__icon, .climate-card__schedule-button, .climate-card__mode-button, .climate-card__step-button).is-pressing:not(:disabled) {
           animation: climate-card-button-bounce var(--climate-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
         }
 
@@ -4288,6 +6751,7 @@ class NodaliaClimateCard extends HTMLElement {
           </div>
 
           <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
+            ${scheduleButtonDialMarkup}
             <div
               class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}${noSetpointDial ? " climate-card__dial--no-setpoint" : ""}"
               data-climate-control="dial"
@@ -4328,6 +6792,7 @@ class NodaliaClimateCard extends HTMLElement {
                   >
                     <span>&minus;</span>
                   </button>
+                  ${scheduleButtonStepsMarkup}
                   <button
                     type="button"
                     class="climate-card__step-button"
@@ -4342,11 +6807,15 @@ class NodaliaClimateCard extends HTMLElement {
           }
         </div>
       </ha-card>
+      ${scheduleComposerMarkup}
     `;
 
     if (shouldAnimateEntrance) {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
     }
+
+    this._syncRenderSignature();
+    this._restoreScheduleAgendaScrollState(savedScheduleAgendaScrollTop);
   }
 }
 
@@ -4364,9 +6833,34 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._showTapActionsSection = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {
@@ -4940,7 +7434,39 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderCheckboxField("ed.climate.legacy_show_humidity_chip", "show_humidity_chip", config.show_humidity_chip !== false)}
             ${this._renderCheckboxField("ed.climate.legacy_show_mode_buttons", "show_mode_buttons", config.show_mode_buttons !== false)}
             ${this._renderCheckboxField("ed.climate.legacy_show_step_controls", "show_step_controls", config.show_step_controls !== false)}
+            ${this._renderCheckboxField("ed.climate.schedule_button", "show_schedule_button", config.show_schedule_button !== false)}
             ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.schedule_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.schedule_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderTextField("ed.climate.schedule_webhook", "setpoint_schedule_webhook", config.setpoint_schedule_webhook || "", {
+              placeholder: "nodalia_climate_setpoint_schedule",
+              fullWidth: true,
+            })}
+            ${this._renderTextField("ed.climate.schedule_helper", "setpoint_schedule_helper", config.setpoint_schedule_helper || "", {
+              placeholder: "input_text.nodalia_climate_schedule_salon",
+              fullWidth: true,
+            })}
+            ${this._renderSelectField(
+              "ed.climate.schedule_week_starts_on",
+              "setpoint_schedule_week_starts_on",
+              config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
+              [
+                { value: "monday", label: "ed.climate.schedule_week_starts_monday" },
+                { value: "sunday", label: "ed.climate.schedule_week_starts_sunday" },
+              ],
+            )}
+            ${this._renderCheckboxField(
+              "ed.calendar.allow_webhooks_non_admin",
+              "security.allow_webhooks_for_non_admin",
+              config.security?.allow_webhooks_for_non_admin === true,
+            )}
           </div>
         </section>
 
@@ -5050,10 +7576,36 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {
@@ -5996,7 +8548,39 @@ class NodaliaClimateCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.climate.chip_humidity", "show_humidity_chip", config.show_humidity_chip !== false)}
             ${this._renderCheckboxField("ed.climate.mode_buttons", "show_mode_buttons", config.show_mode_buttons !== false)}
             ${this._renderCheckboxField("ed.climate.step_controls", "show_step_controls", config.show_step_controls !== false)}
+            ${this._renderCheckboxField("ed.climate.schedule_button", "show_schedule_button", config.show_schedule_button !== false)}
             ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.schedule_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.schedule_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderTextField("ed.climate.schedule_webhook", "setpoint_schedule_webhook", config.setpoint_schedule_webhook || "", {
+              placeholder: "nodalia_climate_setpoint_schedule",
+              fullWidth: true,
+            })}
+            ${this._renderTextField("ed.climate.schedule_helper", "setpoint_schedule_helper", config.setpoint_schedule_helper || "", {
+              placeholder: "input_text.nodalia_climate_schedule_salon",
+              fullWidth: true,
+            })}
+            ${this._renderSelectField(
+              "ed.climate.schedule_week_starts_on",
+              "setpoint_schedule_week_starts_on",
+              config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
+              [
+                { value: "monday", label: "ed.climate.schedule_week_starts_monday" },
+                { value: "sunday", label: "ed.climate.schedule_week_starts_sunday" },
+              ],
+            )}
+            ${this._renderCheckboxField(
+              "ed.calendar.allow_webhooks_non_admin",
+              "security.allow_webhooks_for_non_admin",
+              config.security?.allow_webhooks_for_non_admin === true,
+            )}
           </div>
         </section>
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.1.4";
+const CARD_VERSION = "1.2.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -217,8 +217,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -234,6 +241,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -725,6 +735,9 @@ class NodaliaLightCard extends HTMLElement {
               if (path.some(node => node instanceof HTMLInputElement && node.dataset?.lightControl)) {
                 return null;
               }
+              if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+                return null;
+              }
               const actionButton = path.find(
                 node => node instanceof HTMLElement && node.dataset?.lightAction,
               );
@@ -827,25 +840,36 @@ class NodaliaLightCard extends HTMLElement {
 
     this._entranceAnimationResetTimer = window.setTimeout(() => {
       this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
 
   set hass(hass) {
     this._hass = hass;
+    const actualState = this._getActualState();
     let nextSignature = this._getRenderSignature();
     const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !hasPendingOptimistic) {
+    const signatureUnchanged = Boolean(
+      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+    );
+
+    if (signatureUnchanged && !hasPendingOptimistic) {
       return;
     }
 
-    const actualState = this._getActualState();
+    const hadPendingOptimistic = hasPendingOptimistic;
     this._syncLastKnownOnState(actualState);
     this._syncOptimisticTurnOnState(actualState);
     this._syncOptimisticTurnOffState(actualState);
     nextSignature = this._getRenderSignature();
+    const optimisticJustConfirmed = hadPendingOptimistic
+      && !this._optimisticTurnOn
+      && !this._optimisticTurnOff;
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (signatureUnchanged && !optimisticJustConfirmed) {
       return;
     }
 
@@ -1341,6 +1365,9 @@ class NodaliaLightCard extends HTMLElement {
 
     const remaining = Math.max(0, this._optimisticTurnOn.expiresAt - Date.now());
     if (!remaining || typeof window === "undefined") {
+      if (this._isOptimisticTurnOnPending(this._getActualState())) {
+        this._flushOptimisticTurnOnQueue();
+      }
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
       return;
@@ -1353,6 +1380,7 @@ class NodaliaLightCard extends HTMLElement {
         return;
       }
 
+      this._flushOptimisticTurnOnQueue();
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
     }, remaining);
@@ -2296,6 +2324,13 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
+  _patchLightActiveChip(sliderKind, text) {
+    const chip = this.shadowRoot?.querySelector(`[data-light-chip="${escapeSelectorValue(sliderKind)}"]`);
+    if (chip instanceof HTMLElement) {
+      chip.textContent = text;
+    }
+  }
+
   _applySliderValue(slider, value, options = {}) {
     const commit = options.commit === true;
 
@@ -2304,6 +2339,7 @@ class NodaliaLightCard extends HTMLElement {
         const nextValue = clamp(Number(value), 1, 100);
         this._draftBrightness.set(this._config.entity, nextValue);
         this._updateBrightnessPreview(nextValue);
+        this._patchLightActiveChip("brightness", `${Math.round(nextValue)}%`);
         if (commit) {
           this._triggerHaptic("selection");
           this._commitBrightness(nextValue);
@@ -2317,6 +2353,7 @@ class NodaliaLightCard extends HTMLElement {
         const nextKelvin = this._temperatureSliderValueToKelvin(nextValue, state);
         this._draftTemperature.set(this._config.entity, nextKelvin);
         this._updateTemperaturePreview(nextValue, state);
+        this._patchLightActiveChip("temperature", `${nextKelvin}K`);
         if (commit) {
           this._triggerHaptic("selection");
           this._commitTemperaturePreset(nextKelvin);
@@ -2328,6 +2365,7 @@ class NodaliaLightCard extends HTMLElement {
         const nextValue = clamp(Math.round(Number(value)), 0, 360);
         this._draftHue.set(this._config.entity, nextValue);
         this._updateColorPreview(nextValue);
+        this._patchLightActiveChip("color", `${nextValue}°`);
         if (commit) {
           this._triggerHaptic("selection");
           this._commitColorHue(nextValue, state);
@@ -2423,6 +2461,7 @@ class NodaliaLightCard extends HTMLElement {
 
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
+    this._suppressNextLightTap = true;
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2690,6 +2729,9 @@ class NodaliaLightCard extends HTMLElement {
 
     const zone = actionButton.dataset.lightAction;
     if (zone === "body" || zone === "icon") {
+      if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+        return;
+      }
       if (this._suppressNextLightTap) {
         this._suppressNextLightTap = false;
         event.preventDefault();
@@ -2990,7 +3032,7 @@ class NodaliaLightCard extends HTMLElement {
         activeValueChipMarkup = `
           <span class="light-card__active-chip-shell ${modeTransition ? `light-card__active-chip-shell--${modeTransition.phase}` : ""}">
             <span class="light-card__active-chip-inner">
-              <span class="light-card__chip">${escapeHtml(activeValueChip)}</span>
+              <span class="light-card__chip" data-light-chip="${escapeHtml(displayedControlMode)}">${escapeHtml(activeValueChip)}</span>
             </span>
           </span>
         `;
@@ -3252,7 +3294,7 @@ class NodaliaLightCard extends HTMLElement {
         : "";
     const controlsShellMarkup = !isMiniLayout && controlsContentMarkup
       ? `
-        <div class="light-card__controls-shell ${controlsAnimationState ? `light-card__controls-shell--${controlsAnimationState}` : ""}">
+        <div class="light-card__controls-shell ${controlsAnimationState ? `light-card__controls-shell--${controlsAnimationState}` : ""}" data-nodalia-tap-shield="true">
           <div class="light-card__controls-inner">
             ${controlsContentMarkup}
           </div>
@@ -3324,7 +3366,8 @@ class NodaliaLightCard extends HTMLElement {
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
-        .light-card.is-off {
+        .light-card.is-off,
+        .light-card.is-on {
           cursor: pointer;
         }
 
@@ -4298,8 +4341,8 @@ class NodaliaLightCard extends HTMLElement {
       </style>
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
-        style="--accent-color:${escapeHtml(accentColor)};"
         data-light-action="body"
+        style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">
           <div class="light-card__hero">
@@ -4366,10 +4409,36 @@ class NodaliaLightCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {

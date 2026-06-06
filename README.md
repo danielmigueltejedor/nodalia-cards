@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.1.4-2ea44f)
+![Package](https://img.shields.io/badge/package-1.2.0-2ea44f)
 ![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -48,9 +48,51 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.1.x
+# 🚀 What’s new in 1.2.0
 
-**Stable release `1.1.4`** — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.1.4.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Install from the **`main`** branch (or HACS default). The sections below summarize the **`1.0.0`** milestone and newer cards; release notes are in [`CHANGELOG.md`](./CHANGELOG.md) and [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current stable release `1.2.0`** — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Install from the **`main`** branch (or HACS default). Full release notes: [`CHANGELOG.md`](./CHANGELOG.md). Per-alpha build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+## 🎬 Scenes Card
+
+New card for Home Assistant **`scene.*`** entities:
+
+- Grid or list layout with per-scene tint
+- Tap to **`scene.turn_on`** with launch feedback (no dashboard scroll jump)
+- Optional more-info / hold actions
+- Visual editor, haptics, and Nodalia styling
+
+---
+
+## 🌡️ Climate setpoint schedule
+
+Weekly consigna agenda on the Climate Card:
+
+- Fullscreen composer with drag/resize time blocks
+- Save via webhook + optional **`input_text`** helper (compact **v2** / **v3** storage)
+- Path A (per-slot YAML on disk) or Path B (single automation) — see [`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)
+- WebSocket **`webhook/handle`** from Lovelace for reliable automation triggers
+
+---
+
+## ⚡ Power Flow — home popup & consumption
+
+- Tap **Home** to open a device breakdown overlay (individual loads + flows)
+- Optional day/month **consumption chips** on the card header
+- Visual editor: native entity selectors and card-based individual rows
+
+---
+
+## 🔒 Security & interaction (1.2.x)
+
+- Climate schedule webhooks default to **admin-only** (opt in for non-admin dashboards)
+- Slider bubble / control chrome no longer toggles light, fan, humidifier, or cover
+- Editor **`setByPath`** blocks prototype pollution keys
+
+---
+
+# 📦 Earlier milestones (1.0.x / 1.1.x)
+
+The sections below summarize the **`1.0.0`** / **`1.1.x`** milestones.
 
 ## 🧠 Notifications Card
 
@@ -182,13 +224,14 @@ Major internal improvements:
 - `custom:nodalia-graph-card`
 - `custom:nodalia-power-flow-card`
 - `custom:nodalia-cover-card`
-- `custom:nodalia-climate-card`
+- `custom:nodalia-climate-card` — weekly setpoint schedule via webhook: [`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-fav-card`
 - `custom:nodalia-insignia-card`
 - `custom:nodalia-person-card`
+- `custom:nodalia-scenes-card`
 - `custom:nodalia-weather-card`
 - `custom:nodalia-calendar-card`
 - `custom:nodalia-notifications-card`
@@ -245,6 +288,30 @@ calendars:
 
 ---
 
+## Climate Card (setpoint schedule)
+
+Weekly consignas from the dashboard — copy the examples and replace the `YOUR_*` placeholders:
+
+| Placeholder | Example |
+|-------------|---------|
+| `YOUR_CLIMATE_ENTITY` | `climate.living_room` |
+| `YOUR_ROOM` | `living_room` |
+| `WEBHOOK_ID` | `nodalia_climate_setpoint_schedule` |
+
+```yaml
+type: custom:nodalia-climate-card
+entity: climate.YOUR_CLIMATE_ENTITY
+show_schedule_button: true
+setpoint_schedule_webhook: nodalia_climate_setpoint_schedule
+setpoint_schedule_helper: input_text.nodalia_climate_schedule_YOUR_ROOM
+security:
+  allow_webhooks_for_non_admin: true
+```
+
+**Setup (5 steps):** **[`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)** — helpers, webhook (once), Path B apply (per room). Examples: [`examples/climate-setpoint-schedule-*.yaml`](./examples/).
+
+---
+
 ## Advance Vacuum Card
 
 ```yaml
@@ -268,7 +335,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.1.4.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.0.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.
