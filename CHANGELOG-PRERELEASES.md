@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.61] - 2026-06-06
+
+Sixty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.61`**.
+
+### Fixed
+
+- **`nodalia-light-card.js`**, **fan / humidifier / cover cards:** card-body tap works again anywhere on the card — **`data-*-action="body"`** restored on **`ha-card`**. Slider-bubble chrome is ignored only for body/icon toggles, so control buttons and slider padding no longer block power toggle or steal taps from the card body.
+
 ## [1.2.0-alpha.60] - 2026-06-06
 
 Sixtieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.60`**.
