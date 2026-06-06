@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -57,7 +57,7 @@ const DEFAULT_CONFIG = {
   /** `"monday"` (default) or `"sunday"` — first row in the schedule agenda. */
   setpoint_schedule_week_starts_on: "monday",
   security: {
-    allow_webhooks_for_non_admin: true,
+    allow_webhooks_for_non_admin: false,
   },
   tap_action: "more-info",
   hold_action: "more-info",
@@ -229,8 +229,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -246,6 +253,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -1326,11 +1336,10 @@ function normalizeConfig(rawConfig) {
   );
   config.show_schedule_button = config.show_schedule_button !== false;
   config.security = config.security || {};
-  const legacyRequireAdmin = config.security.require_admin_for_webhooks === true;
   if (config.security.allow_webhooks_for_non_admin === undefined) {
-    config.security.allow_webhooks_for_non_admin = !legacyRequireAdmin;
+    config.security.allow_webhooks_for_non_admin = false;
   }
-  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin !== false;
+  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
   return config;
 }
 
@@ -1940,6 +1949,10 @@ class NodaliaClimateCard extends HTMLElement {
 
     const ok = await this._postScheduleWebhookPayload(webhookId, body);
     this._scheduleComposerSaving = false;
+
+    if (!this.isConnected || !this.shadowRoot) {
+      return;
+    }
 
     if (!ok) {
       this._setScheduleComposerError(
@@ -7452,7 +7465,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderCheckboxField(
               "ed.calendar.allow_webhooks_non_admin",
               "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin !== false,
+              config.security?.allow_webhooks_for_non_admin === true,
             )}
           </div>
         </section>
@@ -7563,10 +7576,36 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
     this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   set hass(hass) {
@@ -8540,7 +8579,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
             ${this._renderCheckboxField(
               "ed.calendar.allow_webhooks_non_admin",
               "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin !== false,
+              config.security?.allow_webhooks_for_non_admin === true,
             )}
           </div>
         </section>

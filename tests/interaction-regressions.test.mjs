@@ -188,14 +188,25 @@ test("nav media/popup entrance animations are transition-driven", () => {
 });
 
 test("visual editors reattach shadow listeners on reconnect", () => {
-  const source = read("nodalia-light-card.js");
-  const editorStart = source.indexOf("class NodaliaLightCardEditor");
-  const attachStart = source.indexOf("_attachEditorShadowListeners", editorStart);
-  const editorCtorBlock = source.slice(editorStart, attachStart);
+  const editorFiles = [
+    ["nodalia-light-card.js", "NodaliaLightCardEditor"],
+    ["nodalia-fan-card.js", "NodaliaFanCardEditor"],
+    ["nodalia-humidifier-card.js", "NodaliaHumidifierCardEditor"],
+    ["nodalia-cover-card.js", "NodaliaCoverCardEditor"],
+    ["nodalia-climate-card.js", "NodaliaClimateCardEditor"],
+  ];
 
-  assert.match(source, /_attachEditorShadowListeners\(/);
-  assert.match(source, /connectedCallback\(\) \{\s*\n\s*this\._attachEditorShadowListeners\(\)/);
-  assert.doesNotMatch(editorCtorBlock, /shadowRoot\.addEventListener/);
+  editorFiles.forEach(([file, editorClass]) => {
+    const source = read(file);
+    const editorStart = source.indexOf(`class ${editorClass}`);
+    assert.ok(editorStart >= 0, `${file} should define ${editorClass}`);
+    const attachStart = source.indexOf("_attachEditorShadowListeners", editorStart);
+    const editorCtorBlock = source.slice(editorStart, attachStart);
+
+    assert.match(source, /_attachEditorShadowListeners\(/);
+    assert.match(source, /connectedCallback\(\) \{\s*\n\s*this\._attachEditorShadowListeners\(\)/);
+    assert.doesNotMatch(editorCtorBlock, /shadowRoot\.addEventListener/);
+  });
 });
 
 test("service-security controls are exposed in visual editors", () => {
@@ -1058,6 +1069,13 @@ test("climate schedule save posts webhook without requiring live climate state",
   assert.match(source, /_flushScheduleComposerFocusedField\(\)/);
   assert.match(source, /domPatchById\.get\(slot\.id\)/);
   assert.match(source, /window\.NodaliaUtils\.postHomeAssistantWebhook/);
+});
+
+test("climate card defaults webhook access to admin-only", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin: false/);
+  assert.match(source, /allow_webhooks_for_non_admin === true/);
+  assert.match(source, /isUnsafeConfigPathKey/);
 });
 
 test("climate schedule composer keeps agenda scroll position across re-renders", () => {

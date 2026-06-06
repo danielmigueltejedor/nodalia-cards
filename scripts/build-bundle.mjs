@@ -116,7 +116,7 @@ const versionedLoaderFile = `nodalia-cards-${pkg.version}.js`;
 const coreFile = `nodalia-cards-core-${pkg.version}.js`;
 const suiteFile = `nodalia-cards-suite-${pkg.version}.js`;
 
-const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-alpha\.\d+)?\.js$/;
+const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
 const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile]);
 for (const name of fs.readdirSync(root)) {
   if (!VERSIONED_BUNDLE_PATTERN.test(name) || keepVersionedBundles.has(name)) {

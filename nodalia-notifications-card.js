@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -614,8 +614,15 @@ function fireEvent(node, type, detail = {}, options = {}) {
   }));
 }
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".").filter(Boolean);
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
   parts.forEach((part, index) => {
     if (index === parts.length - 1) {
@@ -631,6 +638,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = String(path || "").split(".").filter(Boolean);
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
   for (let i = 0; i < parts.length - 1; i += 1) {
     cursor = cursor?.[parts[i]];
@@ -3404,7 +3414,6 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   _attachEditorShadowListeners() {

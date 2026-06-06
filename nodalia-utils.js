@@ -42,6 +42,42 @@
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
 
+  function isUnsafeConfigPathKey(key) {
+    return key === "__proto__" || key === "constructor" || key === "prototype";
+  }
+
+  function setByPath(target, path, value) {
+    const parts = String(path || "").split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+        cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+      }
+      cursor = cursor[key];
+    }
+    cursor[parts[parts.length - 1]] = value;
+  }
+
+  function deleteByPath(target, path) {
+    const parts = String(path || "").split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+        return;
+      }
+      cursor = cursor[key];
+    }
+    delete cursor[parts[parts.length - 1]];
+  }
+
   function deepClone(value) {
     if (value === undefined) {
       return undefined;
@@ -1025,6 +1061,9 @@
 
   const api = {
     isObject,
+    isUnsafeConfigPathKey,
+    setByPath,
+    deleteByPath,
     deepClone,
     deepEqual,
     stripEqualToDefaults,

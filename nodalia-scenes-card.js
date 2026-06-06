@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
 const SCENE_LAUNCH_DURATION = 780;
 const HAPTIC_PATTERNS = {
@@ -160,8 +160,15 @@ function getByPath(target, path) {
   return cursor;
 }
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];
@@ -175,6 +182,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];
@@ -1539,7 +1549,6 @@ class NodaliaScenesCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   _attachEditorShadowListeners() {

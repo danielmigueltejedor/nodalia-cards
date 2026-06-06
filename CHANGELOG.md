@@ -4,13 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, and completed **`1.1.3-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, and completed **`1.2.0-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
-Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** line.
+Maintenance toward the next **`1.2.x`** patch or **`1.3.0`** feature release.
 
 ### Planned / In progress
 
@@ -19,6 +19,43 @@ Maintenance toward the next **`1.2.x`** or patch releases on the **`1.1.x`** lin
 - Security and service-action hardening.
 - Editor and localization refinements.
 - Home Assistant frontend compatibility updates.
+
+## [1.2.0] - 2026-06-06
+
+Stable **`1.2.0`** release on **`main`**. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Scenes Card:** new **`nodalia-scenes-card`** — grid/list layout, tap to activate scenes, visual editor, per-scene tint, launch feedback without dashboard scroll jumps.
+- **Climate setpoint schedule:** weekly agenda composer (fullscreen overlay, drag/resize blocks), compact **`input_text`** storage (**v2** / **v3**), webhook sync with Path A (disk) and Path B (single automation) examples, WebSocket **`webhook/handle`** from Lovelace.
+- **Power Flow Card:** home device breakdown popup (overlay + scrollable list), optional day/month **consumption chips**, native entity selectors in the visual editor.
+- **Interaction & security:** slider-bubble taps no longer toggle light/fan/humidifier/cover; card-body tap restored; climate schedule webhooks default to **admin-only**; **`setByPath`** prototype-key guards across editors; visual editors reattach listeners on reconnect.
+- **Polish:** entity pictures on device cards; i18n schedule strings (12 runtime locales); power-flow popup long device names; calendar weather forecast stale-run guard.
+
+### Added
+
+- **`nodalia-scenes-card.js`:** Lovelace card for **`scene.*`** entities with visual editor, haptics, and styles.
+- **`nodalia-climate-card.js`:** **`setpoint_schedule_webhook`**, **`setpoint_schedule_helper`**, **`show_schedule_button`**, **`setpoint_schedule_week_starts_on`**, compact schedule storage helpers.
+- **`nodalia-power-flow-card.js`:** **`show_home_device_popup`**, **`consumption_chips`**, individual device editor rows.
+- **Examples / docs:** [`examples/climate-setpoint-schedule-*.yaml`](./examples/), [`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md).
+- **Tests:** climate schedule storage, webhook transport, interaction regressions (126 tests).
+
+### Fixed
+
+- **`nodalia-utils.js`:** **`postHomeAssistantWebhook`** prefers **`webhook/handle`** via **`hass.callWS`**; same-origin fallback when authenticated fetch fails.
+- **`nodalia-climate-card.js`:** schedule save without live climate state; agenda scroll preserved on re-render; composer **`isConnected`** guard after async webhook; webhook admin gate aligned with calendar card.
+- **`nodalia-light-card.js` / fan / humidifier / cover:** card-body toggle vs slider chrome; optimistic turn-on flush for queued slider changes.
+- **`nodalia-power-flow-card.js`:** home popup layout for long device names; popup opens when individuals are hidden on the diagram.
+- **`nodalia-entity-card.js` / `nodalia-fav-card.js`:** **`homeassistant.toggle`** for cover/lock; i18n reads **`localStorage.selectedLanguage`**.
+- **`nodalia-calendar-card.js`:** weather forecast refresh respects **`refreshRunId`** (no stale overlay).
+- **Editors:** duplicate shadow listeners removed from constructors; climate visual editor uses **`connectedCallback`** attach pattern.
+
+### Changed
+
+- **Release metadata:** promote **`1.2.0-alpha.*`** (alpha.21–alpha.61) to stable **`1.2.0`** on **`main`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.2.0.js`**; optional split **`nodalia-cards-core-1.2.0.js`** + **`nodalia-cards-suite-1.2.0.js`**.
+
+Per-alpha notes for **`1.2.0-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.1.4] - 2026-05-23
 

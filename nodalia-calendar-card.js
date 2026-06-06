@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1542,7 +1542,7 @@ class NodaliaCalendarCard extends HTMLElement {
       }
       if (!calendarIds.length) {
         this._events = [];
-        await this._refreshWeatherForecastByDay();
+        await this._refreshWeatherForecastByDay(refreshRunId);
         this._loading = false;
         this._error = "";
         this._renderIfChanged(true);
@@ -1584,7 +1584,7 @@ class NodaliaCalendarCard extends HTMLElement {
           return;
         }
         this._events = all;
-        await this._refreshWeatherForecastByDay();
+        await this._refreshWeatherForecastByDay(refreshRunId);
       } catch (_error) {
         if (refreshRunId !== this._refreshRunId) {
           return;
@@ -2180,10 +2180,13 @@ class NodaliaCalendarCard extends HTMLElement {
       .flatMap(forecastType => this._tagForecastRows(this._weatherForecastEvents?.[forecastType]?.forecast, forecastType));
   }
 
-  async _refreshWeatherForecastByDay() {
+  async _refreshWeatherForecastByDay(refreshRunId = this._refreshRunId) {
     const entityId = this._getWeatherEntityId();
     if (!entityId || !this._hass?.states?.[entityId]) {
       this._weatherForecastByDay = new Map();
+      return;
+    }
+    if (refreshRunId !== this._refreshRunId) {
       return;
     }
     const stateObj = this._hass.states[entityId];
@@ -2223,6 +2226,9 @@ class NodaliaCalendarCard extends HTMLElement {
       }
     }
     const forecastRows = this._selectBestForecastRows(forecastCandidates);
+    if (refreshRunId !== this._refreshRunId) {
+      return;
+    }
     this._applyWeatherForecastRows(forecastRows);
   }
 
@@ -4370,7 +4376,6 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   _attachEditorShadowListeners() {

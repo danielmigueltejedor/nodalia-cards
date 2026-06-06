@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -450,8 +450,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -467,6 +474,9 @@ function setByPath(target, path, value) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {

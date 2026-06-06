@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -176,8 +176,15 @@ function compactConfig(value) {
 }
 
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(target, path, value) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -200,6 +207,9 @@ function getByPath(target, path) {
 
 function deleteByPath(target, path) {
   const parts = path.split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let cursor = target;
 
   for (let index = 0; index < parts.length - 1; index += 1) {
@@ -2055,7 +2065,6 @@ class NodaliaFavCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   _attachEditorShadowListeners() {

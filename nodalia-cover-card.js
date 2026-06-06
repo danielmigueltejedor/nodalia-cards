@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.0-alpha.61";
+const CARD_VERSION = "1.2.0";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -187,8 +187,15 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
 function setByPath(obj, path, value) {
   const parts = String(path || "").split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let target = obj;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const part = parts[index];
@@ -202,6 +209,9 @@ function setByPath(obj, path, value) {
 
 function deleteByPath(obj, path) {
   const parts = String(path || "").split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
   let target = obj;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const part = parts[index];
@@ -1718,7 +1728,6 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
   }
 
   _attachEditorShadowListeners() {

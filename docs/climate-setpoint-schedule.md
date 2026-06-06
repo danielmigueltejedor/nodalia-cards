@@ -2,7 +2,7 @@
 
 The **Nodalia Climate Card** can manage a **weekly setpoint schedule** (consignas por franjas horarias) from the dashboard. Saving does **not** write to the Lovelace YAML — the card sends the schedule to Home Assistant through a **webhook**. Your automations store the JSON and apply `climate.set_temperature` at the right times.
 
-**Requires Nodalia Cards `1.2.0-alpha.23+`** (webhook over WebSocket: **`1.2.0-alpha.61+`** recommended).
+**Requires Nodalia Cards `1.2.0`** (setpoint schedule and WebSocket webhook support).
 
 ---
 
@@ -124,7 +124,7 @@ sequenceDiagram
 ```
 
 1. User edits the weekly agenda in the card (fullscreen composer) and taps **Save**.
-2. The card triggers your webhook via WebSocket **`webhook/handle`** when possible (**`1.2.0-alpha.61+`**), then falls back to `POST /api/webhook/<WEBHOOK_ID>`.
+2. The card triggers your webhook via WebSocket **`webhook/handle`** when possible, then falls back to `POST /api/webhook/<WEBHOOK_ID>`.
 3. The **webhook automation** stores the schedule and fires an event.
 4. **Path A** or **Path B** calls `climate.set_temperature` for the active time block.
 
@@ -217,6 +217,8 @@ Best for **v:3** storage or native time triggers. Requires write access to `/con
 
 ```yaml
   - action: shell_command.nodalia_climate_write_setpoint_schedule_automations
+    data:
+      value: "{{ trigger.json | tojson }}"
   - action: automation.reload
 ```
 
@@ -270,7 +272,7 @@ Use `event:` + `event_data:` — **not** `action: event.fire` (Spook flags that 
 ## Security
 
 - **`local_only: false`** on the webhook trigger if you use HA remotely (Nabu Casa, mobile app). With `local_only: true`, saves may return **200** without running the automation.
-- **`1.2.0-alpha.61+`** uses WebSocket **`webhook/handle`** from the dashboard first — still keep `local_only: false` for reliability.
+- **`1.2.0+`** uses WebSocket **`webhook/handle`** from the dashboard first — still keep `local_only: false` for reliability.
 - Treat `WEBHOOK_ID` like a password.
 - Set `security.allow_webhooks_for_non_admin: true` if household members without admin rights should save schedules.
 
@@ -282,7 +284,7 @@ Use `event:` + `event_data:` — **not** `action: event.fire` (Spook flags that 
 |---------|--------|
 | No schedule button | `show_schedule_button: true` and `setpoint_schedule_webhook` set. |
 | Save does nothing | `WEBHOOK_ID` matches on card and automation; automation enabled; **Logs**. |
-| Traces empty / helper unchanged | Webhook `local_only: true` while remote → set **`local_only: false`**. Update to **`1.2.0-alpha.61+`**. |
+| Traces empty / helper unchanged | Webhook `local_only: true` while remote → set **`local_only: false`**. Update to **`1.2.0+`**. |
 | 401 / webhook denied | Admin user, or `allow_webhooks_for_non_admin: true`. |
 | Schedule lost after reload | Helper missing or `setpoint_schedule_helper` mismatch. |
 | Path B `TemplateSyntaxError: '&'` | Use `%` and `//`, not `&` / `>>` — see [Path B example](../examples/climate-setpoint-schedule-path-b.yaml). |
@@ -318,4 +320,4 @@ From the webhook automation:
 
 ## Related changelog
 
-Setpoint schedule: **`1.2.0-alpha.23+`**; agenda UI through **`1.2.0-alpha.26`**; webhook WebSocket **`1.2.0-alpha.61`**; agenda scroll fix **`1.2.0-alpha.59`**. See [`CHANGELOG-PRERELEASES.md`](../CHANGELOG-PRERELEASES.md).
+Setpoint schedule, agenda UI, WebSocket webhooks, and agenda scroll fixes are included in stable **`1.2.0`**. Per-alpha history: [`CHANGELOG-PRERELEASES.md`](../CHANGELOG-PRERELEASES.md).

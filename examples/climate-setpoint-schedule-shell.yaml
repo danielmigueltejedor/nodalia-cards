@@ -1,4 +1,6 @@
 # Optional: Path A — write per-slot automations from the webhook payload.
+# ADMIN ONLY: the webhook payload controls what is written under /config/automations/.
+# Enable only on trusted instances; keep the webhook ID secret and restrict Lovelace access.
 # Guide: docs/climate-setpoint-schedule.md#path-a-per-slot-automations-on-disk
 #
 # Requires shell access to `/config` (Home Assistant OS / Supervised).
@@ -13,4 +15,4 @@
 
 shell_command:
   nodalia_climate_write_setpoint_schedule_automations: >-
-    python3 -c "import json,os,sys; p=json.load(sys.stdin); e=p.get('entity_id','').replace('.','_'); d='/config/automations'; os.makedirs(d,exist_ok=True); open(f'{d}/nodalia_climate_{e}_schedule.yaml','w').write(p.get('automation_yaml_bundle',''))" <<< '{{ trigger.json | tojson }}'
+    python3 -c "import json,os,sys; p=json.load(sys.stdin); e=p.get('entity_id','').replace('.','_'); d='/config/automations'; os.makedirs(d,exist_ok=True); open(f'{d}/nodalia_climate_{e}_schedule.yaml','w').write(p.get('automation_yaml_bundle',''))" <<< '{{ value }}'
