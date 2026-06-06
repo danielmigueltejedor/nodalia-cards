@@ -788,20 +788,27 @@
     "__slider-track",
     "__slider-thumb",
     "__active-chip-shell",
+    "__controls-shell",
+    "__controls-inner",
   ];
 
-  /** Slider bubble chrome (wrap/shell/track) must not trigger card-body tap (toggle). */
+  /** Slider / controls chrome must not trigger card-body tap (toggle). */
   function isNodaliaSliderChromeHit(event) {
     const path = typeof event?.composedPath === "function" ? event.composedPath() : [];
     for (const node of path) {
-      if (!(node instanceof HTMLElement)) {
+      if (!(node instanceof Element)) {
         continue;
       }
-      const className = node.className;
-      if (typeof className !== "string" || !className) {
-        continue;
+      if (node instanceof HTMLElement && node.dataset?.nodaliaTapShield === "true") {
+        return true;
       }
-      if (NODALIA_SLIDER_CHROME_CLASS_MARKERS.some(marker => className.includes(marker))) {
+      const className = typeof node.className === "string"
+        ? node.className
+        : String(node.getAttribute?.("class") || "");
+      if (
+        className &&
+        NODALIA_SLIDER_CHROME_CLASS_MARKERS.some(marker => className.includes(marker))
+      ) {
         return true;
       }
     }

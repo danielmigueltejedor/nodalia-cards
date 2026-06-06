@@ -2592,7 +2592,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : "";
     const labelMarkup = this._config?.show_labels === false
       ? ""
-      : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
+      : `<span class="power-flow-card__home-popup-device-name">${escapeHtml(node.label)}</span>`;
     const valueMarkup = this._config?.show_values === false || node.unavailable
       ? (node.unavailable ? `<span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};"><span>--</span></span>` : "")
       : `
@@ -3388,20 +3388,28 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__home-popup-list {
-          display: grid;
-          gap: 12px 10px;
-          grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-          justify-items: center;
+          border-top: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 2px;
+          min-width: 0;
           padding-bottom: 4px;
+          padding-top: 12px;
+          width: 100%;
         }
 
         .power-flow-card__home-popup-node {
           align-items: center;
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 14px;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: auto minmax(0, 1fr);
           max-width: 100%;
           min-width: 0;
+          padding: 10px 12px;
           width: 100%;
         }
 
@@ -3410,16 +3418,44 @@ class NodaliaPowerFlowCard extends HTMLElement {
           animation-delay: var(--device-enter-delay, 0ms);
         }
 
-        .power-flow-card__home-popup-node .power-flow-card__node-info--popup {
-          align-items: center;
-          gap: 4px;
-          max-width: 100%;
-          position: static;
-          transform: none;
+        .power-flow-card__home-popup-node .power-flow-card__bubble--individual {
+          flex-shrink: 0;
         }
 
-        .power-flow-card__home-popup-node .power-flow-card__chip {
-          max-width: 100%;
+        .power-flow-card__home-popup-node .power-flow-card__node-info--popup {
+          align-items: flex-start;
+          gap: 5px;
+          justify-content: center;
+          left: auto;
+          max-width: none;
+          min-width: 0;
+          position: static;
+          transform: none;
+          width: 100%;
+        }
+
+        .power-flow-card__home-popup-device-name {
+          color: var(--primary-text-color);
+          display: block;
+          font-size: calc(var(--chip-font-size, 11px) + 1px);
+          font-weight: 600;
+          line-height: 1.25;
+          min-width: 0;
+          overflow-wrap: anywhere;
+          text-align: left;
+          width: 100%;
+          word-break: break-word;
+        }
+
+        .power-flow-card__home-popup-node .power-flow-card__chip--value {
+          align-self: flex-start;
+          max-width: none;
+        }
+
+        .power-flow-card__home-popup-node .power-flow-card__node-secondary {
+          max-width: none;
+          text-align: left;
+          white-space: normal;
         }
 
         .power-flow-card__header--entering {

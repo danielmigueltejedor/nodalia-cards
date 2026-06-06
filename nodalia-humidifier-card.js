@@ -2137,6 +2137,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
+    this._suppressNextHumidifierTap = true;
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2736,7 +2737,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         : "";
     const controlsShellMarkup = controlsContentMarkup
       ? `
-        <div class="humidifier-card__controls-shell ${controlsAnimationState ? `humidifier-card__controls-shell--${controlsAnimationState}` : ""}">
+        <div class="humidifier-card__controls-shell ${controlsAnimationState ? `humidifier-card__controls-shell--${controlsAnimationState}` : ""}" data-nodalia-tap-shield="true">
           <div class="humidifier-card__controls-inner">
             ${controlsContentMarkup}
           </div>
@@ -3668,11 +3669,10 @@ class NodaliaHumidifierCard extends HTMLElement {
       </style>
       <ha-card
         class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""} ${powerAnimationState ? `humidifier-card--${powerAnimationState}` : ""}"
-        data-humidifier-action="body"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="humidifier-card__content ${shouldAnimateEntrance ? "humidifier-card__content--entering" : ""}">
-          <div class="humidifier-card__hero">
+          <div class="humidifier-card__hero" data-humidifier-action="body">
             <button
               type="button"
               class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "humidifier-card__icon--active-motion" : ""}"

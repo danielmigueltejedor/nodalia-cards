@@ -1043,6 +1043,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._applySliderValue(drag.slider, nextValue, { commit: true });
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
+    this._suppressNextCoverTap = true;
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
       this._render();
@@ -1672,10 +1673,9 @@ class NodaliaCoverCard extends HTMLElement {
       </style>
       <ha-card
         class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}${coverUiClass ? ` ${coverUiClass}` : ""}${coverToggleLaneClass}"
-        data-cover-action="body"
       >
         <div class="fan-card__content">
-          <div class="fan-card__hero">
+          <div class="fan-card__hero" data-cover-action="body">
             <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -1689,7 +1689,7 @@ class NodaliaCoverCard extends HTMLElement {
               </div>
             ` : ""}
           </div>
-          <div class="fan-card__controls-shell">
+          <div class="fan-card__controls-shell" data-nodalia-tap-shield="true">
             <div class="fan-card__controls-inner${hasSliders ? " fan-card__controls-inner--cover-combined" : ""}">
               ${controlsMarkup}
             </div>

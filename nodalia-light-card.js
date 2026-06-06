@@ -2451,6 +2451,7 @@ class NodaliaLightCard extends HTMLElement {
 
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
+    this._suppressNextLightTap = true;
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -3286,7 +3287,7 @@ class NodaliaLightCard extends HTMLElement {
         : "";
     const controlsShellMarkup = !isMiniLayout && controlsContentMarkup
       ? `
-        <div class="light-card__controls-shell ${controlsAnimationState ? `light-card__controls-shell--${controlsAnimationState}` : ""}">
+        <div class="light-card__controls-shell ${controlsAnimationState ? `light-card__controls-shell--${controlsAnimationState}` : ""}" data-nodalia-tap-shield="true">
           <div class="light-card__controls-inner">
             ${controlsContentMarkup}
           </div>
@@ -4333,10 +4334,9 @@ class NodaliaLightCard extends HTMLElement {
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        data-light-action="body"
       >
         <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">
-          <div class="light-card__hero">
+          <div class="light-card__hero" data-light-action="body">
             <button
               type="button"
               class="light-card__icon"

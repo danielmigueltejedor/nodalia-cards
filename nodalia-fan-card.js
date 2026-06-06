@@ -1966,6 +1966,7 @@ class NodaliaFanCard extends HTMLElement {
 
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
+    this._suppressNextFanTap = true;
 
     if (this._pendingRenderAfterDrag) {
       this._pendingRenderAfterDrag = false;
@@ -2548,7 +2549,7 @@ class NodaliaFanCard extends HTMLElement {
         : "";
     const controlsShellMarkup = controlsContentMarkup
       ? `
-        <div class="fan-card__controls-shell ${controlsAnimationState ? `fan-card__controls-shell--${controlsAnimationState}` : ""}">
+        <div class="fan-card__controls-shell ${controlsAnimationState ? `fan-card__controls-shell--${controlsAnimationState}` : ""}" data-nodalia-tap-shield="true">
           <div class="fan-card__controls-inner">
             ${controlsContentMarkup}
           </div>
@@ -3421,10 +3422,9 @@ class NodaliaFanCard extends HTMLElement {
       <ha-card
         class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""} ${powerAnimationState ? `fan-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        data-fan-action="body"
       >
         <div class="fan-card__content">
-          <div class="fan-card__hero">
+          <div class="fan-card__hero" data-fan-action="body">
             <button
               type="button"
               class="fan-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "fan-card__icon--active-motion" : ""}"

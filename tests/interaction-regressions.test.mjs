@@ -1071,10 +1071,14 @@ test("climate schedule composer keeps agenda scroll position across re-renders",
 test("slider bubble chrome does not trigger card body tap", () => {
   const utils = read("nodalia-utils.js");
   assert.match(utils, /function isNodaliaSliderChromeHit\(/);
-  assert.match(utils, /__slider-wrap/);
+  assert.match(utils, /nodaliaTapShield/);
+  assert.match(utils, /__controls-shell/);
   for (const card of ["nodalia-light-card.js", "nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-cover-card.js"]) {
     const source = read(card);
     assert.match(source, /isNodaliaSliderChromeHit\?\.\(event\)/);
+    assert.match(source, /data-nodalia-tap-shield="true"/);
+    assert.doesNotMatch(source, /<ha-card[\s\S]{0,240}data-(?:light|fan|humidifier|cover)-action="body"/);
+    assert.match(source, /__hero" data-(?:light|fan|humidifier|cover)-action="body"/);
   }
 });
 

@@ -17,7 +17,7 @@ Fifty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.59`**.
 ### Fixed
 
 - **`nodalia-climate-card.js`:** the setpoint schedule popup no longer jumps scroll to the top when adding blocks or editing fields on a weekday far down the agenda — agenda **`scrollTop`** is restored after re-renders, and the render signature stays in sync after in-place slot patches so Home Assistant state updates do not force extra full redraws while the popup is open.
-- **`nodalia-utils.js`**, **light / fan / humidifier / cover cards:** taps on slider bubble chrome (**`__slider-wrap`**, shell, track, value chip shell) no longer trigger card-body toggle — only intentional background taps do.
+- **`nodalia-utils.js`**, **light / fan / humidifier / cover cards:** taps on slider bubble chrome no longer trigger card-body toggle — body tap moved from **`ha-card`** to the **hero** row only, controls block is **`data-nodalia-tap-shield`**, and post-drag ghost clicks are suppressed.
 
 ### Changed
 
