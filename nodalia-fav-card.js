@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.0-alpha.56";
+const CARD_VERSION = "1.2.0-alpha.57";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -754,6 +754,39 @@ class NodaliaFavCard extends HTMLElement {
     return stateKey === "on" || stateKey === "off";
   }
 
+  _isHomeAssistantToggleable(state) {
+    if (!state?.entity_id) {
+      return false;
+    }
+
+    const stateKey = normalizeTextKey(state.state);
+    if (!stateKey || stateKey === "unavailable") {
+      return false;
+    }
+
+    const domain = this._getDomain(state.entity_id);
+    return [
+      "switch",
+      "light",
+      "fan",
+      "cover",
+      "lock",
+      "input_boolean",
+      "automation",
+      "script",
+      "valve",
+      "siren",
+      "remote",
+      "water_heater",
+      "humidifier",
+      "media_player",
+    ].includes(domain);
+  }
+
+  _canToggleEntity(state) {
+    return this._isBinaryOnOff(state) || this._isHomeAssistantToggleable(state);
+  }
+
   _isActiveState(state) {
     const stateKey = normalizeTextKey(state?.state);
 
@@ -977,7 +1010,7 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     if (tapAction === "toggle") {
-      return this._isBinaryOnOff(state);
+      return this._canToggleEntity(state);
     }
 
     if (tapAction === "more-info") {
@@ -1237,12 +1270,23 @@ class NodaliaFavCard extends HTMLElement {
 
   _toggleEntity(entityId = this._config?.entity) {
     const state = this._hass?.states?.[entityId];
-    if (!this._hass || !entityId || !state || !this._isBinaryOnOff(state)) {
+    if (!this._hass || !entityId || !state) {
       return;
     }
 
-    const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
-    this._hass.callService("homeassistant", service, {
+    if (this._isBinaryOnOff(state)) {
+      const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
+      this._hass.callService("homeassistant", service, {
+        entity_id: entityId,
+      });
+      return;
+    }
+
+    if (!this._isHomeAssistantToggleable(state)) {
+      return;
+    }
+
+    this._hass.callService("homeassistant", "toggle", {
       entity_id: entityId,
     });
   }

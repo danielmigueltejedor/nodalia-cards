@@ -10,6 +10,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.57] - 2026-06-06
+
+Fifty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.57`**.
+
+### Fixed
+
+- **`nodalia-entity-card.js` / `nodalia-fav-card.js`:** explicit **`toggle`** tap actions now call **`homeassistant.toggle`** for cover, lock, and other non–on/off entities instead of silently doing nothing.
+- **`nodalia-i18n.js`:** automatic language resolution reads Home Assistant profile language from **`localStorage.selectedLanguage`** before stale **`hass.language`**, fixing cards stuck in Spanish when the UI profile is English; person states **`en_casa`** / **`casa`** map to the active locale’s home label.
+- **`nodalia-climate-card.js`:** weekly setpoint schedule **Save** no longer depends on a live climate state, merges timeline drag and manual time edits into the draft before POST, syncs focused time fields on blur, and defers re-renders during agenda drag so the webhook payload matches edited consignas.
+- **`nodalia-utils.js`:** **`postHomeAssistantWebhook`** falls back to same-origin **`fetch`** when **`fetchWithAuth`** returns a non-OK response, so local webhook automations trigger reliably from Lovelace.
+
+### Added
+
+- **Tests:** regressions for entity-card toggle domains, i18n **`localStorage`** language, person home aliases, climate schedule save routing, and webhook **`fetchWithAuth`** fallback.
+
+## [1.2.0-alpha.56] - 2026-05-29
+
+Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** home device popup follows the calendar/climate expanded pattern — fixed viewport overlay rendered outside the card, blurred backdrop, centered rounded panel (up to ~640×780px), and scrollable body when there are many individual devices or consumption chips. Replaces the full-screen panel from **alpha.53**.
+
 ## [1.2.0-alpha.55] - 2026-05-29
 
 Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
@@ -18,22 +41,22 @@ Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
 
 - **`nodalia-light-card.js`:** `set hass` now re-renders when an optimistic turn-on/turn-off is confirmed by Home Assistant even if the render signature is unchanged, matching fan/humidifier behavior so power transitions and controls do not stay stale.
 
+### Added
+
+- **Tests:** VM regression in `tests/light-optimistic-toggle.test.mjs` for optimistic turn-off confirmation with unchanged signature.
+
 ## [1.2.0-alpha.54] - 2026-05-29
 
 Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
 
 ### Fixed
 
-- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** optimistic visual-settle no longer leaves slider/humidity stuck after HA confirms `on` but keeps publishing `0` — an expiry timer and `set hass` sync clear settle state and force a render when the window ends.
-- **`nodalia-humidifier-card.js`:** `mode_entity` helper state and options are now part of the render signature so external mode changes refresh the active mode UI.
+- **`nodalia-fan-card.js` / `nodalia-humidifier-card.js`:** optimistic visual-settle no longer leaves slider/humidity stuck after HA confirms `on` but keeps publishing `0` — a dedicated expiry timer, centralized cleanup, and `set hass` sync force a render when the settle window ends.
+- **`nodalia-humidifier-card.js`:** `mode_entity` helper state and option list are now part of the render signature so external mode changes refresh the active mode button and label.
 
-## [1.2.0-alpha.56] - 2026-05-29
+### Added
 
-Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
-
-### Changed
-
-- **`nodalia-power-flow-card.js`:** home device popup uses the calendar/climate pattern again — fixed viewport overlay outside the card, centered rounded panel (not full-screen), with scrollable content when there are many devices.
+- **Tests:** VM regressions in `tests/fan-humidifier-optimistic-settle.test.mjs` for visual-settle expiry and `mode_entity` signature updates.
 
 ## [1.2.0-alpha.53] - 2026-05-29
 
@@ -41,7 +64,7 @@ Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
 
 ### Changed
 
-- **`nodalia-power-flow-card.js`:** home device popup is rendered outside the card surface as a fixed overlay with a scrollable body (superseded by **alpha.56** centered-panel layout).
+- **`nodalia-power-flow-card.js`:** home device popup moved outside the card as a fixed overlay with a scrollable body (first pass used a full-screen panel; layout refined in **alpha.56**).
 
 ## [1.2.0-alpha.52] - 2026-05-29
 
@@ -49,8 +72,8 @@ Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
 
 ### Changed
 
-- **`nodalia-power-flow-card.js`:** removed the home individual-device hint chip — opening the popup by tapping Home is enough.
-- **`nodalia-power-flow-card.js`:** home device popup now reuses the card’s own node language (gradient bubbles, label/value chips) instead of generic row containers.
+- **`nodalia-power-flow-card.js`:** removed the home individual-device hint chip — tapping the Home node to open the popup is sufficient.
+- **`nodalia-power-flow-card.js`:** home device popup items reuse the card’s diagram node language (gradient bubbles, label/value chips) instead of generic row containers.
 
 ## [1.2.0-alpha.51] - 2026-05-29
 
@@ -58,8 +81,8 @@ Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
 
 ### Changed
 
-- **`nodalia-power-flow-card.js`:** home individual-device hint moved out of the Home bubble into a subtle chip under the label (`1 device` / `N devices` + chevron) so it no longer overlaps the consumption value or clashes with the card palette.
-- **`nodalia-power-flow-card.js`:** home device popup restyled to match the main card — same background, softer borders, circular device icons, and chip-style value pills instead of orange accent bars.
+- **`nodalia-power-flow-card.js`:** home individual-device hint moved out of the Home bubble into a subtle chip under the label so it no longer overlapped the consumption value (chip removed again in **alpha.52**).
+- **`nodalia-power-flow-card.js`:** first pass restyling the home device popup toward the main card palette (superseded by **alpha.52** node layout).
 
 ## [1.2.0-alpha.50] - 2026-05-29
 

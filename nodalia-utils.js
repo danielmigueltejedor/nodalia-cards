@@ -206,36 +206,40 @@
     }
     const payload = body && typeof body === "object" ? body : {};
     const path = `/api/webhook/${encodeURIComponent(id)}`;
+    const payloadJson = JSON.stringify(payload);
+
+    const postSameOrigin = () => {
+      if (typeof fetch !== "function") {
+        return Promise.resolve(false);
+      }
+      const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
+      if (!origin) {
+        return Promise.resolve(false);
+      }
+      return fetch(`${origin}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payloadJson,
+        credentials: "same-origin",
+      }).then(
+        res => res.ok,
+        () => false,
+      );
+    };
 
     const authFetch = hass?.auth?.fetchWithAuth;
     if (typeof authFetch === "function") {
       return authFetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payloadJson,
       }).then(
-        res => res.ok,
-        () => false,
+        res => (res.ok ? true : postSameOrigin()),
+        () => postSameOrigin(),
       );
     }
 
-    if (typeof fetch !== "function") {
-      return Promise.resolve(false);
-    }
-    const origin = typeof window !== "undefined" && window.location ? window.location.origin : "";
-    if (!origin) {
-      return Promise.resolve(false);
-    }
-    const url = `${origin}${path}`;
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "same-origin",
-    }    ).then(
-      res => res.ok,
-      () => false,
-    );
+    return postSameOrigin();
   }
 
   /**

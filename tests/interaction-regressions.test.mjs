@@ -8,8 +8,17 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "es-ES", includeEditor = false } = {}) {
+function loadI18nRuntime({ rootHass = null, docLang = "", navigatorLanguage = "es-ES", localStorageSelectedLanguage = null, includeEditor = false } = {}) {
+  const storage = new Map();
+  if (localStorageSelectedLanguage != null) {
+    storage.set("selectedLanguage", JSON.stringify(localStorageSelectedLanguage));
+  }
   const sandbox = {
+    localStorage: {
+      getItem(key) {
+        return storage.has(key) ? storage.get(key) : null;
+      },
+    },
     document: {
       documentElement: { getAttribute(name) { return name === "lang" ? docLang : ""; } },
       querySelector(selector) {
@@ -273,6 +282,29 @@ test("notifications mobile sent state only marks successful deliveries", () => {
 test("calendar native webhook failures show composer errors", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
+});
+
+test("i18n person home aliases translate with active language", () => {
+  const i18n = loadI18nRuntime({ localStorageSelectedLanguage: "en" });
+  const state = { entity_id: "person.example", state: "en_casa", attributes: {} };
+  assert.equal(
+    i18n.translateEntityState("en", state, 2, (v, u, d) => `${v}${u}`, (v) => String(v), () => null),
+    "Home",
+  );
+  assert.equal(
+    i18n.translateEntityState("es", { ...state, state: "casa" }, 2, (v, u, d) => `${v}${u}`, (v) => String(v), () => null),
+    "En casa",
+  );
+});
+
+test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
+  const i18n = loadI18nRuntime({
+    rootHass: { language: "es" },
+    localStorageSelectedLanguage: "en",
+  });
+
+  assert.equal(i18n.resolveLanguage(null, "auto"), "en");
+  assert.equal(i18n.resolveLanguage({ language: "es" }, "auto"), "en");
 });
 
 test("i18n automatic language prefers HA profile locale over stale legacy language", () => {
@@ -1013,6 +1045,27 @@ test("cover card switches open/close arrow orientation by device class and open_
   assert.match(source, /coverDeviceClassPrefersHorizontalOpenClose/);
   assert.match(source, /"ed\.cover\.open_close_icons"/);
   assert.match(source, /escapeHtml\(openCloseIcons\.open\)/);
+});
+
+test("climate schedule save posts webhook without requiring live climate state", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /climateAction === "schedule-save"[\s\S]*void this\._submitScheduleComposer\(\)/);
+  assert.match(source, /climateAction === "schedule-save"[\s\S]*return;/);
+  assert.doesNotMatch(
+    source,
+    /climateAction === "schedule-save"[\s\S]{0,120}const state = this\._getState\(\)/,
+  );
+  assert.match(source, /_flushScheduleComposerFocusedField\(\)/);
+  assert.match(source, /domPatchById\.get\(slot\.id\)/);
+  assert.match(source, /window\.NodaliaUtils\.postHomeAssistantWebhook/);
+});
+
+test("entity card toggle uses homeassistant.toggle for cover and lock entities", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /_isHomeAssistantToggleable\(state\)/);
+  assert.match(source, /_canToggleEntity\(/);
+  assert.match(source, /callService\("homeassistant", "toggle", \{\s*entity_id: entityId,/);
+  assert.match(source, /tapAction === "toggle"[\s\S]*_canToggleEntity\(this\._getActualState\(\)\)/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

@@ -49,6 +49,33 @@
    * Lovelace may pass a hass object with states but without i18n fields until a later update — fall back
    * to `document.querySelector("home-assistant")?.hass` so `language: auto` matches the profile.
    */
+  /**
+   * Home Assistant stores the profile language in localStorage (`selectedLanguage`, JSON string).
+   * That value is more reliable than the legacy `hass.language` field, which can reflect the
+   * server default (e.g. Spanish) while the user profile is English.
+   */
+  function profileLanguageFromLocalStorage() {
+    if (typeof localStorage === "undefined") {
+      return null;
+    }
+    try {
+      const raw = localStorage.getItem("selectedLanguage");
+      if (!raw) {
+        return null;
+      }
+      let parsed = raw;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (_err) {
+        // HA stores a JSON-encoded string; tolerate plain values.
+      }
+      const code = typeof parsed === "string" ? parsed : String(parsed ?? "").trim();
+      return code ? baseLang(code) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
   function effectiveHaLanguageCode(hass) {
     const fromProfileObject = h => {
       if (!h || typeof h !== "object") {
@@ -77,7 +104,8 @@
      * generic `language` field, which can lag behind the profile and leak Spanish labels into English UIs.
      */
     return (
-      fromProfileObject(rootHass)
+      profileLanguageFromLocalStorage()
+      || fromProfileObject(rootHass)
       || fromProfileObject(resolveHass(hass))
       || fromLegacyObject(rootHass)
       || fromLegacyObject(resolveHass(hass))
@@ -8409,6 +8437,15 @@
     }
 
     const st = dict.states;
+
+    if (domain === "person") {
+      if (key === "casa" || key === "en_casa") {
+        return st.home;
+      }
+      if (key === "fuera") {
+        return st.not_home;
+      }
+    }
     switch (key) {
       case "on":
         return st.on;

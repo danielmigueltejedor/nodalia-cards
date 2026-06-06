@@ -78,6 +78,35 @@ test("postHomeAssistantWebhook uses hass.auth.fetchWithAuth when provided", asyn
   assert.strictEqual(captured.opts.body, JSON.stringify({ value: "[]" }));
 });
 
+test("postHomeAssistantWebhook falls back to same-origin fetch when fetchWithAuth fails", async () => {
+  const code = fs.readFileSync(new URL("../nodalia-utils.js", import.meta.url), "utf8");
+  let fetchUrl = "";
+  const sandbox = {
+    window: { location: { origin: "https://homeassistant.local:8123" } },
+    console,
+    fetch: async url => {
+      fetchUrl = String(url);
+      return { ok: true };
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(code, sandbox);
+
+  const hass = {
+    auth: {
+      fetchWithAuth: async () => ({ ok: false, status: 401 }),
+    },
+  };
+
+  const ok = await sandbox.window.NodaliaUtils.postHomeAssistantWebhook(
+    "nodalia_climate_setpoint_schedule",
+    { type: "climate_setpoint_schedule" },
+    hass,
+  );
+  assert.strictEqual(ok, true);
+  assert.strictEqual(fetchUrl, "https://homeassistant.local:8123/api/webhook/nodalia_climate_setpoint_schedule");
+});
+
 test("postHomeAssistantWebhook strips pasted webhook URL to id", async () => {
   const code = fs.readFileSync(new URL("../nodalia-utils.js", import.meta.url), "utf8");
   let url = "";

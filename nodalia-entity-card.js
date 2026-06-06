@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.0-alpha.56";
+const CARD_VERSION = "1.2.0-alpha.57";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1026,6 +1026,39 @@ class NodaliaEntityCard extends HTMLElement {
     return String(entityId || "").split(".")[0] || "";
   }
 
+  _isHomeAssistantToggleable(state) {
+    if (!state?.entity_id) {
+      return false;
+    }
+
+    const stateKey = normalizeTextKey(state.state);
+    if (!stateKey || stateKey === "unavailable") {
+      return false;
+    }
+
+    const domain = this._getDomain(state.entity_id);
+    return [
+      "switch",
+      "light",
+      "fan",
+      "cover",
+      "lock",
+      "input_boolean",
+      "automation",
+      "script",
+      "valve",
+      "siren",
+      "remote",
+      "water_heater",
+      "humidifier",
+      "media_player",
+    ].includes(domain);
+  }
+
+  _canToggleEntity(state = this._getActualState()) {
+    return this._isBinaryOnOff(state) || this._isHomeAssistantToggleable(state);
+  }
+
   _isBinaryOnOff(state) {
     const stateKey = normalizeTextKey(state?.state);
     return stateKey === "on" || stateKey === "off";
@@ -1216,7 +1249,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     if (tapAction === "toggle") {
-      return this._isBinaryOnOff(state);
+      return this._canToggleEntity(this._getActualState());
     }
 
     if (tapAction === "more-info") {
@@ -1257,7 +1290,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     if (holdAction === "toggle") {
-      return this._isBinaryOnOff(state);
+      return this._canToggleEntity(this._getActualState());
     }
 
     if (holdAction === "more-info") {
@@ -1309,7 +1342,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     if (doubleAction === "toggle") {
-      return this._isBinaryOnOff(state);
+      return this._canToggleEntity(this._getActualState());
     }
 
     if (doubleAction === "more-info" || doubleAction === "auto") {
@@ -1322,16 +1355,31 @@ class NodaliaEntityCard extends HTMLElement {
   _toggleEntity(entityId = this._config?.entity) {
     const state = this._hass?.states?.[entityId];
     const isPrimaryEntity = entityId && entityId === this._config?.entity;
+    const actualState = isPrimaryEntity ? this._getActualState() : state;
     const effectiveState = isPrimaryEntity ? this._getState() : state;
-    if (!this._hass || !entityId || !effectiveState || !this._isBinaryOnOff(effectiveState)) {
+    if (!this._hass || !entityId || !actualState) {
       return;
     }
 
-    const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
-    if (isPrimaryEntity) {
-      this._startOptimisticToggle(service === "turn_on" ? "on" : "off", state);
+    if (this._isBinaryOnOff(actualState)) {
+      const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
+      if (isPrimaryEntity) {
+        this._startOptimisticToggle(service === "turn_on" ? "on" : "off", actualState);
+      }
+      this._hass.callService("homeassistant", service, {
+        entity_id: entityId,
+      });
+      if (isPrimaryEntity) {
+        this._render();
+      }
+      return;
     }
-    this._hass.callService("homeassistant", service, {
+
+    if (!this._isHomeAssistantToggleable(actualState)) {
+      return;
+    }
+
+    this._hass.callService("homeassistant", "toggle", {
       entity_id: entityId,
     });
     if (isPrimaryEntity) {

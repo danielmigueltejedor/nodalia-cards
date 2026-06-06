@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0-alpha.56";
+const CARD_VERSION = "1.2.0-alpha.57";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1413,6 +1413,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._dialDragFrame = 0;
     this._pendingDialDragPoint = null;
     this._pendingRenderAfterDrag = false;
+    this._pendingRenderAfterScheduleDrag = false;
     /** `null` | `"low"` | `"high"` — dual-range (`heat_cool`) thumb focus for step buttons; not persisted. */
     this._selectedRangeThumb = null;
     this._lastDualRangeModeKey = null;
@@ -1445,9 +1446,11 @@ class NodaliaClimateCard extends HTMLElement {
     this._onWindowScheduleBlockDragUp = this._onWindowScheduleBlockDragUp.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowBlur = this._onShadowBlur.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
     this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("blur", this._onShadowBlur, true);
     this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
@@ -1593,6 +1596,11 @@ class NodaliaClimateCard extends HTMLElement {
 
     if (this._activeDialDrag) {
       this._pendingRenderAfterDrag = true;
+      return;
+    }
+
+    if (this._activeScheduleDrag) {
+      this._pendingRenderAfterScheduleDrag = true;
       return;
     }
 
@@ -1766,33 +1774,74 @@ class NodaliaClimateCard extends HTMLElement {
       this.shadowRoot.querySelector('[data-climate-schedule-field="enabled"]')?.checked,
     );
 
-    const slots = [];
-    const seenSlotIds = new Set();
+    const domPatchById = new Map();
     this.shadowRoot.querySelectorAll("[data-schedule-slot-editor]").forEach(editor => {
       const slotId = String(editor.getAttribute("data-schedule-slot-editor") || "").trim();
-      if (!slotId || seenSlotIds.has(slotId)) {
+      if (!slotId) {
         return;
       }
-      seenSlotIds.add(slotId);
 
       const start = String(editor.querySelector('[data-climate-schedule-field="start"]')?.value || "").trim();
       const end = String(editor.querySelector('[data-climate-schedule-field="end"]')?.value || "").trim();
       const temperatureRaw = Number(editor.querySelector('[data-climate-schedule-field="temperature"]')?.value);
-      const existing = schedule.slots.find(slot => slot.id === slotId);
-      slots.push(
-        normalizeSetpointScheduleSlot({
-          ...(existing || {}),
-          id: slotId,
-          start,
-          end,
-          temperature: temperatureRaw,
-        }),
-      );
+      domPatchById.set(slotId, {
+        start,
+        end,
+        temperature: temperatureRaw,
+      });
     });
 
-    schedule.slots = slots;
-    this._scheduleComposerDraft = schedule;
-    return schedule;
+    const mergedSlots = schedule.slots.map(slot => {
+      const patch = domPatchById.get(slot.id);
+      if (!patch) {
+        return slot;
+      }
+      domPatchById.delete(slot.id);
+      return normalizeSetpointScheduleSlot({
+        ...slot,
+        ...patch,
+      });
+    });
+
+    for (const [slotId, patch] of domPatchById) {
+      mergedSlots.push(
+        normalizeSetpointScheduleSlot({
+          id: slotId,
+          ...patch,
+        }),
+      );
+    }
+
+    schedule.slots = mergedSlots;
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    return this._scheduleComposerDraft;
+  }
+
+  _flushScheduleComposerFocusedField() {
+    const active = this.shadowRoot?.activeElement;
+    if (
+      !(active instanceof HTMLInputElement)
+      || !active.dataset?.climateScheduleField
+      || active.dataset.climateScheduleField === "enabled"
+    ) {
+      return;
+    }
+
+    const slotId = String(active.dataset.scheduleSlotId || "").trim();
+    const field = String(active.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    let value = active.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
   }
 
   async _submitScheduleComposer() {
@@ -1827,6 +1876,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    this._flushScheduleComposerFocusedField();
     const schedule = this._syncScheduleComposerDraftFromDom();
     const storageEntityId = getClimateScheduleStorageEntityId(
       entityId,
@@ -2231,6 +2281,12 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._activeScheduleDrag = null;
     this._setScheduleDragWindowListeners(false);
+    if (this._pendingRenderAfterScheduleDrag) {
+      this._pendingRenderAfterScheduleDrag = false;
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
     this._lastRenderSignature = "";
     this._render();
   }
@@ -4250,6 +4306,26 @@ class NodaliaClimateCard extends HTMLElement {
         return;
       }
 
+      if (climateAction === "schedule-save") {
+        this._triggerHaptic("selection");
+        void this._submitScheduleComposer();
+        return;
+      }
+
+      if (climateAction === "schedule-add") {
+        this._triggerHaptic("selection");
+        this._addScheduleComposerSlot(actionButton.dataset.scheduleDay || "mon");
+        return;
+      }
+
+      if (climateAction === "schedule-remove") {
+        if (actionButton.dataset.scheduleSlotId) {
+          this._triggerHaptic("selection");
+          this._removeScheduleComposerSlot(actionButton.dataset.scheduleSlotId);
+        }
+        return;
+      }
+
       const state = this._getState();
       if (!state) {
         return;
@@ -4276,20 +4352,6 @@ class NodaliaClimateCard extends HTMLElement {
           this._selectedRangeThumb = null;
           this._triggerHaptic();
           this._setHvacMode(actionButton.dataset.mode);
-        }
-        break;
-      case "schedule-save":
-        this._triggerHaptic("selection");
-        this._submitScheduleComposer();
-        break;
-      case "schedule-add":
-        this._triggerHaptic("selection");
-        this._addScheduleComposerSlot(actionButton.dataset.scheduleDay || "mon");
-        break;
-      case "schedule-remove":
-        if (actionButton.dataset.scheduleSlotId) {
-          this._triggerHaptic("selection");
-          this._removeScheduleComposerSlot(actionButton.dataset.scheduleSlotId);
         }
         break;
       default:
@@ -4418,6 +4480,33 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if ((input.type === "time" || input.type === "number") && event.type === "input") {
+      return;
+    }
+
+    let value = input.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  _onShadowBlur(event) {
+    const input = event.composedPath()[0];
+    if (
+      !(input instanceof HTMLInputElement)
+      || !input.dataset?.climateScheduleField
+      || input.dataset.climateScheduleField === "enabled"
+    ) {
+      return;
+    }
+
+    const slotId = String(input.dataset.scheduleSlotId || "").trim();
+    const field = String(input.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
       return;
     }
 
