@@ -508,7 +508,38 @@
       "dialNoSetpoint": "Temperatura interior; o termostato não tem setpoint ativo",
       "togglePower": "Turn on or off"
     },
-    "dialNoSetpointHint": "Sem setpoint ativo"
+    "dialNoSetpointHint": "Sem setpoint ativo",
+    "schedule": {
+      "openButton": "Weekly setpoint schedule",
+      "popupTitle": "Weekly schedule",
+      "popupHint": "Define time blocks and target temperatures, then save to sync Home Assistant automations through your webhook.",
+      "enabledLabel": "Enable schedule",
+      "addSlot": "Add block",
+      "emptyDay": "No blocks",
+      "cancel": "Cancel",
+      "save": "Save schedule",
+      "saving": "Saving…",
+      "start": "Start",
+      "end": "End",
+      "temperature": "Setpoint",
+      "remove": "Remove",
+      "close": "Close",
+      "day": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "errors": {
+        "webhookMissing": "Configure a setpoint schedule webhook in the card editor.",
+        "entityMissing": "Select a climate entity first.",
+        "webhookFailed": "Could not sync the schedule. Check the webhook and Home Assistant logs.",
+        "dualRangeUnsupported": "Weekly schedules are not supported while the thermostat uses a dual heat/cool range."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Sem histórico disponível"
