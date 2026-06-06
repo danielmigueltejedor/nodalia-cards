@@ -17,7 +17,7 @@
 #      OR path-a → examples/climate-setpoint-schedule-shell.yaml (advanced)
 #
 # local_only: false — recommended when using HA remotely (Nabu Casa, mobile app).
-# Card 1.2.0-alpha.58+ also uses WebSocket webhook/handle from the dashboard.
+# Card 1.2.0-alpha.60+ also uses WebSocket webhook/handle from the dashboard.
 
 alias: "Nodalia Climate | Sync setpoint schedule"
 mode: parallel

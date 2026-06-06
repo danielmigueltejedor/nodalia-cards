@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.60] - 2026-06-06
+
+Sixtieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.60`**.
+
+### Fixed
+
+- **`nodalia-power-flow-card.js`:** home device popup no longer clips long device names — list uses full-width rows (icon + text) with wrapping labels instead of a narrow multi-column grid.
+
 ## [1.2.0-alpha.59] - 2026-06-06
 
 Fifty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.59`**.
