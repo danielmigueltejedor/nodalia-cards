@@ -2708,12 +2708,6 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.lightAction);
 
     if (!actionButton) {
@@ -2725,6 +2719,9 @@ class NodaliaLightCard extends HTMLElement {
 
     const zone = actionButton.dataset.lightAction;
     if (zone === "body" || zone === "icon") {
+      if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+        return;
+      }
       if (this._suppressNextLightTap) {
         this._suppressNextLightTap = false;
         event.preventDefault();
@@ -3359,7 +3356,8 @@ class NodaliaLightCard extends HTMLElement {
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
 
-        .light-card.is-off {
+        .light-card.is-off,
+        .light-card.is-on {
           cursor: pointer;
         }
 
@@ -4333,10 +4331,11 @@ class NodaliaLightCard extends HTMLElement {
       </style>
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
+        data-light-action="body"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">
-          <div class="light-card__hero" data-light-action="body">
+          <div class="light-card__hero">
             <button
               type="button"
               class="light-card__icon"

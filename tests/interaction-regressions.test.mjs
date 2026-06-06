@@ -1077,8 +1077,13 @@ test("slider bubble chrome does not trigger card body tap", () => {
     const source = read(card);
     assert.match(source, /isNodaliaSliderChromeHit\?\.\(event\)/);
     assert.match(source, /data-nodalia-tap-shield="true"/);
-    assert.doesNotMatch(source, /<ha-card[\s\S]{0,240}data-(?:light|fan|humidifier|cover)-action="body"/);
-    assert.match(source, /__hero" data-(?:light|fan|humidifier|cover)-action="body"/);
+    assert.match(source, /<ha-card[\s\S]{0,320}data-(?:light|fan|humidifier|cover)-action="body"/);
+    assert.doesNotMatch(source, /__hero" data-(?:light|fan|humidifier|cover)-action="body"/);
+    assert.match(
+      source,
+      /(?:body|icon)[\s\S]{0,220}isNodaliaSliderChromeHit\?\.\(event\)/,
+      `${card} should ignore slider chrome only for body/icon taps`,
+    );
   }
 });
 

@@ -850,11 +850,6 @@ class NodaliaCoverCard extends HTMLElement {
     const path = event.composedPath();
     const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
     if (slider) return;
-    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
     const button = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (!button) return;
     event.preventDefault();
@@ -862,6 +857,9 @@ class NodaliaCoverCard extends HTMLElement {
     const coverAction = button.dataset.coverAction;
     if (this._isCardTapAction(coverAction)) {
       if (coverAction === "body" || coverAction === "icon") {
+        if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+          return;
+        }
         if (this._suppressNextCoverTap) {
           this._suppressNextCoverTap = false;
           return;
@@ -1673,9 +1671,10 @@ class NodaliaCoverCard extends HTMLElement {
       </style>
       <ha-card
         class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}${coverUiClass ? ` ${coverUiClass}` : ""}${coverToggleLaneClass}"
+        data-cover-action="body"
       >
         <div class="fan-card__content">
-          <div class="fan-card__hero" data-cover-action="body">
+          <div class="fan-card__hero">
             <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}

@@ -2177,12 +2177,6 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.fanAction);
 
     if (!actionButton) {
@@ -2197,6 +2191,9 @@ class NodaliaFanCard extends HTMLElement {
 
     if (fanAction === "body" || fanAction === "icon") {
       const zone = fanAction;
+      if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+        return;
+      }
       if (this._suppressNextFanTap) {
         this._suppressNextFanTap = false;
         return;
@@ -3421,10 +3418,11 @@ class NodaliaFanCard extends HTMLElement {
       </style>
       <ha-card
         class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""} ${powerAnimationState ? `fan-card--${powerAnimationState}` : ""}"
+        data-fan-action="body"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="fan-card__content">
-          <div class="fan-card__hero" data-fan-action="body">
+          <div class="fan-card__hero">
             <button
               type="button"
               class="fan-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "fan-card__icon--active-motion" : ""}"

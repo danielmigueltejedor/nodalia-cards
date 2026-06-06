@@ -2349,12 +2349,6 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
-    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
     const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.humidifierAction);
 
     if (!actionButton) {
@@ -2369,6 +2363,9 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     if (humidifierAction === "body" || humidifierAction === "icon") {
       const zone = humidifierAction;
+      if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+        return;
+      }
       if (this._suppressNextHumidifierTap) {
         this._suppressNextHumidifierTap = false;
         return;
@@ -3669,10 +3666,11 @@ class NodaliaHumidifierCard extends HTMLElement {
       </style>
       <ha-card
         class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""} ${powerAnimationState ? `humidifier-card--${powerAnimationState}` : ""}"
+        data-humidifier-action="body"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="humidifier-card__content ${shouldAnimateEntrance ? "humidifier-card__content--entering" : ""}">
-          <div class="humidifier-card__hero" data-humidifier-action="body">
+          <div class="humidifier-card__hero">
             <button
               type="button"
               class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "humidifier-card__icon--active-motion" : ""}"
