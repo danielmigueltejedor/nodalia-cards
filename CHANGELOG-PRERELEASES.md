@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.58] - 2026-06-06
+
+Fifty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.58`**.
+
+### Fixed
+
+- **`nodalia-utils.js`:** webhook saves from Lovelace now prefer Home Assistant’s authenticated WebSocket command **`webhook/handle`** (`hass.callWS`) before HTTP POST. This reliably triggers automations from the dashboard; plain HTTP can return **200** without firing when the webhook trigger has **`local_only: true`** (common with remote / Nabu Casa URLs).
+
+### Added
+
+- **Tests:** regression ensuring **`postHomeAssistantWebhook`** uses **`webhook/handle`** when **`hass.callWS`** is available.
+
 ## [1.2.0-alpha.57] - 2026-06-06
 
 Fifty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.57`**.

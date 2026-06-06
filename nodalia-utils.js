@@ -193,12 +193,37 @@
    * POST JSON to the Home Assistant webhook endpoint `/api/webhook/<webhook_id>`.
    * Does not rely on the signed-in user's permission to call `input_text.set_value`;
    * an automation triggered by the webhook runs with normal HA privileges.
-   * Typical body: `{ "value": "<payload>" }` with `{{ trigger.json.value }}` in actions.
    *
-   * Pass **`hass`** (third argument) so **`hass.auth.fetchWithAuth`** is used — raw `fetch`
-   * often returns **401** in the HA frontend because API routes expect the bearer/session
-   * from `fetchWithAuth`, not cookies alone.
+   * From Lovelace, prefer the authenticated WebSocket command `webhook/handle` when
+   * `hass.callWS` is available — it reliably triggers automations even when HTTP POST
+   * would return 200 without firing (e.g. `local_only` webhooks via remote/Nabu Casa).
+   * Falls back to same-origin POST, then `hass.auth.fetchWithAuth`.
    */
+  function postHomeAssistantWebhookViaWebSocket(hass, webhookId, payloadJson) {
+    if (typeof hass?.callWS !== "function") {
+      return Promise.resolve(false);
+    }
+
+    return Promise.resolve(
+      hass.callWS({
+        type: "webhook/handle",
+        webhook_id: webhookId,
+        method: "POST",
+        body: payloadJson,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ).then(
+      result => {
+        const status = Number(result?.status);
+        if (Number.isFinite(status)) {
+          return status >= 200 && status < 300;
+        }
+        return result != null;
+      },
+      () => false,
+    );
+  }
+
   function postHomeAssistantWebhook(webhookId, body, hass) {
     const id = normalizeHomeAssistantWebhookId(webhookId);
     if (!id) {
@@ -227,8 +252,11 @@
       );
     };
 
-    const authFetch = hass?.auth?.fetchWithAuth;
-    if (typeof authFetch === "function") {
+    const postViaAuthFetch = () => {
+      const authFetch = hass?.auth?.fetchWithAuth;
+      if (typeof authFetch !== "function") {
+        return postSameOrigin();
+      }
       return authFetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -237,9 +265,17 @@
         res => (res.ok ? true : postSameOrigin()),
         () => postSameOrigin(),
       );
+    };
+
+    const postViaHttp = () => postSameOrigin().then(ok => (ok ? true : postViaAuthFetch()));
+
+    if (hass && typeof hass.callWS === "function") {
+      return postHomeAssistantWebhookViaWebSocket(hass, id, payloadJson).then(
+        ok => (ok ? true : postViaHttp()),
+      );
     }
 
-    return postSameOrigin();
+    return postViaHttp();
   }
 
   /**
