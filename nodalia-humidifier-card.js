@@ -658,6 +658,9 @@ class NodaliaHumidifierCard extends HTMLElement {
               if (path.some(node => node instanceof HTMLInputElement && node.dataset?.humidifierControl)) {
                 return null;
               }
+              if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+                return null;
+              }
               const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.humidifierAction);
               const zone = actionButton?.dataset?.humidifierAction;
               return zone === "body" || zone === "icon" ? zone : null;
@@ -2342,6 +2345,12 @@ class NodaliaHumidifierCard extends HTMLElement {
     );
 
     if (slider) {
+      return;
+    }
+
+    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+      event.preventDefault();
+      event.stopPropagation();
       return;
     }
 

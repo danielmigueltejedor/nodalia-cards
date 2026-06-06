@@ -513,6 +513,9 @@ class NodaliaCoverCard extends HTMLElement {
               if (path.some(node => node instanceof HTMLInputElement && node.dataset?.coverControl)) {
                 return null;
               }
+              if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+                return null;
+              }
               const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
               const zone = actionButton?.dataset?.coverAction;
               return zone === "body" || zone === "icon" ? zone : null;
@@ -847,6 +850,11 @@ class NodaliaCoverCard extends HTMLElement {
     const path = event.composedPath();
     const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
     if (slider) return;
+    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     const button = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
     if (!button) return;
     event.preventDefault();

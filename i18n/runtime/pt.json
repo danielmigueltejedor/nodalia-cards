@@ -339,7 +339,38 @@
       "dialTargetSlider": "Temperatura alvo",
       "dialNoSetpoint": "Temperatura interior; o termostato não tem setpoint ativo"
     },
-    "dialNoSetpointHint": "Sem setpoint ativo"
+    "dialNoSetpointHint": "Sem setpoint ativo",
+    "schedule": {
+      "openButton": "Horário semanal de consignas",
+      "popupTitle": "Horário semanal",
+      "popupHint": "Defina blocos horários e temperaturas alvo e guarde para sincronizar com o Home Assistant através do webhook.",
+      "enabledLabel": "Ativar horário",
+      "addSlot": "Adicionar bloco",
+      "emptyDay": "Sem blocos",
+      "cancel": "Cancelar",
+      "save": "Guardar horário",
+      "saving": "A guardar…",
+      "start": "Início",
+      "end": "Fim",
+      "temperature": "Consigna",
+      "remove": "Remover",
+      "close": "Fechar",
+      "day": {
+        "mon": "Segunda-feira",
+        "tue": "Terça-feira",
+        "wed": "Quarta-feira",
+        "thu": "Quinta-feira",
+        "fri": "Sexta-feira",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      },
+      "errors": {
+        "webhookMissing": "Configure o webhook de horário no editor do cartão.",
+        "entityMissing": "Selecione primeiro uma entidade climate.",
+        "webhookFailed": "Não foi possível sincronizar o horário. Verifique o webhook e os registos do Home Assistant.",
+        "dualRangeUnsupported": "Horários semanais não estão disponíveis enquanto o termostato usa um intervalo dual calor/frio."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Sem histórico disponível"

@@ -1060,6 +1060,24 @@ test("climate schedule save posts webhook without requiring live climate state",
   assert.match(source, /window\.NodaliaUtils\.postHomeAssistantWebhook/);
 });
 
+test("climate schedule composer keeps agenda scroll position across re-renders", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /_captureScheduleAgendaScrollState\(\)/);
+  assert.match(source, /_restoreScheduleAgendaScrollState\(savedScheduleAgendaScrollTop\)/);
+  assert.match(source, /_syncRenderSignature\(\)/);
+  assert.match(source, /this\._patchScheduleBlockDom\(slotId\);[\s\S]*this\._syncRenderSignature\(\)/);
+});
+
+test("slider bubble chrome does not trigger card body tap", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function isNodaliaSliderChromeHit\(/);
+  assert.match(utils, /__slider-wrap/);
+  for (const card of ["nodalia-light-card.js", "nodalia-fan-card.js", "nodalia-humidifier-card.js", "nodalia-cover-card.js"]) {
+    const source = read(card);
+    assert.match(source, /isNodaliaSliderChromeHit\?\.\(event\)/);
+  }
+});
+
 test("entity card toggle uses homeassistant.toggle for cover and lock entities", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /_isHomeAssistantToggleable\(state\)/);

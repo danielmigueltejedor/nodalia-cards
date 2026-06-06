@@ -725,6 +725,9 @@ class NodaliaLightCard extends HTMLElement {
               if (path.some(node => node instanceof HTMLInputElement && node.dataset?.lightControl)) {
                 return null;
               }
+              if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+                return null;
+              }
               const actionButton = path.find(
                 node => node instanceof HTMLElement && node.dataset?.lightAction,
               );
@@ -2701,6 +2704,12 @@ class NodaliaLightCard extends HTMLElement {
     );
 
     if (slider) {
+      return;
+    }
+
+    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+      event.preventDefault();
+      event.stopPropagation();
       return;
     }
 

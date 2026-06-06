@@ -1,9 +1,19 @@
-# Helpers for Nodalia Climate Card weekly setpoint schedules.
+# Storage helper for Nodalia Climate Card weekly setpoint schedules.
 # Guide: docs/climate-setpoint-schedule.md
-# The card stores JSON in this entity (via webhook) so schedules persist without saving the dashboard.
+#
+# ─── Customize ───────────────────────────────────────────────────────────────
+# YOUR_ROOM          Short slug for this thermostat (e.g. living_room, bedroom).
+#                    Used in the entity id below — pick one word, lowercase, underscores OK.
+# YOUR_DISPLAY_NAME  Label shown in Home Assistant (e.g. "Living room", "Bedroom").
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The id MUST match `setpoint_schedule_helper` on the climate card:
+#   setpoint_schedule_helper: input_text.nodalia_climate_schedule_YOUR_ROOM
+#
+# One helper per climate card / thermostat. Repeat this block for each room.
 
 input_text:
-  climate_schedule_dormitorios:
-    name: Nodalia consignas — Dormitorios
+  nodalia_climate_schedule_YOUR_ROOM:
+    name: "Nodalia schedule — YOUR_DISPLAY_NAME"
     max: 255
     initial: '{"v":3,"b":"","n":0}'

@@ -1,18 +1,16 @@
-# Optional: write per-slot automations from the webhook payload and reload automations.
-# Guide: docs/climate-setpoint-schedule.md
+# Optional: Path A — write per-slot automations from the webhook payload.
+# Guide: docs/climate-setpoint-schedule.md#path-a-per-slot-automations-on-disk
+#
 # Requires shell access to `/config` (Home Assistant OS / Supervised).
+# No per-room customization here — the card sends the correct YAML in the webhook.
 #
 # Add to configuration.yaml:
 #   shell_command: !include climate-setpoint-schedule-shell-commands.yaml
 #   automation: !include_dir_merge_list automations/
 #
-# The webhook automation in `climate-setpoint-schedule-webhook.yaml` must call:
-#   shell_command.nodalia_climate_write_setpoint_schedule_automations
+# Then uncomment the two actions at the bottom of:
+#   examples/climate-setpoint-schedule-webhook.yaml
 
 shell_command:
   nodalia_climate_write_setpoint_schedule_automations: >-
     python3 -c "import json,os,sys; p=json.load(sys.stdin); e=p.get('entity_id','').replace('.','_'); d='/config/automations'; os.makedirs(d,exist_ok=True); open(f'{d}/nodalia_climate_{e}_schedule.yaml','w').write(p.get('automation_yaml_bundle',''))" <<< '{{ trigger.json | tojson }}'
-
-# After the shell_command, add to the webhook automation sequence:
-#   - action: shell_command.nodalia_climate_write_setpoint_schedule_automations
-#   - action: automation.reload

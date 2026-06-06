@@ -1,10 +1,23 @@
-# Automation for Nodalia Climate Card `setpoint_schedule_webhook`.
+# Webhook automation — receives schedule saves from every Nodalia Climate Card.
 # Full guide: docs/climate-setpoint-schedule.md
 #
-# 1. Copy `climate-setpoint-schedule-helpers.yaml` into your HA config (or create the input_text).
-# 2. Set webhook_id `nodalia_climate_setpoint_schedule` in the climate card editor.
-# 3. Optional: enable `shell_command` + `automation.reload` below to write per-slot automations from
-#    `trigger.json.automation_yaml_bundle` (see `climate-setpoint-schedule-shell.yaml`).
+# ─── Customize ───────────────────────────────────────────────────────────────
+# WEBHOOK_ID   Usually keep the default below. Must match `setpoint_schedule_webhook`
+#              on every climate card that uses this feature.
+#              Treat it like a password — do not publish it publicly.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# You only need ONE copy of this automation for the whole home.
+# Each card sends its own `entity_id` and `storage_entity_id` in the JSON payload.
+#
+# Setup order:
+#   1. helpers  → examples/climate-setpoint-schedule-helpers.yaml (one per room)
+#   2. this file → webhook automation (once)
+#   3. path-b   → examples/climate-setpoint-schedule-path-b.yaml (one per room)
+#      OR path-a → examples/climate-setpoint-schedule-shell.yaml (advanced)
+#
+# local_only: false — recommended when using HA remotely (Nabu Casa, mobile app).
+# Card 1.2.0-alpha.58+ also uses WebSocket webhook/handle from the dashboard.
 
 alias: "Nodalia Climate | Sync setpoint schedule"
 mode: parallel
@@ -15,7 +28,7 @@ trigger:
     webhook_id: nodalia_climate_setpoint_schedule
     allowed_methods:
       - POST
-    local_only: true
+    local_only: false
 
 actions:
   - variables:
@@ -42,9 +55,12 @@ actions:
       slot_count: "{{ specs | length }}"
       automation_id_prefix: "{{ prefix }}"
 
-  # Optional: call your own script to create/replace automations from `automation_specs` or
-  # `automation_yaml_bundle`. Example:
-  # - action: script.nodalia_climate_install_setpoint_schedule_automations
+  # Optional Path A: write per-slot automations to disk (requires shell_command):
+  # - action: shell_command.nodalia_climate_write_setpoint_schedule_automations
+  # - action: automation.reload
+  #
+  # Optional custom script:
+  # - action: script.your_install_climate_schedule
   #   data:
   #     entity_id: "{{ entity_id }}"
   #     automation_specs: "{{ specs }}"

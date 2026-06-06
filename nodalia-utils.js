@@ -22,6 +22,7 @@
     "bindHostPointerHoldGesture",
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
+    "isNodaliaSliderChromeHit",
     "renderLovelaceEntityGuardCardHtml",
     "renderLovelaceEntityGuardForEntities",
     "renderEditorCollapsibleToggleHtml",
@@ -781,6 +782,32 @@
     host._nodaliaZoneTap = null;
   }
 
+  const NODALIA_SLIDER_CHROME_CLASS_MARKERS = [
+    "__slider-wrap",
+    "__slider-shell",
+    "__slider-track",
+    "__slider-thumb",
+    "__active-chip-shell",
+  ];
+
+  /** Slider bubble chrome (wrap/shell/track) must not trigger card-body tap (toggle). */
+  function isNodaliaSliderChromeHit(event) {
+    const path = typeof event?.composedPath === "function" ? event.composedPath() : [];
+    for (const node of path) {
+      if (!(node instanceof HTMLElement)) {
+        continue;
+      }
+      const className = node.className;
+      if (typeof className !== "string" || !className) {
+        continue;
+      }
+      if (NODALIA_SLIDER_CHROME_CLASS_MARKERS.some(marker => className.includes(marker))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function scheduleCardZoneTap(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -1008,6 +1035,7 @@
     bindHostPointerHoldGesture,
     cancelCardZoneTap,
     scheduleCardZoneTap,
+    isNodaliaSliderChromeHit,
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
     renderEditorCollapsibleToggleHtml,

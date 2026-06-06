@@ -339,7 +339,38 @@
       "dialTargetSlider": "目标温度",
       "dialNoSetpoint": "室内温度；恒温器尚无生效目标温度"
     },
-    "dialNoSetpointHint": "尚无生效设定"
+    "dialNoSetpointHint": "尚无生效设定",
+    "schedule": {
+      "openButton": "每周设定温度计划",
+      "popupTitle": "每周计划",
+      "popupHint": "定义时间段和目标温度，然后保存以通过 webhook 与 Home Assistant 同步。",
+      "enabledLabel": "启用计划",
+      "addSlot": "添加时段",
+      "emptyDay": "无时段",
+      "cancel": "取消",
+      "save": "保存计划",
+      "saving": "保存中…",
+      "start": "开始",
+      "end": "结束",
+      "temperature": "设定温度",
+      "remove": "删除",
+      "close": "关闭",
+      "day": {
+        "mon": "周一",
+        "tue": "周二",
+        "wed": "周三",
+        "thu": "周四",
+        "fri": "周五",
+        "sat": "周六",
+        "sun": "周日"
+      },
+      "errors": {
+        "webhookMissing": "请在卡片编辑器中配置计划 webhook。",
+        "entityMissing": "请先选择 climate 实体。",
+        "webhookFailed": "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
+        "dualRangeUnsupported": "恒温器使用双模式冷暖范围时，不支持每周计划。"
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "暂无历史数据"

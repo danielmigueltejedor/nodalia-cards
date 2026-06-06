@@ -1,0 +1,113 @@
+# Path B — one automation per thermostat: reads the helper and applies the active slot.
+# Full guide: docs/climate-setpoint-schedule.md#path-b-single-automation-active-slot
+#
+# ─── Customize (must match your climate card) ────────────────────────────────
+# YOUR_CLIMATE_ENTITY   climate.* entity (card `entity:` field)
+# YOUR_ROOM             Same slug as in the input_text helper (see helpers example)
+# YOUR_DISPLAY_NAME     Room name for the automation list (e.g. "Living room")
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Copy this file once per thermostat. Do NOT use schedule.slots in templates —
+# the helper stores compact JSON like {"v":2,"s":[93726209]}.
+#
+# Path B supports storage v:1, v:2, and legacy verbose JSON.
+# For v:3 (base64, ~40 blocks) use Path A instead (shell_command + per-slot YAML).
+
+alias: "Nodalia Climate | Apply active setpoint (YOUR_DISPLAY_NAME)"
+mode: single
+
+triggers:
+  - trigger: time_pattern
+    minutes: "/1"
+  - trigger: event
+    event_type: nodalia_climate_setpoint_schedule_updated
+    event_data:
+      entity_id: climate.YOUR_CLIMATE_ENTITY
+
+variables:
+  entity_id: climate.YOUR_CLIMATE_ENTITY
+  storage: input_text.nodalia_climate_schedule_YOUR_ROOM
+  parsed: "{{ states(storage) | from_json(default={}) }}"
+  today_key: "{{ ['mon','tue','wed','thu','fri','sat','sun'][now().weekday()] }}"
+  minutes_now: "{{ now().hour * 60 + now().minute }}"
+
+actions:
+  - if:
+      - condition: template
+        value_template: >-
+          {% if parsed.v in [1, 2, 3] %}
+            {{ parsed.e | default(1) != 0 }}
+          {% else %}
+            {{ parsed.enabled | default(true) }}
+          {% endif %}
+    then:
+      - variables:
+          active: >-
+            {% set ns = namespace(slot=none, start=-1) %}
+            {% set day_names = ['mon','tue','wed','thu','fri','sat','sun'] %}
+            {% if parsed.v == 2 %}
+              {% for p in parsed.s | default([]) %}
+                {% set pi = p | int %}
+                {% set start_m = (pi % 512) * 5 %}
+                {% set end_m = ((pi // 512) % 512) * 5 %}
+                {% set slot_day = day_names[(pi // 262144) % 8] %}
+                {% if ((pi // 2097152) % 2) == 0 and slot_day == today_key %}
+                  {% if start_m <= end_m %}
+                    {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
+                  {% else %}
+                    {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+                  {% endif %}
+                  {% if in_range and start_m > ns.start %}
+                    {% set ns.slot = {'temperature': ((pi // 4194304) % 256) + 5} %}
+                    {% set ns.start = start_m %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% elif parsed.v == 1 %}
+              {% for row in parsed.s | default([]) %}
+                {% if row | length >= 4 and (row[4] | default(1)) != 0 %}
+                  {% set slot_day = day_names[row[0] | int] %}
+                  {% set start_m = row[1] | int %}
+                  {% set end_m = row[2] | int %}
+                  {% if slot_day == today_key %}
+                    {% if start_m <= end_m %}
+                      {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
+                    {% else %}
+                      {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+                    {% endif %}
+                    {% if in_range and start_m > ns.start %}
+                      {% set ns.slot = {'temperature': row[3] | float} %}
+                      {% set ns.start = start_m %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              {% for slot in parsed.slots | default([]) if slot.enabled | default(true) %}
+                {% if slot.day == today_key %}
+                  {% set start_parts = slot.start.split(':') %}
+                  {% set end_parts = slot.end.split(':') %}
+                  {% set start_m = start_parts[0] | int * 60 + start_parts[1] | int %}
+                  {% set end_m = end_parts[0] | int * 60 + end_parts[1] | int %}
+                  {% if start_m <= end_m %}
+                    {% set in_range = minutes_now >= start_m and minutes_now < end_m %}
+                  {% else %}
+                    {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
+                  {% endif %}
+                  {% if in_range and start_m > ns.start %}
+                    {% set ns.slot = slot %}
+                    {% set ns.start = start_m %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.slot }}
+      - if:
+          - condition: template
+            value_template: "{{ active is mapping }}"
+        then:
+          - action: climate.set_temperature
+            target:
+              entity_id: "{{ entity_id }}"
+            data:
+              temperature: "{{ active.temperature }}"

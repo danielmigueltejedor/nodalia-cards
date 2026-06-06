@@ -10,13 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0-alpha.59] - 2026-06-06
+
+Fifty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.59`**.
+
+### Fixed
+
+- **`nodalia-climate-card.js`:** the setpoint schedule popup no longer jumps scroll to the top when adding blocks or editing fields on a weekday far down the agenda — agenda **`scrollTop`** is restored after re-renders, and the render signature stays in sync after in-place slot patches so Home Assistant state updates do not force extra full redraws while the popup is open.
+- **`nodalia-utils.js`**, **light / fan / humidifier / cover cards:** taps on slider bubble chrome (**`__slider-wrap`**, shell, track, value chip shell) no longer trigger card-body toggle — only intentional background taps do.
+
+### Changed
+
+- **Docs / examples:** [`docs/climate-setpoint-schedule.md`](docs/climate-setpoint-schedule.md) quick-start guide, **`YOUR_*`** placeholders, and generic automation YAML (`climate-setpoint-schedule-*.yaml`) so each thermostat is copy-paste with clear values to replace.
+- **i18n:** `climateCard.schedule` runtime strings (popup, days, errors) in all **`i18n/runtime/*`** locales; Norwegian editor schedule labels translated in **`i18n/editor/no.json`**.
+
 ## [1.2.0-alpha.58] - 2026-06-06
 
 Fifty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.58`**.
 
 ### Fixed
 
-- **`nodalia-utils.js`:** webhook saves from Lovelace now prefer Home Assistant’s authenticated WebSocket command **`webhook/handle`** (`hass.callWS`) before HTTP POST. This reliably triggers automations from the dashboard; plain HTTP can return **200** without firing when the webhook trigger has **`local_only: true`** (common with remote / Nabu Casa URLs).
+- **`nodalia-utils.js`:** webhook saves from Lovelace now prefer Home Assistant’s authenticated WebSocket command **`webhook/handle`** (`hass.callWS`) before HTTP POST. This reliably triggers automations from the dashboard; plain HTTP can return **200** without firing when the webhook trigger has **`local_only: true`** (common with remote / Nabu Casa URLs). **Docs/examples now recommend `local_only: false`** on the webhook automation when remote access is used.
 
 ### Added
 

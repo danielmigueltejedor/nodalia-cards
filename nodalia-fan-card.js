@@ -652,6 +652,9 @@ class NodaliaFanCard extends HTMLElement {
               if (path.some(node => node instanceof HTMLInputElement && node.dataset?.fanControl)) {
                 return null;
               }
+              if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+                return null;
+              }
               const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.fanAction);
               const zone = actionButton?.dataset?.fanAction;
               return zone === "body" || zone === "icon" ? zone : null;
@@ -2170,6 +2173,12 @@ class NodaliaFanCard extends HTMLElement {
     );
 
     if (slider) {
+      return;
+    }
+
+    if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+      event.preventDefault();
+      event.stopPropagation();
       return;
     }
 

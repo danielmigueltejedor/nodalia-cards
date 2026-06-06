@@ -339,7 +339,38 @@
       "dialTargetSlider": "Temperatura țintă",
       "dialNoSetpoint": "Temperatură interioară; termostatul nu are țintă activă"
     },
-    "dialNoSetpointHint": "Fără țintă activă"
+    "dialNoSetpointHint": "Fără țintă activă",
+    "schedule": {
+      "openButton": "Program săptămânal consigne",
+      "popupTitle": "Program săptămânal",
+      "popupHint": "Definește intervale orare și temperaturi țintă, apoi salvează pentru a sincroniza cu Home Assistant prin webhook.",
+      "enabledLabel": "Activează programul",
+      "addSlot": "Adaugă interval",
+      "emptyDay": "Fără intervale",
+      "cancel": "Anulează",
+      "save": "Salvează programul",
+      "saving": "Se salvează…",
+      "start": "Început",
+      "end": "Sfârșit",
+      "temperature": "Consignă",
+      "remove": "Elimină",
+      "close": "Închide",
+      "day": {
+        "mon": "Luni",
+        "tue": "Marți",
+        "wed": "Miercuri",
+        "thu": "Joi",
+        "fri": "Vineri",
+        "sat": "Sâmbătă",
+        "sun": "Duminică"
+      },
+      "errors": {
+        "webhookMissing": "Configurează webhook-ul programului în editorul cardului.",
+        "entityMissing": "Selectează mai întâi o entitate climate.",
+        "webhookFailed": "Programul nu a putut fi sincronizat. Verifică webhook-ul și jurnalele Home Assistant.",
+        "dualRangeUnsupported": "Programele săptămânale nu sunt disponibile cât timp termostatul folosește un interval dual încălzire/răcire."
+      }
+    }
   },
   "graphCard": {
     "emptyHistory": "Nu există istoric disponibil"

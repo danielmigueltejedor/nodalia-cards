@@ -248,15 +248,25 @@ calendars:
 
 ## Climate Card (setpoint schedule)
 
+Weekly consignas from the dashboard — copy the examples and replace the `YOUR_*` placeholders:
+
+| Placeholder | Example |
+|-------------|---------|
+| `YOUR_CLIMATE_ENTITY` | `climate.living_room` |
+| `YOUR_ROOM` | `living_room` |
+| `WEBHOOK_ID` | `nodalia_climate_setpoint_schedule` |
+
 ```yaml
 type: custom:nodalia-climate-card
-entity: climate.living_room
+entity: climate.YOUR_CLIMATE_ENTITY
 show_schedule_button: true
 setpoint_schedule_webhook: nodalia_climate_setpoint_schedule
-setpoint_schedule_helper: input_text.climate_schedule_dormitorios
+setpoint_schedule_helper: input_text.nodalia_climate_schedule_YOUR_ROOM
+security:
+  allow_webhooks_for_non_admin: true
 ```
 
-Full setup (helpers, webhook automation, applying temperatures): **[`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)**. Example YAML: [`examples/climate-setpoint-schedule-webhook.yaml`](./examples/climate-setpoint-schedule-webhook.yaml).
+**Setup (5 steps):** **[`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)** — helpers, webhook (once), Path B apply (per room). Examples: [`examples/climate-setpoint-schedule-*.yaml`](./examples/).
 
 ---
 

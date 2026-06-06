@@ -1,13 +1,23 @@
+# Nodalia Climate Card — example with weekly setpoint schedule (consignas).
+# Full setup: docs/climate-setpoint-schedule.md
+#
+# ─── Customize ───────────────────────────────────────────────────────────────
+# YOUR_CLIMATE_ENTITY   Your climate.* entity
+# YOUR_ROOM             Slug matching the input_text helper (see helpers example)
+# WEBHOOK_ID            Same on all cards; must match the webhook automation
+# ─────────────────────────────────────────────────────────────────────────────
+
 type: custom:nodalia-climate-card
-entity: climate.living_room
-name: Living Room
+entity: climate.YOUR_CLIMATE_ENTITY
+name: YOUR_DISPLAY_NAME
 show_state_chip: true
 show_current_temperature_chip: true
 show_humidity_chip: true
 show_mode_buttons: true
 show_step_controls: true
 show_schedule_button: true
-# Webhook + HA automations: docs/climate-setpoint-schedule.md (examples/climate-setpoint-schedule-*.yaml).
 setpoint_schedule_webhook: nodalia_climate_setpoint_schedule
-# Required: create this input_text in HA (any id you choose; must match setpoint_schedule_helper).
-setpoint_schedule_helper: input_text.climate_schedule_dormitorios
+setpoint_schedule_helper: input_text.nodalia_climate_schedule_YOUR_ROOM
+setpoint_schedule_week_starts_on: monday
+security:
+  allow_webhooks_for_non_admin: true

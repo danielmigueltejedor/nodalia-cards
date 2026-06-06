@@ -1664,9 +1664,52 @@ class NodaliaClimateCard extends HTMLElement {
   _setScheduleComposerDraft(schedule, options = {}) {
     this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
     if (options.render !== false) {
-      this._lastRenderSignature = "";
       this._render();
+      return;
     }
+
+    this._syncRenderSignature();
+  }
+
+  _syncRenderSignature() {
+    if (this._hass) {
+      this._lastRenderSignature = this._getRenderSignature(this._hass);
+    }
+  }
+
+  _captureScheduleAgendaScrollState() {
+    if (!this._scheduleComposerOpen || !this.shadowRoot) {
+      return null;
+    }
+
+    const agenda = this.shadowRoot.querySelector(".climate-schedule-agenda");
+    if (!(agenda instanceof HTMLElement)) {
+      return null;
+    }
+
+    return agenda.scrollTop;
+  }
+
+  _restoreScheduleAgendaScrollState(scrollTop) {
+    if (typeof scrollTop !== "number" || !Number.isFinite(scrollTop) || scrollTop <= 0) {
+      return;
+    }
+
+    const apply = () => {
+      const agenda = this.shadowRoot?.querySelector(".climate-schedule-agenda");
+      if (agenda instanceof HTMLElement) {
+        agenda.scrollTop = scrollTop;
+      }
+    };
+
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(apply);
+      });
+      return;
+    }
+
+    apply();
   }
 
   _loadScheduleDraftFromStorage() {
@@ -1942,6 +1985,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     this._patchScheduleBlockDom(slotId);
+    this._syncRenderSignature();
   }
 
   _getScheduleDayTrackElement(day) {
@@ -4828,6 +4872,8 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const savedScheduleAgendaScrollTop = this._captureScheduleAgendaScrollState();
+
     const config = this._config || normalizeConfig({});
     const styles = config.styles || DEFAULT_CONFIG.styles;
 
@@ -6754,6 +6800,9 @@ class NodaliaClimateCard extends HTMLElement {
     if (shouldAnimateEntrance) {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
     }
+
+    this._syncRenderSignature();
+    this._restoreScheduleAgendaScrollState(savedScheduleAgendaScrollTop);
   }
 }
 
