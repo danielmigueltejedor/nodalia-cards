@@ -1078,6 +1078,43 @@ test("climate card defaults webhook access to admin-only", () => {
   assert.match(source, /isUnsafeConfigPathKey/);
 });
 
+test("advance vacuum card defaults shared session webhook access to admin-only", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin: false/);
+  assert.match(source, /_postSharedCleaningSessionWebhook/);
+  assert.match(source, /webhook blocked for non-admin user/);
+  assert.match(source, /async _runMapAction\(\)[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}/);
+  assert.match(source, /strict_service_actions === true/);
+});
+
+test("NodaliaUtils schedules and clears deferred timers on disconnect", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function scheduleDeferTimer\(/);
+  assert.match(utils, /function clearDeferTimers\(/);
+  assert.match(read("nodalia-fan-card.js"), /NodaliaUtils\?\.scheduleDeferTimer/);
+  assert.match(read("nodalia-fan-card.js"), /NodaliaUtils\?\.clearDeferTimers\?\.\(this\)/);
+});
+
+test("scenes card empty state uses unified render signature", () => {
+  const source = read("nodalia-scenes-card.js");
+  assert.doesNotMatch(source, /_lastRenderSignature = `empty:\$\{JSON\.stringify/);
+  assert.match(source, /const sceneStamp = /);
+  assert.match(source, /if \(!entries\.length\) \{\s*this\.shadowRoot\.innerHTML = this\._renderEmptyState\(\)/);
+});
+
+test("power flow applies per-node bubble icon contrast", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /_getNodeIconGlyphColor\(node\)/);
+  assert.match(source, /--node-icon-glyph:/);
+  assert.match(source, /shouldDarkenBubbleIconGlyph/);
+});
+
+test("notifications async refresh guards disconnected lifecycle in finally", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /_calendarRefreshInFlight = false;[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}[\s\S]*_renderIfChanged\(true\)/);
+  assert.match(source, /_weatherRefreshInFlight = false;[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}[\s\S]*_renderIfChanged\(true\)/);
+});
+
 test("climate schedule composer keeps agenda scroll position across re-renders", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /_captureScheduleAgendaScrollState\(\)/);
@@ -1257,7 +1294,8 @@ test("fav and vacuum resize observers skip render when signature is unchanged", 
 test("power flow caches tracked entity stamp for render signature", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
-  assert.match(source, /trackedStates: this\._trackedEntitiesStamp/);
+  assert.match(source, /NodaliaRenderSignature\?\.joinParts/);
+  assert.match(source, /prefix: "states:", values: \[this\._trackedEntitiesStamp\]/);
 });
 
 test("advance vacuum map display follows cleaning session mode", () => {

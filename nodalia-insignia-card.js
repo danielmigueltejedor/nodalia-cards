@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

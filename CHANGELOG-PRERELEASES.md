@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), and completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), and active **`1.2.1-beta.*`** prereleases.
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,41 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.2.1-beta.2] - 2026-06-06
+
+Second **`1.2.1`** **`beta`**: deferred-timer lifecycle, render-path polish, and visual coherence. Release channel **`1.2.1-beta.2`**.
+
+### Fixed
+
+- **`nodalia-utils.js`:** **`scheduleDeferTimer`** / **`clearDeferTimers`** — press-bounce and panel timers cleared on disconnect (fan, light, humidifier, cover, advance-vacuum, power-flow).
+- **`nodalia-scenes-card.js`:** empty-state render signature aligned with **`_getRenderSignature`** (no full re-render every HA tick); lighter signature without full-config **`JSON.stringify`**.
+- **`nodalia-calendar-card.js`:** **`_renderIfChanged`** and async **`_refreshEvents`** skip work when disconnected.
+- **`nodalia-notifications-card.js`:** calendar/weather refresh **`finally`** blocks guard **`isConnected`** before re-render/reschedule.
+- **`nodalia-advance-vacuum-card.js`:** map stale-image removal timer tracked; security editor checkbox matches opt-in **`strict_service_actions`** default.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** per-node bubble icon contrast via **`--node-icon-glyph`** and **`NodaliaBubbleContrast`**.
+- **`nodalia-bubble-contrast.js`:** editor color cache capped at **256** entries.
+- **`nodalia-light-card.js` / `climate` / `scenes` / `power-flow`:** editors delegate **`resolveEditorColorValue`** to shared cached resolver.
+
+## [1.2.1-beta.1] - 2026-06-06
+
+First **`1.2.1`** **`beta`**: stability, visual coherence, and performance pass on top of stable **`1.2.0`**. Release channel **`1.2.1-beta.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1-beta.1.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** visual editor config updates delegate to guarded **`NodaliaUtils.setByPath`** (prototype-pollution safe).
+- **`nodalia-advance-vacuum-card.js`:** shared cleaning session webhooks default to **admin-only** (`security.allow_webhooks_for_non_admin: false`); **`isConnected`** guards after async map actions and webhook callbacks.
+- **`nodalia-graph-card.js`:** skip redundant full render while history is loading; **`isConnected`** checks after async history/statistics fetches.
+- **`nodalia-notifications-card.js`:** entrance animation timer respects disconnected lifecycle.
+
+### Changed
+
+- **`nodalia-light-card.js` / `nodalia-climate-card.js` / `nodalia-scenes-card.js`:** bubble icon contrast via **`NodaliaBubbleContrast.shouldDarkenBubbleIconGlyph`**; light card uses proportional icon sizing (matches fan/entity).
+- **`nodalia-power-flow-card.js`:** render signature uses **`NodaliaRenderSignature.joinParts`** instead of **`JSON.stringify`**.
+- **`nodalia-scenes-card.js`:** default **`button_bounce_duration`** aligned to **320** ms (entity card convention).
 
 ## [1.2.0-alpha.61] - 2026-06-06
 

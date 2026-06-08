@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -296,25 +296,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -4924,6 +4910,8 @@ class NodaliaClimateCard extends HTMLElement {
     const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
+    const darkenBubbleIconGlyph =
+      !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
     const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const isRangeMode = !isOff && this._isDualSetpointRange(state);
     if (!isRangeMode) {
@@ -5436,6 +5424,11 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__icon ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
+          color: ${
+            darkenBubbleIconGlyph
+              ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+              : (isOff ? styles.icon.off_color : styles.icon.on_color)
+          };
           display: inline-flex;
           height: calc(${effectiveIconSize} * 0.44);
           left: 50%;

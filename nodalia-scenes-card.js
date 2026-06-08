@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
 const SCENE_LAUNCH_DURATION = 780;
 const HAPTIC_PATTERNS = {
@@ -35,7 +35,7 @@ const DEFAULT_CONFIG = {
   animations: {
     enabled: true,
     content_duration: 420,
-    button_bounce_duration: 260,
+    button_bounce_duration: 320,
     launch_duration: SCENE_LAUNCH_DURATION,
   },
   styles: {
@@ -213,23 +213,11 @@ function formatEditorHexChannel(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorColorFromHex(hex, alpha = 1) {
@@ -731,10 +719,22 @@ class NodaliaScenesCard extends HTMLElement {
   }
 
   _getRenderSignature() {
-    const entries = resolveSceneEntries(this._config, this._hass);
+    const config = this._config || {};
+    const entries = resolveSceneEntries(config, this._hass);
+    const sceneStamp = (Array.isArray(config.scenes) ? config.scenes : [])
+      .map(item => (typeof item === "string" ? item : `${item?.entity || ""}:${item?.tint || ""}`))
+      .join("|");
+    const styles = config.styles || {};
     return [
       CARD_VERSION,
-      JSON.stringify(this._config),
+      config.layout || "grid",
+      config.columns ?? 3,
+      config.name || "",
+      config.language || "auto",
+      config.show_title !== false,
+      styles.accent || "",
+      styles.icon?.size || "",
+      sceneStamp,
       entries.map(entry => `${entry.entity}:${entry.unavailable}:${entry.accent}`).join("|"),
     ].join("::");
   }
@@ -984,6 +984,15 @@ class NodaliaScenesCard extends HTMLElement {
     const iconSize = parseSizeToPixels(styles.icon.size, 44);
     const listIconSize = Math.max(42, iconSize - 2);
     const bubbleSize = isList ? listIconSize : Math.max(46, iconSize + 2);
+    const darkenBubbleIconGlyph = Boolean(
+      window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(
+        { entity_id: entry.entity || "scene.placeholder" },
+        entry.accent,
+      ),
+    );
+    const iconGlyphColor = darkenBubbleIconGlyph
+      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${entry.accent})`
+      : entry.accent;
     const tileClass = isList ? "scenes-card__tile scenes-card__tile--list" : "scenes-card__tile scenes-card__tile--grid";
     return `
       <div
@@ -994,7 +1003,7 @@ class NodaliaScenesCard extends HTMLElement {
         data-unavailable="${entry.unavailable ? "true" : "false"}"
         ${entry.unavailable ? 'aria-disabled="true"' : ""}
         aria-label="${escapeHtml(entry.label)}"
-        style="--scene-accent: ${escapeHtml(entry.accent)}; --scene-bubble-size: ${bubbleSize}px;"
+        style="--scene-accent: ${escapeHtml(entry.accent)}; --scene-icon-glyph: ${escapeHtml(iconGlyphColor)}; --scene-bubble-size: ${bubbleSize}px;"
       >
         <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
         <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
@@ -1025,7 +1034,6 @@ class NodaliaScenesCard extends HTMLElement {
     const config = this._config || {};
     const entries = resolveSceneEntries(config, this._hass);
     if (!entries.length) {
-      this._lastRenderSignature = `empty:${JSON.stringify(config.scenes || [])}`;
       this.shadowRoot.innerHTML = this._renderEmptyState();
       return;
     }
@@ -1370,7 +1378,7 @@ class NodaliaScenesCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
             0 12px 24px color-mix(in srgb, var(--scene-accent) 22%, rgba(0, 0, 0, 0.18));
-          color: var(--scene-accent);
+          color: var(--scene-icon-glyph, var(--scene-accent));
           display: inline-flex;
           flex: 0 0 auto;
           height: var(--scene-bubble-size);

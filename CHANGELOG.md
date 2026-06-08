@@ -4,21 +4,20 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, and completed **`1.2.0-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, and active **`1.2.1-beta.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
-Maintenance toward the next **`1.2.x`** patch or **`1.3.0`** feature release.
+Maintenance toward stable **`1.2.1`** (stability, visual coherence, performance).
 
 ### Planned / In progress
 
-- Bug fixes and compatibility patches.
-- Performance and rendering improvements.
-- Security and service-action hardening.
-- Editor and localization refinements.
-- Home Assistant frontend compatibility updates.
+- Bubble icon contrast alignment across light, climate, and scenes cards.
+- Graph and power-flow render-path optimizations.
+- Async lifecycle guards on advance vacuum and graph cards.
+- Security hardening (calendar editor paths, vacuum webhooks).
 
 ## [1.2.0] - 2026-06-06
 

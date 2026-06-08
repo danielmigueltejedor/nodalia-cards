@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -726,6 +726,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._clearOptimisticToggleTimer();
     this._clearOptimisticVisualSettleTimer();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -1524,9 +1525,18 @@ class NodaliaHumidifierCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -1960,7 +1970,12 @@ class NodaliaHumidifierCard extends HTMLElement {
       };
 
       panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeRemoval, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      }
     };
     const appendPanel = () => {
       if (!panelMarkup) {
@@ -1981,11 +1996,17 @@ class NodaliaHumidifierCard extends HTMLElement {
       }
 
       controlsInner.appendChild(panelNode);
-      window.setTimeout(() => {
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const finalizeEnter = () => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("humidifier-card__panel-shell--entering");
         }
-      }, animations.panelDuration + 80);
+      };
+      if (typeof schedule === "function") {
+        schedule(this, finalizeEnter, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeEnter, animations.panelDuration + 80);
+      }
     };
 
     if (!nextPanelKey) {

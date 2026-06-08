@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -560,6 +560,7 @@ class NodaliaCoverCard extends HTMLElement {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -716,7 +717,18 @@ class NodaliaCoverCard extends HTMLElement {
     element.classList.remove("is-pressing");
     element.getBoundingClientRect();
     element.classList.add("is-pressing");
-    window.setTimeout(() => element.classList.remove("is-pressing"), animations.buttonBounceDuration + 40);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
+      element.classList.remove("is-pressing");
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _isServiceAllowed(serviceValue) {

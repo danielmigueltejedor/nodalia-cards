@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -797,8 +797,12 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
     this._lastRenderSignature = nextSignature;
+    const hadHistory = this._historySeries.length > 0;
+    const hasEntities = this._getEntityEntries().length > 0;
     this._requestHistory();
-    this._render();
+    if (!hasEntities || hadHistory) {
+      this._render();
+    }
   }
 
   getCardSize() {
@@ -1683,7 +1687,7 @@ class NodaliaGraphCard extends HTMLElement {
     try {
       const entityIds = this._getEntityEntries().map(entry => entry.entity);
       const raw = await this._fetchHistory(start, end, entityIds, controller.signal);
-      if (controller.signal.aborted) {
+      if (!this.isConnected || controller.signal.aborted) {
         return;
       }
 
@@ -1700,7 +1704,7 @@ class NodaliaGraphCard extends HTMLElement {
       }
 
       const statisticsRaw = await this._fetchStatistics(start, end, entityIds);
-      if (controller.signal.aborted) {
+      if (!this.isConnected || controller.signal.aborted) {
         return;
       }
 
@@ -1712,7 +1716,7 @@ class NodaliaGraphCard extends HTMLElement {
       this._animateChartOnNextRender = true;
       this._render();
     } catch (_error) {
-      if (controller.signal.aborted) {
+      if (!this.isConnected || controller.signal.aborted) {
         return;
       }
 

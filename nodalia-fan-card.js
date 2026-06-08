@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -710,6 +710,7 @@ class NodaliaFanCard extends HTMLElement {
     this._pendingDragUpdate = null;
     this._clearOptimisticToggleTimer();
     this._clearOptimisticVisualSettleTimer();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -1410,9 +1411,18 @@ class NodaliaFanCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -1826,7 +1836,12 @@ class NodaliaFanCard extends HTMLElement {
       };
 
       panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeRemoval, animations.presetDuration + 80);
+      } else {
+        window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
+      }
     };
     const appendPanel = () => {
       if (!panelMarkup) {
@@ -1847,11 +1862,17 @@ class NodaliaFanCard extends HTMLElement {
       }
 
       controlsInner.appendChild(panelNode);
-      window.setTimeout(() => {
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const finalizeEnter = () => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("fan-card__preset-panel-shell--entering");
         }
-      }, animations.presetDuration + 80);
+      };
+      if (typeof schedule === "function") {
+        schedule(this, finalizeEnter, animations.presetDuration + 80);
+      } else {
+        window.setTimeout(finalizeEnter, animations.presetDuration + 80);
+      }
     };
 
     if (!this._presetPanelOpen) {

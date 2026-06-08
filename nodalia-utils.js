@@ -1059,6 +1059,30 @@
     }
   }
 
+  function clearDeferTimers(host) {
+    const timers = host?._nodaliaDeferTimers;
+    if (!timers?.size) {
+      return;
+    }
+    timers.forEach(timer => window.clearTimeout(timer));
+    timers.clear();
+  }
+
+  function scheduleDeferTimer(host, callback, delayMs) {
+    if (!host || typeof window === "undefined" || typeof callback !== "function") {
+      return 0;
+    }
+    if (!host._nodaliaDeferTimers) {
+      host._nodaliaDeferTimers = new Set();
+    }
+    const timer = window.setTimeout(() => {
+      host._nodaliaDeferTimers?.delete(timer);
+      callback();
+    }, delayMs);
+    host._nodaliaDeferTimers.add(timer);
+    return timer;
+  }
+
   const api = {
     isObject,
     isUnsafeConfigPathKey,
@@ -1088,6 +1112,8 @@
     renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
+    scheduleDeferTimer,
+    clearDeferTimers,
   };
 
   if (typeof window !== "undefined") {

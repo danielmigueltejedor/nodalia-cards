@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -344,25 +344,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -802,6 +788,7 @@ class NodaliaLightCard extends HTMLElement {
     }
     this._modeTransition = null;
     this._pendingDragUpdate = null;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -1930,9 +1917,18 @@ class NodaliaLightCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _startModeSwitchTransition(nextMode, state = this._getState()) {
@@ -2845,6 +2841,8 @@ class NodaliaLightCard extends HTMLElement {
     const brightnessPercent = this._getBrightnessPercent(state);
     const currentKelvin = this._getCurrentKelvin(state);
     const accentColor = this._getAccentColor(state);
+    const darkenBubbleIconGlyph =
+      isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
@@ -3508,21 +3506,22 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__icon ha-icon {
+          --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           align-items: center;
+          color: ${
+            darkenBubbleIconGlyph
+              ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+              : (isOn ? styles.icon.on_color : styles.icon.off_color)
+          };
           display: inline-flex;
-          height: 22px;
+          height: calc(${styles.icon.size} * 0.46);
           justify-content: center;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 22px;
+          width: calc(${styles.icon.size} * 0.46);
           z-index: 1;
-        }
-
-        .light-card__icon ha-icon {
-          color: ${isOn ? styles.icon.color : styles.icon.off_color};
-          font-size: 26px;
         }
 
         .light-card__picture {

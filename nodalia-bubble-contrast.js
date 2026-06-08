@@ -18,7 +18,18 @@
     return entityId.includes(".") ? entityId.split(".")[0] : "";
   }
 
+  const RESOLVE_COLOR_CACHE_MAX = 256;
   const resolveEditorColorValueCache = new Map();
+
+  function setResolveEditorColorCache(key, value) {
+    if (resolveEditorColorValueCache.size >= RESOLVE_COLOR_CACHE_MAX) {
+      const oldestKey = resolveEditorColorValueCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        resolveEditorColorValueCache.delete(oldestKey);
+      }
+    }
+    resolveEditorColorValueCache.set(key, value);
+  }
 
   function resolveEditorColorValue(value) {
     const rawValue = String(value ?? "").trim();
@@ -36,7 +47,7 @@
     probe.style.color = "";
     probe.style.color = rawValue;
     if (!probe.style.color) {
-      resolveEditorColorValueCache.set(rawValue, rawValue);
+      setResolveEditorColorCache(rawValue, rawValue);
       return rawValue;
     }
 
@@ -44,7 +55,7 @@
     const resolved = getComputedStyle(probe).color;
     probe.remove();
     const result = resolved || rawValue;
-    resolveEditorColorValueCache.set(rawValue, result);
+    setResolveEditorColorCache(rawValue, result);
     return result;
   }
 

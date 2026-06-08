@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1-beta.2";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1514,6 +1514,9 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   _renderIfChanged(force = false) {
+    if (!this.isConnected) {
+      return;
+    }
     const next = this._getRenderSignature();
     if (!force && next === this._lastRenderSignature) {
       return;
@@ -1592,16 +1595,18 @@ class NodaliaCalendarCard extends HTMLElement {
         this._events = [];
         this._error = this._uiText("errors.loadEvents", "Could not load calendar events.");
       } finally {
-        if (refreshRunId !== this._refreshRunId) {
+        if (refreshRunId !== this._refreshRunId || !this.isConnected) {
           return;
         }
         this._loading = false;
         this._renderIfChanged(true);
-        this._scheduleRefresh();
+        if (this.isConnected) {
+          this._scheduleRefresh();
+        }
       }
     } finally {
       this._refreshInFlight = false;
-      if (this._refreshQueued) {
+      if (this._refreshQueued && this.isConnected) {
         this._refreshQueued = false;
         this._refreshEvents();
       }
@@ -4570,6 +4575,15 @@ class NodaliaCalendarCardEditor extends HTMLElement {
 
   _setFieldValue(targetConfig, field, value) {
     if (!field) {
+      return;
+    }
+    if (
+      !field.startsWith("calendars.") &&
+      typeof window !== "undefined" &&
+      window.NodaliaUtils &&
+      typeof window.NodaliaUtils.setByPath === "function"
+    ) {
+      window.NodaliaUtils.setByPath(targetConfig, field, value);
       return;
     }
     if (field.startsWith("calendars.")) {
