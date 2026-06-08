@@ -78,6 +78,7 @@ function loadClimateCardClass() {
       documentElement: { getAttribute() { return ""; } },
       querySelector() { return null; },
     },
+    HTMLInputElement: class {},
     HTMLElement: FakeHTMLElement,
     navigator: {},
     setTimeout,
