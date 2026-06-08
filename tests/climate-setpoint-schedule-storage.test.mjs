@@ -53,7 +53,7 @@ function buildWeeklySlots(blocksPerDay = 2) {
   return slots;
 }
 
-test("schedule storage prefers v3 binary and round-trips", () => {
+test("schedule storage prefers Path B compatible v2 packed payloads and round-trips", () => {
   const api = loadScheduleStorageApi();
   const schedule = {
     enabled: true,
@@ -70,7 +70,7 @@ test("schedule storage prefers v3 binary and round-trips", () => {
   const legacy = JSON.stringify(schedule);
   const compact = api.encodeSetpointScheduleStorageState(schedule);
   const parsed = JSON.parse(compact);
-  assert.ok(parsed.v === 2 || parsed.v === 3, `expected v2 or v3, got v${parsed.v}`);
+  assert.equal(parsed.v, 2, "v2 should be preferred while it fits Path B automations");
   assert.ok(compact.length <= 255);
 
   const restored = api.decodeSetpointScheduleStorageState(compact);
@@ -94,10 +94,10 @@ test("fourteen weekly blocks fit within input_text 255 character limit", () => {
   const api = loadScheduleStorageApi();
   const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots: buildWeeklySlots(2) });
   assert.ok(compact.length <= 255, `expected <=255 chars, got ${compact.length}: ${compact}`);
-  assert.equal(JSON.parse(compact).v, 3, "fourteen blocks should use v3 binary");
+  assert.equal(JSON.parse(compact).v, 2, "fourteen blocks should stay compatible with Path B");
 });
 
-test("forty weekly blocks fit within input_text 255 character limit", () => {
+test("storage falls back to v3 binary only when v2 packed would exceed the limit", () => {
   const api = loadScheduleStorageApi();
   const slots = [];
   for (let day = 0; day < 7; day += 1) {
@@ -126,6 +126,29 @@ test("forty weekly blocks fit within input_text 255 character limit", () => {
 
   const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots: slots.slice(0, 40) });
   assert.ok(compact.length <= 255, `expected <=255 chars for 40 slots, got ${compact.length}: ${compact}`);
+  assert.equal(JSON.parse(compact).v, 3, "larger schedules may use v3 once v2 no longer fits");
   const restored = api.decodeSetpointScheduleStorageState(compact);
   assert.equal(restored.slots.length, 40);
+});
+
+test("storage leaves oversized schedules detectable before helper writes", () => {
+  const api = loadScheduleStorageApi();
+  const slots = [];
+  for (let index = 0; index < 70; index += 1) {
+    const startHour = 6 + (index % 12);
+    slots.push({
+      id: `slot_${index}`,
+      day: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"][index % 7],
+      start: `${String(startHour).padStart(2, "0")}:00`,
+      end: `${String(Math.min(startHour + 1, 23)).padStart(2, "0")}:00`,
+      temperature: 18 + (index % 6),
+      enabled: true,
+    });
+  }
+
+  const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots });
+  assert.ok(
+    compact.length > 255,
+    `expected oversized compact payload to be detected by save guard, got ${compact.length}: ${compact}`,
+  );
 });

@@ -1032,6 +1032,16 @@ function encodeSetpointScheduleStorageState(schedule) {
 
   const withinLimit = candidates.filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
   if (withinLimit.length) {
+    const pathBCompatible = withinLimit.filter(candidate => {
+      try {
+        return Number(JSON.parse(candidate)?.v) !== SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY;
+      } catch (_error) {
+        return true;
+      }
+    });
+    if (pathBCompatible.length) {
+      return pathBCompatible.sort((left, right) => left.length - right.length)[0];
+    }
     return withinLimit.sort((left, right) => left.length - right.length)[0];
   }
 
@@ -1941,6 +1951,15 @@ class NodaliaClimateCard extends HTMLElement {
       friendlyName: this._getClimateName(state),
       cardVersion: CARD_VERSION,
     });
+    if (String(body.storage_state ?? "").length > SETPOINT_SCHEDULE_INPUT_TEXT_MAX) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.storageTooLarge",
+          "This weekly schedule is too large for the input_text helper. Reduce the number of blocks or use the Path A automation setup.",
+        ),
+      );
+      return;
+    }
 
     this._scheduleComposerSaving = true;
     this._scheduleComposerError = "";

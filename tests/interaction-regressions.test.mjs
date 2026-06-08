@@ -1071,6 +1071,64 @@ test("climate schedule save posts webhook without requiring live climate state",
   assert.match(source, /window\.NodaliaUtils\.postHomeAssistantWebhook/);
 });
 
+test("climate schedule save blocks oversized helper state before webhook", async () => {
+  const ClimateCard = loadClimateCardClass();
+  const card = new ClimateCard();
+  Object.defineProperty(card, "isConnected", { value: true, configurable: true });
+  card.setConfig({
+    entity: "climate.living_room",
+    setpoint_schedule_webhook: "nodalia_climate_setpoint_schedule",
+    setpoint_schedule_helper: "input_text.nodalia_climate_schedule_living_room",
+  });
+
+  let webhookPosts = 0;
+  let helperWrites = 0;
+  card._hass = {
+    user: { is_admin: true },
+    states: {
+      "climate.living_room": {
+        entity_id: "climate.living_room",
+        state: "heat",
+        attributes: {
+          friendly_name: "Living room",
+          current_temperature: 20,
+          temperature: 21,
+          min_temp: 5,
+          max_temp: 35,
+          target_temp_step: 0.5,
+        },
+      },
+    },
+    callService() {
+      helperWrites += 1;
+    },
+  };
+  card._postScheduleWebhookPayload = async () => {
+    webhookPosts += 1;
+    return true;
+  };
+
+  const slots = [];
+  for (let index = 0; index < 70; index += 1) {
+    const startHour = 6 + (index % 12);
+    slots.push({
+      id: `slot_${index}`,
+      day: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"][index % 7],
+      start: `${String(startHour).padStart(2, "0")}:00`,
+      end: `${String(Math.min(startHour + 1, 23)).padStart(2, "0")}:00`,
+      temperature: 18 + (index % 6),
+      enabled: true,
+    });
+  }
+  card._setScheduleComposerDraft({ enabled: true, slots }, { render: false });
+
+  await card._submitScheduleComposer();
+
+  assert.equal(webhookPosts, 0);
+  assert.equal(helperWrites, 0);
+  assert.match(card._scheduleComposerError, /too large for the input_text helper/);
+});
+
 test("climate card defaults webhook access to admin-only", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /allow_webhooks_for_non_admin: false/);
