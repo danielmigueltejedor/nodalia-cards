@@ -173,6 +173,13 @@
     "recently played tracks": "Brani recenti",
     "browseFallback": "Elemento"
   },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
+  },
   "vacuumSimple": {
     "quiet": "Silenzioso",
     "silent": "Silenzioso",
@@ -207,9 +214,19 @@
     "unavailable": "Non disponibile",
     "unknown": "Sconosciuto",
     "noState": "Nessuno stato",
-    "fallbackName": "Ventilatore"
+    "fallbackName": "Ventilatore",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Set `entity` to a `fan.*` entity to show this card.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "lightCard": {
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Set `entity` to a `light.*` entity to show this card.",
     "controlModes": {
       "brightness": "Show brightness",
       "temperature": "Show temperature",
@@ -228,7 +245,17 @@
   },
   "common": {
     "aria": {
-      "togglePower": "Turn on or off"
+      "togglePower": "Turn on or off",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
     }
   },
   "alarmPanel": {
@@ -296,6 +323,8 @@
     "moods": "moods"
   },
   "entityCard": {
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Set `entity` to show this card.",
     "binarySensor": {
       "doorOpen": "Aperta",
       "doorClosed": "Chiusa",
@@ -370,6 +399,8 @@
     }
   },
   "weatherCard": {
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Set `entity` to show the weather.",
     "conditions": {
       "clear_night": "Cielo sereno",
       "cloudy": "Nuvoloso",
@@ -448,6 +479,13 @@
     }
   },
   "humidifierCard": {
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Set `entity` to a `humidifier.*` entity to show this card.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
+    },
     "modes": {
       "auto": "Auto",
       "automatic": "Auto",
@@ -484,6 +522,8 @@
     }
   },
   "climateCard": {
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Set `entity` to a `climate.*` entity to show this card.",
     "modes": {
       "off": "Spento",
       "heat": "Caldo",
@@ -542,7 +582,39 @@
     }
   },
   "graphCard": {
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Set `entities` to one or more numeric entities to show the chart.",
     "emptyHistory": "Nessuno storico disponibile"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Set `entity` to a numeric entity to show the dial."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Set `entity` to a `vacuum.*` entity to show this card."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configure `entity` or basic content to show the badge."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Set `entity` or `players` to show a player.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
   },
   "notificationsCard": {
     "fallbackEvent": "Evento",
@@ -617,6 +689,8 @@
     }
   },
   "favCard": {
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Set `entity` to show the favorite.",
     "disarmedF": "Disattivato",
     "armed_home": "Casa",
     "armed_away": "Fuori",
