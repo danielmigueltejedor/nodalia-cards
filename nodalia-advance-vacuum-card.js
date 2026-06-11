@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -3151,72 +3151,78 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         .join("|")
       : "";
 
-    return JSON.stringify({
-      vacuum: {
-        state: String(state?.state || ""),
-        lastUpdated: String(state?.last_updated || ""),
-        battery: Number(state?.attributes?.battery_level ?? -1),
-        fanSpeed: String(state?.attributes?.fan_speed || ""),
-        icon: String(this._getIcon() || ""),
-        name: String(this._getName() || ""),
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const sections = [
+      {
+        prefix: "vac:",
+        values: [
+          state?.state || "",
+          state?.last_updated || "",
+          state?.attributes?.battery_level ?? -1,
+          state?.attributes?.fan_speed || "",
+          this._getIcon() || "",
+          this._getName() || "",
+        ],
       },
-      map: {
-        entity: String(mapEntityId || ""),
-        state: String(mapState?.state || ""),
-        lastUpdated: String(mapState?.last_updated || ""),
-        picture: mapPicture,
+      {
+        prefix: "map:",
+        values: [mapEntityId || "", mapState?.state || "", mapState?.last_updated || "", mapPicture],
       },
-      sharedSession: {
-        entity: String(sharedSessionEntityId || ""),
-        webhook: String(this._config?.shared_cleaning_session_webhook || "").trim(),
-        state: String(sharedSessionState?.state || ""),
-        lastUpdated: String(sharedSessionState?.last_updated || ""),
+      {
+        prefix: "session:",
+        values: [
+          sharedSessionEntityId || "",
+          this._config?.shared_cleaning_session_webhook || "",
+          sharedSessionState?.state || "",
+          sharedSessionState?.last_updated || "",
+        ],
       },
-      calibration: this._getCalibrationSignatureFragment(hass),
-      activeMode: String(this._activeMode || ""),
-      activeCleaningSessionMode: String(this._activeCleaningSessionMode || ""),
-      transientZoneReturnMode: String(this._transientZoneReturnMode || ""),
-      activeUtilityPanel: String(this._activeUtilityPanel || ""),
-      activeModePanelPreset: String(this._activeModePanelPreset || ""),
-      activeDockPanelSection: String(this._activeDockPanelSection || ""),
-      selectedRooms: this._selectedRoomIds.join("|"),
-      activeCleaningRooms: this._activeCleaningRoomIds.join("|"),
-      activeCleaningZones: this._activeCleaningZones.map(zone => `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`).join("|"),
-      currentRoom: currentRoomId,
-      selectedZones: this._selectedPredefinedZoneIds.join("|"),
-      manualZones: this._manualZones.length,
-      goto: this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
-      repeats: Number(this._repeats || 1),
-      dimensions: `${this._mapImageWidth}x${this._mapImageHeight}`,
-      modes: {
-        suction: suctionDescriptor
-          ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}`
-          : "",
-        mop: mopDescriptor
-          ? `${mopDescriptor.service}:${mopDescriptor.target}:${mopDescriptor.current}:${mopDescriptor.options.join("|")}`
-          : "",
-        mopMode: mopModeDescriptor
-          ? `${mopModeDescriptor.service}:${mopModeDescriptor.target}:${mopModeDescriptor.current}:${mopModeDescriptor.options.join("|")}`
-          : "",
-      },
-      dock: {
-        controls: dockControlDescriptors.map(descriptor => `${descriptor.id}:${descriptor.target}:${descriptor.active ? "1" : "0"}`).join("|"),
-        settings: dockSettingDescriptors.map(descriptor => `${descriptor.id}:${descriptor.target}:${descriptor.current}:${descriptor.options.join("|")}`).join("|"),
-      },
-      routines: routineSignature,
-      ui: {
-        cfgLang: String(this._config?.language ?? "auto"),
-        resolvedLang: String(
+      {
+        prefix: "ui:",
+        values: [
+          this._activeMode || "",
+          this._activeCleaningSessionMode || "",
+          this._transientZoneReturnMode || "",
+          this._activeUtilityPanel || "",
+          this._activeModePanelPreset || "",
+          this._activeDockPanelSection || "",
+          this._selectedRoomIds.join("|"),
+          this._activeCleaningRoomIds.join("|"),
+          this._activeCleaningZones.map(zone => `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`).join("|"),
+          currentRoomId,
+          this._selectedPredefinedZoneIds.join("|"),
+          this._manualZones.length,
+          this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
+          this._repeats || 1,
+          `${this._mapImageWidth}x${this._mapImageHeight}`,
+          JSON.stringify(this._getCalibrationSignatureFragment(hass)),
+          suctionDescriptor
+            ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}`
+            : "",
+          mopDescriptor
+            ? `${mopDescriptor.service}:${mopDescriptor.target}:${mopDescriptor.current}:${mopDescriptor.options.join("|")}`
+            : "",
+          mopModeDescriptor
+            ? `${mopModeDescriptor.service}:${mopModeDescriptor.target}:${mopModeDescriptor.current}:${mopModeDescriptor.options.join("|")}`
+            : "",
+          dockControlDescriptors.map(d => `${d.id}:${d.target}:${d.active ? "1" : "0"}`).join("|"),
+          dockSettingDescriptors.map(d => `${d.id}:${d.target}:${d.current}:${d.options.join("|")}`).join("|"),
+          routineSignature,
+          this._config?.language ?? "auto",
           typeof window !== "undefined"
             ? window.NodaliaI18n?.resolveLanguage?.(
                 hass ?? window.NodaliaI18n?.resolveHass?.(null),
                 this._config?.language ?? "auto",
               ) ?? ""
             : "",
-        ),
-        i18nLoaded: Boolean(typeof window !== "undefined" && window.NodaliaI18n?.strings),
+          Boolean(typeof window !== "undefined" && window.NodaliaI18n?.strings),
+        ],
       },
-    });
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts(sections);
+    }
+    return sections.map(section => `${section.prefix}${section.values.map(v => String(v ?? "")).join(":")}`).join("||");
   }
 
   _updateCalibration() {

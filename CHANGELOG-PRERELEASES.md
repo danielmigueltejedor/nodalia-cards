@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), and active **`1.2.1-beta.*`** prereleases.
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), and active **`1.2.1-alpha.*`** prereleases.
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -10,9 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.1-beta.2] - 2026-06-06
+## [1.2.1-alpha.3] - 2026-06-06
 
-Second **`1.2.1`** **`beta`**: deferred-timer lifecycle, render-path polish, and visual coherence. Release channel **`1.2.1-beta.2`**.
+Third **`1.2.1`** **`alpha`**: audit pass 3 — async lifecycle, render signatures, graph hover, security defaults, shared color resolver. Release channel **`1.2.1-alpha.3`**.
+
+### Fixed
+
+- **`nodalia-media-player.js`:** `isConnected` guards after media-browser async; volume step loop aborts on disconnect; progress ticker avoids full render until 3 consecutive DOM misses.
+- **`nodalia-climate-card.js`:** post-`await` guards on temperature/range commits; `_commitAborted` on disconnect; schedule draft uses revision counter instead of full object in render signature.
+- **`nodalia-notifications-card.js`:** cached calendar/weather signature stamps; `isConnected` guards in refresh loops and mobile notify flush; deferred press-animation timers.
+- **`nodalia-graph-card.js`:** hover tooltip/line DOM patch without full chart re-render; cached history request key; deferred button-bounce timers.
+
+### Changed
+
+- **Render signatures:** **`joinParts`** / pipe stamps on advance-vacuum, climate, cover, vacuum, and fav cards (no hot-path **`JSON.stringify`**).
+- **`nodalia-bubble-contrast.js` delegates:** calendar, graph, media-player, cover, vacuum, fav, alarm, person, weather, circular-gauge editors use cached shared resolver.
+- **`security.strict_service_actions`:** default **`false`** (opt-in) on media-player, navigation-bar, climate, and vacuum; climate/vacuum gate **`callService`** when strict mode enabled.
+- **`nodalia-calendar-card.js`:** editor **`styles.*` / `animations.*` / `haptics.*`** paths use guarded **`NodaliaUtils.setByPath`**.
+
+## [1.2.1-alpha.2] - 2026-06-06
+
+Second **`1.2.1`** **`alpha`**: deferred-timer lifecycle, render-path polish, and visual coherence. Release channel **`1.2.1-alpha.2`**.
 
 ### Fixed
 
@@ -28,9 +46,9 @@ Second **`1.2.1`** **`beta`**: deferred-timer lifecycle, render-path polish, and
 - **`nodalia-bubble-contrast.js`:** editor color cache capped at **256** entries.
 - **`nodalia-light-card.js` / `climate` / `scenes` / `power-flow`:** editors delegate **`resolveEditorColorValue`** to shared cached resolver.
 
-## [1.2.1-beta.1] - 2026-06-06
+## [1.2.1-alpha.1] - 2026-06-06
 
-First **`1.2.1`** **`beta`**: stability, visual coherence, and performance pass on top of stable **`1.2.0`**. Release channel **`1.2.1-beta.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1-beta.1.js`**, and **`CARD_VERSION`** on bundled card modules.
+First **`1.2.1`** **`alpha`**: stability, visual coherence, and performance pass on top of stable **`1.2.0`**. Release channel **`1.2.1-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1-alpha.1.js`**, and **`CARD_VERSION`** on bundled card modules.
 
 ### Fixed
 

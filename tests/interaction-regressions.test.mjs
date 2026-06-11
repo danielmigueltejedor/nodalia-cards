@@ -523,6 +523,7 @@ test("climate queued wake commits include hvac_mode in set_temperature", async (
   card.disconnectedCallback();
 
   calls.length = 0;
+  card._commitAborted = false;
   card._hass.states["climate.ecobee"].attributes.hvac_modes = ["off"];
   const direct = card._queueTemperatureCommit(22, {
     hvacWake: true,
@@ -1255,10 +1256,12 @@ test("numeric display cards use Home Assistant locale instead of hardcoded Spani
   });
 });
 
-test("climate render signature tracks temperature drafts", () => {
+test("climate render signature tracks temperature drafts via revision counter", () => {
   const source = read("nodalia-climate-card.js");
-  assert.match(source, /hasTemperatureDraft: Boolean\(/);
   assert.match(source, /this\._draftTemperature\.has\(entityId\) \|\| this\._draftTempRange\.has\(entityId\)/);
+  assert.match(source, /_scheduleDraftRevision/);
+  assert.match(source, /joinParts\(\[\{ prefix: "climate:", values \}\]\)/);
+  assert.doesNotMatch(source, /JSON\.stringify\(this\._scheduleComposerDraft\)/);
 });
 
 test("fan and humidifier re-render when optimistic toggle is confirmed during animation", () => {

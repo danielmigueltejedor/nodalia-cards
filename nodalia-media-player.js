@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -171,6 +171,11 @@ const DEFAULT_CONFIG = {
     panel_duration: 700,
     browser_duration: 760,
     button_bounce_duration: 320,
+  },
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
   },
   layout: {
     fixed: false,
@@ -404,25 +409,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function resolveColorInContext(contextNode, value) {
@@ -1794,9 +1785,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     const stepCount = clamp(Math.round(Math.abs(delta) / 6), 1, 12);
 
     for (let index = 0; index < stepCount; index += 1) {
+      if (!this.isConnected) {
+        break;
+      }
       try {
         await this._hass.callService("media_player", service, { entity_id: entityId });
       } catch (_error) {
+        break;
+      }
+
+      if (!this.isConnected) {
         break;
       }
 
@@ -1932,8 +1930,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         const updated = this._updateProgressTick(players);
-        if (!updated) {
-          this._render();
+        if (!updated && this.isConnected) {
+          this._progressTickMisses = (this._progressTickMisses || 0) + 1;
+          if (this._progressTickMisses >= 3) {
+            this._progressTickMisses = 0;
+            this._render();
+          }
+        } else {
+          this._progressTickMisses = 0;
         }
       }, 1000);
       return;
@@ -2640,7 +2644,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     try {
       const rootNode = await this._fetchMediaBrowserNode(entityId);
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2656,7 +2660,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2701,7 +2705,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         mediaContentId,
       );
 
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 
@@ -2717,7 +2721,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token) {
+      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
         return;
       }
 

@@ -14,12 +14,12 @@ Current stable release:
 1.2.0
 ```
 
-## Beta preview
+## Alpha preview
 
-Current beta (stability / coherence pass):
+Current alpha (stability / coherence pass):
 
 ```text
-1.2.1-beta.2
+1.2.1-alpha.3
 ```
 
 The **`1.2.1`** line focuses on **stability**, **visual coherence**, and **render performance** on top of stable **`1.2.0`** (Scenes Card, climate setpoint schedule, Power Flow home popup, interaction/security hardening).

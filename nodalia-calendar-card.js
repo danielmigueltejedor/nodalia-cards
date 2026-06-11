@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -523,25 +523,11 @@ function supportedWeatherForecastTypes(state) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -4623,36 +4609,6 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       };
       return;
     }
-    if (field.startsWith("styles.")) {
-      const parts = field.split(".");
-      let cursor = targetConfig;
-      for (let index = 0; index < parts.length - 1; index += 1) {
-        const key = parts[index];
-        if (!isObject(cursor[key])) {
-          cursor[key] = {};
-        }
-        cursor = cursor[key];
-      }
-      cursor[parts[parts.length - 1]] = value;
-      return;
-    }
-    if (field.startsWith("animations.")) {
-      const key = field.split(".")[1];
-      if (!isObject(targetConfig.animations)) {
-        targetConfig.animations = {};
-      }
-      targetConfig.animations[key] = value;
-      return;
-    }
-    if (field.startsWith("haptics.")) {
-      const key = field.split(".")[1];
-      if (!isObject(targetConfig.haptics)) {
-        targetConfig.haptics = {};
-      }
-      targetConfig.haptics[key] = value;
-      return;
-    }
-    targetConfig[field] = value;
   }
 
   _readFieldValue(input) {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -922,7 +922,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._calendarRefreshTimer = 0;
     this._calendarRefreshInFlight = false;
     this._lastCalendarRefresh = 0;
+    this._calendarEventsSignature = "";
     this._weatherForecasts = {};
+    this._weatherForecastsSignature = "";
     this._weatherRefreshTimer = 0;
     this._weatherRefreshInFlight = false;
     this._lastWeatherRefresh = 0;
@@ -1007,6 +1009,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationTimer);
       this._entranceAnimationTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -1385,8 +1388,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     const events = [];
     try {
       for (const entityId of this._config.calendar_entities) {
+        if (!this.isConnected) {
+          return;
+        }
         const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
         const raw = await this._hass.callApi("GET", path);
+        if (!this.isConnected) {
+          return;
+        }
         normalizeCalendarFetchResult(raw).forEach(event => {
           events.push({ ...event, _entity: entityId });
         });
@@ -1399,6 +1408,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarEvents = events;
       this._calendarError = "";
       this._lastCalendarRefresh = Date.now();
+      this._rebuildCalendarEventsSignature();
     } catch (_error) {
       this._calendarEvents = [];
       this._calendarError = this._text("messages.calendarTodayLoadFailed", "Could not load today's calendar events.");
@@ -1472,10 +1482,12 @@ class NodaliaNotificationsCard extends HTMLElement {
       legacyForecasts();
       this._weatherForecasts = next;
       this._lastWeatherRefresh = Date.now();
+      this._rebuildWeatherForecastsSignature();
     } catch (_error) {
       legacyForecasts();
       this._weatherForecasts = next;
       this._lastWeatherRefresh = Date.now();
+      this._rebuildWeatherForecastsSignature();
     } finally {
       this._weatherRefreshInFlight = false;
       if (!this.isConnected) {
@@ -2304,10 +2316,13 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   async _flushMobileNotifications(items) {
-    if (!this._hass || typeof this._hass.callService !== "function") {
+    if (!this._hass || typeof this._hass.callService !== "function" || !this.isConnected) {
       return;
     }
     for (const item of items) {
+      if (!this.isConnected) {
+        return;
+      }
       const hash = this._dismissKey(item.id);
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
@@ -2459,6 +2474,24 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
   }
 
+  _rebuildCalendarEventsSignature() {
+    this._calendarEventsSignature = this._calendarEvents
+      .map(event => {
+        const start = calendarEventDate(event.start);
+        const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
+        const uid = String(event.uid ?? event.id ?? "");
+        const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
+        return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
+      })
+      .join("|");
+  }
+
+  _rebuildWeatherForecastsSignature() {
+    this._weatherForecastsSignature = Object.entries(this._weatherForecasts || {})
+      .map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`)
+      .join("|");
+  }
+
   _getRenderSignature(hass = this._hass) {
     const parts = [
       CARD_VERSION,
@@ -2466,16 +2499,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       [...this._dismissed].join(","),
       this._calendarLoading ? "loading" : "",
       this._calendarError,
-      this._calendarEvents
-        .map(event => {
-          const start = calendarEventDate(event.start);
-          const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
-          const uid = String(event.uid ?? event.id ?? "");
-          const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
-          return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
-        })
-        .join("|"),
-      Object.entries(this._weatherForecasts || {}).map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`).join("|"),
+      this._calendarEventsSignature || "",
+      this._weatherForecastsSignature || "",
     ];
     parts.push(this._config.language || "auto");
     parts.push(
@@ -2540,9 +2565,18 @@ class NodaliaNotificationsCard extends HTMLElement {
     element.classList.remove("is-pressing");
     element.getBoundingClientRect();
     element.classList.add("is-pressing");
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _text(path, fallback = "", values = {}) {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -239,23 +239,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -614,19 +602,22 @@ class NodaliaCoverCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const state = this._getState(hass);
     const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId: this._config?.entity || "",
-      coverControlsViewMode: this._coverControlsViewMode,
-      state: state?.state || "",
-      attrs: {
-        friendly_name: attrs.friendly_name || "",
-        icon: attrs.icon || "",
-        device_class: attrs.device_class || "",
-        current_position: attrs.current_position ?? "",
-        current_tilt_position: attrs.current_tilt_position ?? "",
-        supported_features: attrs.supported_features ?? "",
-      },
-    });
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      this._config?.entity || "",
+      this._coverControlsViewMode,
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      attrs.device_class || "",
+      attrs.current_position ?? "",
+      attrs.current_tilt_position ?? "",
+      attrs.supported_features ?? "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "cover:", values }]);
+    }
+    return values.join("::");
   }
 
   _features(state = this._getState()) {

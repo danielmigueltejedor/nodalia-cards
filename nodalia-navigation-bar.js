@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -167,6 +167,11 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+  },
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
   },
   layout: {
     fixed: true,

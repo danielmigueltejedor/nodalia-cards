@@ -21,8 +21,36 @@ test("graph card uses non-JSON render signature strategy", () => {
   assert.doesNotMatch(source, /return JSON\.stringify\(\{\s*trackedStates/s);
 });
 
-test("media player render signature uses shared runtime helper", () => {
-  const source = read("nodalia-media-player.js");
-  assert.match(source, /getRenderSignatureRuntime\(/);
-  assert.match(source, /runtime\.joinParts\(/);
+test("cover climate vacuum fav and advance-vacuum use joinParts render signatures", () => {
+  for (const file of [
+    "nodalia-cover-card.js",
+    "nodalia-climate-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-advance-vacuum-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /joinParts/, `${file} should use joinParts`);
+    assert.doesNotMatch(source, /return JSON\.stringify\(\{[\s\S]*_getRenderSignature/s, `${file} should not JSON.stringify full render signature`);
+  }
+});
+
+test("graph card patches hover overlay without full render", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /_patchHoverOverlay\(\)/);
+  assert.match(source, /if \(!this\._hoverEntering && this\._patchHoverOverlay\(\)\)/);
+});
+
+test("notifications card caches calendar and weather signature stamps", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /_rebuildCalendarEventsSignature\(/);
+  assert.match(source, /_calendarEventsSignature/);
+  assert.match(source, /_weatherForecastsSignature/);
+});
+
+test("climate card gates external services when strict mode enabled", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.match(source, /_isServiceAllowed\(fullService\)/);
+  assert.match(source, /strict_service_actions === true/);
+  assert.match(source, /_scheduleDraftRevision/);
 });

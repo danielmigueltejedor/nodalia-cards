@@ -1,8 +1,8 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.2.1--beta.2-f59e0b)
-![Release channel](https://img.shields.io/badge/release%20channel-beta-f59e0b)
+![Package](https://img.shields.io/badge/package-1.2.1--alpha.3-f59e0b)
+![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -48,18 +48,24 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.2.1-beta
+# 🚀 What’s new in 1.2.1-alpha
 
-**Current beta `1.2.1-beta.2`** — stability, visual coherence, and performance pass on **`1.2.0`**. Match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1-beta.2.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Install from the **`beta`** branch (or HACS pre-release). Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current alpha `1.2.1-alpha.3`** — third stability/performance audit applied. Match **`nodalia-cards-1.2.1-alpha.3.js`**. Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
-### Beta.2 highlights
+### Alpha.3 highlights
+
+- Media-player / climate async guards; graph hover without full re-render.
+- Lighter render signatures (advance-vacuum, climate, cover, vacuum, fav).
+- Shared editor color resolver on 10 more cards; strict services opt-in on media/nav/climate/vacuum.
+
+### Alpha.2 highlights
 
 - Shared **`scheduleDeferTimer`** — press/panel timers cleared on card disconnect.
 - Scenes empty state: no redundant re-render on every HA poll.
 - Power-flow diagram nodes: per-tint icon contrast.
 - Calendar / notifications: async refresh respects disconnected lifecycle.
 
-### Beta.1 highlights
+### Alpha.1 highlights
 
 - Calendar editor: guarded config path updates (security).
 - Advance Vacuum: admin-only webhooks by default; async lifecycle guards on map actions.
@@ -356,7 +362,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-beta.2.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-alpha.3.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

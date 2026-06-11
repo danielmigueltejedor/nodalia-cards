@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.1-beta.2";
+const CARD_VERSION = "1.2.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -224,25 +224,11 @@ function deleteByPath(target, path) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -678,18 +664,23 @@ class NodaliaFavCard extends HTMLElement {
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      deviceClass: String(attrs.device_class || ""),
-      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      attrs.device_class || "",
+      attrs.unit_of_measurement || attrs.native_unit_of_measurement || "",
       helperEntityId,
-      helperState: String(helperState?.state || ""),
-      layout: String(this._layout || ""),
-      alarmOpen: Boolean(this._alarmMenuOpen),
-    });
+      helperState?.state || "",
+      this._layout || "",
+      this._alarmMenuOpen === true,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "fav:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
