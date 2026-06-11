@@ -29,6 +29,9 @@
     "renderEditorCollapsibleSectionHeaderHtml",
     "getEntityFriendlyName",
     "applyDefaultConfigNameFromEntity",
+    "coerceCardTapAction",
+    "applyCardTapActionField",
+    "invokeHomeAssistantService",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -670,6 +673,138 @@
   }
 
   const CARD_ZONE_DOUBLE_TAP_MS = 320;
+  const CARD_TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+
+  function normalizeTapActionToken(raw) {
+    return String(raw ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, "-");
+  }
+
+  /**
+   * Lovelace may store tap/hold actions as plain strings or HA action objects
+   * (`{ action: "toggle" }`, `{ action: "perform-action", perform_action: "..." }`).
+   */
+  function coerceCardTapAction(value, fallback = "auto") {
+    if (value === undefined || value === null || value === "") {
+      return fallback;
+    }
+    if (typeof value === "string") {
+      const key = normalizeTapActionToken(value);
+      return CARD_TAP_ACTIONS.has(key) ? key : fallback;
+    }
+    if (!isObject(value)) {
+      const key = normalizeTapActionToken(value);
+      if (!key || key === "[object object]") {
+        return fallback;
+      }
+      return CARD_TAP_ACTIONS.has(key) ? key : fallback;
+    }
+
+    let action = normalizeTapActionToken(value.action || value.perform_action || "");
+    if (action === "more-info-dialog") {
+      action = "more-info";
+    }
+    if (action === "open-url") {
+      action = "url";
+    }
+    if (action === "perform-action" || action === "call-service") {
+      const service = String(value.perform_action || value.service || "").trim().toLowerCase();
+      if (service === "homeassistant.toggle" || service.endsWith(".toggle")) {
+        return "toggle";
+      }
+      if (service) {
+        return "service";
+      }
+    }
+    if (action.includes(".")) {
+      if (action === "homeassistant.toggle" || action.endsWith(".toggle")) {
+        return "toggle";
+      }
+      return "service";
+    }
+    return CARD_TAP_ACTIONS.has(action) ? action : fallback;
+  }
+
+  function applyCardTapActionField(config, keys, rawValue, fallback) {
+    if (!isObject(config)) {
+      return;
+    }
+    const actionKey = keys.actionKey || "tap_action";
+    const serviceKey = keys.serviceKey || "tap_service";
+    const serviceDataKey = keys.serviceDataKey || "tap_service_data";
+    const urlKey = keys.urlKey || "tap_url";
+    const navigationKey = keys.navigationKey || "navigation_path";
+    const newTabKey = keys.newTabKey || "tap_new_tab";
+
+    config[actionKey] = coerceCardTapAction(rawValue, fallback);
+    if (!isObject(rawValue)) {
+      return;
+    }
+
+    const navigationPath = String(rawValue.navigation_path || rawValue.path || "").trim();
+    const urlPath = String(rawValue.url_path || rawValue.url || "").trim();
+    const service = String(rawValue.perform_action || rawValue.service || "").trim();
+    if (navigationPath && !String(config[navigationKey] || "").trim()) {
+      config[navigationKey] = navigationPath;
+      if (config[actionKey] === "auto") {
+        config[actionKey] = "navigate";
+      }
+    }
+    if (urlPath && !String(config[urlKey] || "").trim()) {
+      config[urlKey] = urlPath;
+      if (config[actionKey] === "auto") {
+        config[actionKey] = "url";
+      }
+    }
+    if (service && !String(config[serviceKey] || "").trim() && config[actionKey] !== "toggle") {
+      config[serviceKey] = service;
+      if (config[actionKey] === "auto") {
+        config[actionKey] = "service";
+      }
+    }
+    if (rawValue.service_data !== undefined && rawValue.service_data !== null && !String(config[serviceDataKey] || "").trim()) {
+      config[serviceDataKey] = typeof rawValue.service_data === "string"
+        ? rawValue.service_data
+        : JSON.stringify(rawValue.service_data);
+    }
+    if (rawValue.new_tab !== undefined) {
+      config[newTabKey] = rawValue.new_tab === true;
+    }
+  }
+
+  function invokeHomeAssistantService(host, hass, domain, service, serviceData = {}, target = null) {
+    if (!hass || !domain || !service) {
+      return Promise.resolve(false);
+    }
+    const payload = isObject(serviceData) ? serviceData : {};
+    if (typeof hass.callService === "function") {
+      try {
+        const result = target != null
+          ? hass.callService(domain, service, payload, target)
+          : hass.callService(domain, service, payload);
+        return Promise.resolve(result);
+      } catch (_err) {
+        return Promise.resolve(false);
+      }
+    }
+    if (host instanceof HTMLElement && typeof host.dispatchEvent === "function") {
+      host.dispatchEvent(new CustomEvent("hass-action", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          action: "call-service",
+          service: `${domain}.${service}`,
+          serviceData: payload,
+          data: payload,
+          target: target || undefined,
+        },
+      }));
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(false);
+  }
 
   function escapeLovelaceWarningText(text) {
     return String(text ?? "")
@@ -1135,6 +1270,9 @@
     renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
+    coerceCardTapAction,
+    applyCardTapActionField,
+    invokeHomeAssistantService,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,

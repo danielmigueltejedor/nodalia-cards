@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.2.1";
+const CARD_VERSION = "1.2.1.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -928,8 +928,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getCodeValue(state) {
-    if (this._shouldShowCodeInput(state)) {
-      return String(this._codeInput || "").trim();
+    const manualPin = String(this._codeInput || "").trim();
+    if (manualPin) {
+      return manualPin;
     }
 
     const helperEntityId = String(this._config?.code_entity || "").trim();
@@ -1110,18 +1111,24 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     };
 
     const requiresManualPin = this._shouldShowCodeInput(state);
-    const manualPin = String(this._codeInput || "").trim();
-    if (requiresManualPin && !manualPin) {
+    const code = this._getCodeValue(state);
+    if (requiresManualPin && !code) {
       this._triggerHaptic("warning");
+      const input = this.shadowRoot?.querySelector?.('input[data-alarm-field="code"]');
+      if (input instanceof HTMLInputElement) {
+        input.focus();
+      }
       return;
     }
 
-    const code = this._getCodeValue(state);
     if (code) {
       payload.code = code;
     }
 
+    const manualPin = String(this._codeInput || "").trim();
     const usedManualCode = requiresManualPin && manualPin !== "";
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, domain, svc, data) => Promise.resolve(hass?.callService?.(domain, svc, data)));
 
     this._triggerHaptic();
 
@@ -1150,8 +1157,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         }, pinVerifyMs),
       };
 
-      const promise = this._hass.callService("alarm_control_panel", service, payload);
-      Promise.resolve(promise)
+      Promise.resolve(invoke(this, this._hass, "alarm_control_panel", service, payload))
         .then(() => {
           if (!this.isConnected) {
             return;
@@ -1166,7 +1172,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           this._showNativePinErrorChip();
         });
     } else {
-      this._hass.callService("alarm_control_panel", service, payload);
+      Promise.resolve(invoke(this, this._hass, "alarm_control_panel", service, payload)).catch(() => {
+        if (!this.isConnected) {
+          return;
+        }
+        this._showNativePinErrorChip();
+      });
     }
   }
 

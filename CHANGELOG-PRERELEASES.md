@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), and completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), and **`1.2.1.1-alpha.*`** hotfix prereleases.
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,21 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.2.1.1-alpha.1] - 2026-05-29
+
+First **`1.2.1.1`** hotfix **`alpha`**: entity-card toggles, person i18n, alarm PIN flow. Release channel **`1.2.1.1-alpha.1`**.
+
+### Fixed
+
+- **`entity`:** Lovelace visual-editor `tap_action` objects (`{ action: "toggle" }`) no longer stringify to `"[object Object]"` and fall back to `auto` / more-info; cover/lock toggles work again.
+- **`entity`:** `homeassistant.toggle` / `turn_on` / `turn_off` allowed when security lists are empty; service calls use `invokeHomeAssistantService` (`callService` + `hass-action` fallback).
+- **`entity` / `i18n`:** `language: "auto"` resolves from root hass + document `lang` instead of stale `hass.language`; person `home` / `en_casa` / `casa` states translate with the active locale.
+- **`alarm-panel`:** Home/Away/Night arm when `code` or `code_entity` is configured (Alarmo `code_format` no longer blocks configured PINs); missing manual PIN focuses the code field; service calls use `invokeHomeAssistantService` with error handling.
+
+### Changed
+
+- **`utils`:** `coerceCardTapAction`, `applyCardTapActionField`, and `invokeHomeAssistantService` shared helpers for Lovelace action objects and HA service dispatch.
 
 ## [1.2.1-alpha.8] - 2026-06-11
 

@@ -306,6 +306,33 @@ test("i18n person home aliases translate with active language", () => {
     i18n.translateEntityState("es", { ...state, state: "casa" }, 2, (v, u, d) => `${v}${u}`, (v) => String(v), () => null),
     "En casa",
   );
+  assert.equal(
+    i18n.translateEntityState("en", { ...state, state: "home" }, 2, (v, u, d) => `${v}${u}`, (v) => String(v), () => null),
+    "Home",
+  );
+});
+
+test("i18n automatic language prefers document lang over stale hass.language inside HA", () => {
+  const i18n = loadI18nRuntime({
+    rootHass: { language: "es", states: {} },
+    docLang: "en",
+    navigatorLanguage: "es-ES",
+  });
+
+  assert.equal(i18n.resolveLanguage({ language: "es" }, "auto"), "en");
+});
+
+test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", () => {
+  const sandbox = { window: null };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  const { coerceCardTapAction } = sandbox.window.NodaliaUtils;
+
+  assert.equal(coerceCardTapAction({ action: "toggle" }), "toggle");
+  assert.equal(coerceCardTapAction({ action: "more-info" }), "more-info");
+  assert.equal(coerceCardTapAction({ perform_action: "homeassistant.toggle" }), "toggle");
+  assert.equal(coerceCardTapAction("[object Object]", "auto"), "auto");
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -858,13 +885,12 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel requires manual PIN when the code field is visible", () => {
+test("alarm panel resolves configured PIN before requiring manual entry", () => {
   const source = read("nodalia-alarm-panel-card.js");
-  assert.match(
-    source,
-    /if \(this\._shouldShowCodeInput\(state\)\) \{[\s\S]*return String\(this\._codeInput \|\| ""\)\.trim\(\);[\s\S]*\}[\s\S]*const helperEntityId/,
-  );
-  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
+  assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
+  assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
+  assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
+  assert.match(source, /invokeHomeAssistantService/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
@@ -1147,8 +1173,9 @@ test("entity card toggle uses homeassistant.toggle for cover and lock entities",
   const source = read("nodalia-entity-card.js");
   assert.match(source, /_isHomeAssistantToggleable\(state\)/);
   assert.match(source, /_canToggleEntity\(/);
-  assert.match(source, /callService\("homeassistant", "toggle", \{\s*entity_id: entityId,/);
+  assert.match(source, /invoke\(this, this\._hass, "homeassistant", "toggle", \{\s*entity_id: entityId,/);
   assert.match(source, /tapAction === "toggle"[\s\S]*_canToggleEntity\(this\._getActualState\(\)\)/);
+  assert.match(source, /applyCardTapActionField/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

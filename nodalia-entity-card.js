@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1";
+const CARD_VERSION = "1.2.1.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -68,10 +68,11 @@ const DEFAULT_CONFIG = {
   show_secondary_chip: true,
   compact_layout_mode: "auto",
   quick_actions: [],
+  language: "auto",
   security: {
-    strict_service_actions: true,
+    strict_service_actions: false,
     allowed_services: [],
-    allowed_service_domains: [],
+    allowed_service_domains: ["homeassistant"],
   },
   haptics: {
     enabled: true,
@@ -619,28 +620,65 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
-  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
-  const normTap = String(config.tap_action ?? "auto").trim().toLowerCase();
-  config.tap_action = TAP_ACTIONS.has(normTap) ? normTap : "auto";
-  const normHold = String(config.hold_action ?? "none").trim().toLowerCase();
-  config.hold_action = TAP_ACTIONS.has(normHold) ? normHold : "none";
-  const iconHoldStr = config.icon_hold_action === undefined || config.icon_hold_action === null
-    ? ""
-    : String(config.icon_hold_action).trim();
-  if (!iconHoldStr) {
-    config.icon_hold_action = "";
-  } else {
-    const n = iconHoldStr.toLowerCase();
-    config.icon_hold_action = TAP_ACTIONS.has(n) ? n : "";
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyTap === "function") {
+    applyTap(config, {
+      actionKey: "tap_action",
+      serviceKey: "tap_service",
+      serviceDataKey: "tap_service_data",
+      urlKey: "tap_url",
+      navigationKey: "navigation_path",
+      newTabKey: "tap_new_tab",
+    }, rawConfig?.tap_action ?? config.tap_action, "auto");
+    applyTap(config, {
+      actionKey: "hold_action",
+      serviceKey: "hold_service",
+      serviceDataKey: "hold_service_data",
+      urlKey: "hold_url",
+      navigationKey: "hold_navigation_path",
+      newTabKey: "hold_new_tab",
+    }, rawConfig?.hold_action ?? config.hold_action, "none");
+    applyTap(config, {
+      actionKey: "icon_tap_action",
+      serviceKey: "icon_tap_service",
+      serviceDataKey: "icon_tap_service_data",
+      urlKey: "icon_tap_url",
+      navigationKey: "icon_navigation_path",
+      newTabKey: "icon_tap_new_tab",
+    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+    applyTap(config, {
+      actionKey: "icon_hold_action",
+      serviceKey: "icon_hold_service",
+      serviceDataKey: "icon_hold_service_data",
+      urlKey: "icon_hold_url",
+      navigationKey: "icon_hold_navigation_path",
+      newTabKey: "icon_hold_new_tab",
+    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+    applyTap(config, {
+      actionKey: "double_tap_action",
+      serviceKey: "double_tap_service",
+      serviceDataKey: "double_tap_service_data",
+      urlKey: "double_tap_url",
+      navigationKey: "double_tap_navigation_path",
+      newTabKey: "double_tap_new_tab",
+    }, rawConfig?.double_tap_action ?? config.double_tap_action, "none");
+    applyTap(config, {
+      actionKey: "icon_double_tap_action",
+      serviceKey: "icon_double_tap_service",
+      serviceDataKey: "icon_double_tap_service_data",
+      urlKey: "icon_double_tap_url",
+      navigationKey: "icon_double_tap_navigation_path",
+      newTabKey: "icon_double_tap_new_tab",
+    }, rawConfig?.icon_double_tap_action ?? config.icon_double_tap_action, "");
   }
-  const iconTapStr = config.icon_tap_action === undefined || config.icon_tap_action === null
-    ? ""
-    : String(config.icon_tap_action).trim();
-  if (!iconTapStr) {
+  if (String(config.icon_tap_action || "").trim() === "") {
     config.icon_tap_action = "";
-  } else {
-    const normalizedIconTap = iconTapStr.toLowerCase();
-    config.icon_tap_action = TAP_ACTIONS.has(normalizedIconTap) ? normalizedIconTap : "";
+  }
+  if (String(config.icon_hold_action || "").trim() === "") {
+    config.icon_hold_action = "";
+  }
+  if (String(config.icon_double_tap_action || "").trim() === "") {
+    config.icon_double_tap_action = "";
   }
   config.tap_service = String(config.tap_service ?? "").trim();
   config.tap_service_data = String(config.tap_service_data ?? "").trim();
@@ -668,17 +706,7 @@ function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
-  const normDouble = String(config.double_tap_action ?? "none").trim().toLowerCase();
-  config.double_tap_action = TAP_ACTIONS.has(normDouble) ? normDouble : "none";
-  const iconDoubleStr = config.icon_double_tap_action === undefined || config.icon_double_tap_action === null
-    ? ""
-    : String(config.icon_double_tap_action).trim();
-  if (!iconDoubleStr) {
-    config.icon_double_tap_action = "";
-  } else {
-    const n = iconDoubleStr.toLowerCase();
-    config.icon_double_tap_action = TAP_ACTIONS.has(n) ? n : "";
-  }
+  config.language = String(config.language ?? "auto").trim() || "auto";
   config.double_tap_service = String(config.double_tap_service ?? "").trim();
   config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
   config.double_tap_url = String(config.double_tap_url ?? "").trim();
@@ -1109,7 +1137,8 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _translateStateValue(state) {
-    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+    const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
+    const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
     return window.NodaliaI18n.translateEntityState(
       lang,
       state,
@@ -1135,7 +1164,8 @@ class NodaliaEntityCard extends HTMLElement {
     const numberDecimals = this._getNumberDecimals();
 
     if (typeof value === "boolean") {
-      const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language);
+      const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
+      const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
       const labels = window.NodaliaI18n.strings(lang).entityCard.boolean;
       return value ? labels.yes : labels.no;
     }
@@ -1380,12 +1410,15 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, domain, service, data) => Promise.resolve(hass?.callService?.(domain, service, data)));
+
     if (this._isBinaryOnOff(actualState)) {
       const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
       if (isPrimaryEntity) {
         this._startOptimisticToggle(service === "turn_on" ? "on" : "off", actualState);
       }
-      this._hass.callService("homeassistant", service, {
+      invoke(this, this._hass, "homeassistant", service, {
         entity_id: entityId,
       });
       if (isPrimaryEntity) {
@@ -1398,7 +1431,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    this._hass.callService("homeassistant", "toggle", {
+    invoke(this, this._hass, "homeassistant", "toggle", {
       entity_id: entityId,
     });
     if (isPrimaryEntity) {
@@ -1500,7 +1533,9 @@ class NodaliaEntityCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return false;
+      return normalizedService === "homeassistant.toggle"
+        || normalizedService === "homeassistant.turn_on"
+        || normalizedService === "homeassistant.turn_off";
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }

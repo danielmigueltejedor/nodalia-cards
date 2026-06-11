@@ -54,12 +54,12 @@
    * That value is more reliable than the legacy `hass.language` field, which can reflect the
    * server default (e.g. Spanish) while the user profile is English.
    */
-  function profileLanguageFromLocalStorage() {
-    if (typeof localStorage === "undefined") {
+  function profileLanguageFromStorage(storage) {
+    if (!storage || typeof storage.getItem !== "function") {
       return null;
     }
     try {
-      const raw = localStorage.getItem("selectedLanguage");
+      const raw = storage.getItem("selectedLanguage");
       if (!raw) {
         return null;
       }
@@ -74,6 +74,20 @@
     } catch (_err) {
       return null;
     }
+  }
+
+  function profileLanguageFromLocalStorage() {
+    if (typeof localStorage === "undefined") {
+      return null;
+    }
+    return profileLanguageFromStorage(localStorage);
+  }
+
+  function profileLanguageFromSessionStorage() {
+    if (typeof sessionStorage === "undefined") {
+      return null;
+    }
+    return profileLanguageFromStorage(sessionStorage);
   }
 
   function effectiveHaLanguageCode(hass) {
@@ -97,19 +111,35 @@
     };
     const rootHass =
       typeof document !== "undefined" ? document.querySelector("home-assistant")?.hass : null;
+    const inHomeAssistant =
+      typeof document !== "undefined" && Boolean(document.querySelector("home-assistant"));
     /**
      * Prefer the app-root hass first: Lovelace sometimes passes a hass-shaped object that has
      * entity state but omits `language`; the canonical UI language lives on `home-assistant.hass`.
      * Within a hass object, `selectedLanguage` / `locale.language` are more reliable than the older
      * generic `language` field, which can lag behind the profile and leak Spanish labels into English UIs.
      */
-    return (
+    const profile =
       profileLanguageFromLocalStorage()
+      || profileLanguageFromSessionStorage()
       || fromProfileObject(rootHass)
-      || fromProfileObject(resolveHass(hass))
-      || fromLegacyObject(rootHass)
-      || fromLegacyObject(resolveHass(hass))
-    );
+      || fromProfileObject(resolveHass(hass));
+    if (profile) {
+      return profile;
+    }
+
+    if (typeof document !== "undefined") {
+      const docLang = baseLang(String(document.documentElement?.getAttribute("lang") || "").trim());
+      if (docLang) {
+        return docLang;
+      }
+    }
+
+    if (!inHomeAssistant) {
+      return fromLegacyObject(rootHass) || fromLegacyObject(resolveHass(hass));
+    }
+
+    return null;
   }
 
   function resolveLanguage(hass, configLang) {
@@ -10861,11 +10891,12 @@
     const st = dict.states;
 
     if (domain === "person") {
-      if (key === "casa" || key === "en_casa") {
-        return st.home;
+      const personDict = strings(code).person || strings("en").person || {};
+      if (key === "casa" || key === "en_casa" || key === "home") {
+        return personDict.home || st.home;
       }
-      if (key === "fuera") {
-        return st.not_home;
+      if (key === "fuera" || key === "not_home") {
+        return personDict.notHome || st.not_home;
       }
     }
     switch (key) {
