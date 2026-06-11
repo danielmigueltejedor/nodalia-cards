@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -58,6 +58,9 @@ const DEFAULT_CONFIG = {
   setpoint_schedule_week_starts_on: "monday",
   security: {
     allow_webhooks_for_non_admin: false,
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
   },
   tap_action: "more-info",
   hold_action: "more-info",
@@ -296,25 +299,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -1335,11 +1324,10 @@ function normalizeConfig(rawConfig) {
     config.setpoint_schedule_week_starts_on,
   );
   config.show_schedule_button = config.show_schedule_button !== false;
-  config.security = config.security || {};
-  if (config.security.allow_webhooks_for_non_admin === undefined) {
-    config.security.allow_webhooks_for_non_admin = false;
-  }
-  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
+  const allowWebhooksForNonAdmin = config.security?.allow_webhooks_for_non_admin === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  config.security.allow_webhooks_for_non_admin = allowWebhooksForNonAdmin;
   return config;
 }
 
@@ -1446,6 +1434,8 @@ class NodaliaClimateCard extends HTMLElement {
     this._scheduleComposerDraft = normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
     this._scheduleComposerError = "";
     this._scheduleComposerSaving = false;
+    this._scheduleDraftRevision = 0;
+    this._commitAborted = false;
     this._scheduleComposerSelectedSlotId = "";
     this._activeScheduleDrag = null;
     this._scheduleBlockDragPending = null;
@@ -1515,6 +1505,7 @@ class NodaliaClimateCard extends HTMLElement {
           })
         : () => {};
     this._animateContentOnNextRender = true;
+    this._commitAborted = false;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
       this._render();
@@ -1555,6 +1546,8 @@ class NodaliaClimateCard extends HTMLElement {
     this._pendingDialDragPoint = null;
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
+    this._commitAborted = true;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -1624,34 +1617,39 @@ class NodaliaClimateCard extends HTMLElement {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      temperature: parseFiniteClimateNumber(attrs.temperature),
-      currentTemperature: parseFiniteClimateNumber(attrs.current_temperature),
-      targetTempHigh: parseFiniteClimateNumber(attrs.target_temp_high),
-      targetTempLow: parseFiniteClimateNumber(attrs.target_temp_low),
-      humidity: Number(attrs.humidity ?? -1),
-      currentHumidity: Number(attrs.current_humidity ?? -1),
-      hvacMode: String(attrs.hvac_mode || ""),
-      hvacAction: String(attrs.hvac_action || ""),
-      presetMode: String(attrs.preset_mode || ""),
-      fanMode: String(attrs.fan_mode || ""),
-      swingMode: String(attrs.swing_mode || ""),
-      actions: `${String(this._config?.tap_action || "")}|${String(this._config?.hold_action || "")}|${String(this._config?.double_tap_action || "")}`,
-      hasTemperatureDraft: Boolean(
-        entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId)),
-      ),
-      scheduleComposerOpen: this._scheduleComposerOpen === true,
-      scheduleDraft: this._scheduleComposerDraft,
-      scheduleComposerError: this._scheduleComposerError,
-      scheduleComposerSaving: this._scheduleComposerSaving === true,
-      showScheduleButton: this._config?.show_schedule_button !== false,
-    });
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      this._config?.show_entity_picture === true,
+      this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "",
+      parseFiniteClimateNumber(attrs.temperature),
+      parseFiniteClimateNumber(attrs.current_temperature),
+      parseFiniteClimateNumber(attrs.target_temp_high),
+      parseFiniteClimateNumber(attrs.target_temp_low),
+      attrs.humidity ?? -1,
+      attrs.current_humidity ?? -1,
+      attrs.hvac_mode || "",
+      attrs.hvac_action || "",
+      attrs.preset_mode || "",
+      attrs.fan_mode || "",
+      attrs.swing_mode || "",
+      `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}|${this._config?.double_tap_action || ""}`,
+      Boolean(entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))),
+      this._scheduleComposerOpen === true,
+      this._scheduleDraftRevision || 0,
+      Boolean(this._scheduleComposerDraft?.enabled),
+      Array.isArray(this._scheduleComposerDraft?.slots) ? this._scheduleComposerDraft.slots.length : 0,
+      this._scheduleComposerError,
+      this._scheduleComposerSaving === true,
+      this._config?.show_schedule_button !== false,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "climate:", values }]);
+    }
+    return values.join("::");
   }
 
   _climateScheduleText(key, fallback = "") {
@@ -1666,12 +1664,17 @@ class NodaliaClimateCard extends HTMLElement {
     return fallback;
   }
 
+  _touchScheduleDraftRevision() {
+    this._scheduleDraftRevision = (this._scheduleDraftRevision || 0) + 1;
+  }
+
   _getScheduleComposerDraft() {
     return normalizeSetpointScheduleConfig(this._scheduleComposerDraft);
   }
 
   _setScheduleComposerDraft(schedule, options = {}) {
     this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    this._touchScheduleDraftRevision();
     if (options.render !== false) {
       this._render();
       return;
@@ -1866,6 +1869,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     schedule.slots = mergedSlots;
     this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    this._touchScheduleDraftRevision();
     return this._scheduleComposerDraft;
   }
 
@@ -1991,6 +1995,7 @@ class NodaliaClimateCard extends HTMLElement {
       ...patch,
     });
     this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    this._touchScheduleDraftRevision();
     if (options.render !== false) {
       this._lastRenderSignature = "";
       this._render();
@@ -2966,10 +2971,38 @@ class NodaliaClimateCard extends HTMLElement {
       return Promise.resolve();
     }
 
+    const fullService = `climate.${service}`;
+    if (!this._isServiceAllowed(fullService)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Climate Card", fullService);
+      return Promise.resolve();
+    }
+
     return this._hass.callService("climate", service, {
       entity_id: this._config.entity,
       ...data,
     });
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
   }
 
   _setHvacMode(mode) {
@@ -3088,6 +3121,9 @@ class NodaliaClimateCard extends HTMLElement {
           await Promise.resolve(this._setClimateService("set_hvac_mode", {
             hvac_mode: wakeMode,
           }));
+          if (this._commitAborted) {
+            return;
+          }
         } else if (typeof console !== "undefined" && typeof console.debug === "function") {
           console.debug("Nodalia Climate Card: committing setpoint without HVAC wake mode.");
         }
@@ -3097,6 +3133,9 @@ class NodaliaClimateCard extends HTMLElement {
           temperature: target,
           ...(wakeMode ? { hvac_mode: wakeMode } : {}),
         }));
+        if (this._commitAborted) {
+          return;
+        }
       }
     } catch (_error) {
       serviceFailed = true;
@@ -3208,6 +3247,9 @@ class NodaliaClimateCard extends HTMLElement {
         target_temp_low: pending.low,
         target_temp_high: pending.high,
       }));
+      if (this._commitAborted) {
+        return;
+      }
     } catch (_error) {
       serviceFailed = true;
       this._rangeCommitQueuedValue = pending;
@@ -3537,9 +3579,18 @@ class NodaliaClimateCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -4335,9 +4386,18 @@ class NodaliaClimateCard extends HTMLElement {
     element.classList.remove(className);
     element.getBoundingClientRect();
     element.classList.add(className);
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, duration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, duration + 40);
+    } else {
+      window.setTimeout(done, duration + 40);
+    }
   }
 
   _onShadowClick(event) {
@@ -4871,11 +4931,24 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
+  _climateCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._climateCardUi("emptyTitle", "Nodalia Climate Card"));
+    const body = escapeHtml(
+      this._climateCardUi("emptyBody", "Set `entity` to a `climate.*` entity to show this card."),
+    );
     return `
       <ha-card class="climate-card climate-card--empty">
-        <div class="climate-card__empty-title">Nodalia Climate Card</div>
-        <div class="climate-card__empty-text">Configura \`entity\` con una entidad \`climate.*\` para mostrar la tarjeta.</div>
+        <div class="climate-card__empty-title">${title}</div>
+        <div class="climate-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
@@ -4924,6 +4997,8 @@ class NodaliaClimateCard extends HTMLElement {
     const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
+    const darkenBubbleIconGlyph =
+      !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
     const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const isRangeMode = !isOff && this._isDualSetpointRange(state);
     if (!isRangeMode) {
@@ -5436,6 +5511,11 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__icon ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
+          color: ${
+            darkenBubbleIconGlyph
+              ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+              : (isOff ? styles.icon.off_color : styles.icon.on_color)
+          };
           display: inline-flex;
           height: calc(${effectiveIconSize} * 0.44);
           left: 50%;

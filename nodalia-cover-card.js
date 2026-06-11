@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -182,6 +182,8 @@ function normalizeConfig(rawConfig) {
     : "auto";
   const openCloseIcons = normalizeTextKey(config.open_close_icons) || "auto";
   config.open_close_icons = ["auto", "vertical", "horizontal"].includes(openCloseIcons) ? openCloseIcons : "auto";
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.security.allowed_services = normalizeList(config.security?.allowed_services);
   config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
   return config;
@@ -239,23 +241,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -560,6 +550,7 @@ class NodaliaCoverCard extends HTMLElement {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -613,19 +604,22 @@ class NodaliaCoverCard extends HTMLElement {
   _getRenderSignature(hass = this._hass) {
     const state = this._getState(hass);
     const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId: this._config?.entity || "",
-      coverControlsViewMode: this._coverControlsViewMode,
-      state: state?.state || "",
-      attrs: {
-        friendly_name: attrs.friendly_name || "",
-        icon: attrs.icon || "",
-        device_class: attrs.device_class || "",
-        current_position: attrs.current_position ?? "",
-        current_tilt_position: attrs.current_tilt_position ?? "",
-        supported_features: attrs.supported_features ?? "",
-      },
-    });
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      this._config?.entity || "",
+      this._coverControlsViewMode,
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      attrs.device_class || "",
+      attrs.current_position ?? "",
+      attrs.current_tilt_position ?? "",
+      attrs.supported_features ?? "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "cover:", values }]);
+    }
+    return values.join("::");
   }
 
   _features(state = this._getState()) {
@@ -716,7 +710,18 @@ class NodaliaCoverCard extends HTMLElement {
     element.classList.remove("is-pressing");
     element.getBoundingClientRect();
     element.classList.add("is-pressing");
-    window.setTimeout(() => element.classList.remove("is-pressing"), animations.buttonBounceDuration + 40);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
+      element.classList.remove("is-pressing");
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _isServiceAllowed(serviceValue) {

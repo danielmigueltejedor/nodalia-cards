@@ -74,7 +74,7 @@
       "fast": "Rápido",
       "rapido": "Rápido"
     },
-    "offSuction": "Off",
+    "offSuction": "Apagado",
     "reportedStates": {
       "docked": "En base",
       "charging": "Cargando",
@@ -173,6 +173,13 @@
     "recently played tracks": "Canciones reproducidas recientemente",
     "browseFallback": "Elemento"
   },
+  "mediaBrowser": {
+    "loading": "Cargando medios...",
+    "empty": "No hay elementos disponibles aquí.",
+    "playItem": "Reproducir {title}",
+    "dialog": "Explorador de medios",
+    "eyebrow": "Explorador de medios"
+  },
   "vacuumSimple": {
     "quiet": "Silencioso",
     "silent": "Silencioso",
@@ -207,9 +214,19 @@
     "unavailable": "No disponible",
     "unknown": "Desconocido",
     "noState": "Sin estado",
-    "fallbackName": "Ventilador"
+    "fallbackName": "Ventilador",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Configura `entity` con una entidad `fan.*` para mostrar la tarjeta.",
+    "aria": {
+      "speedSlider": "Velocidad",
+      "oscillationOn": "Activar oscilación",
+      "oscillationOff": "Desactivar oscilación",
+      "showModes": "Mostrar modos"
+    }
   },
   "lightCard": {
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Configura `entity` con una entidad `light.*` para mostrar la tarjeta.",
     "controlModes": {
       "brightness": "Mostrar brillo",
       "temperature": "Mostrar temperatura",
@@ -228,7 +245,17 @@
   },
   "common": {
     "aria": {
-      "togglePower": "Encender o apagar"
+      "togglePower": "Encender o apagar",
+      "back": "Atrás",
+      "close": "Cerrar",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "playPause": "Reproducir o pausar",
+      "volumeDown": "Bajar volumen",
+      "volumeUp": "Subir volumen",
+      "openMedia": "Abrir medios",
+      "navigationBar": "Barra de navegación",
+      "mediaPlayers": "Reproductores multimedia"
     }
   },
   "alarmPanel": {
@@ -271,7 +298,9 @@
     "stop": "Parar",
     "positionSlider": "Posición",
     "tiltSlider": "Inclinación",
-    "tiltChip": "Inclinación {value}%"
+    "tiltChip": "Inclinación {value}%",
+    "toggleShowButtons": "Mostrar abrir, parar y cerrar",
+    "toggleShowSliders": "Mostrar deslizadores"
   },
   "person": {
     "home": "En casa",
@@ -282,7 +311,7 @@
     "unknown": "Desconocido",
     "locationUnknown": "Ubicación desconocida",
     "emptyTitle": "Nodalia Person Card",
-    "emptyBody": "Configure `entity` to show the card.",
+    "emptyBody": "Configura `entity` para mostrar la tarjeta.",
     "defaultName": "Persona"
   },
   "scenes": {
@@ -294,6 +323,8 @@
     "moods": "ambientes"
   },
   "entityCard": {
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Configura `entity` para mostrar la tarjeta.",
     "binarySensor": {
       "doorOpen": "Abierta",
       "doorClosed": "Cerrada",
@@ -368,6 +399,8 @@
     }
   },
   "weatherCard": {
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Configura `entity` para mostrar el tiempo.",
     "conditions": {
       "clear_night": "Despejado",
       "cloudy": "Nublado",
@@ -446,6 +479,13 @@
     }
   },
   "humidifierCard": {
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Configura `entity` con una entidad `humidifier.*` para mostrar la tarjeta.",
+    "aria": {
+      "targetHumidity": "Humedad objetivo",
+      "showModes": "Mostrar modos",
+      "showSpeeds": "Mostrar velocidades"
+    },
     "modes": {
       "auto": "Auto",
       "automatic": "Auto",
@@ -460,7 +500,7 @@
       "medium": "Media",
       "mid": "Media",
       "high": "Alta",
-      "boost": "Boost",
+      "boost": "Aumentar",
       "turbo": "Turbo",
       "normal": "Normal",
       "balanced": "Normal",
@@ -482,6 +522,8 @@
     }
   },
   "climateCard": {
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Configura `entity` con una entidad `climate.*` para mostrar la tarjeta.",
     "modes": {
       "off": "Apagado",
       "heat": "Calor",
@@ -540,7 +582,39 @@
     }
   },
   "graphCard": {
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Configura `entities` con una o varias entidades numéricas para mostrar la gráfica.",
     "emptyHistory": "Sin historial disponible"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Configura `entity` con una entidad numérica para mostrar el dial."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Configura `entity` con una entidad `vacuum.*` para mostrar la tarjeta."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configura `entity` o contenido básico para mostrar la insignia."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Configura `entity` o `players` para mostrar un reproductor.",
+    "aria": {
+      "turnOn": "Encender",
+      "turnOff": "Apagar",
+      "playPause": "Reproducir o pausar",
+      "showVolume": "Mostrar volumen",
+      "sources": "Fuentes",
+      "switchSource": "Cambiar fuente",
+      "switchToSource": "Cambiar a {source}",
+      "volume": "Volumen",
+      "selectPlayer": "Seleccionar reproductor {index}",
+      "play": "Reproducir",
+      "hidePlayer": "Ocultar reproductor",
+      "showPlayer": "Mostrar reproductor"
+    }
   },
   "notificationsCard": {
     "fallbackEvent": "Evento",
@@ -615,6 +689,8 @@
     }
   },
   "favCard": {
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Configura `entity` para mostrar el favorito.",
     "disarmedF": "Desarmada",
     "armed_home": "En casa",
     "armed_away": "Ausente",

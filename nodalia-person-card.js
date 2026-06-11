@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -239,25 +239,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -360,6 +346,7 @@ class NodaliaPersonCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -385,6 +372,7 @@ class NodaliaPersonCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -392,6 +380,8 @@ class NodaliaPersonCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    this._cachedZoneTarget = "";
+    this._cachedZoneEntityId = "";
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
@@ -596,6 +586,13 @@ class NodaliaPersonCard extends HTMLElement {
       return null;
     }
 
+    if (this._cachedZoneTarget === target) {
+      if (!this._cachedZoneEntityId) {
+        return null;
+      }
+      return this._hass.states[this._cachedZoneEntityId] || null;
+    }
+
     const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
       if (!entityId.startsWith("zone.")) {
         return false;
@@ -607,6 +604,8 @@ class NodaliaPersonCard extends HTMLElement {
       return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
     });
 
+    this._cachedZoneTarget = target;
+    this._cachedZoneEntityId = zoneEntry ? zoneEntry[0] : "";
     return zoneEntry?.[1] || null;
   }
 
@@ -675,32 +674,31 @@ class NodaliaPersonCard extends HTMLElement {
       return `empty:${this._config?.entity || ""}`;
     }
 
-    const title = this._getTitle(state);
-    const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
-    const fallbackIcon = this._getFallbackIcon(state);
-    const badge = this._getBadgeDescriptor(state);
+    const attrs = state.attributes || {};
     const zoneState = this._getMatchingZoneState(state);
-
-    return JSON.stringify({
-      entity: entityId,
-      state: state.state,
-      title,
-      subtitle,
-      picture,
-      fallbackIcon,
-      badgeIcon: badge?.icon || "",
-      badgeColor: badge?.color || "",
-      zoneEntity: zoneState?.entity_id || "",
-      zoneIcon: zoneState?.attributes?.icon || "",
-      showState: this._config.show_state !== false,
-      showName: this._config.show_name !== false,
-      showZoneBadge: this._config.show_zone_badge !== false,
-      useEntityPicture: this._config.use_entity_picture !== false,
-      useZoneIcon: this._config.use_zone_icon !== false,
-      name: this._config.name || "",
-      icon: this._config.icon || "",
-    });
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      entityId,
+      String(state.state || ""),
+      String(attrs.friendly_name || this._config.name || ""),
+      this._config.show_state !== false ? String(state.state || "") : "",
+      String(attrs.entity_picture || ""),
+      String(attrs.icon || this._config.icon || ""),
+      String(state.state || ""),
+      zoneState?.entity_id || "",
+      zoneState?.attributes?.icon || "",
+      this._config.show_state !== false,
+      this._config.show_name !== false,
+      this._config.show_zone_badge !== false,
+      this._config.use_entity_picture !== false,
+      this._config.use_zone_icon !== false,
+      this._config.name || "",
+      this._config.icon || "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "person:", values }]);
+    }
+    return values.join("::");
   }
 
   _canRunTapAction() {
@@ -762,9 +760,18 @@ class NodaliaPersonCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {

@@ -523,6 +523,7 @@ test("climate queued wake commits include hvac_mode in set_temperature", async (
   card.disconnectedCallback();
 
   calls.length = 0;
+  card._commitAborted = false;
   card._hass.states["climate.ecobee"].attributes.hvac_modes = ["off"];
   const direct = card._queueTemperatureCommit(22, {
     hvacWake: true,
@@ -1078,6 +1079,43 @@ test("climate card defaults webhook access to admin-only", () => {
   assert.match(source, /isUnsafeConfigPathKey/);
 });
 
+test("advance vacuum card defaults shared session webhook access to admin-only", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /allow_webhooks_for_non_admin: false/);
+  assert.match(source, /_postSharedCleaningSessionWebhook/);
+  assert.match(source, /webhook blocked for non-admin user/);
+  assert.match(source, /async _runMapAction\(\)[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}/);
+  assert.match(source, /strict_service_actions === true/);
+});
+
+test("NodaliaUtils schedules and clears deferred timers on disconnect", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function scheduleDeferTimer\(/);
+  assert.match(utils, /function clearDeferTimers\(/);
+  assert.match(read("nodalia-fan-card.js"), /NodaliaUtils\?\.scheduleDeferTimer/);
+  assert.match(read("nodalia-fan-card.js"), /NodaliaUtils\?\.clearDeferTimers\?\.\(this\)/);
+});
+
+test("scenes card empty state uses unified render signature", () => {
+  const source = read("nodalia-scenes-card.js");
+  assert.doesNotMatch(source, /_lastRenderSignature = `empty:\$\{JSON\.stringify/);
+  assert.match(source, /const sceneStamp = /);
+  assert.match(source, /if \(!entries\.length\) \{\s*this\.shadowRoot\.innerHTML = this\._renderEmptyState\(\)/);
+});
+
+test("power flow applies per-node bubble icon contrast", () => {
+  const source = read("nodalia-power-flow-card.js");
+  assert.match(source, /_getNodeIconGlyphColor\(node\)/);
+  assert.match(source, /--node-icon-glyph:/);
+  assert.match(source, /shouldDarkenBubbleIconGlyph/);
+});
+
+test("notifications async refresh guards disconnected lifecycle in finally", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /_calendarRefreshInFlight = false;[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}[\s\S]*_renderIfChanged\(true\)/);
+  assert.match(source, /_weatherRefreshInFlight = false;[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}[\s\S]*_renderIfChanged\(true\)/);
+});
+
 test("climate schedule composer keeps agenda scroll position across re-renders", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /_captureScheduleAgendaScrollState\(\)/);
@@ -1205,6 +1243,15 @@ test("power flow flow dots avoid origin flash before motion starts", () => {
   assert.match(source, /\.power-flow-card__simple-rail--entering \.power-flow-card__simple-dot/);
 });
 
+test("circular gauge thumb follows dial arc via rotate orbit transform", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /function getDialThumbRotate\(/);
+  assert.match(source, /rotate\(var\(--gauge-thumb-rotate/);
+  assert.match(source, /translateY\(calc\(-1 \* var\(--gauge-thumb-orbit/);
+  assert.match(source, /setProperty\("--gauge-thumb-rotate"/);
+  assert.doesNotMatch(source, /--gauge-thumb-left/);
+});
+
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
   [
     "nodalia-power-flow-card.js",
@@ -1218,10 +1265,12 @@ test("numeric display cards use Home Assistant locale instead of hardcoded Spani
   });
 });
 
-test("climate render signature tracks temperature drafts", () => {
+test("climate render signature tracks temperature drafts via revision counter", () => {
   const source = read("nodalia-climate-card.js");
-  assert.match(source, /hasTemperatureDraft: Boolean\(/);
   assert.match(source, /this\._draftTemperature\.has\(entityId\) \|\| this\._draftTempRange\.has\(entityId\)/);
+  assert.match(source, /_scheduleDraftRevision/);
+  assert.match(source, /joinParts\(\[\{ prefix: "climate:", values \}\]\)/);
+  assert.doesNotMatch(source, /JSON\.stringify\(this\._scheduleComposerDraft\)/);
 });
 
 test("fan and humidifier re-render when optimistic toggle is confirmed during animation", () => {
@@ -1244,7 +1293,7 @@ test("humidifier render signature includes mode_entity helper state", () => {
   const source = read("nodalia-humidifier-card.js");
   assert.match(source, /modeEntityId/);
   assert.match(source, /modeEntityState/);
-  assert.match(source, /modeEntityOptions/);
+  assert.match(source, /joinParts\(\[\{ prefix: "humidifier:"/);
 });
 
 test("fav and vacuum resize observers skip render when signature is unchanged", () => {
@@ -1257,7 +1306,8 @@ test("fav and vacuum resize observers skip render when signature is unchanged", 
 test("power flow caches tracked entity stamp for render signature", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
-  assert.match(source, /trackedStates: this\._trackedEntitiesStamp/);
+  assert.match(source, /NodaliaRenderSignature\?\.joinParts/);
+  assert.match(source, /prefix: "states:", values: \[this\._trackedEntitiesStamp\]/);
 });
 
 test("advance vacuum map display follows cleaning session mode", () => {
@@ -1277,6 +1327,70 @@ test("fan off-state memory ignores zero percentage", () => {
 test("humidifier off-state memory ignores zero humidity", () => {
   const source = read("nodalia-humidifier-card.js");
   assert.match(source, /rememberedHumidity > 0/);
+});
+
+test("calendar card invalidates refresh run id on disconnect", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /this\._refreshRunId \+= 1/);
+  assert.match(source, /this\._refreshInFlight = false/);
+  assert.match(source, /this\._refreshQueued = false/);
+});
+
+test("weather forecast subscription guards disconnected lifecycle", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+});
+
+test("vacuum user services respect strict allowlist while internal helpers bypass it", () => {
+  const source = read("nodalia-vacuum-card.js");
+  assert.match(source, /_callUserVacuumService\(/);
+  assert.match(source, /_callSelectOption\(/);
+  assert.match(source, /_callUserVacuumService\(service, data = \{\}\) \{[\s\S]*_isServiceAllowed\(fullService\)/);
+  const selectBody = source.match(/_callSelectOption\(entityId, option\) \{[\s\S]*?\n  \}/);
+  assert.ok(selectBody, "expected _callSelectOption implementation");
+  assert.doesNotMatch(selectBody[0], /_isServiceAllowed/);
+});
+
+test("notifications defers side effects until render signature changes", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /const nextSignature = this\._getRenderSignature\(hass\)/);
+  assert.match(source, /nextSignature === this\._lastRenderSignature\)[\s\S]*return;/);
+});
+
+test("alpha.7 lifecycle defer cleanup and viewport observer guards", () => {
+  assert.match(read("nodalia-person-card.js"), /disconnectedCallback\(\) \{[\s\S]*clearDeferTimers/);
+  assert.match(read("nodalia-circular-gauge-card.js"), /disconnectedCallback\(\) \{[\s\S]*clearDeferTimers/);
+  assert.match(read("nodalia-vacuum-card.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-calendar-card.js"), /IntersectionObserver\([\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-notifications-card.js"), /IntersectionObserver\([\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-power-flow-card.js"), /_onFlowViewport\(entries\) \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-media-player.js"), /_callInternalMediaService\(/);
+  assert.match(read("nodalia-light-card.js"), /_lastEntityRevision/);
+});
+
+test("alpha.5 lifecycle guards on notifications media climate scenes calendar graph nav and alarm", () => {
+  assert.match(read("nodalia-notifications-card.js"), /_renderIfChanged\(force = false\) \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-notifications-card.js"), /this\._calendarRefreshInFlight = false/);
+  assert.match(read("nodalia-media-player.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-climate-card.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-scenes-card.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-graph-card.js"), /requestAnimationFrame\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-navigation-bar.js"), /_dockEntranceResetFrame/);
+  assert.match(read("nodalia-alarm-panel-card.js"), /_countdownInterval = window\.setInterval\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
+});
+
+test("entity person weather and alarm use deferred press timers", () => {
+  for (const file of [
+    "nodalia-entity-card.js",
+    "nodalia-person-card.js",
+    "nodalia-weather-card.js",
+    "nodalia-alarm-panel-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /scheduleDeferTimer/, `${file} should schedule defer timers`);
+    assert.match(source, /clearDeferTimers/, `${file} should clear defer timers on disconnect`);
+  }
 });
 
 test("notifications tracked entity stamp is cached between hass updates", () => {

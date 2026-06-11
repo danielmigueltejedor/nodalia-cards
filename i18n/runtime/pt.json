@@ -277,7 +277,9 @@
         "met": "Meteorológico",
         "monitor": "Monitorizar"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Configure `entity` para mostrar o tempo."
   },
   "humidifierCard": {
     "modes": {
@@ -294,7 +296,7 @@
       "medium": "Média",
       "mid": "Média",
       "high": "Alta",
-      "boost": "Boost",
+      "boost": "Impulsionar",
       "turbo": "Turbo",
       "normal": "Normal",
       "balanced": "Normal",
@@ -313,6 +315,13 @@
       "idle": "Inativo",
       "unavailable": "Indisponível",
       "unknown": "Desconhecido"
+    },
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Defina `entity` como uma entidade `humidifier.*` para mostrar este cartão.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
@@ -337,7 +346,8 @@
     "aria": {
       "dialRangeGroup": "Faixa de conforto e temperatura interior",
       "dialTargetSlider": "Temperatura alvo",
-      "dialNoSetpoint": "Temperatura interior; o termostato não tem setpoint ativo"
+      "dialNoSetpoint": "Temperatura interior; o termostato não tem setpoint ativo",
+      "togglePower": "Ligar ou desligar"
     },
     "dialNoSetpointHint": "Sem setpoint ativo",
     "schedule": {
@@ -370,10 +380,14 @@
         "webhookFailed": "Não foi possível sincronizar o horário. Verifique o webhook e os registos do Home Assistant.",
         "dualRangeUnsupported": "Horários semanais não estão disponíveis enquanto o termostato usa um intervalo dual calor/frio."
       }
-    }
+    },
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Defina `entity` como uma entidade `climate.*` para mostrar este cartão."
   },
   "graphCard": {
-    "emptyHistory": "Sem histórico disponível"
+    "emptyHistory": "Sem histórico disponível",
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Defina `entities` com uma ou mais entidades numéricas para mostrar o gráfico."
   },
   "fan": {
     "off": "Desligado",
@@ -381,7 +395,15 @@
     "unavailable": "Indisponível",
     "unknown": "Desconhecido",
     "noState": "Sem estado",
-    "fallbackName": "Ventoinha"
+    "fallbackName": "Ventoinha",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Defina `entity` como uma entidade `fan.*` para mostrar este cartão.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "Alarme",
@@ -423,7 +445,9 @@
     "stop": "Parar",
     "positionSlider": "Posição",
     "tiltSlider": "Inclinação",
-    "tiltChip": "Inclinação {value}%"
+    "tiltChip": "Inclinação {value}%",
+    "toggleShowButtons": "Mostrar abrir, parar e fechar",
+    "toggleShowSliders": "Mostrar controlos deslizantes"
   },
   "person": {
     "home": "Em casa",
@@ -509,7 +533,9 @@
       "good": "Bom",
       "fair": "Razoável",
       "poor": "Mau"
-    }
+    },
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Configure `entity` para mostrar o cartão."
   },
   "favCard": {
     "disarmedF": "Desarmada",
@@ -521,7 +547,9 @@
     "arming": "A armar",
     "disarming": "A desarmar",
     "pending": "Pendente",
-    "triggered": "Disparado"
+    "triggered": "Disparado",
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Configure `entity` para mostrar o favorito."
   },
   "notificationsCard": {
     "fallbackEvent": "Evento",
@@ -546,7 +574,8 @@
       "inkLow": "Tinta baixa",
       "humidityHigh": "Humidade alta",
       "humidityLow": "Humidade baixa",
-      "customFallback": "Notificação"
+      "customFallback": "Notificação",
+      "humidifierFillFull": "Depósito cheio"
     },
     "messages": {
       "vacuumAttention": "{name} está no estado {state}.",
@@ -557,7 +586,8 @@
       "mediaLeftOn": "{media} continua ligado e {source} não deteta presença.",
       "rainSoon": "{source} prevê chuva por volta de {time}. Se tens roupa estendida, convém verificar.",
       "lowLevel": "{source} está em {value}.",
-      "sensorValue": "{source} marca {value}."
+      "sensorValue": "{source} marca {value}.",
+      "highLevel": "{source} está em {value}."
     },
     "actions": {
       "openCalendar": "Abrir calendário",
@@ -587,6 +617,10 @@
       "dismiss": "Apagar notificação",
       "showLess": "Mostrar menos",
       "showAll": "Mostrar todas as notificações"
+    },
+    "empty": {
+      "title": "Tudo calmo",
+      "message": "Não tem alertas ativos"
     }
   },
   "calendarCard": {
@@ -661,61 +695,150 @@
       "newEventDialog": "Novo evento de calendário",
       "deleteEvent": "Eliminar evento",
       "createHaEvent": "Criar evento HA",
-      "close": "Fechar"
+      "close": "Fechar",
+      "deleteRecurringDialog": "Escolha como eliminar o evento recorrente"
+    },
+    "deleteRecurrence": {
+      "title": "Eliminar evento recorrente",
+      "message": "Este evento faz parte de uma série. O que pretende eliminar?",
+      "thisOnly": "Apenas este evento",
+      "thisAndFuture": "Este e todos os seguintes",
+      "deleteFailed": "Não foi possível eliminar o evento. Tente novamente.",
+      "deleteFailedWithMessage": "Não foi possível eliminar o evento: {message}"
     }
   },
   "vacuumErrorLabels": {
-    "lidar_blocked": "LiDAR blocked",
-    "bumper_stuck": "Bumper stuck",
-    "wheels_suspended": "Wheels suspended",
-    "cliff_sensor_error": "Cliff sensor error",
-    "main_brush_jammed": "Main brush jammed",
-    "side_brush_jammed": "Side brush jammed",
-    "wheels_jammed": "Wheels jammed",
-    "robot_trapped": "Robot trapped",
-    "no_dustbin": "Dustbin missing",
-    "strainer_error": "Filter error",
-    "compass_error": "Compass error",
-    "low_battery": "Low battery",
-    "charging_error": "Charging error",
-    "battery_error": "Battery error",
-    "wall_sensor_dirty": "Wall sensor dirty",
-    "robot_tilted": "Robot tilted",
-    "side_brush_error": "Side brush error",
-    "fan_error": "Fan error",
-    "dock": "Dock error",
-    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
-    "vertical_bumper_pressed": "Vertical bumper pressed",
-    "dock_locator_error": "Dock locator error",
-    "return_to_dock_fail": "Failed to return to dock",
-    "nogo_zone_detected": "No-go zone detected",
-    "visual_sensor": "Visual sensor error",
-    "light_touch": "Light touch sensor triggered",
-    "vibrarise_jammed": "VibraRise jammed",
-    "robot_on_carpet": "Robot on carpet",
-    "filter_blocked": "Filter blocked",
-    "invisible_wall_detected": "Invisible wall detected",
-    "cannot_cross_carpet": "Cannot cross carpet",
-    "internal_error": "Internal error",
-    "collect_dust_error_3": "Dust collection error",
-    "collect_dust_error_4": "Dust collection error",
-    "mopping_roller_1": "Mopping roller error",
-    "mopping_roller_error_2": "Mopping roller error",
-    "clear_water_box_hoare": "Clean water tank abnormal",
-    "dirty_water_box_hoare": "Dirty water tank abnormal",
-    "sink_strainer_hoare": "Sink strainer abnormal",
-    "clear_water_box_exception": "Clean water tank error",
-    "clear_brush_exception": "Cleaning brush error",
-    "clear_brush_exception_2": "Cleaning brush error",
-    "filter_screen_exception": "Filter screen error",
-    "mopping_roller_2": "Mopping roller error",
-    "up_water_exception": "Water refill error",
-    "drain_water_exception": "Water drain error",
-    "temperature_protection": "Temperature protection",
-    "clean_carousel_exception": "Cleaning carousel error",
-    "clean_carousel_water_full": "Cleaning carousel water full",
-    "water_carriage_drop": "Water carriage dropped",
-    "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "lidar_blocked": "LiDAR bloqueado",
+    "bumper_stuck": "Pára-choque preso",
+    "wheels_suspended": "Rodas suspensas",
+    "cliff_sensor_error": "Erro no sensor de penhasco",
+    "main_brush_jammed": "Escova principal presa",
+    "side_brush_jammed": "Escova lateral emperrada",
+    "wheels_jammed": "Rodas emperradas",
+    "robot_trapped": "Robô preso",
+    "no_dustbin": "Lixeira faltando",
+    "strainer_error": "Erro de filtro",
+    "compass_error": "Erro de bússola",
+    "low_battery": "Bateria fraca",
+    "charging_error": "Erro de carregamento",
+    "battery_error": "Erro de bateria",
+    "wall_sensor_dirty": "Sensor de parede sujo",
+    "robot_tilted": "Robô inclinado",
+    "side_brush_error": "Erro na escova lateral",
+    "fan_error": "Erro do ventilador",
+    "dock": "Erro de encaixe",
+    "optical_flow_sensor_dirt": "Sensor de fluxo óptico sujo",
+    "vertical_bumper_pressed": "Pára-choque vertical pressionado",
+    "dock_locator_error": "Erro no localizador de doca",
+    "return_to_dock_fail": "Falha ao retornar à doca",
+    "nogo_zone_detected": "Zona proibida detectada",
+    "visual_sensor": "Erro do sensor visual",
+    "light_touch": "Sensor de toque leve acionado",
+    "vibrarise_jammed": "VibraRise preso",
+    "robot_on_carpet": "Robô no tapete",
+    "filter_blocked": "Filtro bloqueado",
+    "invisible_wall_detected": "Parede invisível detectada",
+    "cannot_cross_carpet": "Não é possível atravessar o tapete",
+    "internal_error": "Erro interno",
+    "collect_dust_error_3": "Erro de coleta de poeira",
+    "collect_dust_error_4": "Erro de coleta de poeira",
+    "mopping_roller_1": "Erro no rolo de limpeza",
+    "mopping_roller_error_2": "Erro no rolo de limpeza",
+    "clear_water_box_hoare": "Tanque de água limpa anormal",
+    "dirty_water_box_hoare": "Tanque de água sujo anormal",
+    "sink_strainer_hoare": "Filtro da pia anormal",
+    "clear_water_box_exception": "Erro no tanque de água limpa",
+    "clear_brush_exception": "Erro na escova de limpeza",
+    "clear_brush_exception_2": "Erro na escova de limpeza",
+    "filter_screen_exception": "Erro na tela de filtro",
+    "mopping_roller_2": "Erro no rolo de limpeza",
+    "up_water_exception": "Erro de recarga de água",
+    "drain_water_exception": "Erro de drenagem de água",
+    "temperature_protection": "Proteção de temperatura",
+    "clean_carousel_exception": "Erro no carrossel de limpeza",
+    "clean_carousel_water_full": "Carrossel de limpeza cheio de água",
+    "water_carriage_drop": "Carruagem de água caiu",
+    "check_clean_carouse": "Verifique o carrossel de limpeza",
+    "audio_error": "Erro de áudio",
+    "water_empty": "Depósito de água vazio"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Mostrar brilho",
+      "temperature": "Mostrar temperatura",
+      "color": "Mostrar cor"
+    },
+    "sections": {
+      "temperature": "Temperatura",
+      "color": "Cor",
+      "presets": "Predefinições"
+    },
+    "temperaturePresets": {
+      "warm": "Quente",
+      "neutral": "Neutra",
+      "cool": "Fria"
+    },
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Defina `entity` como uma entidade `light.*` para mostrar este cartão."
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Ligar ou desligar",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
+    }
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Adicione entidades de cena no editor do cartão.",
+    "defaultName": "Cenas",
+    "unavailable": "Indisponível",
+    "subtitle": "Toque num ambiente para iniciar",
+    "moods": "ambientes"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Defina `entity` como uma entidade numérica para mostrar o mostrador."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Defina `entity` como uma entidade `vacuum.*` para mostrar este cartão."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configure `entity` ou conteúdo básico para mostrar o distintivo."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Defina `entity` ou `players` para mostrar um leitor.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

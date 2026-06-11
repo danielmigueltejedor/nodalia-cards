@@ -207,7 +207,15 @@
     "unavailable": "Niet beschikbaar",
     "unknown": "Onbekend",
     "noState": "Geen status",
-    "fallbackName": "Ventilator"
+    "fallbackName": "Ventilator",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Stel `entity` in op een `fan.*`-entiteit om deze kaart te tonen.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "Alarm",
@@ -249,7 +257,9 @@
     "stop": "Stop",
     "positionSlider": "Positie",
     "tiltSlider": "Kantelen",
-    "tiltChip": "Kanteling {value}%"
+    "tiltChip": "Kanteling {value}%",
+    "toggleShowButtons": "Openen, stop en sluiten tonen",
+    "toggleShowSliders": "Schuifregelaars tonen"
   },
   "person": {
     "home": "Thuis",
@@ -335,7 +345,9 @@
       "good": "Goed",
       "fair": "Redelijk",
       "poor": "Slecht"
-    }
+    },
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Stel `entity` in om deze kaart te tonen."
   },
   "weatherCard": {
     "conditions": {
@@ -413,7 +425,9 @@
         "met": "Meteorologisch",
         "monitor": "Monitoren"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Stel `entity` in om het weer te tonen."
   },
   "humidifierCard": {
     "modes": {
@@ -449,6 +463,13 @@
       "idle": "Inactief",
       "unavailable": "Niet beschikbaar",
       "unknown": "Onbekend"
+    },
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Stel `entity` in op een `humidifier.*`-entiteit om deze kaart te tonen.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
@@ -473,7 +494,8 @@
     "aria": {
       "dialRangeGroup": "Comfortbereik en binnentemperatuur",
       "dialTargetSlider": "Doeltemperatuur",
-      "dialNoSetpoint": "Kamertemperatuur; thermostaat heeft geen actieve setpoint"
+      "dialNoSetpoint": "Kamertemperatuur; thermostaat heeft geen actieve setpoint",
+      "togglePower": "In- of uitschakelen"
     },
     "dialNoSetpointHint": "Geen actieve setpoint",
     "schedule": {
@@ -488,7 +510,7 @@
       "saving": "Opslaan…",
       "start": "Start",
       "end": "Einde",
-      "temperature": "Setpoint",
+      "temperature": "Instelpunt",
       "remove": "Verwijderen",
       "close": "Sluiten",
       "day": {
@@ -506,10 +528,14 @@
         "webhookFailed": "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
         "dualRangeUnsupported": "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt."
       }
-    }
+    },
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Stel `entity` in op een `climate.*`-entiteit om deze kaart te tonen."
   },
   "graphCard": {
-    "emptyHistory": "Geen geschiedenis beschikbaar"
+    "emptyHistory": "Geen geschiedenis beschikbaar",
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Stel `entities` in op een of meer numerieke entiteiten om de grafiek te tonen."
   },
   "favCard": {
     "disarmedF": "Uitgeschakeld",
@@ -521,7 +547,9 @@
     "arming": "Inschakelen",
     "disarming": "Uitschakelen",
     "pending": "In behandeling",
-    "triggered": "Getriggerd"
+    "triggered": "Getriggerd",
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Stel `entity` in om de favoriet te tonen."
   },
   "notificationsCard": {
     "fallbackEvent": "Afspraak",
@@ -546,7 +574,8 @@
       "inkLow": "Inkt bijna op",
       "humidityHigh": "Hoge luchtvochtigheid",
       "humidityLow": "Lage luchtvochtigheid",
-      "customFallback": "Melding"
+      "customFallback": "Melding",
+      "humidifierFillFull": "Tank vol"
     },
     "messages": {
       "vacuumAttention": "{name} heeft status {state}.",
@@ -557,7 +586,8 @@
       "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid.",
       "rainSoon": "{source} verwacht regen rond {time}. Als er was buiten hangt, controleer die even.",
       "lowLevel": "{source} staat op {value}.",
-      "sensorValue": "{source} geeft {value} aan."
+      "sensorValue": "{source} geeft {value} aan.",
+      "highLevel": "{source} staat op {value}."
     },
     "actions": {
       "openCalendar": "Kalender openen",
@@ -587,6 +617,10 @@
       "dismiss": "Melding verwijderen",
       "showLess": "Minder tonen",
       "showAll": "Alle meldingen tonen"
+    },
+    "empty": {
+      "title": "Alles rustig",
+      "message": "Je hebt geen actieve meldingen"
     }
   },
   "calendarCard": {
@@ -661,61 +695,150 @@
       "newEventDialog": "Nieuwe agenda-afspraak",
       "deleteEvent": "Afspraak verwijderen",
       "createHaEvent": "HA-afspraak maken",
-      "close": "Sluiten"
+      "close": "Sluiten",
+      "deleteRecurringDialog": "Kies hoe de terugkerende afspraak wordt verwijderd"
+    },
+    "deleteRecurrence": {
+      "title": "Terugkerende afspraak verwijderen",
+      "message": "Deze afspraak maakt deel uit van een reeks. Wat wil je verwijderen?",
+      "thisOnly": "Alleen deze afspraak",
+      "thisAndFuture": "Deze en alle volgende",
+      "deleteFailed": "Afspraak kon niet worden verwijderd. Probeer het opnieuw.",
+      "deleteFailedWithMessage": "Afspraak kon niet worden verwijderd: {message}"
     }
   },
   "vacuumErrorLabels": {
-    "lidar_blocked": "LiDAR blocked",
-    "bumper_stuck": "Bumper stuck",
-    "wheels_suspended": "Wheels suspended",
-    "cliff_sensor_error": "Cliff sensor error",
-    "main_brush_jammed": "Main brush jammed",
-    "side_brush_jammed": "Side brush jammed",
-    "wheels_jammed": "Wheels jammed",
-    "robot_trapped": "Robot trapped",
-    "no_dustbin": "Dustbin missing",
-    "strainer_error": "Filter error",
-    "compass_error": "Compass error",
-    "low_battery": "Low battery",
-    "charging_error": "Charging error",
-    "battery_error": "Battery error",
-    "wall_sensor_dirty": "Wall sensor dirty",
-    "robot_tilted": "Robot tilted",
-    "side_brush_error": "Side brush error",
-    "fan_error": "Fan error",
-    "dock": "Dock error",
-    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
-    "vertical_bumper_pressed": "Vertical bumper pressed",
-    "dock_locator_error": "Dock locator error",
-    "return_to_dock_fail": "Failed to return to dock",
-    "nogo_zone_detected": "No-go zone detected",
-    "visual_sensor": "Visual sensor error",
-    "light_touch": "Light touch sensor triggered",
-    "vibrarise_jammed": "VibraRise jammed",
-    "robot_on_carpet": "Robot on carpet",
-    "filter_blocked": "Filter blocked",
-    "invisible_wall_detected": "Invisible wall detected",
-    "cannot_cross_carpet": "Cannot cross carpet",
-    "internal_error": "Internal error",
-    "collect_dust_error_3": "Dust collection error",
-    "collect_dust_error_4": "Dust collection error",
-    "mopping_roller_1": "Mopping roller error",
-    "mopping_roller_error_2": "Mopping roller error",
-    "clear_water_box_hoare": "Clean water tank abnormal",
-    "dirty_water_box_hoare": "Dirty water tank abnormal",
-    "sink_strainer_hoare": "Sink strainer abnormal",
-    "clear_water_box_exception": "Clean water tank error",
-    "clear_brush_exception": "Cleaning brush error",
-    "clear_brush_exception_2": "Cleaning brush error",
-    "filter_screen_exception": "Filter screen error",
-    "mopping_roller_2": "Mopping roller error",
-    "up_water_exception": "Water refill error",
-    "drain_water_exception": "Water drain error",
-    "temperature_protection": "Temperature protection",
-    "clean_carousel_exception": "Cleaning carousel error",
-    "clean_carousel_water_full": "Cleaning carousel water full",
-    "water_carriage_drop": "Water carriage dropped",
-    "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "lidar_blocked": "LiDAR geblokkeerd",
+    "bumper_stuck": "Bumper zit vast",
+    "wheels_suspended": "Wielen opgehangen",
+    "cliff_sensor_error": "Fout sensor afgrond",
+    "main_brush_jammed": "Hoofdborstel vastgelopen",
+    "side_brush_jammed": "Zijborstel vastgelopen",
+    "wheels_jammed": "Wielen vastgelopen",
+    "robot_trapped": "Robot gevangen",
+    "no_dustbin": "Vuilnisbak ontbreekt",
+    "strainer_error": "Filterfout",
+    "compass_error": "Kompasfout",
+    "low_battery": "Lage batterij",
+    "charging_error": "Oplaadfout",
+    "battery_error": "Batterijfout",
+    "wall_sensor_dirty": "Wandsensor vuil",
+    "robot_tilted": "Robot gekanteld",
+    "side_brush_error": "Fout zijborstel",
+    "fan_error": "Fout ventilator",
+    "dock": "Dockfout",
+    "optical_flow_sensor_dirt": "Optische flowsensor vuil",
+    "vertical_bumper_pressed": "Verticale bumper ingedrukt",
+    "dock_locator_error": "Docklocatorfout",
+    "return_to_dock_fail": "Kan niet terugkeren naar het dok",
+    "nogo_zone_detected": "No-go-zone gedetecteerd",
+    "visual_sensor": "Visuele sensorfout",
+    "light_touch": "Lichte aanraaksensor geactiveerd",
+    "vibrarise_jammed": "VibraRise vastgelopen",
+    "robot_on_carpet": "Robot op tapijt",
+    "filter_blocked": "Filter geblokkeerd",
+    "invisible_wall_detected": "Onzichtbare muur gedetecteerd",
+    "cannot_cross_carpet": "Kan tapijt niet oversteken",
+    "internal_error": "Interne fout",
+    "collect_dust_error_3": "Fout bij het verzamelen van stof",
+    "collect_dust_error_4": "Fout bij het verzamelen van stof",
+    "mopping_roller_1": "Fout met dweilrol",
+    "mopping_roller_error_2": "Fout met dweilrol",
+    "clear_water_box_hoare": "Schoonwatertank abnormaal",
+    "dirty_water_box_hoare": "Vuilwatertank abnormaal",
+    "sink_strainer_hoare": "Gootsteenzeef abnormaal",
+    "clear_water_box_exception": "Fout schoonwatertank",
+    "clear_brush_exception": "Fout met schoonmaakborstel",
+    "clear_brush_exception_2": "Fout met schoonmaakborstel",
+    "filter_screen_exception": "Filterschermfout",
+    "mopping_roller_2": "Fout met dweilrol",
+    "up_water_exception": "Fout bij het bijvullen van water",
+    "drain_water_exception": "Fout met waterafvoer",
+    "temperature_protection": "Temperatuurbescherming",
+    "clean_carousel_exception": "Fout bij het schoonmaken van de carrousel",
+    "clean_carousel_water_full": "Reinigingscarrousel water vol",
+    "water_carriage_drop": "Waterwagen gevallen",
+    "check_clean_carouse": "Controleer de schoonmaakcarrousel",
+    "audio_error": "Audiofout",
+    "water_empty": "Watertank leeg"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Helderheid tonen",
+      "temperature": "Temperatuur tonen",
+      "color": "Kleur tonen"
+    },
+    "sections": {
+      "temperature": "Temperatuur",
+      "color": "Kleur",
+      "presets": "Voorinstellingen"
+    },
+    "temperaturePresets": {
+      "warm": "Warm",
+      "neutral": "Neutraal",
+      "cool": "Koel"
+    },
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Stel `entity` in op een `light.*`-entiteit om deze kaart te tonen."
+  },
+  "common": {
+    "aria": {
+      "togglePower": "In- of uitschakelen",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
+    }
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Voeg scène-entiteiten toe in de kaarteditor.",
+    "defaultName": "Scènes",
+    "unavailable": "Niet beschikbaar",
+    "subtitle": "Tik op een sfeer om te starten",
+    "moods": "sferen"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Stel `entity` in op een numerieke entiteit om de wijzerplaat te tonen."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Stel `entity` in op een `vacuum.*`-entiteit om deze kaart te tonen."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configureer `entity` of basisinhoud om de badge te tonen."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Stel `entity` of `players` in om een speler te tonen.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

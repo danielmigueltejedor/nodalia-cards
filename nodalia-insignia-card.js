@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -32,6 +32,11 @@ const DEFAULT_CONFIG = {
   hold_new_tab: false,
   show_name: true,
   show_value: true,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -579,14 +584,29 @@ class NodaliaInsigniaCard extends HTMLElement {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const visibilityCount = Array.isArray(this._config?.visibility) ? this._config.visibility.length : 0;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      attrValue: this._config?.state_attribute ? String(attrs[this._config.state_attribute] ?? "") : "",
-      config: this._config,
-    });
+      String(state?.state || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.state_attribute ? String(attrs[this._config.state_attribute] ?? "") : "",
+      String(this._config?.name || ""),
+      String(this._config?.icon || ""),
+      String(this._config?.icon_active || ""),
+      String(this._config?.icon_inactive || ""),
+      this._config?.use_entity_icon !== false,
+      this._config?.use_entity_picture !== false,
+      this._config?.tint_auto !== false,
+      visibilityCount,
+      String(this._config?.styles?.tint?.color || ""),
+      `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}`,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "insignia:", values }]);
+    }
+    return values.join("::");
   }
 
   _triggerHaptic(styleOverride = null) {
@@ -1009,11 +1029,24 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
   }
 
+  _insigniaCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._insigniaCardUi("emptyTitle", "Nodalia Insignia Card"));
+    const body = escapeHtml(
+      this._insigniaCardUi("emptyBody", "Configure `entity` or basic content to show the badge."),
+    );
     return `
       <ha-card class="insignia-card insignia-card--empty">
-        <div class="insignia-card__empty-title">Nodalia Insignia Card</div>
-        <div class="insignia-card__empty-text">Configure \`entity\` or basic content to show the badge.</div>
+        <div class="insignia-card__empty-title">${title}</div>
+        <div class="insignia-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

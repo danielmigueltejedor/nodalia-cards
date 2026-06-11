@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -616,29 +616,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  if (typeof probe.remove === "function") {
-    probe.remove();
-  } else if (probe.parentNode && typeof probe.parentNode.removeChild === "function") {
-    probe.parentNode.removeChild(probe);
-  }
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -1083,6 +1065,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _onFlowViewport(entries) {
+    if (!this.isConnected) {
+      return;
+    }
     const hit = entries.some(entry => entry.isIntersecting);
     this._flowViewportVisible = hit;
     this._syncFlowMotionPause();
@@ -1213,6 +1198,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -1230,11 +1216,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._syncTrackedEntitiesStamp(hass);
     const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
+    this._syncTrackedEntitiesStamp(hass);
     this._lastRenderSignature = nextSignature;
     this._render();
   }
@@ -1343,9 +1329,31 @@ class NodaliaPowerFlowCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
+  }
+
+  _getNodeIconGlyphColor(node) {
+    const defaultColor = this._config?.styles?.icon?.color || DEFAULT_CONFIG.styles.icon.color;
+    const accent = String(node?.color || "").trim();
+    if (!accent) {
+      return defaultColor;
+    }
+    const state = node?.entityId ? this._hass?.states?.[node.entityId] : null;
+    const darken = Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accent));
+    return darken
+      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accent})`
+      : defaultColor;
   }
 
   _navigate(path) {
@@ -1777,17 +1785,31 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     const chips = this._config?.consumption_chips || {};
-    return JSON.stringify({
-      title: this._config?.title || this._config?.name || "",
-      dashboard_link: this._config?.dashboard_link || "",
-      show_header: this._config?.show_header !== false,
-      show_values: this._config?.show_values !== false,
-      show_labels: this._config?.show_labels !== false,
-      homePopupOpen: this._homePopupOpen === true,
-      consumptionChips: `${chips.day_entity || ""}|${chips.month_entity || ""}`,
-      layoutConfig: this._getLayoutConfigStamp(),
-      trackedStates: this._trackedEntitiesStamp,
-    });
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    if (typeof joinParts === "function") {
+      return joinParts([
+        { prefix: "cfg:", values: [
+          this._config?.title || this._config?.name || "",
+          this._config?.dashboard_link || "",
+          this._config?.show_header !== false,
+          this._config?.show_values !== false,
+          this._config?.show_labels !== false,
+        ] },
+        { prefix: "popup:", values: [this._homePopupOpen === true] },
+        { prefix: "chips:", values: [chips.day_entity || "", chips.month_entity || ""] },
+        { prefix: "layout:", values: [this._getLayoutConfigStamp()] },
+        { prefix: "states:", values: [this._trackedEntitiesStamp] },
+      ]);
+    }
+
+    return [
+      this._config?.title || this._config?.name || "",
+      this._config?.dashboard_link || "",
+      this._homePopupOpen === true ? "1" : "0",
+      `${chips.day_entity || ""}|${chips.month_entity || ""}`,
+      this._getLayoutConfigStamp(),
+      this._trackedEntitiesStamp,
+    ].join("::");
   }
 
   _isDiagramBranchConfigured(kind) {
@@ -2366,7 +2388,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             class="power-flow-card__bubble power-flow-card__bubble--home ${isClickable ? "is-clickable" : ""}"
             data-node-entity="${escapeHtml(node.entityId)}"
             data-node-action="${escapeHtml(nodeAction)}"
-            style="--node-size:${scaledNodeSize}px; --node-tint:${escapeHtml(color)};"
+            style="--node-size:${scaledNodeSize}px; --node-tint:${escapeHtml(color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(node))};"
             title="${escapeHtml(node.label)}"
           >
             ${unavailableBadge}
@@ -2398,7 +2420,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           class="power-flow-card__bubble ${node.kind === "individual" ? "power-flow-card__bubble--individual" : ""} ${isClickable ? "is-clickable" : ""}"
           data-node-entity="${escapeHtml(node.entityId)}"
           data-node-action="${isClickable ? "more-info" : ""}"
-          style="--node-size:${scaledNodeSize}px; --node-tint:${escapeHtml(color)};"
+          style="--node-size:${scaledNodeSize}px; --node-tint:${escapeHtml(color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(node))};"
           title="${escapeHtml(node.label)}"
         >
           ${unavailableBadge}
@@ -2626,7 +2648,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           class="power-flow-card__bubble power-flow-card__bubble--individual ${deviceClickable ? "is-clickable" : ""}"
           data-node-entity="${escapeHtml(node.entityId)}"
           data-node-action="${deviceClickable ? "more-info" : ""}"
-          style="--node-size:${deviceSize}px; --node-tint:${escapeHtml(node.color)};"
+          style="--node-size:${deviceSize}px; --node-tint:${escapeHtml(node.color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(node))};"
           title="${escapeHtml(node.label)}"
         >
           ${unavailableBadge}
@@ -2729,7 +2751,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
                 class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
                 data-node-entity="${escapeHtml(home.entityId)}"
                 data-node-action="${homeClickable ? "more-info" : ""}"
-                style="--node-size:${homeSummarySize}px; --node-tint:${escapeHtml(home.color)};"
+                style="--node-size:${homeSummarySize}px; --node-tint:${escapeHtml(home.color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(home))};"
                 title="${escapeHtml(home.label)}"
               >
                 ${homeUnavailableBadge}
@@ -2825,7 +2847,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
               class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(sourceNode.entityId)}"
               data-node-action="${sourceClickable ? "more-info" : ""}"
-              style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(sourceNode.color)};"
+              style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(sourceNode.color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(sourceNode))};"
               title="${escapeHtml(sourceNode.label)}"
             >
               ${sourceUnavailableBadge}
@@ -2840,7 +2862,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
               class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
               data-node-entity="${escapeHtml(nodes.home.entityId)}"
               data-node-action="${escapeHtml(homePopupAction)}"
-              style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)};"
+              style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(nodes.home))};"
               title="${escapeHtml(nodes.home.label)}"
             >
               ${homeUnavailableBadge}
@@ -3929,7 +3951,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, var(--node-tint) 24%, rgba(255,255,255,0.09));
           border-radius: 999px;
           box-shadow: 0 10px 20px color-mix(in srgb, var(--node-tint) 7%, rgba(0,0,0,0.14));
-          color: ${styles.icon.color || "var(--primary-text-color)"};
+          color: var(--node-icon-glyph, ${styles.icon.color || "var(--primary-text-color)"});
           cursor: default;
           display: inline-flex;
           height: var(--node-size);

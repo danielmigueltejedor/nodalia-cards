@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -385,25 +385,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -723,6 +709,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._touchPressState = null;
     this._touchChartHoldFired = false;
     this._wasInViewport = false;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   _onHoverMediaChange(event) {
@@ -748,6 +735,9 @@ class NodaliaGraphCard extends HTMLElement {
     }
     this._viewVisibilityObserver = new IntersectionObserver(
       entries => {
+        if (!this.isConnected) {
+          return;
+        }
         const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
         if (visible === this._wasInViewport) {
           return;
@@ -782,6 +772,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._historySeries = [];
     this._historyKey = "";
     this._historyLoadedAt = 0;
+    this._historyRequestKeyStamp = "";
     this._hoverIndex = null;
     this._animateContentOnNextRender = true;
     this._animateChartOnNextRender = true;
@@ -797,8 +788,12 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
     this._lastRenderSignature = nextSignature;
+    const hadHistory = this._historySeries.length > 0;
+    const hasEntities = this._getEntityEntries().length > 0;
     this._requestHistory();
-    this._render();
+    if (!hasEntities || hadHistory) {
+      this._render();
+    }
   }
 
   getCardSize() {
@@ -1117,9 +1112,18 @@ class NodaliaGraphCard extends HTMLElement {
     void element.offsetWidth;
     element.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _getVisibleSeries(series) {
@@ -1451,6 +1455,10 @@ class NodaliaGraphCard extends HTMLElement {
 
     this._hoverFrame = window.requestAnimationFrame(() => {
       this._hoverFrame = 0;
+      if (!this.isConnected) {
+        this._pendingHoverIndex = null;
+        return;
+      }
       const resolvedIndex = this._pendingHoverIndex;
       this._pendingHoverIndex = null;
       if (resolvedIndex === this._hoverIndex) {
@@ -1464,17 +1472,81 @@ class NodaliaGraphCard extends HTMLElement {
         this._attachDocumentHoverWatch();
       }
       this._hoverIndex = resolvedIndex;
+      if (!this._hoverEntering && this._patchHoverOverlay()) {
+        return;
+      }
       this._render();
     });
   }
 
+  _patchHoverOverlay() {
+    if (!this.shadowRoot || !this._hoverChart) {
+      return false;
+    }
+
+    const chart = this._hoverChart;
+    const hover = this._getHoverPayload(chart);
+    const svg = this.shadowRoot.querySelector(".graph-card__chart-svg");
+
+    if (hover === null) {
+      this.shadowRoot.querySelector(".graph-card__hover-line")?.remove();
+      const tooltip = this.shadowRoot.querySelector(".graph-card__tooltip");
+      if (tooltip) {
+        tooltip.style.opacity = "0";
+      }
+      return true;
+    }
+
+    if (!(svg instanceof SVGSVGElement)) {
+      return false;
+    }
+
+    const hoverLineX = clamp(hover.x, 0, chart.width);
+    let hoverLine = svg.querySelector(".graph-card__hover-line");
+    if (hoverLine) {
+      hoverLine.setAttribute("x1", hoverLineX.toFixed(2));
+      hoverLine.setAttribute("x2", hoverLineX.toFixed(2));
+    } else {
+      return false;
+    }
+
+    let tooltip = this.shadowRoot.querySelector(".graph-card__tooltip");
+    if (!(tooltip instanceof HTMLElement)) {
+      return false;
+    }
+
+    const anchorXPct = graphChartXToPercent(hover.x, chart);
+    const tooltipTint = hover.values?.[0]?.color || "var(--primary-color)";
+    tooltip.dataset.anchorXPct = anchorXPct.toFixed(4);
+    tooltip.style.setProperty("--tooltip-tint", tooltipTint);
+    tooltip.style.opacity = "1";
+    tooltip.innerHTML = `
+      <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
+      <div class="graph-card__tooltip-values">
+        ${hover.values.map(item => `
+          <div class="graph-card__tooltip-row">
+            <span class="graph-card__tooltip-dot" style="background:${escapeHtml(item.color)};"></span>
+            <span class="graph-card__tooltip-name">${escapeHtml(item.name)}</span>
+            <span class="graph-card__tooltip-value">${escapeHtml(item.value)}${item.unit ? ` ${escapeHtml(item.unit)}` : ""}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    this._scheduleTooltipPositionSync();
+    return true;
+  }
+
   _getHistoryRequestKey() {
+    if (this._historyRequestKeyStamp) {
+      return this._historyRequestKeyStamp;
+    }
     const entries = this._getEntityEntries();
-    return JSON.stringify({
+    this._historyRequestKeyStamp = JSON.stringify({
       entities: entries.map(entry => entry.entity),
       hours: Number(this._config?.hours_to_show) || DEFAULT_CONFIG.hours_to_show,
       points: Number(this._config?.points) || DEFAULT_CONFIG.points,
     });
+    return this._historyRequestKeyStamp;
   }
 
   _getStatisticsPeriod() {
@@ -1683,7 +1755,7 @@ class NodaliaGraphCard extends HTMLElement {
     try {
       const entityIds = this._getEntityEntries().map(entry => entry.entity);
       const raw = await this._fetchHistory(start, end, entityIds, controller.signal);
-      if (controller.signal.aborted) {
+      if (!this.isConnected || controller.signal.aborted) {
         return;
       }
 
@@ -1700,7 +1772,7 @@ class NodaliaGraphCard extends HTMLElement {
       }
 
       const statisticsRaw = await this._fetchStatistics(start, end, entityIds);
-      if (controller.signal.aborted) {
+      if (!this.isConnected || controller.signal.aborted) {
         return;
       }
 
@@ -1712,7 +1784,7 @@ class NodaliaGraphCard extends HTMLElement {
       this._animateChartOnNextRender = true;
       this._render();
     } catch (_error) {
-      if (controller.signal.aborted) {
+      if (!this.isConnected || controller.signal.aborted) {
         return;
       }
 
@@ -2075,8 +2147,21 @@ class NodaliaGraphCard extends HTMLElement {
     return [];
   }
 
+  _graphCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.graphCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.graphCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const title = escapeHtml(this._graphCardUi("emptyTitle", "Nodalia Graph Card"));
+    const body = escapeHtml(
+      this._graphCardUi("emptyBody", "Set `entities` to one or more numeric entities to show the chart."),
+    );
     return `
       <style>
         :host {
@@ -2110,8 +2195,8 @@ class NodaliaGraphCard extends HTMLElement {
         }
       </style>
       <ha-card class="graph-card graph-card--empty">
-        <div class="graph-card__empty-title">Nodalia Graph Card</div>
-        <div class="graph-card__empty-text">Configura \`entities\` con una o varias entidades numericas para mostrar la grafica.</div>
+        <div class="graph-card__empty-title">${title}</div>
+        <div class="graph-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

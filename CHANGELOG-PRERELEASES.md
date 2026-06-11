@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), and completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), and completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable).
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,144 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.2.1-alpha.8] - 2026-06-11
+
+Eighth **`1.2.1`** **`alpha`**: i18n completion, empty-state localization, config-safety fixes. Release channel **`1.2.1-alpha.8`**.
+
+### Fixed
+
+- **`person`:** zone lookup cache stores **`entity_id`** instead of a stale **`hass.states`** object (avoids retaining old HA snapshots).
+- **`climate` / `cover` / `fan` / `light` / `entity` / `humidifier` / `media-player` / `fav` / `navigation-bar`:** `normalizeSecurityConfig` fallback clones **`security`** instead of mutating the incoming config reference.
+- **`advance-vacuum` / `calendar`:** non-mutating **`security`** merge on **`normalizeConfig`**.
+
+### Changed
+
+- **`i18n/runtime` + `i18n/editor`:** missing locale keys filled for **es, de, fr, it, nl, no, pt, ru, el, zh, ro** (including **`vacuumErrorLabels`**, **`lightCard`**, calendar/notifications blocks, and Norwegian editor backlog).
+- **Empty states:** climate, fan, humidifier, entity, weather, graph, circular-gauge, vacuum, light, fav, insignia, and media-player cards read **`emptyTitle` / `emptyBody`** from runtime i18n.
+- **`CHANGELOG-PRERELEASES.md`:** corrected release dates for **`1.2.1-alpha.4–7`** and **`1.2.0-alpha.40–56`** (aligned with git history).
+
+## [1.2.1-alpha.7] - 2026-06-11
+
+Seventh **`1.2.1`** **`alpha`**: audit pass 6 — lifecycle defer cleanup, observer guards, security normalization rollout, performance gates. Release channel **`1.2.1-alpha.7`**.
+
+### Fixed
+
+- **`person` / `circular-gauge`:** `clearDeferTimers` on disconnect.
+- **`calendar` / `notifications` / `power-flow`:** `isConnected` guards in viewport `IntersectionObserver` callbacks.
+- **`vacuum`:** panel, bounce, layout refresh, and mode-pending timers use `scheduleDeferTimer` + `clearDeferTimers`.
+- **`alarm-panel`:** pin-error and focus-defer timers use `scheduleDeferTimer`.
+- **`circular-gauge`:** `getContinuousThumbRotate` keeps thumb on short arc path when value decreases.
+
+### Changed
+
+- **`light`:** `_lastEntityRevision` gate skips redundant optimistic sync; `normalizeSecurityConfig` in editor path.
+- **`entity`:** attribute object display without `JSON.stringify`; normalized security config.
+- **`fav`:** render signature includes tap/security fields; `normalizeSecurityConfig`.
+- **`media-player`:** built-in transport/volume/browser actions use `_callInternalMediaService` (strict gate only on user `call-service` actions).
+- **`fan` / `humidifier` / `cover` / `climate` / `navigation-bar`:** `normalizeSecurityConfig` on `normalizeConfig`.
+
+## [1.2.1-alpha.6] - 2026-06-11
+
+Sixth **`1.2.1`** **`alpha`**: circular gauge entrance thumb follows dial arc. Release channel **`1.2.1-alpha.6`**.
+
+### Fixed
+
+- **`nodalia-circular-gauge-card.js`:** thumb entrance and value transitions orbit the semicircular track via `rotate` + `translateY` instead of animating `left`/`top` in a straight line; pop animation moved to inner dot so it does not fight orbit transform.
+
+## [1.2.1-alpha.5] - 2026-06-11
+
+Fifth **`1.2.1`** **`alpha`**: audit pass 5 — lifecycle completion, signature slimming, optimistic gates, security normalization. Release channel **`1.2.1-alpha.5`**.
+
+### Fixed
+
+- **`nodalia-notifications-card.js`:** `isConnected` in `_renderIfChanged`; reset in-flight calendar/weather flags on disconnect; post-`await` guards in `_runNotificationAction`; viewport resize skips forced bust when signature unchanged.
+- **`nodalia-media-player.js` / `climate` / `scenes`:** press-bounce timers use `scheduleDeferTimer` + `clearDeferTimers`; media invalidates browser request token on disconnect.
+- **`nodalia-calendar-card.js`:** forecast WebSocket callback and per-`await` guards in `_refreshWeatherForecastByDay`.
+- **`nodalia-graph-card.js`:** `isConnected` in hover rAF and viewport `IntersectionObserver`.
+- **`nodalia-navigation-bar.js`:** tracked dock-entrance rAF cancelled on disconnect; unsafe editor keys rejected in `_applyFieldValue`.
+- **`nodalia-alarm-panel-card.js`:** countdown interval clears when disconnected.
+
+### Changed
+
+- **`nodalia-utils.js`:** shared **`normalizeSecurityConfig`** helper exported on public API.
+- **Render signatures:** entity `getValueSignature` without `JSON.stringify`; light uses `joinParts`; person stamp uses raw HA fields (no per-tick title/translate/badge work).
+- **`fan` / `humidifier`:** optimistic sync skipped when entity revision and signature are unchanged.
+- **`advance-vacuum`:** persisted session load deferred until signature changes; `select` / `homeassistant` mode helpers route through `_callInternalService`; `_mapActionInFlight` reset on disconnect.
+- **`vacuum`:** `_callService` / `_callSelectOption` are internal; user actions use `_callUserVacuumService` with strict gate.
+
+## [1.2.1-alpha.4] - 2026-06-11
+
+Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.4`**.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** invalidates `_refreshRunId` on disconnect; post-`await` `isConnected` guards in native composer and delete paths; unsafe-key guard on `calendars.*` editor fields.
+- **`nodalia-weather-card.js`:** forecast WebSocket callback guards `isConnected` before re-render.
+- **`entity` / `person` / `weather` / `circular-gauge` / `alarm`:** press animations use `scheduleDeferTimer` + `clearDeferTimers`.
+- **`light` / `fan` / `humidifier` / `entity`:** optimistic and mode-switch deferred work guards `isConnected`.
+- **`alarm-panel`:** ResizeObserver respects render signature; focus-defer and pin-verify timers cleared/guarded.
+
+### Changed
+
+- **Render signatures:** `joinParts` on insignia, person, fan, humidifier, weather, alarm, circular-gauge; insignia no longer embeds full config; person caches zone lookup.
+- **`notifications` / `power-flow` / `media-player`:** per-tick side effects run only when render signature changes.
+- **`advance-vacuum`:** calibration rebuild gated by stamp; `_callVacuumService` routes through `_callInternalService`.
+- **`vacuum`:** `select.select_option` respects `strict_service_actions`.
+- **`light` / `entity` / `insignia` / `fav`:** explicit `DEFAULT_CONFIG.security` blocks.
+
+## [1.2.1-alpha.3] - 2026-06-06
+
+Third **`1.2.1`** **`alpha`**: audit pass 3 — async lifecycle, render signatures, graph hover, security defaults, shared color resolver. Release channel **`1.2.1-alpha.3`**.
+
+### Fixed
+
+- **`nodalia-media-player.js`:** `isConnected` guards after media-browser async; volume step loop aborts on disconnect; progress ticker avoids full render until 3 consecutive DOM misses.
+- **`nodalia-climate-card.js`:** post-`await` guards on temperature/range commits; `_commitAborted` on disconnect; schedule draft uses revision counter instead of full object in render signature.
+- **`nodalia-notifications-card.js`:** cached calendar/weather signature stamps; `isConnected` guards in refresh loops and mobile notify flush; deferred press-animation timers.
+- **`nodalia-graph-card.js`:** hover tooltip/line DOM patch without full chart re-render; cached history request key; deferred button-bounce timers.
+
+### Changed
+
+- **Render signatures:** **`joinParts`** / pipe stamps on advance-vacuum, climate, cover, vacuum, and fav cards (no hot-path **`JSON.stringify`**).
+- **`nodalia-bubble-contrast.js` delegates:** calendar, graph, media-player, cover, vacuum, fav, alarm, person, weather, circular-gauge editors use cached shared resolver.
+- **`security.strict_service_actions`:** default **`false`** (opt-in) on media-player, navigation-bar, climate, and vacuum; climate/vacuum gate **`callService`** when strict mode enabled.
+- **`nodalia-calendar-card.js`:** editor **`styles.*` / `animations.*` / `haptics.*`** paths use guarded **`NodaliaUtils.setByPath`**.
+
+## [1.2.1-alpha.2] - 2026-06-06
+
+Second **`1.2.1`** **`alpha`**: deferred-timer lifecycle, render-path polish, and visual coherence. Release channel **`1.2.1-alpha.2`**.
+
+### Fixed
+
+- **`nodalia-utils.js`:** **`scheduleDeferTimer`** / **`clearDeferTimers`** — press-bounce and panel timers cleared on disconnect (fan, light, humidifier, cover, advance-vacuum, power-flow).
+- **`nodalia-scenes-card.js`:** empty-state render signature aligned with **`_getRenderSignature`** (no full re-render every HA tick); lighter signature without full-config **`JSON.stringify`**.
+- **`nodalia-calendar-card.js`:** **`_renderIfChanged`** and async **`_refreshEvents`** skip work when disconnected.
+- **`nodalia-notifications-card.js`:** calendar/weather refresh **`finally`** blocks guard **`isConnected`** before re-render/reschedule.
+- **`nodalia-advance-vacuum-card.js`:** map stale-image removal timer tracked; security editor checkbox matches opt-in **`strict_service_actions`** default.
+
+### Changed
+
+- **`nodalia-power-flow-card.js`:** per-node bubble icon contrast via **`--node-icon-glyph`** and **`NodaliaBubbleContrast`**.
+- **`nodalia-bubble-contrast.js`:** editor color cache capped at **256** entries.
+- **`nodalia-light-card.js` / `climate` / `scenes` / `power-flow`:** editors delegate **`resolveEditorColorValue`** to shared cached resolver.
+
+## [1.2.1-alpha.1] - 2026-06-06
+
+First **`1.2.1`** **`alpha`**: stability, visual coherence, and performance pass on top of stable **`1.2.0`**. Release channel **`1.2.1-alpha.1`** on **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1-alpha.1.js`**, and **`CARD_VERSION`** on bundled card modules.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** visual editor config updates delegate to guarded **`NodaliaUtils.setByPath`** (prototype-pollution safe).
+- **`nodalia-advance-vacuum-card.js`:** shared cleaning session webhooks default to **admin-only** (`security.allow_webhooks_for_non_admin: false`); **`isConnected`** guards after async map actions and webhook callbacks.
+- **`nodalia-graph-card.js`:** skip redundant full render while history is loading; **`isConnected`** checks after async history/statistics fetches.
+- **`nodalia-notifications-card.js`:** entrance animation timer respects disconnected lifecycle.
+
+### Changed
+
+- **`nodalia-light-card.js` / `nodalia-climate-card.js` / `nodalia-scenes-card.js`:** bubble icon contrast via **`NodaliaBubbleContrast.shouldDarkenBubbleIconGlyph`**; light card uses proportional icon sizing (matches fan/entity).
+- **`nodalia-power-flow-card.js`:** render signature uses **`NodaliaRenderSignature.joinParts`** instead of **`JSON.stringify`**.
+- **`nodalia-scenes-card.js`:** default **`button_bounce_duration`** aligned to **320** ms (entity card convention).
 
 ## [1.2.0-alpha.61] - 2026-06-06
 
@@ -67,7 +205,7 @@ Fifty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.57`**.
 
 - **Tests:** regressions for entity-card toggle domains, i18n **`localStorage`** language, person home aliases, climate schedule save routing, and webhook **`fetchWithAuth`** fallback.
 
-## [1.2.0-alpha.56] - 2026-05-29
+## [1.2.0-alpha.56] - 2026-06-04
 
 Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
 
@@ -75,7 +213,7 @@ Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
 
 - **`nodalia-power-flow-card.js`:** home device popup follows the calendar/climate expanded pattern — fixed viewport overlay rendered outside the card, blurred backdrop, centered rounded panel (up to ~640×780px), and scrollable body when there are many individual devices or consumption chips. Replaces the full-screen panel from **alpha.53**.
 
-## [1.2.0-alpha.55] - 2026-05-29
+## [1.2.0-alpha.55] - 2026-06-04
 
 Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
 
@@ -87,7 +225,7 @@ Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
 
 - **Tests:** VM regression in `tests/light-optimistic-toggle.test.mjs` for optimistic turn-off confirmation with unchanged signature.
 
-## [1.2.0-alpha.54] - 2026-05-29
+## [1.2.0-alpha.54] - 2026-06-04
 
 Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
 
@@ -100,7 +238,7 @@ Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
 
 - **Tests:** VM regressions in `tests/fan-humidifier-optimistic-settle.test.mjs` for visual-settle expiry and `mode_entity` signature updates.
 
-## [1.2.0-alpha.53] - 2026-05-29
+## [1.2.0-alpha.53] - 2026-06-04
 
 Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
 
@@ -108,7 +246,7 @@ Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
 
 - **`nodalia-power-flow-card.js`:** home device popup moved outside the card as a fixed overlay with a scrollable body (first pass used a full-screen panel; layout refined in **alpha.56**).
 
-## [1.2.0-alpha.52] - 2026-05-29
+## [1.2.0-alpha.52] - 2026-06-04
 
 Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
 
@@ -117,7 +255,7 @@ Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
 - **`nodalia-power-flow-card.js`:** removed the home individual-device hint chip — tapping the Home node to open the popup is sufficient.
 - **`nodalia-power-flow-card.js`:** home device popup items reuse the card’s diagram node language (gradient bubbles, label/value chips) instead of generic row containers.
 
-## [1.2.0-alpha.51] - 2026-05-29
+## [1.2.0-alpha.51] - 2026-06-04
 
 Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
 
@@ -126,7 +264,7 @@ Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
 - **`nodalia-power-flow-card.js`:** home individual-device hint moved out of the Home bubble into a subtle chip under the label so it no longer overlapped the consumption value (chip removed again in **alpha.52**).
 - **`nodalia-power-flow-card.js`:** first pass restyling the home device popup toward the main card palette (superseded by **alpha.52** node layout).
 
-## [1.2.0-alpha.50] - 2026-05-29
+## [1.2.0-alpha.50] - 2026-06-04
 
 Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
 
@@ -134,7 +272,7 @@ Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
 
 - **`nodalia-power-flow-card.js`:** visual editor no longer wipes `entities.grid` / `home` / `solar` / `battery` when adding or removing individual devices — the handler wrongly treated `entities` as an array and reset the whole object on every individual action, which broke the main flow diagram and made remove appear to do nothing.
 
-## [1.2.0-alpha.49] - 2026-05-29
+## [1.2.0-alpha.49] - 2026-06-04
 
 Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.
 
@@ -144,7 +282,7 @@ Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.
 - **`nodalia-power-flow-card.js`:** render signature now includes the energy-branch layout config so adding or editing individual devices triggers a full diagram refresh.
 - **Release artifacts:** keep only the current versioned HACS bundles (`1.2.0-alpha.49`); `npm run bundle` now removes stale `nodalia-cards-*-alpha.*.js` files automatically.
 
-## [1.2.0-alpha.48] - 2026-05-29
+## [1.2.0-alpha.48] - 2026-06-04
 
 Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.
 
@@ -152,7 +290,7 @@ Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.
 
 - **Visual editors (suite-wide):** Lovelace briefly disconnects the config panel when opening entity/icon pickers; `disconnectedCallback` had removed click/input listeners without re-attaching them on reconnect, so editor buttons and toggles stopped responding. Listeners now mount in `connectedCallback` via `_attachEditorShadowListeners()`.
 
-## [1.2.0-alpha.47] - 2026-05-29
+## [1.2.0-alpha.47] - 2026-06-03
 
 Forty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.47`**.
 
@@ -164,7 +302,7 @@ Forty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.47`**.
 
 - **`nodalia-navigation-bar.js`:** when popup/browser/expand state is unchanged, route badges and the media player region update in-place instead of rebuilding the full shadow DOM on every `set hass`.
 
-## [1.2.0-alpha.46] - 2026-05-29
+## [1.2.0-alpha.46] - 2026-06-03
 
 Forty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.46`**.
 
@@ -177,7 +315,7 @@ Forty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.46`**.
 
 - **Repo hygiene:** removed accidental Finder duplicate artifacts (`* 2.js`, `* 2.mjs`, `* 2.yaml`, `* 2.json`).
 
-## [1.2.0-alpha.45] - 2026-05-29
+## [1.2.0-alpha.45] - 2026-06-03
 
 Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.
 
@@ -193,7 +331,7 @@ Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.
 
 - **`package.json`:** `npm run validate` — syntax check, i18n validation, tests, and bundle build in one command.
 
-## [1.2.0-alpha.44] - 2026-05-29
+## [1.2.0-alpha.44] - 2026-06-03
 
 Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.
 
@@ -203,7 +341,7 @@ Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.
 - **`nodalia-power-flow-card.js`:** popup mode no longer breaks the flow layout (individual devices are excluded from diagram layout counting).
 - **`nodalia-power-flow-card.js`:** visual editor keeps draft individual rows when adding a device so native entity selectors stay usable before save.
 
-## [1.2.0-alpha.43] - 2026-05-29
+## [1.2.0-alpha.43] - 2026-06-02
 
 Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.
 
@@ -216,7 +354,7 @@ Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.
 - **`nodalia-power-flow-card.js`:** native HA entity selectors in the visual editor; card-based individual device rows with add/remove/reorder.
 - **`nodalia-scenes-card.js`:** bundled at this release channel (launch animation polish from alpha.41).
 
-## [1.2.0-alpha.42] - 2026-05-29
+## [1.2.0-alpha.42] - 2026-06-02
 
 Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
 
@@ -228,7 +366,7 @@ Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
 
 - **`nodalia-power-flow-card.js`:** visual editor uses native Home Assistant `ha-selector` / `ha-entity-picker` for all entity fields, a card-based individual-device editor (no manual entity IDs), and merged editor i18n for consumption chip labels.
 
-## [1.2.0-alpha.41] - 2026-05-29
+## [1.2.0-alpha.41] - 2026-06-02
 
 Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
 
@@ -243,7 +381,7 @@ Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
 - **`nodalia-scenes-card.js`:** richer launch feedback on scene tap — accent burst, outer glow ring, icon pulse, and earlier press animation on pointer/touch down.
 - **`examples/calendar-native-event-webhook.yaml`:** documents admin-only default and `allowed_calendar_ids` allowlist validation.
 
-## [1.2.0-alpha.40] - 2026-05-29
+## [1.2.0-alpha.40] - 2026-06-01
 
 Fortieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.40`**.
 

@@ -1059,6 +1059,53 @@
     }
   }
 
+  function clearDeferTimers(host) {
+    const timers = host?._nodaliaDeferTimers;
+    if (!timers?.size) {
+      return;
+    }
+    timers.forEach(timer => window.clearTimeout(timer));
+    timers.clear();
+  }
+
+  function normalizeSecurityConfig(security = {}, defaults = {}) {
+    const base = {
+      strict_service_actions: false,
+      allowed_services: [],
+      allowed_service_domains: [],
+      ...(isObject(defaults) ? defaults : {}),
+    };
+    const src = isObject(security) ? security : {};
+    const normalized = { ...base };
+    normalized.strict_service_actions = src.strict_service_actions === true;
+    if (Array.isArray(src.allowed_services)) {
+      normalized.allowed_services = src.allowed_services
+        .map(item => String(item || "").trim().toLowerCase())
+        .filter(Boolean);
+    }
+    if (Array.isArray(src.allowed_service_domains)) {
+      normalized.allowed_service_domains = src.allowed_service_domains
+        .map(item => String(item || "").trim().toLowerCase())
+        .filter(Boolean);
+    }
+    return normalized;
+  }
+
+  function scheduleDeferTimer(host, callback, delayMs) {
+    if (!host || typeof window === "undefined" || typeof callback !== "function") {
+      return 0;
+    }
+    if (!host._nodaliaDeferTimers) {
+      host._nodaliaDeferTimers = new Set();
+    }
+    const timer = window.setTimeout(() => {
+      host._nodaliaDeferTimers?.delete(timer);
+      callback();
+    }, delayMs);
+    host._nodaliaDeferTimers.add(timer);
+    return timer;
+  }
+
   const api = {
     isObject,
     isUnsafeConfigPathKey,
@@ -1088,6 +1135,9 @@
     renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,
     applyDefaultConfigNameFromEntity,
+    scheduleDeferTimer,
+    clearDeferTimers,
+    normalizeSecurityConfig,
   };
 
   if (typeof window !== "undefined") {

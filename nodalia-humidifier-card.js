@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -564,6 +564,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -596,9 +598,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
+    this._lastEntityRevision = "";
     this._lastRenderedIsOn = null;
     this._lastRenderedPanelKey = "";
     this._lastControlsMarkup = "";
@@ -726,6 +730,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._clearOptimisticToggleTimer();
     this._clearOptimisticVisualSettleTimer();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -770,19 +775,34 @@ class NodaliaHumidifierCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const actualState = this._getActualState();
-    const visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
+    const entityId = this._config?.entity || "";
+    const entityRevision = entityId && actualState
+      ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}`
+      : "";
+    const revisionUnchanged = Boolean(entityRevision && entityRevision === this._lastEntityRevision);
+    if (entityRevision) {
+      this._lastEntityRevision = entityRevision;
+    }
+    const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
     let nextSignature = this._getRenderSignature();
     const signatureUnchanged = Boolean(
       this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
     );
 
-    if (signatureUnchanged && !this._optimisticToggle && !visualSettleChanged) {
+    if (signatureUnchanged && !hasPendingOptimistic) {
       return;
     }
 
+    let visualSettleChanged = false;
+    if (!revisionUnchanged || hasPendingOptimistic) {
+      visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
+    }
+
     const hadOptimisticToggle = Boolean(this._optimisticToggle);
-    this._syncLastKnownOnState(actualState);
-    this._syncOptimisticToggleState(actualState);
+    if (!revisionUnchanged || hasPendingOptimistic) {
+      this._syncLastKnownOnState(actualState);
+      this._syncOptimisticToggleState(actualState);
+    }
     nextSignature = this._getRenderSignature();
     const optimisticJustConfirmed = hadOptimisticToggle && !this._optimisticToggle;
 
@@ -837,36 +857,41 @@ class NodaliaHumidifierCard extends HTMLElement {
     const modeEntityState = modeEntityId ? hass?.states?.[modeEntityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      optimistic: String(attrs._nodalia_optimistic_toggle || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      humidity: Number(attrs.humidity ?? -1),
-      targetHumidity: Number(attrs.target_humidity ?? -1),
-      minHumidity: Number(attrs.min_humidity ?? -1),
-      maxHumidity: Number(attrs.max_humidity ?? -1),
-      mode: String(attrs.mode || ""),
-      availableModes: Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
+      String(state?.state || ""),
+      String(attrs._nodalia_optimistic_toggle || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.show_entity_picture === true,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.humidity ?? -1),
+      Number(attrs.target_humidity ?? -1),
+      Number(attrs.min_humidity ?? -1),
+      Number(attrs.max_humidity ?? -1),
+      String(attrs.mode || ""),
+      Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
       modeEntityId,
-      modeEntityState: String(modeEntityState?.state || ""),
-      modeEntityOptions: Array.isArray(modeEntityState?.attributes?.options)
+      String(modeEntityState?.state || ""),
+      Array.isArray(modeEntityState?.attributes?.options)
         ? modeEntityState.attributes.options.join("|")
         : "",
       helperEntityId,
-      helperState: String(helperState?.state || ""),
-      helperOptions: Array.isArray(helperState?.attributes?.options)
+      String(helperState?.state || ""),
+      Array.isArray(helperState?.attributes?.options)
         ? helperState.attributes.options.join("|")
         : "",
-      compact: Boolean(this._isCompactLayout),
-      modePanelOpen: Boolean(this._modePanelOpen),
-      fanModePanelOpen: Boolean(this._fanModePanelOpen),
-      tap: `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
-      hold: `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
-    });
+      Boolean(this._isCompactLayout),
+      Boolean(this._modePanelOpen),
+      Boolean(this._fanModePanelOpen),
+      `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
+      `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "humidifier:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
@@ -1129,6 +1154,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
     this._optimisticVisualSettleTimer = window.setTimeout(() => {
       this._optimisticVisualSettleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       const nextActualState = this._getActualState();
       if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
         this._scheduleOptimisticVisualSettleTimeout();
@@ -1179,6 +1207,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
     this._optimisticToggleTimer = window.setTimeout(() => {
       this._optimisticToggleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       if (!this._isOptimisticTogglePending(this._getActualState())) {
         this._lastRenderSignature = "";
         this._render();
@@ -1524,9 +1555,18 @@ class NodaliaHumidifierCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -1960,7 +2000,12 @@ class NodaliaHumidifierCard extends HTMLElement {
       };
 
       panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeRemoval, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      }
     };
     const appendPanel = () => {
       if (!panelMarkup) {
@@ -1981,11 +2026,17 @@ class NodaliaHumidifierCard extends HTMLElement {
       }
 
       controlsInner.appendChild(panelNode);
-      window.setTimeout(() => {
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const finalizeEnter = () => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("humidifier-card__panel-shell--entering");
         }
-      }, animations.panelDuration + 80);
+      };
+      if (typeof schedule === "function") {
+        schedule(this, finalizeEnter, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeEnter, animations.panelDuration + 80);
+      }
     };
 
     if (!nextPanelKey) {
@@ -2417,11 +2468,28 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
   }
 
+  _humidifierCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.humidifierCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.humidifierCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _humidifierAria(key, fallback = "") {
+    return window.NodaliaI18n?.translateHumidifierAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._humidifierCardUi("emptyTitle", "Nodalia Humidifier Card"));
+    const body = escapeHtml(
+      this._humidifierCardUi("emptyBody", "Set `entity` to a `humidifier.*` entity to show this card."),
+    );
     return `
       <ha-card class="humidifier-card humidifier-card--empty">
-        <div class="humidifier-card__empty-title">Nodalia Humidifier Card</div>
-        <div class="humidifier-card__empty-text">Configura \`entity\` con una entidad \`humidifier.*\` para mostrar la tarjeta.</div>
+        <div class="humidifier-card__empty-title">${title}</div>
+        <div class="humidifier-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
@@ -2598,7 +2666,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 step="any"
                 value="${currentHumidity}"
                 style="--humidity:${clamp(humidityProgress, 0, 100)};"
-                aria-label="Humedad objetivo"
+                aria-label="${escapeHtml(this._humidifierAria("targetHumidity", "Target humidity"))}"
               />
             </div>
           </div>
@@ -2613,7 +2681,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                           type="button"
                           class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-mode-panel"
-                          aria-label="Show modes"
+                          aria-label="${escapeHtml(this._humidifierAria("showModes", "Show modes"))}"
                         >
                           <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
@@ -2627,7 +2695,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                           type="button"
                           class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-fan-mode-panel"
-                          aria-label="Show speeds"
+                          aria-label="${escapeHtml(this._humidifierAria("showSpeeds", "Show speeds"))}"
                         >
                           <ha-icon icon="mdi:fan"></ha-icon>
                         </button>
@@ -2650,7 +2718,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                     type="button"
                     class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-mode-panel"
-                    aria-label="Show modes"
+                    aria-label="${escapeHtml(this._humidifierAria("showModes", "Show modes"))}"
                   >
                     <ha-icon icon="mdi:tune-variant"></ha-icon>
                   </button>
@@ -2664,7 +2732,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                     type="button"
                     class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-fan-mode-panel"
-                    aria-label="Show speeds"
+                    aria-label="${escapeHtml(this._humidifierAria("showSpeeds", "Show speeds"))}"
                   >
                     <ha-icon icon="mdi:fan"></ha-icon>
                   </button>

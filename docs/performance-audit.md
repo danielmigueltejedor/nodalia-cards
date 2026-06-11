@@ -1,9 +1,9 @@
 # Nodalia Cards — Performance & interaction audit
 
-**Date:** 2026-05-18 (pass 1 + pass 2)  
+**Date:** 2026-05-18 (pass 1–3); refreshed **2026-06-11** for stable **`1.2.1`**  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
-**Target environment:** Home Assistant Core 2026.4+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
-**Bundle size (minified HACS):** ~3.57 MB (`nodalia-cards-1.1.4.js` — rebuild after release)
+**Target environment:** Home Assistant Core 2025.1+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
+**Bundle size (minified HACS):** ~3.8 MB (`nodalia-cards-1.2.1.js`; optional split core + suite)
 
 ---
 
@@ -171,7 +171,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 
 - **Entry:** 25 card modules + i18n + utils + render-signature + bubble-contrast.
 - **Standalone embed:** `scripts/sync-standalone-embed.mjs` for single-file artifacts only (not committed in card sources).
-- **Tests:** `node --test tests/**/*.test.mjs` (95 tests). No ESLint script in `package.json`.
+- **Tests:** `node --test tests/**/*.test.mjs` (**149** tests). No ESLint script in `package.json`.
 - **i18n:** Editor + runtime JSON; validate via `pnpm run i18n:validate-editor` etc.
 
 ---

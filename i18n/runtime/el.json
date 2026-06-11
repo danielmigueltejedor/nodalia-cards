@@ -277,7 +277,9 @@
         "met": "Μετεωρολογικό",
         "monitor": "Παρακολούθηση"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Ρυθμίστε το `entity` για να εμφανιστεί ο καιρός."
   },
   "humidifierCard": {
     "modes": {
@@ -294,7 +296,7 @@
       "medium": "Μέτριο",
       "mid": "Μέτριο",
       "high": "Υψηλό",
-      "boost": "Boost",
+      "boost": "Ωθηση",
       "turbo": "Turbo",
       "normal": "Κανονικό",
       "balanced": "Κανονικό",
@@ -313,6 +315,13 @@
       "idle": "Αδράνεια",
       "unavailable": "Μη διαθέσιμο",
       "unknown": "Άγνωστο"
+    },
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Ορίστε το `entity` σε οντότητα `humidifier.*` για να εμφανιστεί η κάρτα.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
@@ -337,7 +346,8 @@
     "aria": {
       "dialRangeGroup": "Εύρος άνεσης και εσωτερική θερμοκρασία",
       "dialTargetSlider": "Θερμοκρασία στόχος",
-      "dialNoSetpoint": "Εσωτερική θερμοκρασία· ο θερμοστάτης δεν έχει ενεργό στόχο"
+      "dialNoSetpoint": "Εσωτερική θερμοκρασία· ο θερμοστάτης δεν έχει ενεργό στόχο",
+      "togglePower": "Ενεργοποίηση ή απενεργοποίηση"
     },
     "dialNoSetpointHint": "Χωρίς ενεργό στόχο",
     "schedule": {
@@ -370,10 +380,14 @@
         "webhookFailed": "Αποτυχία συγχρονισμού προγράμματος. Ελέγξτε webhook και αρχεία καταγραφής Home Assistant.",
         "dualRangeUnsupported": "Το εβδομαδιαίο πρόγραμμα δεν είναι διαθέσιμο όσο το θερμοστάτιο χρησιμοποιεί διπλό εύρος θέρμανσης/ψύξης."
       }
-    }
+    },
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Ορίστε το `entity` σε οντότητα `climate.*` για να εμφανιστεί η κάρτα."
   },
   "graphCard": {
-    "emptyHistory": "Δεν υπάρχει διαθέσιμο ιστορικό"
+    "emptyHistory": "Δεν υπάρχει διαθέσιμο ιστορικό",
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Ορίστε `entities` σε μία ή περισσότερες αριθμητικές οντότητες για το γράφημα."
   },
   "fan": {
     "off": "Ανενεργό",
@@ -381,7 +395,15 @@
     "unavailable": "Μη διαθέσιμο",
     "unknown": "Άγνωστο",
     "noState": "Χωρίς κατάσταση",
-    "fallbackName": "Ανεμιστήρας"
+    "fallbackName": "Ανεμιστήρας",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Ορίστε το `entity` σε οντότητα `fan.*` για να εμφανιστεί η κάρτα.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "Συναγερμός",
@@ -423,7 +445,9 @@
     "stop": "Διακοπή",
     "positionSlider": "Θέση",
     "tiltSlider": "Κλίση",
-    "tiltChip": "Κλίση {value}%"
+    "tiltChip": "Κλίση {value}%",
+    "toggleShowButtons": "Εμφάνιση άνοιγμα, στάση και κλείσιμο",
+    "toggleShowSliders": "Εμφάνιση ρυθμιστικών"
   },
   "person": {
     "home": "Σπίτι",
@@ -509,7 +533,9 @@
       "good": "Καλό",
       "fair": "Μέτριο",
       "poor": "Κακό"
-    }
+    },
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Ρυθμίστε το `entity` για να εμφανιστεί η κάρτα."
   },
   "favCard": {
     "disarmedF": "Αφοπλισμένο",
@@ -521,7 +547,9 @@
     "arming": "Οπλισμός",
     "disarming": "Αφόπλιση",
     "pending": "Εκκρεμεί",
-    "triggered": "Ενεργοποιήθηκε"
+    "triggered": "Ενεργοποιήθηκε",
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Ρυθμίστε το `entity` για να εμφανιστεί το αγαπημένο."
   },
   "notificationsCard": {
     "fallbackEvent": "Συμβάν",
@@ -546,7 +574,8 @@
       "inkLow": "Χαμηλή στάθμη μελανιού",
       "humidityHigh": "Υψηλή υγρασία",
       "humidityLow": "Χαμηλή υγρασία",
-      "customFallback": "Ειδοποίηση"
+      "customFallback": "Ειδοποίηση",
+      "humidifierFillFull": "Γεμάτη δεξαμενή"
     },
     "messages": {
       "vacuumAttention": "Το {name} είναι σε κατάσταση {state}.",
@@ -557,7 +586,8 @@
       "mediaLeftOn": "Το {media} παραμένει ενεργό και το {source} δεν ανιχνεύει παρουσία.",
       "rainSoon": "Το {source} προβλέπει βροχή γύρω στις {time}. Αν έχεις ρούχα έξω, έλεγξέ τα.",
       "lowLevel": "Το {source} είναι στο {value}.",
-      "sensorValue": "Το {source} δείχνει {value}."
+      "sensorValue": "Το {source} δείχνει {value}.",
+      "highLevel": "Το {source} είναι στο {value}."
     },
     "actions": {
       "openCalendar": "Άνοιγμα ημερολογίου",
@@ -587,6 +617,10 @@
       "dismiss": "Διαγραφή ειδοποίησης",
       "showLess": "Εμφάνιση λιγότερων",
       "showAll": "Εμφάνιση όλων των ειδοποιήσεων"
+    },
+    "empty": {
+      "title": "Όλα ήσυχα",
+      "message": "Δεν έχετε ενεργές ειδοποιήσεις"
     }
   },
   "calendarCard": {
@@ -661,61 +695,150 @@
       "newEventDialog": "Νέο συμβάν ημερολογίου",
       "deleteEvent": "Διαγραφή συμβάντος",
       "createHaEvent": "Δημιουργία συμβάντος HA",
-      "close": "Κλείσιμο"
+      "close": "Κλείσιμο",
+      "deleteRecurringDialog": "Επιλέξτε πώς να διαγράψετε το επαναλαμβανόμενο συμβάν"
+    },
+    "deleteRecurrence": {
+      "title": "Διαγραφή επαναλαμβανόμενου συμβάντος",
+      "message": "Αυτό το συμβάν ανήκει σε σειρά. Τι θέλετε να διαγράψετε;",
+      "thisOnly": "Μόνο αυτό το συμβάν",
+      "thisAndFuture": "Αυτό και όλα τα επόμενα",
+      "deleteFailed": "Δεν ήταν δυνατή η διαγραφή του συμβάντος. Δοκιμάστε ξανά.",
+      "deleteFailedWithMessage": "Δεν ήταν δυνατή η διαγραφή του συμβάντος: {message}"
     }
   },
   "vacuumErrorLabels": {
-    "lidar_blocked": "LiDAR blocked",
-    "bumper_stuck": "Bumper stuck",
-    "wheels_suspended": "Wheels suspended",
-    "cliff_sensor_error": "Cliff sensor error",
-    "main_brush_jammed": "Main brush jammed",
-    "side_brush_jammed": "Side brush jammed",
-    "wheels_jammed": "Wheels jammed",
-    "robot_trapped": "Robot trapped",
-    "no_dustbin": "Dustbin missing",
-    "strainer_error": "Filter error",
-    "compass_error": "Compass error",
-    "low_battery": "Low battery",
-    "charging_error": "Charging error",
-    "battery_error": "Battery error",
-    "wall_sensor_dirty": "Wall sensor dirty",
-    "robot_tilted": "Robot tilted",
-    "side_brush_error": "Side brush error",
-    "fan_error": "Fan error",
-    "dock": "Dock error",
-    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
-    "vertical_bumper_pressed": "Vertical bumper pressed",
-    "dock_locator_error": "Dock locator error",
-    "return_to_dock_fail": "Failed to return to dock",
-    "nogo_zone_detected": "No-go zone detected",
-    "visual_sensor": "Visual sensor error",
-    "light_touch": "Light touch sensor triggered",
-    "vibrarise_jammed": "VibraRise jammed",
-    "robot_on_carpet": "Robot on carpet",
-    "filter_blocked": "Filter blocked",
-    "invisible_wall_detected": "Invisible wall detected",
-    "cannot_cross_carpet": "Cannot cross carpet",
-    "internal_error": "Internal error",
-    "collect_dust_error_3": "Dust collection error",
-    "collect_dust_error_4": "Dust collection error",
-    "mopping_roller_1": "Mopping roller error",
-    "mopping_roller_error_2": "Mopping roller error",
-    "clear_water_box_hoare": "Clean water tank abnormal",
-    "dirty_water_box_hoare": "Dirty water tank abnormal",
-    "sink_strainer_hoare": "Sink strainer abnormal",
-    "clear_water_box_exception": "Clean water tank error",
-    "clear_brush_exception": "Cleaning brush error",
-    "clear_brush_exception_2": "Cleaning brush error",
-    "filter_screen_exception": "Filter screen error",
-    "mopping_roller_2": "Mopping roller error",
-    "up_water_exception": "Water refill error",
-    "drain_water_exception": "Water drain error",
-    "temperature_protection": "Temperature protection",
-    "clean_carousel_exception": "Cleaning carousel error",
-    "clean_carousel_water_full": "Cleaning carousel water full",
-    "water_carriage_drop": "Water carriage dropped",
-    "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "lidar_blocked": "Το LiDAR αποκλείστηκε",
+    "bumper_stuck": "Ο προφυλακτήρας κόλλησε",
+    "wheels_suspended": "Τροχοί αναρτημένοι",
+    "cliff_sensor_error": "Σφάλμα αισθητήρα γκρεμού",
+    "main_brush_jammed": "Μπλοκάρει η κύρια βούρτσα",
+    "side_brush_jammed": "Η πλαϊνή βούρτσα έχει μπλοκαριστεί",
+    "wheels_jammed": "Μπλοκαρισμένοι τροχοί",
+    "robot_trapped": "Ρομπότ παγιδευμένο",
+    "no_dustbin": "Λείπει ο κάδος απορριμμάτων",
+    "strainer_error": "Σφάλμα φίλτρου",
+    "compass_error": "Σφάλμα πυξίδας",
+    "low_battery": "Χαμηλή μπαταρία",
+    "charging_error": "Σφάλμα φόρτισης",
+    "battery_error": "Σφάλμα μπαταρίας",
+    "wall_sensor_dirty": "Ο αισθητήρας τοίχου είναι βρώμικος",
+    "robot_tilted": "Ρομπότ με κλίση",
+    "side_brush_error": "Σφάλμα πλευρικής βούρτσας",
+    "fan_error": "Σφάλμα ανεμιστήρα",
+    "dock": "Σφάλμα βάσης",
+    "optical_flow_sensor_dirt": "Ο αισθητήρας οπτικής ροής είναι βρώμικος",
+    "vertical_bumper_pressed": "Κάθετος προφυλακτήρας πατημένος",
+    "dock_locator_error": "Σφάλμα εντοπισμού βάσης",
+    "return_to_dock_fail": "Αποτυχία επιστροφής στην αποβάθρα",
+    "nogo_zone_detected": "Εντοπίστηκε απαγορευμένη ζώνη",
+    "visual_sensor": "Σφάλμα οπτικού αισθητήρα",
+    "light_touch": "Ενεργοποιήθηκε ο ελαφρύς αισθητήρας αφής",
+    "vibrarise_jammed": "Το VibraRise μπλοκάρει",
+    "robot_on_carpet": "Ρομπότ στο χαλί",
+    "filter_blocked": "Το φίλτρο μπλοκαρίστηκε",
+    "invisible_wall_detected": "Εντοπίστηκε αόρατος τοίχος",
+    "cannot_cross_carpet": "Δεν μπορεί να περάσει χαλί",
+    "internal_error": "Εσωτερικό σφάλμα",
+    "collect_dust_error_3": "Σφάλμα συλλογής σκόνης",
+    "collect_dust_error_4": "Σφάλμα συλλογής σκόνης",
+    "mopping_roller_1": "Σφάλμα κυλίνδρου σφουγγαρίσματος",
+    "mopping_roller_error_2": "Σφάλμα κυλίνδρου σφουγγαρίσματος",
+    "clear_water_box_hoare": "Δεξαμενή καθαρού νερού μη φυσιολογικό",
+    "dirty_water_box_hoare": "Δεξαμενή βρώμικου νερού μη φυσιολογική",
+    "sink_strainer_hoare": "Το φίλτρο νεροχύτη είναι ανώμαλο",
+    "clear_water_box_exception": "Σφάλμα δεξαμενής καθαρού νερού",
+    "clear_brush_exception": "Σφάλμα βούρτσας καθαρισμού",
+    "clear_brush_exception_2": "Σφάλμα βούρτσας καθαρισμού",
+    "filter_screen_exception": "Σφάλμα οθόνης φίλτρου",
+    "mopping_roller_2": "Σφάλμα κυλίνδρου σφουγγαρίσματος",
+    "up_water_exception": "Σφάλμα αναπλήρωσης νερού",
+    "drain_water_exception": "Σφάλμα αποστράγγισης νερού",
+    "temperature_protection": "Προστασία θερμοκρασίας",
+    "clean_carousel_exception": "Σφάλμα καθαρισμού καρουζέλ",
+    "clean_carousel_water_full": "Καθαρισμός καρουζέλ γεμάτο νερό",
+    "water_carriage_drop": "Το βαγόνι του νερού έπεσε",
+    "check_clean_carouse": "Ελέγξτε το καρουζέλ καθαρισμού",
+    "audio_error": "Σφάλμα ήχου",
+    "water_empty": "Άδειο δοχείο νερού"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Εμφάνιση φωτεινότητας",
+      "temperature": "Εμφάνιση θερμοκρασίας",
+      "color": "Εμφάνιση χρώματος"
+    },
+    "sections": {
+      "temperature": "Θερμοκρασία",
+      "color": "Χρώμα",
+      "presets": "Προεπιλογές"
+    },
+    "temperaturePresets": {
+      "warm": "Ζεστό",
+      "neutral": "Ουδέτερο",
+      "cool": "Ψυχρό"
+    },
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Ορίστε το `entity` σε οντότητα `light.*` για να εμφανιστεί η κάρτα."
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Ενεργοποίηση ή απενεργοποίηση",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
+    }
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Προσθέστε οντότητες σκηνής στον επεξεργαστή κάρτας.",
+    "defaultName": "Σκηνές",
+    "unavailable": "Μη διαθέσιμο",
+    "subtitle": "Πατήστε μια διάθεση για εκκίνηση",
+    "moods": "διαθέσεις"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Ορίστε το `entity` σε αριθμητική οντότητα για τον δείκτη."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Ορίστε το `entity` σε οντότητα `vacuum.*` για να εμφανιστεί η κάρτα."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Ρυθμίστε `entity` ή βασικό περιεχόμενο για να εμφανιστεί το σήμα."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Ορίστε `entity` ή `players` για να εμφανιστεί αναπαραγωγέας.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -263,10 +263,14 @@ function normalizeConfig(config) {
   normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
   delete normalized.quick_reminder_webhook;
   normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
-  normalized.security = normalized.security || {};
+  const priorSecurity = isObject(normalized.security) ? normalized.security : {};
+  normalized.security = {
+    ...DEFAULT_CONFIG.security,
+    ...priorSecurity,
+  };
   if (normalized.security.allow_webhooks_for_non_admin === undefined) {
     normalized.security.allow_webhooks_for_non_admin =
-      normalized.security.require_admin_for_webhooks === true
+      priorSecurity.require_admin_for_webhooks === true
         ? false
         : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
   }
@@ -523,25 +527,11 @@ function supportedWeatherForecastTypes(state) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -877,6 +867,9 @@ class NodaliaCalendarCard extends HTMLElement {
       window.clearTimeout(this._refreshTimer);
       this._refreshTimer = 0;
     }
+    this._refreshRunId += 1;
+    this._refreshInFlight = false;
+    this._refreshQueued = false;
     this._calendarEntrancePlayed = false;
     this._wasInViewport = false;
     this._unsubscribeWeatherForecast();
@@ -888,6 +881,9 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     this._viewVisibilityObserver = new IntersectionObserver(
       entries => {
+        if (!this.isConnected) {
+          return;
+        }
         const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
         if (visible === this._wasInViewport) {
           return;
@@ -1514,6 +1510,9 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   _renderIfChanged(force = false) {
+    if (!this.isConnected) {
+      return;
+    }
     const next = this._getRenderSignature();
     if (!force && next === this._lastRenderSignature) {
       return;
@@ -1592,16 +1591,18 @@ class NodaliaCalendarCard extends HTMLElement {
         this._events = [];
         this._error = this._uiText("errors.loadEvents", "Could not load calendar events.");
       } finally {
-        if (refreshRunId !== this._refreshRunId) {
+        if (refreshRunId !== this._refreshRunId || !this.isConnected) {
           return;
         }
         this._loading = false;
         this._renderIfChanged(true);
-        this._scheduleRefresh();
+        if (this.isConnected) {
+          this._scheduleRefresh();
+        }
       }
     } finally {
       this._refreshInFlight = false;
-      if (this._refreshQueued) {
+      if (this._refreshQueued && this.isConnected) {
         this._refreshQueued = false;
         this._refreshEvents();
       }
@@ -1739,6 +1740,9 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     try {
       await this._hass.callWS(payload);
+      if (!this.isConnected) {
+        return;
+      }
       this._deleteRecurringChoiceKey = "";
       this._deleteRecurrenceError = "";
       this._events = this._events.filter(item => calendarEventKey(item) !== keyTrim);
@@ -2105,6 +2109,9 @@ class NodaliaCalendarCard extends HTMLElement {
     this._unsubscribeWeatherForecast();
     this._weatherForecastSubscriptionKey = subscriptionKey;
     this._weatherForecastSubscription = subscribeMessage(event => {
+      if (!this.isConnected) {
+        return;
+      }
       this._weatherForecastEvents = {
         ...this._weatherForecastEvents,
         [forecastType]: event,
@@ -2200,10 +2207,16 @@ class NodaliaCalendarCard extends HTMLElement {
     };
     addForecastCandidate(this._getCachedForecastRows(forecastTypes));
     for (const forecastType of forecastTypes) {
+      if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+        return;
+      }
       try {
         addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType));
       } catch (_error) {
         // fallback below
+      }
+      if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+        return;
       }
       try {
         addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType));
@@ -2220,6 +2233,9 @@ class NodaliaCalendarCard extends HTMLElement {
           "GET",
           `weather/forecast/${encodeURIComponent(entityId)}?type=daily`,
         );
+        if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+          return;
+        }
         addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
       } catch (_error) {
         // Keep silent, not all HA versions expose this endpoint.
@@ -2579,6 +2595,9 @@ class NodaliaCalendarCard extends HTMLElement {
         });
         if (rrule) {
           await createCalendarEventViaWs(calendarEventPayload);
+          if (!this.isConnected) {
+            return;
+          }
           this._nativeComposerError = "";
           this._nativeEventComposerOpen = false;
           this._refreshEvents();
@@ -2589,12 +2608,18 @@ class NodaliaCalendarCard extends HTMLElement {
             nativeWebhookId,
             this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload),
           );
+          if (!this.isConnected) {
+            return;
+          }
           if (!ok) {
             this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
             return;
           }
         } else {
           await this._hass.callService("calendar", "create_event", payload);
+          if (!this.isConnected) {
+            return;
+          }
         }
       } else {
         const formatLocalDateTime = value => {
@@ -2625,6 +2650,9 @@ class NodaliaCalendarCard extends HTMLElement {
         });
         if (rrule) {
           await createCalendarEventViaWs(calendarEventPayload);
+          if (!this.isConnected) {
+            return;
+          }
           this._nativeComposerError = "";
           this._nativeEventComposerOpen = false;
           this._refreshEvents();
@@ -2635,13 +2663,22 @@ class NodaliaCalendarCard extends HTMLElement {
             nativeWebhookId,
             this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload),
           );
+          if (!this.isConnected) {
+            return;
+          }
           if (!ok) {
             this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
             return;
           }
         } else {
           await this._hass.callService("calendar", "create_event", payload);
+          if (!this.isConnected) {
+            return;
+          }
         }
+      }
+      if (!this.isConnected) {
+        return;
       }
       this._nativeComposerError = "";
       this._nativeEventComposerOpen = false;
@@ -4572,6 +4609,15 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     if (!field) {
       return;
     }
+    if (
+      !field.startsWith("calendars.") &&
+      typeof window !== "undefined" &&
+      window.NodaliaUtils &&
+      typeof window.NodaliaUtils.setByPath === "function"
+    ) {
+      window.NodaliaUtils.setByPath(targetConfig, field, value);
+      return;
+    }
     if (field.startsWith("calendars.")) {
       const parts = field.split(".");
       const index = Number(parts[1]);
@@ -4586,6 +4632,19 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       }
       if (parts.length >= 3) {
         const key = parts[2];
+        const unsafeKey =
+          typeof window !== "undefined"
+          && window.NodaliaUtils
+          && typeof window.NodaliaUtils.isUnsafeConfigPathKey === "function"
+          && window.NodaliaUtils.isUnsafeConfigPathKey(key);
+        if (
+          key === "__proto__"
+          || key === "constructor"
+          || key === "prototype"
+          || unsafeKey
+        ) {
+          return;
+        }
         let entry = targetConfig.calendars[index];
         if (typeof entry === "string") {
           entry = { entity: String(entry).trim(), label: "", tint: "" };
@@ -4609,36 +4668,6 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       };
       return;
     }
-    if (field.startsWith("styles.")) {
-      const parts = field.split(".");
-      let cursor = targetConfig;
-      for (let index = 0; index < parts.length - 1; index += 1) {
-        const key = parts[index];
-        if (!isObject(cursor[key])) {
-          cursor[key] = {};
-        }
-        cursor = cursor[key];
-      }
-      cursor[parts[parts.length - 1]] = value;
-      return;
-    }
-    if (field.startsWith("animations.")) {
-      const key = field.split(".")[1];
-      if (!isObject(targetConfig.animations)) {
-        targetConfig.animations = {};
-      }
-      targetConfig.animations[key] = value;
-      return;
-    }
-    if (field.startsWith("haptics.")) {
-      const key = field.split(".")[1];
-      if (!isObject(targetConfig.haptics)) {
-        targetConfig.haptics = {};
-      }
-      targetConfig.haptics[key] = value;
-      return;
-    }
-    targetConfig[field] = value;
   }
 
   _readFieldValue(input) {

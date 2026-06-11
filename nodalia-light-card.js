@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -68,6 +68,11 @@ const DEFAULT_CONFIG = {
   icon_hold_service_data: "",
   icon_hold_url: "",
   icon_hold_new_tab: false,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -344,25 +349,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -627,6 +618,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -659,6 +652,7 @@ class NodaliaLightCard extends HTMLElement {
     this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
+    this._lastEntityRevision = "";
     this._lastRenderedIsOn = null;
     this._lastRenderedShowDetailedControls = null;
     this._lastControlsMarkup = "";
@@ -802,6 +796,7 @@ class NodaliaLightCard extends HTMLElement {
     }
     this._modeTransition = null;
     this._pendingDragUpdate = null;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -850,6 +845,14 @@ class NodaliaLightCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const actualState = this._getActualState();
+    const entityId = this._config?.entity || "";
+    const entityRevision = entityId && actualState
+      ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}`
+      : "";
+    const revisionUnchanged = Boolean(entityRevision && entityRevision === this._lastEntityRevision);
+    if (entityRevision) {
+      this._lastEntityRevision = entityRevision;
+    }
     let nextSignature = this._getRenderSignature();
     const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
     const signatureUnchanged = Boolean(
@@ -861,9 +864,11 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     const hadPendingOptimistic = hasPendingOptimistic;
-    this._syncLastKnownOnState(actualState);
-    this._syncOptimisticTurnOnState(actualState);
-    this._syncOptimisticTurnOffState(actualState);
+    if (!revisionUnchanged || hasPendingOptimistic) {
+      this._syncLastKnownOnState(actualState);
+      this._syncOptimisticTurnOnState(actualState);
+      this._syncOptimisticTurnOffState(actualState);
+    }
     nextSignature = this._getRenderSignature();
     const optimisticJustConfirmed = hadPendingOptimistic
       && !this._optimisticTurnOn
@@ -899,33 +904,36 @@ class NodaliaLightCard extends HTMLElement {
   _getRenderSignature(state = this._getState()) {
     const entityId = this._config?.entity || "";
     const attrs = state?.attributes || {};
-    return [
-      `e:${entityId}`,
-      `s:${String(state?.state || "")}`,
-      `n:${String(attrs.friendly_name || "")}`,
-      `i:${String(attrs.icon || "")}`,
-      `sep:${this._config?.show_entity_picture ? 1 : 0}`,
-      `ep:${String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "")}`,
-      `b:${Number(attrs.brightness ?? -1)}`,
-      `ct:${Number(attrs.color_temp ?? -1)}`,
-      `ctk:${Number(attrs.color_temp_kelvin ?? -1)}`,
-      `hs:${Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : ""}`,
-      `rgb:${Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : ""}`,
-      `fx:${String(attrs.effect || "")}`,
-      `m:${Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : ""}`,
-      `sf:${Number(attrs.supported_features ?? -1)}`,
-      `lang:${window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en"}`,
-      `c:${this._isCompactLayout ? 1 : 0}`,
-      `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
-      `cm:${String(this._activeControlMode || "")}`,
-      `ss:${this._config?.show_state === true ? 1 : 0}`,
-      `sp:${String(this._config?.state_position || "right")}`,
-      `ae:${this._config?.auto_expand === false ? 0 : 1}`,
-      `co:${this._controlsPanelUserOpen ? 1 : 0}`,
-      `qpt:${this._config?.show_quick_temperature_presets === true ? 1 : 0}`,
-      `qpc:${this._config?.show_quick_color_presets === true ? 1 : 0}`,
-      `cps:${Array.isArray(this._config?.color_presets) ? this._config.color_presets.map(p => `${String(p?.label ?? "").trim()}~${normalizeHexColorForLightPreset(p?.color)}`).join(";") : ""}`,
-      `tap:${[
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      entityId,
+      String(state?.state || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.show_entity_picture ? 1 : 0,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.brightness ?? -1),
+      Number(attrs.color_temp ?? -1),
+      Number(attrs.color_temp_kelvin ?? -1),
+      Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : "",
+      Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
+      String(attrs.effect || ""),
+      Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : "",
+      Number(attrs.supported_features ?? -1),
+      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en",
+      this._isCompactLayout ? 1 : 0,
+      this._shouldUseMiniLayout() ? 1 : 0,
+      String(this._activeControlMode || ""),
+      this._config?.show_state === true ? 1 : 0,
+      String(this._config?.state_position || "right"),
+      this._config?.auto_expand === false ? 0 : 1,
+      this._controlsPanelUserOpen ? 1 : 0,
+      this._config?.show_quick_temperature_presets === true ? 1 : 0,
+      this._config?.show_quick_color_presets === true ? 1 : 0,
+      Array.isArray(this._config?.color_presets)
+        ? this._config.color_presets.map(p => `${String(p?.label ?? "").trim()}~${normalizeHexColorForLightPreset(p?.color)}`).join(";")
+        : "",
+      [
         String(this._config?.tap_action || ""),
         String(this._config?.icon_tap_action || ""),
         String(this._config?.tap_service || ""),
@@ -936,12 +944,12 @@ class NodaliaLightCard extends HTMLElement {
         this._config?.icon_tap_new_tab === true ? 1 : 0,
         String(this._config?.tap_service_data || ""),
         String(this._config?.icon_tap_service_data || ""),
-        this._config?.security?.strict_service_actions === false ? 0 : 1,
+        this._config?.security?.strict_service_actions === true ? 1 : 0,
         Array.isArray(this._config?.security?.allowed_services)
           ? this._config.security.allowed_services.join(",")
           : "",
-      ].join("~")}`,
-      `hold:${[
+      ].join("~"),
+      [
         String(this._config?.hold_action || ""),
         String(this._config?.icon_hold_action ?? ""),
         String(this._config?.hold_service || ""),
@@ -952,8 +960,12 @@ class NodaliaLightCard extends HTMLElement {
         this._config?.icon_hold_new_tab === true ? 1 : 0,
         String(this._config?.hold_service_data || ""),
         String(this._config?.icon_hold_service_data || ""),
-      ].join("~")}`,
-    ].join("|");
+      ].join("~"),
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "light:", values }]);
+    }
+    return values.join("|");
   }
 
   _controlsEditorStr(key) {
@@ -1368,6 +1380,9 @@ class NodaliaLightCard extends HTMLElement {
       if (this._isOptimisticTurnOnPending(this._getActualState())) {
         this._flushOptimisticTurnOnQueue();
       }
+      if (!this.isConnected) {
+        return;
+      }
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
       return;
@@ -1375,6 +1390,9 @@ class NodaliaLightCard extends HTMLElement {
 
     this._optimisticTurnOnTimer = window.setTimeout(() => {
       this._optimisticTurnOnTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
 
       if (!this._isOptimisticTurnOnPending(this._getActualState())) {
         return;
@@ -1539,6 +1557,9 @@ class NodaliaLightCard extends HTMLElement {
 
     const remaining = Math.max(0, this._optimisticTurnOff.expiresAt - Date.now());
     if (!remaining || typeof window === "undefined") {
+      if (!this.isConnected) {
+        return;
+      }
       this._clearOptimisticTurnOffState();
       this._render();
       return;
@@ -1546,6 +1567,9 @@ class NodaliaLightCard extends HTMLElement {
 
     this._optimisticTurnOffTimer = window.setTimeout(() => {
       this._optimisticTurnOffTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
 
       if (!this._isOptimisticTurnOffPending(this._getActualState())) {
         return;
@@ -1930,9 +1954,18 @@ class NodaliaLightCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _startModeSwitchTransition(nextMode, state = this._getState()) {
@@ -1982,6 +2015,9 @@ class NodaliaLightCard extends HTMLElement {
         this._modeSwitchTimer = 0;
 
         const finalizeTransition = () => {
+          if (!this.isConnected) {
+            return;
+          }
           if (
             !this._modeTransition ||
             this._modeTransition.phase !== "expanding" ||
@@ -2798,10 +2834,14 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _renderEmptyState() {
+    const title = escapeHtml(this._lightCardUi("emptyTitle", "Nodalia Light Card"));
+    const body = escapeHtml(
+      this._lightCardUi("emptyBody", "Set `entity` to a `light.*` entity to show this card."),
+    );
     return `
       <ha-card class="light-card light-card--empty">
-        <div class="light-card__empty-title">Nodalia Light Card</div>
-        <div class="light-card__empty-text">Configura \`entity\` con una entidad \`light.*\` para mostrar la tarjeta.</div>
+        <div class="light-card__empty-title">${title}</div>
+        <div class="light-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
@@ -2845,6 +2885,8 @@ class NodaliaLightCard extends HTMLElement {
     const brightnessPercent = this._getBrightnessPercent(state);
     const currentKelvin = this._getCurrentKelvin(state);
     const accentColor = this._getAccentColor(state);
+    const darkenBubbleIconGlyph =
+      isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
@@ -3508,21 +3550,22 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__icon ha-icon {
+          --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           align-items: center;
+          color: ${
+            darkenBubbleIconGlyph
+              ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+              : (isOn ? styles.icon.on_color : styles.icon.off_color)
+          };
           display: inline-flex;
-          height: 22px;
+          height: calc(${styles.icon.size} * 0.46);
           justify-content: center;
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 22px;
+          width: calc(${styles.icon.size} * 0.46);
           z-index: 1;
-        }
-
-        .light-card__icon ha-icon {
-          color: ${isOn ? styles.icon.color : styles.icon.off_color};
-          font-size: 26px;
         }
 
         .light-card__picture {

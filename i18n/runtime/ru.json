@@ -277,7 +277,9 @@
         "met": "Метеорологический",
         "monitor": "Мониторинг"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Настройте `entity`, чтобы показать погоду."
   },
   "humidifierCard": {
     "modes": {
@@ -294,7 +296,7 @@
       "medium": "Средний",
       "mid": "Средний",
       "high": "Высокий",
-      "boost": "Boost",
+      "boost": "Способствовать росту",
       "turbo": "Турбо",
       "normal": "Обычный",
       "balanced": "Обычный",
@@ -313,6 +315,13 @@
       "idle": "Ожидание",
       "unavailable": "Недоступно",
       "unknown": "Неизвестно"
+    },
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
@@ -337,7 +346,8 @@
     "aria": {
       "dialRangeGroup": "Диапазон комфорта и температура в помещении",
       "dialTargetSlider": "Заданная температура",
-      "dialNoSetpoint": "Комнатная температура; на термостате нет активной уставки"
+      "dialNoSetpoint": "Комнатная температура; на термостате нет активной уставки",
+      "togglePower": "Включить или выключить"
     },
     "dialNoSetpointHint": "Нет активной уставки",
     "schedule": {
@@ -370,10 +380,14 @@
         "webhookFailed": "Не удалось синхронизировать расписание. Проверьте webhook и журналы Home Assistant.",
         "dualRangeUnsupported": "Недельное расписание недоступно, пока термостат использует двойной диапазон нагрева/охлаждения."
       }
-    }
+    },
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Укажите `entity` как сущность `climate.*`, чтобы показать карточку."
   },
   "graphCard": {
-    "emptyHistory": "История недоступна"
+    "emptyHistory": "История недоступна",
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Укажите `entities` как одну или несколько числовых сущностей для графика."
   },
   "fan": {
     "off": "Выкл.",
@@ -381,7 +395,15 @@
     "unavailable": "Недоступно",
     "unknown": "Неизвестно",
     "noState": "Нет состояния",
-    "fallbackName": "Вентилятор"
+    "fallbackName": "Вентилятор",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Укажите `entity` как сущность `fan.*`, чтобы показать карточку.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "Сигнализация",
@@ -423,7 +445,9 @@
     "stop": "Стоп",
     "positionSlider": "Положение",
     "tiltSlider": "Наклон",
-    "tiltChip": "Наклон {value}%"
+    "tiltChip": "Наклон {value}%",
+    "toggleShowButtons": "Показать открыть, стоп и закрыть",
+    "toggleShowSliders": "Показать ползунки"
   },
   "person": {
     "home": "Дома",
@@ -509,7 +533,9 @@
       "good": "Хорошо",
       "fair": "Удовлетворительно",
       "poor": "Плохо"
-    }
+    },
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Настройте `entity`, чтобы показать карточку."
   },
   "favCard": {
     "disarmedF": "Снята",
@@ -521,7 +547,9 @@
     "arming": "Включение",
     "disarming": "Выключение",
     "pending": "Ожидание",
-    "triggered": "Сработала"
+    "triggered": "Сработала",
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Настройте `entity`, чтобы показать избранное."
   },
   "notificationsCard": {
     "fallbackEvent": "Событие",
@@ -546,7 +574,8 @@
       "inkLow": "Мало чернил",
       "humidityHigh": "Высокая влажность",
       "humidityLow": "Низкая влажность",
-      "customFallback": "Уведомление"
+      "customFallback": "Уведомление",
+      "humidifierFillFull": "Бак полон"
     },
     "messages": {
       "vacuumAttention": "{name} в состоянии {state}.",
@@ -557,7 +586,8 @@
       "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие.",
       "rainSoon": "{source} ожидает дождь около {time}. Если бельё снаружи, стоит проверить.",
       "lowLevel": "{source}: {value}.",
-      "sensorValue": "{source} показывает {value}."
+      "sensorValue": "{source} показывает {value}.",
+      "highLevel": "{source}: {value}."
     },
     "actions": {
       "openCalendar": "Открыть календарь",
@@ -587,6 +617,10 @@
       "dismiss": "Удалить уведомление",
       "showLess": "Показать меньше",
       "showAll": "Показать все уведомления"
+    },
+    "empty": {
+      "title": "Всё спокойно",
+      "message": "У вас нет активных оповещений"
     }
   },
   "calendarCard": {
@@ -661,61 +695,150 @@
       "newEventDialog": "Новое событие календаря",
       "deleteEvent": "Удалить событие",
       "createHaEvent": "Создать событие HA",
-      "close": "Закрыть"
+      "close": "Закрыть",
+      "deleteRecurringDialog": "Выберите, как удалить повторяющееся событие"
+    },
+    "deleteRecurrence": {
+      "title": "Удалить повторяющееся событие",
+      "message": "Это событие входит в серию. Что удалить?",
+      "thisOnly": "Только это событие",
+      "thisAndFuture": "Это и все последующие",
+      "deleteFailed": "Не удалось удалить событие. Попробуйте снова.",
+      "deleteFailedWithMessage": "Не удалось удалить событие: {message}"
     }
   },
   "vacuumErrorLabels": {
-    "lidar_blocked": "LiDAR blocked",
-    "bumper_stuck": "Bumper stuck",
-    "wheels_suspended": "Wheels suspended",
-    "cliff_sensor_error": "Cliff sensor error",
-    "main_brush_jammed": "Main brush jammed",
-    "side_brush_jammed": "Side brush jammed",
-    "wheels_jammed": "Wheels jammed",
-    "robot_trapped": "Robot trapped",
-    "no_dustbin": "Dustbin missing",
-    "strainer_error": "Filter error",
-    "compass_error": "Compass error",
-    "low_battery": "Low battery",
-    "charging_error": "Charging error",
-    "battery_error": "Battery error",
-    "wall_sensor_dirty": "Wall sensor dirty",
-    "robot_tilted": "Robot tilted",
-    "side_brush_error": "Side brush error",
-    "fan_error": "Fan error",
-    "dock": "Dock error",
-    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
-    "vertical_bumper_pressed": "Vertical bumper pressed",
-    "dock_locator_error": "Dock locator error",
-    "return_to_dock_fail": "Failed to return to dock",
-    "nogo_zone_detected": "No-go zone detected",
-    "visual_sensor": "Visual sensor error",
-    "light_touch": "Light touch sensor triggered",
-    "vibrarise_jammed": "VibraRise jammed",
-    "robot_on_carpet": "Robot on carpet",
-    "filter_blocked": "Filter blocked",
-    "invisible_wall_detected": "Invisible wall detected",
-    "cannot_cross_carpet": "Cannot cross carpet",
-    "internal_error": "Internal error",
-    "collect_dust_error_3": "Dust collection error",
-    "collect_dust_error_4": "Dust collection error",
-    "mopping_roller_1": "Mopping roller error",
-    "mopping_roller_error_2": "Mopping roller error",
-    "clear_water_box_hoare": "Clean water tank abnormal",
-    "dirty_water_box_hoare": "Dirty water tank abnormal",
-    "sink_strainer_hoare": "Sink strainer abnormal",
-    "clear_water_box_exception": "Clean water tank error",
-    "clear_brush_exception": "Cleaning brush error",
-    "clear_brush_exception_2": "Cleaning brush error",
-    "filter_screen_exception": "Filter screen error",
-    "mopping_roller_2": "Mopping roller error",
-    "up_water_exception": "Water refill error",
-    "drain_water_exception": "Water drain error",
-    "temperature_protection": "Temperature protection",
-    "clean_carousel_exception": "Cleaning carousel error",
-    "clean_carousel_water_full": "Cleaning carousel water full",
-    "water_carriage_drop": "Water carriage dropped",
-    "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "lidar_blocked": "Лидар заблокирован",
+    "bumper_stuck": "Бампер застрял",
+    "wheels_suspended": "Колеса подвесные",
+    "cliff_sensor_error": "Ошибка датчика перепада высоты",
+    "main_brush_jammed": "Основная щетка застряла",
+    "side_brush_jammed": "Боковая щетка застряла",
+    "wheels_jammed": "Колеса заклинило",
+    "robot_trapped": "Робот в ловушке",
+    "no_dustbin": "Отсутствует мусорная корзина",
+    "strainer_error": "Ошибка фильтра",
+    "compass_error": "Ошибка компаса",
+    "low_battery": "Низкий заряд батареи",
+    "charging_error": "Ошибка зарядки",
+    "battery_error": "Ошибка батареи",
+    "wall_sensor_dirty": "Настенный датчик загрязнен",
+    "robot_tilted": "Робот наклонен",
+    "side_brush_error": "Ошибка боковой щетки",
+    "fan_error": "Ошибка вентилятора",
+    "dock": "Ошибка док-станции",
+    "optical_flow_sensor_dirt": "Оптический датчик потока загрязнен",
+    "vertical_bumper_pressed": "Вертикальный бампер нажат",
+    "dock_locator_error": "Ошибка локатора док-станции",
+    "return_to_dock_fail": "Не удалось вернуться в док.",
+    "nogo_zone_detected": "Обнаружена запретная зона",
+    "visual_sensor": "Ошибка визуального датчика",
+    "light_touch": "Сработал датчик легкого касания",
+    "vibrarise_jammed": "VibraRise заклинило",
+    "robot_on_carpet": "Робот на ковре",
+    "filter_blocked": "Фильтр заблокирован",
+    "invisible_wall_detected": "Обнаружена невидимая стена",
+    "cannot_cross_carpet": "Не могу пересечь ковер",
+    "internal_error": "Внутренняя ошибка",
+    "collect_dust_error_3": "Ошибка сбора пыли",
+    "collect_dust_error_4": "Ошибка сбора пыли",
+    "mopping_roller_1": "Ошибка швабры",
+    "mopping_roller_error_2": "Ошибка швабры",
+    "clear_water_box_hoare": "Резервуар для чистой воды ненормальный",
+    "dirty_water_box_hoare": "Ненормальный резервуар для грязной воды",
+    "sink_strainer_hoare": "Сетчатый фильтр раковины ненормальный",
+    "clear_water_box_exception": "Ошибка резервуара для чистой воды",
+    "clear_brush_exception": "Ошибка чистящей щетки",
+    "clear_brush_exception_2": "Ошибка чистящей щетки",
+    "filter_screen_exception": "Ошибка экрана фильтра",
+    "mopping_roller_2": "Ошибка швабры",
+    "up_water_exception": "Ошибка пополнения воды",
+    "drain_water_exception": "Ошибка слива воды",
+    "temperature_protection": "Температурная защита",
+    "clean_carousel_exception": "Ошибка очистки карусели",
+    "clean_carousel_water_full": "Очистительная карусель заполнена водой",
+    "water_carriage_drop": "Водная повозка упала",
+    "check_clean_carouse": "Проверьте карусель очистки",
+    "audio_error": "Ошибка звука",
+    "water_empty": "Бак для воды пуст"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Показать яркость",
+      "temperature": "Показать температуру",
+      "color": "Показать цвет"
+    },
+    "sections": {
+      "temperature": "Температура",
+      "color": "Цвет",
+      "presets": "Пресеты"
+    },
+    "temperaturePresets": {
+      "warm": "Тёплый",
+      "neutral": "Нейтральный",
+      "cool": "Холодный"
+    },
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Укажите `entity` как сущность `light.*`, чтобы показать карточку."
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Включить или выключить",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
+    }
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Добавьте сцены в редакторе карточки.",
+    "defaultName": "Сцены",
+    "unavailable": "Недоступно",
+    "subtitle": "Нажмите на сцену для запуска",
+    "moods": "сцены"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Укажите `entity` как числовую сущность для отображения шкалы."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Укажите `entity` как сущность `vacuum.*`, чтобы показать карточку."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Настройте `entity` или базовое содержимое для отображения значка."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Укажите `entity` или `players`, чтобы показать плеер.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

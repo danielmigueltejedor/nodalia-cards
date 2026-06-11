@@ -158,6 +158,7 @@ test("calendar runtime css sanitizer and webhook admin guard are present", () =>
   assert.ok(source.includes("\\b@import\\b"));
   assert.match(source, /security\.allow_webhooks_for_non_admin/);
   assert.match(source, /webhook bloqueado para usuario no administrador/);
+  assert.match(source, /window\.NodaliaUtils\.setByPath\(targetConfig, field, value\)/);
 });
 
 test("calendar weather forecast normalization keeps date-keyed and tabular daily rows", () => {
@@ -510,7 +511,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_scheduleEntranceAnimationReset\(animations\.contentDuration \+ 120\)/);
   assert.match(
     source,
-    /this\._entranceAnimationTimer = window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*this\._animateContentOnNextRender = false;/,
+    /this\._entranceAnimationTimer = window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*if \(!this\.isConnected\) \{\s*return;\s*\}\s*this\._animateContentOnNextRender = false;/,
   );
   assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
   assert.match(source, /_renderCollapsedStackCards\(notifications, startIndex\)/);

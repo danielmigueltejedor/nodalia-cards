@@ -74,7 +74,7 @@
       "fast": "Veloce",
       "rapido": "Veloce"
     },
-    "offSuction": "Off",
+    "offSuction": "Spento",
     "reportedStates": {
       "docked": "In base",
       "charging": "In carica",
@@ -128,7 +128,7 @@
     "actions": {
       "returnToBase": "Torna alla base",
       "locate": "Localizza",
-      "stop": "Stop",
+      "stop": "Fermare",
       "run": "Avvia",
       "addZoneToClean": "Aggiungi zona alla pulizia",
       "cleanZone": "Pulisci zona"
@@ -207,7 +207,15 @@
     "unavailable": "Non disponibile",
     "unknown": "Sconosciuto",
     "noState": "Nessuno stato",
-    "fallbackName": "Ventilatore"
+    "fallbackName": "Ventilatore",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Imposta `entity` su un'entità `fan.*` per mostrare questa scheda.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "Allarme",
@@ -246,10 +254,12 @@
     "cardDescription": "Controlli in stile scheda ventilatore per tapparelle e tende in Home Assistant.",
     "open": "Apri",
     "close": "Chiudi",
-    "stop": "Stop",
+    "stop": "Fermare",
     "positionSlider": "Posizione",
     "tiltSlider": "Inclinazione",
-    "tiltChip": "Inclinazione {value}%"
+    "tiltChip": "Inclinazione {value}%",
+    "toggleShowButtons": "Mostra apri, stop e chiudi",
+    "toggleShowSliders": "Mostra cursori"
   },
   "person": {
     "home": "A casa",
@@ -272,7 +282,7 @@
     },
     "boolean": {
       "yes": "Sì",
-      "no": "No"
+      "no": "NO"
     },
     "states": {
       "on": "Acceso",
@@ -283,7 +293,7 @@
       "closing": "Chiusura",
       "playing": "In riproduzione",
       "paused": "In pausa",
-      "buffering": "Buffering",
+      "buffering": "Bufferizzazione",
       "idle": "Inattivo",
       "standby": "Standby",
       "home": "A casa",
@@ -335,7 +345,9 @@
       "good": "Buono",
       "fair": "Discreto",
       "poor": "Scarso"
-    }
+    },
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Configura `entity` per mostrare la scheda."
   },
   "weatherCard": {
     "conditions": {
@@ -413,7 +425,9 @@
         "met": "Meteorologico",
         "monitor": "Monitoraggio"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Configura `entity` per mostrare il meteo."
   },
   "humidifierCard": {
     "modes": {
@@ -430,7 +444,7 @@
       "medium": "Medio",
       "mid": "Medio",
       "high": "Alto",
-      "boost": "Boost",
+      "boost": "Aumento",
       "turbo": "Turbo",
       "normal": "Normale",
       "balanced": "Normale",
@@ -449,6 +463,13 @@
       "idle": "Inattivo",
       "unavailable": "Non disponibile",
       "unknown": "Sconosciuto"
+    },
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Imposta `entity` su un'entità `humidifier.*` per mostrare questa scheda.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
@@ -473,7 +494,8 @@
     "aria": {
       "dialRangeGroup": "Fascia di comfort e temperatura interna",
       "dialTargetSlider": "Temperatura target",
-      "dialNoSetpoint": "Temperatura interna; nessun setpoint attivo sul termostato"
+      "dialNoSetpoint": "Temperatura interna; nessun setpoint attivo sul termostato",
+      "togglePower": "Accendi o spegni"
     },
     "dialNoSetpointHint": "Nessun setpoint attivo",
     "schedule": {
@@ -506,10 +528,14 @@
         "webhookFailed": "Impossibile sincronizzare il programma. Controlla webhook e log di Home Assistant.",
         "dualRangeUnsupported": "Il programma settimanale non è disponibile mentre il termostato usa un intervallo dual heat/cool."
       }
-    }
+    },
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Imposta `entity` su un'entità `climate.*` per mostrare questa scheda."
   },
   "graphCard": {
-    "emptyHistory": "Nessuno storico disponibile"
+    "emptyHistory": "Nessuno storico disponibile",
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Imposta `entities` su una o più entità numeriche per mostrare il grafico."
   },
   "favCard": {
     "disarmedF": "Disattivato",
@@ -521,7 +547,9 @@
     "arming": "Attivazione",
     "disarming": "Disattivazione",
     "pending": "In attesa",
-    "triggered": "Scattato"
+    "triggered": "Scattato",
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Configura `entity` per mostrare il preferito."
   },
   "notificationsCard": {
     "fallbackEvent": "Evento",
@@ -546,7 +574,8 @@
       "inkLow": "Inchiostro basso",
       "humidityHigh": "Umidità alta",
       "humidityLow": "Umidità bassa",
-      "customFallback": "Notifica"
+      "customFallback": "Notifica",
+      "humidifierFillFull": "Serbatoio pieno"
     },
     "messages": {
       "vacuumAttention": "{name} è nello stato {state}.",
@@ -557,7 +586,8 @@
       "mediaLeftOn": "{media} è ancora acceso e {source} non rileva presenza.",
       "rainSoon": "{source} prevede pioggia verso {time}. Se hai panni fuori, conviene controllare.",
       "lowLevel": "{source} è a {value}.",
-      "sensorValue": "{source} segna {value}."
+      "sensorValue": "{source} segna {value}.",
+      "highLevel": "{source} è a {value}."
     },
     "actions": {
       "openCalendar": "Apri calendario",
@@ -587,6 +617,10 @@
       "dismiss": "Elimina notifica",
       "showLess": "Mostra meno",
       "showAll": "Mostra tutte le notifiche"
+    },
+    "empty": {
+      "title": "Tutto tranquillo",
+      "message": "Non hai avvisi attivi"
     }
   },
   "calendarCard": {
@@ -661,61 +695,150 @@
       "newEventDialog": "Nuovo evento calendario",
       "deleteEvent": "Elimina evento",
       "createHaEvent": "Crea evento HA",
-      "close": "Chiudi"
+      "close": "Chiudi",
+      "deleteRecurringDialog": "Scegli come eliminare l’evento ricorrente"
+    },
+    "deleteRecurrence": {
+      "title": "Elimina evento ricorrente",
+      "message": "Questo evento fa parte di una serie. Cosa vuoi eliminare?",
+      "thisOnly": "Solo questo evento",
+      "thisAndFuture": "Questo e tutti i successivi",
+      "deleteFailed": "Impossibile eliminare l’evento. Riprova.",
+      "deleteFailedWithMessage": "Impossibile eliminare l’evento: {message}"
     }
   },
   "vacuumErrorLabels": {
-    "lidar_blocked": "LiDAR blocked",
-    "bumper_stuck": "Bumper stuck",
-    "wheels_suspended": "Wheels suspended",
-    "cliff_sensor_error": "Cliff sensor error",
-    "main_brush_jammed": "Main brush jammed",
-    "side_brush_jammed": "Side brush jammed",
-    "wheels_jammed": "Wheels jammed",
-    "robot_trapped": "Robot trapped",
-    "no_dustbin": "Dustbin missing",
-    "strainer_error": "Filter error",
-    "compass_error": "Compass error",
-    "low_battery": "Low battery",
-    "charging_error": "Charging error",
-    "battery_error": "Battery error",
-    "wall_sensor_dirty": "Wall sensor dirty",
-    "robot_tilted": "Robot tilted",
-    "side_brush_error": "Side brush error",
-    "fan_error": "Fan error",
-    "dock": "Dock error",
-    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
-    "vertical_bumper_pressed": "Vertical bumper pressed",
-    "dock_locator_error": "Dock locator error",
-    "return_to_dock_fail": "Failed to return to dock",
-    "nogo_zone_detected": "No-go zone detected",
-    "visual_sensor": "Visual sensor error",
-    "light_touch": "Light touch sensor triggered",
-    "vibrarise_jammed": "VibraRise jammed",
-    "robot_on_carpet": "Robot on carpet",
-    "filter_blocked": "Filter blocked",
-    "invisible_wall_detected": "Invisible wall detected",
-    "cannot_cross_carpet": "Cannot cross carpet",
-    "internal_error": "Internal error",
-    "collect_dust_error_3": "Dust collection error",
-    "collect_dust_error_4": "Dust collection error",
-    "mopping_roller_1": "Mopping roller error",
-    "mopping_roller_error_2": "Mopping roller error",
-    "clear_water_box_hoare": "Clean water tank abnormal",
-    "dirty_water_box_hoare": "Dirty water tank abnormal",
-    "sink_strainer_hoare": "Sink strainer abnormal",
-    "clear_water_box_exception": "Clean water tank error",
-    "clear_brush_exception": "Cleaning brush error",
-    "clear_brush_exception_2": "Cleaning brush error",
-    "filter_screen_exception": "Filter screen error",
-    "mopping_roller_2": "Mopping roller error",
-    "up_water_exception": "Water refill error",
-    "drain_water_exception": "Water drain error",
-    "temperature_protection": "Temperature protection",
-    "clean_carousel_exception": "Cleaning carousel error",
-    "clean_carousel_water_full": "Cleaning carousel water full",
-    "water_carriage_drop": "Water carriage dropped",
-    "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "lidar_blocked": "LiDAR bloccato",
+    "bumper_stuck": "Paraurti bloccato",
+    "wheels_suspended": "Ruote sospese",
+    "cliff_sensor_error": "Errore del sensore di dislivello",
+    "main_brush_jammed": "Spazzola principale inceppata",
+    "side_brush_jammed": "Spazzola laterale inceppata",
+    "wheels_jammed": "Ruote bloccate",
+    "robot_trapped": "Robot intrappolato",
+    "no_dustbin": "Manca la pattumiera",
+    "strainer_error": "Errore filtro",
+    "compass_error": "Errore della bussola",
+    "low_battery": "Batteria scarica",
+    "charging_error": "Errore di ricarica",
+    "battery_error": "Errore batteria",
+    "wall_sensor_dirty": "Sensore a parete sporco",
+    "robot_tilted": "Robot inclinato",
+    "side_brush_error": "Errore della spazzola laterale",
+    "fan_error": "Errore ventola",
+    "dock": "Errore nel dock",
+    "optical_flow_sensor_dirt": "Sensore di flusso ottico sporco",
+    "vertical_bumper_pressed": "Paraurti verticale premuto",
+    "dock_locator_error": "Errore di localizzazione del dock",
+    "return_to_dock_fail": "Impossibile tornare al molo",
+    "nogo_zone_detected": "Rilevata zona vietata",
+    "visual_sensor": "Errore del sensore visivo",
+    "light_touch": "Sensore tattile leggero attivato",
+    "vibrarise_jammed": "VibraRise inceppato",
+    "robot_on_carpet": "Robot sul tappeto",
+    "filter_blocked": "Filtro bloccato",
+    "invisible_wall_detected": "Rilevato muro invisibile",
+    "cannot_cross_carpet": "Impossibile attraversare il tappeto",
+    "internal_error": "Errore interno",
+    "collect_dust_error_3": "Errore di raccolta della polvere",
+    "collect_dust_error_4": "Errore di raccolta della polvere",
+    "mopping_roller_1": "Errore del rullo di pulizia",
+    "mopping_roller_error_2": "Errore del rullo di pulizia",
+    "clear_water_box_hoare": "Anomalia del serbatoio dell'acqua pulita",
+    "dirty_water_box_hoare": "Il serbatoio dell'acqua sporco è anomalo",
+    "sink_strainer_hoare": "Filtro del lavandino anomalo",
+    "clear_water_box_exception": "Errore nel serbatoio dell'acqua pulita",
+    "clear_brush_exception": "Errore della spazzola di pulizia",
+    "clear_brush_exception_2": "Errore della spazzola di pulizia",
+    "filter_screen_exception": "Errore nella schermata del filtro",
+    "mopping_roller_2": "Errore del rullo di pulizia",
+    "up_water_exception": "Errore di riempimento dell'acqua",
+    "drain_water_exception": "Errore di scarico dell'acqua",
+    "temperature_protection": "Protezione dalla temperatura",
+    "clean_carousel_exception": "Errore di pulizia del carosello",
+    "clean_carousel_water_full": "Acqua del carosello di pulizia piena",
+    "water_carriage_drop": "Il trasporto dell'acqua è caduto",
+    "check_clean_carouse": "Controllare il carosello di pulizia",
+    "audio_error": "Errore audio",
+    "water_empty": "Serbatoio dell’acqua vuoto"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "Mostra luminosità",
+      "temperature": "Mostra temperatura",
+      "color": "Mostra colore"
+    },
+    "sections": {
+      "temperature": "Temperatura",
+      "color": "Colore",
+      "presets": "Preset"
+    },
+    "temperaturePresets": {
+      "warm": "Calda",
+      "neutral": "Neutra",
+      "cool": "Fredda"
+    },
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Imposta `entity` su un'entità `light.*` per mostrare questa scheda."
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Accendi o spegni",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
+    }
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Aggiungi entità scena nell’editor della scheda.",
+    "defaultName": "Scene",
+    "unavailable": "Non disponibile",
+    "subtitle": "Tocca un’atmosfera per avviarla",
+    "moods": "atmosfere"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Imposta `entity` su un'entità numerica per mostrare il quadrante."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Imposta `entity` su un'entità `vacuum.*` per mostrare questa scheda."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configura `entity` o contenuto di base per mostrare il badge."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Imposta `entity` o `players` per mostrare un lettore.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

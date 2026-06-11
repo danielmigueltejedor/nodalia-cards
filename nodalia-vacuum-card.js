@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -110,6 +110,11 @@ const DEFAULT_CONFIG = {
     icon_animation: true,
     panel_duration: 800,
     button_bounce_duration: 320,
+  },
+  security: {
+    strict_service_actions: false,
+    allowed_services: [],
+    allowed_service_domains: [],
   },
   styles: {
     card: {
@@ -348,25 +353,11 @@ function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -519,6 +510,9 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  config.security.strict_service_actions = config.security.strict_service_actions === true;
 
   return config;
 }
@@ -557,6 +551,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._suppressNextVacuumTap = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -636,6 +631,7 @@ class NodaliaVacuumCard extends HTMLElement {
         this._pendingModeSelectionTimers[kind] = 0;
       }
     });
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -699,12 +695,19 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    window.setTimeout(() => {
+    const safeDelay = Math.max(0, Number(delay) || 0);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
       if (!this.isConnected) {
         return;
       }
       this._notifyLayoutChange();
-    }, Math.max(0, Number(delay) || 0));
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, safeDelay);
+    } else {
+      window.setTimeout(done, safeDelay);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -759,31 +762,36 @@ class NodaliaVacuumCard extends HTMLElement {
     const errorEntityId = this._config?.error_entity || this._guessRelatedErrorEntity();
     const errorState = errorEntityId ? hass?.states?.[errorEntityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      batteryLevel: Number(attrs.battery_level ?? -1),
-      status: String(attrs.status || ""),
-      fanSpeed: String(attrs.fan_speed || ""),
-      waterGrade: String(attrs.water_grade || attrs.water_box_mode || ""),
-      currentRoom: String(attrs.current_room || attrs.current_segment || ""),
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      this._config?.show_entity_picture === true,
+      this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "",
+      attrs.battery_level ?? -1,
+      attrs.status || "",
+      attrs.fan_speed || "",
+      attrs.water_grade || attrs.water_box_mode || "",
+      attrs.current_room || attrs.current_segment || "",
       errorEntityId,
-      errorState: String(errorState?.state || ""),
-      compact: Boolean(this._isCompactLayout),
-      activeModePanel: String(this._activeModePanel || ""),
-      roomPanelOpen: Boolean(this._roomPanelOpen),
-      tapAction: String(this._config?.tap_action || ""),
-      iconTapAction: String(this._config?.icon_tap_action ?? ""),
-      tapNav: String(this._config?.tap_navigation_path || ""),
-      holdAction: String(this._config?.hold_action || ""),
-      iconHoldAction: String(this._config?.icon_hold_action ?? ""),
-      holdNav: String(this._config?.hold_navigation_path || ""),
-      iconHoldNav: String(this._config?.icon_hold_navigation_path || ""),
-    });
+      errorState?.state || "",
+      this._isCompactLayout,
+      this._activeModePanel || "",
+      this._roomPanelOpen === true,
+      this._config?.tap_action || "",
+      this._config?.icon_tap_action ?? "",
+      this._config?.tap_navigation_path || "",
+      this._config?.hold_action || "",
+      this._config?.icon_hold_action ?? "",
+      this._config?.hold_navigation_path || "",
+      this._config?.icon_hold_navigation_path || "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "vacuum:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
@@ -878,9 +886,18 @@ class NodaliaVacuumCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _openMoreInfo(entityId = this._config?.entity) {
@@ -1707,7 +1724,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return false;
     }
 
-    this._callService("clean_area", {
+    this._callUserVacuumService("clean_area", {
       cleaning_area_id: selectedIds,
     });
     return true;
@@ -2077,7 +2094,12 @@ class NodaliaVacuumCard extends HTMLElement {
       };
 
       panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeRemoval, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      }
     };
 
     const appendPanel = () => {
@@ -2103,11 +2125,17 @@ class NodaliaVacuumCard extends HTMLElement {
       panelsHost.replaceChildren(panelNode);
       this._notifyLayoutChange();
       this._scheduleLayoutRefresh(animations.panelDuration + 120);
-      window.setTimeout(() => {
+      const finalizeEnter = () => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("vacuum-card__panel-shell--entering");
         }
-      }, animations.panelDuration + 80);
+      };
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeEnter, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeEnter, animations.panelDuration + 80);
+      }
     };
 
     if (!nextPanelKey) {
@@ -2341,6 +2369,48 @@ class NodaliaVacuumCard extends HTMLElement {
     });
   }
 
+  _callUserVacuumService(service, data = {}) {
+    const fullService = `vacuum.${service}`;
+    if (!this._isServiceAllowed(fullService)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Vacuum Card", fullService);
+      return;
+    }
+    this._callService(service, data);
+  }
+
+  _callSelectOption(entityId, option) {
+    if (!this._hass || !entityId || !option) {
+      return;
+    }
+
+    this._hass.callService("select", "select_option", {
+      entity_id: entityId,
+      option,
+    });
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
   _findMatchingModeOption(options, value) {
     const expectedKey = normalizeTextKey(value);
     if (!expectedKey || !Array.isArray(options)) {
@@ -2421,15 +2491,21 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    this._pendingModeSelectionTimers[kind] = window.setTimeout(() => {
+    const done = () => {
       this._pendingModeSelectionTimers[kind] = 0;
-      if (!this._pendingModeSelection[kind]) {
+      if (!this.isConnected || !this._pendingModeSelection[kind]) {
         return;
       }
 
       this._pendingModeSelection[kind] = "";
       this._render();
-    }, 2500);
+    };
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    if (typeof schedule === "function") {
+      this._pendingModeSelectionTimers[kind] = schedule(this, done, 2500);
+    } else {
+      this._pendingModeSelectionTimers[kind] = window.setTimeout(done, 2500);
+    }
   }
 
   _syncPendingModeSelections(state = this._getState()) {
@@ -2490,10 +2566,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const otherDescriptor = this._getModeDescriptor(otherKind, state);
 
     if (descriptor?.service === "select" && descriptor.target && value) {
-      this._hass.callService("select", "select_option", {
-        entity_id: descriptor.target,
-        option: value,
-      });
+      this._callSelectOption(descriptor.target, value);
     } else if (descriptor?.service === "fan" && value) {
       this._callService("set_fan_speed", {
         fan_speed: value,
@@ -2515,10 +2588,7 @@ class NodaliaVacuumCard extends HTMLElement {
         sharedSmartOption &&
         normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
       ) {
-        this._hass.callService("select", "select_option", {
-          entity_id: otherDescriptor.target,
-          option: sharedSmartOption,
-        });
+        this._callSelectOption(otherDescriptor.target, sharedSmartOption);
       }
       return;
     }
@@ -2532,10 +2602,7 @@ class NodaliaVacuumCard extends HTMLElement {
       fallbackOption &&
       normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
     ) {
-      this._hass.callService("select", "select_option", {
-        entity_id: otherDescriptor.target,
-        option: fallbackOption,
-      });
+      this._callSelectOption(otherDescriptor.target, fallbackOption);
     }
   }
 
@@ -2547,11 +2614,11 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (this._shouldUsePausePrimary(state)) {
-      this._callService("pause");
+      this._callUserVacuumService("pause");
       return;
     }
 
-    this._callService("start");
+    this._callUserVacuumService("start");
   }
 
   _shouldUsePausePrimary(state) {
@@ -2623,11 +2690,24 @@ class NodaliaVacuumCard extends HTMLElement {
     return controls.slice(0, 4);
   }
 
+  _vacuumCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.vacuumCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.vacuumCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._vacuumCardUi("emptyTitle", "Nodalia Vacuum Card"));
+    const body = escapeHtml(
+      this._vacuumCardUi("emptyBody", "Set `entity` to a `vacuum.*` entity to show this card."),
+    );
     return `
       <ha-card class="vacuum-card vacuum-card--empty">
-        <div class="vacuum-card__empty-title">Nodalia Vacuum Card</div>
-        <div class="vacuum-card__empty-text">Configura \`entity\` con una entidad \`vacuum.*\` para mostrar la tarjeta.</div>
+        <div class="vacuum-card__empty-title">${title}</div>
+        <div class="vacuum-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
@@ -2669,19 +2749,19 @@ class NodaliaVacuumCard extends HTMLElement {
         this._runPrimaryAction(state);
         break;
       case "start":
-        this._callService("start");
+        this._callUserVacuumService("start");
         break;
       case "pause":
-        this._callService("pause");
+        this._callUserVacuumService("pause");
         break;
       case "stop":
-        this._callService("stop");
+        this._callUserVacuumService("stop");
         break;
       case "return_to_base":
-        this._callService("return_to_base");
+        this._callUserVacuumService("return_to_base");
         break;
       case "locate":
-        this._callService("locate");
+        this._callUserVacuumService("locate");
         break;
       case "toggle-mode-panel": {
         const modeKind = button.dataset.modeKind || "";
@@ -2703,7 +2783,7 @@ class NodaliaVacuumCard extends HTMLElement {
           this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._setModePanelActiveSelection(button.dataset.modeKind || "suction", button.dataset.value);
-          this._callService("set_fan_speed", {
+          this._callUserVacuumService("set_fan_speed", {
             fan_speed: button.dataset.value,
           });
         }

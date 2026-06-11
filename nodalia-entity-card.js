@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -68,6 +68,11 @@ const DEFAULT_CONFIG = {
   show_secondary_chip: true,
   compact_layout_mode: "auto",
   quick_actions: [],
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -361,12 +366,13 @@ function getValueSignature(value) {
     return "";
   }
 
-  if (Array.isArray(value) || isObject(value)) {
-    try {
-      return JSON.stringify(value);
-    } catch (_error) {
-      return String(value);
-    }
+  if (Array.isArray(value)) {
+    return `a:${value.length}|${value.map(item => String(item ?? "")).join(",")}`;
+  }
+
+  if (isObject(value)) {
+    const keys = Object.keys(value).sort();
+    return `o:${keys.length}|${keys.map(key => `${key}=${String(value[key] ?? "")}`).join(",")}`;
   }
 
   return String(value);
@@ -688,6 +694,8 @@ function normalizeConfig(rawConfig) {
   }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -792,6 +800,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._clearOptimisticToggleTimer();
   }
 
@@ -974,6 +983,9 @@ class NodaliaEntityCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
     this._optimisticToggleTimer = window.setTimeout(() => {
       this._optimisticToggleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       if (!this._isOptimisticTogglePending(this._getActualState())) {
         this._lastRenderSignature = "";
         this._render();
@@ -1145,11 +1157,8 @@ class NodaliaEntityCard extends HTMLElement {
         return String(value.name);
       }
 
-      try {
-        return JSON.stringify(value);
-      } catch (_error) {
-        return String(value);
-      }
+      const keys = Object.keys(value).sort();
+      return keys.map(key => `${key}:${String(value[key] ?? "")}`).join(", ");
     }
 
     const numericValue = parseNumericValue(value);
@@ -1726,9 +1735,18 @@ class NodaliaEntityCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -1822,11 +1840,22 @@ class NodaliaEntityCard extends HTMLElement {
     return `<div class="entity-card__chip entity-card__chip--${tone}">${escapeHtml(label)}</div>`;
   }
 
+  _entityCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._entityCardUi("emptyTitle", "Nodalia Entity Card"));
+    const body = escapeHtml(this._entityCardUi("emptyBody", "Set `entity` to show this card."));
     return `
       <ha-card class="entity-card entity-card--empty">
-        <div class="entity-card__empty-title">Nodalia Entity Card</div>
-        <div class="entity-card__empty-text">Configura \`entity\` para mostrar la tarjeta.</div>
+        <div class="entity-card__empty-title">${title}</div>
+        <div class="entity-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

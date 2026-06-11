@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -561,6 +561,8 @@ function normalizeConfig(rawConfig) {
   config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -592,9 +594,11 @@ class NodaliaFanCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
+    this._lastEntityRevision = "";
     this._lastRenderedIsOn = null;
     this._lastRenderedPresetPanelVisible = false;
     this._lastControlsMarkup = "";
@@ -710,6 +714,7 @@ class NodaliaFanCard extends HTMLElement {
     this._pendingDragUpdate = null;
     this._clearOptimisticToggleTimer();
     this._clearOptimisticVisualSettleTimer();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -732,19 +737,34 @@ class NodaliaFanCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const actualState = this._getActualState();
-    const visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
+    const entityId = this._config?.entity || "";
+    const entityRevision = entityId && actualState
+      ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}`
+      : "";
+    const revisionUnchanged = Boolean(entityRevision && entityRevision === this._lastEntityRevision);
+    if (entityRevision) {
+      this._lastEntityRevision = entityRevision;
+    }
+    const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
     let nextSignature = this._getRenderSignature();
     const signatureUnchanged = Boolean(
       this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
     );
 
-    if (signatureUnchanged && !this._optimisticToggle && !visualSettleChanged) {
+    if (signatureUnchanged && !hasPendingOptimistic) {
       return;
     }
 
+    let visualSettleChanged = false;
+    if (!revisionUnchanged || hasPendingOptimistic) {
+      visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
+    }
+
     const hadOptimisticToggle = Boolean(this._optimisticToggle);
-    this._syncLastKnownOnState(actualState);
-    this._syncOptimisticToggleState(actualState);
+    if (!revisionUnchanged || hasPendingOptimistic) {
+      this._syncLastKnownOnState(actualState);
+      this._syncOptimisticToggleState(actualState);
+    }
     nextSignature = this._getRenderSignature();
     const optimisticJustConfirmed = hadOptimisticToggle && !this._optimisticToggle;
 
@@ -795,26 +815,31 @@ class NodaliaFanCard extends HTMLElement {
     const actualState = entityId ? hass?.states?.[entityId] || null : null;
     const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      optimistic: String(attrs._nodalia_optimistic_toggle || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      percentage: Number(attrs.percentage ?? -1),
-      percentageStep: Number(attrs.percentage_step ?? -1),
-      presetMode: String(attrs.preset_mode || ""),
-      presetModes: Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
-      oscillating: String(attrs.oscillating ?? ""),
-      direction: String(attrs.direction || ""),
-      compact: Boolean(this._isCompactLayout),
-      presetPanelOpen: Boolean(this._presetPanelOpen),
-      tap: `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
-      hold: `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
-      double: `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`,
-    });
+      String(state?.state || ""),
+      String(attrs._nodalia_optimistic_toggle || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.show_entity_picture === true,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.percentage ?? -1),
+      Number(attrs.percentage_step ?? -1),
+      String(attrs.preset_mode || ""),
+      Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
+      String(attrs.oscillating ?? ""),
+      String(attrs.direction || ""),
+      Boolean(this._isCompactLayout),
+      Boolean(this._presetPanelOpen),
+      `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
+      `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
+      `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "fan:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
@@ -1084,6 +1109,9 @@ class NodaliaFanCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
     this._optimisticVisualSettleTimer = window.setTimeout(() => {
       this._optimisticVisualSettleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       const nextActualState = this._getActualState();
       if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
         this._scheduleOptimisticVisualSettleTimeout();
@@ -1134,6 +1162,9 @@ class NodaliaFanCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
     this._optimisticToggleTimer = window.setTimeout(() => {
       this._optimisticToggleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       if (!this._isOptimisticTogglePending(this._getActualState())) {
         this._lastRenderSignature = "";
         this._render();
@@ -1410,9 +1441,18 @@ class NodaliaFanCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _triggerRenderedButtonBounce(selector) {
@@ -1826,7 +1866,12 @@ class NodaliaFanCard extends HTMLElement {
       };
 
       panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeRemoval, animations.presetDuration + 80);
+      } else {
+        window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
+      }
     };
     const appendPanel = () => {
       if (!panelMarkup) {
@@ -1847,11 +1892,17 @@ class NodaliaFanCard extends HTMLElement {
       }
 
       controlsInner.appendChild(panelNode);
-      window.setTimeout(() => {
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const finalizeEnter = () => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("fan-card__preset-panel-shell--entering");
         }
-      }, animations.presetDuration + 80);
+      };
+      if (typeof schedule === "function") {
+        schedule(this, finalizeEnter, animations.presetDuration + 80);
+      } else {
+        window.setTimeout(finalizeEnter, animations.presetDuration + 80);
+      }
     };
 
     if (!this._presetPanelOpen) {
@@ -2254,11 +2305,28 @@ class NodaliaFanCard extends HTMLElement {
     }
   }
 
+  _fanCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.fan;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.fan;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _fanAria(key, fallback = "") {
+    return window.NodaliaI18n?.translateFanAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._fanCardUi("emptyTitle", "Nodalia Fan Card"));
+    const body = escapeHtml(
+      this._fanCardUi("emptyBody", "Set `entity` to a `fan.*` entity to show this card."),
+    );
     return `
       <ha-card class="fan-card fan-card--empty">
-        <div class="fan-card__empty-title">Nodalia Fan Card</div>
-        <div class="fan-card__empty-text">Configura \`entity\` con una entidad \`fan.*\` para mostrar la tarjeta.</div>
+        <div class="fan-card__empty-title">${title}</div>
+        <div class="fan-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
@@ -2427,7 +2495,7 @@ class NodaliaFanCard extends HTMLElement {
                 step="any"
                 value="${currentPercentage}"
                 style="--percentage:${currentPercentage};"
-                aria-label="Velocidad"
+                aria-label="${escapeHtml(this._fanAria("speedSlider", "Speed"))}"
               />
             </div>
           </div>
@@ -2442,7 +2510,7 @@ class NodaliaFanCard extends HTMLElement {
                           type="button"
                           class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
                           data-fan-action="oscillate"
-                          aria-label="${this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"}"
+                          aria-label="${escapeHtml(this._fanAria(this._isOscillating(state) ? "oscillationOff" : "oscillationOn", this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"))}"
                         >
                           <ha-icon icon="mdi:rotate-360"></ha-icon>
                         </button>
@@ -2456,7 +2524,7 @@ class NodaliaFanCard extends HTMLElement {
                           type="button"
                           class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                           data-fan-action="toggle-preset-panel"
-                          aria-label="Show modes"
+                          aria-label="${escapeHtml(this._fanAria("showModes", "Show modes"))}"
                         >
                           <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
@@ -2479,7 +2547,7 @@ class NodaliaFanCard extends HTMLElement {
                     type="button"
                     class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
                     data-fan-action="oscillate"
-                    aria-label="${this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"}"
+                    aria-label="${escapeHtml(this._fanAria(this._isOscillating(state) ? "oscillationOff" : "oscillationOn", this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"))}"
                   >
                     <ha-icon icon="mdi:rotate-360"></ha-icon>
                   </button>
@@ -2493,7 +2561,7 @@ class NodaliaFanCard extends HTMLElement {
                     type="button"
                     class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                     data-fan-action="toggle-preset-panel"
-                    aria-label="Show modes"
+                    aria-label="${escapeHtml(this._fanAria("showModes", "Show modes"))}"
                   >
                     <ha-icon icon="mdi:tune-variant"></ha-icon>
                   </button>

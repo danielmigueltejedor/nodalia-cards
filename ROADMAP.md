@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-1.2.0
+1.2.1
 ```
 
-The **`1.2.0`** release adds the **Scenes Card**, **Climate setpoint schedule**, **Power Flow home popup**, and broad interaction/security hardening on top of the **`1.1.x`** line.
+The **`1.2.1`** line delivered **stability**, **visual coherence**, **render performance**, and **i18n completion** on top of **`1.2.0`** (Scenes Card, climate setpoint schedule, Power Flow home popup, interaction/security hardening). Prerelease notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The **`1.0.0`** cycle transformed Nodalia Cards from a growing collection of custom cards into a much more complete and cohesive frontend ecosystem for Home Assistant.
 

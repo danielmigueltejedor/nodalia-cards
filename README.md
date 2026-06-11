@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.2.0-2ea44f)
+![Package](https://img.shields.io/badge/package-1.2.1-2ea44f)
 ![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -48,9 +48,43 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.2.0
+# 🚀 What’s new in 1.2.1
 
-**Current stable release `1.2.0`** — match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.0.js`**, and **`window.__NODALIA_BUNDLE__.pkgVersion`**. Install from the **`main`** branch (or HACS default). Full release notes: [`CHANGELOG.md`](./CHANGELOG.md). Per-alpha build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current stable `1.2.1`** — stability pass, security normalization, render-signature optimizations, and full runtime i18n. Match **`nodalia-cards-1.2.1.js`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+### Alpha.4 highlights
+
+- Calendar disconnect invalidates refresh runs; weather forecast WS guarded.
+- `joinParts` on insignia, person, fan, humidifier, weather, alarm, gauge.
+- Notifications/power-flow/media skip work when signature unchanged.
+- Vacuum select + advance-vacuum internal services aligned with strict mode.
+
+### Alpha.3 highlights
+
+- Media-player / climate async guards; graph hover without full re-render.
+- Lighter render signatures (advance-vacuum, climate, cover, vacuum, fav).
+- Shared editor color resolver on 10 more cards; strict services opt-in on media/nav/climate/vacuum.
+
+### Alpha.2 highlights
+
+- Shared **`scheduleDeferTimer`** — press/panel timers cleared on card disconnect.
+- Scenes empty state: no redundant re-render on every HA poll.
+- Power-flow diagram nodes: per-tint icon contrast.
+- Calendar / notifications: async refresh respects disconnected lifecycle.
+
+### Alpha.1 highlights
+
+- Calendar editor: guarded config path updates (security).
+- Advance Vacuum: admin-only webhooks by default; async lifecycle guards on map actions.
+- Graph card: fewer redundant renders while history loads.
+- Light / Climate / Scenes: improved bubble icon contrast and proportional light icon sizing.
+- Power Flow: lighter render signatures on busy dashboards.
+
+---
+
+# 📦 Stable 1.2.0
+
+**Stable release `1.2.0`** on **`main`** — **`nodalia-cards-1.2.0.js`**. Full release notes: [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🎬 Scenes Card
 
@@ -335,7 +369,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.0.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.1.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

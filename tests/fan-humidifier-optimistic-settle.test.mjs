@@ -198,6 +198,6 @@ test("humidifier render signature tracks mode_entity helper state", () => {
   });
 
   assert.notEqual(signatureAuto, signatureAway);
-  assert.match(signatureAuto, /"modeEntityState":"auto"/);
-  assert.match(signatureAway, /"modeEntityState":"away"/);
+  assert.match(signatureAuto, /auto/);
+  assert.match(signatureAway, /away/);
 });

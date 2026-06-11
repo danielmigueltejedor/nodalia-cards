@@ -4,21 +4,44 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, and completed **`1.2.0-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, and completed **`1.2.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
-Maintenance toward the next **`1.2.x`** patch or **`1.3.0`** feature release.
+## [1.2.1] - 2026-06-11
 
-### Planned / In progress
+Stable **`1.2.1`** release on **`main`**. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
 
-- Bug fixes and compatibility patches.
-- Performance and rendering improvements.
-- Security and service-action hardening.
-- Editor and localization refinements.
-- Home Assistant frontend compatibility updates.
+### Highlights
+
+- **Stability pass:** lifecycle defer cleanup, `isConnected` guards on async paths, ResizeObserver and render-signature gates across device cards.
+- **Security:** shared **`normalizeSecurityConfig`** rollout; strict service gates on vacuum/climate/media; non-mutating config merges on calendar, advance-vacuum, and device cards.
+- **Performance:** `joinParts` / stamp caches on notifications, power-flow, person, insignia, fan, humidifier, weather, and more; graph hover DOM patch; optimistic UI gates on fan/humidifier/light.
+- **i18n:** runtime and editor locale trees completed (12 languages); localized empty states; media browser and control aria-labels on navigation bar, media-player, fan, and humidifier.
+- **Polish:** circular-gauge thumb orbit; person zone cache by `entity_id`; changelog date corrections.
+
+### Added
+
+- **`nodalia-utils.js`:** **`normalizeSecurityConfig`**, **`scheduleDeferTimer`** / **`clearDeferTimers`** on public API.
+- **Runtime i18n:** **`mediaBrowser`**, **`fan.aria`**, **`humidifierCard.aria`**, **`mediaPlayerCard.aria`**, expanded **`common.aria`**; **`translateFanAria`**, **`translateHumidifierAria`**, **`translateMediaBrowserUi`**, **`translateMediaPlayerAria`** on **`NodaliaI18n`**.
+- **Tests:** interaction regressions, lifecycle guards, security normalization, render-signature pilots (**149** tests).
+
+### Fixed
+
+- **Person card:** zone lookup cache stores **`entity_id`** instead of stale **`hass.states`** snapshots.
+- **Device cards:** **`normalizeSecurityConfig`** fallback clones **`security`** instead of mutating incoming HA config references.
+- **Calendar / notifications / power-flow / graph / media-player:** disconnect and post-**`await`** lifecycle guards.
+- **Circular gauge:** thumb follows dial arc on value decrease and entrance animation.
+
+### Changed
+
+- **Release metadata:** promote **`1.2.1-alpha.*`** (alpha.1–alpha.8) to stable **`1.2.1`** on **`main`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.2.1.js`**; optional split **`nodalia-cards-core-1.2.1.js`** + **`nodalia-cards-suite-1.2.1.js`**.
+- **`hacs.json`:** minimum Home Assistant **`2025.1.0`** (aligned with README).
+
+Per-alpha notes for **`1.2.1-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.2.0] - 2026-06-06
 

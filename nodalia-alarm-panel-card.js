@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -276,25 +276,11 @@ function escapeSelectorValue(value) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -540,6 +526,11 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
         this._cardWidth = nextWidth;
         this._isCompactLayout = nextCompact;
+        const signature = this._getRenderSignature();
+        if (signature === this._lastRenderSignature) {
+          return;
+        }
+        this._lastRenderSignature = signature;
         this._requestRender();
       });
     }
@@ -565,6 +556,11 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
     this._pinErrorVisible = false;
     this._pinErrorBaseline = null;
+    if (this._focusDeferTimer) {
+      window.clearTimeout(this._focusDeferTimer);
+      this._focusDeferTimer = 0;
+    }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -666,22 +662,27 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      supportedFeatures: Number(attrs.supported_features ?? 0),
-      codeFormat: String(attrs.code_format || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      delay: Number(attrs.delay ?? -1),
-      nextState: String(attrs.next_state || ""),
-      postPendingState: String(attrs.post_pending_state || ""),
-      postDelayState: String(attrs.post_delay_state || ""),
+      String(state?.state || ""),
+      Number(attrs.supported_features ?? 0),
+      String(attrs.code_format || ""),
+      this._config?.show_entity_picture === true,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.delay ?? -1),
+      String(attrs.next_state || ""),
+      String(attrs.post_pending_state || ""),
+      String(attrs.post_delay_state || ""),
       helperEntityId,
-      helperState: String(helperState?.state || ""),
-      compact: Boolean(this._isCompactLayout),
-      wrongCodeFeedbackMs: Number(this._config?.wrong_code_feedback_ms) || 5000,
-    });
+      String(helperState?.state || ""),
+      Boolean(this._isCompactLayout),
+      Number(this._config?.wrong_code_feedback_ms) || 5000,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "alarm:", values }]);
+    }
+    return values.join("::");
   }
 
   _getTitle(state) {
@@ -782,6 +783,10 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
 
     this._countdownInterval = window.setInterval(() => {
+      if (!this.isConnected) {
+        this._clearCountdownTimer();
+        return;
+      }
       const nextState = this._getState();
       const nextRemaining = this._getCountdownSecondsRemaining(nextState);
 
@@ -1009,9 +1014,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -1053,13 +1067,22 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._pinErrorBaseline = snap ? { state: snap.state, lc: snap.last_changed } : null;
     this._pinErrorVisible = true;
     this._lastRenderSignature = "";
-    this._pinErrorClearTimer = window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
       this._pinErrorClearTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       this._pinErrorVisible = false;
       this._pinErrorBaseline = null;
       this._lastRenderSignature = "";
       this._requestRender();
-    }, 4500);
+    };
+    if (typeof schedule === "function") {
+      this._pinErrorClearTimer = schedule(this, done, 4500);
+    } else {
+      this._pinErrorClearTimer = window.setTimeout(done, 4500);
+    }
     this._requestRender();
   }
 
@@ -1130,9 +1153,15 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       const promise = this._hass.callService("alarm_control_panel", service, payload);
       Promise.resolve(promise)
         .then(() => {
+          if (!this.isConnected) {
+            return;
+          }
           this._clearPinVerifyWatch();
         })
         .catch(() => {
+          if (!this.isConnected) {
+            return;
+          }
           this._clearPinVerifyWatch();
           this._showNativePinErrorChip();
         });
@@ -1202,7 +1231,16 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       return;
     }
 
-    window.setTimeout(() => {
+    if (this._focusDeferTimer) {
+      window.clearTimeout(this._focusDeferTimer);
+      this._focusDeferTimer = 0;
+    }
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      this._focusDeferTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       const activeElement = this.shadowRoot?.activeElement;
       const stillFocused = activeElement instanceof HTMLInputElement && activeElement.dataset?.alarmField === "code";
 
@@ -1212,7 +1250,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         this._pendingRenderWhileCodeFocused = false;
         this._renderWithFocusPreserved();
       }
-    }, 0);
+    };
+    if (typeof schedule === "function") {
+      this._focusDeferTimer = schedule(this, done, 0);
+    } else {
+      this._focusDeferTimer = window.setTimeout(done, 0);
+    }
   }
 
   _renderChip(label, tone = "default", accentColor = "var(--accent-color)") {

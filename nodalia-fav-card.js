@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -42,6 +42,11 @@ const DEFAULT_CONFIG = {
   show_state: true,
   state_attribute: "",
   layout_mode: "auto",
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -224,25 +229,11 @@ function deleteByPath(target, path) {
 }
 
 function resolveEditorColorValue(value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
+  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  if (typeof resolver === "function") {
+    return resolver(value);
   }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  (document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  return String(value ?? "").trim();
 }
 
 function formatEditorHexChannel(value) {
@@ -573,7 +564,10 @@ function fireEvent(node, type, detail, options) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  return config;
 }
 
 class NodaliaFavCard extends HTMLElement {
@@ -678,18 +672,30 @@ class NodaliaFavCard extends HTMLElement {
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      deviceClass: String(attrs.device_class || ""),
-      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      attrs.device_class || "",
+      attrs.unit_of_measurement || attrs.native_unit_of_measurement || "",
       helperEntityId,
-      helperState: String(helperState?.state || ""),
-      layout: String(this._layout || ""),
-      alarmOpen: Boolean(this._alarmMenuOpen),
-    });
+      helperState?.state || "",
+      this._layout || "",
+      this._alarmMenuOpen === true,
+      String(this._config?.tap_action || ""),
+      String(this._config?.tap_service || ""),
+      String(this._config?.tap_url || ""),
+      this._config?.security?.strict_service_actions === true ? 1 : 0,
+      Array.isArray(this._config?.security?.allowed_services)
+        ? this._config.security.allowed_services.join(",")
+        : "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "fav:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
@@ -1557,11 +1563,22 @@ class NodaliaFavCard extends HTMLElement {
     return this._getConfiguredGridRows() === 1;
   }
 
+  _favCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.favCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.favCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._favCardUi("emptyTitle", "Nodalia Fav Card"));
+    const body = escapeHtml(this._favCardUi("emptyBody", "Set `entity` to show the favorite."));
     return `
       <ha-card class="fav-card fav-card--empty">
-        <div class="fav-card__empty-title">Nodalia Fav Card</div>
-        <div class="fav-card__empty-text">Configura \`entity\` para mostrar el favorito.</div>
+        <div class="fav-card__empty-title">${title}</div>
+        <div class="fav-card__empty-text">${body}</div>
       </ha-card>
     `;
   }
