@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -510,9 +510,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
-  if (!isObject(config.security)) {
-    config.security = { ...DEFAULT_CONFIG.security };
-  }
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.security.strict_service_actions = config.security.strict_service_actions === true;
 
   return config;
@@ -1707,7 +1706,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return false;
     }
 
-    this._callService("clean_area", {
+    this._callUserVacuumService("clean_area", {
       cleaning_area_id: selectedIds,
     });
     return true;
@@ -2335,26 +2334,23 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    const fullService = `vacuum.${service}`;
-    if (!this._isServiceAllowed(fullService)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Vacuum Card", fullService);
-      return;
-    }
-
     this._hass.callService("vacuum", service, {
       entity_id: this._config.entity,
       ...data,
     });
   }
 
-  _callSelectOption(entityId, option) {
-    if (!this._hass || !entityId || !option) {
-      return;
-    }
-
-    const fullService = "select.select_option";
+  _callUserVacuumService(service, data = {}) {
+    const fullService = `vacuum.${service}`;
     if (!this._isServiceAllowed(fullService)) {
       window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Vacuum Card", fullService);
+      return;
+    }
+    this._callService(service, data);
+  }
+
+  _callSelectOption(entityId, option) {
+    if (!this._hass || !entityId || !option) {
       return;
     }
 
@@ -2583,11 +2579,11 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (this._shouldUsePausePrimary(state)) {
-      this._callService("pause");
+      this._callUserVacuumService("pause");
       return;
     }
 
-    this._callService("start");
+    this._callUserVacuumService("start");
   }
 
   _shouldUsePausePrimary(state) {
@@ -2705,19 +2701,19 @@ class NodaliaVacuumCard extends HTMLElement {
         this._runPrimaryAction(state);
         break;
       case "start":
-        this._callService("start");
+        this._callUserVacuumService("start");
         break;
       case "pause":
-        this._callService("pause");
+        this._callUserVacuumService("pause");
         break;
       case "stop":
-        this._callService("stop");
+        this._callUserVacuumService("stop");
         break;
       case "return_to_base":
-        this._callService("return_to_base");
+        this._callUserVacuumService("return_to_base");
         break;
       case "locate":
-        this._callService("locate");
+        this._callUserVacuumService("locate");
         break;
       case "toggle-mode-panel": {
         const modeKind = button.dataset.modeKind || "";
@@ -2739,7 +2735,7 @@ class NodaliaVacuumCard extends HTMLElement {
           this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._setModePanelActiveSelection(button.dataset.modeKind || "suction", button.dataset.value);
-          this._callService("set_fan_speed", {
+          this._callUserVacuumService("set_fan_speed", {
             fan_speed: button.dataset.value,
           });
         }

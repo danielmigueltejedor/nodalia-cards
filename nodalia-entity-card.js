@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -366,12 +366,13 @@ function getValueSignature(value) {
     return "";
   }
 
-  if (Array.isArray(value) || isObject(value)) {
-    try {
-      return JSON.stringify(value);
-    } catch (_error) {
-      return String(value);
-    }
+  if (Array.isArray(value)) {
+    return `a:${value.length}|${value.map(item => String(item ?? "")).join(",")}`;
+  }
+
+  if (isObject(value)) {
+    const keys = Object.keys(value).sort();
+    return `o:${keys.length}|${keys.map(key => `${key}=${String(value[key] ?? "")}`).join(",")}`;
   }
 
   return String(value);

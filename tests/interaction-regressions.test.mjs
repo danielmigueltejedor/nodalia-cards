@@ -1332,16 +1332,32 @@ test("weather forecast subscription guards disconnected lifecycle", () => {
   assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
-test("vacuum select_option respects strict service allowlist", () => {
+test("vacuum user services respect strict allowlist while internal helpers bypass it", () => {
   const source = read("nodalia-vacuum-card.js");
+  assert.match(source, /_callUserVacuumService\(/);
   assert.match(source, /_callSelectOption\(/);
-  assert.match(source, /_isServiceAllowed\(fullService\)/);
+  assert.match(source, /_callUserVacuumService\(service, data = \{\}\) \{[\s\S]*_isServiceAllowed\(fullService\)/);
+  const selectBody = source.match(/_callSelectOption\(entityId, option\) \{[\s\S]*?\n  \}/);
+  assert.ok(selectBody, "expected _callSelectOption implementation");
+  assert.doesNotMatch(selectBody[0], /_isServiceAllowed/);
 });
 
 test("notifications defers side effects until render signature changes", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /const nextSignature = this\._getRenderSignature\(hass\)/);
   assert.match(source, /nextSignature === this\._lastRenderSignature\)[\s\S]*return;/);
+});
+
+test("alpha.5 lifecycle guards on notifications media climate scenes calendar graph nav and alarm", () => {
+  assert.match(read("nodalia-notifications-card.js"), /_renderIfChanged\(force = false\) \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-notifications-card.js"), /this\._calendarRefreshInFlight = false/);
+  assert.match(read("nodalia-media-player.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-climate-card.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-scenes-card.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-graph-card.js"), /requestAnimationFrame\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-navigation-bar.js"), /_dockEntranceResetFrame/);
+  assert.match(read("nodalia-alarm-panel-card.js"), /_countdownInterval = window\.setInterval\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
 test("entity person weather and alarm use deferred press timers", () => {

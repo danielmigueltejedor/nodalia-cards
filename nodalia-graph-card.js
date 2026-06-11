@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -735,6 +735,9 @@ class NodaliaGraphCard extends HTMLElement {
     }
     this._viewVisibilityObserver = new IntersectionObserver(
       entries => {
+        if (!this.isConnected) {
+          return;
+        }
         const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
         if (visible === this._wasInViewport) {
           return;
@@ -1452,6 +1455,10 @@ class NodaliaGraphCard extends HTMLElement {
 
     this._hoverFrame = window.requestAnimationFrame(() => {
       this._hoverFrame = 0;
+      if (!this.isConnected) {
+        this._pendingHoverIndex = null;
+        return;
+      }
       const resolvedIndex = this._pendingHoverIndex;
       this._pendingHoverIndex = null;
       if (resolvedIndex === this._hoverIndex) {

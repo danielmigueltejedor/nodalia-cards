@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1009,6 +1009,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationTimer);
       this._entranceAnimationTimer = 0;
     }
+    this._calendarRefreshInFlight = false;
+    this._weatherRefreshInFlight = false;
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
@@ -1109,6 +1111,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     this._viewportResizeTimer = window.setTimeout(() => {
       this._viewportResizeTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      const nextSignature = this._getRenderSignature();
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        fireEvent(this, "iron-resize", {});
+        return;
+      }
       this._lastRenderSignature = "";
       this._renderIfChanged(true);
       fireEvent(this, "iron-resize", {});
@@ -1464,6 +1474,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     try {
       if (typeof this._hass.callWS === "function") {
         for (const forecastType of ["hourly", "daily"]) {
+          if (!this.isConnected) {
+            return;
+          }
           try {
             const response = await this._hass.callWS({
               type: "weather/get_forecasts",
@@ -2519,6 +2532,9 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _renderIfChanged(force = false) {
+    if (!this.isConnected) {
+      return;
+    }
     const next = this._getRenderSignature();
     if (!force && next === this._lastRenderSignature) {
       return;
@@ -2708,6 +2724,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       } else {
         await this._callNamedService("homeassistant.toggle", data);
       }
+      if (!this.isConnected) {
+        return;
+      }
       return;
     }
     if (action.type === "service" && action.service && typeof this._hass.callService === "function") {
@@ -2719,6 +2738,9 @@ class NodaliaNotificationsCard extends HTMLElement {
         await this._callInternalService(action.service, data);
       } else {
         await this._callNamedService(action.service, data);
+      }
+      if (!this.isConnected) {
+        return;
       }
     }
   }

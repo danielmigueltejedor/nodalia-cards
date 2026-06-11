@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -891,33 +891,36 @@ class NodaliaLightCard extends HTMLElement {
   _getRenderSignature(state = this._getState()) {
     const entityId = this._config?.entity || "";
     const attrs = state?.attributes || {};
-    return [
-      `e:${entityId}`,
-      `s:${String(state?.state || "")}`,
-      `n:${String(attrs.friendly_name || "")}`,
-      `i:${String(attrs.icon || "")}`,
-      `sep:${this._config?.show_entity_picture ? 1 : 0}`,
-      `ep:${String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "")}`,
-      `b:${Number(attrs.brightness ?? -1)}`,
-      `ct:${Number(attrs.color_temp ?? -1)}`,
-      `ctk:${Number(attrs.color_temp_kelvin ?? -1)}`,
-      `hs:${Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : ""}`,
-      `rgb:${Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : ""}`,
-      `fx:${String(attrs.effect || "")}`,
-      `m:${Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : ""}`,
-      `sf:${Number(attrs.supported_features ?? -1)}`,
-      `lang:${window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en"}`,
-      `c:${this._isCompactLayout ? 1 : 0}`,
-      `mini:${this._shouldUseMiniLayout() ? 1 : 0}`,
-      `cm:${String(this._activeControlMode || "")}`,
-      `ss:${this._config?.show_state === true ? 1 : 0}`,
-      `sp:${String(this._config?.state_position || "right")}`,
-      `ae:${this._config?.auto_expand === false ? 0 : 1}`,
-      `co:${this._controlsPanelUserOpen ? 1 : 0}`,
-      `qpt:${this._config?.show_quick_temperature_presets === true ? 1 : 0}`,
-      `qpc:${this._config?.show_quick_color_presets === true ? 1 : 0}`,
-      `cps:${Array.isArray(this._config?.color_presets) ? this._config.color_presets.map(p => `${String(p?.label ?? "").trim()}~${normalizeHexColorForLightPreset(p?.color)}`).join(";") : ""}`,
-      `tap:${[
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      entityId,
+      String(state?.state || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.show_entity_picture ? 1 : 0,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.brightness ?? -1),
+      Number(attrs.color_temp ?? -1),
+      Number(attrs.color_temp_kelvin ?? -1),
+      Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : "",
+      Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
+      String(attrs.effect || ""),
+      Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.join("|") : "",
+      Number(attrs.supported_features ?? -1),
+      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en",
+      this._isCompactLayout ? 1 : 0,
+      this._shouldUseMiniLayout() ? 1 : 0,
+      String(this._activeControlMode || ""),
+      this._config?.show_state === true ? 1 : 0,
+      String(this._config?.state_position || "right"),
+      this._config?.auto_expand === false ? 0 : 1,
+      this._controlsPanelUserOpen ? 1 : 0,
+      this._config?.show_quick_temperature_presets === true ? 1 : 0,
+      this._config?.show_quick_color_presets === true ? 1 : 0,
+      Array.isArray(this._config?.color_presets)
+        ? this._config.color_presets.map(p => `${String(p?.label ?? "").trim()}~${normalizeHexColorForLightPreset(p?.color)}`).join(";")
+        : "",
+      [
         String(this._config?.tap_action || ""),
         String(this._config?.icon_tap_action || ""),
         String(this._config?.tap_service || ""),
@@ -928,12 +931,12 @@ class NodaliaLightCard extends HTMLElement {
         this._config?.icon_tap_new_tab === true ? 1 : 0,
         String(this._config?.tap_service_data || ""),
         String(this._config?.icon_tap_service_data || ""),
-        this._config?.security?.strict_service_actions === false ? 0 : 1,
+        this._config?.security?.strict_service_actions === true ? 1 : 0,
         Array.isArray(this._config?.security?.allowed_services)
           ? this._config.security.allowed_services.join(",")
           : "",
-      ].join("~")}`,
-      `hold:${[
+      ].join("~"),
+      [
         String(this._config?.hold_action || ""),
         String(this._config?.icon_hold_action ?? ""),
         String(this._config?.hold_service || ""),
@@ -944,8 +947,12 @@ class NodaliaLightCard extends HTMLElement {
         this._config?.icon_hold_new_tab === true ? 1 : 0,
         String(this._config?.hold_service_data || ""),
         String(this._config?.icon_hold_service_data || ""),
-      ].join("~")}`,
-    ].join("|");
+      ].join("~"),
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "light:", values }]);
+    }
+    return values.join("|");
   }
 
   _controlsEditorStr(key) {

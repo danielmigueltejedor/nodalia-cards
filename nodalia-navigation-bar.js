@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -645,6 +645,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateDockEntranceNext = true;
     this._dockEntrancePlayed = false;
+    this._dockEntranceResetFrame = 0;
     this._lastShouldHide = false;
     this._playDockEntrance = false;
     this._lastMediaToggleVisible = false;
@@ -712,6 +713,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
       window.clearInterval(this._mediaTicker);
       this._mediaTicker = null;
     }
+    if (this._dockEntranceResetFrame) {
+      window.cancelAnimationFrame(this._dockEntranceResetFrame);
+      this._dockEntranceResetFrame = 0;
+    }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -2981,7 +2987,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
     // one frame so follow-up renders still emit --entering until the browser composites.
     if (this._animateDockEntranceNext) {
       if (animations.enabled) {
-        requestAnimationFrame(() => {
+        if (this._dockEntranceResetFrame) {
+          window.cancelAnimationFrame(this._dockEntranceResetFrame);
+        }
+        this._dockEntranceResetFrame = window.requestAnimationFrame(() => {
+          this._dockEntranceResetFrame = 0;
+          if (!this.isConnected) {
+            return;
+          }
           this._animateDockEntranceNext = false;
         });
       } else {
@@ -4658,6 +4671,9 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
   _applyFieldValue(target, key, field) {
     if (!target || !key) {
+      return;
+    }
+    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
       return;
     }
 

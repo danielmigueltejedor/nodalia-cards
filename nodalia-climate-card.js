@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1549,6 +1549,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
     this._commitAborted = true;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -3580,9 +3581,18 @@ class NodaliaClimateCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -4378,9 +4388,18 @@ class NodaliaClimateCard extends HTMLElement {
     element.classList.remove(className);
     element.getBoundingClientRect();
     element.classList.add(className);
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, duration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, duration + 40);
+    } else {
+      window.setTimeout(done, duration + 40);
+    }
   }
 
   _onShadowClick(event) {

@@ -10,9 +10,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.1-alpha.4] - 2026-06-06
+## [1.2.1-alpha.5] - 2026-05-29
 
-Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.4`**.
+Fifth **`1.2.1`** **`alpha`**: audit pass 5 — lifecycle completion, signature slimming, optimistic gates, security normalization. Release channel **`1.2.1-alpha.5`**.
+
+### Fixed
+
+- **`nodalia-notifications-card.js`:** `isConnected` in `_renderIfChanged`; reset in-flight calendar/weather flags on disconnect; post-`await` guards in `_runNotificationAction`; viewport resize skips forced bust when signature unchanged.
+- **`nodalia-media-player.js` / `climate` / `scenes`:** press-bounce timers use `scheduleDeferTimer` + `clearDeferTimers`; media invalidates browser request token on disconnect.
+- **`nodalia-calendar-card.js`:** forecast WebSocket callback and per-`await` guards in `_refreshWeatherForecastByDay`.
+- **`nodalia-graph-card.js`:** `isConnected` in hover rAF and viewport `IntersectionObserver`.
+- **`nodalia-navigation-bar.js`:** tracked dock-entrance rAF cancelled on disconnect; unsafe editor keys rejected in `_applyFieldValue`.
+- **`nodalia-alarm-panel-card.js`:** countdown interval clears when disconnected.
+
+### Changed
+
+- **`nodalia-utils.js`:** shared **`normalizeSecurityConfig`** helper exported on public API.
+- **Render signatures:** entity `getValueSignature` without `JSON.stringify`; light uses `joinParts`; person stamp uses raw HA fields (no per-tick title/translate/badge work).
+- **`fan` / `humidifier`:** optimistic sync skipped when entity revision and signature are unchanged.
+- **`advance-vacuum`:** persisted session load deferred until signature changes; `select` / `homeassistant` mode helpers route through `_callInternalService`; `_mapActionInFlight` reset on disconnect.
+- **`vacuum`:** `_callService` / `_callSelectOption` are internal; user actions use `_callUserVacuumService` with strict gate.
+
+## [1.2.1-alpha.5] - 2026-06-06
+
+Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.5`**.
 
 ### Fixed
 

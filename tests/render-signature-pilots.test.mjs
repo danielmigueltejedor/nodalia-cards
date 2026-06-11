@@ -75,3 +75,24 @@ test("insignia render signature does not embed full config object", () => {
   const source = read("nodalia-insignia-card.js");
   assert.doesNotMatch(source, /config: this\._config/);
 });
+
+test("alpha.5 cards avoid JSON attribute signatures and use slim person stamp", () => {
+  const entitySource = read("nodalia-entity-card.js");
+  const getValueSignatureFn = entitySource.match(/function getValueSignature\(value\) \{[\s\S]*?\n\}/);
+  assert.ok(getValueSignatureFn, "expected getValueSignature helper");
+  assert.doesNotMatch(getValueSignatureFn[0], /JSON\.stringify/);
+  assert.match(getValueSignatureFn[0], /`a:\$\{value\.length\}/);
+  assert.match(read("nodalia-light-card.js"), /prefix: "light:"/);
+  const personSource = read("nodalia-person-card.js");
+  const personSignatureFn = personSource.match(/_getRenderSignature\(hass = this\._hass\) \{[\s\S]*?\n  \}/);
+  assert.ok(personSignatureFn, "expected person _getRenderSignature");
+  assert.doesNotMatch(personSignatureFn[0], /_getTitle\(/);
+  assert.doesNotMatch(personSignatureFn[0], /_translateState\(/);
+  assert.doesNotMatch(personSignatureFn[0], /_getBadgeDescriptor\(/);
+});
+
+test("normalizeSecurityConfig is exported from nodalia-utils", () => {
+  const source = read("nodalia-utils.js");
+  assert.match(source, /function normalizeSecurityConfig\(/);
+  assert.match(source, /normalizeSecurityConfig,/);
+});

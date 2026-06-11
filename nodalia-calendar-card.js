@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2102,6 +2102,9 @@ class NodaliaCalendarCard extends HTMLElement {
     this._unsubscribeWeatherForecast();
     this._weatherForecastSubscriptionKey = subscriptionKey;
     this._weatherForecastSubscription = subscribeMessage(event => {
+      if (!this.isConnected) {
+        return;
+      }
       this._weatherForecastEvents = {
         ...this._weatherForecastEvents,
         [forecastType]: event,
@@ -2197,10 +2200,16 @@ class NodaliaCalendarCard extends HTMLElement {
     };
     addForecastCandidate(this._getCachedForecastRows(forecastTypes));
     for (const forecastType of forecastTypes) {
+      if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+        return;
+      }
       try {
         addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType));
       } catch (_error) {
         // fallback below
+      }
+      if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+        return;
       }
       try {
         addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType));
@@ -2217,6 +2226,9 @@ class NodaliaCalendarCard extends HTMLElement {
           "GET",
           `weather/forecast/${encodeURIComponent(entityId)}?type=daily`,
         );
+        if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+          return;
+        }
         addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
       } catch (_error) {
         // Keep silent, not all HA versions expose this endpoint.

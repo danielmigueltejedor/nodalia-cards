@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -1604,6 +1604,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._mapActionInFlight = false;
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
@@ -1708,13 +1709,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   set hass(hass) {
     try {
       this._hass = hass;
-      this._ensurePersistedCleaningSessionStateLoaded();
       const nextSignature = this._getRenderSignature(hass);
       if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
         this._lastRenderSignature = nextSignature;
         return;
       }
+      this._ensurePersistedCleaningSessionStateLoaded();
       this._syncCalibrationIfNeeded(hass);
+      this._lastRenderSignature = nextSignature;
       this._render();
     } catch (error) {
       this._handleCardError(error, "set hass");
@@ -3472,9 +3474,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    this._hass.callService("homeassistant", this._isBooleanEntityOn(entityId) ? "turn_off" : "turn_on", {
-      entity_id: entityId,
-    });
+    this._callInternalService(
+      `homeassistant.${this._isBooleanEntityOn(entityId) ? "turn_off" : "turn_on"}`,
+      { entity_id: entityId },
+    );
   }
 
   _setEntityOption(entityId, value) {
@@ -4081,7 +4084,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const otherDescriptor = this._getModeDescriptor(otherKind, state);
 
     if (descriptor?.service === "select" && descriptor.target && value) {
-      this._hass.callService("select", "select_option", {
+      this._callInternalService("select.select_option", {
         entity_id: descriptor.target,
         option: value,
       });
@@ -4106,7 +4109,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         sharedSmartOption &&
         normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
       ) {
-        this._hass.callService("select", "select_option", {
+        this._callInternalService("select.select_option", {
           entity_id: otherDescriptor.target,
           option: sharedSmartOption,
         });
@@ -4123,7 +4126,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       fallbackOption &&
       normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
     ) {
-      this._hass.callService("select", "select_option", {
+      this._callInternalService("select.select_option", {
         entity_id: otherDescriptor.target,
         option: fallbackOption,
       });
@@ -4142,7 +4145,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         return;
       }
 
-      this._hass.callService("select", "select_option", {
+      this._callInternalService("select.select_option", {
         entity_id: descriptor.target,
         option: value,
       });

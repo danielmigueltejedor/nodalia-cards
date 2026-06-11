@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
 const SCENE_LAUNCH_DURATION = 780;
 const HAPTIC_PATTERNS = {
@@ -646,10 +646,7 @@ class NodaliaScenesCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
-    this._launchAnimationTimers?.forEach(timer => window.clearTimeout(timer));
-    this._launchAnimationTimers?.clear();
-    this._pressAnimationTimers?.forEach(timer => window.clearTimeout(timer));
-    this._pressAnimationTimers?.clear();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._cancelScrollRestore?.();
     this._cancelScrollRestore = null;
     cancelDashboardScrollRestore();
@@ -765,21 +762,22 @@ class NodaliaScenesCard extends HTMLElement {
     if (!(tile instanceof HTMLElement)) {
       return;
     }
-    const existingTimer = this._pressAnimationTimers.get(tile);
-    if (existingTimer) {
-      window.clearTimeout(existingTimer);
-    }
+    const animations = this._getAnimationSettings();
     tile.classList.remove("is-pressing");
     void tile.offsetWidth;
     tile.classList.add("is-pressing");
-    const timer = window.setTimeout(
-      () => {
-        tile.classList.remove("is-pressing");
-        this._pressAnimationTimers.delete(tile);
-      },
-      this._getAnimationSettings().buttonBounceDuration,
-    );
-    this._pressAnimationTimers.set(tile, timer);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!tile.isConnected) {
+        return;
+      }
+      tile.classList.remove("is-pressing");
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration);
+    }
   }
 
   _triggerLaunchAnimation(tile) {
@@ -787,10 +785,6 @@ class NodaliaScenesCard extends HTMLElement {
       return;
     }
     const duration = this._getAnimationSettings().launchDuration;
-    const existingTimer = this._launchAnimationTimers.get(tile);
-    if (existingTimer) {
-      window.clearTimeout(existingTimer);
-    }
     tile.classList.remove("scenes-card__tile--launching");
     const icon = tile.querySelector(".scenes-card__tile-icon");
     if (icon instanceof HTMLElement) {
@@ -801,16 +795,21 @@ class NodaliaScenesCard extends HTMLElement {
     if (icon instanceof HTMLElement) {
       icon.classList.add("scenes-card__tile-icon--launching");
     }
-    this._launchAnimationTimers.set(
-      tile,
-      window.setTimeout(() => {
-        tile.classList.remove("scenes-card__tile--launching");
-        if (icon instanceof HTMLElement) {
-          icon.classList.remove("scenes-card__tile-icon--launching");
-        }
-        this._launchAnimationTimers.delete(tile);
-      }, duration),
-    );
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!tile.isConnected) {
+        return;
+      }
+      tile.classList.remove("scenes-card__tile--launching");
+      if (icon instanceof HTMLElement) {
+        icon.classList.remove("scenes-card__tile-icon--launching");
+      }
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, duration);
+    } else {
+      window.setTimeout(done, duration);
+    }
   }
 
   _openMoreInfo(entityId) {

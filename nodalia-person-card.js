@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "1.2.1-alpha.4";
+const CARD_VERSION = "1.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -671,22 +671,17 @@ class NodaliaPersonCard extends HTMLElement {
       return `empty:${this._config?.entity || ""}`;
     }
 
-    const title = this._getTitle(state);
-    const subtitle = this._config.show_state !== false ? this._translateState(state) : "";
-    const picture = this._getPersonPicture(state);
-    const fallbackIcon = this._getFallbackIcon(state);
-    const badge = this._getBadgeDescriptor(state);
+    const attrs = state.attributes || {};
     const zoneState = this._getMatchingZoneState(state);
     const joinParts = window.NodaliaRenderSignature?.joinParts;
     const values = [
       entityId,
       String(state.state || ""),
-      title,
-      subtitle,
-      picture,
-      fallbackIcon,
-      badge?.icon || "",
-      badge?.color || "",
+      String(attrs.friendly_name || this._config.name || ""),
+      this._config.show_state !== false ? String(state.state || "") : "",
+      String(attrs.entity_picture || ""),
+      String(attrs.icon || this._config.icon || ""),
+      String(state.state || ""),
       zoneState?.entity_id || "",
       zoneState?.attributes?.icon || "",
       this._config.show_state !== false,
