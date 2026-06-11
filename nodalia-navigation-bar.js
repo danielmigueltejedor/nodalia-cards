@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.2.1-alpha.8";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2196,6 +2196,18 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return match?.icon || "";
   }
 
+  _commonAria(key, fallback = "") {
+    return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  }
+
+  _mediaBrowserUi(key, fallback = "", values = {}) {
+    return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+  }
+
+  _mediaPlayerAria(key, fallback = "", values = {}) {
+    return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+  }
+
   _getMediaBrowserDisplayTitle(value) {
     const label = typeof value === "string" ? value : value?.title;
     const fallback = String(label || "").trim();
@@ -2558,11 +2570,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
     );
 
     const bodyMarkup = this._mediaBrowserState.loading
-      ? `<div class="media-browser__empty">Cargando medios...</div>`
+      ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("loading", "Loading media..."))}</div>`
       : this._mediaBrowserState.error
         ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>`
         : items.length === 0
-          ? `<div class="media-browser__empty">No hay elementos disponibles aqui.</div>`
+          ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("empty", "No items available here."))}</div>`
           : `
             <div class="media-browser__list">
               ${items
@@ -2607,7 +2619,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                               data-media-browser-action="play"
                               data-media-content-type="${escapeHtml(item.media_content_type || "")}"
                               data-media-content-id="${escapeHtml(item.media_content_id || "")}"
-                              aria-label="Reproducir ${escapeHtml(itemTitle)}"
+                              aria-label="${escapeHtml(this._mediaBrowserUi("playItem", "Play {title}", { title: itemTitle }))}"
                             >
                               <ha-icon icon="mdi:play"></ha-icon>
                             </button>
@@ -2623,25 +2635,25 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     return `
       <div class="media-browser-backdrop" data-media-browser-close="true"></div>
-      <div class="media-browser-panel" role="dialog" aria-modal="true" aria-label="Media browser">
+      <div class="media-browser-panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._mediaBrowserUi("dialog", "Media browser"))}">
         <div class="media-browser__header">
           <button
             type="button"
             class="media-browser__header-button"
             data-media-browser-back="true"
-            aria-label="Back"
+            aria-label="${escapeHtml(this._commonAria("back", "Back"))}"
           >
             <ha-icon icon="mdi:chevron-left"></ha-icon>
           </button>
           <div class="media-browser__header-copy">
-            <div class="media-browser__eyebrow">Music Assistant</div>
+            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || this._mediaBrowserUi("eyebrow", "Media Browser"))}</div>
             <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Media"))}</div>
           </div>
           <button
             type="button"
             class="media-browser__header-button"
             data-media-browser-close="true"
-            aria-label="Close"
+            aria-label="${escapeHtml(this._commonAria("close", "Close"))}"
           >
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
@@ -2691,7 +2703,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           data-media-control="volume-down"
           data-entity="${escapeHtml(player.entity)}"
           data-media-volume="${volumeLevel}"
-          aria-label="Volume down"
+          aria-label="${escapeHtml(this._commonAria("volumeDown", "Volume down"))}"
         >
           <ha-icon icon="mdi:minus"></ha-icon>
         </button>
@@ -2705,7 +2717,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           data-media-control="volume-up"
           data-entity="${escapeHtml(player.entity)}"
           data-media-volume="${volumeLevel}"
-          aria-label="Volume up"
+          aria-label="${escapeHtml(this._commonAria("volumeUp", "Volume up"))}"
         >
           <ha-icon icon="mdi:plus"></ha-icon>
         </button>
@@ -2720,7 +2732,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             data-media-control="browse-media"
             data-entity="${escapeHtml(player.entity)}"
             data-media-path="${escapeHtml(browsePath)}"
-            aria-label="Open media"
+            aria-label="${escapeHtml(this._commonAria("openMedia", "Open media"))}"
           >
             <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
           </button>
@@ -2730,7 +2742,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     const dotsMarkup =
       visiblePlayers.length > 1
         ? `
-          <div class="media-player__dots" aria-label="Media players">
+          <div class="media-player__dots" aria-label="${escapeHtml(this._commonAria("mediaPlayers", "Media players"))}">
             ${visiblePlayers
               .map(
                 (_item, index) => `
@@ -2738,7 +2750,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                     type="button"
                     class="media-player__dot ${index === this._activeMediaPlayerIndex ? "active" : ""}"
                     data-media-index="${index}"
-                    aria-label="Select player ${index + 1}"
+                    aria-label="${escapeHtml(this._mediaPlayerAria("selectPlayer", "Select player {index}", { index: index + 1 }))}"
                   ></button>
                 `,
               )
@@ -2792,7 +2804,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         type="button"
         class="media-player__collapse"
         data-media-toggle="collapse"
-        aria-label="Hide player"
+        aria-label="${escapeHtml(this._mediaPlayerAria("hidePlayer", "Hide player"))}"
       >
         <ha-icon icon="mdi:chevron-down"></ha-icon>
       </button>
@@ -2846,7 +2858,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       class="media-player__control"
                       data-media-control="previous"
                       data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Previous"
+                      aria-label="${escapeHtml(this._commonAria("previous", "Previous"))}"
                     >
                       <ha-icon icon="mdi:skip-previous"></ha-icon>
                     </button>
@@ -2855,7 +2867,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       class="media-player__control media-player__control--primary"
                       data-media-control="play-pause"
                       data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Play or pause"
+                      aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"
                     >
                       <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
                     </button>
@@ -2864,7 +2876,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       class="media-player__control"
                       data-media-control="next"
                       data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Next"
+                      aria-label="${escapeHtml(this._commonAria("next", "Next"))}"
                     >
                       <ha-icon icon="mdi:skip-next"></ha-icon>
                     </button>
@@ -2911,7 +2923,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           type="button"
           class="media-player-toggle${playToggleEntrance ? " media-player-toggle--entering" : ""}"
           data-media-toggle="expand"
-          aria-label="Show player"
+          aria-label="${escapeHtml(this._mediaPlayerAria("showPlayer", "Show player"))}"
         >
           <span class="media-player-toggle__artwork">
             ${
@@ -4371,7 +4383,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             ${mediaPlayerMarkup}
             <ha-card class="navbar-card${playDockEntrance ? ` navbar-card--entering navbar-card--entering-${config.layout.position === "top" ? "top" : "bottom"}` : ""}">
               ${titleMarkup}
-              <nav class="navbar" aria-label="Navigation bar">
+              <nav class="navbar" aria-label="${escapeHtml(this._commonAria("navigationBar", "Navigation bar"))}">
                 ${routesMarkup}
               </nav>
             </ha-card>

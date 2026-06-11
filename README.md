@@ -1,8 +1,8 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.2.1--alpha.8-f59e0b)
-![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
+![Package](https://img.shields.io/badge/package-1.2.1-2ea44f)
+![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -48,9 +48,9 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.2.1-alpha
+# 🚀 What’s new in 1.2.1
 
-**Current alpha `1.2.1-alpha.8`** — i18n completion, localized empty states, config-safety fixes. Match **`nodalia-cards-1.2.1-alpha.8.js`**. Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current stable `1.2.1`** — stability pass, security normalization, render-signature optimizations, and full runtime i18n. Match **`nodalia-cards-1.2.1.js`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ### Alpha.4 highlights
 
@@ -369,7 +369,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-alpha.8.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.1.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

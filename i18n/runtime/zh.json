@@ -317,7 +317,12 @@
       "unknown": "未知"
     },
     "emptyTitle": "Nodalia Humidifier Card",
-    "emptyBody": "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。"
+    "emptyBody": "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
+    }
   },
   "climateCard": {
     "modes": {
@@ -392,7 +397,13 @@
     "noState": "无状态",
     "fallbackName": "风扇",
     "emptyTitle": "Nodalia Fan Card",
-    "emptyBody": "将 `entity` 设置为 `fan.*` 实体以显示此卡片。"
+    "emptyBody": "将 `entity` 设置为 `fan.*` 实体以显示此卡片。",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "报警",
@@ -772,7 +783,17 @@
   },
   "common": {
     "aria": {
-      "togglePower": "开或关"
+      "togglePower": "开或关",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
     }
   },
   "scenes": {
@@ -797,6 +818,27 @@
   },
   "mediaPlayerCard": {
     "emptyTitle": "Nodalia Media Player",
-    "emptyBody": "设置 `entity` 或 `players` 以显示播放器。"
+    "emptyBody": "设置 `entity` 或 `players` 以显示播放器。",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

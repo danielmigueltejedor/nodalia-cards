@@ -317,7 +317,12 @@
       "unknown": "Неизвестно"
     },
     "emptyTitle": "Nodalia Humidifier Card",
-    "emptyBody": "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку."
+    "emptyBody": "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
+    }
   },
   "climateCard": {
     "modes": {
@@ -392,7 +397,13 @@
     "noState": "Нет состояния",
     "fallbackName": "Вентилятор",
     "emptyTitle": "Nodalia Fan Card",
-    "emptyBody": "Укажите `entity` как сущность `fan.*`, чтобы показать карточку."
+    "emptyBody": "Укажите `entity` как сущность `fan.*`, чтобы показать карточку.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "alarmPanel": {
     "defaultTitle": "Сигнализация",
@@ -772,7 +783,17 @@
   },
   "common": {
     "aria": {
-      "togglePower": "Включить или выключить"
+      "togglePower": "Включить или выключить",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
     }
   },
   "scenes": {
@@ -797,6 +818,27 @@
   },
   "mediaPlayerCard": {
     "emptyTitle": "Nodalia Media Player",
-    "emptyBody": "Укажите `entity` или `players`, чтобы показать плеер."
+    "emptyBody": "Укажите `entity` или `players`, чтобы показать плеер.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
+  },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
   }
 }

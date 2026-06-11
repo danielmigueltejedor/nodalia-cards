@@ -173,6 +173,13 @@
     "recently played tracks": "Canciones reproducidas recientemente",
     "browseFallback": "Elemento"
   },
+  "mediaBrowser": {
+    "loading": "Cargando medios...",
+    "empty": "No hay elementos disponibles aquí.",
+    "playItem": "Reproducir {title}",
+    "dialog": "Explorador de medios",
+    "eyebrow": "Explorador de medios"
+  },
   "vacuumSimple": {
     "quiet": "Silencioso",
     "silent": "Silencioso",
@@ -209,7 +216,13 @@
     "noState": "Sin estado",
     "fallbackName": "Ventilador",
     "emptyTitle": "Nodalia Fan Card",
-    "emptyBody": "Configura `entity` con una entidad `fan.*` para mostrar la tarjeta."
+    "emptyBody": "Configura `entity` con una entidad `fan.*` para mostrar la tarjeta.",
+    "aria": {
+      "speedSlider": "Velocidad",
+      "oscillationOn": "Activar oscilación",
+      "oscillationOff": "Desactivar oscilación",
+      "showModes": "Mostrar modos"
+    }
   },
   "lightCard": {
     "emptyTitle": "Nodalia Light Card",
@@ -232,7 +245,17 @@
   },
   "common": {
     "aria": {
-      "togglePower": "Encender o apagar"
+      "togglePower": "Encender o apagar",
+      "back": "Atrás",
+      "close": "Cerrar",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "playPause": "Reproducir o pausar",
+      "volumeDown": "Bajar volumen",
+      "volumeUp": "Subir volumen",
+      "openMedia": "Abrir medios",
+      "navigationBar": "Barra de navegación",
+      "mediaPlayers": "Reproductores multimedia"
     }
   },
   "alarmPanel": {
@@ -458,6 +481,11 @@
   "humidifierCard": {
     "emptyTitle": "Nodalia Humidifier Card",
     "emptyBody": "Configura `entity` con una entidad `humidifier.*` para mostrar la tarjeta.",
+    "aria": {
+      "targetHumidity": "Humedad objetivo",
+      "showModes": "Mostrar modos",
+      "showSpeeds": "Mostrar velocidades"
+    },
     "modes": {
       "auto": "Auto",
       "automatic": "Auto",
@@ -572,7 +600,21 @@
   },
   "mediaPlayerCard": {
     "emptyTitle": "Nodalia Media Player",
-    "emptyBody": "Configura `entity` o `players` para mostrar un reproductor."
+    "emptyBody": "Configura `entity` o `players` para mostrar un reproductor.",
+    "aria": {
+      "turnOn": "Encender",
+      "turnOff": "Apagar",
+      "playPause": "Reproducir o pausar",
+      "showVolume": "Mostrar volumen",
+      "sources": "Fuentes",
+      "switchSource": "Cambiar fuente",
+      "switchToSource": "Cambiar a {source}",
+      "volume": "Volumen",
+      "selectPlayer": "Seleccionar reproductor {index}",
+      "play": "Reproducir",
+      "hidePlayer": "Ocultar reproductor",
+      "showPlayer": "Mostrar reproductor"
+    }
   },
   "notificationsCard": {
     "fallbackEvent": "Evento",

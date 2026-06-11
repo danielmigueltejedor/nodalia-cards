@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.2.1-alpha.8";
+const CARD_VERSION = "1.2.1";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -3106,6 +3106,18 @@ class NodaliaMediaPlayer extends HTMLElement {
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
+  _commonAria(key, fallback = "") {
+    return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  }
+
+  _mediaBrowserUi(key, fallback = "", values = {}) {
+    return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+  }
+
+  _mediaPlayerAria(key, fallback = "", values = {}) {
+    return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+  }
+
   _renderEmptyState() {
     const title = escapeHtml(this._mediaPlayerCardUi("emptyTitle", "Nodalia Media Player"));
     const body = escapeHtml(
@@ -3130,11 +3142,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     );
 
     const bodyMarkup = this._mediaBrowserState.loading
-      ? `<div class="media-browser__empty">Loading media...</div>`
+      ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("loading", "Loading media..."))}</div>`
       : this._mediaBrowserState.error
         ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>`
         : items.length === 0
-          ? `<div class="media-browser__empty">No items available here.</div>`
+          ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("empty", "No items available here."))}</div>`
           : `
             <div class="media-browser__list">
               ${items
@@ -3182,7 +3194,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                               data-media-browser-action="play"
                               data-media-content-type="${escapeHtml(item.media_content_type || "")}"
                               data-media-content-id="${escapeHtml(item.media_content_id || "")}"
-                              aria-label="Reproducir ${escapeHtml(itemTitle)}"
+                              aria-label="${escapeHtml(this._mediaBrowserUi("playItem", "Play {title}", { title: itemTitle }))}"
                             >
                               <ha-icon icon="mdi:play"></ha-icon>
                             </button>
@@ -3210,25 +3222,25 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     return `
       <div class="${mediaBrowserBackdropClasses}" data-media-browser-close="true"></div>
-      <div class="${mediaBrowserPanelClasses}" role="dialog" aria-modal="true" aria-label="Media browser">
+      <div class="${mediaBrowserPanelClasses}" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._mediaBrowserUi("dialog", "Media browser"))}">
         <div class="media-browser__header">
           <button
             type="button"
             class="media-browser__header-button"
             data-media-browser-back="true"
-            aria-label="Back"
+            aria-label="${escapeHtml(this._commonAria("back", "Back"))}"
           >
             <ha-icon icon="mdi:chevron-left"></ha-icon>
           </button>
           <div class="media-browser__header-copy">
-            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || "Media Browser")}</div>
+            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || this._mediaBrowserUi("eyebrow", "Media Browser"))}</div>
             <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Media"))}</div>
           </div>
           <button
             type="button"
             class="media-browser__header-button"
             data-media-browser-close="true"
-            aria-label="Close"
+            aria-label="${escapeHtml(this._commonAria("close", "Close"))}"
           >
             <ha-icon icon="mdi:close"></ha-icon>
           </button>
@@ -3346,7 +3358,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="volume-down"
           data-entity="${escapeHtml(player.entity)}"
           data-media-volume="${volumeLevel}"
-          aria-label="Volume down"
+          aria-label="${escapeHtml(this._commonAria("volumeDown", "Volume down"))}"
         >
           <ha-icon icon="mdi:minus"></ha-icon>
         </button>
@@ -3360,7 +3372,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="volume-up"
           data-entity="${escapeHtml(player.entity)}"
           data-media-volume="${volumeLevel}"
-          aria-label="Volume up"
+          aria-label="${escapeHtml(this._commonAria("volumeUp", "Volume up"))}"
         >
           <ha-icon icon="mdi:plus"></ha-icon>
         </button>
@@ -3375,7 +3387,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             data-media-control="browse-media"
             data-entity="${escapeHtml(player.entity)}"
             data-media-path="${escapeHtml(browsePath)}"
-            aria-label="Open media"
+            aria-label="${escapeHtml(this._commonAria("openMedia", "Open media"))}"
           >
             <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
           </button>
@@ -3390,7 +3402,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="browse-media"
           data-entity="${escapeHtml(player.entity)}"
           data-media-path="${escapeHtml(browsePath)}"
-          aria-label="Open media"
+          aria-label="${escapeHtml(this._commonAria("openMedia", "Open media"))}"
         >
           <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
         </button>
@@ -3403,7 +3415,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         data-media-control="power-toggle"
         data-entity="${escapeHtml(player.entity)}"
         data-media-state="${escapeHtml(state.state)}"
-        aria-label="${escapeHtml(state.state === "off" ? "Encender" : "Apagar")}"
+        aria-label="${escapeHtml(state.state === "off" ? this._mediaPlayerAria("turnOn", "Turn on") : this._mediaPlayerAria("turnOff", "Turn off"))}"
       >
         <ha-icon icon="mdi:power"></ha-icon>
       </button>
@@ -3415,7 +3427,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         class="media-player__control media-player__control--primary"
         data-media-control="play-pause"
         data-entity="${escapeHtml(player.entity)}"
-        aria-label="Play o pausa"
+        aria-label="${escapeHtml(this._mediaPlayerAria("playPause", "Play or pause"))}"
       >
         <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
       </button>
@@ -3428,7 +3440,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           class="media-player__control ${this._tvVolumePickerEntity === player.entity ? "media-player__control--active" : ""}"
           data-media-control="toggle-volume-panel"
           data-entity="${escapeHtml(player.entity)}"
-          aria-label="Show volume"
+          aria-label="${escapeHtml(this._mediaPlayerAria("showVolume", "Show volume"))}"
         >
           <ha-icon icon="mdi:volume-high"></ha-icon>
         </button>
@@ -3443,7 +3455,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           data-media-control="browse-media"
           data-entity="${escapeHtml(player.entity)}"
           data-media-path="${escapeHtml(browsePath)}"
-          aria-label="Open media"
+          aria-label="${escapeHtml(this._commonAria("openMedia", "Open media"))}"
         >
           <ha-icon icon="mdi:apps"></ha-icon>
         </button>
@@ -3451,7 +3463,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : "";
     const sourceButtonsMarkup = sourceOptions.length
       ? `
-        <div class="media-player__source-buttons" aria-label="Fuentes">
+        <div class="media-player__source-buttons" aria-label="${escapeHtml(this._mediaPlayerAria("sources", "Sources"))}">
           ${sourceOptions
             .map(source => `
               <button
@@ -3460,7 +3472,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                 data-media-control="select-source"
                 data-entity="${escapeHtml(player.entity)}"
                 data-media-source="${escapeHtml(source)}"
-                aria-label="Cambiar a ${escapeHtml(source)}"
+                aria-label="${escapeHtml(this._mediaPlayerAria("switchToSource", "Switch to {source}", { source }))}"
               >
                 ${escapeHtml(source)}
               </button>
@@ -3491,7 +3503,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               step="any"
               value="${currentVolumePercent}"
               style="--media-volume:${currentVolumePercent};"
-              aria-label="Volumen"
+              aria-label="${escapeHtml(this._mediaPlayerAria("volume", "Volume"))}"
             />
           </div>
         </div>
@@ -3512,7 +3524,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : "";
     const dotsMarkup = players.length > 1
       ? `
-        <div class="media-player__dots" aria-label="Media players">
+        <div class="media-player__dots" aria-label="${escapeHtml(this._commonAria("mediaPlayers", "Media players"))}">
           ${players
             .map(
               (_item, index) => `
@@ -3520,7 +3532,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   type="button"
                   class="media-player__dot ${index === this._activePlayerIndex ? "active" : ""}"
                   data-media-index="${index}"
-                  aria-label="Seleccionar reproductor ${index + 1}"
+                  aria-label="${escapeHtml(this._mediaPlayerAria("selectPlayer", "Select player {index}", { index: index + 1 }))}"
                 ></button>
               `,
             )
@@ -3578,7 +3590,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           class="media-player__control media-player__control--primary"
           data-media-control="play"
           data-entity="${escapeHtml(player.entity)}"
-          aria-label="Reproducir"
+          aria-label="${escapeHtml(this._mediaPlayerAria("play", "Play"))}"
         >
           <ha-icon icon="mdi:play"></ha-icon>
         </button>
@@ -3625,7 +3637,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                       class="media-player__artwork media-player__artwork--idle media-player__artwork--interactive ${this._tvSourcePickerEntity === player.entity ? "media-player__artwork--active" : ""}"
                       data-media-control="toggle-source-panel"
                       data-entity="${escapeHtml(player.entity)}"
-                      aria-label="Cambiar fuente"
+                      aria-label="${escapeHtml(this._mediaPlayerAria("switchSource", "Switch source"))}"
                     >
                       ${
                         artwork
@@ -3696,7 +3708,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                     class="media-player__artwork media-player__artwork--interactive ${this._tvSourcePickerEntity === player.entity ? "media-player__artwork--active" : ""}"
                     data-media-control="toggle-source-panel"
                     data-entity="${escapeHtml(player.entity)}"
-                    aria-label="Cambiar fuente"
+                    aria-label="${escapeHtml(this._mediaPlayerAria("switchSource", "Switch source"))}"
                   >
                     ${
                       artwork
@@ -3752,7 +3764,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                             class="media-player__control"
                             data-media-control="previous"
                             data-entity="${escapeHtml(player.entity)}"
-                            aria-label="Previous"
+                            aria-label="${escapeHtml(this._commonAria("previous", "Previous"))}"
                           >
                             <ha-icon icon="mdi:skip-previous"></ha-icon>
                           </button>
@@ -3761,7 +3773,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                             class="media-player__control media-player__control--primary"
                             data-media-control="play-pause"
                             data-entity="${escapeHtml(player.entity)}"
-                            aria-label="Play or pause"
+                            aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"
                           >
                             <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
                           </button>
@@ -3770,7 +3782,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                             class="media-player__control"
                             data-media-control="next"
                             data-entity="${escapeHtml(player.entity)}"
-                            aria-label="Next"
+                            aria-label="${escapeHtml(this._commonAria("next", "Next"))}"
                           >
                             <ha-icon icon="mdi:skip-next"></ha-icon>
                           </button>

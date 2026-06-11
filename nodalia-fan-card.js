@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.1-alpha.8";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2314,6 +2314,10 @@ class NodaliaFanCard extends HTMLElement {
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
+  _fanAria(key, fallback = "") {
+    return window.NodaliaI18n?.translateFanAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  }
+
   _renderEmptyState() {
     const title = escapeHtml(this._fanCardUi("emptyTitle", "Nodalia Fan Card"));
     const body = escapeHtml(
@@ -2491,7 +2495,7 @@ class NodaliaFanCard extends HTMLElement {
                 step="any"
                 value="${currentPercentage}"
                 style="--percentage:${currentPercentage};"
-                aria-label="Velocidad"
+                aria-label="${escapeHtml(this._fanAria("speedSlider", "Speed"))}"
               />
             </div>
           </div>
@@ -2506,7 +2510,7 @@ class NodaliaFanCard extends HTMLElement {
                           type="button"
                           class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
                           data-fan-action="oscillate"
-                          aria-label="${this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"}"
+                          aria-label="${escapeHtml(this._fanAria(this._isOscillating(state) ? "oscillationOff" : "oscillationOn", this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"))}"
                         >
                           <ha-icon icon="mdi:rotate-360"></ha-icon>
                         </button>
@@ -2520,7 +2524,7 @@ class NodaliaFanCard extends HTMLElement {
                           type="button"
                           class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                           data-fan-action="toggle-preset-panel"
-                          aria-label="Show modes"
+                          aria-label="${escapeHtml(this._fanAria("showModes", "Show modes"))}"
                         >
                           <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
@@ -2543,7 +2547,7 @@ class NodaliaFanCard extends HTMLElement {
                     type="button"
                     class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}"
                     data-fan-action="oscillate"
-                    aria-label="${this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"}"
+                    aria-label="${escapeHtml(this._fanAria(this._isOscillating(state) ? "oscillationOff" : "oscillationOn", this._isOscillating(state) ? "Turn oscillation off" : "Turn oscillation on"))}"
                   >
                     <ha-icon icon="mdi:rotate-360"></ha-icon>
                   </button>
@@ -2557,7 +2561,7 @@ class NodaliaFanCard extends HTMLElement {
                     type="button"
                     class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}"
                     data-fan-action="toggle-preset-panel"
-                    aria-label="Show modes"
+                    aria-label="${escapeHtml(this._fanAria("showModes", "Show modes"))}"
                   >
                     <ha-icon icon="mdi:tune-variant"></ha-icon>
                   </button>

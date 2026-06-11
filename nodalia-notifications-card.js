@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.2.1-alpha.8";
+const CARD_VERSION = "1.2.1";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -433,10 +433,8 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
     ? String(config.mobile_notifications.min_severity).toLowerCase()
     : DEFAULT_CONFIG.mobile_notifications.min_severity;
-  config.security = mergeDeep(DEFAULT_CONFIG.security, config.security || {});
-  config.security.strict_service_actions = config.security.strict_service_actions === true;
-  config.security.allowed_services = normalizeStringList(config.security.allowed_services);
-  config.security.allowed_service_domains = normalizeStringList(config.security.allowed_service_domains);
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
   config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
   config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
   config.animations.enabled = config.animations.enabled !== false;

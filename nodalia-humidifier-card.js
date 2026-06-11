@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.2.1-alpha.8";
+const CARD_VERSION = "1.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2477,6 +2477,10 @@ class NodaliaHumidifierCard extends HTMLElement {
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
+  _humidifierAria(key, fallback = "") {
+    return window.NodaliaI18n?.translateHumidifierAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  }
+
   _renderEmptyState() {
     const title = escapeHtml(this._humidifierCardUi("emptyTitle", "Nodalia Humidifier Card"));
     const body = escapeHtml(
@@ -2662,7 +2666,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                 step="any"
                 value="${currentHumidity}"
                 style="--humidity:${clamp(humidityProgress, 0, 100)};"
-                aria-label="Humedad objetivo"
+                aria-label="${escapeHtml(this._humidifierAria("targetHumidity", "Target humidity"))}"
               />
             </div>
           </div>
@@ -2677,7 +2681,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                           type="button"
                           class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-mode-panel"
-                          aria-label="Show modes"
+                          aria-label="${escapeHtml(this._humidifierAria("showModes", "Show modes"))}"
                         >
                           <ha-icon icon="mdi:tune-variant"></ha-icon>
                         </button>
@@ -2691,7 +2695,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                           type="button"
                           class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                           data-humidifier-action="toggle-fan-mode-panel"
-                          aria-label="Show speeds"
+                          aria-label="${escapeHtml(this._humidifierAria("showSpeeds", "Show speeds"))}"
                         >
                           <ha-icon icon="mdi:fan"></ha-icon>
                         </button>
@@ -2714,7 +2718,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                     type="button"
                     class="humidifier-card__control ${this._modePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-mode-panel"
-                    aria-label="Show modes"
+                    aria-label="${escapeHtml(this._humidifierAria("showModes", "Show modes"))}"
                   >
                     <ha-icon icon="mdi:tune-variant"></ha-icon>
                   </button>
@@ -2728,7 +2732,7 @@ class NodaliaHumidifierCard extends HTMLElement {
                     type="button"
                     class="humidifier-card__control ${this._fanModePanelOpen ? "humidifier-card__control--active" : ""}"
                     data-humidifier-action="toggle-fan-mode-panel"
-                    aria-label="Show speeds"
+                    aria-label="${escapeHtml(this._humidifierAria("showSpeeds", "Show speeds"))}"
                   >
                     <ha-icon icon="mdi:fan"></ha-icon>
                   </button>

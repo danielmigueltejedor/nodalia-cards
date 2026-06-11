@@ -173,6 +173,13 @@
     "recently played tracks": "Recently played tracks",
     "browseFallback": "Item"
   },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
+  },
   "vacuumSimple": {
     "quiet": "Quiet",
     "silent": "Silent",
@@ -209,7 +216,13 @@
     "noState": "No state",
     "fallbackName": "Fan",
     "emptyTitle": "Nodalia Fan Card",
-    "emptyBody": "Set `entity` to a `fan.*` entity to show this card."
+    "emptyBody": "Set `entity` to a `fan.*` entity to show this card.",
+    "aria": {
+      "speedSlider": "Speed",
+      "oscillationOn": "Turn oscillation on",
+      "oscillationOff": "Turn oscillation off",
+      "showModes": "Show modes"
+    }
   },
   "lightCard": {
     "emptyTitle": "Nodalia Light Card",
@@ -232,7 +245,17 @@
   },
   "common": {
     "aria": {
-      "togglePower": "Turn on or off"
+      "togglePower": "Turn on or off",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
     }
   },
   "alarmPanel": {
@@ -458,6 +481,11 @@
   "humidifierCard": {
     "emptyTitle": "Nodalia Humidifier Card",
     "emptyBody": "Set `entity` to a `humidifier.*` entity to show this card.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
+    },
     "modes": {
       "auto": "Auto",
       "automatic": "Auto",
@@ -572,7 +600,21 @@
   },
   "mediaPlayerCard": {
     "emptyTitle": "Nodalia Media Player",
-    "emptyBody": "Set `entity` or `players` to show a player."
+    "emptyBody": "Set `entity` or `players` to show a player.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
   },
   "notificationsCard": {
     "fallbackEvent": "Event",

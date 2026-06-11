@@ -365,6 +365,13 @@
         "recently played tracks": "Recently played tracks",
         browseFallback: "Item"
       },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
+      },
       vacuumSimple: {
         quiet: "Quiet",
         silent: "Silent",
@@ -401,7 +408,13 @@
         noState: "No state",
         fallbackName: "Fan",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Set `entity` to a `fan.*` entity to show this card."
+        emptyBody: "Set `entity` to a `fan.*` entity to show this card.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       lightCard: {
         emptyTitle: "Nodalia Light Card",
@@ -424,7 +437,17 @@
       },
       common: {
         aria: {
-          togglePower: "Turn on or off"
+          togglePower: "Turn on or off",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       alarmPanel: {
@@ -650,6 +673,11 @@
       humidifierCard: {
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Set `entity` to a `humidifier.*` entity to show this card.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        },
         modes: {
           auto: "Auto",
           automatic: "Auto",
@@ -764,7 +792,21 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Set `entity` or `players` to show a player."
+        emptyBody: "Set `entity` or `players` to show a player.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
       },
       notificationsCard: {
         fallbackEvent: "Event",
@@ -1203,7 +1245,13 @@
         noState: "Kein Status",
         fallbackName: "Ventilator",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Lege `entity` auf eine `fan.*`-Entität fest, um diese Karte anzuzeigen."
+        emptyBody: "Lege `entity` auf eine `fan.*`-Entität fest, um diese Karte anzuzeigen.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Alarm",
@@ -1453,7 +1501,12 @@
           unknown: "Unbekannt"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Lege `entity` auf eine `humidifier.*`-Entität fest, um diese Karte anzuzeigen."
+        emptyBody: "Lege `entity` auf eine `humidifier.*`-Entität fest, um diese Karte anzuzeigen.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -1766,7 +1819,17 @@
       },
       common: {
         aria: {
-          togglePower: "Ein- oder ausschalten"
+          togglePower: "Ein- oder ausschalten",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -1791,7 +1854,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Lege `entity` oder `players` fest, um einen Player anzuzeigen."
+        emptyBody: "Lege `entity` oder `players` fest, um einen Player anzuzeigen.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     el: {
@@ -2113,7 +2197,12 @@
           unknown: "Άγνωστο"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Ορίστε το `entity` σε οντότητα `humidifier.*` για να εμφανιστεί η κάρτα."
+        emptyBody: "Ορίστε το `entity` σε οντότητα `humidifier.*` για να εμφανιστεί η κάρτα.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -2188,7 +2277,13 @@
         noState: "Χωρίς κατάσταση",
         fallbackName: "Ανεμιστήρας",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Ορίστε το `entity` σε οντότητα `fan.*` για να εμφανιστεί η κάρτα."
+        emptyBody: "Ορίστε το `entity` σε οντότητα `fan.*` για να εμφανιστεί η κάρτα.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Συναγερμός",
@@ -2568,7 +2663,17 @@
       },
       common: {
         aria: {
-          togglePower: "Ενεργοποίηση ή απενεργοποίηση"
+          togglePower: "Ενεργοποίηση ή απενεργοποίηση",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -2593,7 +2698,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Ορίστε `entity` ή `players` για να εμφανιστεί αναπαραγωγέας."
+        emptyBody: "Ορίστε `entity` ή `players` για να εμφανιστεί αναπαραγωγέας.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     es: {
@@ -2771,6 +2897,13 @@
         "recently played tracks": "Canciones reproducidas recientemente",
         browseFallback: "Elemento"
       },
+      mediaBrowser: {
+        loading: "Cargando medios...",
+        empty: "No hay elementos disponibles aquí.",
+        playItem: "Reproducir {title}",
+        dialog: "Explorador de medios",
+        eyebrow: "Explorador de medios"
+      },
       vacuumSimple: {
         quiet: "Silencioso",
         silent: "Silencioso",
@@ -2807,7 +2940,13 @@
         noState: "Sin estado",
         fallbackName: "Ventilador",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Configura `entity` con una entidad `fan.*` para mostrar la tarjeta."
+        emptyBody: "Configura `entity` con una entidad `fan.*` para mostrar la tarjeta.",
+        aria: {
+          speedSlider: "Velocidad",
+          oscillationOn: "Activar oscilación",
+          oscillationOff: "Desactivar oscilación",
+          showModes: "Mostrar modos"
+        }
       },
       lightCard: {
         emptyTitle: "Nodalia Light Card",
@@ -2830,7 +2969,17 @@
       },
       common: {
         aria: {
-          togglePower: "Encender o apagar"
+          togglePower: "Encender o apagar",
+          back: "Atrás",
+          close: "Cerrar",
+          previous: "Anterior",
+          next: "Siguiente",
+          playPause: "Reproducir o pausar",
+          volumeDown: "Bajar volumen",
+          volumeUp: "Subir volumen",
+          openMedia: "Abrir medios",
+          navigationBar: "Barra de navegación",
+          mediaPlayers: "Reproductores multimedia"
         }
       },
       alarmPanel: {
@@ -3056,6 +3205,11 @@
       humidifierCard: {
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Configura `entity` con una entidad `humidifier.*` para mostrar la tarjeta.",
+        aria: {
+          targetHumidity: "Humedad objetivo",
+          showModes: "Mostrar modos",
+          showSpeeds: "Mostrar velocidades"
+        },
         modes: {
           auto: "Auto",
           automatic: "Auto",
@@ -3170,7 +3324,21 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Configura `entity` o `players` para mostrar un reproductor."
+        emptyBody: "Configura `entity` o `players` para mostrar un reproductor.",
+        aria: {
+          turnOn: "Encender",
+          turnOff: "Apagar",
+          playPause: "Reproducir o pausar",
+          showVolume: "Mostrar volumen",
+          sources: "Fuentes",
+          switchSource: "Cambiar fuente",
+          switchToSource: "Cambiar a {source}",
+          volume: "Volumen",
+          selectPlayer: "Seleccionar reproductor {index}",
+          play: "Reproducir",
+          hidePlayer: "Ocultar reproductor",
+          showPlayer: "Mostrar reproductor"
+        }
       },
       notificationsCard: {
         fallbackEvent: "Evento",
@@ -3609,7 +3777,13 @@
         noState: "Pas d'état",
         fallbackName: "Ventilateur",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Définissez `entity` sur une entité `fan.*` pour afficher cette carte."
+        emptyBody: "Définissez `entity` sur une entité `fan.*` pour afficher cette carte.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Alarme",
@@ -3859,7 +4033,12 @@
           unknown: "Inconnu"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Définissez `entity` sur une entité `humidifier.*` pour afficher cette carte."
+        emptyBody: "Définissez `entity` sur une entité `humidifier.*` pour afficher cette carte.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -4172,7 +4351,17 @@
       },
       common: {
         aria: {
-          togglePower: "Allumer ou éteindre"
+          togglePower: "Allumer ou éteindre",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -4197,7 +4386,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Définissez `entity` ou `players` pour afficher un lecteur."
+        emptyBody: "Définissez `entity` ou `players` pour afficher un lecteur.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     it: {
@@ -4411,7 +4621,13 @@
         noState: "Nessuno stato",
         fallbackName: "Ventilatore",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Imposta `entity` su un'entità `fan.*` per mostrare questa scheda."
+        emptyBody: "Imposta `entity` su un'entità `fan.*` per mostrare questa scheda.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Allarme",
@@ -4661,7 +4877,12 @@
           unknown: "Sconosciuto"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Imposta `entity` su un'entità `humidifier.*` per mostrare questa scheda."
+        emptyBody: "Imposta `entity` su un'entità `humidifier.*` per mostrare questa scheda.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -4974,7 +5195,17 @@
       },
       common: {
         aria: {
-          togglePower: "Accendi o spegni"
+          togglePower: "Accendi o spegni",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -4999,7 +5230,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Imposta `entity` o `players` per mostrare un lettore."
+        emptyBody: "Imposta `entity` o `players` per mostrare un lettore.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     nl: {
@@ -5213,7 +5465,13 @@
         noState: "Geen status",
         fallbackName: "Ventilator",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Stel `entity` in op een `fan.*`-entiteit om deze kaart te tonen."
+        emptyBody: "Stel `entity` in op een `fan.*`-entiteit om deze kaart te tonen.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Alarm",
@@ -5463,7 +5721,12 @@
           unknown: "Onbekend"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Stel `entity` in op een `humidifier.*`-entiteit om deze kaart te tonen."
+        emptyBody: "Stel `entity` in op een `humidifier.*`-entiteit om deze kaart te tonen.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -5776,7 +6039,17 @@
       },
       common: {
         aria: {
-          togglePower: "In- of uitschakelen"
+          togglePower: "In- of uitschakelen",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -5801,7 +6074,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Stel `entity` of `players` in om een speler te tonen."
+        emptyBody: "Stel `entity` of `players` in om een speler te tonen.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     no: {
@@ -6070,7 +6364,13 @@
         noState: "Ingen status",
         fallbackName: "Vifte",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Sett `entity` til en `fan.*`-entitet for å vise kortet."
+        emptyBody: "Sett `entity` til en `fan.*`-entitet for å vise kortet.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Alarm",
@@ -6320,7 +6620,12 @@
           unknown: "Ukjent"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Sett `entity` til en `humidifier.*`-entitet for å vise kortet."
+        emptyBody: "Sett `entity` til en `humidifier.*`-entitet for å vise kortet.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -6578,7 +6883,17 @@
       },
       common: {
         aria: {
-          togglePower: "In- of uitschakelen"
+          togglePower: "In- of uitschakelen",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -6603,7 +6918,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Sett `entity` eller `players` for å vise en spiller."
+        emptyBody: "Sett `entity` eller `players` for å vise en spiller.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     pt: {
@@ -6925,7 +7261,12 @@
           unknown: "Desconhecido"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Defina `entity` como uma entidade `humidifier.*` para mostrar este cartão."
+        emptyBody: "Defina `entity` como uma entidade `humidifier.*` para mostrar este cartão.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -7000,7 +7341,13 @@
         noState: "Sem estado",
         fallbackName: "Ventoinha",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Defina `entity` como uma entidade `fan.*` para mostrar este cartão."
+        emptyBody: "Defina `entity` como uma entidade `fan.*` para mostrar este cartão.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Alarme",
@@ -7380,7 +7727,17 @@
       },
       common: {
         aria: {
-          togglePower: "Ligar ou desligar"
+          togglePower: "Ligar ou desligar",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -7405,7 +7762,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Defina `entity` ou `players` para mostrar um leitor."
+        emptyBody: "Defina `entity` ou `players` para mostrar um leitor.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     ro: {
@@ -7727,7 +8105,12 @@
           unknown: "Necunoscut"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Setează `entity` la o entitate `humidifier.*` pentru a afișa cardul."
+        emptyBody: "Setează `entity` la o entitate `humidifier.*` pentru a afișa cardul.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -7802,7 +8185,13 @@
         noState: "Fără stare",
         fallbackName: "Ventilator",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Setează `entity` la o entitate `fan.*` pentru a afișa cardul."
+        emptyBody: "Setează `entity` la o entitate `fan.*` pentru a afișa cardul.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Alarmă",
@@ -8182,7 +8571,17 @@
       },
       common: {
         aria: {
-          togglePower: "Pornește sau oprește"
+          togglePower: "Pornește sau oprește",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -8207,7 +8606,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Setează `entity` sau `players` pentru a afișa un player."
+        emptyBody: "Setează `entity` sau `players` pentru a afișa un player.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     ru: {
@@ -8529,7 +8949,12 @@
           unknown: "Неизвестно"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку."
+        emptyBody: "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку.",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -8604,7 +9029,13 @@
         noState: "Нет состояния",
         fallbackName: "Вентилятор",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "Укажите `entity` как сущность `fan.*`, чтобы показать карточку."
+        emptyBody: "Укажите `entity` как сущность `fan.*`, чтобы показать карточку.",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "Сигнализация",
@@ -8984,7 +9415,17 @@
       },
       common: {
         aria: {
-          togglePower: "Включить или выключить"
+          togglePower: "Включить или выключить",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -9009,7 +9450,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "Укажите `entity` или `players`, чтобы показать плеер."
+        emptyBody: "Укажите `entity` или `players`, чтобы показать плеер.",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     },
     zh: {
@@ -9331,7 +9793,12 @@
           unknown: "未知"
         },
         emptyTitle: "Nodalia Humidifier Card",
-        emptyBody: "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。"
+        emptyBody: "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。",
+        aria: {
+          targetHumidity: "Target humidity",
+          showModes: "Show modes",
+          showSpeeds: "Show speeds"
+        }
       },
       climateCard: {
         modes: {
@@ -9406,7 +9873,13 @@
         noState: "无状态",
         fallbackName: "风扇",
         emptyTitle: "Nodalia Fan Card",
-        emptyBody: "将 `entity` 设置为 `fan.*` 实体以显示此卡片。"
+        emptyBody: "将 `entity` 设置为 `fan.*` 实体以显示此卡片。",
+        aria: {
+          speedSlider: "Speed",
+          oscillationOn: "Turn oscillation on",
+          oscillationOff: "Turn oscillation off",
+          showModes: "Show modes"
+        }
       },
       alarmPanel: {
         defaultTitle: "报警",
@@ -9786,7 +10259,17 @@
       },
       common: {
         aria: {
-          togglePower: "开或关"
+          togglePower: "开或关",
+          back: "Back",
+          close: "Close",
+          previous: "Previous",
+          next: "Next",
+          playPause: "Play or pause",
+          volumeDown: "Volume down",
+          volumeUp: "Volume up",
+          openMedia: "Open media",
+          navigationBar: "Navigation bar",
+          mediaPlayers: "Media players"
         }
       },
       scenes: {
@@ -9811,7 +10294,28 @@
       },
       mediaPlayerCard: {
         emptyTitle: "Nodalia Media Player",
-        emptyBody: "设置 `entity` 或 `players` 以显示播放器。"
+        emptyBody: "设置 `entity` 或 `players` 以显示播放器。",
+        aria: {
+          turnOn: "Turn on",
+          turnOff: "Turn off",
+          playPause: "Play or pause",
+          showVolume: "Show volume",
+          sources: "Sources",
+          switchSource: "Switch source",
+          switchToSource: "Switch to {source}",
+          volume: "Volume",
+          selectPlayer: "Select player {index}",
+          play: "Play",
+          hidePlayer: "Hide player",
+          showPlayer: "Show player"
+        }
+      },
+      mediaBrowser: {
+        loading: "Loading media...",
+        empty: "No items available here.",
+        playItem: "Play {title}",
+        dialog: "Media browser",
+        eyebrow: "Media Browser"
       }
     }
   };
@@ -10061,6 +10565,42 @@
     const commonLoc = strings(lang).common?.aria || {};
     const commonEn = strings("en").common?.aria || {};
     return commonLoc[key] ?? commonEn[key] ?? fallback;
+  }
+
+  function applyRuntimeUiTemplate(raw, values = {}) {
+    let text = String(raw ?? "");
+    Object.entries(values).forEach(([token, value]) => {
+      text = text.split(`{${token}}`).join(String(value ?? ""));
+    });
+    return text;
+  }
+
+  function translateFanAria(hass, configLang, key, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const loc = strings(lang).fan?.aria || {};
+    const en = strings("en").fan?.aria || {};
+    return loc[key] ?? en[key] ?? fallback;
+  }
+
+  function translateHumidifierAria(hass, configLang, key, fallback = "") {
+    const lang = resolveLanguage(hass, configLang);
+    const loc = strings(lang).humidifierCard?.aria || {};
+    const en = strings("en").humidifierCard?.aria || {};
+    return loc[key] ?? en[key] ?? fallback;
+  }
+
+  function translateMediaBrowserUi(hass, configLang, key, fallback = "", values = {}) {
+    const lang = resolveLanguage(hass, configLang);
+    const loc = strings(lang).mediaBrowser || {};
+    const en = strings("en").mediaBrowser || {};
+    return applyRuntimeUiTemplate(loc[key] ?? en[key] ?? fallback, values);
+  }
+
+  function translateMediaPlayerAria(hass, configLang, key, fallback = "", values = {}) {
+    const lang = resolveLanguage(hass, configLang);
+    const loc = strings(lang).mediaPlayerCard?.aria || {};
+    const en = strings("en").mediaPlayerCard?.aria || {};
+    return applyRuntimeUiTemplate(loc[key] ?? en[key] ?? fallback, values);
   }
 
   function translateClimateDialNoSetpointHint(hass, configLang) {
@@ -10472,6 +11012,10 @@
     translateClimateHvacLabel,
     translateClimateAria,
     translateCommonAria,
+    translateFanAria,
+    translateHumidifierAria,
+    translateMediaBrowserUi,
+    translateMediaPlayerAria,
     translateClimateDialAria,
     translateClimateDialNoSetpointHint,
     translateClimateSchedule,
