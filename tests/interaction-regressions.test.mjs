@@ -1177,6 +1177,38 @@ test("slider bubble chrome does not trigger card body tap", () => {
   }
 });
 
+test("fav card matches entity cover lock toggle and tap action parsing", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /applyCardTapActionField/);
+  assert.match(source, /_toggleCoverEntity\(/);
+  assert.match(source, /_toggleLockEntity\(/);
+  assert.match(source, /_usesDomainToggleService\(state\)/);
+  assert.match(source, /invokeHomeAssistantService/);
+  assert.match(source, /_isBinaryOnOff\(state\) \|\| this\._usesDomainToggleService\(state\)/);
+  assert.doesNotMatch(source, /disarm: "Disarm"/);
+});
+
+test("cover card coerces Lovelace tap_action objects in normalizeConfig", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /applyCardTapActionField/);
+});
+
+test("graph card patches hover tooltip without full innerHTML rebuild", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /_syncTooltipContent\(/);
+  assert.doesNotMatch(source, /_patchHoverOverlay\(\) \{[\s\S]*tooltip\.innerHTML =/);
+});
+
+test("calendar card re-renders on hass updates when render signature changes", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*this\._renderIfChanged\(false\)/);
+});
+
+test("entity card configured services use invokeHomeAssistantService", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /_callConfiguredService[\s\S]*invokeHomeAssistantService/);
+});
+
 test("entity card toggle uses domain services for cover and lock entities", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /_toggleCoverEntity\(/);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.2.2-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1650,7 +1650,9 @@ class NodaliaEntityCard extends HTMLElement {
       payload.entity_id = entityId;
     }
 
-    this._hass.callService(domain, service, payload);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
+    invoke(this, this._hass, domain, service, payload);
   }
 
   _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {

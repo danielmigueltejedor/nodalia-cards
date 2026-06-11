@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.2.2-alpha.1";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
 const SCENE_LAUNCH_DURATION = 780;
 const HAPTIC_PATTERNS = {

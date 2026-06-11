@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.2.2-alpha.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 
@@ -186,6 +186,43 @@ function normalizeConfig(rawConfig) {
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.security.allowed_services = normalizeList(config.security?.allowed_services);
   config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyTap === "function") {
+    applyTap(config, {
+      actionKey: "tap_action",
+      serviceKey: "tap_service",
+      serviceDataKey: "tap_service_data",
+      urlKey: "tap_url",
+      newTabKey: "tap_new_tab",
+    }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+    applyTap(config, {
+      actionKey: "icon_tap_action",
+      serviceKey: "icon_tap_service",
+      serviceDataKey: "icon_tap_service_data",
+      urlKey: "icon_tap_url",
+      newTabKey: "icon_tap_new_tab",
+    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+    applyTap(config, {
+      actionKey: "hold_action",
+      serviceKey: "hold_service",
+      serviceDataKey: "hold_service_data",
+      urlKey: "hold_url",
+      newTabKey: "hold_new_tab",
+    }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+    applyTap(config, {
+      actionKey: "icon_hold_action",
+      serviceKey: "icon_hold_service",
+      serviceDataKey: "icon_hold_service_data",
+      urlKey: "icon_hold_url",
+      newTabKey: "icon_hold_new_tab",
+    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+  }
+  if (String(config.icon_tap_action || "").trim() === "") {
+    config.icon_tap_action = "";
+  }
+  if (String(config.icon_hold_action || "").trim() === "") {
+    config.icon_hold_action = "";
+  }
   return config;
 }
 

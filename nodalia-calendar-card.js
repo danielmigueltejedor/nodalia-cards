@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.2.2-alpha.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -924,8 +924,6 @@ class NodaliaCalendarCard extends HTMLElement {
 
   set hass(hass) {
     const hadHass = this._hadHass;
-    const prevLocale = this._hass?.locale?.language;
-    const prevLabelSig = hadHass ? this._getCalendarEntityLabelsSignature() : "";
     this._hass = hass;
     if (!hass) {
       this._unsubscribeWeatherForecast();
@@ -937,10 +935,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._refreshEvents();
       return;
     }
-    const nextLabelSig = this._getCalendarEntityLabelsSignature();
-    if (prevLocale !== hass.locale?.language || prevLabelSig !== nextLabelSig) {
-      this._renderIfChanged(true);
-    }
+    this._renderIfChanged(false);
   }
 
   _getLocale() {

@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), and completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), and **`1.2.2-alpha.*`** prereleases.
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,21 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.2.2-alpha.1] - 2026-05-29
+
+First **`1.2.2`** **`alpha`**: bugfix and performance pass on top of stable **`1.2.1.1`**. Release channel **`1.2.2-alpha.1`**.
+
+### Fixed
+
+- **`fav`:** cover/lock tap parity with entity card; Lovelace `tap_action` objects via `applyCardTapActionField`; alarm mode labels from runtime i18n.
+- **`cover`:** Lovelace tap/hold action objects parsed in `normalizeConfig`.
+- **`entity`:** configured services use `invokeHomeAssistantService`.
+- **`calendar`:** `set hass` compares full render signature for weather/header updates.
+
+### Changed
+
+- **`graph`:** hover tooltip DOM patch via `_syncTooltipContent` (no `innerHTML` rebuild on pointer move).
 
 ## [1.2.1.1-alpha.2] - 2026-05-29
 
