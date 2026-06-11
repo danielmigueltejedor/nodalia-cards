@@ -1284,7 +1284,7 @@ test("humidifier render signature includes mode_entity helper state", () => {
   const source = read("nodalia-humidifier-card.js");
   assert.match(source, /modeEntityId/);
   assert.match(source, /modeEntityState/);
-  assert.match(source, /modeEntityOptions/);
+  assert.match(source, /joinParts\(\[\{ prefix: "humidifier:"/);
 });
 
 test("fav and vacuum resize observers skip render when signature is unchanged", () => {
@@ -1318,6 +1318,43 @@ test("fan off-state memory ignores zero percentage", () => {
 test("humidifier off-state memory ignores zero humidity", () => {
   const source = read("nodalia-humidifier-card.js");
   assert.match(source, /rememberedHumidity > 0/);
+});
+
+test("calendar card invalidates refresh run id on disconnect", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /this\._refreshRunId \+= 1/);
+  assert.match(source, /this\._refreshInFlight = false/);
+  assert.match(source, /this\._refreshQueued = false/);
+});
+
+test("weather forecast subscription guards disconnected lifecycle", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+});
+
+test("vacuum select_option respects strict service allowlist", () => {
+  const source = read("nodalia-vacuum-card.js");
+  assert.match(source, /_callSelectOption\(/);
+  assert.match(source, /_isServiceAllowed\(fullService\)/);
+});
+
+test("notifications defers side effects until render signature changes", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /const nextSignature = this\._getRenderSignature\(hass\)/);
+  assert.match(source, /nextSignature === this\._lastRenderSignature\)[\s\S]*return;/);
+});
+
+test("entity person weather and alarm use deferred press timers", () => {
+  for (const file of [
+    "nodalia-entity-card.js",
+    "nodalia-person-card.js",
+    "nodalia-weather-card.js",
+    "nodalia-alarm-panel-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /scheduleDeferTimer/, `${file} should schedule defer timers`);
+    assert.match(source, /clearDeferTimers/, `${file} should clear defer timers on disconnect`);
+  }
 });
 
 test("notifications tracked entity stamp is cached between hass updates", () => {

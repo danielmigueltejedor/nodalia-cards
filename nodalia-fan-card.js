@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -592,6 +592,7 @@ class NodaliaFanCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
@@ -796,26 +797,31 @@ class NodaliaFanCard extends HTMLElement {
     const actualState = entityId ? hass?.states?.[entityId] || null : null;
     const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      optimistic: String(attrs._nodalia_optimistic_toggle || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      percentage: Number(attrs.percentage ?? -1),
-      percentageStep: Number(attrs.percentage_step ?? -1),
-      presetMode: String(attrs.preset_mode || ""),
-      presetModes: Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
-      oscillating: String(attrs.oscillating ?? ""),
-      direction: String(attrs.direction || ""),
-      compact: Boolean(this._isCompactLayout),
-      presetPanelOpen: Boolean(this._presetPanelOpen),
-      tap: `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
-      hold: `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
-      double: `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`,
-    });
+      String(state?.state || ""),
+      String(attrs._nodalia_optimistic_toggle || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.show_entity_picture === true,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.percentage ?? -1),
+      Number(attrs.percentage_step ?? -1),
+      String(attrs.preset_mode || ""),
+      Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
+      String(attrs.oscillating ?? ""),
+      String(attrs.direction || ""),
+      Boolean(this._isCompactLayout),
+      Boolean(this._presetPanelOpen),
+      `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
+      `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
+      `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "fan:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
@@ -1085,6 +1091,9 @@ class NodaliaFanCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
     this._optimisticVisualSettleTimer = window.setTimeout(() => {
       this._optimisticVisualSettleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       const nextActualState = this._getActualState();
       if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
         this._scheduleOptimisticVisualSettleTimeout();
@@ -1135,6 +1144,9 @@ class NodaliaFanCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
     this._optimisticToggleTimer = window.setTimeout(() => {
       this._optimisticToggleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       if (!this._isOptimisticTogglePending(this._getActualState())) {
         this._lastRenderSignature = "";
         this._render();

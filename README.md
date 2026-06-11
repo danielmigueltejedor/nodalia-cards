@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.2.1--alpha.3-f59e0b)
+![Package](https://img.shields.io/badge/package-1.2.1--alpha.4-f59e0b)
 ![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -50,7 +50,14 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.2.1-alpha
 
-**Current alpha `1.2.1-alpha.3`** — third stability/performance audit applied. Match **`nodalia-cards-1.2.1-alpha.3.js`**. Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current alpha `1.2.1-alpha.4`** — fourth audit: lifecycle, signatures, side-effect gates, security defaults. Match **`nodalia-cards-1.2.1-alpha.4.js`**. Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+### Alpha.4 highlights
+
+- Calendar disconnect invalidates refresh runs; weather forecast WS guarded.
+- `joinParts` on insignia, person, fan, humidifier, weather, alarm, gauge.
+- Notifications/power-flow/media skip work when signature unchanged.
+- Vacuum select + advance-vacuum internal services aligned with strict mode.
 
 ### Alpha.3 highlights
 
@@ -362,7 +369,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-alpha.3.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-alpha.4.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

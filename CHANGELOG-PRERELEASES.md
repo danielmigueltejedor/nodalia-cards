@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.1-alpha.4] - 2026-06-06
+
+Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.4`**.
+
+### Fixed
+
+- **`nodalia-calendar-card.js`:** invalidates `_refreshRunId` on disconnect; post-`await` `isConnected` guards in native composer and delete paths; unsafe-key guard on `calendars.*` editor fields.
+- **`nodalia-weather-card.js`:** forecast WebSocket callback guards `isConnected` before re-render.
+- **`entity` / `person` / `weather` / `circular-gauge` / `alarm`:** press animations use `scheduleDeferTimer` + `clearDeferTimers`.
+- **`light` / `fan` / `humidifier` / `entity`:** optimistic and mode-switch deferred work guards `isConnected`.
+- **`alarm-panel`:** ResizeObserver respects render signature; focus-defer and pin-verify timers cleared/guarded.
+
+### Changed
+
+- **Render signatures:** `joinParts` on insignia, person, fan, humidifier, weather, alarm, circular-gauge; insignia no longer embeds full config; person caches zone lookup.
+- **`notifications` / `power-flow` / `media-player`:** per-tick side effects run only when render signature changes.
+- **`advance-vacuum`:** calibration rebuild gated by stamp; `_callVacuumService` routes through `_callInternalService`.
+- **`vacuum`:** `select.select_option` respects `strict_service_actions`.
+- **`light` / `entity` / `insignia` / `fav`:** explicit `DEFAULT_CONFIG.security` blocks.
+
 ## [1.2.1-alpha.3] - 2026-06-06
 
 Third **`1.2.1`** **`alpha`**: audit pass 3 — async lifecycle, render signatures, graph hover, security defaults, shared color resolver. Release channel **`1.2.1-alpha.3`**.

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -863,6 +863,9 @@ class NodaliaCalendarCard extends HTMLElement {
       window.clearTimeout(this._refreshTimer);
       this._refreshTimer = 0;
     }
+    this._refreshRunId += 1;
+    this._refreshInFlight = false;
+    this._refreshQueued = false;
     this._calendarEntrancePlayed = false;
     this._wasInViewport = false;
     this._unsubscribeWeatherForecast();
@@ -1730,6 +1733,9 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     try {
       await this._hass.callWS(payload);
+      if (!this.isConnected) {
+        return;
+      }
       this._deleteRecurringChoiceKey = "";
       this._deleteRecurrenceError = "";
       this._events = this._events.filter(item => calendarEventKey(item) !== keyTrim);
@@ -2570,6 +2576,9 @@ class NodaliaCalendarCard extends HTMLElement {
         });
         if (rrule) {
           await createCalendarEventViaWs(calendarEventPayload);
+          if (!this.isConnected) {
+            return;
+          }
           this._nativeComposerError = "";
           this._nativeEventComposerOpen = false;
           this._refreshEvents();
@@ -2580,12 +2589,18 @@ class NodaliaCalendarCard extends HTMLElement {
             nativeWebhookId,
             this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload),
           );
+          if (!this.isConnected) {
+            return;
+          }
           if (!ok) {
             this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
             return;
           }
         } else {
           await this._hass.callService("calendar", "create_event", payload);
+          if (!this.isConnected) {
+            return;
+          }
         }
       } else {
         const formatLocalDateTime = value => {
@@ -2616,6 +2631,9 @@ class NodaliaCalendarCard extends HTMLElement {
         });
         if (rrule) {
           await createCalendarEventViaWs(calendarEventPayload);
+          if (!this.isConnected) {
+            return;
+          }
           this._nativeComposerError = "";
           this._nativeEventComposerOpen = false;
           this._refreshEvents();
@@ -2626,13 +2644,22 @@ class NodaliaCalendarCard extends HTMLElement {
             nativeWebhookId,
             this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload),
           );
+          if (!this.isConnected) {
+            return;
+          }
           if (!ok) {
             this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
             return;
           }
         } else {
           await this._hass.callService("calendar", "create_event", payload);
+          if (!this.isConnected) {
+            return;
+          }
         }
+      }
+      if (!this.isConnected) {
+        return;
       }
       this._nativeComposerError = "";
       this._nativeEventComposerOpen = false;
@@ -4586,6 +4613,19 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       }
       if (parts.length >= 3) {
         const key = parts[2];
+        const unsafeKey =
+          typeof window !== "undefined"
+          && window.NodaliaUtils
+          && typeof window.NodaliaUtils.isUnsafeConfigPathKey === "function"
+          && window.NodaliaUtils.isUnsafeConfigPathKey(key);
+        if (
+          key === "__proto__"
+          || key === "constructor"
+          || key === "prototype"
+          || unsafeKey
+        ) {
+          return;
+        }
         let entry = targetConfig.calendars[index];
         if (typeof entry === "string") {
           entry = { entity: String(entry).trim(), label: "", tint: "" };

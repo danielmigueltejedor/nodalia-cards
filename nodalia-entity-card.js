@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -68,6 +68,11 @@ const DEFAULT_CONFIG = {
   show_secondary_chip: true,
   compact_layout_mode: "auto",
   quick_actions: [],
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -792,6 +797,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._clearOptimisticToggleTimer();
   }
 
@@ -974,6 +980,9 @@ class NodaliaEntityCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
     this._optimisticToggleTimer = window.setTimeout(() => {
       this._optimisticToggleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       if (!this._isOptimisticTogglePending(this._getActualState())) {
         this._lastRenderSignature = "";
         this._render();
@@ -1726,9 +1735,18 @@ class NodaliaEntityCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -596,6 +596,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
     this._dragFrame = 0;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
@@ -838,36 +839,41 @@ class NodaliaHumidifierCard extends HTMLElement {
     const modeEntityState = modeEntityId ? hass?.states?.[modeEntityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      optimistic: String(attrs._nodalia_optimistic_toggle || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      showEntityPicture: this._config?.show_entity_picture === true,
-      entityPicture: String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-      humidity: Number(attrs.humidity ?? -1),
-      targetHumidity: Number(attrs.target_humidity ?? -1),
-      minHumidity: Number(attrs.min_humidity ?? -1),
-      maxHumidity: Number(attrs.max_humidity ?? -1),
-      mode: String(attrs.mode || ""),
-      availableModes: Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
+      String(state?.state || ""),
+      String(attrs._nodalia_optimistic_toggle || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.show_entity_picture === true,
+      String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+      Number(attrs.humidity ?? -1),
+      Number(attrs.target_humidity ?? -1),
+      Number(attrs.min_humidity ?? -1),
+      Number(attrs.max_humidity ?? -1),
+      String(attrs.mode || ""),
+      Array.isArray(attrs.available_modes) ? attrs.available_modes.join("|") : "",
       modeEntityId,
-      modeEntityState: String(modeEntityState?.state || ""),
-      modeEntityOptions: Array.isArray(modeEntityState?.attributes?.options)
+      String(modeEntityState?.state || ""),
+      Array.isArray(modeEntityState?.attributes?.options)
         ? modeEntityState.attributes.options.join("|")
         : "",
       helperEntityId,
-      helperState: String(helperState?.state || ""),
-      helperOptions: Array.isArray(helperState?.attributes?.options)
+      String(helperState?.state || ""),
+      Array.isArray(helperState?.attributes?.options)
         ? helperState.attributes.options.join("|")
         : "",
-      compact: Boolean(this._isCompactLayout),
-      modePanelOpen: Boolean(this._modePanelOpen),
-      fanModePanelOpen: Boolean(this._fanModePanelOpen),
-      tap: `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
-      hold: `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
-    });
+      Boolean(this._isCompactLayout),
+      Boolean(this._modePanelOpen),
+      Boolean(this._fanModePanelOpen),
+      `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
+      `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "humidifier:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridColumns() {
@@ -1130,6 +1136,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
     this._optimisticVisualSettleTimer = window.setTimeout(() => {
       this._optimisticVisualSettleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       const nextActualState = this._getActualState();
       if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
         this._scheduleOptimisticVisualSettleTimeout();
@@ -1180,6 +1189,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
     this._optimisticToggleTimer = window.setTimeout(() => {
       this._optimisticToggleTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
       if (!this._isOptimisticTogglePending(this._getActualState())) {
         this._lastRenderSignature = "";
         this._render();

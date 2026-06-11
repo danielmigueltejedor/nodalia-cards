@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -886,6 +886,7 @@ class NodaliaWeatherCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._unsubscribeForecast();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
@@ -940,31 +941,36 @@ class NodaliaWeatherCard extends HTMLElement {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      temperature: Number(attrs.temperature ?? -1),
-      humidity: Number(attrs.humidity ?? -1),
-      pressure: Number(attrs.pressure ?? -1),
-      windSpeed: Number(attrs.wind_speed ?? -1),
-      unitSystem: normalizeUnitSystem(this._config?.unit_system),
-      temperatureUnit: normalizeTemperatureUnitPreference(this._config?.temperature_unit),
-      windSpeedUnit: normalizeWindUnitPreference(this._config?.wind_speed_unit),
-      windBearing: Number(attrs.wind_bearing ?? -1),
-      visibility: Number(attrs.visibility ?? -1),
-      precipitation: Number(attrs.precipitation ?? -1),
-      showForecastDetails: this._config?.show_forecast_details === true,
-      forecastExpanded: this._forecastExpanded,
-      activeForecastView: this._activeForecastView,
-      activeForecastType: this._activeForecastType,
-      forecastPopup: this._forecastPopup?.key || "",
-      forecastHoverPreview: this._forecastHoverPreview?.key || "",
-      forecastUpdated: String(this._forecastEvents?.[this._activeForecastType]?.forecast?.[0]?.datetime || ""),
-      meteoalarm: this._getMeteoalarmSignature(hass),
-      meteoalarmPopupOpen: this._meteoalarmPopupOpen,
-    });
+      String(state?.state || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      Number(attrs.temperature ?? -1),
+      Number(attrs.humidity ?? -1),
+      Number(attrs.pressure ?? -1),
+      Number(attrs.wind_speed ?? -1),
+      normalizeUnitSystem(this._config?.unit_system),
+      normalizeTemperatureUnitPreference(this._config?.temperature_unit),
+      normalizeWindUnitPreference(this._config?.wind_speed_unit),
+      Number(attrs.wind_bearing ?? -1),
+      Number(attrs.visibility ?? -1),
+      Number(attrs.precipitation ?? -1),
+      this._config?.show_forecast_details === true,
+      this._forecastExpanded,
+      this._activeForecastView,
+      this._activeForecastType,
+      this._forecastPopup?.key || "",
+      this._forecastHoverPreview?.key || "",
+      String(this._forecastEvents?.[this._activeForecastType]?.forecast?.[0]?.datetime || ""),
+      this._getMeteoalarmSignature(hass),
+      this._meteoalarmPopupOpen,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "weather:", values }]);
+    }
+    return values.join("::");
   }
 
   _getMeteoalarmState(hass = this._hass) {
@@ -979,16 +985,16 @@ class NodaliaWeatherCard extends HTMLElement {
 
     const state = this._getMeteoalarmState(hass);
     const attrs = state?.attributes || {};
-    return JSON.stringify({
-      entityId: String(this._config?.meteoalarm_entity || ""),
-      state: String(state?.state || ""),
-      awarenessLevel: String(attrs.awareness_level || ""),
-      awarenessType: String(attrs.awareness_type || ""),
-      event: String(attrs.event || ""),
-      expires: String(attrs.expires || ""),
-      headline: String(attrs.headline || ""),
-      severity: String(attrs.severity || ""),
-    });
+    return [
+      String(this._config?.meteoalarm_entity || ""),
+      String(state?.state || ""),
+      String(attrs.awareness_level || ""),
+      String(attrs.awareness_type || ""),
+      String(attrs.event || ""),
+      String(attrs.expires || ""),
+      String(attrs.headline || ""),
+      String(attrs.severity || ""),
+    ].join("|");
   }
 
   _unsubscribeForecast() {
@@ -1037,6 +1043,9 @@ class NodaliaWeatherCard extends HTMLElement {
 
     this._forecastSubscriptionKey = subscriptionKey;
     this._forecastSubscription = this._hass.connection.subscribeMessage(event => {
+      if (!this.isConnected) {
+        return;
+      }
       this._forecastEvents = {
         ...this._forecastEvents,
         [forecastType]: event,
@@ -1283,9 +1292,18 @@ class NodaliaWeatherCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _performWeatherCardAction(actionKind) {

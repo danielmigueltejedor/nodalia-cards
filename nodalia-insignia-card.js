@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-insignia-card";
 const EDITOR_TAG = "nodalia-insignia-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -32,6 +32,11 @@ const DEFAULT_CONFIG = {
   hold_new_tab: false,
   show_name: true,
   show_value: true,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -579,14 +584,29 @@ class NodaliaInsigniaCard extends HTMLElement {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const visibilityCount = Array.isArray(this._config?.visibility) ? this._config.visibility.length : 0;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      attrValue: this._config?.state_attribute ? String(attrs[this._config.state_attribute] ?? "") : "",
-      config: this._config,
-    });
+      String(state?.state || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      this._config?.state_attribute ? String(attrs[this._config.state_attribute] ?? "") : "",
+      String(this._config?.name || ""),
+      String(this._config?.icon || ""),
+      String(this._config?.icon_active || ""),
+      String(this._config?.icon_inactive || ""),
+      this._config?.use_entity_icon !== false,
+      this._config?.use_entity_picture !== false,
+      this._config?.tint_auto !== false,
+      visibilityCount,
+      String(this._config?.styles?.tint?.color || ""),
+      `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}`,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "insignia:", values }]);
+    }
+    return values.join("::");
   }
 
   _triggerHaptic(styleOverride = null) {

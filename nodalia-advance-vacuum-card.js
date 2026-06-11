@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -1549,6 +1549,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectionUpdatedAt = 0;
     this._wasCleaningSessionActive = false;
     this._lastRenderSignature = "";
+    this._calibrationSignatureStamp = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._mapActionInFlight = false;
@@ -1619,7 +1620,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if (nextSignature === this._lastRenderSignature && this.shadowRoot.innerHTML) {
         return;
       }
-      this._updateCalibration();
+      this._syncCalibrationIfNeeded();
       this._render();
     } catch (_err) {
       // ignore
@@ -1700,7 +1701,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._ensurePersistedCleaningSessionStateLoaded();
-    this._updateCalibration();
+    this._syncCalibrationIfNeeded();
     this._render();
   }
 
@@ -1713,7 +1714,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._lastRenderSignature = nextSignature;
         return;
       }
-      this._updateCalibration();
+      this._syncCalibrationIfNeeded(hass);
       this._render();
     } catch (error) {
       this._handleCardError(error, "set hass");
@@ -3123,6 +3124,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return { kind: "none", len: 0 };
   }
 
+  _getCalibrationSignatureStamp(hass = this._hass) {
+    const fragment = this._getCalibrationSignatureFragment(hass);
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [fragment.kind, fragment.id || "", fragment.len, fragment.lu || ""];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "cal:", values }]);
+    }
+    return values.join(":");
+  }
+
+  _syncCalibrationIfNeeded(hass = this._hass) {
+    const stamp = this._getCalibrationSignatureStamp(hass);
+    if (stamp === this._calibrationSignatureStamp) {
+      return;
+    }
+    this._calibrationSignatureStamp = stamp;
+    this._updateCalibration();
+  }
+
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
@@ -3195,7 +3215,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
           this._repeats || 1,
           `${this._mapImageWidth}x${this._mapImageHeight}`,
-          JSON.stringify(this._getCalibrationSignatureFragment(hass)),
+          this._getCalibrationSignatureStamp(hass),
           suctionDescriptor
             ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}`
             : "",
@@ -5114,7 +5134,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    return this._hass.callService("vacuum", service, {
+    return this._callInternalService(`vacuum.${service}`, {
       entity_id: this._config.entity,
       ...data,
     });

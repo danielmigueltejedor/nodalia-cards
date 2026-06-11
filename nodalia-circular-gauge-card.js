@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -697,6 +697,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._lastRenderSignature = "";
     this._lastGaugeVisualState = null;
     this._gaugeVisualFrame = 0;
@@ -766,15 +767,20 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const attrs = state?.attributes || {};
-    return JSON.stringify({
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
       entityId,
-      state: String(state?.state || ""),
-      friendlyName: String(attrs.friendly_name || ""),
-      icon: String(attrs.icon || ""),
-      unit: String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
-      rows: Number(this._config?.grid_options?.rows || 0),
-      columns: Number(this._config?.grid_options?.columns || 0),
-    });
+      String(state?.state || ""),
+      String(attrs.friendly_name || ""),
+      String(attrs.icon || ""),
+      String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+      Number(this._config?.grid_options?.rows || 0),
+      Number(this._config?.grid_options?.columns || 0),
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "gauge:", values }]);
+    }
+    return values.join("::");
   }
 
   _getConfiguredGridRows() {
@@ -1009,9 +1015,18 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     content.getBoundingClientRect();
     content.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!content.isConnected) {
+        return;
+      }
       content.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -346,6 +346,7 @@ class NodaliaPersonCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -378,6 +379,8 @@ class NodaliaPersonCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    this._cachedZoneTarget = "";
+    this._cachedZoneState = undefined;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
@@ -582,6 +585,10 @@ class NodaliaPersonCard extends HTMLElement {
       return null;
     }
 
+    if (this._cachedZoneTarget === target && this._cachedZoneState !== undefined) {
+      return this._cachedZoneState;
+    }
+
     const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
       if (!entityId.startsWith("zone.")) {
         return false;
@@ -593,7 +600,10 @@ class NodaliaPersonCard extends HTMLElement {
       return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
     });
 
-    return zoneEntry?.[1] || null;
+    const result = zoneEntry?.[1] || null;
+    this._cachedZoneTarget = target;
+    this._cachedZoneState = result;
+    return result;
   }
 
   _getBadgeDescriptor(state) {
@@ -667,26 +677,30 @@ class NodaliaPersonCard extends HTMLElement {
     const fallbackIcon = this._getFallbackIcon(state);
     const badge = this._getBadgeDescriptor(state);
     const zoneState = this._getMatchingZoneState(state);
-
-    return JSON.stringify({
-      entity: entityId,
-      state: state.state,
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      entityId,
+      String(state.state || ""),
       title,
       subtitle,
       picture,
       fallbackIcon,
-      badgeIcon: badge?.icon || "",
-      badgeColor: badge?.color || "",
-      zoneEntity: zoneState?.entity_id || "",
-      zoneIcon: zoneState?.attributes?.icon || "",
-      showState: this._config.show_state !== false,
-      showName: this._config.show_name !== false,
-      showZoneBadge: this._config.show_zone_badge !== false,
-      useEntityPicture: this._config.use_entity_picture !== false,
-      useZoneIcon: this._config.use_zone_icon !== false,
-      name: this._config.name || "",
-      icon: this._config.icon || "",
-    });
+      badge?.icon || "",
+      badge?.color || "",
+      zoneState?.entity_id || "",
+      zoneState?.attributes?.icon || "",
+      this._config.show_state !== false,
+      this._config.show_name !== false,
+      this._config.show_zone_badge !== false,
+      this._config.use_entity_picture !== false,
+      this._config.use_zone_icon !== false,
+      this._config.name || "",
+      this._config.icon || "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "person:", values }]);
+    }
+    return values.join("::");
   }
 
   _canRunTapAction() {
@@ -748,9 +762,18 @@ class NodaliaPersonCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
       element.classList.remove(className);
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {

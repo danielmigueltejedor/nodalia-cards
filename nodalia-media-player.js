@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -928,13 +928,14 @@ class NodaliaMediaPlayer extends HTMLElement {
   set hass(hass) {
     const previousHass = this._hass;
     this._hass = hass;
-    if (!this._activeSliderDrag) {
-      this._syncVolumeControlsFromHass(hass);
-    }
 
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
       return;
+    }
+
+    if (!this._activeSliderDrag) {
+      this._syncVolumeControlsFromHass(hass);
     }
 
     this._lastRenderSignature = nextSignature;

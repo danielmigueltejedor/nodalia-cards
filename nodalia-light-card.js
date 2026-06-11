@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -68,6 +68,11 @@ const DEFAULT_CONFIG = {
   icon_hold_service_data: "",
   icon_hold_url: "",
   icon_hold_new_tab: false,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",
@@ -1355,6 +1360,9 @@ class NodaliaLightCard extends HTMLElement {
       if (this._isOptimisticTurnOnPending(this._getActualState())) {
         this._flushOptimisticTurnOnQueue();
       }
+      if (!this.isConnected) {
+        return;
+      }
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
       return;
@@ -1362,6 +1370,9 @@ class NodaliaLightCard extends HTMLElement {
 
     this._optimisticTurnOnTimer = window.setTimeout(() => {
       this._optimisticTurnOnTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
 
       if (!this._isOptimisticTurnOnPending(this._getActualState())) {
         return;
@@ -1526,6 +1537,9 @@ class NodaliaLightCard extends HTMLElement {
 
     const remaining = Math.max(0, this._optimisticTurnOff.expiresAt - Date.now());
     if (!remaining || typeof window === "undefined") {
+      if (!this.isConnected) {
+        return;
+      }
       this._clearOptimisticTurnOffState();
       this._render();
       return;
@@ -1533,6 +1547,9 @@ class NodaliaLightCard extends HTMLElement {
 
     this._optimisticTurnOffTimer = window.setTimeout(() => {
       this._optimisticTurnOffTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
 
       if (!this._isOptimisticTurnOffPending(this._getActualState())) {
         return;
@@ -1978,6 +1995,9 @@ class NodaliaLightCard extends HTMLElement {
         this._modeSwitchTimer = 0;
 
         const finalizeTransition = () => {
+          if (!this.isConnected) {
+            return;
+          }
           if (
             !this._modeTransition ||
             this._modeTransition.phase !== "expanding" ||

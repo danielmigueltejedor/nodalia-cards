@@ -54,3 +54,24 @@ test("climate card gates external services when strict mode enabled", () => {
   assert.match(source, /strict_service_actions === true/);
   assert.match(source, /_scheduleDraftRevision/);
 });
+
+test("alpha.4 cards use joinParts render signatures", () => {
+  for (const [file, prefix] of [
+    ["nodalia-insignia-card.js", "insignia:"],
+    ["nodalia-person-card.js", "person:"],
+    ["nodalia-fan-card.js", "fan:"],
+    ["nodalia-humidifier-card.js", "humidifier:"],
+    ["nodalia-weather-card.js", "weather:"],
+    ["nodalia-alarm-panel-card.js", "alarm:"],
+    ["nodalia-circular-gauge-card.js", "gauge:"],
+  ]) {
+    const source = read(file);
+    assert.match(source, /joinParts/, `${file} should use joinParts`);
+    assert.match(source, new RegExp(`prefix: "${prefix.replace(":", "\\:")}"`), `${file} should use ${prefix} prefix`);
+  }
+});
+
+test("insignia render signature does not embed full config object", () => {
+  const source = read("nodalia-insignia-card.js");
+  assert.doesNotMatch(source, /config: this\._config/);
+});

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -42,6 +42,11 @@ const DEFAULT_CONFIG = {
   show_state: true,
   state_attribute: "",
   layout_mode: "auto",
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: {
     enabled: true,
     style: "medium",

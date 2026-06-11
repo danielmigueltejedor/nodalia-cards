@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2347,6 +2347,23 @@ class NodaliaVacuumCard extends HTMLElement {
     });
   }
 
+  _callSelectOption(entityId, option) {
+    if (!this._hass || !entityId || !option) {
+      return;
+    }
+
+    const fullService = "select.select_option";
+    if (!this._isServiceAllowed(fullService)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Vacuum Card", fullService);
+      return;
+    }
+
+    this._hass.callService("select", "select_option", {
+      entity_id: entityId,
+      option,
+    });
+  }
+
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
     if (security.strict_service_actions !== true) {
@@ -2518,10 +2535,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const otherDescriptor = this._getModeDescriptor(otherKind, state);
 
     if (descriptor?.service === "select" && descriptor.target && value) {
-      this._hass.callService("select", "select_option", {
-        entity_id: descriptor.target,
-        option: value,
-      });
+      this._callSelectOption(descriptor.target, value);
     } else if (descriptor?.service === "fan" && value) {
       this._callService("set_fan_speed", {
         fan_speed: value,
@@ -2543,10 +2557,7 @@ class NodaliaVacuumCard extends HTMLElement {
         sharedSmartOption &&
         normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
       ) {
-        this._hass.callService("select", "select_option", {
-          entity_id: otherDescriptor.target,
-          option: sharedSmartOption,
-        });
+        this._callSelectOption(otherDescriptor.target, sharedSmartOption);
       }
       return;
     }
@@ -2560,10 +2571,7 @@ class NodaliaVacuumCard extends HTMLElement {
       fallbackOption &&
       normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
     ) {
-      this._hass.callService("select", "select_option", {
-        entity_id: otherDescriptor.target,
-        option: fallbackOption,
-      });
+      this._callSelectOption(otherDescriptor.target, fallbackOption);
     }
   }
 

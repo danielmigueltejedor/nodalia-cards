@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.2.1-alpha.3";
+const CARD_VERSION = "1.2.1-alpha.4";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1142,11 +1142,16 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._lastRouteKey = nextRouteKey;
       this._replayEntranceAnimation({ force: true });
     }
+    const nextSignature = this._getRenderSignature(hass);
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      return;
+    }
     this._syncSharedDismissedFromHass();
     this._refreshCalendarEventsSoon();
     this._refreshWeatherForecastsSoon();
     this._syncTrackedEntitiesStamp(hass);
-    this._renderIfChanged();
+    this._lastRenderSignature = nextSignature;
+    this._renderIfChanged(true);
   }
 
   getCardSize() {
