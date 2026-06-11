@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.2-alpha.1] - 2026-05-29
+## [1.2.2-alpha.1] - 2026-06-12
 
 First **`1.2.2`** **`alpha`**: bugfix and performance pass on top of stable **`1.2.1.1`**. Release channel **`1.2.2-alpha.1`**.
 
@@ -25,7 +25,7 @@ First **`1.2.2`** **`alpha`**: bugfix and performance pass on top of stable **`1
 
 - **`graph`:** hover tooltip DOM patch via `_syncTooltipContent` (no `innerHTML` rebuild on pointer move).
 
-## [1.2.1.1-alpha.2] - 2026-05-29
+## [1.2.1.1-alpha.2] - 2026-06-11
 
 Second **`1.2.1.1`** hotfix **`alpha`**: person-card i18n and entity cover/lock tap services. Release channel **`1.2.1.1-alpha.2`**.
 
@@ -34,7 +34,7 @@ Second **`1.2.1.1`** hotfix **`alpha`**: person-card i18n and entity cover/lock 
 - **`person`:** location subtitle (`Home` / `Away`, zones) uses runtime i18n via `_personStrings()` instead of hardcoded Spanish in `_translateState`.
 - **`entity`:** cover tap toggles `open_cover` / `close_cover` (or `set_cover_position` 100/0); lock tap uses `lock.open` / `lock.lock` instead of `homeassistant.toggle`; `auto` tap also toggles cover/lock.
 
-## [1.2.1.1-alpha.1] - 2026-05-29
+## [1.2.1.1-alpha.1] - 2026-06-11
 
 First **`1.2.1.1`** hotfix **`alpha`**: entity-card toggles, person i18n, alarm PIN flow. Release channel **`1.2.1.1-alpha.1`**.
 
