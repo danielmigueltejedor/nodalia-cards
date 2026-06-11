@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1075,6 +1075,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     this._viewVisibilityObserver = new IntersectionObserver(
       entries => {
+        if (!this.isConnected) {
+          return;
+        }
         const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
         if (visible === this._wasInViewport) {
           return;

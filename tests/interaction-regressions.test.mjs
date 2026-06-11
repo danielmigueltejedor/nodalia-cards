@@ -1243,6 +1243,15 @@ test("power flow flow dots avoid origin flash before motion starts", () => {
   assert.match(source, /\.power-flow-card__simple-rail--entering \.power-flow-card__simple-dot/);
 });
 
+test("circular gauge thumb follows dial arc via rotate orbit transform", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /function getDialThumbRotate\(/);
+  assert.match(source, /rotate\(var\(--gauge-thumb-rotate/);
+  assert.match(source, /translateY\(calc\(-1 \* var\(--gauge-thumb-orbit/);
+  assert.match(source, /setProperty\("--gauge-thumb-rotate"/);
+  assert.doesNotMatch(source, /--gauge-thumb-left/);
+});
+
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
   [
     "nodalia-power-flow-card.js",
@@ -1346,6 +1355,17 @@ test("notifications defers side effects until render signature changes", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /const nextSignature = this\._getRenderSignature\(hass\)/);
   assert.match(source, /nextSignature === this\._lastRenderSignature\)[\s\S]*return;/);
+});
+
+test("alpha.7 lifecycle defer cleanup and viewport observer guards", () => {
+  assert.match(read("nodalia-person-card.js"), /disconnectedCallback\(\) \{[\s\S]*clearDeferTimers/);
+  assert.match(read("nodalia-circular-gauge-card.js"), /disconnectedCallback\(\) \{[\s\S]*clearDeferTimers/);
+  assert.match(read("nodalia-vacuum-card.js"), /scheduleDeferTimer/);
+  assert.match(read("nodalia-calendar-card.js"), /IntersectionObserver\([\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-notifications-card.js"), /IntersectionObserver\([\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-power-flow-card.js"), /_onFlowViewport\(entries\) \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-media-player.js"), /_callInternalMediaService\(/);
+  assert.match(read("nodalia-light-card.js"), /_lastEntityRevision/);
 });
 
 test("alpha.5 lifecycle guards on notifications media climate scenes calendar graph nav and alarm", () => {

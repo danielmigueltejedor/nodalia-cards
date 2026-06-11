@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -877,6 +877,9 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     this._viewVisibilityObserver = new IntersectionObserver(
       entries => {
+        if (!this.isConnected) {
+          return;
+        }
         const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
         if (visible === this._wasInViewport) {
           return;

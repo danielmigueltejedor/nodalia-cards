@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1324,12 +1324,10 @@ function normalizeConfig(rawConfig) {
     config.setpoint_schedule_week_starts_on,
   );
   config.show_schedule_button = config.show_schedule_button !== false;
-  config.security = config.security || {};
-  if (config.security.allow_webhooks_for_non_admin === undefined) {
-    config.security.allow_webhooks_for_non_admin = false;
-  }
-  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
-  config.security.strict_service_actions = config.security.strict_service_actions === true;
+  const allowWebhooksForNonAdmin = config.security?.allow_webhooks_for_non_admin === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? config.security;
+  config.security.allow_webhooks_for_non_admin = allowWebhooksForNonAdmin;
   return config;
 }
 

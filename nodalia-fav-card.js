@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -564,7 +564,10 @@ function fireEvent(node, type, detail, options) {
 }
 
 function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? config.security;
+  return config;
 }
 
 class NodaliaFavCard extends HTMLElement {
@@ -681,6 +684,13 @@ class NodaliaFavCard extends HTMLElement {
       helperState?.state || "",
       this._layout || "",
       this._alarmMenuOpen === true,
+      String(this._config?.tap_action || ""),
+      String(this._config?.tap_service || ""),
+      String(this._config?.tap_url || ""),
+      this._config?.security?.strict_service_actions === true ? 1 : 0,
+      Array.isArray(this._config?.security?.allowed_services)
+        ? this._config.security.allowed_services.join(",")
+        : "",
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "fav:", values }]);

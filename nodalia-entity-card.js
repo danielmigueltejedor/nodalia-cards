@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -694,6 +694,8 @@ function normalizeConfig(rawConfig) {
   }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? config.security;
 
   return config;
 }
@@ -1155,11 +1157,8 @@ class NodaliaEntityCard extends HTMLElement {
         return String(value.name);
       }
 
-      try {
-        return JSON.stringify(value);
-      } catch (_error) {
-        return String(value);
-      }
+      const keys = Object.keys(value).sort();
+      return keys.map(key => `${key}:${String(value[key] ?? "")}`).join(", ");
     }
 
     const numericValue = parseNumericValue(value);

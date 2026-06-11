@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -618,6 +618,8 @@ function normalizeConfig(rawConfig) {
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? config.security;
 
   return config;
 }
@@ -650,6 +652,7 @@ class NodaliaLightCard extends HTMLElement {
     this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
+    this._lastEntityRevision = "";
     this._lastRenderedIsOn = null;
     this._lastRenderedShowDetailedControls = null;
     this._lastControlsMarkup = "";
@@ -842,6 +845,14 @@ class NodaliaLightCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const actualState = this._getActualState();
+    const entityId = this._config?.entity || "";
+    const entityRevision = entityId && actualState
+      ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}`
+      : "";
+    const revisionUnchanged = Boolean(entityRevision && entityRevision === this._lastEntityRevision);
+    if (entityRevision) {
+      this._lastEntityRevision = entityRevision;
+    }
     let nextSignature = this._getRenderSignature();
     const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
     const signatureUnchanged = Boolean(
@@ -853,9 +864,11 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     const hadPendingOptimistic = hasPendingOptimistic;
-    this._syncLastKnownOnState(actualState);
-    this._syncOptimisticTurnOnState(actualState);
-    this._syncOptimisticTurnOffState(actualState);
+    if (!revisionUnchanged || hasPendingOptimistic) {
+      this._syncLastKnownOnState(actualState);
+      this._syncOptimisticTurnOnState(actualState);
+      this._syncOptimisticTurnOffState(actualState);
+    }
     nextSignature = this._getRenderSignature();
     const optimisticJustConfirmed = hadPendingOptimistic
       && !this._optimisticTurnOn

@@ -10,6 +10,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.1-alpha.7] - 2026-05-29
+
+Seventh **`1.2.1`** **`alpha`**: audit pass 6 — lifecycle defer cleanup, observer guards, security normalization rollout, performance gates. Release channel **`1.2.1-alpha.7`**.
+
+### Fixed
+
+- **`person` / `circular-gauge`:** `clearDeferTimers` on disconnect.
+- **`calendar` / `notifications` / `power-flow`:** `isConnected` guards in viewport `IntersectionObserver` callbacks.
+- **`vacuum`:** panel, bounce, layout refresh, and mode-pending timers use `scheduleDeferTimer` + `clearDeferTimers`.
+- **`alarm-panel`:** pin-error and focus-defer timers use `scheduleDeferTimer`.
+- **`circular-gauge`:** `getContinuousThumbRotate` keeps thumb on short arc path when value decreases.
+
+### Changed
+
+- **`light`:** `_lastEntityRevision` gate skips redundant optimistic sync; `normalizeSecurityConfig` in editor path.
+- **`entity`:** attribute object display without `JSON.stringify`; normalized security config.
+- **`fav`:** render signature includes tap/security fields; `normalizeSecurityConfig`.
+- **`media-player`:** built-in transport/volume/browser actions use `_callInternalMediaService` (strict gate only on user `call-service` actions).
+- **`fan` / `humidifier` / `cover` / `climate` / `navigation-bar`:** `normalizeSecurityConfig` on `normalizeConfig`.
+
+## [1.2.1-alpha.6] - 2026-05-29
+
+Sixth **`1.2.1`** **`alpha`**: circular gauge entrance thumb follows dial arc. Release channel **`1.2.1-alpha.6`**.
+
+### Fixed
+
+- **`nodalia-circular-gauge-card.js`:** thumb entrance and value transitions orbit the semicircular track via `rotate` + `translateY` instead of animating `left`/`top` in a straight line; pop animation moved to inner dot so it does not fight orbit transform.
+
 ## [1.2.1-alpha.5] - 2026-05-29
 
 Fifth **`1.2.1`** **`alpha`**: audit pass 5 — lifecycle completion, signature slimming, optimistic gates, security normalization. Release channel **`1.2.1-alpha.5`**.
@@ -31,9 +59,9 @@ Fifth **`1.2.1`** **`alpha`**: audit pass 5 — lifecycle completion, signature 
 - **`advance-vacuum`:** persisted session load deferred until signature changes; `select` / `homeassistant` mode helpers route through `_callInternalService`; `_mapActionInFlight` reset on disconnect.
 - **`vacuum`:** `_callService` / `_callSelectOption` are internal; user actions use `_callUserVacuumService` with strict gate.
 
-## [1.2.1-alpha.5] - 2026-06-06
+## [1.2.1-alpha.4] - 2026-06-06
 
-Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.5`**.
+Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.4`**.
 
 ### Fixed
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -792,6 +792,8 @@ function normalizeConfig(rawConfig) {
     power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
   }));
   config.layout.position = config.layout.position === "top" ? "top" : "bottom";
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? config.security;
 
   return config;
 }
@@ -1801,7 +1803,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         break;
       }
       try {
-        await this._hass.callService("media_player", service, { entity_id: entityId });
+        await this._callInternalMediaService(service, { entity_id: entityId });
       } catch (_error) {
         break;
       }
@@ -1835,7 +1837,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     Promise.resolve(
-      this._hass.callService("media_player", "volume_set", {
+      this._callInternalMediaService("volume_set", {
         entity_id: entityId,
         volume_level: clamp(nextValue / 100, 0, 1),
       }),
@@ -2013,6 +2015,14 @@ class NodaliaMediaPlayer extends HTMLElement {
     return updated;
   }
 
+  _callInternalMediaService(service, data = {}) {
+    if (!this._hass || !service) {
+      return;
+    }
+
+    return this._hass.callService("media_player", service, data);
+  }
+
   _callService(action) {
     if (!this._hass || !action?.service) {
       return;
@@ -2153,23 +2163,23 @@ class NodaliaMediaPlayer extends HTMLElement {
         const service = ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey(currentState))
           ? "turn_on"
           : "turn_off";
-        this._hass.callService("media_player", service, { entity_id: entityId });
+        this._callInternalMediaService(service, { entity_id: entityId });
         break;
       }
       case "play":
-        this._hass.callService("media_player", "media_play", { entity_id: entityId });
+        this._callInternalMediaService("media_play", { entity_id: entityId });
         break;
       case "stop":
-        this._hass.callService("media_player", "media_stop", { entity_id: entityId });
+        this._callInternalMediaService("media_stop", { entity_id: entityId });
         break;
       case "previous":
-        this._hass.callService("media_player", "media_previous_track", { entity_id: entityId });
+        this._callInternalMediaService("media_previous_track", { entity_id: entityId });
         break;
       case "next":
-        this._hass.callService("media_player", "media_next_track", { entity_id: entityId });
+        this._callInternalMediaService("media_next_track", { entity_id: entityId });
         break;
       case "play-pause":
-        this._hass.callService("media_player", "media_play_pause", { entity_id: entityId });
+        this._callInternalMediaService("media_play_pause", { entity_id: entityId });
         break;
       case "volume-down": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
@@ -2177,14 +2187,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
         this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
         this._scheduleDraftVolumeClear(entityId);
-        this._hass.callService("media_player", "volume_set", {
+        this._callInternalMediaService("volume_set", {
           entity_id: entityId,
           volume_level: nextVolumeLevel,
         });
         break;
       }
       case "volume-down-step":
-        this._hass.callService("media_player", "volume_down", { entity_id: entityId });
+        this._callInternalMediaService("volume_down", { entity_id: entityId });
         break;
       case "volume-up": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
@@ -2192,18 +2202,18 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
         this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
         this._scheduleDraftVolumeClear(entityId);
-        this._hass.callService("media_player", "volume_set", {
+        this._callInternalMediaService("volume_set", {
           entity_id: entityId,
           volume_level: nextVolumeLevel,
         });
         break;
       }
       case "volume-up-step":
-        this._hass.callService("media_player", "volume_up", { entity_id: entityId });
+        this._callInternalMediaService("volume_up", { entity_id: entityId });
         break;
       case "select-source":
         if (options.source) {
-          this._hass.callService("media_player", "select_source", {
+          this._callInternalMediaService("select_source", {
             entity_id: entityId,
             source: options.source,
           });
@@ -2772,7 +2782,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
-    this._hass.callService("media_player", "play_media", {
+    this._callInternalMediaService("play_media", {
       entity_id: entityId,
       media_content_id: mediaContentId,
       media_content_type: mediaContentType,

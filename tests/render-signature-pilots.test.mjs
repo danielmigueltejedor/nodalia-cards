@@ -51,7 +51,8 @@ test("notifications card caches calendar and weather signature stamps", () => {
 test("climate card gates external services when strict mode enabled", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /_isServiceAllowed\(fullService\)/);
-  assert.match(source, /strict_service_actions === true/);
+  assert.match(source, /strict_service_actions !== true/);
+  assert.match(source, /normalizeSecurityConfig/);
   assert.match(source, /_scheduleDraftRevision/);
 });
 
@@ -89,6 +90,37 @@ test("alpha.5 cards avoid JSON attribute signatures and use slim person stamp", 
   assert.doesNotMatch(personSignatureFn[0], /_getTitle\(/);
   assert.doesNotMatch(personSignatureFn[0], /_translateState\(/);
   assert.doesNotMatch(personSignatureFn[0], /_getBadgeDescriptor\(/);
+});
+
+test("alpha.7 cards adopt normalizeSecurityConfig in normalizeConfig", () => {
+  for (const file of [
+    "nodalia-light-card.js",
+    "nodalia-entity-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-climate-card.js",
+    "nodalia-media-player.js",
+    "nodalia-navigation-bar.js",
+    "nodalia-humidifier-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /normalizeSecurityConfig/, `${file} should normalize security config`);
+  }
+});
+
+test("fav render signature includes tap and security fields", () => {
+  const source = read("nodalia-fav-card.js");
+  const signatureFn = source.match(/_getRenderSignature\(hass = this\._hass\) \{[\s\S]*?\n  \}/);
+  assert.ok(signatureFn, "expected fav _getRenderSignature");
+  assert.match(signatureFn[0], /tap_action/);
+  assert.match(signatureFn[0], /strict_service_actions/);
+});
+
+test("circular gauge thumb uses continuous rotate along arc sweep", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /function getContinuousThumbRotate\(/);
+  assert.match(source, /thumbRotate/);
 });
 
 test("normalizeSecurityConfig is exported from nodalia-utils", () => {

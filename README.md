@@ -50,7 +50,7 @@ Animations and interactions in action:
 
 # 🚀 What’s new in 1.2.1-alpha
 
-**Current alpha `1.2.1-alpha.5`** — fourth audit: lifecycle, signatures, side-effect gates, security defaults. Match **`nodalia-cards-1.2.1-alpha.5.js`**. Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current alpha `1.2.1-alpha.7`** — fourth audit: lifecycle, signatures, side-effect gates, security defaults. Match **`nodalia-cards-1.2.1-alpha.7.js`**. Build notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ### Alpha.4 highlights
 
@@ -369,7 +369,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-alpha.5.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.2.1-alpha.7.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

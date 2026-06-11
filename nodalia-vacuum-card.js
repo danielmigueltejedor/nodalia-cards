@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -551,6 +551,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._suppressNextVacuumTap = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
@@ -630,6 +631,7 @@ class NodaliaVacuumCard extends HTMLElement {
         this._pendingModeSelectionTimers[kind] = 0;
       }
     });
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -693,12 +695,19 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    window.setTimeout(() => {
+    const safeDelay = Math.max(0, Number(delay) || 0);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
       if (!this.isConnected) {
         return;
       }
       this._notifyLayoutChange();
-    }, Math.max(0, Number(delay) || 0));
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, safeDelay);
+    } else {
+      window.setTimeout(done, safeDelay);
+    }
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -877,9 +886,18 @@ class NodaliaVacuumCard extends HTMLElement {
     button.getBoundingClientRect();
     button.classList.add("is-pressing");
 
-    window.setTimeout(() => {
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
       button.classList.remove("is-pressing");
-    }, animations.buttonBounceDuration + 40);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
   }
 
   _openMoreInfo(entityId = this._config?.entity) {
@@ -2076,7 +2094,12 @@ class NodaliaVacuumCard extends HTMLElement {
       };
 
       panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeRemoval, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+      }
     };
 
     const appendPanel = () => {
@@ -2102,11 +2125,17 @@ class NodaliaVacuumCard extends HTMLElement {
       panelsHost.replaceChildren(panelNode);
       this._notifyLayoutChange();
       this._scheduleLayoutRefresh(animations.panelDuration + 120);
-      window.setTimeout(() => {
+      const finalizeEnter = () => {
         if (panelNode.isConnected) {
           panelNode.classList.remove("vacuum-card__panel-shell--entering");
         }
-      }, animations.panelDuration + 80);
+      };
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      if (typeof schedule === "function") {
+        schedule(this, finalizeEnter, animations.panelDuration + 80);
+      } else {
+        window.setTimeout(finalizeEnter, animations.panelDuration + 80);
+      }
     };
 
     if (!nextPanelKey) {
@@ -2462,15 +2491,21 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    this._pendingModeSelectionTimers[kind] = window.setTimeout(() => {
+    const done = () => {
       this._pendingModeSelectionTimers[kind] = 0;
-      if (!this._pendingModeSelection[kind]) {
+      if (!this.isConnected || !this._pendingModeSelection[kind]) {
         return;
       }
 
       this._pendingModeSelection[kind] = "";
       this._render();
-    }, 2500);
+    };
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    if (typeof schedule === "function") {
+      this._pendingModeSelectionTimers[kind] = schedule(this, done, 2500);
+    } else {
+      this._pendingModeSelectionTimers[kind] = window.setTimeout(done, 2500);
+    }
   }
 
   _syncPendingModeSelections(state = this._getState()) {

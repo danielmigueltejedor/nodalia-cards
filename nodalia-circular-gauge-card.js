@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -623,6 +623,25 @@ function getDialMarkerPosition(angle) {
   };
 }
 
+/** CSS rotate for thumb orbit: translateY(-orbit) starts at 12 o'clock; math angles use 3 o'clock = 0°. */
+function getDialThumbRotate(angle) {
+  return Number((angle + 90).toFixed(3));
+}
+
+function getContinuousThumbRotate(previousRotate, nextAngle) {
+  if (!Number.isFinite(previousRotate)) {
+    return getDialThumbRotate(nextAngle);
+  }
+  const nextRotate = getDialThumbRotate(nextAngle);
+  let delta = nextRotate - previousRotate;
+  if (delta > DIAL_SWEEP / 2) {
+    delta -= 360;
+  } else if (delta < -(DIAL_SWEEP / 2)) {
+    delta += 360;
+  }
+  return Number((previousRotate + delta).toFixed(3));
+}
+
 function getDialMarkerCoordinates(angle) {
   const center = DIAL_VIEWBOX_SIZE / 2;
   const radians = (angle * Math.PI) / 180;
@@ -724,6 +743,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -1151,7 +1171,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const accentColor = this._getAccentColor(state, ratio);
     const progressLength = Number((DIAL_VISIBLE_LENGTH * ratio).toFixed(3));
     const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
-    const thumbPosition = getDialMarkerPosition(dialAngle);
+    const thumbOrbitRatio = DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE;
     const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
     const dialStartCapColor =
       sanitizeCssValue(styles.gauge.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
@@ -1204,7 +1224,15 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
     const initialRatio = previousVisualState ? previousVisualState.ratio : shouldAnimateEntrance ? 0 : ratio;
     const initialProgressLength = Number((DIAL_VISIBLE_LENGTH * initialRatio).toFixed(3));
-    const initialThumbPosition = previousVisualState ? previousVisualState.thumbPosition : shouldAnimateEntrance ? getDialMarkerPosition(DIAL_START_ANGLE) : thumbPosition;
+    const initialThumbAngle = previousVisualState
+      ? previousVisualState.dialAngle
+      : shouldAnimateEntrance
+        ? DIAL_START_ANGLE
+        : dialAngle;
+    const initialThumbRotate = previousVisualState?.thumbRotate ?? getDialThumbRotate(initialThumbAngle);
+    const targetThumbRotate = previousVisualState
+      ? getContinuousThumbRotate(initialThumbRotate, dialAngle)
+      : getDialThumbRotate(dialAngle);
     const initialProgressSegments = this._getGaugeProgressSegments(initialRatio, tintScale);
     const chips = [];
 
@@ -1436,7 +1464,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           animation-delay: 70ms;
         }
 
-        .gauge-card__dial-wrap--entering .gauge-card__dial-thumb {
+        .gauge-card__dial-wrap--entering .gauge-card__dial-thumb::after {
           animation: gauge-card-dial-thumb-pop calc(var(--gauge-card-content-duration) * 0.66) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
           animation-delay: 90ms;
         }
@@ -1444,6 +1472,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         .gauge-card__dial {
           --gauge-progress-length: ${initialProgressLength};
           --gauge-dial-size: ${dialSizePx}px;
+          --gauge-thumb-orbit: calc(var(--gauge-dial-size) * ${thumbOrbitRatio});
+          --gauge-thumb-rotate: ${initialThumbRotate}deg;
           --gauge-thumb-size: ${thumbSizePx}px;
           align-self: center;
           aspect-ratio: 1;
@@ -1519,14 +1549,15 @@ class NodaliaCircularGaugeCard extends HTMLElement {
             0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.18);
           height: var(--gauge-thumb-size);
-          left: var(--gauge-thumb-left, 50%);
+          left: 50%;
           position: absolute;
-          top: var(--gauge-thumb-top, 50%);
-          transform: translate(-50%, -50%) scale(1);
+          top: 50%;
+          transform:
+            translate(-50%, -50%)
+            rotate(var(--gauge-thumb-rotate, 225deg))
+            translateY(calc(-1 * var(--gauge-thumb-orbit, 0px)));
           transition:
-            left var(--gauge-card-dial-duration) ease-out,
-            top var(--gauge-card-dial-duration) ease-out,
-            transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform var(--gauge-card-dial-duration) ease-out,
             border-color var(--gauge-card-dial-duration) ease,
             box-shadow var(--gauge-card-dial-duration) ease,
             background var(--gauge-card-dial-duration) ease;
@@ -1784,7 +1815,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
             <div
               class="gauge-card__dial"
               aria-hidden="true"
-              style="--gauge-progress-length:${initialProgressLength};--gauge-thumb-left:${initialThumbPosition.left}%;--gauge-thumb-top:${initialThumbPosition.top}%;"
+              style="--gauge-progress-length:${initialProgressLength};"
             >
               <svg class="gauge-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}">
                 <circle
@@ -1877,8 +1908,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           }
 
           dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
-          dial.style.setProperty("--gauge-thumb-left", `${thumbPosition.left}%`);
-          dial.style.setProperty("--gauge-thumb-top", `${thumbPosition.top}%`);
+          dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
           this._gaugeVisualFrame = 0;
         });
       }
@@ -1887,7 +1917,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._lastGaugeVisualState = {
       progressLength,
       ratio,
-      thumbPosition,
+      dialAngle,
+      thumbRotate: previousVisualState || shouldAnimateEntrance ? targetThumbRotate : getDialThumbRotate(dialAngle),
     };
 
     if (shouldAnimateEntrance) {

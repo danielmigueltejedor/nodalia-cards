@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.2.1-alpha.5";
+const CARD_VERSION = "1.2.1-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -617,7 +617,10 @@ function normalizeConfig(config) {
     throw new Error('"routes" is required and must be an array');
   }
 
-  return mergeConfig(DEFAULT_CONFIG, baseConfig);
+  const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
+  mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security)
+    ?? mergedConfig.security;
+  return mergedConfig;
 }
 
 class NodaliaNavigationBarCard extends HTMLElement {
