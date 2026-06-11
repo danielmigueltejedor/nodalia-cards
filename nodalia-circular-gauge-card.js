@@ -1096,8 +1096,21 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._openMoreInfo();
   }
 
+  _circularGaugeCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.circularGaugeCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.circularGaugeCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const title = escapeHtml(this._circularGaugeCardUi("emptyTitle", "Nodalia Circular Gauge Card"));
+    const body = escapeHtml(
+      this._circularGaugeCardUi("emptyBody", "Set `entity` to a numeric entity to show the dial."),
+    );
     return `
       <style>
         :host {
@@ -1131,8 +1144,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
       </style>
       <ha-card class="gauge-card gauge-card--empty">
-        <div class="gauge-card__empty-title">Nodalia Circular Gauge Card</div>
-        <div class="gauge-card__empty-text">Configura \`entity\` con una entidad numerica para mostrar el dial.</div>
+        <div class="gauge-card__empty-title">${title}</div>
+        <div class="gauge-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

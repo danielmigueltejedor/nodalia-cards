@@ -2147,8 +2147,21 @@ class NodaliaGraphCard extends HTMLElement {
     return [];
   }
 
+  _graphCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.graphCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.graphCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const title = escapeHtml(this._graphCardUi("emptyTitle", "Nodalia Graph Card"));
+    const body = escapeHtml(
+      this._graphCardUi("emptyBody", "Set `entities` to one or more numeric entities to show the chart."),
+    );
     return `
       <style>
         :host {
@@ -2182,8 +2195,8 @@ class NodaliaGraphCard extends HTMLElement {
         }
       </style>
       <ha-card class="graph-card graph-card--empty">
-        <div class="graph-card__empty-title">Nodalia Graph Card</div>
-        <div class="graph-card__empty-text">Configura \`entities\` con una o varias entidades numericas para mostrar la grafica.</div>
+        <div class="graph-card__empty-title">${title}</div>
+        <div class="graph-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

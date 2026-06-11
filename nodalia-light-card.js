@@ -619,7 +619,7 @@ function normalizeConfig(rawConfig) {
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? config.security;
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -2834,10 +2834,14 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _renderEmptyState() {
+    const title = escapeHtml(this._lightCardUi("emptyTitle", "Nodalia Light Card"));
+    const body = escapeHtml(
+      this._lightCardUi("emptyBody", "Set `entity` to a `light.*` entity to show this card."),
+    );
     return `
       <ha-card class="light-card light-card--empty">
-        <div class="light-card__empty-title">Nodalia Light Card</div>
-        <div class="light-card__empty-text">Configura \`entity\` con una entidad \`light.*\` para mostrar la tarjeta.</div>
+        <div class="light-card__empty-title">${title}</div>
+        <div class="light-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

@@ -2690,11 +2690,24 @@ class NodaliaVacuumCard extends HTMLElement {
     return controls.slice(0, 4);
   }
 
+  _vacuumCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.vacuumCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.vacuumCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._vacuumCardUi("emptyTitle", "Nodalia Vacuum Card"));
+    const body = escapeHtml(
+      this._vacuumCardUi("emptyBody", "Set `entity` to a `vacuum.*` entity to show this card."),
+    );
     return `
       <ha-card class="vacuum-card vacuum-card--empty">
-        <div class="vacuum-card__empty-title">Nodalia Vacuum Card</div>
-        <div class="vacuum-card__empty-text">Configura \`entity\` con una entidad \`vacuum.*\` para mostrar la tarjeta.</div>
+        <div class="vacuum-card__empty-title">${title}</div>
+        <div class="vacuum-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

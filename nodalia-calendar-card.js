@@ -263,10 +263,14 @@ function normalizeConfig(config) {
   normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
   delete normalized.quick_reminder_webhook;
   normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
-  normalized.security = normalized.security || {};
+  const priorSecurity = isObject(normalized.security) ? normalized.security : {};
+  normalized.security = {
+    ...DEFAULT_CONFIG.security,
+    ...priorSecurity,
+  };
   if (normalized.security.allow_webhooks_for_non_admin === undefined) {
     normalized.security.allow_webhooks_for_non_admin =
-      normalized.security.require_admin_for_webhooks === true
+      priorSecurity.require_admin_for_webhooks === true
         ? false
         : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
   }

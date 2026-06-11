@@ -2069,11 +2069,22 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
+  _weatherCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.weatherCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._weatherCardUi("emptyTitle", "Nodalia Weather Card"));
+    const body = escapeHtml(this._weatherCardUi("emptyBody", "Set `entity` to show the weather."));
     return `
       <ha-card class="weather-card weather-card--empty">
-        <div class="weather-card__empty-title">Nodalia Weather Card</div>
-        <div class="weather-card__empty-text">Configura \`entity\` para mostrar el tiempo.</div>
+        <div class="weather-card__empty-title">${title}</div>
+        <div class="weather-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

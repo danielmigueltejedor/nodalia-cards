@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.1-alpha.7] - 2026-05-29
+## [1.2.1-alpha.7] - 2026-06-11
 
 Seventh **`1.2.1`** **`alpha`**: audit pass 6 — lifecycle defer cleanup, observer guards, security normalization rollout, performance gates. Release channel **`1.2.1-alpha.7`**.
 
@@ -30,7 +30,7 @@ Seventh **`1.2.1`** **`alpha`**: audit pass 6 — lifecycle defer cleanup, obser
 - **`media-player`:** built-in transport/volume/browser actions use `_callInternalMediaService` (strict gate only on user `call-service` actions).
 - **`fan` / `humidifier` / `cover` / `climate` / `navigation-bar`:** `normalizeSecurityConfig` on `normalizeConfig`.
 
-## [1.2.1-alpha.6] - 2026-05-29
+## [1.2.1-alpha.6] - 2026-06-11
 
 Sixth **`1.2.1`** **`alpha`**: circular gauge entrance thumb follows dial arc. Release channel **`1.2.1-alpha.6`**.
 
@@ -38,7 +38,7 @@ Sixth **`1.2.1`** **`alpha`**: circular gauge entrance thumb follows dial arc. R
 
 - **`nodalia-circular-gauge-card.js`:** thumb entrance and value transitions orbit the semicircular track via `rotate` + `translateY` instead of animating `left`/`top` in a straight line; pop animation moved to inner dot so it does not fight orbit transform.
 
-## [1.2.1-alpha.5] - 2026-05-29
+## [1.2.1-alpha.5] - 2026-06-11
 
 Fifth **`1.2.1`** **`alpha`**: audit pass 5 — lifecycle completion, signature slimming, optimistic gates, security normalization. Release channel **`1.2.1-alpha.5`**.
 
@@ -59,7 +59,7 @@ Fifth **`1.2.1`** **`alpha`**: audit pass 5 — lifecycle completion, signature 
 - **`advance-vacuum`:** persisted session load deferred until signature changes; `select` / `homeassistant` mode helpers route through `_callInternalService`; `_mapActionInFlight` reset on disconnect.
 - **`vacuum`:** `_callService` / `_callSelectOption` are internal; user actions use `_callUserVacuumService` with strict gate.
 
-## [1.2.1-alpha.4] - 2026-06-06
+## [1.2.1-alpha.4] - 2026-06-11
 
 Fourth **`1.2.1`** **`alpha`**: audit pass 4 — lifecycle hardening, signature migration, side-effect gates, security defaults. Release channel **`1.2.1-alpha.4`**.
 
@@ -189,7 +189,7 @@ Fifty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.57`**.
 
 - **Tests:** regressions for entity-card toggle domains, i18n **`localStorage`** language, person home aliases, climate schedule save routing, and webhook **`fetchWithAuth`** fallback.
 
-## [1.2.0-alpha.56] - 2026-05-29
+## [1.2.0-alpha.56] - 2026-06-04
 
 Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
 
@@ -197,7 +197,7 @@ Fifty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.56`**.
 
 - **`nodalia-power-flow-card.js`:** home device popup follows the calendar/climate expanded pattern — fixed viewport overlay rendered outside the card, blurred backdrop, centered rounded panel (up to ~640×780px), and scrollable body when there are many individual devices or consumption chips. Replaces the full-screen panel from **alpha.53**.
 
-## [1.2.0-alpha.55] - 2026-05-29
+## [1.2.0-alpha.55] - 2026-06-04
 
 Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
 
@@ -209,7 +209,7 @@ Fifty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.55`**.
 
 - **Tests:** VM regression in `tests/light-optimistic-toggle.test.mjs` for optimistic turn-off confirmation with unchanged signature.
 
-## [1.2.0-alpha.54] - 2026-05-29
+## [1.2.0-alpha.54] - 2026-06-04
 
 Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
 
@@ -222,7 +222,7 @@ Fifty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.54`**.
 
 - **Tests:** VM regressions in `tests/fan-humidifier-optimistic-settle.test.mjs` for visual-settle expiry and `mode_entity` signature updates.
 
-## [1.2.0-alpha.53] - 2026-05-29
+## [1.2.0-alpha.53] - 2026-06-04
 
 Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
 
@@ -230,7 +230,7 @@ Fifty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.53`**.
 
 - **`nodalia-power-flow-card.js`:** home device popup moved outside the card as a fixed overlay with a scrollable body (first pass used a full-screen panel; layout refined in **alpha.56**).
 
-## [1.2.0-alpha.52] - 2026-05-29
+## [1.2.0-alpha.52] - 2026-06-04
 
 Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
 
@@ -239,7 +239,7 @@ Fifty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.52`**.
 - **`nodalia-power-flow-card.js`:** removed the home individual-device hint chip — tapping the Home node to open the popup is sufficient.
 - **`nodalia-power-flow-card.js`:** home device popup items reuse the card’s diagram node language (gradient bubbles, label/value chips) instead of generic row containers.
 
-## [1.2.0-alpha.51] - 2026-05-29
+## [1.2.0-alpha.51] - 2026-06-04
 
 Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
 
@@ -248,7 +248,7 @@ Fifty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.51`**.
 - **`nodalia-power-flow-card.js`:** home individual-device hint moved out of the Home bubble into a subtle chip under the label so it no longer overlapped the consumption value (chip removed again in **alpha.52**).
 - **`nodalia-power-flow-card.js`:** first pass restyling the home device popup toward the main card palette (superseded by **alpha.52** node layout).
 
-## [1.2.0-alpha.50] - 2026-05-29
+## [1.2.0-alpha.50] - 2026-06-04
 
 Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
 
@@ -256,7 +256,7 @@ Fiftieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.50`**.
 
 - **`nodalia-power-flow-card.js`:** visual editor no longer wipes `entities.grid` / `home` / `solar` / `battery` when adding or removing individual devices — the handler wrongly treated `entities` as an array and reset the whole object on every individual action, which broke the main flow diagram and made remove appear to do nothing.
 
-## [1.2.0-alpha.49] - 2026-05-29
+## [1.2.0-alpha.49] - 2026-06-04
 
 Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.
 
@@ -266,7 +266,7 @@ Forty-ninth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.49`**.
 - **`nodalia-power-flow-card.js`:** render signature now includes the energy-branch layout config so adding or editing individual devices triggers a full diagram refresh.
 - **Release artifacts:** keep only the current versioned HACS bundles (`1.2.0-alpha.49`); `npm run bundle` now removes stale `nodalia-cards-*-alpha.*.js` files automatically.
 
-## [1.2.0-alpha.48] - 2026-05-29
+## [1.2.0-alpha.48] - 2026-06-04
 
 Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.
 
@@ -274,7 +274,7 @@ Forty-eighth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.48`**.
 
 - **Visual editors (suite-wide):** Lovelace briefly disconnects the config panel when opening entity/icon pickers; `disconnectedCallback` had removed click/input listeners without re-attaching them on reconnect, so editor buttons and toggles stopped responding. Listeners now mount in `connectedCallback` via `_attachEditorShadowListeners()`.
 
-## [1.2.0-alpha.47] - 2026-05-29
+## [1.2.0-alpha.47] - 2026-06-03
 
 Forty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.47`**.
 
@@ -286,7 +286,7 @@ Forty-seventh **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.47`**.
 
 - **`nodalia-navigation-bar.js`:** when popup/browser/expand state is unchanged, route badges and the media player region update in-place instead of rebuilding the full shadow DOM on every `set hass`.
 
-## [1.2.0-alpha.46] - 2026-05-29
+## [1.2.0-alpha.46] - 2026-06-03
 
 Forty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.46`**.
 
@@ -299,7 +299,7 @@ Forty-sixth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.46`**.
 
 - **Repo hygiene:** removed accidental Finder duplicate artifacts (`* 2.js`, `* 2.mjs`, `* 2.yaml`, `* 2.json`).
 
-## [1.2.0-alpha.45] - 2026-05-29
+## [1.2.0-alpha.45] - 2026-06-03
 
 Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.
 
@@ -315,7 +315,7 @@ Forty-fifth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.45`**.
 
 - **`package.json`:** `npm run validate` — syntax check, i18n validation, tests, and bundle build in one command.
 
-## [1.2.0-alpha.44] - 2026-05-29
+## [1.2.0-alpha.44] - 2026-06-03
 
 Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.
 
@@ -325,7 +325,7 @@ Forty-fourth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.44`**.
 - **`nodalia-power-flow-card.js`:** popup mode no longer breaks the flow layout (individual devices are excluded from diagram layout counting).
 - **`nodalia-power-flow-card.js`:** visual editor keeps draft individual rows when adding a device so native entity selectors stay usable before save.
 
-## [1.2.0-alpha.43] - 2026-05-29
+## [1.2.0-alpha.43] - 2026-06-02
 
 Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.
 
@@ -338,7 +338,7 @@ Forty-third **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.43`**.
 - **`nodalia-power-flow-card.js`:** native HA entity selectors in the visual editor; card-based individual device rows with add/remove/reorder.
 - **`nodalia-scenes-card.js`:** bundled at this release channel (launch animation polish from alpha.41).
 
-## [1.2.0-alpha.42] - 2026-05-29
+## [1.2.0-alpha.42] - 2026-06-02
 
 Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
 
@@ -350,7 +350,7 @@ Forty-second **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.42`**.
 
 - **`nodalia-power-flow-card.js`:** visual editor uses native Home Assistant `ha-selector` / `ha-entity-picker` for all entity fields, a card-based individual-device editor (no manual entity IDs), and merged editor i18n for consumption chip labels.
 
-## [1.2.0-alpha.41] - 2026-05-29
+## [1.2.0-alpha.41] - 2026-06-02
 
 Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
 
@@ -365,7 +365,7 @@ Forty-first **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.41`**.
 - **`nodalia-scenes-card.js`:** richer launch feedback on scene tap — accent burst, outer glow ring, icon pulse, and earlier press animation on pointer/touch down.
 - **`examples/calendar-native-event-webhook.yaml`:** documents admin-only default and `allowed_calendar_ids` allowlist validation.
 
-## [1.2.0-alpha.40] - 2026-05-29
+## [1.2.0-alpha.40] - 2026-06-01
 
 Fortieth **`1.2.0`** **`alpha`**: release channel **`1.2.0-alpha.40`**.
 

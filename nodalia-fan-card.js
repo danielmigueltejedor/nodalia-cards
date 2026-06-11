@@ -562,7 +562,7 @@ function normalizeConfig(rawConfig) {
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? config.security;
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -2305,11 +2305,24 @@ class NodaliaFanCard extends HTMLElement {
     }
   }
 
+  _fanCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.fan;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.fan;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._fanCardUi("emptyTitle", "Nodalia Fan Card"));
+    const body = escapeHtml(
+      this._fanCardUi("emptyBody", "Set `entity` to a `fan.*` entity to show this card."),
+    );
     return `
       <ha-card class="fan-card fan-card--empty">
-        <div class="fan-card__empty-title">Nodalia Fan Card</div>
-        <div class="fan-card__empty-text">Configura \`entity\` con una entidad \`fan.*\` para mostrar la tarjeta.</div>
+        <div class="fan-card__empty-title">${title}</div>
+        <div class="fan-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

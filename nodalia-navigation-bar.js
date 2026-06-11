@@ -619,7 +619,10 @@ function normalizeConfig(config) {
 
   const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
   mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security)
-    ?? mergedConfig.security;
+    ?? {
+      ...DEFAULT_CONFIG.security,
+      ...(isObject(mergedConfig.security) ? mergedConfig.security : {}),
+    };
   return mergedConfig;
 }
 

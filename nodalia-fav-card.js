@@ -566,7 +566,7 @@ function fireEvent(node, type, detail, options) {
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? config.security;
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   return config;
 }
 
@@ -1563,11 +1563,22 @@ class NodaliaFavCard extends HTMLElement {
     return this._getConfiguredGridRows() === 1;
   }
 
+  _favCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.favCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.favCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._favCardUi("emptyTitle", "Nodalia Fav Card"));
+    const body = escapeHtml(this._favCardUi("emptyBody", "Set `entity` to show the favorite."));
     return `
       <ha-card class="fav-card fav-card--empty">
-        <div class="fav-card__empty-title">Nodalia Fav Card</div>
-        <div class="fav-card__empty-text">Configura \`entity\` para mostrar el favorito.</div>
+        <div class="fav-card__empty-title">${title}</div>
+        <div class="fav-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

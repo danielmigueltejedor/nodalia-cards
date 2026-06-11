@@ -793,7 +793,7 @@ function normalizeConfig(rawConfig) {
   }));
   config.layout.position = config.layout.position === "top" ? "top" : "bottom";
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? config.security;
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
 
   return config;
 }
@@ -3097,11 +3097,24 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
+  _mediaPlayerCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._mediaPlayerCardUi("emptyTitle", "Nodalia Media Player"));
+    const body = escapeHtml(
+      this._mediaPlayerCardUi("emptyBody", "Set `entity` or `players` to show a player."),
+    );
     return `
       <ha-card class="empty-card">
-        <div class="empty-card__title">Nodalia Media Player</div>
-        <div class="empty-card__text">Configura ` + "`entity`" + ` o ` + "`players`" + ` para mostrar un reproductor.</div>
+        <div class="empty-card__title">${title}</div>
+        <div class="empty-card__text">${body}</div>
       </ha-card>
     `;
   }

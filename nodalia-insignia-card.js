@@ -1029,11 +1029,24 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
   }
 
+  _insigniaCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._insigniaCardUi("emptyTitle", "Nodalia Insignia Card"));
+    const body = escapeHtml(
+      this._insigniaCardUi("emptyBody", "Configure `entity` or basic content to show the badge."),
+    );
     return `
       <ha-card class="insignia-card insignia-card--empty">
-        <div class="insignia-card__empty-title">Nodalia Insignia Card</div>
-        <div class="insignia-card__empty-text">Configure \`entity\` or basic content to show the badge.</div>
+        <div class="insignia-card__empty-title">${title}</div>
+        <div class="insignia-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

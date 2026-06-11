@@ -1479,9 +1479,10 @@ function normalizeConfig(rawConfig) {
   config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
   config.routines = normalizeRoutineItems(config.routines);
   config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
-  if (!isObject(config.security)) {
-    config.security = { ...DEFAULT_CONFIG.security };
-  }
+  config.security = {
+    ...DEFAULT_CONFIG.security,
+    ...(isObject(config.security) ? config.security : {}),
+  };
   if (config.security.allow_webhooks_for_non_admin === undefined) {
     config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
   }

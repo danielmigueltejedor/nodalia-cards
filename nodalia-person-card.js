@@ -381,7 +381,7 @@ class NodaliaPersonCard extends HTMLElement {
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._cachedZoneTarget = "";
-    this._cachedZoneState = undefined;
+    this._cachedZoneEntityId = "";
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
@@ -586,8 +586,11 @@ class NodaliaPersonCard extends HTMLElement {
       return null;
     }
 
-    if (this._cachedZoneTarget === target && this._cachedZoneState !== undefined) {
-      return this._cachedZoneState;
+    if (this._cachedZoneTarget === target) {
+      if (!this._cachedZoneEntityId) {
+        return null;
+      }
+      return this._hass.states[this._cachedZoneEntityId] || null;
     }
 
     const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
@@ -601,10 +604,9 @@ class NodaliaPersonCard extends HTMLElement {
       return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
     });
 
-    const result = zoneEntry?.[1] || null;
     this._cachedZoneTarget = target;
-    this._cachedZoneState = result;
-    return result;
+    this._cachedZoneEntityId = zoneEntry ? zoneEntry[0] : "";
+    return zoneEntry?.[1] || null;
   }
 
   _getBadgeDescriptor(state) {

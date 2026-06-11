@@ -183,7 +183,7 @@ function normalizeConfig(rawConfig) {
   const openCloseIcons = normalizeTextKey(config.open_close_icons) || "auto";
   config.open_close_icons = ["auto", "vertical", "horizontal"].includes(openCloseIcons) ? openCloseIcons : "auto";
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? config.security;
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.security.allowed_services = normalizeList(config.security?.allowed_services);
   config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
   return config;

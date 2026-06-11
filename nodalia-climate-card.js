@@ -1326,7 +1326,7 @@ function normalizeConfig(rawConfig) {
   config.show_schedule_button = config.show_schedule_button !== false;
   const allowWebhooksForNonAdmin = config.security?.allow_webhooks_for_non_admin === true;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? config.security;
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.security.allow_webhooks_for_non_admin = allowWebhooksForNonAdmin;
   return config;
 }
@@ -4931,11 +4931,24 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
+  _climateCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
+    const title = escapeHtml(this._climateCardUi("emptyTitle", "Nodalia Climate Card"));
+    const body = escapeHtml(
+      this._climateCardUi("emptyBody", "Set `entity` to a `climate.*` entity to show this card."),
+    );
     return `
       <ha-card class="climate-card climate-card--empty">
-        <div class="climate-card__empty-title">Nodalia Climate Card</div>
-        <div class="climate-card__empty-text">Configura \`entity\` con una entidad \`climate.*\` para mostrar la tarjeta.</div>
+        <div class="climate-card__empty-title">${title}</div>
+        <div class="climate-card__empty-text">${body}</div>
       </ha-card>
     `;
   }

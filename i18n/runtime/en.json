@@ -207,9 +207,13 @@
     "unavailable": "Unavailable",
     "unknown": "Unknown",
     "noState": "No state",
-    "fallbackName": "Fan"
+    "fallbackName": "Fan",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Set `entity` to a `fan.*` entity to show this card."
   },
   "lightCard": {
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Set `entity` to a `light.*` entity to show this card.",
     "controlModes": {
       "brightness": "Show brightness",
       "temperature": "Show temperature",
@@ -296,6 +300,8 @@
     "moods": "moods"
   },
   "entityCard": {
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Set `entity` to show this card.",
     "binarySensor": {
       "doorOpen": "Open",
       "doorClosed": "Closed",
@@ -370,6 +376,8 @@
     }
   },
   "weatherCard": {
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Set `entity` to show the weather.",
     "conditions": {
       "clear_night": "Clear night",
       "cloudy": "Cloudy",
@@ -448,6 +456,8 @@
     }
   },
   "humidifierCard": {
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Set `entity` to a `humidifier.*` entity to show this card.",
     "modes": {
       "auto": "Auto",
       "automatic": "Auto",
@@ -484,6 +494,8 @@
     }
   },
   "climateCard": {
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Set `entity` to a `climate.*` entity to show this card.",
     "modes": {
       "off": "Off",
       "heat": "Heat",
@@ -542,7 +554,25 @@
     }
   },
   "graphCard": {
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "Set `entities` to one or more numeric entities to show the chart.",
     "emptyHistory": "No history available"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Set `entity` to a numeric entity to show the dial."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Set `entity` to a `vacuum.*` entity to show this card."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configure `entity` or basic content to show the badge."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Set `entity` or `players` to show a player."
   },
   "notificationsCard": {
     "fallbackEvent": "Event",
@@ -617,6 +647,8 @@
     }
   },
   "favCard": {
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Set `entity` to show the favorite.",
     "disarmedF": "Disarmed",
     "armed_home": "Home",
     "armed_away": "Away",

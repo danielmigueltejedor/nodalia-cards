@@ -277,7 +277,9 @@
         "met": "气象",
         "monitor": "监测"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "配置 `entity` 以显示天气。"
   },
   "humidifierCard": {
     "modes": {
@@ -313,7 +315,9 @@
       "idle": "空闲",
       "unavailable": "不可用",
       "unknown": "未知"
-    }
+    },
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。"
   },
   "climateCard": {
     "modes": {
@@ -337,7 +341,8 @@
     "aria": {
       "dialRangeGroup": "舒适区间与室内温度",
       "dialTargetSlider": "目标温度",
-      "dialNoSetpoint": "室内温度；恒温器尚无生效目标温度"
+      "dialNoSetpoint": "室内温度；恒温器尚无生效目标温度",
+      "togglePower": "开或关"
     },
     "dialNoSetpointHint": "尚无生效设定",
     "schedule": {
@@ -370,10 +375,14 @@
         "webhookFailed": "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
         "dualRangeUnsupported": "恒温器使用双模式冷暖范围时，不支持每周计划。"
       }
-    }
+    },
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "将 `entity` 设置为 `climate.*` 实体以显示此卡片。"
   },
   "graphCard": {
-    "emptyHistory": "暂无历史数据"
+    "emptyHistory": "暂无历史数据",
+    "emptyTitle": "Nodalia Graph Card",
+    "emptyBody": "将 `entities` 设置为一个或多个数值实体以显示图表。"
   },
   "fan": {
     "off": "关",
@@ -381,7 +390,9 @@
     "unavailable": "不可用",
     "unknown": "未知",
     "noState": "无状态",
-    "fallbackName": "风扇"
+    "fallbackName": "风扇",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "将 `entity` 设置为 `fan.*` 实体以显示此卡片。"
   },
   "alarmPanel": {
     "defaultTitle": "报警",
@@ -423,7 +434,9 @@
     "stop": "停止",
     "positionSlider": "位置",
     "tiltSlider": "倾斜",
-    "tiltChip": "倾斜 {value}%"
+    "tiltChip": "倾斜 {value}%",
+    "toggleShowButtons": "显示打开、停止和关闭",
+    "toggleShowSliders": "显示滑块"
   },
   "person": {
     "home": "在家",
@@ -509,7 +522,9 @@
       "good": "良好",
       "fair": "一般",
       "poor": "差"
-    }
+    },
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "配置 `entity` 以显示卡片。"
   },
   "favCard": {
     "disarmedF": "已撤防",
@@ -521,7 +536,9 @@
     "arming": "布防中",
     "disarming": "撤防中",
     "pending": "等待",
-    "triggered": "已触发"
+    "triggered": "已触发",
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "配置 `entity` 以显示收藏。"
   },
   "notificationsCard": {
     "fallbackEvent": "事件",
@@ -546,7 +563,8 @@
       "inkLow": "墨水不足",
       "humidityHigh": "湿度偏高",
       "humidityLow": "湿度偏低",
-      "customFallback": "通知"
+      "customFallback": "通知",
+      "humidifierFillFull": "水箱已满"
     },
     "messages": {
       "vacuumAttention": "{name} 当前状态为 {state}。",
@@ -557,7 +575,8 @@
       "mediaLeftOn": "{media} 仍处于开启状态，{source} 未检测到有人。",
       "rainSoon": "{source} 预计 {time} 左右有雨。如果外面晾着衣物，建议检查一下。",
       "lowLevel": "{source} 剩余 {value}。",
-      "sensorValue": "{source} 显示 {value}。"
+      "sensorValue": "{source} 显示 {value}。",
+      "highLevel": "{source} 为 {value}。"
     },
     "actions": {
       "openCalendar": "打开日历",
@@ -587,6 +606,10 @@
       "dismiss": "删除通知",
       "showLess": "显示更少",
       "showAll": "显示所有通知"
+    },
+    "empty": {
+      "title": "一切平静",
+      "message": "当前没有警报"
     }
   },
   "calendarCard": {
@@ -661,61 +684,119 @@
       "newEventDialog": "新建日历事件",
       "deleteEvent": "删除事件",
       "createHaEvent": "创建 HA 事件",
-      "close": "关闭"
+      "close": "关闭",
+      "deleteRecurringDialog": "选择如何删除重复事件"
+    },
+    "deleteRecurrence": {
+      "title": "删除重复事件",
+      "message": "此事件属于系列。要删除什么？",
+      "thisOnly": "仅此次",
+      "thisAndFuture": "此次及之后所有",
+      "deleteFailed": "无法删除事件，请重试。",
+      "deleteFailedWithMessage": "无法删除事件：{message}"
     }
   },
   "vacuumErrorLabels": {
-    "lidar_blocked": "LiDAR blocked",
-    "bumper_stuck": "Bumper stuck",
-    "wheels_suspended": "Wheels suspended",
-    "cliff_sensor_error": "Cliff sensor error",
-    "main_brush_jammed": "Main brush jammed",
-    "side_brush_jammed": "Side brush jammed",
-    "wheels_jammed": "Wheels jammed",
-    "robot_trapped": "Robot trapped",
-    "no_dustbin": "Dustbin missing",
-    "strainer_error": "Filter error",
-    "compass_error": "Compass error",
-    "low_battery": "Low battery",
-    "charging_error": "Charging error",
-    "battery_error": "Battery error",
-    "wall_sensor_dirty": "Wall sensor dirty",
-    "robot_tilted": "Robot tilted",
-    "side_brush_error": "Side brush error",
-    "fan_error": "Fan error",
-    "dock": "Dock error",
-    "optical_flow_sensor_dirt": "Optical flow sensor dirty",
-    "vertical_bumper_pressed": "Vertical bumper pressed",
-    "dock_locator_error": "Dock locator error",
-    "return_to_dock_fail": "Failed to return to dock",
-    "nogo_zone_detected": "No-go zone detected",
-    "visual_sensor": "Visual sensor error",
-    "light_touch": "Light touch sensor triggered",
-    "vibrarise_jammed": "VibraRise jammed",
-    "robot_on_carpet": "Robot on carpet",
-    "filter_blocked": "Filter blocked",
-    "invisible_wall_detected": "Invisible wall detected",
-    "cannot_cross_carpet": "Cannot cross carpet",
-    "internal_error": "Internal error",
-    "collect_dust_error_3": "Dust collection error",
-    "collect_dust_error_4": "Dust collection error",
-    "mopping_roller_1": "Mopping roller error",
-    "mopping_roller_error_2": "Mopping roller error",
-    "clear_water_box_hoare": "Clean water tank abnormal",
-    "dirty_water_box_hoare": "Dirty water tank abnormal",
-    "sink_strainer_hoare": "Sink strainer abnormal",
-    "clear_water_box_exception": "Clean water tank error",
-    "clear_brush_exception": "Cleaning brush error",
-    "clear_brush_exception_2": "Cleaning brush error",
-    "filter_screen_exception": "Filter screen error",
-    "mopping_roller_2": "Mopping roller error",
-    "up_water_exception": "Water refill error",
-    "drain_water_exception": "Water drain error",
-    "temperature_protection": "Temperature protection",
-    "clean_carousel_exception": "Cleaning carousel error",
-    "clean_carousel_water_full": "Cleaning carousel water full",
-    "water_carriage_drop": "Water carriage dropped",
-    "check_clean_carouse": "Check cleaning carousel",
-    "audio_error": "Audio error"
+    "lidar_blocked": "激光雷达被阻挡",
+    "bumper_stuck": "保险杠卡住",
+    "wheels_suspended": "车轮悬挂",
+    "cliff_sensor_error": "悬崖传感器错误",
+    "main_brush_jammed": "主刷卡住",
+    "side_brush_jammed": "边刷卡住",
+    "wheels_jammed": "车轮卡住",
+    "robot_trapped": "机器人被困",
+    "no_dustbin": "垃圾箱不见了",
+    "strainer_error": "过滤器错误",
+    "compass_error": "指南针错误",
+    "low_battery": "电池电量低",
+    "charging_error": "充电错误",
+    "battery_error": "电池错误",
+    "wall_sensor_dirty": "墙壁传感器脏了",
+    "robot_tilted": "机器人倾斜",
+    "side_brush_error": "边刷错误",
+    "fan_error": "风扇错误",
+    "dock": "对接错误",
+    "optical_flow_sensor_dirt": "光流传感器脏了",
+    "vertical_bumper_pressed": "垂直保险杠受压",
+    "dock_locator_error": "码头定位器错误",
+    "return_to_dock_fail": "无法返回码头",
+    "nogo_zone_detected": "检测到禁区",
+    "visual_sensor": "视觉传感器错误",
+    "light_touch": "轻触传感器触发",
+    "vibrarise_jammed": "VibraRise 卡住了",
+    "robot_on_carpet": "地毯上的机器人",
+    "filter_blocked": "过滤器堵塞",
+    "invisible_wall_detected": "检测到隐形墙",
+    "cannot_cross_carpet": "不能穿越地毯",
+    "internal_error": "内部错误",
+    "collect_dust_error_3": "集尘错误",
+    "collect_dust_error_4": "集尘错误",
+    "mopping_roller_1": "拖地滚轮错误",
+    "mopping_roller_error_2": "拖地滚轮错误",
+    "clear_water_box_hoare": "净水箱异常",
+    "dirty_water_box_hoare": "脏水箱异常",
+    "sink_strainer_hoare": "水槽滤网异常",
+    "clear_water_box_exception": "净水箱错误",
+    "clear_brush_exception": "清洁刷错误",
+    "clear_brush_exception_2": "清洁刷错误",
+    "filter_screen_exception": "滤网错误",
+    "mopping_roller_2": "拖地滚轮错误",
+    "up_water_exception": "加水错误",
+    "drain_water_exception": "排水错误",
+    "temperature_protection": "温度保护",
+    "clean_carousel_exception": "清洁转盘错误",
+    "clean_carousel_water_full": "清洗转盘水满",
+    "water_carriage_drop": "水车掉落",
+    "check_clean_carouse": "检查清洁转盘",
+    "audio_error": "音频错误",
+    "water_empty": "水箱为空"
+  },
+  "lightCard": {
+    "controlModes": {
+      "brightness": "显示亮度",
+      "temperature": "显示色温",
+      "color": "显示颜色"
+    },
+    "sections": {
+      "temperature": "色温",
+      "color": "颜色",
+      "presets": "预设"
+    },
+    "temperaturePresets": {
+      "warm": "暖色",
+      "neutral": "中性",
+      "cool": "冷色"
+    },
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "将 `entity` 设置为 `light.*` 实体以显示此卡片。"
+  },
+  "common": {
+    "aria": {
+      "togglePower": "开或关"
+    }
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "在卡片编辑器中添加场景实体。",
+    "defaultName": "场景",
+    "unavailable": "不可用",
+    "subtitle": "点按氛围以启动",
+    "moods": "氛围"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "将 `entity` 设置为数值实体以显示表盘。"
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "将 `entity` 设置为 `vacuum.*` 实体以显示此卡片。"
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "配置 `entity` 或基本内容以显示徽章。"
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "设置 `entity` 或 `players` 以显示播放器。"
   }
 }
