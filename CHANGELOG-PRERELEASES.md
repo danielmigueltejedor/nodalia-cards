@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.1-alpha.8] - 2026-06-11
+
+Eighth **`1.2.1`** **`alpha`**: i18n completion, empty-state localization, config-safety fixes. Release channel **`1.2.1-alpha.8`**.
+
+### Fixed
+
+- **`person`:** zone lookup cache stores **`entity_id`** instead of a stale **`hass.states`** object (avoids retaining old HA snapshots).
+- **`climate` / `cover` / `fan` / `light` / `entity` / `humidifier` / `media-player` / `fav` / `navigation-bar`:** `normalizeSecurityConfig` fallback clones **`security`** instead of mutating the incoming config reference.
+- **`advance-vacuum` / `calendar`:** non-mutating **`security`** merge on **`normalizeConfig`**.
+
+### Changed
+
+- **`i18n/runtime` + `i18n/editor`:** missing locale keys filled for **es, de, fr, it, nl, no, pt, ru, el, zh, ro** (including **`vacuumErrorLabels`**, **`lightCard`**, calendar/notifications blocks, and Norwegian editor backlog).
+- **Empty states:** climate, fan, humidifier, entity, weather, graph, circular-gauge, vacuum, light, fav, insignia, and media-player cards read **`emptyTitle` / `emptyBody`** from runtime i18n.
+- **`CHANGELOG-PRERELEASES.md`:** corrected release dates for **`1.2.1-alpha.4–7`** and **`1.2.0-alpha.40–56`** (aligned with git history).
+
 ## [1.2.1-alpha.7] - 2026-06-11
 
 Seventh **`1.2.1`** **`alpha`**: audit pass 6 — lifecycle defer cleanup, observer guards, security normalization rollout, performance gates. Release channel **`1.2.1-alpha.7`**.
