@@ -4,11 +4,30 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, and completed **`1.2.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, and completed **`1.2.1.1-alpha.*`** hotfix builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+## [1.2.1.1] - 2026-05-29
+
+Stable **`1.2.1.1`** hotfix on **`main`**. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1.1.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Fixed
+
+- **`person`:** location subtitle (`Home` / `Away`, zones) follows the active HA language instead of hardcoded Spanish.
+- **`entity`:** Lovelace `tap_action` objects (`{ action: "toggle" }`) parse correctly; cover tap toggles `open_cover` / `close_cover` (or `set_cover_position` 100/0); lock tap uses `lock.open` / `lock.lock` instead of `homeassistant.toggle`.
+- **`entity` / `i18n`:** `language: "auto"` resolves from profile and document `lang` instead of stale `hass.language`.
+- **`alarm-panel`:** Home/Away/Night arm when `code` or `code_entity` is configured; improved PIN flow and service dispatch.
+
+### Changed
+
+- **`utils`:** `coerceCardTapAction`, `applyCardTapActionField`, and `invokeHomeAssistantService` shared helpers for Lovelace actions and HA service calls.
+- **Release metadata:** promote **`1.2.1.1-alpha.*`** (alpha.1–alpha.2) to stable **`1.2.1.1`** on **`main`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.2.1.1.js`**; optional split **`nodalia-cards-core-1.2.1.1.js`** + **`nodalia-cards-suite-1.2.1.1.js`**.
+
+Per-alpha notes for **`1.2.1.1-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.2.1] - 2026-06-11
 

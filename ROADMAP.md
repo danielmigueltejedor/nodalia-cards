@@ -11,10 +11,12 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-1.2.1
+1.2.1.1
 ```
 
-The **`1.2.1`** line delivered **stability**, **visual coherence**, **render performance**, and **i18n completion** on top of **`1.2.0`** (Scenes Card, climate setpoint schedule, Power Flow home popup, interaction/security hardening). Prerelease notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+The **`1.2.1.1`** hotfix addresses **person-card language**, **entity-card cover/lock tap actions**, **alarm PIN flow**, and **Lovelace toggle parsing** on top of stable **`1.2.1`**. Prerelease notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+The **`1.2.1`** line delivered **stability**, **visual coherence**, **render performance**, and **i18n completion** on top of **`1.2.0`** (Scenes Card, climate setpoint schedule, Power Flow home popup, interaction/security hardening).
 
 The **`1.0.0`** cycle transformed Nodalia Cards from a growing collection of custom cards into a much more complete and cohesive frontend ecosystem for Home Assistant.
 
