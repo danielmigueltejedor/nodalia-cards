@@ -295,6 +295,14 @@ test("calendar native webhook failures show composer errors", () => {
   assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
 });
 
+test("person card translates location state with runtime i18n", () => {
+  const source = read("nodalia-person-card.js");
+  assert.match(source, /_personStrings\(\)/);
+  assert.match(source, /person\.notHome/);
+  assert.doesNotMatch(source, /return "En casa";/);
+  assert.doesNotMatch(source, /return "Fuera";/);
+});
+
 test("i18n person home aliases translate with active language", () => {
   const i18n = loadI18nRuntime({ localStorageSelectedLanguage: "en" });
   const state = { entity_id: "person.example", state: "en_casa", attributes: {} };
@@ -1169,12 +1177,16 @@ test("slider bubble chrome does not trigger card body tap", () => {
   }
 });
 
-test("entity card toggle uses homeassistant.toggle for cover and lock entities", () => {
+test("entity card toggle uses domain services for cover and lock entities", () => {
   const source = read("nodalia-entity-card.js");
-  assert.match(source, /_isHomeAssistantToggleable\(state\)/);
-  assert.match(source, /_canToggleEntity\(/);
-  assert.match(source, /invoke\(this, this\._hass, "homeassistant", "toggle", \{\s*entity_id: entityId,/);
-  assert.match(source, /tapAction === "toggle"[\s\S]*_canToggleEntity\(this\._getActualState\(\)\)/);
+  assert.match(source, /_toggleCoverEntity\(/);
+  assert.match(source, /_toggleLockEntity\(/);
+  assert.match(source, /cover", "open_cover"/);
+  assert.match(source, /cover", "close_cover"/);
+  assert.match(source, /set_cover_position", entityId, \{ position: 100 \}/);
+  assert.match(source, /lock", "open", entityId/);
+  assert.match(source, /lock", "lock", entityId/);
+  assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
 });
 

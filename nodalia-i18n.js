@@ -10895,7 +10895,7 @@
       if (key === "casa" || key === "en_casa" || key === "home") {
         return personDict.home || st.home;
       }
-      if (key === "fuera" || key === "not_home") {
+      if (key === "fuera" || key === "not_home" || key === "away") {
         return personDict.notHome || st.not_home;
       }
     }

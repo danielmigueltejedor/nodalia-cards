@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1.1-alpha.1";
+const CARD_VERSION = "1.2.1.1-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -12,6 +12,10 @@ const HAPTIC_PATTERNS = {
 };
 const COMPACT_LAYOUT_THRESHOLD = 150;
 const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
+const COVER_SET_POSITION = 4;
+const LOCK_OPEN = 1;
+const LOCK_LOCK = 2;
+const LOCK_UNLOCK = 4;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -483,6 +487,26 @@ function isUnavailableState(state) {
 function getEntityDomain(state) {
   const entityId = String(state?.entity_id || "");
   return entityId.includes(".") ? entityId.split(".")[0] : "";
+}
+
+function entitySupportedFeatures(state) {
+  return Number(state?.attributes?.supported_features) || 0;
+}
+
+function entitySupportsFeature(state, flag) {
+  return (entitySupportedFeatures(state) & flag) !== 0;
+}
+
+function coverEntityIsOpen(state) {
+  const stateKey = normalizeTextKey(state?.state);
+  if (["open", "opening"].includes(stateKey)) {
+    return true;
+  }
+  if (["closed", "closing"].includes(stateKey)) {
+    return false;
+  }
+  const position = parseNumericValue(state?.attributes?.current_position);
+  return position !== null && position > 0;
 }
 
 function getDynamicEntityIcon(state) {
@@ -1109,6 +1133,62 @@ class NodaliaEntityCard extends HTMLElement {
     return this._isBinaryOnOff(state) || this._isHomeAssistantToggleable(state);
   }
 
+  _usesDomainToggleService(state = this._getActualState()) {
+    const domain = this._getDomain(state?.entity_id);
+    return domain === "cover" || domain === "lock";
+  }
+
+  _invokeEntityService(domain, service, entityId, serviceData = {}) {
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
+    return invoke(this, this._hass, domain, service, {
+      entity_id: entityId,
+      ...serviceData,
+    });
+  }
+
+  _toggleCoverEntity(state, entityId) {
+    if (coverEntityIsOpen(state)) {
+      if (entitySupportsFeature(state, COVER_SET_POSITION)) {
+        this._invokeEntityService("cover", "set_cover_position", entityId, { position: 0 });
+      } else {
+        this._invokeEntityService("cover", "close_cover", entityId);
+      }
+      return;
+    }
+
+    if (entitySupportsFeature(state, COVER_SET_POSITION)) {
+      this._invokeEntityService("cover", "set_cover_position", entityId, { position: 100 });
+    } else {
+      this._invokeEntityService("cover", "open_cover", entityId);
+    }
+  }
+
+  _toggleLockEntity(state, entityId) {
+    const stateKey = normalizeTextKey(state?.state);
+    if (["locking", "unlocking", "jammed", "unavailable", "unknown"].includes(stateKey)) {
+      return;
+    }
+
+    const features = entitySupportedFeatures(state);
+    if (stateKey === "locked") {
+      if (features & LOCK_OPEN) {
+        this._invokeEntityService("lock", "open", entityId);
+      } else if (features & LOCK_UNLOCK) {
+        this._invokeEntityService("lock", "unlock", entityId);
+      } else {
+        this._invokeEntityService("lock", "unlock", entityId);
+      }
+      return;
+    }
+
+    if (features & LOCK_LOCK) {
+      this._invokeEntityService("lock", "lock", entityId);
+    } else {
+      this._invokeEntityService("lock", "lock", entityId);
+    }
+  }
+
   _isBinaryOnOff(state) {
     const stateKey = normalizeTextKey(state?.state);
     return stateKey === "on" || stateKey === "off";
@@ -1410,17 +1490,29 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
-      || ((host, hass, domain, service, data) => Promise.resolve(hass?.callService?.(domain, service, data)));
-
     if (this._isBinaryOnOff(actualState)) {
       const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
       if (isPrimaryEntity) {
         this._startOptimisticToggle(service === "turn_on" ? "on" : "off", actualState);
       }
-      invoke(this, this._hass, "homeassistant", service, {
-        entity_id: entityId,
-      });
+      this._invokeEntityService("homeassistant", service, entityId);
+      if (isPrimaryEntity) {
+        this._render();
+      }
+      return;
+    }
+
+    const domain = this._getDomain(entityId);
+    if (domain === "cover") {
+      this._toggleCoverEntity(actualState, entityId);
+      if (isPrimaryEntity) {
+        this._render();
+      }
+      return;
+    }
+
+    if (domain === "lock") {
+      this._toggleLockEntity(actualState, entityId);
       if (isPrimaryEntity) {
         this._render();
       }
@@ -1431,9 +1523,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    invoke(this, this._hass, "homeassistant", "toggle", {
-      entity_id: entityId,
-    });
+    this._invokeEntityService("homeassistant", "toggle", entityId);
     if (isPrimaryEntity) {
       this._render();
     }
@@ -1602,7 +1692,7 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "auto":
       default:
-        if (this._isBinaryOnOff(state)) {
+        if (this._isBinaryOnOff(state) || this._usesDomainToggleService(state)) {
           this._toggleEntity(this._config?.entity);
           return;
         }
@@ -1647,7 +1737,7 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "auto":
       default:
-        if (this._isBinaryOnOff(state)) {
+        if (this._isBinaryOnOff(state) || this._usesDomainToggleService(state)) {
           this._toggleEntity(this._config?.entity);
           return;
         }
@@ -1692,7 +1782,7 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "auto":
       default:
-        if (this._isBinaryOnOff(state)) {
+        if (this._isBinaryOnOff(state) || this._usesDomainToggleService(state)) {
           this._toggleEntity(this._config?.entity);
           return;
         }

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "1.2.1.1-alpha.1";
+const CARD_VERSION = "1.2.1.1-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   tap_action: "more-info",
+  language: "auto",
   show_name: true,
   show_state: true,
   show_zone_badge: true,
@@ -549,34 +550,76 @@ class NodaliaPersonCard extends HTMLElement {
     return this._config?.icon || state?.attributes?.icon || "mdi:account";
   }
 
+  _personStrings() {
+    const NI = window.NodaliaI18n;
+    if (!NI?.strings || !NI.resolveLanguage) {
+      return {
+        home: "Home",
+        notHome: "Away",
+        work: "Work",
+        school: "School",
+        unavailable: "Unavailable",
+        unknown: "Unknown",
+        locationUnknown: "Unknown location",
+      };
+    }
+    const hass = NI.resolveHass?.(this._hass) ?? this._hass;
+    const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
+    return NI.strings(lang).person || NI.strings("en").person || {};
+  }
+
   _translateState(state) {
+    const person = this._personStrings();
     const raw = String(state?.state || "").trim();
     const key = normalizeTextKey(raw);
+
+    const NI = window.NodaliaI18n;
+    if (NI?.translateEntityState && state && this._config?.entity) {
+      const hass = NI.resolveHass?.(this._hass) ?? this._hass;
+      const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
+      const translated = NI.translateEntityState(
+        lang,
+        { ...state, entity_id: state.entity_id || this._config.entity },
+        2,
+        (v, u, d) => `${v}${u}`,
+        (v) => String(v),
+        () => null,
+      );
+      if (translated && translated !== raw) {
+        return translated;
+      }
+    }
 
     switch (key) {
       case "home":
       case "casa":
       case "en_casa":
-        return "En casa";
+        return person.home || "Home";
       case "not_home":
       case "away":
       case "fuera":
-        return "Fuera";
+        return person.notHome || "Away";
       case "work":
       case "trabajo":
       case "office":
       case "oficina":
-        return "Trabajo";
+        return person.work || "Work";
       case "school":
       case "colegio":
       case "escuela":
-        return "Colegio";
+        return person.school || "School";
       case "unavailable":
-        return "No disponible";
+        return person.unavailable || "Unavailable";
       case "unknown":
-        return "Desconocido";
-      default:
-        return raw || "Ubicacion desconocida";
+        return person.unknown || "Unknown";
+      default: {
+        const zoneState = this._getMatchingZoneState(state);
+        const zoneName = String(zoneState?.attributes?.friendly_name || "").trim();
+        if (zoneName) {
+          return zoneName;
+        }
+        return raw || person.locationUnknown || "Unknown location";
+      }
     }
   }
 
@@ -827,16 +870,14 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   _personUiCopy() {
-    const NI = window.NodaliaI18n;
-    if (!NI?.strings || !NI.resolveLanguage) {
+    const person = this._personStrings();
+    if (!person.emptyTitle && !person.emptyBody) {
       return {
         emptyTitle: "Nodalia Person Card",
         emptyBody: "Configure `entity` to show the card.",
-        defaultName: "Person",
+        defaultName: person.defaultName || "Person",
       };
     }
-    const lang = NI.resolveLanguage(this._hass, this._config?.language);
-    const person = NI.strings(lang).person || {};
     return {
       emptyTitle: person.emptyTitle || "Nodalia Person Card",
       emptyBody: person.emptyBody || "Configure `entity` to show the card.",
