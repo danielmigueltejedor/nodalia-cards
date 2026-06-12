@@ -1,9 +1,10 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.4";
+const CARD_VERSION = "1.3.0-alpha.5";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
+const NEWS_HISTORY_STORAGE_PREFIX = "nodalia-news-card:history:";
 
 const ITEM_LIST_ATTRS = ["items", "articles", "entries", "news", "headlines"];
 const LAYOUT_MODES = new Set(["compact", "magazine", "list"]);
@@ -15,6 +16,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   language: "auto",
   max_items: 5,
+  remember_items: true,
+  storage_key: "",
   sources: [],
   layout: {
     mode: "magazine",
@@ -482,6 +485,8 @@ function normalizeConfig(rawConfig) {
       : DEFAULT_CONFIG.appearance.preset,
   };
   merged.max_items = Math.max(1, Math.min(50, Number(merged.max_items) || DEFAULT_CONFIG.max_items));
+  merged.remember_items = merged.remember_items !== false;
+  merged.storage_key = String(merged.storage_key ?? "").trim();
   merged.title = String(merged.title ?? "").trim();
   merged.entity = String(merged.entity ?? "").trim();
   merged.language = String(merged.language ?? "auto").trim() || "auto";
@@ -513,6 +518,118 @@ function buildNewsRenderStamp(items) {
       item.hasUrl ? 1 : 0,
     ].join(":"))
     .join("|");
+}
+
+function getNewsHistoryStorageKey(config) {
+  const explicit = String(config?.storage_key ?? "").trim();
+  if (explicit) {
+    return `${NEWS_HISTORY_STORAGE_PREFIX}${explicit}`;
+  }
+  const sources = resolveSourceEntries(config).map(entry => entry.entity).sort().join(",");
+  return `${NEWS_HISTORY_STORAGE_PREFIX}${sources || "default"}`;
+}
+
+function compactNewsHistoryItem(item) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+  const title = String(item.title || "").trim();
+  if (!title) {
+    return null;
+  }
+  return {
+    title,
+    summary: String(item.summary || "").trim(),
+    source: String(item.source || "").trim(),
+    category: String(item.category || "").trim(),
+    url: String(item.url || "").trim(),
+    image: String(item.image || "").trim(),
+    publishedMs: item.publishedMs ?? null,
+    sourceEntityId: String(item.sourceEntityId || "").trim(),
+    sourceName: String(item.sourceName || "").trim(),
+    sourceIcon: String(item.sourceIcon || "").trim(),
+    sourceCategory: String(item.sourceCategory || "").trim(),
+  };
+}
+
+function restoreNewsHistoryItem(stored) {
+  if (!stored || typeof stored !== "object") {
+    return null;
+  }
+  const title = String(stored.title || "").trim();
+  if (!title) {
+    return null;
+  }
+  const publishedMs = stored.publishedMs ?? null;
+  const url = isSafeHttpUrl(stored.url) ? String(stored.url).trim() : "";
+  const image = sanitizeImageUrl(stored.image);
+  const sourceEntityId = String(stored.sourceEntityId || "").trim();
+  return {
+    id: `${sourceEntityId || "news"}::${url || title}::${publishedMs || ""}`,
+    title,
+    summary: String(stored.summary || "").trim(),
+    source: String(stored.source || "").trim(),
+    category: String(stored.category || "").trim(),
+    url,
+    image,
+    publishedMs,
+    publishedISO: publishedMs ? new Date(publishedMs).toISOString() : "",
+    sourceEntityId,
+    sourceName: String(stored.sourceName || "").trim(),
+    sourceIcon: String(stored.sourceIcon || "").trim(),
+    sourceCategory: String(stored.sourceCategory || "").trim(),
+    hasUrl: Boolean(url),
+  };
+}
+
+function mergeNewsItemHistory(stored, incoming, maxItems) {
+  const limit = Math.max(1, Math.min(50, Number(maxItems) || DEFAULT_CONFIG.max_items));
+  const byId = new Map();
+  [...(Array.isArray(stored) ? stored : []), ...(Array.isArray(incoming) ? incoming : [])].forEach(item => {
+    const normalized = item?.id ? item : restoreNewsHistoryItem(item);
+    if (normalized?.id) {
+      byId.set(normalized.id, normalized);
+    }
+  });
+  return [...byId.values()]
+    .sort((left, right) => {
+      const leftMs = left.publishedMs ?? 0;
+      const rightMs = right.publishedMs ?? 0;
+      if (rightMs !== leftMs) {
+        return rightMs - leftMs;
+      }
+      return left.title.localeCompare(right.title);
+    })
+    .slice(0, limit);
+}
+
+function loadNewsHistoryFromStorage(storageKey) {
+  if (typeof localStorage === "undefined" || !storageKey) {
+    return [];
+  }
+  try {
+    const raw = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    return raw.map(restoreNewsHistoryItem).filter(Boolean);
+  } catch (_err) {
+    return [];
+  }
+}
+
+function saveNewsHistoryToStorage(storageKey, items) {
+  if (typeof localStorage === "undefined" || !storageKey) {
+    return;
+  }
+  try {
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify((Array.isArray(items) ? items : []).map(compactNewsHistoryItem).filter(Boolean)),
+    );
+  } catch (_err) {
+    // Ignore quota / private mode errors.
+  }
 }
 
 function getLocaleTag(hass, language) {
@@ -584,6 +701,8 @@ class NodaliaNewsCard extends HTMLElement {
     this._magazineSwipeState = null;
     this._magazineSwipeWindowAttached = false;
     this._suppressArticleTap = false;
+    this._newsHistory = [];
+    this._historyStorageKey = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
@@ -618,6 +737,8 @@ class NodaliaNewsCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._magazineItemsStamp = "";
     this._magazineIndex = 0;
+    this._historyStorageKey = "";
+    this._newsHistory = [];
     this._animateContentOnNextRender = true;
     this._render();
   }
@@ -677,11 +798,33 @@ class NodaliaNewsCard extends HTMLElement {
     return getNewsSourceHealth(this._hass, this._config);
   }
 
+  _ensureNewsHistory(incoming) {
+    const config = this._config || DEFAULT_CONFIG;
+    const storageKey = getNewsHistoryStorageKey(config);
+    if (storageKey !== this._historyStorageKey) {
+      this._historyStorageKey = storageKey;
+      this._newsHistory = loadNewsHistoryFromStorage(storageKey);
+    }
+    const merged = mergeNewsItemHistory(this._newsHistory, incoming, config.max_items);
+    const previousStamp = buildNewsRenderStamp(this._newsHistory);
+    const nextStamp = buildNewsRenderStamp(merged);
+    if (previousStamp !== nextStamp) {
+      this._newsHistory = merged;
+      saveNewsHistoryToStorage(storageKey, merged);
+    }
+    return merged;
+  }
+
   _getDisplayItems(hass = this._hass) {
     if (!hass) {
       return [];
     }
-    return getNewsItemsForConfig(hass, this._config);
+    const config = this._config || DEFAULT_CONFIG;
+    const collected = collectNormalizedItems(hass, config);
+    const pool = config.remember_items !== false
+      ? this._ensureNewsHistory(collected)
+      : collected;
+    return applyNewsFilters(pool, config);
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -693,6 +836,8 @@ class NodaliaNewsCard extends HTMLElement {
     const values = [
       String(config.title || ""),
       config.max_items,
+      config.remember_items === false ? 0 : 1,
+      String(config.storage_key || ""),
       layout.mode,
       layout.density,
       layout.show_images ? 1 : 0,
@@ -1587,80 +1732,323 @@ class NodaliaNewsCard extends HTMLElement {
   }
 }
 
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
+function setByPath(target, path, value) {
+  const parts = String(path || "").split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
+  let cursor = target;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key])) {
+      cursor[key] = {};
+    }
+    cursor = cursor[key];
+  }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function deleteByPath(target, path) {
+  const parts = String(path || "").split(".");
+  if (parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
+  let cursor = target;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key])) {
+      return;
+    }
+    cursor = cursor[key];
+  }
+  delete cursor[parts[parts.length - 1]];
+}
+
+function escapeSelectorValue(value) {
+  const text = String(value ?? "");
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(text);
+  }
+  return text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function fireEvent(node, type, detail, options) {
+  const event = new CustomEvent(type, {
+    bubbles: options?.bubbles !== false,
+    composed: options?.composed !== false,
+    cancelable: Boolean(options?.cancelable),
+    detail,
+  });
+  node.dispatchEvent(event);
+  return event;
+}
+
 class NodaliaNewsCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._entityOptionsSignature = "";
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+  }
+
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
+    this._editorShadowListenersAttached = false;
+  }
+
+  connectedCallback() {
+    this._attachEditorShadowListeners();
+  }
+
+  disconnectedCallback() {
+    this._detachEditorShadowListeners();
   }
 
   setConfig(config) {
+    const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
-    this._hass = this._hass || null;
     this._render();
+    this._restoreFocusState(focusState);
   }
 
   set hass(hass) {
+    const nextSignature = window.NodaliaUtils?.editorFilteredStatesSignature?.(
+      hass,
+      this._config?.language,
+      id => id.startsWith("sensor."),
+    ) || "";
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
     this._hass = hass;
-    this._render();
-  }
-
-  _updateConfig(path, value) {
-    const next = deepClone(this._config || DEFAULT_CONFIG);
-    const parts = String(path).split(".");
-    let cursor = next;
-    for (let index = 0; index < parts.length - 1; index += 1) {
-      const key = parts[index];
-      if (!isObject(cursor[key])) {
-        cursor[key] = {};
-      }
-      cursor = cursor[key];
+    this._entityOptionsSignature = nextSignature;
+    if (!shouldRender) {
+      return;
     }
-    cursor[parts[parts.length - 1]] = value;
-    this._config = normalizeConfig(next);
-    this._dispatchConfig();
+    const focusState = this._captureFocusState();
     this._render();
+    this._restoreFocusState(focusState);
   }
 
-  _dispatchConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      bubbles: true,
-      composed: true,
-      detail: { config: compactConfig(deepClone(this._config)) },
-    }));
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+    this._pendingEditorControlTags.add(tagName);
+    customElements.whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+          return;
+        }
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
   }
 
-  _renderField(label, path, value, options = {}) {
-    const type = options.type || "text";
-    const placeholder = options.placeholder ? ` placeholder="${escapeHtml(options.placeholder)}"` : "";
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+  }
+
+  _captureFocusState() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (
+      !(
+        activeElement instanceof HTMLInputElement
+        || activeElement instanceof HTMLTextAreaElement
+        || activeElement instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+    const selector = activeElement.dataset?.field
+      ? `[data-field="${escapeSelectorValue(activeElement.dataset.field)}"]`
+      : null;
+    if (!selector) {
+      return null;
+    }
+    const supportsSelection = typeof activeElement.selectionStart === "number"
+      && typeof activeElement.selectionEnd === "number";
+    return {
+      selector,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.selector || !this.shadowRoot) {
+      return;
+    }
+    const target = this.shadowRoot.querySelector(focusState.selector);
+    if (
+      !(
+        target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_err) {
+      target.focus();
+    }
+    if (
+      focusState.type !== "checkbox"
+      && typeof focusState.selectionStart === "number"
+      && typeof focusState.selectionEnd === "number"
+      && typeof target.setSelectionRange === "function"
+    ) {
+      try {
+        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+      } catch (_err) {
+        // Ignore unsupported inputs.
+      }
+    }
+  }
+
+  _emitConfig() {
+    const focusState = this._captureFocusState();
+    const nextConfig = deepClone(this._config);
+    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._render();
+    this._restoreFocusState(focusState);
+    fireEvent(this, "config-changed", {
+      config: compactConfig(window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig),
+    });
+  }
+
+  _setFieldValue(path, value) {
+    if (value === undefined || value === null || value === "") {
+      deleteByPath(this._config, path);
+      return;
+    }
+    setByPath(this._config, path, value);
+  }
+
+  _readFieldValue(input) {
+    const valueType = input.dataset.valueType || "string";
+    if (valueType === "boolean") {
+      return Boolean(input.checked);
+    }
+    if (valueType === "number") {
+      const numeric = Number(input.value);
+      return Number.isFinite(numeric) ? numeric : input.value;
+    }
+    return input.value;
+  }
+
+  _onShadowInput(event) {
+    const input = event.composedPath().find(node => (
+      node instanceof HTMLInputElement
+      || node instanceof HTMLSelectElement
+      || node instanceof HTMLTextAreaElement
+    ));
+    if (!input?.dataset?.field) {
+      return;
+    }
+    event.stopPropagation();
+    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
+    this._config = normalizeConfig(this._config);
+    if (event.type === "change") {
+      this._emitConfig();
+    }
+  }
+
+  _onShadowValueChanged(event) {
+    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+    if (!control?.dataset?.field) {
+      return;
+    }
+    event.stopPropagation();
+    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+    if (typeof control.dataset?.value === "string") {
+      control.dataset.value = String(nextValue || "");
+    }
+    this._setFieldValue(control.dataset.field, nextValue);
+    this._config = normalizeConfig(this._config);
+    this._emitConfig();
+  }
+
+  _editorLabel(key) {
+    if (typeof key !== "string" || !window.NodaliaI18n?.editorStr) {
+      return key;
+    }
+    return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", key);
+  }
+
+  _renderTextField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const inputType = options.type || "text";
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const valueType = options.valueType || "string";
     return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
+      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
         <input
-          type="${escapeHtml(type)}"
-          data-config-path="${escapeHtml(path)}"
-          value="${escapeHtml(String(value ?? ""))}"${placeholder}
+          type="${escapeHtml(inputType)}"
+          data-field="${escapeHtml(field)}"
+          data-value-type="${escapeHtml(valueType)}"
+          value="${escapeHtml(String(value ?? ""))}"
+          ${placeholder}
         />
       </label>
     `;
   }
 
-  _renderCheckbox(label, path, checked) {
+  _renderCheckboxField(label, field, checked) {
+    const tLabel = this._editorLabel(label);
     return `
-      <label class="editor-field editor-field--checkbox">
-        <input type="checkbox" data-config-path="${escapeHtml(path)}" ${checked ? "checked" : ""} />
-        <span>${escapeHtml(label)}</span>
+      <label class="editor-toggle">
+        <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
+        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
-  _renderSelect(label, path, value, options) {
+  _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = this._editorLabel(label);
+    const strValue = String(value ?? "");
     return `
-      <label class="editor-field">
-        <span>${escapeHtml(label)}</span>
-        <select data-config-path="${escapeHtml(path)}">
+      <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
+        <select data-field="${escapeHtml(field)}">
           ${options.map(option => `
-            <option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+            <option value="${escapeHtml(option.value)}" ${String(option.value) === strValue ? "selected" : ""}>
+              ${escapeHtml(this._editorLabel(option.label))}
             </option>
           `).join("")}
         </select>
@@ -1668,83 +2056,194 @@ class NodaliaNewsCardEditor extends HTMLElement {
     `;
   }
 
-  _onInput(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
-      return;
-    }
-    const path = target.dataset.configPath;
-    if (!path) {
-      return;
-    }
-    let value = target.value;
-    if (target instanceof HTMLInputElement && target.type === "checkbox") {
-      value = target.checked;
-    } else if (target instanceof HTMLInputElement && target.type === "number") {
-      value = Number(target.value);
-    }
-    this._updateConfig(path, value);
+  _renderEntityPickerField(label, field, value) {
+    const tLabel = this._editorLabel(label);
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field editor-field--full">
+        <span>${escapeHtml(tLabel)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="entity"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+        ></div>
+      </div>
+    `;
+  }
+
+  _mountEntityPicker(host) {
+    window.NodaliaUtils?.mountEntityPickerHost?.(host, {
+      hass: this._hass,
+      field: host.dataset.field || "entity",
+      value: host.dataset.value || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
   }
 
   _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
     const config = this._config || DEFAULT_CONFIG;
     const layout = config.layout || DEFAULT_CONFIG.layout;
+    const appearance = config.appearance || DEFAULT_CONFIG.appearance;
+
     this.shadowRoot.innerHTML = `
       <style>
-        .editor {
+        :host { display: block; }
+        * { box-sizing: border-box; }
+        .editor { color: var(--primary-text-color); display: grid; gap: 16px; }
+        .editor-section {
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 18px;
           display: grid;
-          gap: 12px;
-          padding: 8px 0;
+          gap: 14px;
+          padding: 16px;
+        }
+        .editor-section__header { display: grid; gap: 4px; }
+        .editor-section__title { font-size: 15px; font-weight: 700; }
+        .editor-section__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
         }
         .editor-grid {
           display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        .editor-field {
-          display: grid;
-          gap: 6px;
+        .editor-grid--stacked { grid-template-columns: 1fr; }
+        .editor-field, .editor-toggle { display: grid; gap: 6px; min-width: 0; }
+        .editor-field--full { grid-column: 1 / -1; }
+        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]) { grid-column: 1 / -1; }
+        .editor-field > span, .editor-toggle > span {
+          color: var(--secondary-text-color);
           font-size: 12px;
+          font-weight: 600;
         }
-        .editor-field input,
-        .editor-field select {
+        .editor-field input, .editor-field select {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          font: inherit;
+          min-height: 40px;
+          padding: 10px 12px;
           width: 100%;
         }
-        .editor-field--checkbox {
-          align-items: center;
-          grid-template-columns: auto 1fr;
+        .editor-field ha-entity-picker, .editor-field ha-selector, .editor-control-host, .editor-control-host > * {
+          display: block;
+          width: 100%;
         }
-        .editor-section__title {
-          font-size: 14px;
-          font-weight: 700;
+        :is(.editor-toggle, .editor-checkbox) {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-template-columns: auto minmax(0, 1fr);
+          min-height: 40px;
+          position: relative;
+        }
+        :is(.editor-toggle, .editor-checkbox) input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+        .editor-toggle__switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 22px;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease;
+          width: 40px;
+        }
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+        @media (max-width: 640px) {
+          .editor-grid { grid-template-columns: 1fr; }
         }
       </style>
       <div class="editor">
-        <div class="editor-section__title">Nodalia News Card</div>
-        <div class="editor-grid">
-          ${this._renderField("Title", "title", config.title)}
-          ${this._renderField("Entity", "entity", config.entity, { placeholder: "sensor.news" })}
-          ${this._renderField("Max items", "max_items", config.max_items, { type: "number" })}
-          ${this._renderSelect("Layout mode", "layout.mode", layout.mode, [
-            { value: "magazine", label: "Magazine" },
-            { value: "compact", label: "Compact" },
-            { value: "list", label: "List" },
-          ])}
-          ${this._renderCheckbox("Show images", "layout.show_images", layout.show_images !== false)}
-          ${this._renderCheckbox("Show summary", "layout.show_summary", layout.show_summary !== false)}
-          ${this._renderCheckbox("Show source", "layout.show_source", layout.show_source !== false)}
-          ${this._renderCheckbox("Show time", "layout.show_time", layout.show_time !== false)}
-          ${this._renderCheckbox("Show category", "layout.show_category", layout.show_category !== false)}
-        </div>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.news.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.news.general_section_hint"))}</div>
+          </div>
+          <div class="editor-grid editor-grid--stacked">
+            ${this._renderEntityPickerField("ed.news.entity", "entity", config.entity)}
+            ${this._renderTextField("ed.news.title", "title", config.title, { fullWidth: true })}
+            ${this._renderTextField("ed.news.max_items", "max_items", config.max_items, { type: "number", valueType: "number" })}
+            ${this._renderCheckboxField("ed.news.remember_items", "remember_items", config.remember_items !== false)}
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.news.layout_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.news.layout_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField("ed.news.layout_mode", "layout.mode", layout.mode, [
+              { value: "magazine", label: "ed.news.layout_mode_magazine" },
+              { value: "compact", label: "ed.news.layout_mode_compact" },
+              { value: "list", label: "ed.news.layout_mode_list" },
+            ])}
+            ${this._renderSelectField("ed.news.density", "layout.density", layout.density || "normal", [
+              { value: "compact", label: "ed.news.density_compact" },
+              { value: "normal", label: "ed.news.density_normal" },
+              { value: "relaxed", label: "ed.news.density_relaxed" },
+            ])}
+            ${this._renderCheckboxField("ed.news.show_images", "layout.show_images", layout.show_images !== false)}
+            ${this._renderCheckboxField("ed.news.show_summary", "layout.show_summary", layout.show_summary !== false)}
+            ${this._renderCheckboxField("ed.news.show_source", "layout.show_source", layout.show_source !== false)}
+            ${this._renderCheckboxField("ed.news.show_time", "layout.show_time", layout.show_time !== false)}
+            ${this._renderCheckboxField("ed.news.show_category", "layout.show_category", layout.show_category !== false)}
+          </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.news.appearance_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.news.appearance_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField("ed.news.appearance_preset", "appearance.preset", appearance.preset || "glass", [
+              { value: "glass", label: "ed.news.appearance_glass" },
+              { value: "default", label: "ed.news.appearance_default" },
+            ], { fullWidth: true })}
+          </div>
+        </section>
       </div>
     `;
-    this.shadowRoot.querySelectorAll("[data-config-path]").forEach(node => {
-      node.removeEventListener("change", this._onInputBound);
+
+    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => {
+      this._mountEntityPicker(host);
     });
-    this._onInputBound = this._onInputBound || this._onInput.bind(this);
-    this.shadowRoot.querySelectorAll("[data-config-path]").forEach(node => {
-      node.addEventListener("change", this._onInputBound);
-    });
+    this._ensureEditorControlsReady();
   }
 }
 

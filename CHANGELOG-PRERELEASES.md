@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.5] - 2026-06-12
+
+Fifth **`1.3.0`** **`alpha`**: News Card article history and aligned visual editor. Release channel **`1.3.0-alpha.5`**.
+
+### Added
+
+- **`news`:** `remember_items` (default on) keeps a rolling local history up to `max_items` as the sensor receives new RSS headlines.
+
+### Changed
+
+- **`news`:** visual editor aligned with the suite (sections, entity picker, toggle switches, i18n).
+
 ## [1.3.0-alpha.4] - 2026-06-12
 
 Fourth **`1.3.0`** **`alpha`**: News Card magazine carousel. Release channel **`1.3.0-alpha.4`**.

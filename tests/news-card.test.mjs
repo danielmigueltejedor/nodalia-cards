@@ -25,6 +25,9 @@ function loadNewsHelpers() {
       coerceNewsAttributeList,
       extractRawItemsFromState,
       getNewsSourceHealth,
+      mergeNewsItemHistory,
+      restoreNewsHistoryItem,
+      getNewsHistoryStorageKey,
     };
   `;
   const sandbox = {
@@ -334,4 +337,47 @@ test("magazine layout uses swipe carousel markup in source", () => {
   assert.match(source, /news-card__carousel-track/);
   assert.match(source, /_navigateMagazine\(/);
   assert.match(source, /MAGAZINE_SWIPE_THRESHOLD_PX/);
+});
+
+test("mergeNewsItemHistory accumulates unique articles up to max_items", () => {
+  const source = { entity: "sensor.nodalia_news_real", name: "Feed" };
+  const first = helpers.normalizeNewsItem({
+    title: "First",
+    published: "2026-06-12T10:00:00Z",
+    url: "https://example.com/first",
+  }, source);
+  const second = helpers.normalizeNewsItem({
+    title: "Second",
+    published: "2026-06-11T10:00:00Z",
+    url: "https://example.com/second",
+  }, source);
+  const third = helpers.normalizeNewsItem({
+    title: "Third",
+    published: "2026-06-10T10:00:00Z",
+    url: "https://example.com/third",
+  }, source);
+  const merged = helpers.mergeNewsItemHistory([first], [second], 3);
+  assert.equal(merged.length, 2);
+  assert.equal(merged[0].title, "First");
+  const capped = helpers.mergeNewsItemHistory(merged, [third], 2);
+  assert.equal(capped.length, 2);
+  assert.equal(capped[0].title, "First");
+  assert.equal(capped[1].title, "Second");
+});
+
+test("mergeNewsItemHistory dedupes repeated sensor payloads", () => {
+  const item = helpers.normalizeNewsItem({
+    title: "Same story",
+    url: "https://example.com/same",
+    published: "2026-06-12T08:00:00Z",
+  }, { entity: "sensor.news" });
+  const merged = helpers.mergeNewsItemHistory([item], [item], 8);
+  assert.equal(merged.length, 1);
+});
+
+test("getNewsHistoryStorageKey scopes storage per entity", () => {
+  const left = helpers.getNewsHistoryStorageKey({ entity: "sensor.a" });
+  const right = helpers.getNewsHistoryStorageKey({ entity: "sensor.b" });
+  assert.notEqual(left, right);
+  assert.match(left, /sensor\.a/);
 });

@@ -126,6 +126,8 @@ If both `entity` and `sources` are configured, both are merged.
 | Option | Description |
 |--------|-------------|
 | `max_items` | Maximum items after merge (default `5`, max `50`). |
+| `remember_items` | When `true` (default), the card keeps a rolling local history up to `max_items` as the sensor receives new headlines (ideal for RSS feeds that only expose the latest article). Set `false` to show only what the entity currently exposes. |
+| `storage_key` | Optional localStorage key suffix when multiple cards share the same entity but need separate histories. |
 | `filters.hide_older_than` | Drop older items (`24h`, `48h`, `7d`). Invalid values are ignored safely. |
 | `filters.max_per_source` | Limit items per source entity. |
 | `filters.include_keywords` | Keep items whose title/summary contains any keyword. |
@@ -146,4 +148,4 @@ Runtime strings are available in English and Spanish via `newsCard.*` i18n keys.
 
 ## Editor
 
-The visual editor supports title, entity, max items, layout mode, and visibility toggles for images, summary, source, time, and category.
+The visual editor follows the Nodalia suite layout: General (entity picker, title, max articles, history toggle), Layout (mode, density, visibility toggles), and Appearance (glass/default preset).
