@@ -327,3 +327,11 @@ test("unknown entity state with items is not treated as unavailable", () => {
   assert.equal(health.loading, false);
   assert.equal(health.unavailable, false);
 });
+
+test("magazine layout uses swipe carousel markup in source", () => {
+  const source = read("nodalia-news-card.js");
+  assert.match(source, /data-news-carousel/);
+  assert.match(source, /news-card__carousel-track/);
+  assert.match(source, /_navigateMagazine\(/);
+  assert.match(source, /MAGAZINE_SWIPE_THRESHOLD_PX/);
+});

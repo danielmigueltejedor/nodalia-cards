@@ -600,7 +600,11 @@
     "publishedNow": "Ahora",
     "publishedMinutesAgo": "Hace {count} min",
     "publishedHoursAgo": "Hace {count} h",
-    "publishedDaysAgo": "Hace {count} d"
+    "publishedDaysAgo": "Hace {count} d",
+    "previousArticle": "Artículo anterior",
+    "nextArticle": "Artículo siguiente",
+    "articlePosition": "Artículo {current} de {total}",
+    "goToArticle": "Ir al artículo {index}"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",

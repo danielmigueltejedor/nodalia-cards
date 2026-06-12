@@ -1,6 +1,9 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.3";
+const CARD_VERSION = "1.3.0-alpha.4";
+
+const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
+const MAGAZINE_SWIPE_LOCK_PX = 10;
 
 const ITEM_LIST_ATTRS = ["items", "articles", "entries", "news", "headlines"];
 const LAYOUT_MODES = new Set(["compact", "magazine", "list"]);
@@ -576,10 +579,19 @@ class NodaliaNewsCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._magazineIndex = 0;
+    this._magazineItemsStamp = "";
+    this._magazineSwipeState = null;
+    this._magazineSwipeWindowAttached = false;
+    this._suppressArticleTap = false;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onWindowMagazinePointerMove = this._onWindowMagazinePointerMove.bind(this);
+    this._onWindowMagazinePointerUp = this._onWindowMagazinePointerUp.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
   }
 
   connectedCallback() {
@@ -595,6 +607,7 @@ class NodaliaNewsCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    this._cancelMagazineSwipe();
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
@@ -603,6 +616,8 @@ class NodaliaNewsCard extends HTMLElement {
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
+    this._magazineItemsStamp = "";
+    this._magazineIndex = 0;
     this._animateContentOnNextRender = true;
     this._render();
   }
@@ -721,13 +736,45 @@ class NodaliaNewsCard extends HTMLElement {
   }
 
   _onShadowClick(event) {
-    const target = event.composedPath().find(node => (
-      node instanceof HTMLElement && node.dataset?.newsAction === "open"
+    const path = event.composedPath();
+    const actionTarget = path.find(node => (
+      node instanceof HTMLElement && node.dataset?.newsAction
     ));
-    if (!(target instanceof HTMLElement)) {
+    if (!(actionTarget instanceof HTMLElement)) {
       return;
     }
-    const url = target.dataset.newsUrl || "";
+
+    const action = actionTarget.dataset.newsAction || "";
+    if (action === "prev") {
+      event.preventDefault();
+      event.stopPropagation();
+      this._navigateMagazine(-1);
+      return;
+    }
+    if (action === "next") {
+      event.preventDefault();
+      event.stopPropagation();
+      this._navigateMagazine(1);
+      return;
+    }
+    if (action === "goto") {
+      event.preventDefault();
+      event.stopPropagation();
+      const index = Number.parseInt(actionTarget.dataset.newsIndex || "", 10);
+      if (Number.isFinite(index)) {
+        this._goToMagazineIndex(index);
+      }
+      return;
+    }
+    if (action !== "open") {
+      return;
+    }
+    if (this._suppressArticleTap) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const url = actionTarget.dataset.newsUrl || "";
     if (!url) {
       return;
     }
@@ -737,6 +784,21 @@ class NodaliaNewsCard extends HTMLElement {
   }
 
   _onShadowKeyDown(event) {
+    const carousel = event.composedPath().find(node => (
+      node instanceof HTMLElement && node.dataset?.newsCarousel !== undefined
+    ));
+    if (carousel instanceof HTMLElement) {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        this._navigateMagazine(-1);
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        this._navigateMagazine(1);
+        return;
+      }
+    }
     if (event.key !== "Enter" && event.key !== " ") {
       return;
     }
@@ -749,6 +811,209 @@ class NodaliaNewsCard extends HTMLElement {
     }
     event.preventDefault();
     this._openArticleUrl(target.dataset.newsUrl);
+  }
+
+  _syncMagazineIndex(items) {
+    const stamp = buildNewsRenderStamp(items);
+    if (stamp !== this._magazineItemsStamp) {
+      this._magazineItemsStamp = stamp;
+      this._magazineIndex = 0;
+      return;
+    }
+    const maxIndex = Math.max(0, items.length - 1);
+    if (this._magazineIndex > maxIndex) {
+      this._magazineIndex = maxIndex;
+    }
+  }
+
+  _goToMagazineIndex(index) {
+    const items = this._getDisplayItems();
+    if (!items.length) {
+      return;
+    }
+    this._syncMagazineIndex(items);
+    const maxIndex = items.length - 1;
+    const nextIndex = Math.max(0, Math.min(index, maxIndex));
+    if (nextIndex === this._magazineIndex) {
+      return;
+    }
+    this._magazineIndex = nextIndex;
+    this._render();
+  }
+
+  _navigateMagazine(delta) {
+    const items = this._getDisplayItems();
+    if (items.length <= 1) {
+      return;
+    }
+    this._syncMagazineIndex(items);
+    const nextIndex = this._magazineIndex + delta;
+    if (nextIndex < 0 || nextIndex >= items.length) {
+      return;
+    }
+    this._magazineIndex = nextIndex;
+    this._render();
+  }
+
+  _attachMagazineSwipeWindowListeners() {
+    if (this._magazineSwipeWindowAttached || typeof window === "undefined") {
+      return;
+    }
+    this._magazineSwipeWindowAttached = true;
+    window.addEventListener("pointermove", this._onWindowMagazinePointerMove, { passive: false });
+    window.addEventListener("pointerup", this._onWindowMagazinePointerUp);
+    window.addEventListener("pointercancel", this._onWindowMagazinePointerUp);
+  }
+
+  _detachMagazineSwipeWindowListeners() {
+    if (!this._magazineSwipeWindowAttached || typeof window === "undefined") {
+      return;
+    }
+    this._magazineSwipeWindowAttached = false;
+    window.removeEventListener("pointermove", this._onWindowMagazinePointerMove);
+    window.removeEventListener("pointerup", this._onWindowMagazinePointerUp);
+    window.removeEventListener("pointercancel", this._onWindowMagazinePointerUp);
+  }
+
+  _cancelMagazineSwipe() {
+    this._magazineSwipeState = null;
+    this._detachMagazineSwipeWindowListeners();
+    const track = this.shadowRoot?.querySelector("[data-news-track]");
+    if (track instanceof HTMLElement) {
+      track.classList.remove("news-card__carousel-track--dragging");
+      track.style.removeProperty("--news-drag-offset");
+    }
+  }
+
+  _getMagazineCarouselViewport(event) {
+    return event.composedPath().find(node => (
+      node instanceof HTMLElement && node.classList?.contains("news-card__carousel-viewport")
+    )) || null;
+  }
+
+  _updateMagazineTrackTransform(track, index, dragOffsetPx = 0, animate = true) {
+    if (!(track instanceof HTMLElement)) {
+      return;
+    }
+    track.style.setProperty("--news-slide-index", String(index));
+    track.style.setProperty("--news-drag-offset", `${dragOffsetPx}px`);
+    track.classList.toggle("news-card__carousel-track--dragging", !animate);
+  }
+
+  _onShadowPointerDown(event) {
+    if (event.button !== undefined && event.button !== 0) {
+      return;
+    }
+    const viewport = this._getMagazineCarouselViewport(event);
+    if (!(viewport instanceof HTMLElement)) {
+      return;
+    }
+    const carousel = viewport.closest("[data-news-carousel]");
+    const count = Number.parseInt(carousel?.dataset?.newsCount || "0", 10);
+    if (!carousel || count <= 1) {
+      return;
+    }
+    const navTarget = event.composedPath().find(node => (
+      node instanceof HTMLElement
+      && node !== viewport
+      && node.dataset?.newsAction
+      && node.dataset.newsAction !== "open"
+    ));
+    if (navTarget instanceof HTMLElement) {
+      return;
+    }
+
+    this._cancelMagazineSwipe();
+    this._magazineSwipeState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      locked: false,
+      dragging: false,
+      viewport,
+      track: viewport.querySelector("[data-news-track]"),
+      width: viewport.getBoundingClientRect().width || 1,
+      startIndex: this._magazineIndex,
+    };
+    this._attachMagazineSwipeWindowListeners();
+    if (typeof viewport.setPointerCapture === "function") {
+      try {
+        viewport.setPointerCapture(event.pointerId);
+      } catch (_err) {
+        // Ignore capture failures on unsupported browsers.
+      }
+    }
+  }
+
+  _onWindowMagazinePointerMove(event) {
+    const swipe = this._magazineSwipeState;
+    if (!swipe || event.pointerId !== swipe.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - swipe.startX;
+    const deltaY = event.clientY - swipe.startY;
+    if (!swipe.locked) {
+      if (Math.hypot(deltaX, deltaY) < MAGAZINE_SWIPE_LOCK_PX) {
+        return;
+      }
+      swipe.locked = true;
+      swipe.dragging = Math.abs(deltaX) >= Math.abs(deltaY);
+      if (!swipe.dragging) {
+        this._cancelMagazineSwipe();
+        return;
+      }
+    }
+    if (!swipe.dragging) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const atStart = swipe.startIndex <= 0 && deltaX > 0;
+    const items = this._getDisplayItems();
+    const atEnd = swipe.startIndex >= items.length - 1 && deltaX < 0;
+    let offset = deltaX;
+    if (atStart || atEnd) {
+      offset = deltaX * 0.35;
+    }
+    this._updateMagazineTrackTransform(swipe.track, swipe.startIndex, offset, false);
+  }
+
+  _onWindowMagazinePointerUp(event) {
+    const swipe = this._magazineSwipeState;
+    if (!swipe || event.pointerId !== swipe.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - swipe.startX;
+    const items = this._getDisplayItems();
+    let navigated = false;
+    if (swipe.dragging && Math.abs(deltaX) >= MAGAZINE_SWIPE_THRESHOLD_PX) {
+      if (deltaX < 0 && swipe.startIndex < items.length - 1) {
+        this._magazineIndex = swipe.startIndex + 1;
+        navigated = true;
+      } else if (deltaX > 0 && swipe.startIndex > 0) {
+        this._magazineIndex = swipe.startIndex - 1;
+        navigated = true;
+      }
+      this._suppressArticleTap = true;
+      window.setTimeout(() => {
+        this._suppressArticleTap = false;
+      }, 320);
+    }
+
+    this._cancelMagazineSwipe();
+    if (navigated) {
+      this._render();
+      return;
+    }
+    this._updateMagazineTrackTransform(
+      this.shadowRoot?.querySelector("[data-news-track]"),
+      this._magazineIndex,
+      0,
+      true,
+    );
   }
 
   _renderMetaLine(item, layout, locale) {
@@ -804,20 +1069,101 @@ class NodaliaNewsCard extends HTMLElement {
       ? `<span class="news-card__read-more">${escapeHtml(this._ui("readMore", "Read more"))}</span>`
       : "";
     const headlineClass = variant === "hero" ? "news-card__headline news-card__headline--hero" : "news-card__headline";
-
-    return `
-      <${tag}
-        class="news-card__article news-card__article--${variant}${disabledClass}"
-        ${typeAttr}${tabindexAttr}${actionAttrs}${ariaLabel}
-      >
-        ${this._renderImage(item, `news-card__media news-card__media--${variant}`, layout)}
+    const copyMarkup = `
         <div class="news-card__copy">
           <h3 class="${headlineClass}">${escapeHtml(item.title)}</h3>
           ${this._renderMetaLine(item, layout, locale)}
           ${summary}
           ${readMore}
         </div>
+    `;
+    const imageMarkup = this._renderImage(item, `news-card__media news-card__media--${variant}`, layout);
+
+    return `
+      <${tag}
+        class="news-card__article news-card__article--${variant}${disabledClass}"
+        ${typeAttr}${tabindexAttr}${actionAttrs}${ariaLabel}
+      >
+        ${variant === "hero" ? `${copyMarkup}${imageMarkup}` : `${imageMarkup}${copyMarkup}`}
       </${tag}>
+    `;
+  }
+
+  _renderMagazineCarousel(items) {
+    this._syncMagazineIndex(items);
+    const index = this._magazineIndex;
+    const count = items.length;
+    const positionLabel = this._ui("articlePosition", "Article {current} of {total}", {
+      current: index + 1,
+      total: count,
+    });
+    const dots = count > 1
+      ? items.map((_, dotIndex) => {
+        const activeClass = dotIndex === index ? " is-active" : "";
+        const dotLabel = this._ui("goToArticle", "Go to article {index}", { index: dotIndex + 1 });
+        return `
+          <button
+            type="button"
+            class="news-card__dot${activeClass}"
+            data-news-action="goto"
+            data-news-index="${dotIndex}"
+            aria-label="${escapeHtml(dotLabel)}"
+            aria-current="${dotIndex === index ? "true" : "false"}"
+          ></button>
+        `;
+      }).join("")
+      : "";
+    const prevDisabled = index <= 0 ? " is-disabled" : "";
+    const nextDisabled = index >= count - 1 ? " is-disabled" : "";
+
+    return `
+      <div
+        class="news-card__magazine"
+        data-news-carousel
+        data-news-count="${count}"
+        tabindex="0"
+        aria-roledescription="carousel"
+        aria-label="${escapeHtml(positionLabel)}"
+      >
+        <div class="news-card__carousel-viewport">
+          <div
+            class="news-card__carousel-track"
+            data-news-track
+            style="--news-slide-index: ${index}; --news-drag-offset: 0px;"
+          >
+            ${items.map(item => `
+              <div class="news-card__carousel-slide">
+                ${this._renderArticleItem(item, { variant: "hero" })}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        ${count > 1 ? `
+          <div class="news-card__carousel-nav">
+            <button
+              type="button"
+              class="news-card__carousel-btn${prevDisabled}"
+              data-news-action="prev"
+              aria-label="${escapeHtml(this._ui("previousArticle", "Previous article"))}"
+              ${index <= 0 ? "disabled" : ""}
+            >
+              <span aria-hidden="true">‹</span>
+            </button>
+            <div class="news-card__dots" role="tablist" aria-label="${escapeHtml(positionLabel)}">
+              ${dots}
+            </div>
+            <button
+              type="button"
+              class="news-card__carousel-btn${nextDisabled}"
+              data-news-action="next"
+              aria-label="${escapeHtml(this._ui("nextArticle", "Next article"))}"
+              ${index >= count - 1 ? "disabled" : ""}
+            >
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
+        ` : ""}
+      </div>
     `;
   }
 
@@ -827,13 +1173,7 @@ class NodaliaNewsCard extends HTMLElement {
       return "";
     }
     if (mode === "magazine") {
-      const [hero, ...rest] = items;
-      return `
-        <div class="news-card__magazine">
-          ${this._renderArticleItem(hero, { variant: "hero" })}
-          ${rest.length ? `<div class="news-card__stack">${rest.map(item => this._renderArticleItem(item, { variant: "compact" })).join("")}</div>` : ""}
-        </div>
-      `;
+      return this._renderMagazineCarousel(items);
     }
     if (mode === "compact") {
       return `<div class="news-card__stack news-card__stack--compact">${items.map(item => this._renderArticleItem(item, { variant: "compact" })).join("")}</div>`;
@@ -978,6 +1318,111 @@ class NodaliaNewsCard extends HTMLElement {
           gap: ${density === "compact" ? "10px" : density === "relaxed" ? "18px" : "14px"};
         }
 
+        .news-card__magazine {
+          gap: 12px;
+          outline: none;
+        }
+
+        .news-card__magazine:focus-visible {
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 24%, transparent);
+          border-radius: calc(${styles.card.border_radius} - 6px);
+        }
+
+        .news-card__carousel-viewport {
+          overflow: hidden;
+          touch-action: pan-y;
+          width: 100%;
+        }
+
+        .news-card__carousel-track {
+          display: flex;
+          transform: translateX(calc((var(--news-slide-index, 0) * -100%) + var(--news-drag-offset, 0px)));
+          transition: transform 280ms ease;
+          width: 100%;
+          will-change: transform;
+        }
+
+        .news-card__carousel-track--dragging {
+          transition: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .news-card__carousel-track {
+            transition: none;
+          }
+        }
+
+        .news-card__carousel-slide {
+          flex: 0 0 100%;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .news-card__carousel-slide .news-card__media--hero {
+          max-height: 200px;
+        }
+
+        .news-card__carousel-nav {
+          align-items: center;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: auto 1fr auto;
+        }
+
+        .news-card__carousel-btn {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          height: 34px;
+          justify-content: center;
+          width: 34px;
+        }
+
+        .news-card__carousel-btn:hover:not(:disabled),
+        .news-card__carousel-btn:focus-visible:not(:disabled) {
+          border-color: color-mix(in srgb, var(--primary-color) 28%, transparent);
+          outline: none;
+        }
+
+        .news-card__carousel-btn:disabled,
+        .news-card__carousel-btn.is-disabled {
+          cursor: default;
+          opacity: 0.35;
+        }
+
+        .news-card__dots {
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+          min-width: 0;
+        }
+
+        .news-card__dot {
+          background: color-mix(in srgb, var(--primary-text-color) 18%, transparent);
+          border: 0;
+          border-radius: 999px;
+          cursor: pointer;
+          height: 8px;
+          padding: 0;
+          width: 8px;
+        }
+
+        .news-card__dot.is-active {
+          background: var(--primary-color);
+          width: 18px;
+        }
+
+        .news-card__dot:focus-visible {
+          outline: 2px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
+          outline-offset: 2px;
+        }
+
         .news-card__article {
           background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -1014,7 +1459,7 @@ class NodaliaNewsCard extends HTMLElement {
         }
 
         .news-card__article--hero {
-          grid-template-columns: ${layout.show_images !== false ? "minmax(0, 1.35fr) minmax(120px, 0.75fr)" : "minmax(0, 1fr)"};
+          grid-template-columns: minmax(0, 1fr);
           align-items: start;
         }
 
@@ -1121,15 +1566,6 @@ class NodaliaNewsCard extends HTMLElement {
           margin: 0;
         }
 
-        @media (max-width: 520px) {
-          .news-card__article--hero {
-            grid-template-columns: minmax(0, 1fr);
-          }
-
-          .news-card__media--hero {
-            order: 2;
-          }
-        }
       </style>
       ${bodyMarkup}
     `;

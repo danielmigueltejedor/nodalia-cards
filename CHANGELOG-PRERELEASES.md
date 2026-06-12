@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.4] - 2026-06-12
+
+Fourth **`1.3.0`** **`alpha`**: News Card magazine carousel. Release channel **`1.3.0-alpha.4`**.
+
+### Changed
+
+- **`news`:** `magazine` layout shows one article at a time with horizontal swipe navigation, dot indicators, and prev/next controls (keyboard arrows supported).
+
 ## [1.3.0-alpha.3] - 2026-06-12
 
 Third **`1.3.0`** **`alpha`**: News Card source readiness fix. Release channel **`1.3.0-alpha.3`**.

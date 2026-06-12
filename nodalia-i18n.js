@@ -822,7 +822,11 @@
         publishedNow: "Just now",
         publishedMinutesAgo: "{count} min ago",
         publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago"
+        publishedDaysAgo: "{count} d ago",
+        previousArticle: "Previous article",
+        nextArticle: "Next article",
+        articlePosition: "Article {current} of {total}",
+        goToArticle: "Go to article {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -3373,7 +3377,11 @@
         publishedNow: "Ahora",
         publishedMinutesAgo: "Hace {count} min",
         publishedHoursAgo: "Hace {count} h",
-        publishedDaysAgo: "Hace {count} d"
+        publishedDaysAgo: "Hace {count} d",
+        previousArticle: "Artículo anterior",
+        nextArticle: "Artículo siguiente",
+        articlePosition: "Artículo {current} de {total}",
+        goToArticle: "Ir al artículo {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",

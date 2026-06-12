@@ -117,7 +117,7 @@ If both `entity` and `sources` are configured, both are merged.
 
 | Mode | Description |
 |------|-------------|
-| `magazine` | Default. First item featured with dominant headline; remaining items listed below. |
+| `magazine` | Default. One featured article at a time; swipe left/right or use arrows to browse. |
 | `compact` | Dense headline list with optional thumbnails. |
 | `list` | Vertical article list with optional thumbnail and summary. |
 
@@ -135,6 +135,7 @@ Items are sorted by published date descending.
 
 ## Interaction
 
+- In `magazine` layout, swipe horizontally on the article area (or use arrow buttons / keyboard arrows) to move between items.
 - Tapping an item with a valid `http`/`https` URL opens it in a new tab with `noopener,noreferrer`.
 - Unsafe URLs (for example `javascript:`) are ignored.
 - The card does not call Home Assistant services from news data in this MVP.
