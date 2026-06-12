@@ -24,6 +24,7 @@ function loadNewsHelpers() {
       buildNewsRenderStamp,
       coerceNewsAttributeList,
       extractRawItemsFromState,
+      getNewsSourceHealth,
     };
   `;
   const sandbox = {
@@ -201,7 +202,7 @@ test("coerceNewsAttributeList accepts native arrays and JSON strings", () => {
   assert.equal(parsed[0].title, "Template headline");
   assert.equal(parsed[0].summary, "From JSON");
   assert.equal(helpers.coerceNewsAttributeList("not-json").length, 0);
-  assert.equal(helpers.coerceNewsAttributeList('{"title":"Object not list"}').length, 0);
+  assert.equal(helpers.coerceNewsAttributeList('{"title":"Object not list"}').length, 1);
   assert.equal(helpers.coerceNewsAttributeList("").length, 0);
 });
 
@@ -265,4 +266,64 @@ test("extractRawItemsFromState supports headlines JSON from template sensors", (
   const raw = helpers.extractRawItemsFromState(state);
   assert.equal(raw.length, 1);
   assert.equal(raw[0].name, "Headline via name key");
+});
+
+const nodaliaNewsFixture = [
+  {
+    title: "Home Assistant estrena un nuevo sistema de dashboards para hogares conectados",
+    summary: "La plataforma sigue reforzando su enfoque como centro visual y operativo para viviendas inteligentes.",
+    source: "Nodalia Daily",
+    published: "2026-06-12T02:20:00.202282+02:00",
+    url: "https://www.home-assistant.io/blog/",
+    image: "https://www.home-assistant.io/images/blog/2024-06/dashboard-chapter-1/social.png",
+    category: "Domótica",
+  },
+  {
+    title: "La energía inteligente gana protagonismo en los hogares europeos",
+    summary: "Los sistemas de monitorización y automatización permiten ajustar consumos, climatización y hábitos familiares.",
+    source: "Energy Brief",
+    published: "2026-06-12T00:20:00.202349+02:00",
+    url: "https://www.home-assistant.io/integrations/energy/",
+    image: "https://www.home-assistant.io/images/blog/2021-08-energy/social.png",
+    category: "Energía",
+  },
+];
+
+test("native items array from sensor renders even when hass.connected is false", () => {
+  const hass = {
+    connected: false,
+    states: {
+      "sensor.nodalia_news_test": {
+        state: "2026-06-12",
+        attributes: {
+          friendly_name: "Nodalia News Test",
+          items: nodaliaNewsFixture,
+        },
+      },
+    },
+  };
+  const health = helpers.getNewsSourceHealth(hass, { entity: "sensor.nodalia_news_test" });
+  assert.equal(health.loading, false);
+  assert.equal(health.unavailable, false);
+  const items = helpers.getNewsItemsForConfig(hass, {
+    entity: "sensor.nodalia_news_test",
+    max_items: 5,
+  });
+  assert.equal(items.length, 2);
+  assert.match(items[0].title, /Home Assistant estrena/);
+});
+
+test("unknown entity state with items is not treated as unavailable", () => {
+  const hass = {
+    connected: false,
+    states: {
+      "sensor.nodalia_news_test": {
+        state: "unknown",
+        attributes: { items: nodaliaNewsFixture },
+      },
+    },
+  };
+  const health = helpers.getNewsSourceHealth(hass, { entity: "sensor.nodalia_news_test" });
+  assert.equal(health.loading, false);
+  assert.equal(health.unavailable, false);
 });

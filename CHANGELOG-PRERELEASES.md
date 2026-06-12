@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.3] - 2026-06-12
+
+Third **`1.3.0`** **`alpha`**: News Card source readiness fix. Release channel **`1.3.0-alpha.3`**.
+
+### Fixed
+
+- **`news`:** no longer stuck on “Loading news…” when configured entities are already in `hass.states` but global hydration/`connected` flags are false (common on wall tablets).
+- **`news`:** entity states with `unknown`/`unavailable` still render when `items` attributes contain articles; numeric-key object lists coerced to arrays.
+
 ## [1.3.0-alpha.2] - 2026-06-12
 
 Second **`1.3.0`** **`alpha`**: News Card template-sensor compatibility. Release channel **`1.3.0-alpha.2`**.

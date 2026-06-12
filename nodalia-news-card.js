@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.2";
+const CARD_VERSION = "1.3.0-alpha.3";
 
 const ITEM_LIST_ATTRS = ["items", "articles", "entries", "news", "headlines"];
 const LAYOUT_MODES = new Set(["compact", "magazine", "list"]);
@@ -261,6 +261,20 @@ function coerceNewsAttributeList(value) {
   if (Array.isArray(value)) {
     return value;
   }
+  if (isObject(value)) {
+    if (pickFirstString(value, ["title", "headline", "name"])) {
+      return [value];
+    }
+    const numericEntries = Object.keys(value)
+      .filter(key => /^\d+$/.test(key))
+      .sort((left, right) => Number(left) - Number(right))
+      .map(key => value[key])
+      .filter(entry => entry && typeof entry === "object");
+    if (numericEntries.length) {
+      return numericEntries;
+    }
+    return [];
+  }
   if (typeof value !== "string") {
     return [];
   }
@@ -270,7 +284,7 @@ function coerceNewsAttributeList(value) {
   }
   try {
     const parsed = JSON.parse(trimmed);
-    return Array.isArray(parsed) ? parsed : [];
+    return coerceNewsAttributeList(parsed);
   } catch (_err) {
     return [];
   }
@@ -323,6 +337,41 @@ function resolveSourceEntries(config) {
     });
   }
   return entries;
+}
+
+function isLovelaceHassStatesHydrated(hass) {
+  return window.NodaliaUtils?.isLovelaceHassStatesHydrated?.(hass) === true;
+}
+
+function isNewsSourceStateUnavailable(state) {
+  if (!state) {
+    return true;
+  }
+  if (extractRawItemsFromState(state).length > 0) {
+    return false;
+  }
+  const stateKey = String(state.state || "").toLowerCase();
+  return stateKey === "unavailable" || stateKey === "unknown";
+}
+
+function getNewsSourceHealth(hass, config) {
+  const sources = resolveSourceEntries(config);
+  if (!sources.length) {
+    return { hasSources: false, unavailable: false, loading: false };
+  }
+  if (!hass) {
+    return { hasSources: true, unavailable: false, loading: true };
+  }
+  const sourceStates = sources.map(source => hass.states?.[source.entity] || null);
+  const hasAnySourceState = sourceStates.some(Boolean);
+  if (!hasAnySourceState) {
+    if (!isLovelaceHassStatesHydrated(hass)) {
+      return { hasSources: true, unavailable: false, loading: true };
+    }
+    return { hasSources: true, unavailable: true, loading: false };
+  }
+  const unavailable = sourceStates.some(state => isNewsSourceStateUnavailable(state));
+  return { hasSources: true, unavailable, loading: false };
 }
 
 function collectNormalizedItems(hass, config) {
@@ -609,23 +658,8 @@ class NodaliaNewsCard extends HTMLElement {
     return resolveSourceEntries(this._config);
   }
 
-  _isHassHydrated(hass = this._hass) {
-    return window.NodaliaUtils?.isLovelaceHassStatesHydrated?.(hass) === true;
-  }
-
   _getSourceHealth() {
-    const sources = this._getSourceEntries();
-    if (!sources.length) {
-      return { hasSources: false, unavailable: false, loading: false };
-    }
-    if (!this._hass || !this._isHassHydrated(this._hass)) {
-      return { hasSources: true, unavailable: false, loading: true };
-    }
-    const unavailable = sources.some(source => {
-      const state = this._hass?.states?.[source.entity];
-      return !state || String(state.state || "").toLowerCase() === "unavailable";
-    });
-    return { hasSources: true, unavailable, loading: false };
+    return getNewsSourceHealth(this._hass, this._config);
   }
 
   _getDisplayItems(hass = this._hass) {
