@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -942,6 +942,9 @@ class NodaliaEntityCard extends HTMLElement {
       `ihs:${String(this._config?.icon_hold_service || "")}`,
       `hu:${String(this._config?.hold_url || "")}`,
       `ihu:${String(this._config?.icon_hold_url || "")}`,
+      `sn:${this._config?.show_name !== false ? 1 : 0}`,
+      `ss:${this._config?.show_state !== false ? 1 : 0}`,
+      `nm:${String(this._config?.name || "")}`,
     ].join("|");
   }
 
@@ -2004,6 +2007,10 @@ class NodaliaEntityCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (this._config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 

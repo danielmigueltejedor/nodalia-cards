@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -47,7 +47,7 @@ const DEFAULT_CONFIG = {
   state_attribute: "",
   layout_mode: "auto",
   security: {
-    strict_service_actions: true,
+    strict_service_actions: false,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -675,6 +675,9 @@ class NodaliaFavCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    this._alarmMenuOpen = false;
+    this._applyHostGridSpan(false);
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -739,6 +742,10 @@ class NodaliaFavCard extends HTMLElement {
       Array.isArray(this._config?.security?.allowed_services)
         ? this._config.security.allowed_services.join(",")
         : "",
+      this._config?.show_name !== false ? 1 : 0,
+      this._config?.show_state !== false ? 1 : 0,
+      String(this._config?.state_attribute || ""),
+      String(this._config?.name || ""),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "fav:", values }]);
@@ -857,6 +864,11 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
+    const serviceValue = `${domain}.${service}`;
+    if (!this._isServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fav Card", serviceValue);
+      return Promise.resolve(false);
+    }
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
     return invoke(this, this._hass, domain, service, {
@@ -1105,7 +1117,9 @@ class NodaliaFavCard extends HTMLElement {
     const key = normalizeTextKey(attributeName);
 
     if (typeof value === "boolean") {
-      return value ? "Si" : "No";
+      const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en";
+      const pack = window.NodaliaI18n?.strings?.(lang) || window.NodaliaI18n?.strings?.("en") || {};
+      return value ? (pack.boolean?.yes || "Yes") : (pack.boolean?.no || "No");
     }
 
     if (typeof value === "number") {
@@ -1171,14 +1185,18 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getAlarmSupportedFeatures(state) {
-    const value = Number(state?.attributes?.supported_features);
+    const attrs = state?.attributes;
+    if (!attrs || !Object.prototype.hasOwnProperty.call(attrs, "supported_features")) {
+      return null;
+    }
+    const value = Number(attrs.supported_features);
     return Number.isFinite(value) ? value : 0;
   }
 
   _supportsAlarmMode(state, mode) {
     const features = this._getAlarmSupportedFeatures(state);
 
-    if (!features) {
+    if (features === null) {
       return true;
     }
 
@@ -1338,21 +1356,27 @@ class NodaliaFavCard extends HTMLElement {
         label: this._getAlarmActionLabel("home"),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
-        enabled: this._config?.alarm_show_arm_home !== false && currentModeKey !== "home",
+        enabled: this._config?.alarm_show_arm_home !== false
+          && this._supportsAlarmMode(state, "home")
+          && currentModeKey !== "home",
       },
       {
         key: "away",
         label: this._getAlarmActionLabel("away"),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
-        enabled: this._config?.alarm_show_arm_away !== false && currentModeKey !== "away",
+        enabled: this._config?.alarm_show_arm_away !== false
+          && this._supportsAlarmMode(state, "away")
+          && currentModeKey !== "away",
       },
       {
         key: "night",
         label: this._getAlarmActionLabel("night"),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
-        enabled: this._config?.alarm_show_arm_night !== false && currentModeKey !== "night",
+        enabled: this._config?.alarm_show_arm_night !== false
+          && this._supportsAlarmMode(state, "night")
+          && currentModeKey !== "night",
       },
     ];
 
@@ -1730,6 +1754,10 @@ class NodaliaFavCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
     const styles = config.styles || DEFAULT_CONFIG.styles;

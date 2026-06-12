@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2872,6 +2872,10 @@ class NodaliaLightCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (this._config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 

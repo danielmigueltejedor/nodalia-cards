@@ -806,7 +806,23 @@
       graphCard: {
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Set `entities` to one or more numeric entities to show the chart.",
-        emptyHistory: "No history available"
+        emptyHistory: "No history available",
+        defaultTitle: "Graph"
+      },
+      newsCard: {
+        title: "News",
+        emptyTitle: "No news available",
+        emptyBody: "Add a news entity or check your feed source.",
+        loading: "Loading news…",
+        errorTitle: "News source unavailable",
+        errorBody: "Check your configured entity or source attributes.",
+        readMore: "Read more",
+        sourceUnknown: "Unknown source",
+        categoryGeneral: "General",
+        publishedNow: "Just now",
+        publishedMinutesAgo: "{count} min ago",
+        publishedHoursAgo: "{count} h ago",
+        publishedDaysAgo: "{count} d ago"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -1006,6 +1022,9 @@
           deleteRecurringDialog: "Choose how to delete the recurring event",
           createHaEvent: "Create HA event",
           close: "Close"
+        },
+        warnings: {
+          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -3338,7 +3357,23 @@
       graphCard: {
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Configura `entities` con una o varias entidades numéricas para mostrar la gráfica.",
-        emptyHistory: "Sin historial disponible"
+        emptyHistory: "Sin historial disponible",
+        defaultTitle: "Gráfica"
+      },
+      newsCard: {
+        title: "Noticias",
+        emptyTitle: "No hay noticias disponibles",
+        emptyBody: "Añade una entidad de noticias o revisa la fuente configurada.",
+        loading: "Cargando noticias…",
+        errorTitle: "Fuente de noticias no disponible",
+        errorBody: "Revisa la entidad configurada o sus atributos.",
+        readMore: "Leer más",
+        sourceUnknown: "Fuente desconocida",
+        categoryGeneral: "General",
+        publishedNow: "Ahora",
+        publishedMinutesAgo: "Hace {count} min",
+        publishedHoursAgo: "Hace {count} h",
+        publishedDaysAgo: "Hace {count} d"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -10469,6 +10504,24 @@
     });
   }
 
+  function translateNewsUi(hass, configLang, path, fallback = "", values = {}) {
+    const lang = resolveLanguage(hass, configLang);
+    const dict = strings(lang).newsCard || strings("en").newsCard || {};
+    const raw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], dict);
+    const enRaw = String(path || "")
+      .split(".")
+      .filter(Boolean)
+      .reduce((cursor, key) => cursor?.[key], strings("en").newsCard || {});
+    const template = typeof raw === "string" ? raw : typeof enRaw === "string" ? enRaw : String(fallback || "");
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+      const value = values?.[key];
+      return value === undefined || value === null ? "" : String(value);
+    });
+  }
+
   function translateLightUi(hass, configLang, path, fallback = "", values = {}) {
     const lang = resolveLanguage(hass, configLang);
     const dict = strings(lang).lightCard || strings("en").lightCard || {};
@@ -11036,6 +11089,7 @@
     translateGraphEmptyHistory,
     translateNotificationsUi,
     translateCalendarUi,
+    translateNewsUi,
     translateLightUi,
     translateHumidifierMode,
     translateEntityStateChip,

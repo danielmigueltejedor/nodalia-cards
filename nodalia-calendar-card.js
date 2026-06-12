@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2380,7 +2380,10 @@ class NodaliaCalendarCard extends HTMLElement {
     ) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(
-          "Nodalia Calendar Card: webhook bloqueado para usuario no administrador (security.allow_webhooks_for_non_admin=false).",
+          this._uiText(
+            "warnings.webhookBlockedNonAdmin",
+            "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).",
+          ),
         );
       }
       return false;

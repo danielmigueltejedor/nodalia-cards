@@ -56,6 +56,7 @@ test("card sources use nodalia-utils.js instead of inlined duplicate helpers", (
     "nodalia-weather-card.js",
     "nodalia-notifications-card.js",
     "nodalia-vacuum-card.js",
+    "nodalia-news-card.js",
   ];
   const utils = read("nodalia-utils.js");
   assert.match(utils, /function escapeLovelaceWarningText\(/);
@@ -157,7 +158,7 @@ test("calendar runtime css sanitizer and webhook admin guard are present", () =>
   assert.ok(source.includes("\\burl\\s*\\("));
   assert.ok(source.includes("\\b@import\\b"));
   assert.match(source, /security\.allow_webhooks_for_non_admin/);
-  assert.match(source, /webhook bloqueado para usuario no administrador/);
+  assert.match(source, /webhookBlockedNonAdmin|webhook blocked for non-admin user/);
   assert.match(source, /window\.NodaliaUtils\.setByPath\(targetConfig, field, value\)/);
 });
 
@@ -455,6 +456,20 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   assert.ok(pkg.files.includes("nodalia-scenes-card.js"), "nodalia-scenes-card.js should be published");
   assert.match(readme, /custom:nodalia-scenes-card/);
   assert.match(bundle, /callService\("scene","turn_on"/);
+});
+
+test("news card is registered and shipped in the HACS bundle", () => {
+  const source = read("nodalia-news-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const pkg = JSON.parse(read("package.json"));
+  const bundle = read(`nodalia-cards-${pkg.version}.js`);
+  assert.match(source, /const CARD_TAG = "nodalia-news-card"/);
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
+  assert.match(source, /registerCustomCard\(\{/);
+  assert.match(source, /function isSafeHttpUrl\(/);
+  assert.match(build, /nodalia-news-card\.js/);
+  assert.ok(pkg.files.includes("nodalia-news-card.js"), "nodalia-news-card.js should be published");
+  assert.match(bundle, /nodalia-news-card/);
 });
 
 test("cover card is registered and shipped in the HACS bundle", () => {

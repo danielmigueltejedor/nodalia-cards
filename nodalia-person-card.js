@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -915,6 +915,10 @@ class NodaliaPersonCard extends HTMLElement {
     const state = this._getState();
     if (!state) {
       this._lastRenderSignature = `empty:${config.entity || ""}`;
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 

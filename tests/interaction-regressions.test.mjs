@@ -1486,3 +1486,59 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
     /\/\/ Match entity\/weather cards: do not render \(or consume entrance\) before hass/,
   );
 });
+
+test("NodaliaUtils renders card empty state shell for missing entity state", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function renderCardEmptyStateDocument\(/);
+  assert.match(utils, /\[class\$="--empty"\]/);
+  for (const file of [
+    "nodalia-entity-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-person-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /if \(!state\) \{[\s\S]*renderCardEmptyStateDocument/,
+      `${file} should render empty state when entity state is missing`,
+    );
+  }
+});
+
+test("cover card compact auto mode uses width and grid heuristics", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /COMPACT_LAYOUT_THRESHOLD/);
+  assert.match(source, /configuredColumns < 4/);
+  assert.doesNotMatch(source, /if \(mode === "auto"\)[\s\S]*return false;/);
+});
+
+test("fav card aligns service security with entity and cleans up alarm host span", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /strict_service_actions: false/);
+  assert.match(source, /_invokeEntityService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
+  assert.match(source, /disconnectedCallback\(\) \{[\s\S]*_applyHostGridSpan\(false\)/);
+  assert.match(source, /clearDeferTimers/);
+});
+
+test("alarm supported_features distinguishes missing attribute from explicit zero", () => {
+  for (const file of ["nodalia-alarm-panel-card.js", "nodalia-fav-card.js"]) {
+    const source = read(file);
+    assert.match(source, /hasOwnProperty\.call\(attrs, "supported_features"\)/, file);
+    assert.match(source, /if \(features === null\) \{[\s\S]*return true;/, file);
+  }
+});
+
+test("graph card always renders on hass while history loads", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*this\._requestHistory\(\);[\s\S]*this\._render\(\);/);
+  assert.doesNotMatch(source, /if \(!hasEntities \|\| hadHistory\)/);
+});
+
+test("invokeHomeAssistantService logs callService failures", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /callService failed/);
+});

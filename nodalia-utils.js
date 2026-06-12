@@ -32,6 +32,7 @@
     "coerceCardTapAction",
     "applyCardTapActionField",
     "invokeHomeAssistantService",
+    "renderCardEmptyStateDocument",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -785,7 +786,10 @@
           ? hass.callService(domain, service, payload, target)
           : hass.callService(domain, service, payload);
         return Promise.resolve(result);
-      } catch (_err) {
+      } catch (err) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("NodaliaUtils: callService failed", `${domain}.${service}`, err);
+        }
         return Promise.resolve(false);
       }
     }
@@ -871,6 +875,56 @@
       return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
     }
     return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderCardEmptyStateDocument(innerHtml, options = {}) {
+    const markup = String(innerHtml ?? "").trim();
+    if (!markup) {
+      return "";
+    }
+    if (markup.includes("<style")) {
+      return markup;
+    }
+    const card = isObject(options.card) ? options.card : {};
+    const background = String(card.background ?? "var(--ha-card-background)");
+    const border = String(card.border ?? "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)");
+    const borderRadius = String(card.border_radius ?? "var(--ha-card-border-radius, 12px)");
+    const boxShadow = String(card.box_shadow ?? "var(--ha-card-box-shadow, none)");
+    const padding = String(card.padding ?? "16px");
+    return `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        [class$="--empty"] {
+          background: ${background};
+          border: ${border};
+          border-radius: ${borderRadius};
+          box-shadow: ${boxShadow};
+          display: grid;
+          gap: 8px;
+          padding: ${padding};
+        }
+
+        [class$="__empty-title"] {
+          color: var(--primary-text-color);
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        [class$="__empty-text"] {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          line-height: 1.5;
+        }
+      </style>
+      ${markup}
+    `;
   }
 
   function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
@@ -1273,6 +1327,7 @@
     coerceCardTapAction,
     applyCardTapActionField,
     invokeHomeAssistantService,
+    renderCardEmptyStateDocument,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,

@@ -1,8 +1,9 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
+const COMPACT_LAYOUT_THRESHOLD = 150;
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -652,6 +653,11 @@ class NodaliaCoverCard extends HTMLElement {
       attrs.current_position ?? "",
       attrs.current_tilt_position ?? "",
       attrs.supported_features ?? "",
+      this._config?.show_state === true ? 1 : 0,
+      this._config?.show_name !== false ? 1 : 0,
+      String(this._config?.name || ""),
+      String(this._config?.tap_action || ""),
+      String(this._config?.hold_action || ""),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "cover:", values }]);
@@ -727,7 +733,23 @@ class NodaliaCoverCard extends HTMLElement {
     const mode = this._config?.compact_layout_mode || "auto";
     if (mode === "always") return true;
     if (mode === "never") return false;
-    return false;
+    const configuredColumns = this._getConfiguredGridColumns();
+    if (configuredColumns !== null) {
+      return configuredColumns < 4;
+    }
+    const width = Math.round(this._cardWidth || this.clientWidth || 0);
+    return width > 0 && width <= COMPACT_LAYOUT_THRESHOLD;
+  }
+
+  _renderEmptyState() {
+    const title = escapeHtml(this._coverCardUi("emptyTitle", "Nodalia Cover Card"));
+    const body = escapeHtml(this._coverCardUi("emptyBody", "Set `entity` to a `cover.*` entity to show this card."));
+    return `
+      <ha-card class="cover-card cover-card--empty">
+        <div class="cover-card__empty-title">${title}</div>
+        <div class="cover-card__empty-text">${body}</div>
+      </ha-card>
+    `;
   }
 
   _triggerHaptic(styleOverride = null) {
@@ -1285,6 +1307,10 @@ class NodaliaCoverCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 

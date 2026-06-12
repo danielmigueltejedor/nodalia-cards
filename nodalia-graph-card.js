@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.2.2-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -788,12 +788,8 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
     this._lastRenderSignature = nextSignature;
-    const hadHistory = this._historySeries.length > 0;
-    const hasEntities = this._getEntityEntries().length > 0;
     this._requestHistory();
-    if (!hasEntities || hadHistory) {
-      this._render();
-    }
+    this._render();
   }
 
   getCardSize() {
@@ -824,6 +820,11 @@ class NodaliaGraphCard extends HTMLElement {
       { prefix: "ts:", values: [trackedStates.join("|")] },
       { prefix: "a:", values: [this._activeSeriesEntityId || ""] },
       { prefix: "s:", values: [this._selectedSeriesEntityId || ""] },
+      { prefix: "cfg:", values: [
+        String(this._config?.name || ""),
+        Number(this._config?.hours_to_show ?? 24),
+        this._getEntityEntries().length,
+      ] },
     ]);
   }
 
@@ -858,7 +859,7 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getTitle() {
-    return this._config?.name || "Grafica";
+    return this._config?.name || this._graphCardUi("defaultTitle", "Graph");
   }
 
   _getIcon() {

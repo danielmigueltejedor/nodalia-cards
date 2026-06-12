@@ -584,7 +584,23 @@
   "graphCard": {
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "Configura `entities` con una o varias entidades numéricas para mostrar la gráfica.",
-    "emptyHistory": "Sin historial disponible"
+    "emptyHistory": "Sin historial disponible",
+    "defaultTitle": "Gráfica"
+  },
+  "newsCard": {
+    "title": "Noticias",
+    "emptyTitle": "No hay noticias disponibles",
+    "emptyBody": "Añade una entidad de noticias o revisa la fuente configurada.",
+    "loading": "Cargando noticias…",
+    "errorTitle": "Fuente de noticias no disponible",
+    "errorBody": "Revisa la entidad configurada o sus atributos.",
+    "readMore": "Leer más",
+    "sourceUnknown": "Fuente desconocida",
+    "categoryGeneral": "General",
+    "publishedNow": "Ahora",
+    "publishedMinutesAgo": "Hace {count} min",
+    "publishedHoursAgo": "Hace {count} h",
+    "publishedDaysAgo": "Hace {count} d"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",
