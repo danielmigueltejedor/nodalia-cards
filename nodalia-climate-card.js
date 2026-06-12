@@ -1027,6 +1027,10 @@ function encodeSetpointScheduleStorageState(schedule) {
   return candidates.sort((left, right) => left.length - right.length)[0];
 }
 
+function isSetpointScheduleStorageStateWithinLimit(storageState) {
+  return String(storageState ?? "").length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX;
+}
+
 function normalizeSetpointScheduleWeekStartsOn(value) {
   const key = String(value ?? "monday").trim().toLowerCase();
   return key === "sunday" ? "sunday" : "monday";
@@ -1945,6 +1949,15 @@ class NodaliaClimateCard extends HTMLElement {
       friendlyName: this._getClimateName(state),
       cardVersion: CARD_VERSION,
     });
+    if (storageEntityId && !isSetpointScheduleStorageStateWithinLimit(body.storage_state)) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.scheduleTooLarge",
+          `This schedule has too many time blocks to store in the Home Assistant input_text helper (${body.storage_state.length}/${SETPOINT_SCHEDULE_INPUT_TEXT_MAX} characters). Remove some blocks and try again.`,
+        ),
+      );
+      return;
+    }
 
     this._scheduleComposerSaving = true;
     this._scheduleComposerError = "";

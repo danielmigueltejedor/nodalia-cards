@@ -53,6 +53,24 @@ function buildWeeklySlots(blocksPerDay = 2) {
   return slots;
 }
 
+function buildDenseWeeklySlots(count = 45) {
+  const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const slots = [];
+  for (let index = 0; index < count; index += 1) {
+    const startMinutes = (index * 15) % (23 * 60);
+    const endMinutes = startMinutes + 15;
+    slots.push({
+      id: `slot_dense_${index}`,
+      day: days[index % days.length],
+      start: `${String(Math.floor(startMinutes / 60)).padStart(2, "0")}:${String(startMinutes % 60).padStart(2, "0")}`,
+      end: `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`,
+      temperature: 18 + ((index % 9) * 0.5),
+      enabled: true,
+    });
+  }
+  return slots;
+}
+
 test("schedule storage prefers v3 binary and round-trips", () => {
   const api = loadScheduleStorageApi();
   const schedule = {
@@ -128,4 +146,12 @@ test("forty weekly blocks fit within input_text 255 character limit", () => {
   assert.ok(compact.length <= 255, `expected <=255 chars for 40 slots, got ${compact.length}: ${compact}`);
   const restored = api.decodeSetpointScheduleStorageState(compact);
   assert.equal(restored.slots.length, 40);
+});
+
+test("oversized weekly schedules are flagged before input_text persistence", () => {
+  const api = loadScheduleStorageApi();
+  const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots: buildDenseWeeklySlots(45) });
+
+  assert.ok(compact.length > 255, `expected oversized storage state, got ${compact.length}: ${compact}`);
+  assert.equal(api.isSetpointScheduleStorageStateWithinLimit(compact), false);
 });
