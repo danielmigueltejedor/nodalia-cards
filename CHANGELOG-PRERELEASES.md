@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.2] - 2026-06-12
+
+Second **`1.3.0`** **`alpha`**: News Card template-sensor compatibility. Release channel **`1.3.0-alpha.2`**.
+
+### Fixed
+
+- **`news`:** `items`, `articles`, `entries`, `news`, and `headlines` attributes accept native arrays or JSON strings (Home Assistant template sensors); invalid JSON is treated as empty and the next attribute key is tried.
+
 ## [1.3.0-alpha.1] - 2026-06-12
 
 First **`1.3.0`** **`alpha`**: introduces the new Nodalia News Card. Release channel **`1.3.0-alpha.1`**.

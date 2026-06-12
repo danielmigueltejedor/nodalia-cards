@@ -22,6 +22,8 @@ function loadNewsHelpers() {
       parsePublishedMs,
       parseHideOlderThanMs,
       buildNewsRenderStamp,
+      coerceNewsAttributeList,
+      extractRawItemsFromState,
     };
   `;
   const sandbox = {
@@ -187,5 +189,80 @@ test("news card uses safe window.open hardening in source", () => {
   const source = read("nodalia-news-card.js");
   assert.match(source, /window\.open\([^)]*"noopener,noreferrer"\)/);
   assert.match(source, /function isSafeHttpUrl\(/);
+  assert.match(source, /function coerceNewsAttributeList\(/);
   assert.doesNotMatch(source, /innerHTML = .*item\.title/);
+});
+
+test("coerceNewsAttributeList accepts native arrays and JSON strings", () => {
+  const native = [{ title: "Native" }];
+  assert.deepEqual(helpers.coerceNewsAttributeList(native), native);
+  const parsed = helpers.coerceNewsAttributeList('[{"title":"Template headline","summary":"From JSON"}]');
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].title, "Template headline");
+  assert.equal(parsed[0].summary, "From JSON");
+  assert.equal(helpers.coerceNewsAttributeList("not-json").length, 0);
+  assert.equal(helpers.coerceNewsAttributeList('{"title":"Object not list"}').length, 0);
+  assert.equal(helpers.coerceNewsAttributeList("").length, 0);
+});
+
+test("template sensor JSON string attributes render through entity config", () => {
+  const templatePayload = JSON.stringify([
+    {
+      headline: "Template sensor story",
+      description: "Rendered from a Home Assistant template attribute.",
+      publisher: "Template Feed",
+      published_at: "2026-06-12T11:30:00+02:00",
+      link: "https://example.com/template-story",
+    },
+  ]);
+  const hass = {
+    states: {
+      "sensor.news_template": {
+        state: "ok",
+        attributes: {
+          items: templatePayload,
+        },
+      },
+    },
+  };
+  const items = helpers.getNewsItemsForConfig(hass, {
+    entity: "sensor.news_template",
+    max_items: 5,
+  });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].title, "Template sensor story");
+  assert.equal(items[0].source, "Template Feed");
+  assert.equal(items[0].url, "https://example.com/template-story");
+});
+
+test("invalid JSON string attribute falls back to next news attribute key", () => {
+  const hass = {
+    states: {
+      "sensor.news_template": {
+        state: "ok",
+        attributes: {
+          items: "{ broken json",
+          articles: JSON.stringify([{ title: "Fallback article", source: "Articles attr" }]),
+        },
+      },
+    },
+  };
+  const items = helpers.getNewsItemsForConfig(hass, {
+    entity: "sensor.news_template",
+  });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].title, "Fallback article");
+});
+
+test("extractRawItemsFromState supports headlines JSON from template sensors", () => {
+  const state = {
+    attributes: {
+      headlines: JSON.stringify([
+        { name: "Headline via name key", source: "Evening edition" },
+      ]),
+    },
+  };
+  const raw = helpers.extractRawItemsFromState(state);
+  assert.equal(raw.length, 1);
+  assert.equal(raw[0].name, "Headline via name key");
 });

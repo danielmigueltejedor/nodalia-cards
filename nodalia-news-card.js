@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.1";
+const CARD_VERSION = "1.3.0-alpha.2";
 
 const ITEM_LIST_ATTRS = ["items", "articles", "entries", "news", "headlines"];
 const LAYOUT_MODES = new Set(["compact", "magazine", "list"]);
@@ -257,15 +257,37 @@ function normalizeNewsItem(raw, sourceMeta = {}) {
   };
 }
 
+function coerceNewsAttributeList(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return [];
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_err) {
+    return [];
+  }
+}
+
 function extractRawItemsFromState(state) {
   if (!state?.attributes) {
     return [];
   }
   const attrs = state.attributes;
   for (const key of ITEM_LIST_ATTRS) {
-    const value = attrs[key];
-    if (Array.isArray(value)) {
-      return value;
+    if (!Object.prototype.hasOwnProperty.call(attrs, key)) {
+      continue;
+    }
+    const items = coerceNewsAttributeList(attrs[key]);
+    if (items.length > 0) {
+      return items;
     }
   }
   return [];
