@@ -13,9 +13,6 @@ const HAPTIC_PATTERNS = {
 const COMPACT_LAYOUT_THRESHOLD = 150;
 const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
 const COVER_SET_POSITION = 4;
-const LOCK_OPEN = 1;
-const LOCK_LOCK = 2;
-const LOCK_UNLOCK = 4;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -1170,23 +1167,12 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
-      if (features & LOCK_OPEN) {
-        this._invokeEntityService("lock", "open", entityId);
-      } else if (features & LOCK_UNLOCK) {
-        this._invokeEntityService("lock", "unlock", entityId);
-      } else {
-        this._invokeEntityService("lock", "unlock", entityId);
-      }
+      this._invokeEntityService("lock", "unlock", entityId);
       return;
     }
 
-    if (features & LOCK_LOCK) {
-      this._invokeEntityService("lock", "lock", entityId);
-    } else {
-      this._invokeEntityService("lock", "lock", entityId);
-    }
+    this._invokeEntityService("lock", "lock", entityId);
   }
 
   _isBinaryOnOff(state) {

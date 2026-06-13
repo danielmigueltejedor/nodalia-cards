@@ -139,6 +139,47 @@ function loadPowerFlowCardClass() {
   return registry.get("nodalia-power-flow-card");
 }
 
+function loadEntityCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+  }
+
+  class FakeResizeObserver {
+    observe() {}
+    disconnect() {}
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+    },
+    HTMLElement: FakeHTMLElement,
+    ResizeObserver: FakeResizeObserver,
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-entity-card.js"), sandbox);
+  return registry.get("nodalia-entity-card");
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -1184,10 +1225,44 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /cover", "open_cover"/);
   assert.match(source, /cover", "close_cover"/);
   assert.match(source, /set_cover_position", entityId, \{ position: 100 \}/);
-  assert.match(source, /lock", "open", entityId/);
+  assert.match(source, /lock", "unlock", entityId/);
+  assert.doesNotMatch(source, /lock", "open", entityId/);
   assert.match(source, /lock", "lock", entityId/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
+});
+
+test("entity card auto tap unlocks locked lock entities without opening them", () => {
+  const EntityCard = loadEntityCardClass();
+  assert.ok(EntityCard, "entity card custom element should register");
+
+  const calls = [];
+  const card = new EntityCard();
+  card._render = () => {};
+  card._config = {
+    entity: "lock.front_door",
+    tap_action: "auto",
+  };
+  card._hass = {
+    callService: (...args) => {
+      calls.push(args);
+    },
+    states: {
+      "lock.front_door": {
+        entity_id: "lock.front_door",
+        state: "locked",
+        attributes: {
+          supported_features: 1 | 2 | 4,
+        },
+      },
+    },
+  };
+
+  card._performTapAction(card._getState());
+
+  assert.deepEqual(calls, [
+    ["lock", "unlock", { entity_id: "lock.front_door" }],
+  ]);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {
