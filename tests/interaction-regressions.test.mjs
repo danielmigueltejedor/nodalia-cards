@@ -1263,7 +1263,7 @@ test("entity card auto tap unlocks locked lock entities without opening them", (
 
   card._performTapAction(card._getState());
 
-  assert.deepEqual(calls, [
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
     ["lock", "unlock", { entity_id: "lock.front_door" }],
   ]);
 });
