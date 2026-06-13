@@ -170,6 +170,9 @@ function loadEntityCardClass() {
       createElement() { return {}; },
     },
     HTMLElement: FakeHTMLElement,
+    NodaliaUtils: {
+      registerCustomCard() {},
+    },
     ResizeObserver: FakeResizeObserver,
     setTimeout,
     window: null,
