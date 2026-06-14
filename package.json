@@ -85,6 +85,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "esbuild": "^0.28.0"
+    "esbuild": "^0.28.1"
   }
 }
