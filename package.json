@@ -85,7 +85,7 @@
     "nodalia"
   ],
   "license": "MIT",
-  "dependencies": {
-    "esbuild": "^0.28.0"
+  "devDependencies": {
+    "esbuild": "^0.28.1"
   }
 }
