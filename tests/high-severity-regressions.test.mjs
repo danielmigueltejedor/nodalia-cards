@@ -114,6 +114,10 @@ function createHass(states, calls = []) {
   };
 }
 
+function plain(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 test("fav card auto tap uses cover domain services instead of generic toggle", () => {
   const FavCard = loadCardClass("nodalia-fav-card.js", "nodalia-fav-card");
   const calls = [];
@@ -128,7 +132,7 @@ test("fav card auto tap uses cover domain services instead of generic toggle", (
   card.hass = createHass({ "cover.garage": state }, calls);
   card._performPrimaryAction(state);
 
-  assert.deepEqual(calls, [
+  assert.deepEqual(plain(calls), [
     { domain: "cover", service: "open_cover", data: { entity_id: "cover.garage" } },
   ]);
 });
@@ -148,7 +152,7 @@ test("fav card coerces Lovelace tap_action objects before dispatching lock toggl
   card._performPrimaryAction(state);
 
   assert.equal(card._config.tap_action, "toggle");
-  assert.deepEqual(calls, [
+  assert.deepEqual(plain(calls), [
     { domain: "lock", service: "open", data: { entity_id: "lock.gate" } },
   ]);
 });
@@ -175,7 +179,7 @@ test("alarm panel keeps manual PIN watchdog after resolved no-op service calls",
 
   await new Promise(resolve => setTimeout(resolve, 0));
 
-  assert.deepEqual(calls, [
+  assert.deepEqual(plain(calls), [
     {
       domain: "alarm_control_panel",
       service: "alarm_arm_away",
