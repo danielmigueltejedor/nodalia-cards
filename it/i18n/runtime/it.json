@@ -325,6 +325,8 @@
   "entityCard": {
     "emptyTitle": "Nodalia Entity Card",
     "emptyBody": "Set `entity` to show this card.",
+    "selectPickerTitle": "Choose option",
+    "selectPickerClose": "Close",
     "binarySensor": {
       "doorOpen": "Aperta",
       "doorClosed": "Chiusa",
