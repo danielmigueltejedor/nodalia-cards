@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.6] - 2026-06-12
+
+Sixth **`1.3.0`** **`alpha`**: Entity Card select picker and News Card history. Release channel **`1.3.0-alpha.6`**.
+
+### Added
+
+- **`entity`:** `select.*` and `input_select.*` entities open an inline Nodalia-style option picker on tap (`tap_action: auto`) instead of more-info; calls `select.select_option` / `input_select.select_option`.
+- **`news`:** `remember_items` keeps a rolling local history up to `max_items` as RSS sensors publish new headlines.
+
+### Changed
+
+- **`news`:** visual editor aligned with the suite (sections, entity picker, toggle switches, i18n).
+
 ## [1.3.0-alpha.5] - 2026-06-12
 
 Fifth **`1.3.0`** **`alpha`**: News Card article history and aligned visual editor. Release channel **`1.3.0-alpha.5`**.

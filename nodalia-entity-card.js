@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.0-alpha.5";
+const CARD_VERSION = "1.3.0-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -489,6 +489,33 @@ function getEntityDomain(state) {
   return entityId.includes(".") ? entityId.split(".")[0] : "";
 }
 
+function isSelectDomainEntity(state) {
+  const domain = getEntityDomain(state);
+  return domain === "select" || domain === "input_select";
+}
+
+function getSelectEntityOptions(state) {
+  if (!state?.attributes) {
+    return [];
+  }
+  const options = state.attributes.options;
+  if (!Array.isArray(options)) {
+    return [];
+  }
+  return options.map(item => String(item ?? "").trim()).filter(Boolean);
+}
+
+function getSelectEntityCurrentValue(state) {
+  return String(state?.state ?? "").trim();
+}
+
+function humanizeSelectOptionLabel(raw) {
+  return String(raw ?? "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, match => match.toUpperCase())
+    .trim();
+}
+
 function entitySupportedFeatures(state) {
   return Number(state?.attributes?.supported_features) || 0;
 }
@@ -571,6 +598,10 @@ function getDynamicEntityIcon(state) {
 
   if (domain === "fan") {
     return stateKey === "on" ? "mdi:fan" : "mdi:fan-off";
+  }
+
+  if (domain === "select" || domain === "input_select") {
+    return "mdi:format-list-bulleted";
   }
 
   if (domain === "lock") {
@@ -774,6 +805,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._suppressNextEntityTap = false;
+    this._selectPickerOpen = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -851,6 +883,7 @@ class NodaliaEntityCard extends HTMLElement {
       this._entranceAnimationResetTimer = 0;
     }
     this._animateContentOnNextRender = true;
+    this._selectPickerOpen = false;
     this._lastRenderSignature = "";
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._clearOptimisticToggleTimer();
@@ -867,6 +900,7 @@ class NodaliaEntityCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._selectPickerOpen = false;
     this._animateContentOnNextRender = true;
     this._render();
   }
@@ -945,6 +979,8 @@ class NodaliaEntityCard extends HTMLElement {
       `sn:${this._config?.show_name !== false ? 1 : 0}`,
       `ss:${this._config?.show_state !== false ? 1 : 0}`,
       `nm:${String(this._config?.name || "")}`,
+      `sp:${this._selectPickerOpen ? 1 : 0}`,
+      `sel:${isSelectDomainEntity(state) ? getSelectEntityOptions(state).join("\u001f") : ""}`,
     ].join("|");
   }
 
@@ -1139,6 +1175,83 @@ class NodaliaEntityCard extends HTMLElement {
   _usesDomainToggleService(state = this._getActualState()) {
     const domain = this._getDomain(state?.entity_id);
     return domain === "cover" || domain === "lock";
+  }
+
+  _isSelectEntity(state = this._getActualState()) {
+    return isSelectDomainEntity(state) && getSelectEntityOptions(state).length > 0;
+  }
+
+  _getSelectOptions(state = this._getActualState()) {
+    return getSelectEntityOptions(state);
+  }
+
+  _getSelectCurrentValue(state = this._getActualState()) {
+    return getSelectEntityCurrentValue(state);
+  }
+
+  _formatSelectOptionLabel(option) {
+    const chipLabel = window.NodaliaI18n?.translateEntityStateChip?.(
+      this._hass,
+      this._config?.language ?? "auto",
+      option,
+    );
+    if (chipLabel) {
+      return chipLabel;
+    }
+    return humanizeSelectOptionLabel(option);
+  }
+
+  _shouldOpenSelectPickerOnTap(state, zone = "body") {
+    const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
+    if (tapAction !== "auto") {
+      return false;
+    }
+    if (isUnavailableState(state)) {
+      return false;
+    }
+    return this._isSelectEntity(state);
+  }
+
+  _openSelectPicker() {
+    if (this._selectPickerOpen) {
+      return;
+    }
+    this._selectPickerOpen = true;
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _closeSelectPicker() {
+    if (!this._selectPickerOpen) {
+      return;
+    }
+    this._selectPickerOpen = false;
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _toggleSelectPicker() {
+    if (this._selectPickerOpen) {
+      this._closeSelectPicker();
+      return;
+    }
+    this._openSelectPicker();
+  }
+
+  _selectEntityOption(optionValue) {
+    const entityId = this._config?.entity;
+    const state = this._getActualState();
+    if (!entityId || !state || isUnavailableState(state)) {
+      return;
+    }
+    const value = String(optionValue ?? "").trim();
+    if (!value) {
+      return;
+    }
+    const domain = this._getDomain(entityId);
+    const serviceDomain = domain === "input_select" ? "input_select" : "select";
+    this._invokeEntityService(serviceDomain, "select_option", entityId, { option: value });
+    this._closeSelectPicker();
   }
 
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
@@ -1697,6 +1810,10 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "auto":
       default:
+        if (this._shouldOpenSelectPickerOnTap(state, zone)) {
+          this._toggleSelectPicker();
+          return;
+        }
         if (this._isBinaryOnOff(state) || this._usesDomainToggleService(state)) {
           this._toggleEntity(this._config?.entity);
           return;
@@ -1915,6 +2032,19 @@ class NodaliaEntityCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    if (action === "select-close") {
+      this._closeSelectPicker();
+      return;
+    }
+
+    if (action === "select-option") {
+      const value = actionTarget.dataset.selectValue || "";
+      this._triggerHaptic("selection");
+      this._triggerPressAnimation(actionTarget);
+      this._selectEntityOption(value);
+      return;
+    }
+
     if (action === "body" || action === "icon") {
       if (this._suppressNextEntityTap) {
         this._suppressNextEntityTap = false;
@@ -1977,6 +2107,57 @@ class NodaliaEntityCard extends HTMLElement {
     const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _renderSelectPickerPanel(state, accentColor) {
+    const options = this._getSelectOptions(state);
+    if (!options.length) {
+      return "";
+    }
+    const current = this._getSelectCurrentValue(state);
+    const pickerTitle = this._entityCardUi("selectPickerTitle", "Choose option");
+    const closeLabel = this._entityCardUi("selectPickerClose", "Close");
+
+    return `
+      <div
+        class="entity-card__select-picker"
+        role="listbox"
+        aria-label="${escapeHtml(pickerTitle)}"
+      >
+        <div class="entity-card__select-picker-head">
+          <span class="entity-card__select-picker-kicker">${escapeHtml(pickerTitle)}</span>
+          <button
+            type="button"
+            class="entity-card__select-picker-close"
+            data-entity-action="select-close"
+            aria-label="${escapeHtml(closeLabel)}"
+          >
+            <ha-icon icon="mdi:chevron-up"></ha-icon>
+          </button>
+        </div>
+        <div class="entity-card__select-options">
+          ${options.map(option => {
+            const isActive = normalizeTextKey(option) === normalizeTextKey(current);
+            const label = this._formatSelectOptionLabel(option);
+            return `
+              <button
+                type="button"
+                class="entity-card__select-option${isActive ? " is-active" : ""}"
+                data-entity-action="select-option"
+                data-select-value="${escapeHtml(option)}"
+                role="option"
+                aria-selected="${isActive ? "true" : "false"}"
+                style="--select-option-accent:${escapeHtml(accentColor)};"
+              >
+                <span class="entity-card__select-option-indicator" aria-hidden="true"></span>
+                <span class="entity-card__select-option-label">${escapeHtml(label)}</span>
+                ${isActive ? '<ha-icon class="entity-card__select-option-check" icon="mdi:check"></ha-icon>' : ""}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
   }
 
   _renderEmptyState() {
@@ -2064,6 +2245,8 @@ class NodaliaEntityCard extends HTMLElement {
     const showCopyBlock = showCopyHeader || chips.length > 0;
     const canRunBodyTap = this._canRunTapAction(state, "body");
     const canRunIconTap = this._canRunTapAction(state, "icon");
+    const isSelectEntity = this._isSelectEntity(state);
+    const showSelectPicker = isSelectEntity && this._selectPickerOpen;
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
@@ -2080,7 +2263,11 @@ class NodaliaEntityCard extends HTMLElement {
         :host {
           --entity-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --entity-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --entity-card-select-panel-duration: ${animations.enabled ? Math.max(220, Math.round(animations.contentDuration * 0.72)) : 0}ms;
           display: block;
+          overflow: ${showSelectPicker ? "visible" : "hidden"};
+          position: relative;
+          z-index: ${showSelectPicker ? 2 : "auto"};
         }
 
         * {
@@ -2366,6 +2553,151 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        .entity-card__select-hint {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          margin-left: 2px;
+          opacity: 0.72;
+        }
+
+        .entity-card__select-hint ha-icon {
+          --mdc-icon-size: 14px;
+        }
+
+        .entity-card__select-picker {
+          animation: entity-card-select-panel-in var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--accent-color, var(--primary-color)) 8%, color-mix(in srgb, var(--primary-text-color) 3%, transparent)) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%);
+          border: 1px solid color-mix(in srgb, var(--accent-color, var(--primary-color)) 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: calc(${styles.card.border_radius} - 8px);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+            0 14px 28px color-mix(in srgb, var(--accent-color, var(--primary-color)) 12%, rgba(0, 0, 0, 0.18));
+          display: grid;
+          gap: 10px;
+          margin-top: 2px;
+          overflow: hidden;
+          padding: 10px;
+          transform-origin: top center;
+        }
+
+        .entity-card__select-picker-head {
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          min-width: 0;
+        }
+
+        .entity-card__select-picker-kicker {
+          color: var(--secondary-text-color);
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+
+        .entity-card__select-picker-close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 28px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 28px;
+        }
+
+        .entity-card__select-picker-close ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .entity-card__select-options {
+          display: grid;
+          gap: 8px;
+          max-height: min(240px, 42vh);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+        }
+
+        .entity-card__select-option {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 14px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: grid;
+          font: inherit;
+          gap: 10px;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          min-height: 42px;
+          padding: 10px 12px;
+          text-align: left;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+          width: 100%;
+        }
+
+        .entity-card__select-option:hover,
+        .entity-card__select-option:focus-visible {
+          background: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          outline: none;
+        }
+
+        .entity-card__select-option.is-active {
+          background: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 34%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          box-shadow: 0 8px 18px color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 14%, rgba(0, 0, 0, 0.12));
+        }
+
+        .entity-card__select-option-indicator {
+          background: color-mix(in srgb, var(--primary-text-color) 16%, transparent);
+          border-radius: 999px;
+          height: 8px;
+          width: 8px;
+        }
+
+        .entity-card__select-option.is-active .entity-card__select-option-indicator {
+          background: var(--select-option-accent, var(--primary-color));
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 18%, transparent);
+        }
+
+        .entity-card__select-option-label {
+          font-size: 0.88rem;
+          font-weight: 600;
+          line-height: 1.25;
+          min-width: 0;
+        }
+
+        .entity-card__select-option-check {
+          --mdc-icon-size: 18px;
+          color: var(--select-option-accent, var(--primary-color));
+        }
+
+        @keyframes entity-card-select-panel-in {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .entity-card--select-open .entity-card__content {
+          align-content: start;
+        }
+
         .entity-card__actions {
           display: flex;
           flex-wrap: wrap;
@@ -2512,7 +2844,7 @@ class NodaliaEntityCard extends HTMLElement {
         `}
       </style>
       <ha-card
-        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
+        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${isSelectEntity ? "entity-card--select" : ""} ${showSelectPicker ? "entity-card--select-open" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         ${canRunBodyTap ? 'data-entity-action="body"' : ""}
       >
@@ -2536,15 +2868,22 @@ class NodaliaEntityCard extends HTMLElement {
                     ? `
                       <div class="entity-card__copy-header">
                         ${showTitle ? `<div class="entity-card__title">${escapeHtml(title)}</div>` : ""}
-                        ${placeStateChipOnTitleRow ? `<div class="entity-card__copy-header-chip">${stateChip}</div>` : ""}
+                        ${placeStateChipOnTitleRow ? `
+                          <div class="entity-card__copy-header-chip">
+                            ${stateChip}
+                            ${isSelectEntity && !showSelectPicker ? '<span class="entity-card__select-hint" aria-hidden="true"><ha-icon icon="mdi:chevron-down"></ha-icon></span>' : ""}
+                          </div>
+                        ` : ""}
                       </div>
                     `
                     : ""}
-                  ${chips.length ? `<div class="entity-card__chips">${chips.join("")}</div>` : ""}
+                  ${chips.length ? `<div class="entity-card__chips">${chips.join("")}${isSelectEntity && !placeStateChipOnTitleRow && !showSelectPicker ? '<span class="entity-card__select-hint" aria-hidden="true"><ha-icon icon="mdi:chevron-down"></ha-icon></span>' : ""}</div>` : (isSelectEntity && !showSelectPicker ? '<div class="entity-card__chips"><span class="entity-card__select-hint" aria-hidden="true"><ha-icon icon="mdi:chevron-down"></ha-icon></span></div>' : "")}
                 </div>
               `
               : ""}
           </div>
+
+          ${showSelectPicker ? this._renderSelectPickerPanel(state, accentColor) : ""}
 
           ${
             quickActions.length

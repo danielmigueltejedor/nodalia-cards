@@ -1222,6 +1222,15 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /applyCardTapActionField/);
 });
 
+test("entity card opens inline select picker for select and input_select entities", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /isSelectDomainEntity/);
+  assert.match(source, /entity-card__select-picker/);
+  assert.match(source, /select_option/);
+  assert.match(source, /_shouldOpenSelectPickerOnTap/);
+  assert.match(source, /data-entity-action="select-option"/);
+});
+
 test("entity card supports in-app navigate tap action with navigation_path", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /navigation_path: ""/);
