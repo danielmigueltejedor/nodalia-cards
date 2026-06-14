@@ -1162,7 +1162,10 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           if (!this.isConnected) {
             return;
           }
-          this._clearPinVerifyWatch();
+          const st = this._getState();
+          if (st && (st.state !== snapState || st.last_changed !== snapLc)) {
+            this._clearPinVerifyWatch();
+          }
         })
         .catch(() => {
           if (!this.isConnected) {
