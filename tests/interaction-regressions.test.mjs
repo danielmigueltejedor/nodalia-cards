@@ -1183,6 +1183,7 @@ test("fav card matches entity cover lock toggle and tap action parsing", () => {
   assert.match(source, /_toggleCoverEntity\(/);
   assert.match(source, /_toggleLockEntity\(/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
+  assert.match(source, /stateKey === "locked"[\s\S]*lock", "unlock", entityId/);
   assert.match(source, /invokeHomeAssistantService/);
   assert.match(source, /_isBinaryOnOff\(state\) \|\| this\._usesDomainToggleService\(state\)/);
   assert.doesNotMatch(source, /disarm: "Disarm"/);
@@ -1216,7 +1217,7 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /cover", "open_cover"/);
   assert.match(source, /cover", "close_cover"/);
   assert.match(source, /set_cover_position", entityId, \{ position: 100 \}/);
-  assert.match(source, /lock", "open", entityId/);
+  assert.match(source, /stateKey === "locked"[\s\S]*lock", "unlock", entityId/);
   assert.match(source, /lock", "lock", entityId/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
@@ -1225,7 +1226,9 @@ test("entity card toggle uses domain services for cover and lock entities", () =
 test("entity card opens inline select picker for select and input_select entities", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /isSelectDomainEntity/);
-  assert.match(source, /entity-card__select-picker/);
+  assert.match(source, /_setSelectPickerVisibility\(/);
+  assert.match(source, /entity-card__select-picker-shell--entering/);
+  assert.match(source, /entity-card__select-picker-shell--leaving/);
   assert.match(source, /select_option/);
   assert.match(source, /_shouldOpenSelectPickerOnTap/);
   assert.match(source, /data-entity-action="select-option"/);

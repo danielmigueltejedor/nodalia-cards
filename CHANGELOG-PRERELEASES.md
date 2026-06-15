@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.7] - 2026-06-16
+
+Seventh **`1.3.0`** **`alpha`**: Entity Card polish, lock/alarm/climate fixes. Release channel **`1.3.0-alpha.7`**.
+
+### Fixed
+
+- **`entity`:** select picker expand/collapse uses in-DOM shell animations instead of full re-render (no card flicker on open/close).
+- **`entity`:** active-state tint no longer shows a clipped square glow in light mode (`:host` overflow).
+- **`entity`**, **`fav`:** generic lock toggle calls `lock.unlock` for locked states instead of `lock.open` (avoids unlatching secured doors on tap).
+- **`alarm_panel`:** manual PIN watchdog stays armed after a resolved service call until the alarm entity state/`last_changed` changes (wrong-code feedback for slow/no-op integrations).
+- **`climate`:** setpoint schedule composer blocks saves when `storage_state` exceeds the `input_text` 255-character limit, before webhook delivery.
+
+### Added
+
+- **`tests`:** `high-severity-regressions.test.mjs` for fav cover/lock routing, lock unlock behavior, alarm PIN watchdog, and climate storage guard.
+
 ## [1.3.0-alpha.6] - 2026-06-12
 
 Sixth **`1.3.0`** **`alpha`**: Entity Card select picker and News Card history. Release channel **`1.3.0-alpha.6`**.

@@ -579,7 +579,8 @@
         "webhookMissing": "Configura el webhook de horario en el editor de la tarjeta.",
         "entityMissing": "Selecciona primero una entidad climate.",
         "webhookFailed": "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
-        "dualRangeUnsupported": "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío."
+        "dualRangeUnsupported": "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío.",
+        "storageTooLarge": "Este horario es demasiado grande para el helper input_text (255 caracteres). Reduce bloques o usa automatizaciones Path A en disco."
       }
     }
   },

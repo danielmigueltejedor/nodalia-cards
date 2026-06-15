@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.3.0-alpha.6";
+const CARD_VERSION = "1.3.0-alpha.7";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1027,6 +1027,10 @@ function encodeSetpointScheduleStorageState(schedule) {
   return candidates.sort((left, right) => left.length - right.length)[0];
 }
 
+function isSetpointScheduleStorageStateWithinLimit(storageState) {
+  return String(storageState ?? "").length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX;
+}
+
 function normalizeSetpointScheduleWeekStartsOn(value) {
   const key = String(value ?? "monday").trim().toLowerCase();
   return key === "sunday" ? "sunday" : "monday";
@@ -1945,6 +1949,16 @@ class NodaliaClimateCard extends HTMLElement {
       friendlyName: this._getClimateName(state),
       cardVersion: CARD_VERSION,
     });
+
+    if (!isSetpointScheduleStorageStateWithinLimit(body.storage_state)) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.storageTooLarge",
+          "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk.",
+        ),
+      );
+      return;
+    }
 
     this._scheduleComposerSaving = true;
     this._scheduleComposerError = "";

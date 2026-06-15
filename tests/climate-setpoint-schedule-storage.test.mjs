@@ -129,3 +129,12 @@ test("forty weekly blocks fit within input_text 255 character limit", () => {
   const restored = api.decodeSetpointScheduleStorageState(compact);
   assert.equal(restored.slots.length, 40);
 });
+
+test("forty-five weekly blocks exceed input_text limit and are detectable", () => {
+  const api = loadScheduleStorageApi();
+  const slots = buildWeeklySlots(7);
+  assert.equal(slots.length, 49);
+  const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots: slots.slice(0, 45) });
+  assert.ok(compact.length > 255, `expected >255 chars for 45 slots, got ${compact.length}`);
+  assert.equal(api.isSetpointScheduleStorageStateWithinLimit(compact), false);
+});
