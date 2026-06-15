@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.9] - 2026-06-16
+
+Ninth **`1.3.0`** **`alpha`**: News Card render regression hotfix. Release channel **`1.3.0-alpha.9`**.
+
+### Fixed
+
+- **`news`:** `_renderShell` now receives `density` and `layout` (fixes Lovelace **Configuration error: Can't find variable: density** introduced in alpha.8).
+
 ## [1.3.0-alpha.8] - 2026-06-16
 
 Eighth **`1.3.0`** **`alpha`**: News Card source health and render fixes. Release channel **`1.3.0-alpha.8`**.

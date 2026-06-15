@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.8";
+const CARD_VERSION = "1.3.0-alpha.9";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
@@ -1398,10 +1398,10 @@ class NodaliaNewsCard extends HTMLElement {
     }
 
     try {
-      this._renderShell(bodyMarkup, styles, cardBackground);
+      this._renderShell(bodyMarkup, styles, cardBackground, density, layout);
     } catch (error) {
       console.error("Nodalia News Card render failed:", error);
-      this._renderShell(this._renderEmptyState("error"), styles, cardBackground);
+      this._renderShell(this._renderEmptyState("error"), styles, cardBackground, density, layout);
     }
 
     if (this._animateContentOnNextRender) {
@@ -1420,7 +1420,7 @@ class NodaliaNewsCard extends HTMLElement {
     }
   }
 
-  _renderShell(bodyMarkup, styles, cardBackground) {
+  _renderShell(bodyMarkup, styles, cardBackground, density = "normal", layout = DEFAULT_CONFIG.layout) {
     if (!this.shadowRoot) {
       return;
     }
