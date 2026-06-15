@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.11] - 2026-06-16
+
+Eleventh **`1.3.0`** **`alpha`**: Power Flow home popup bubble polish and news package example. Release channel **`1.3.0-alpha.11`**.
+
+### Added
+
+- **`examples`:** `nodalia-news-real-package.yaml` — server-side rolling RSS history (10 headlines) for `sensor.nodalia_news_real`.
+
+### Fixed
+
+- **`power_flow`:** home device popup summary bubble keeps a square aspect ratio (matches the main card node instead of a flattened wide pill).
+
 ## [1.3.0-alpha.10] - 2026-06-16
 
 Tenth **`1.3.0`** **`alpha`**: News Card shared history and smoother magazine carousel. Release channel **`1.3.0-alpha.10`**.

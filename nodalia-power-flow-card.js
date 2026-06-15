@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.3.0-alpha.10";
+const CARD_VERSION = "1.3.0-alpha.11";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2698,7 +2698,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : `${home.valueText}${home.unitText ? ` ${home.unitText}` : ""}`.trim();
     const animations = this._getAnimationSettings();
 
-    const homeSummarySize = Math.round(Math.max(72, parseSizeToPixels(styles.icon?.home_size, 96) * 0.68));
+    const homeSummarySize = Math.round(Math.max(92, parseSizeToPixels(styles.icon?.home_size, 96)));
     const homeSummaryLabel = this._config?.show_labels === false
       ? ""
       : `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(home.label)}</span>`;
@@ -3416,7 +3416,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__home-popup-summary .power-flow-card__bubble--home {
-          width: auto;
+          aspect-ratio: 1 / 1;
+          height: auto;
+          min-height: var(--node-size);
+          min-width: var(--node-size);
+          width: var(--node-size);
         }
 
         .power-flow-card__home-popup-list {
