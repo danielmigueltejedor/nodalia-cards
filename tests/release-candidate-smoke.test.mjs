@@ -465,7 +465,7 @@ test("news card is registered and shipped in the HACS bundle", () => {
   const bundle = read(`nodalia-cards-${pkg.version}.js`);
   assert.match(source, /const CARD_TAG = "nodalia-news-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
-  assert.match(source, /registerCustomCard\(\{/);
+  assert.match(source, /registerCustomCard\?\.\(\{/);
   assert.match(source, /function isSafeHttpUrl\(/);
   assert.match(build, /nodalia-news-card\.js/);
   assert.ok(pkg.files.includes("nodalia-news-card.js"), "nodalia-news-card.js should be published");

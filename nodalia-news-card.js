@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.7";
+const CARD_VERSION = "1.3.0-alpha.8";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
@@ -368,10 +368,19 @@ function getNewsSourceHealth(hass, config) {
   if (!hass) {
     return { hasSources: true, unavailable: false, loading: true };
   }
+
+  if (collectNormalizedItems(hass, config).length > 0) {
+    return { hasSources: true, unavailable: false, loading: false };
+  }
+
   const sourceStates = sources.map(source => hass.states?.[source.entity] || null);
   const hasAnySourceState = sourceStates.some(Boolean);
   if (!hasAnySourceState) {
-    if (!isLovelaceHassStatesHydrated(hass)) {
+    const states = hass.states;
+    const statesPopulated = Boolean(
+      states && typeof states === "object" && Object.keys(states).length > 0,
+    );
+    if (!statesPopulated && !isLovelaceHassStatesHydrated(hass)) {
       return { hasSources: true, unavailable: false, loading: true };
     }
     return { hasSources: true, unavailable: true, loading: false };
@@ -794,8 +803,8 @@ class NodaliaNewsCard extends HTMLElement {
     return resolveSourceEntries(this._config);
   }
 
-  _getSourceHealth() {
-    return getNewsSourceHealth(this._hass, this._config);
+  _getSourceHealth(hass = this._hass) {
+    return getNewsSourceHealth(hass, this._config);
   }
 
   _ensureNewsHistory(incoming) {
@@ -831,7 +840,7 @@ class NodaliaNewsCard extends HTMLElement {
     const config = this._config || DEFAULT_CONFIG;
     const layout = config.layout || DEFAULT_CONFIG.layout;
     const items = this._getDisplayItems(hass);
-    const health = this._getSourceHealth();
+    const health = getNewsSourceHealth(hass, config);
     const joinParts = window.NodaliaRenderSignature?.joinParts;
     const values = [
       String(config.title || ""),
@@ -1368,15 +1377,7 @@ class NodaliaNewsCard extends HTMLElement {
     const animateClass = this._animateContentOnNextRender ? " news-card--enter" : "";
 
     let bodyMarkup = "";
-    if (!health.hasSources) {
-      bodyMarkup = this._renderEmptyState("empty");
-    } else if (health.loading) {
-      bodyMarkup = this._renderEmptyState("loading");
-    } else if (health.unavailable) {
-      bodyMarkup = this._renderEmptyState("error");
-    } else if (!items.length) {
-      bodyMarkup = this._renderEmptyState("empty");
-    } else {
+    if (items.length > 0) {
       bodyMarkup = `
         <ha-card class="news-card news-card--ready news-card--${layout.mode} news-card--density-${density}${animateClass}">
           <header class="news-card__header">
@@ -1386,6 +1387,42 @@ class NodaliaNewsCard extends HTMLElement {
           ${this._renderArticles(items)}
         </ha-card>
       `;
+    } else if (!health.hasSources) {
+      bodyMarkup = this._renderEmptyState("empty");
+    } else if (health.loading) {
+      bodyMarkup = this._renderEmptyState("loading");
+    } else if (health.unavailable) {
+      bodyMarkup = this._renderEmptyState("error");
+    } else {
+      bodyMarkup = this._renderEmptyState("empty");
+    }
+
+    try {
+      this._renderShell(bodyMarkup, styles, cardBackground);
+    } catch (error) {
+      console.error("Nodalia News Card render failed:", error);
+      this._renderShell(this._renderEmptyState("error"), styles, cardBackground);
+    }
+
+    if (this._animateContentOnNextRender) {
+      this._animateContentOnNextRender = false;
+      if (this._entranceAnimationResetTimer) {
+        window.clearTimeout(this._entranceAnimationResetTimer);
+      }
+      this._entranceAnimationResetTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
+        this,
+        "_entranceAnimationResetTimer",
+        () => {
+          this._entranceAnimationResetTimer = 0;
+        },
+        480,
+      ) || 0;
+    }
+  }
+
+  _renderShell(bodyMarkup, styles, cardBackground) {
+    if (!this.shadowRoot) {
+      return;
     }
 
     this.shadowRoot.innerHTML = `
@@ -1714,21 +1751,6 @@ class NodaliaNewsCard extends HTMLElement {
       </style>
       ${bodyMarkup}
     `;
-
-    if (this._animateContentOnNextRender) {
-      this._animateContentOnNextRender = false;
-      if (this._entranceAnimationResetTimer) {
-        window.clearTimeout(this._entranceAnimationResetTimer);
-      }
-      this._entranceAnimationResetTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
-        this,
-        "_entranceAnimationResetTimer",
-        () => {
-          this._entranceAnimationResetTimer = 0;
-        },
-        480,
-      ) || 0;
-    }
   }
 }
 
@@ -2255,7 +2277,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaNewsCardEditor);
 }
 
-window.NodaliaUtils.registerCustomCard({
+window.NodaliaUtils?.registerCustomCard?.({
   type: CARD_TAG,
   name: "Nodalia News Card",
   description: "Editorial newspaper-style news card for Home Assistant dashboards.",

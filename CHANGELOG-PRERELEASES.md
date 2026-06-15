@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.8] - 2026-06-16
+
+Eighth **`1.3.0`** **`alpha`**: News Card source health and render fixes. Release channel **`1.3.0-alpha.8`**.
+
+### Fixed
+
+- **`news`:** show cached or live items even when the sensor state is `unavailable`/`unknown` (no longer blocks on `health.unavailable` before reading display items).
+- **`news`:** `getNewsSourceHealth` treats parsed items as healthy and stops infinite loading when `hass.states` is populated but the entity is missing.
+- **`news`:** render signature uses the incoming `hass` snapshot for health checks.
+- **`news`:** render failures are caught so Lovelace does not fall back to a configuration error.
+
 ## [1.3.0-alpha.7] - 2026-06-16
 
 Seventh **`1.3.0`** **`alpha`**: Entity Card polish, lock/alarm/climate fixes. Release channel **`1.3.0-alpha.7`**.

@@ -25,6 +25,7 @@ function loadNewsHelpers() {
       coerceNewsAttributeList,
       extractRawItemsFromState,
       getNewsSourceHealth,
+      getNewsSourceHealth,
       mergeNewsItemHistory,
       restoreNewsHistoryItem,
       getNewsHistoryStorageKey,
@@ -83,7 +84,8 @@ const sampleHass = {
 test("news card registers custom element and bundle entry", () => {
   const source = read("nodalia-news-card.js");
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
-  assert.match(source, /registerCustomCard\(\{[\s\S]*type: CARD_TAG/);
+  assert.match(source, /registerCustomCard\?\.\(\{[\s\S]*type: CARD_TAG/);
+  assert.match(source, /if \(items\.length > 0\) \{[\s\S]*health\.unavailable/);
   assert.match(read("scripts/build-bundle.mjs"), /nodalia-news-card\.js/);
 });
 
@@ -329,6 +331,38 @@ test("unknown entity state with items is not treated as unavailable", () => {
   const health = helpers.getNewsSourceHealth(hass, { entity: "sensor.nodalia_news_test" });
   assert.equal(health.loading, false);
   assert.equal(health.unavailable, false);
+});
+
+test("missing configured entity stops loading once hass states are populated", () => {
+  const hass = {
+    connected: false,
+    states: {
+      "light.kitchen": { state: "on", attributes: {} },
+    },
+  };
+  const health = helpers.getNewsSourceHealth(hass, { entity: "sensor.nodalia_news_missing" });
+  assert.equal(health.loading, false);
+  assert.equal(health.unavailable, true);
+});
+
+test("parsed news items bypass loading even when hass.connected is false", () => {
+  const hass = {
+    connected: false,
+    states: {
+      "sensor.nodalia_news_real": {
+        state: "unknown",
+        attributes: { items: nodaliaNewsFixture },
+      },
+    },
+  };
+  const health = helpers.getNewsSourceHealth(hass, { entity: "sensor.nodalia_news_real" });
+  assert.equal(health.loading, false);
+  assert.equal(health.unavailable, false);
+  const items = helpers.getNewsItemsForConfig(hass, {
+    entity: "sensor.nodalia_news_real",
+    max_items: 8,
+  });
+  assert.ok(items.length > 0);
 });
 
 test("magazine layout uses swipe carousel markup in source", () => {
