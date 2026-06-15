@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.3.0-alpha.9";
+const CARD_VERSION = "1.3.0-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3840,10 +3840,12 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -5328,6 +5330,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
       });
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

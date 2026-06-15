@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.3.0-alpha.9";
+const CARD_VERSION = "1.3.0-alpha.10";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -4437,10 +4437,12 @@ class NodaliaCalendarCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {

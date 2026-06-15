@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.0-alpha.9";
+const CARD_VERSION = "1.3.0-alpha.10";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -3511,10 +3511,12 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -4855,6 +4857,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
     this.shadowRoot.querySelectorAll('[data-mounted-control="icon"]').forEach(host => this._mountIconPicker(host));
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

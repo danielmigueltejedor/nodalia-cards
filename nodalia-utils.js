@@ -1280,6 +1280,85 @@
     return normalized;
   }
 
+  /**
+   * Lovelace card dialog (.element-editor) stretches to match preview height on wide layouts.
+   * Short visual editors then scroll past their fields into empty space — align the pane to content.
+   */
+  function findLovelaceElementEditorPane(editorHost) {
+    if (!(editorHost instanceof HTMLElement)) {
+      return null;
+    }
+    let node = editorHost.parentElement;
+    while (node) {
+      if (node.classList?.contains("element-editor")) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function bindEditorDialogLayoutFix(editorHost) {
+    if (!(editorHost instanceof HTMLElement)) {
+      return;
+    }
+    releaseEditorDialogLayoutFix(editorHost);
+    const pane = findLovelaceElementEditorPane(editorHost);
+    if (!pane) {
+      return;
+    }
+    const previous = {
+      alignSelf: pane.style.alignSelf,
+      height: pane.style.height,
+      maxHeight: pane.style.maxHeight,
+      overflowY: pane.style.overflowY,
+    };
+    pane.style.alignSelf = "flex-start";
+    pane.style.height = "auto";
+    pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
+    pane.style.overflowY = "auto";
+    editorHost._nodaliaEditorDialogLayoutRelease = () => {
+      pane.style.alignSelf = previous.alignSelf;
+      pane.style.height = previous.height;
+      pane.style.maxHeight = previous.maxHeight;
+      pane.style.overflowY = previous.overflowY;
+    };
+  }
+
+  function releaseEditorDialogLayoutFix(editorHost) {
+    if (editorHost?._nodaliaEditorDialogLayoutRelease) {
+      editorHost._nodaliaEditorDialogLayoutRelease();
+      editorHost._nodaliaEditorDialogLayoutRelease = null;
+    }
+  }
+
+  function clampEditorDialogScroll(editorHost) {
+    if (!(editorHost instanceof HTMLElement) || typeof window === "undefined") {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      if (!editorHost.isConnected) {
+        return;
+      }
+      bindEditorDialogLayoutFix(editorHost);
+      let node = findLovelaceElementEditorPane(editorHost) || editorHost;
+      while (node && node !== document.documentElement) {
+        const style = getComputedStyle(node);
+        const scrollable =
+          /(auto|scroll|overlay)/.test(style.overflowY) &&
+          node.scrollHeight > node.clientHeight + 1;
+        if (scrollable) {
+          const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+          if (node.scrollTop > maxScroll) {
+            node.scrollTop = maxScroll;
+          }
+          break;
+        }
+        node = node.parentElement;
+      }
+    });
+  }
+
   function scheduleDeferTimer(host, callback, delayMs) {
     if (!host || typeof window === "undefined" || typeof callback !== "function") {
       return 0;
@@ -1328,6 +1407,9 @@
     applyCardTapActionField,
     invokeHomeAssistantService,
     renderCardEmptyStateDocument,
+    bindEditorDialogLayoutFix,
+    releaseEditorDialogLayoutFix,
+    clampEditorDialogScroll,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,

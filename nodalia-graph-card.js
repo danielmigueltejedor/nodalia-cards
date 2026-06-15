@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.3.0-alpha.9";
+const CARD_VERSION = "1.3.0-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3819,10 +3819,12 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -5116,6 +5118,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.3.0-alpha.9";
+const CARD_VERSION = "1.3.0-alpha.10";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -6955,10 +6955,12 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -7700,10 +7702,12 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -8865,6 +8869,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

@@ -1158,6 +1158,20 @@ test("climate schedule composer keeps agenda scroll position across re-renders",
   assert.match(source, /this\._patchScheduleBlockDom\(slotId\);[\s\S]*this\._syncRenderSignature\(\)/);
 });
 
+test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function bindEditorDialogLayoutFix\(/);
+  assert.match(utils, /function clampEditorDialogScroll\(/);
+  assert.match(utils, /element-editor/);
+  assert.match(utils, /alignSelf = "flex-start"/);
+  for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js"]) {
+    const source = read(card);
+    assert.match(source, /bindEditorDialogLayoutFix\?\.\(this\)/);
+    assert.match(source, /releaseEditorDialogLayoutFix\?\.\(this\)/);
+    assert.match(source, /clampEditorDialogScroll\?\.\(this\)/);
+  }
+});
+
 test("slider bubble chrome does not trigger card body tap", () => {
   const utils = read("nodalia-utils.js");
   assert.match(utils, /function isNodaliaSliderChromeHit\(/);

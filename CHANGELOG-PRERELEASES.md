@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.10] - 2026-06-16
+
+Tenth **`1.3.0`** **`alpha`**: News Card shared history and smoother magazine carousel. Release channel **`1.3.0-alpha.10`**.
+
+### Added
+
+- **`news`:** `history_helper` syncs article history through a Home Assistant `input_text` or `text` helper so iPhone, Mac, and other clients show the same headlines.
+- **`news`:** `mirror_history_local` keeps an optional browser cache when a helper is configured (default on).
+- **`examples`:** `news-history-helper.yaml` sample helper setup.
+- **`tests`:** compact helper round-trip, payload size budget, helper load, and carousel commit smoke coverage.
+
+### Changed
+
+- **`news`:** magazine carousel commits slide changes in-DOM with a 520 ms eased transition instead of full card re-renders on swipe or arrow navigation.
+- **`news`:** docs and visual editor fields for shared history configuration.
+
+### Fixed
+
+- **`utils` / editors:** wide editor dialogs no longer leave empty scroll space below the form when the live preview is taller (`bindEditorDialogLayoutFix` applied suite-wide).
+
 ## [1.3.0-alpha.9] - 2026-06-16
 
 Ninth **`1.3.0`** **`alpha`**: News Card render regression hotfix. Release channel **`1.3.0-alpha.9`**.

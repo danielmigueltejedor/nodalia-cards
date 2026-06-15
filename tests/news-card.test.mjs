@@ -29,6 +29,12 @@ function loadNewsHelpers() {
       mergeNewsItemHistory,
       restoreNewsHistoryItem,
       getNewsHistoryStorageKey,
+      encodeCompactNewsHistoryEntry,
+      decodeCompactNewsHistoryEntry,
+      parseNewsHistoryFromHelperState,
+      fitNewsHistoryPayloadToLimit,
+      loadNewsHistoryFromHelper,
+      writeNewsHistoryToHelper,
     };
   `;
   const sandbox = {
@@ -415,4 +421,58 @@ test("getNewsHistoryStorageKey scopes storage per entity", () => {
   const right = helpers.getNewsHistoryStorageKey({ entity: "sensor.b" });
   assert.notEqual(left, right);
   assert.match(left, /sensor\.a/);
+});
+
+test("compact helper history round-trips through helper state JSON", () => {
+  const item = helpers.normalizeNewsItem({
+    title: "Shared headline",
+    summary: "Body copy",
+    url: "https://example.com/shared",
+    published: "2026-06-12T08:00:00Z",
+  }, { entity: "sensor.news_shared", name: "Shared" });
+  const encoded = helpers.encodeCompactNewsHistoryEntry(item);
+  const restored = helpers.decodeCompactNewsHistoryEntry(encoded);
+  assert.equal(restored.title, "Shared headline");
+  assert.equal(restored.url, "https://example.com/shared");
+  assert.equal(restored.sourceEntityId, "sensor.news_shared");
+});
+
+test("fitNewsHistoryPayloadToLimit respects input_text size budget", () => {
+  const entries = Array.from({ length: 8 }, (_, index) => ({
+    t: `Headline number ${index + 1}`,
+    p: 1718208000000 + index,
+    e: "sensor.news",
+  }));
+  const payload = helpers.fitNewsHistoryPayloadToLimit(entries, 250);
+  assert.ok(payload.length <= 250);
+  const parsed = JSON.parse(payload);
+  assert.ok(Array.isArray(parsed));
+  assert.ok(parsed.length > 0);
+  assert.ok(parsed.length < entries.length);
+});
+
+test("loadNewsHistoryFromHelper reads helper entity state", () => {
+  const item = helpers.encodeCompactNewsHistoryEntry(
+    helpers.normalizeNewsItem({ title: "Server headline" }, { entity: "sensor.news" }),
+  );
+  const hass = {
+    states: {
+      "input_text.nodalia_news_history": {
+        state: JSON.stringify([item]),
+      },
+    },
+    callService() {},
+  };
+  const loaded = helpers.loadNewsHistoryFromHelper(hass, "input_text.nodalia_news_history");
+  assert.equal(loaded.length, 1);
+  assert.equal(loaded[0].title, "Server headline");
+});
+
+test("news card supports shared helper history and smooth carousel commits", () => {
+  const source = read("nodalia-news-card.js");
+  assert.match(source, /history_helper/);
+  assert.match(source, /writeNewsHistoryToHelper/);
+  assert.match(source, /_commitMagazineSlide/);
+  assert.match(source, /cubic-bezier\(0\.22, 1, 0\.36, 1\)/);
+  assert.match(source, /news-card__carousel-slide\.is-active/);
 });

@@ -828,7 +828,8 @@
         previousArticle: "Previous article",
         nextArticle: "Next article",
         articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        goToArticle: "Go to article {index}",
+        historyHelperHint: "Configure history_helper with an input_text helper for shared history across devices."
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",

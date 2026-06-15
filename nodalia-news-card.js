@@ -1,10 +1,13 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.9";
+const CARD_VERSION = "1.3.0-alpha.10";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
 const NEWS_HISTORY_STORAGE_PREFIX = "nodalia-news-card:history:";
+const NEWS_HISTORY_HELPER_MAX_CHARS = 250;
+const NEWS_HISTORY_HELPER_WRITE_MS = 450;
+const MAGAZINE_SLIDE_TRANSITION_MS = 520;
 
 const ITEM_LIST_ATTRS = ["items", "articles", "entries", "news", "headlines"];
 const LAYOUT_MODES = new Set(["compact", "magazine", "list"]);
@@ -18,6 +21,8 @@ const DEFAULT_CONFIG = {
   max_items: 5,
   remember_items: true,
   storage_key: "",
+  history_helper: "",
+  mirror_history_local: true,
   sources: [],
   layout: {
     mode: "magazine",
@@ -496,6 +501,8 @@ function normalizeConfig(rawConfig) {
   merged.max_items = Math.max(1, Math.min(50, Number(merged.max_items) || DEFAULT_CONFIG.max_items));
   merged.remember_items = merged.remember_items !== false;
   merged.storage_key = String(merged.storage_key ?? "").trim();
+  merged.history_helper = String(merged.history_helper ?? merged.history_entity ?? "").trim();
+  merged.mirror_history_local = merged.mirror_history_local !== false;
   merged.title = String(merged.title ?? "").trim();
   merged.entity = String(merged.entity ?? "").trim();
   merged.language = String(merged.language ?? "auto").trim() || "auto";
@@ -641,6 +648,124 @@ function saveNewsHistoryToStorage(storageKey, items) {
   }
 }
 
+function encodeCompactNewsHistoryEntry(item) {
+  const compact = compactNewsHistoryItem(item);
+  if (!compact) {
+    return null;
+  }
+  const entry = {
+    t: compact.title.slice(0, 48),
+    p: compact.publishedMs ?? undefined,
+    e: compact.sourceEntityId || undefined,
+    u: compact.url ? compact.url.slice(0, 56) : undefined,
+    s: compact.source ? compact.source.slice(0, 24) : undefined,
+    c: compact.category ? compact.category.slice(0, 20) : undefined,
+    m: compact.summary ? compact.summary.slice(0, 48) : undefined,
+    g: compact.image ? compact.image.slice(0, 56) : undefined,
+  };
+  Object.keys(entry).forEach(key => {
+    if (entry[key] === undefined || entry[key] === "") {
+      delete entry[key];
+    }
+  });
+  return entry;
+}
+
+function decodeCompactNewsHistoryEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+  if (entry.title || entry.headline) {
+    return restoreNewsHistoryItem(entry);
+  }
+  if (!entry.t) {
+    return null;
+  }
+  return restoreNewsHistoryItem({
+    title: entry.t,
+    summary: entry.m || "",
+    source: entry.s || "",
+    category: entry.c || "",
+    url: entry.u || "",
+    image: entry.g || "",
+    publishedMs: entry.p ?? null,
+    sourceEntityId: entry.e || "",
+    sourceName: entry.s || "",
+  });
+}
+
+function parseNewsHistoryFromHelperState(rawState) {
+  const raw = String(rawState ?? "").trim();
+  if (!raw || raw === "unknown" || raw === "unavailable") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map(decodeCompactNewsHistoryEntry).filter(Boolean);
+  } catch (_err) {
+    return [];
+  }
+}
+
+function fitNewsHistoryPayloadToLimit(entries, maxChars = NEWS_HISTORY_HELPER_MAX_CHARS) {
+  let payload = Array.isArray(entries) ? entries.filter(Boolean) : [];
+  while (payload.length > 0) {
+    const json = JSON.stringify(payload);
+    if (json.length <= maxChars) {
+      return json;
+    }
+    payload = payload.slice(0, -1);
+  }
+  return "[]";
+}
+
+function loadNewsHistoryFromHelper(hass, entityId) {
+  const id = String(entityId ?? "").trim();
+  if (!id || !hass?.states?.[id]) {
+    return [];
+  }
+  return parseNewsHistoryFromHelperState(hass.states[id].state);
+}
+
+function getNewsHistoryHelperSignature(hass, entityId) {
+  const id = String(entityId ?? "").trim();
+  if (!id || !hass?.states?.[id]) {
+    return "";
+  }
+  const state = hass.states[id];
+  return `${state.state ?? ""}::${state.last_changed ?? state.last_updated ?? ""}`;
+}
+
+function writeNewsHistoryToHelper(hass, entityId, items) {
+  const id = String(entityId ?? "").trim();
+  if (!id || typeof hass?.callService !== "function") {
+    return false;
+  }
+  const domain = id.split(".")[0];
+  if (domain !== "input_text" && domain !== "text") {
+    return false;
+  }
+  const payload = fitNewsHistoryPayloadToLimit(
+    (Array.isArray(items) ? items : []).map(encodeCompactNewsHistoryEntry).filter(Boolean),
+  );
+  const current = String(hass.states?.[id]?.state ?? "").trim();
+  if (current === payload) {
+    return true;
+  }
+  try {
+    hass.callService(domain, "set_value", {
+      entity_id: id,
+      value: payload,
+    });
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
 function getLocaleTag(hass, language) {
   const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language ?? "auto");
   return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
@@ -712,6 +837,10 @@ class NodaliaNewsCard extends HTMLElement {
     this._suppressArticleTap = false;
     this._newsHistory = [];
     this._historyStorageKey = "";
+    this._historyHelperEntityId = "";
+    this._historyHelperSignature = "";
+    this._historyHelperWriteTimer = 0;
+    this._magazineSlideResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
@@ -735,6 +864,14 @@ class NodaliaNewsCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    if (this._historyHelperWriteTimer) {
+      window.clearTimeout(this._historyHelperWriteTimer);
+      this._historyHelperWriteTimer = 0;
+    }
+    if (this._magazineSlideResetTimer) {
+      window.clearTimeout(this._magazineSlideResetTimer);
+      this._magazineSlideResetTimer = 0;
+    }
     this._cancelMagazineSwipe();
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
@@ -747,6 +884,8 @@ class NodaliaNewsCard extends HTMLElement {
     this._magazineItemsStamp = "";
     this._magazineIndex = 0;
     this._historyStorageKey = "";
+    this._historyHelperEntityId = "";
+    this._historyHelperSignature = "";
     this._newsHistory = [];
     this._animateContentOnNextRender = true;
     this._render();
@@ -809,19 +948,63 @@ class NodaliaNewsCard extends HTMLElement {
 
   _ensureNewsHistory(incoming) {
     const config = this._config || DEFAULT_CONFIG;
+    const helperEntityId = String(config.history_helper || "").trim();
     const storageKey = getNewsHistoryStorageKey(config);
-    if (storageKey !== this._historyStorageKey) {
+    const helperSignature = helperEntityId
+      ? getNewsHistoryHelperSignature(this._hass, helperEntityId)
+      : "";
+
+    if (helperEntityId && this._hass) {
+      if (
+        helperEntityId !== this._historyHelperEntityId
+        || helperSignature !== this._historyHelperSignature
+      ) {
+        this._historyHelperEntityId = helperEntityId;
+        this._historyHelperSignature = helperSignature;
+        this._newsHistory = loadNewsHistoryFromHelper(this._hass, helperEntityId);
+      }
+    } else if (storageKey !== this._historyStorageKey) {
       this._historyStorageKey = storageKey;
+      this._historyHelperEntityId = "";
+      this._historyHelperSignature = "";
       this._newsHistory = loadNewsHistoryFromStorage(storageKey);
     }
+
     const merged = mergeNewsItemHistory(this._newsHistory, incoming, config.max_items);
     const previousStamp = buildNewsRenderStamp(this._newsHistory);
     const nextStamp = buildNewsRenderStamp(merged);
     if (previousStamp !== nextStamp) {
       this._newsHistory = merged;
-      saveNewsHistoryToStorage(storageKey, merged);
+      if (helperEntityId && this._hass) {
+        this._scheduleNewsHistoryHelperWrite(merged, helperEntityId);
+      }
+      if (!helperEntityId || config.mirror_history_local !== false) {
+        if (!this._historyStorageKey) {
+          this._historyStorageKey = storageKey;
+        }
+        saveNewsHistoryToStorage(this._historyStorageKey, merged);
+      }
     }
     return merged;
+  }
+
+  _scheduleNewsHistoryHelperWrite(items, helperEntityId) {
+    if (this._historyHelperWriteTimer) {
+      window.clearTimeout(this._historyHelperWriteTimer);
+    }
+    const entityId = String(helperEntityId || this._config?.history_helper || "").trim();
+    if (!entityId) {
+      return;
+    }
+    this._historyHelperWriteTimer = window.setTimeout(() => {
+      this._historyHelperWriteTimer = 0;
+      if (!this.isConnected || !this._hass) {
+        return;
+      }
+      if (writeNewsHistoryToHelper(this._hass, entityId, items)) {
+        this._historyHelperSignature = getNewsHistoryHelperSignature(this._hass, entityId);
+      }
+    }, NEWS_HISTORY_HELPER_WRITE_MS);
   }
 
   _getDisplayItems(hass = this._hass) {
@@ -847,6 +1030,9 @@ class NodaliaNewsCard extends HTMLElement {
       config.max_items,
       config.remember_items === false ? 0 : 1,
       String(config.storage_key || ""),
+      String(config.history_helper || ""),
+      config.mirror_history_local === false ? 0 : 1,
+      getNewsHistoryHelperSignature(hass, config.history_helper),
       layout.mode,
       layout.density,
       layout.show_images ? 1 : 0,
@@ -991,6 +1177,10 @@ class NodaliaNewsCard extends HTMLElement {
     if (nextIndex === this._magazineIndex) {
       return;
     }
+    if (this._canPatchMagazineCarousel(items)) {
+      this._commitMagazineSlide(nextIndex);
+      return;
+    }
     this._magazineIndex = nextIndex;
     this._render();
   }
@@ -1005,8 +1195,87 @@ class NodaliaNewsCard extends HTMLElement {
     if (nextIndex < 0 || nextIndex >= items.length) {
       return;
     }
+    if (this._canPatchMagazineCarousel(items)) {
+      this._commitMagazineSlide(nextIndex);
+      return;
+    }
     this._magazineIndex = nextIndex;
     this._render();
+  }
+
+  _canPatchMagazineCarousel(items) {
+    if (!this.shadowRoot?.querySelector("[data-news-track]")) {
+      return false;
+    }
+    const stamp = buildNewsRenderStamp(items);
+    return stamp === this._magazineItemsStamp && (this._config?.layout?.mode || "magazine") === "magazine";
+  }
+
+  _commitMagazineSlide(nextIndex) {
+    const items = this._getDisplayItems();
+    const track = this.shadowRoot?.querySelector("[data-news-track]");
+    if (!(track instanceof HTMLElement) || !items.length) {
+      this._magazineIndex = nextIndex;
+      this._render();
+      return;
+    }
+
+    const maxIndex = Math.max(0, items.length - 1);
+    const safeIndex = Math.max(0, Math.min(nextIndex, maxIndex));
+    this._magazineIndex = safeIndex;
+    this._cancelMagazineSwipe();
+
+    track.classList.remove("news-card__carousel-track--dragging");
+    track.style.setProperty("--news-drag-offset", "0px");
+    track.style.setProperty("--news-slide-index", String(safeIndex));
+    track.classList.add("news-card__carousel-track--animating");
+
+    track.querySelectorAll(".news-card__carousel-slide").forEach((slide, slideIndex) => {
+      slide.classList.toggle("is-active", slideIndex === safeIndex);
+    });
+
+    this._updateMagazineChrome(safeIndex, items.length);
+
+    if (this._magazineSlideResetTimer) {
+      window.clearTimeout(this._magazineSlideResetTimer);
+    }
+    this._magazineSlideResetTimer = window.setTimeout(() => {
+      this._magazineSlideResetTimer = 0;
+      track.classList.remove("news-card__carousel-track--animating");
+    }, MAGAZINE_SLIDE_TRANSITION_MS + 40);
+  }
+
+  _updateMagazineChrome(index, total) {
+    const carousel = this.shadowRoot?.querySelector("[data-news-carousel]");
+    if (!(carousel instanceof HTMLElement)) {
+      return;
+    }
+    const positionLabel = this._ui("articlePosition", "Article {current} of {total}", {
+      current: index + 1,
+      total,
+    });
+    carousel.setAttribute("aria-label", positionLabel);
+
+    carousel.querySelectorAll('[data-news-action="goto"]').forEach(button => {
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+      const dotIndex = Number.parseInt(button.dataset.newsIndex || "", 10);
+      const isActive = dotIndex === index;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-current", isActive ? "true" : "false");
+    });
+
+    const prevButton = carousel.querySelector('[data-news-action="prev"]');
+    const nextButton = carousel.querySelector('[data-news-action="next"]');
+    if (prevButton instanceof HTMLButtonElement) {
+      prevButton.disabled = index <= 0;
+      prevButton.classList.toggle("is-disabled", index <= 0);
+    }
+    if (nextButton instanceof HTMLButtonElement) {
+      nextButton.disabled = index >= total - 1;
+      nextButton.classList.toggle("is-disabled", index >= total - 1);
+    }
   }
 
   _attachMagazineSwipeWindowListeners() {
@@ -1159,7 +1428,11 @@ class NodaliaNewsCard extends HTMLElement {
 
     this._cancelMagazineSwipe();
     if (navigated) {
-      this._render();
+      if (this._canPatchMagazineCarousel(items)) {
+        this._commitMagazineSlide(this._magazineIndex);
+      } else {
+        this._render();
+      }
       return;
     }
     this._updateMagazineTrackTransform(
@@ -1285,8 +1558,8 @@ class NodaliaNewsCard extends HTMLElement {
             data-news-track
             style="--news-slide-index: ${index}; --news-drag-offset: 0px;"
           >
-            ${items.map(item => `
-              <div class="news-card__carousel-slide">
+            ${items.map((item, slideIndex) => `
+              <div class="news-card__carousel-slide${slideIndex === index ? " is-active" : ""}">
                 ${this._renderArticleItem(item, { variant: "hero" })}
               </div>
             `).join("")}
@@ -1519,7 +1792,7 @@ class NodaliaNewsCard extends HTMLElement {
         .news-card__carousel-track {
           display: flex;
           transform: translateX(calc((var(--news-slide-index, 0) * -100%) + var(--news-drag-offset, 0px)));
-          transition: transform 280ms ease;
+          transition: transform ${MAGAZINE_SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1);
           width: 100%;
           will-change: transform;
         }
@@ -1528,16 +1801,35 @@ class NodaliaNewsCard extends HTMLElement {
           transition: none;
         }
 
+        .news-card__carousel-track--animating {
+          transition: transform ${MAGAZINE_SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .news-card__carousel-track {
-            transition: none;
+          .news-card__carousel-track,
+          .news-card__carousel-track--animating,
+          .news-card__carousel-slide {
+            transition: none !important;
           }
         }
 
         .news-card__carousel-slide {
           flex: 0 0 100%;
+          filter: saturate(0.94);
           min-width: 0;
+          opacity: 0.78;
+          transform: scale(0.992);
+          transition:
+            filter ${MAGAZINE_SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity ${MAGAZINE_SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1),
+            transform ${MAGAZINE_SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1);
           width: 100%;
+        }
+
+        .news-card__carousel-slide.is-active {
+          filter: none;
+          opacity: 1;
+          transform: scale(1);
         }
 
         .news-card__carousel-slide .news-card__media--hero {
@@ -1843,10 +2135,12 @@ class NodaliaNewsCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   setConfig(config) {
@@ -2222,6 +2516,11 @@ class NodaliaNewsCardEditor extends HTMLElement {
             ${this._renderTextField("ed.news.title", "title", config.title, { fullWidth: true })}
             ${this._renderTextField("ed.news.max_items", "max_items", config.max_items, { type: "number", valueType: "number" })}
             ${this._renderCheckboxField("ed.news.remember_items", "remember_items", config.remember_items !== false)}
+            ${this._renderTextField("ed.news.history_helper", "history_helper", config.history_helper || "", {
+              fullWidth: true,
+              placeholder: "input_text.nodalia_news_history",
+            })}
+            ${this._renderCheckboxField("ed.news.mirror_history_local", "mirror_history_local", config.mirror_history_local !== false)}
           </div>
         </section>
         <section class="editor-section">
@@ -2266,6 +2565,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
       this._mountEntityPicker(host);
     });
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 
