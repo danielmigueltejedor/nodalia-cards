@@ -799,7 +799,9 @@ function packSetpointScheduleSlot(dayIdx, startMins, endMins, temperature, enabl
   }
 
   const day = clamp(Number(dayIdx), 0, 6);
-  const temp = clamp(Math.round(Number(temperature)) - 5, 0, 255);
+  const tempQuarters = clamp(Math.round((Number(temperature) - 5) * 4), 0, 1023);
+  const temp = (tempQuarters >> 2) & 0xFF;
+  const tempFraction = tempQuarters & 0x03;
   const disabled = enabled === false ? 1 : 0;
 
   return (
@@ -807,7 +809,8 @@ function packSetpointScheduleSlot(dayIdx, startMins, endMins, temperature, enabl
     (endQ << 9) |
     (day << 18) |
     (disabled << 21) |
-    (temp << 22)
+    (temp << 22) |
+    (tempFraction << 30)
   ) >>> 0;
 }
 
@@ -817,7 +820,7 @@ function unpackSetpointSchedulePacked(packedValue) {
   const endQ = (packed >> 9) & 0x1FF;
   const dayIdx = (packed >> 18) & 7;
   const disabled = (packed >> 21) & 1;
-  const temperature = ((packed >> 22) & 0xFF) + 5;
+  const temperature = (((packed >> 22) & 0xFF) + 5) + (((packed >>> 30) & 0x03) / 4);
   const startMins = startQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
   let endMins = endQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
   if (endMins <= startMins) {
@@ -962,6 +965,9 @@ function decodeSetpointScheduleStorageState(rawState) {
 function encodeSetpointScheduleStorageState(schedule) {
   const normalized = normalizeSetpointScheduleConfig(schedule);
   const candidates = [];
+  const addCandidate = (state, pathBCompatible = true) => {
+    candidates.push({ state, pathBCompatible });
+  };
 
   if (normalized.slots.length > 0) {
     const packed = normalized.slots.map(slot => {
@@ -979,7 +985,7 @@ function encodeSetpointScheduleStorageState(schedule) {
     if (normalized.enabled === false) {
       binaryPayload.e = 0;
     }
-    candidates.push(JSON.stringify(binaryPayload));
+    addCandidate(JSON.stringify(binaryPayload), false);
 
     const packedPayload = {
       v: SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED,
@@ -988,7 +994,7 @@ function encodeSetpointScheduleStorageState(schedule) {
     if (normalized.enabled === false) {
       packedPayload.e = 0;
     }
-    candidates.push(JSON.stringify(packedPayload));
+    addCandidate(JSON.stringify(packedPayload), true);
   }
 
   const rows = normalized.slots.map(slot => {
@@ -1009,22 +1015,30 @@ function encodeSetpointScheduleStorageState(schedule) {
   if (normalized.enabled === false) {
     legacyCompactPayload.e = 0;
   }
-  candidates.push(JSON.stringify(legacyCompactPayload));
+  addCandidate(JSON.stringify(legacyCompactPayload), true);
 
   if (!normalized.slots.length) {
     const emptyPayload = { v: SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY, b: "", n: 0 };
     if (normalized.enabled === false) {
       emptyPayload.e = 0;
     }
-    candidates.push(JSON.stringify(emptyPayload));
+    addCandidate(JSON.stringify(emptyPayload), false);
   }
 
-  const withinLimit = candidates.filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
+  const shortest = values => values.sort((left, right) => left.state.length - right.state.length)[0].state;
+  const withinLimitPathB = candidates.filter(
+    candidate => candidate.pathBCompatible && candidate.state.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX,
+  );
+  if (withinLimitPathB.length) {
+    return shortest(withinLimitPathB);
+  }
+
+  const withinLimit = candidates.filter(candidate => candidate.state.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
   if (withinLimit.length) {
-    return withinLimit.sort((left, right) => left.length - right.length)[0];
+    return shortest(withinLimit);
   }
 
-  return candidates.sort((left, right) => left.length - right.length)[0];
+  return shortest(candidates);
 }
 
 function normalizeSetpointScheduleWeekStartsOn(value) {

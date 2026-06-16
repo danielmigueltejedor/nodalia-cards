@@ -74,7 +74,7 @@ Reload automations. After **Save** on the card, check **Traces** — you should 
 | Path | Best for | File |
 |------|----------|------|
 | **B** (recommended) | No shell access; one automation per thermostat | [`climate-setpoint-schedule-path-b.yaml`](../examples/climate-setpoint-schedule-path-b.yaml) |
-| **A** | Many blocks (v:3 storage); native time triggers | [`climate-setpoint-schedule-shell.yaml`](../examples/climate-setpoint-schedule-shell.yaml) + webhook optional steps |
+| **A** | Very large schedules (v:3 storage); native time triggers | [`climate-setpoint-schedule-shell.yaml`](../examples/climate-setpoint-schedule-shell.yaml) + webhook optional steps |
 
 **Path B:** copy the example **once per thermostat**, replace `YOUR_CLIMATE_ENTITY`, `YOUR_ROOM`, and `YOUR_DISPLAY_NAME`, reload automations, then **Run actions** once to verify `climate.set_temperature` runs.
 
@@ -189,7 +189,7 @@ For each enabled slot, the card can build one automation that triggers at `start
 
 | Version | Shape | ~Capacity | Path B |
 |---------|--------|-----------|--------|
-| **3** (default for many blocks) | `{"v":3,"b":"<base64>","n":12}` | ~40 blocks | No (use Path A) |
+| **3** (used when Path-B formats do not fit) | `{"v":3,"b":"<base64>","n":12}` | ~40 blocks | No (use Path A) |
 | **2** | `{"v":2,"s":[93726209,…]}` | ~22–27 blocks | Yes |
 | **1** | `{"v":1,"s":[[0,140,965,21]]}` | ~14–18 blocks | Yes |
 | Verbose JSON | `{"enabled":true,"slots":[…]}` | ~2–3 blocks | Yes |
@@ -202,7 +202,7 @@ For each enabled slot, the card can build one automation that triggers at `start
 | end (minutes) | `((pi // 512) % 512) * 5` |
 | day index 0–6 | `(pi // 262144) % 8` → `['mon','tue',…][index]` |
 | disabled | `(pi // 2097152) % 2` |
-| temperature | `((pi // 4194304) % 256) + 5` |
+| temperature | `((pi // 4194304) % 256) + 5 + (((pi // 1073741824) % 4) / 4)` |
 
 Full working template: [`examples/climate-setpoint-schedule-path-b.yaml`](../examples/climate-setpoint-schedule-path-b.yaml).
 
@@ -210,7 +210,7 @@ Full working template: [`examples/climate-setpoint-schedule-path-b.yaml`](../exa
 
 ## Path A: Per-slot automations on disk
 
-Best for **v:3** storage or native time triggers. Requires write access to `/config`.
+Best for **v:3** storage (very large schedules) or native time triggers. Requires write access to `/config`.
 
 1. Add [`examples/climate-setpoint-schedule-shell.yaml`](../examples/climate-setpoint-schedule-shell.yaml) to `configuration.yaml`.
 2. Uncomment in the webhook automation:

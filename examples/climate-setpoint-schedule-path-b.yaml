@@ -11,7 +11,7 @@
 # the helper stores compact JSON like {"v":2,"s":[93726209]}.
 #
 # Path B supports storage v:1, v:2, and legacy verbose JSON.
-# For v:3 (base64, ~40 blocks) use Path A instead (shell_command + per-slot YAML).
+# For v:3 (base64, very large schedules) use Path A instead (shell_command + per-slot YAML).
 
 alias: "Nodalia Climate | Apply active setpoint (YOUR_DISPLAY_NAME)"
 mode: single
@@ -58,7 +58,7 @@ actions:
                     {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
                   {% endif %}
                   {% if in_range and start_m > ns.start %}
-                    {% set ns.slot = {'temperature': ((pi // 4194304) % 256) + 5} %}
+                    {% set ns.slot = {'temperature': ((pi // 4194304) % 256) + 5 + (((pi // 1073741824) % 4) / 4)} %}
                     {% set ns.start = start_m %}
                   {% endif %}
                 {% endif %}
