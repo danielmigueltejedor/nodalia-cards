@@ -58,7 +58,9 @@ actions:
                     {% set in_range = minutes_now >= start_m or minutes_now < end_m %}
                   {% endif %}
                   {% if in_range and start_m > ns.start %}
-                    {% set ns.slot = {'temperature': ((pi // 4194304) % 256) + 5} %}
+                    {% set temp_base = ((pi // 4194304) % 256) + 5 %}
+                    {% set temp_frac = (pi // 1073741824) % 4 %}
+                    {% set ns.slot = {'temperature': temp_base + (temp_frac / 4)} %}
                     {% set ns.start = start_m %}
                   {% endif %}
                 {% endif %}

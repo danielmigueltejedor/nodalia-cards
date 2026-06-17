@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.12] - 2026-06-16
+
+Twelfth **`1.3.0`** **`alpha`**: Climate Path B schedule storage compatibility. Release channel **`1.3.0-alpha.12`**.
+
+### Fixed
+
+- **`climate`:** setpoint schedule encoder prefers Path-B-compatible **v1/v2** storage when it fits in `input_text` (255 chars), using **v3** binary only for larger schedules so Path B automations keep applying temperatures.
+- **`climate`:** packed **v2** slots preserve quarter-degree setpoints (e.g. 20.5°C) via spare packed bits; Path B template and docs updated to decode them.
+
+### Changed
+
+- **`tests`:** climate storage and entity-card lock toggle regression coverage tightened.
+
 ## [1.3.0-alpha.11] - 2026-06-16
 
 Eleventh **`1.3.0`** **`alpha`**: Power Flow home popup bubble polish and news package example. Release channel **`1.3.0-alpha.11`**.

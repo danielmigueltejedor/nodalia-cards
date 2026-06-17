@@ -1232,6 +1232,11 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /cover", "close_cover"/);
   assert.match(source, /set_cover_position", entityId, \{ position: 100 \}/);
   assert.match(source, /stateKey === "locked"[\s\S]*lock", "unlock", entityId/);
+  assert.doesNotMatch(
+    source,
+    /if \(stateKey === "locked"\) \{[\s\S]*?lock", "open"/,
+    "entity card should not call lock.open for generic locked toggle",
+  );
   assert.match(source, /lock", "lock", entityId/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
