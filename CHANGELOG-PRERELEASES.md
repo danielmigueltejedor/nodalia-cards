@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.14] - 2026-06-16
+
+Fourteenth **`1.3.0`** **`alpha`**: Entity Card select polish and press haptics. Release channel **`1.3.0-alpha.14`**.
+
+### Changed
+
+- **`entity`:** `select` / `input_select` cards no longer show chevron-down feedback arrows next to the state chip.
+- **`entity`:** haptic feedback fires on `pointerdown` for body, icon, quick actions, and select picker controls (including close), so every press is felt immediately.
+
 ## [1.3.0-alpha.13] - 2026-06-16
 
 Thirteenth **`1.3.0`** **`alpha`**: Circular Gauge entrance animation polish. Release channel **`1.3.0-alpha.13`**.

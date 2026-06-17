@@ -1251,6 +1251,9 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /select_option/);
   assert.match(source, /_shouldOpenSelectPickerOnTap/);
   assert.match(source, /data-entity-action="select-option"/);
+  assert.match(source, /_onShadowPointerDown/);
+  assert.match(source, /_triggerEntityPressFeedback/);
+  assert.match(source, /select-close[\s\S]*_triggerEntityPressFeedback/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

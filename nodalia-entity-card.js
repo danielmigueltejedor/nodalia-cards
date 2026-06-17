@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.0-alpha.13";
+const CARD_VERSION = "1.3.0-alpha.14";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -830,7 +830,9 @@ class NodaliaEntityCard extends HTMLElement {
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -851,7 +853,6 @@ class NodaliaEntityCard extends HTMLElement {
               if (!state) {
                 return;
               }
-              this._triggerHaptic();
               this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
               this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
               this._performHoldAction(state, zone);
@@ -1235,11 +1236,6 @@ class NodaliaEntityCard extends HTMLElement {
     if (card instanceof HTMLElement) {
       card.classList.toggle("entity-card--select-open", isOpen === true);
     }
-    this.shadowRoot?.querySelectorAll(".entity-card__select-hint").forEach(node => {
-      if (node instanceof HTMLElement) {
-        node.hidden = isOpen === true;
-      }
-    });
   }
 
   _getSelectPickerShellHost() {
@@ -2212,6 +2208,48 @@ class NodaliaEntityCard extends HTMLElement {
     }, safeDelay);
   }
 
+  _triggerEntityPressFeedback(action, actionTarget) {
+    const hapticStyle = action === "select-option" ? "selection" : null;
+    this._triggerHaptic(hapticStyle);
+
+    if (action === "body" || action === "icon") {
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+      return;
+    }
+
+    if (actionTarget instanceof HTMLElement) {
+      this._triggerPressAnimation(actionTarget);
+    }
+  }
+
+  _onShadowPointerDown(event) {
+    if (typeof event.button === "number" && event.button !== 0) {
+      return;
+    }
+
+    const actionTarget = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.entityAction);
+
+    if (!actionTarget) {
+      return;
+    }
+
+    const action = actionTarget.dataset.entityAction;
+    if (action === "body" || action === "icon") {
+      if (this._suppressNextEntityTap) {
+        return;
+      }
+      this._triggerEntityPressFeedback(action, actionTarget);
+      return;
+    }
+
+    if (action === "select-close" || action === "select-option" || action === "quick") {
+      this._triggerEntityPressFeedback(action, actionTarget);
+    }
+  }
+
   _onShadowClick(event) {
     const actionTarget = event
       .composedPath()
@@ -2234,8 +2272,6 @@ class NodaliaEntityCard extends HTMLElement {
 
     if (action === "select-option") {
       const value = actionTarget.dataset.selectValue || "";
-      this._triggerHaptic("selection");
-      this._triggerPressAnimation(actionTarget);
       this._selectEntityOption(value);
       return;
     }
@@ -2250,18 +2286,12 @@ class NodaliaEntityCard extends HTMLElement {
         if (!this._canRunTapAction(state, zone)) {
           return;
         }
-        this._triggerHaptic();
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
         this._performTapAction(state, zone);
       };
       const runDouble = () => {
         if (!this._canRunDoubleTapAction(state, zone)) {
           return;
         }
-        this._triggerHaptic();
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
         this._performDoubleTapAction(state, zone);
       };
       if (this._canRunDoubleTapAction(state, zone) && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
@@ -2280,9 +2310,6 @@ class NodaliaEntityCard extends HTMLElement {
         return;
       }
 
-      this._triggerHaptic();
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-      this._triggerPressAnimation(actionTarget);
       this._performQuickAction(quickAction);
     }
   }
@@ -2751,18 +2778,6 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
-        .entity-card__select-hint {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: inline-flex;
-          margin-left: 2px;
-          opacity: 0.72;
-        }
-
-        .entity-card__select-hint ha-icon {
-          --mdc-icon-size: 14px;
-        }
-
         ha-card.entity-card--select-open {
           overflow: visible;
         }
@@ -3165,13 +3180,12 @@ class NodaliaEntityCard extends HTMLElement {
                         ${placeStateChipOnTitleRow ? `
                           <div class="entity-card__copy-header-chip">
                             ${stateChip}
-                            ${isSelectEntity ? '<span class="entity-card__select-hint" aria-hidden="true"><ha-icon icon="mdi:chevron-down"></ha-icon></span>' : ""}
                           </div>
                         ` : ""}
                       </div>
                     `
                     : ""}
-                  ${chips.length ? `<div class="entity-card__chips">${chips.join("")}${isSelectEntity ? '<span class="entity-card__select-hint" aria-hidden="true"><ha-icon icon="mdi:chevron-down"></ha-icon></span>' : ""}</div>` : (isSelectEntity ? '<div class="entity-card__chips"><span class="entity-card__select-hint" aria-hidden="true"><ha-icon icon="mdi:chevron-down"></ha-icon></span></div>' : "")}
+                  ${chips.length ? `<div class="entity-card__chips">${chips.join("")}</div>` : ""}
                 </div>
               `
               : ""}
