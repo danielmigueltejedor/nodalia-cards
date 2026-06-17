@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "1.3.0-alpha.12";
+const CARD_VERSION = "1.3.0-alpha.13";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1067,7 +1067,51 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         return;
       }
       this._animateContentOnNextRender = false;
+      this._finalizeGaugeEntranceProgress();
     }, safeDelay);
+  }
+
+  _finalizeGaugeEntranceProgress() {
+    const dial = this.shadowRoot?.querySelector(".gauge-card__dial");
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    const visualState = this._lastGaugeVisualState;
+    const ratio = Number(visualState?.ratio) || 0;
+    const tintScale = this._getGaugeTintScale();
+    const segments = this._getGaugeProgressSegments(ratio, tintScale);
+    const dialStartCapColor =
+      sanitizeCssValue(this._config?.styles?.gauge?.foreground_color, "")
+      || resolveGaugeTintColor(tintScale, 0.02);
+
+    dial.classList.remove("gauge-card__dial--entrance-progress");
+
+    const smoothProgress = dial.querySelector("[data-progress-smooth]");
+    if (smoothProgress instanceof SVGElement) {
+      smoothProgress.style.opacity = "0";
+    }
+
+    dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
+      const segment = segments[index];
+      if (!(segmentElement instanceof SVGElement) || !segment) {
+        return;
+      }
+
+      segmentElement.style.transition = "none";
+      segmentElement.style.stroke = segment.color;
+      segmentElement.style.strokeDasharray = segment.dasharray;
+      segmentElement.style.strokeDashoffset = segment.dashoffset;
+      segmentElement.style.opacity = String(segment.opacity);
+      void segmentElement.getBoundingClientRect();
+      segmentElement.style.transition = "";
+    });
+
+    const startCap = dial.querySelector("[data-progress-start]");
+    if (startCap instanceof SVGElement) {
+      startCap.style.fill = dialStartCapColor;
+      startCap.style.opacity = ratio > 0 ? "0.96" : "0";
+    }
   }
 
   _openMoreInfo() {
@@ -1525,6 +1569,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-track,
+        .gauge-card__dial-progress,
         .gauge-card__dial-progress-segment {
           fill: none;
           stroke-width: ${dialStrokePx};
@@ -1536,6 +1581,33 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
           stroke-linecap: round;
           stroke: ${dialTrackColor};
+        }
+
+        .gauge-card__dial-progress {
+          filter: drop-shadow(0 0 0 transparent);
+          opacity: 0;
+          pointer-events: none;
+          stroke: ${sanitizeCssValue(accentColor, styles.gauge.max_tint_color)};
+          stroke-dasharray: var(--gauge-progress-length) ${DIAL_CIRCUMFERENCE};
+          stroke-linecap: round;
+          transition:
+            stroke var(--gauge-card-dial-duration) ease,
+            stroke-dasharray var(--gauge-card-dial-duration) ease-out,
+            opacity 120ms ease;
+        }
+
+        .gauge-card__dial--entrance-progress .gauge-card__dial-progress {
+          opacity: 0.96;
+        }
+
+        .gauge-card__dial--entrance-progress .gauge-card__dial-progress-segment {
+          opacity: 0 !important;
+          transition: none !important;
+        }
+
+        .gauge-card__dial--entrance-progress .gauge-card__dial-progress-start {
+          opacity: 0 !important;
+          transition: none !important;
         }
 
         .gauge-card__dial-progress-segment {
@@ -1830,13 +1902,20 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           }
           <div class="gauge-card__dial-wrap ${shouldAnimateEntrance ? "gauge-card__dial-wrap--entering" : ""}">
             <div
-              class="gauge-card__dial"
+              class="gauge-card__dial${shouldAnimateEntrance ? " gauge-card__dial--entrance-progress" : ""}"
               aria-hidden="true"
               style="--gauge-progress-length:${initialProgressLength};"
             >
               <svg class="gauge-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}">
                 <circle
                   class="gauge-card__dial-track"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="gauge-card__dial-progress"
+                  data-progress-smooth
                   cx="${DIAL_VIEWBOX_SIZE / 2}"
                   cy="${DIAL_VIEWBOX_SIZE / 2}"
                   r="${DIAL_CIRCLE_RADIUS}"
@@ -1905,6 +1984,14 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       const dial = this.shadowRoot.querySelector(".gauge-card__dial");
       if (dial instanceof HTMLElement) {
         this._gaugeVisualFrame = window.requestAnimationFrame(() => {
+          dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
+          dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
+
+          if (shouldAnimateEntrance) {
+            this._gaugeVisualFrame = 0;
+            return;
+          }
+
           const nextProgressSegments = this._getGaugeProgressSegments(ratio, tintScale);
           dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
             const segment = nextProgressSegments[index];
@@ -1924,8 +2011,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
             startCap.style.opacity = ratio > 0 ? "0.96" : "0";
           }
 
-          dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
-          dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
           this._gaugeVisualFrame = 0;
         });
       }

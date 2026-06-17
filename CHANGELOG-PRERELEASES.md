@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.13] - 2026-06-16
+
+Thirteenth **`1.3.0`** **`alpha`**: Circular Gauge entrance animation polish. Release channel **`1.3.0-alpha.13`**.
+
+### Fixed
+
+- **`circular_gauge`:** entrance dial animation uses one smooth progress arc instead of tweening 40 tint segments, removing visible per-unit stripes while the thumb sweeps to the target value.
+
 ## [1.3.0-alpha.12] - 2026-06-16
 
 Twelfth **`1.3.0`** **`alpha`**: Climate Path B schedule storage compatibility. Release channel **`1.3.0-alpha.12`**.

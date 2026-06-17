@@ -1354,6 +1354,18 @@ test("circular gauge thumb follows dial arc via rotate orbit transform", () => {
   assert.doesNotMatch(source, /--gauge-thumb-left/);
 });
 
+test("circular gauge entrance animates a single smooth progress arc", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /gauge-card__dial--entrance-progress/);
+  assert.match(source, /data-progress-smooth/);
+  assert.match(source, /_finalizeGaugeEntranceProgress/);
+  assert.match(
+    source,
+    /if \(shouldAnimateEntrance\) \{[\s\S]*?return;[\s\S]*?\}/,
+    "entrance animation should not tween segmented dash stripes",
+  );
+});
+
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
   [
     "nodalia-power-flow-card.js",
