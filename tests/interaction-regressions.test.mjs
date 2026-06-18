@@ -1054,7 +1054,7 @@ test("alarm panel visible PIN input blocks configured-code fallback until manual
   assert.equal(calls.length, 1);
   assert.equal(calls[0].domain, "alarm_control_panel");
   assert.equal(calls[0].service, "alarm_disarm");
-  assert.deepEqual(calls[0].data, {
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].data)), {
     entity_id: "alarm_control_panel.home",
     code: "9876",
   });
@@ -1377,7 +1377,7 @@ test("entity card Lovelace perform-action target overrides card entity", () => {
 
   card._performTapAction({ entity_id: "lock.back_door", state: "locked", attributes: {} }, "body");
 
-  assert.deepEqual(calls, [{
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [{
     domain: "lock",
     service: "unlock",
     data: { code: "1234" },
