@@ -734,6 +734,7 @@
     const actionKey = keys.actionKey || "tap_action";
     const serviceKey = keys.serviceKey || "tap_service";
     const serviceDataKey = keys.serviceDataKey || "tap_service_data";
+    const serviceTargetKey = keys.serviceTargetKey || "";
     const urlKey = keys.urlKey || "tap_url";
     const navigationKey = keys.navigationKey || "navigation_path";
     const newTabKey = keys.newTabKey || "tap_new_tab";
@@ -764,10 +765,14 @@
         config[actionKey] = "service";
       }
     }
-    if (rawValue.service_data !== undefined && rawValue.service_data !== null && !String(config[serviceDataKey] || "").trim()) {
-      config[serviceDataKey] = typeof rawValue.service_data === "string"
-        ? rawValue.service_data
-        : JSON.stringify(rawValue.service_data);
+    const actionData = rawValue.service_data !== undefined ? rawValue.service_data : rawValue.data;
+    if (actionData !== undefined && actionData !== null && !String(config[serviceDataKey] || "").trim()) {
+      config[serviceDataKey] = typeof actionData === "string"
+        ? actionData
+        : JSON.stringify(actionData);
+    }
+    if (serviceTargetKey && isObject(rawValue.target) && !String(config[serviceTargetKey] || "").trim()) {
+      config[serviceTargetKey] = JSON.stringify(rawValue.target);
     }
     if (rawValue.new_tab !== undefined) {
       config[newTabKey] = rawValue.new_tab === true;

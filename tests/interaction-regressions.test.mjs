@@ -139,6 +139,94 @@ function loadPowerFlowCardClass() {
   return registry.get("nodalia-power-flow-card");
 }
 
+function loadBrowserCardClass(file, tag) {
+  const registry = new Map();
+  class FakeShadowRoot {
+    constructor() {
+      this.activeElement = null;
+      this.innerHTML = "";
+    }
+
+    addEventListener() {}
+    removeEventListener() {}
+    querySelector() { return null; }
+    querySelectorAll() { return []; }
+  }
+
+  class FakeHTMLElement {
+    constructor() {
+      this.clientWidth = 0;
+      this.isConnected = true;
+      this.shadowRoot = null;
+    }
+
+    attachShadow() {
+      this.shadowRoot = new FakeShadowRoot();
+      return this.shadowRoot;
+    }
+
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return true; }
+  }
+
+  class FakeHTMLInputElement {
+    constructor() {
+      this.dataset = {};
+      this.value = "";
+      this.focused = false;
+    }
+
+    focus() {
+      this.focused = true;
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLInputElement: FakeHTMLInputElement,
+    navigator: {},
+    PointerEvent: class {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    ShadowRoot: FakeShadowRoot,
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = {
+    ...sandbox,
+    addEventListener() {},
+    clearTimeout,
+    removeEventListener() {},
+    setTimeout,
+  };
+  sandbox.window.window = sandbox.window;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read(file), sandbox);
+  return { CardClass: registry.get(tag), sandbox };
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -341,6 +429,35 @@ test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", 
   assert.equal(coerceCardTapAction({ action: "more-info" }), "more-info");
   assert.equal(coerceCardTapAction({ perform_action: "homeassistant.toggle" }), "toggle");
   assert.equal(coerceCardTapAction("[object Object]", "auto"), "auto");
+});
+
+test("NodaliaUtils preserves Lovelace service action data and targets", () => {
+  const sandbox = { window: null };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  const { applyCardTapActionField } = sandbox.window.NodaliaUtils;
+  const config = {};
+
+  applyCardTapActionField(config, {
+    actionKey: "tap_action",
+    serviceKey: "tap_service",
+    serviceDataKey: "tap_service_data",
+    serviceTargetKey: "tap_service_target",
+    urlKey: "tap_url",
+    navigationKey: "navigation_path",
+    newTabKey: "tap_new_tab",
+  }, {
+    action: "perform-action",
+    perform_action: "lock.unlock",
+    data: { code: "1234" },
+    target: { entity_id: "lock.front_door" },
+  }, "auto");
+
+  assert.equal(config.tap_action, "service");
+  assert.equal(config.tap_service, "lock.unlock");
+  assert.deepEqual(JSON.parse(config.tap_service_data), { code: "1234" });
+  assert.deepEqual(JSON.parse(config.tap_service_target), { entity_id: "lock.front_door" });
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -893,12 +1010,54 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel resolves configured PIN before requiring manual entry", () => {
-  const source = read("nodalia-alarm-panel-card.js");
-  assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
-  assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
-  assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
-  assert.match(source, /invokeHomeAssistantService/);
+test("alarm panel visible PIN input blocks configured-code fallback until manual entry", async () => {
+  const { CardClass, sandbox } = loadBrowserCardClass("nodalia-alarm-panel-card.js", "nodalia-alarm-panel-card");
+  const card = new CardClass();
+  const input = new sandbox.HTMLInputElement();
+  input.dataset.alarmField = "code";
+  card.shadowRoot.querySelector = () => input;
+  card._triggerHaptic = () => {};
+  card._config = {
+    entity: "alarm_control_panel.home",
+    code: "1234",
+    show_code_input: true,
+    wrong_code_feedback_ms: 2000,
+  };
+
+  const calls = [];
+  card._hass = {
+    states: {
+      "alarm_control_panel.home": {
+        state: "armed_away",
+        last_changed: "2026-06-18T10:00:00Z",
+        attributes: { code_format: "number" },
+      },
+    },
+    callService(domain, service, data, target) {
+      calls.push({ domain, service, data, target });
+      return Promise.resolve();
+    },
+  };
+
+  card._codeInput = "";
+  card._runAlarmAction("alarm_disarm");
+  assert.equal(calls.length, 0);
+  assert.equal(input.focused, true);
+
+  input.focused = false;
+  card._codeInput = " 9876 ";
+  card._runAlarmAction("alarm_disarm");
+  await Promise.resolve();
+  await Promise.resolve();
+  card._clearPinVerifyWatch();
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].domain, "alarm_control_panel");
+  assert.equal(calls[0].service, "alarm_disarm");
+  assert.deepEqual(calls[0].data, {
+    entity_id: "alarm_control_panel.home",
+    code: "9876",
+  });
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
@@ -1188,6 +1347,42 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /lock", "lock", entityId/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
+});
+
+test("entity card Lovelace perform-action target overrides card entity", () => {
+  const { CardClass } = loadBrowserCardClass("nodalia-entity-card.js", "nodalia-entity-card");
+  const card = new CardClass();
+  card._render = () => {};
+  card.setConfig({
+    entity: "lock.back_door",
+    tap_action: {
+      action: "perform-action",
+      perform_action: "lock.unlock",
+      data: { code: "1234" },
+      target: { entity_id: "lock.front_door" },
+    },
+  });
+
+  assert.equal(card._config.tap_action, "service");
+  assert.equal(card._config.tap_service, "lock.unlock");
+  assert.deepEqual(JSON.parse(card._config.tap_service_data), { code: "1234" });
+  assert.deepEqual(JSON.parse(card._config.tap_service_target), { entity_id: "lock.front_door" });
+
+  const calls = [];
+  card._hass = {
+    callService(domain, service, data, target) {
+      calls.push({ domain, service, data, target });
+    },
+  };
+
+  card._performTapAction({ entity_id: "lock.back_door", state: "locked", attributes: {} }, "body");
+
+  assert.deepEqual(calls, [{
+    domain: "lock",
+    service: "unlock",
+    data: { code: "1234" },
+    target: { entity_id: "lock.front_door" },
+  }]);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {
