@@ -160,6 +160,10 @@ function loadEntityCardClass() {
       return this.shadowRoot;
     }
 
+    addEventListener() {}
+
+    removeEventListener() {}
+
     dispatchEvent() {
       return true;
     }
