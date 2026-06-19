@@ -80,6 +80,10 @@ function loadClimateCardClass() {
     },
     HTMLElement: FakeHTMLElement,
     navigator: {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
     setTimeout,
     window: null,
   };
@@ -129,6 +133,10 @@ function loadPowerFlowCardClass() {
     },
     HTMLElement: FakeHTMLElement,
     navigator: {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
     setTimeout,
     window: null,
   };
@@ -178,6 +186,10 @@ function loadEntityCardClass() {
     },
     HTMLElement: FakeHTMLElement,
     navigator: {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
     setTimeout,
     window: null,
   };
