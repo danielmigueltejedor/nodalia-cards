@@ -1172,9 +1172,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
-      if (features & LOCK_OPEN) {
-        this._invokeEntityService("lock", "open", entityId);
-      } else if (features & LOCK_UNLOCK) {
+      if (features & LOCK_UNLOCK) {
         this._invokeEntityService("lock", "unlock", entityId);
       } else {
         this._invokeEntityService("lock", "unlock", entityId);

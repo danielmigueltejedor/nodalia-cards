@@ -139,6 +139,110 @@ function loadPowerFlowCardClass() {
   return registry.get("nodalia-power-flow-card");
 }
 
+function loadEntityCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-entity-card.js"), sandbox);
+  return registry.get("nodalia-entity-card");
+}
+
+function loadAlarmPanelCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+  class FakeHTMLInputElement {
+    focus() {
+      this.focused = true;
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLInputElement: FakeHTMLInputElement,
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-alarm-panel-card.js"), sandbox);
+  return { AlarmPanelCard: registry.get("nodalia-alarm-panel-card"), FakeHTMLInputElement };
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -893,12 +997,66 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel resolves configured PIN before requiring manual entry", () => {
+test("alarm panel requires typed PIN before stored codes when input is visible", () => {
   const source = read("nodalia-alarm-panel-card.js");
   assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
   assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
-  assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
+  assert.match(source, /const code = requiresManualPin \? manualPin : this\._getCodeValue\(state\);/);
   assert.match(source, /invokeHomeAssistantService/);
+});
+
+test("alarm panel visible PIN prompt blocks stored-code arm without manual entry", async () => {
+  const { AlarmPanelCard, FakeHTMLInputElement } = loadAlarmPanelCardClass();
+  assert.ok(AlarmPanelCard, "alarm panel card custom element should register");
+
+  const calls = [];
+  const input = new FakeHTMLInputElement();
+  const card = new AlarmPanelCard();
+  card.isConnected = true;
+  card._config = {
+    entity: "alarm_control_panel.home",
+    code: "1234",
+    code_entity: "input_text.alarm_code",
+    show_code_input: true,
+    haptics: { enabled: false },
+  };
+  card._codeInput = "";
+  card.shadowRoot = {
+    querySelector(selector) {
+      return selector === 'input[data-alarm-field="code"]' ? input : null;
+    },
+  };
+  card._hass = {
+    callService: (...args) => {
+      calls.push(args);
+    },
+    states: {
+      "alarm_control_panel.home": {
+        entity_id: "alarm_control_panel.home",
+        state: "disarmed",
+        attributes: { code_format: "number", supported_features: 3 },
+        last_changed: "2026-06-19T11:00:00Z",
+      },
+      "input_text.alarm_code": {
+        entity_id: "input_text.alarm_code",
+        state: "5678",
+        attributes: {},
+      },
+    },
+  };
+
+  card._runAlarmAction("alarm_arm_away");
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(calls, []);
+  assert.equal(input.focused, true);
+
+  card._codeInput = "2468";
+  card._runAlarmAction("alarm_arm_away");
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ["alarm_control_panel", "alarm_arm_away", { entity_id: "alarm_control_panel.home", code: "2468" }],
+  ]);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
@@ -1184,10 +1342,38 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /cover", "open_cover"/);
   assert.match(source, /cover", "close_cover"/);
   assert.match(source, /set_cover_position", entityId, \{ position: 100 \}/);
-  assert.match(source, /lock", "open", entityId/);
+  const lockToggleStart = source.indexOf("_toggleLockEntity(state, entityId)");
+  assert.ok(lockToggleStart > 0, "lock toggle helper should exist");
+  const lockToggleBlock = source.slice(lockToggleStart, source.indexOf("_isBinaryOnOff", lockToggleStart));
+  assert.doesNotMatch(lockToggleBlock, /"lock", "open", entityId/);
+  assert.match(lockToggleBlock, /"lock", "unlock", entityId/);
   assert.match(source, /lock", "lock", entityId/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
+});
+
+test("entity card default lock toggle unlocks instead of opening latch", async () => {
+  const EntityCard = loadEntityCardClass();
+  assert.ok(EntityCard, "entity card custom element should register");
+
+  const calls = [];
+  const card = new EntityCard();
+  card._hass = {
+    callService: (...args) => {
+      calls.push(args);
+    },
+    states: {},
+  };
+  card._toggleLockEntity({
+    entity_id: "lock.front_door",
+    state: "locked",
+    attributes: { supported_features: 5 },
+  }, "lock.front_door");
+
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ["lock", "unlock", { entity_id: "lock.front_door" }],
+  ]);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

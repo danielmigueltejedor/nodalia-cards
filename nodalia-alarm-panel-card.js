@@ -1111,8 +1111,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     };
 
     const requiresManualPin = this._shouldShowCodeInput(state);
-    const code = this._getCodeValue(state);
-    if (requiresManualPin && !code) {
+    const manualPin = String(this._codeInput || "").trim();
+    if (requiresManualPin && !manualPin) {
       this._triggerHaptic("warning");
       const input = this.shadowRoot?.querySelector?.('input[data-alarm-field="code"]');
       if (input instanceof HTMLInputElement) {
@@ -1121,11 +1121,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       return;
     }
 
+    const code = requiresManualPin ? manualPin : this._getCodeValue(state);
+
     if (code) {
       payload.code = code;
     }
 
-    const manualPin = String(this._codeInput || "").trim();
     const usedManualCode = requiresManualPin && manualPin !== "";
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, domain, svc, data) => Promise.resolve(hass?.callService?.(domain, svc, data)));
