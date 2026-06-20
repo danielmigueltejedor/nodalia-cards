@@ -41,6 +41,67 @@ function loadNodaliaUtils(sandbox) {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
 }
 
+function loadCustomCardClass(file, tag) {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  class FakeHTMLInputElement extends FakeHTMLElement {
+    focus() {}
+  }
+
+  class FakeHTMLButtonElement extends FakeHTMLElement {}
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLButtonElement: FakeHTMLButtonElement,
+    HTMLInputElement: FakeHTMLInputElement,
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read(file), sandbox);
+  return { Card: registry.get(tag), sandbox };
+}
+
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -335,12 +396,63 @@ test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", 
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   loadNodaliaUtils(sandbox);
-  const { coerceCardTapAction } = sandbox.window.NodaliaUtils;
+  const { applyCardTapActionField, coerceCardTapAction } = sandbox.window.NodaliaUtils;
 
   assert.equal(coerceCardTapAction({ action: "toggle" }), "toggle");
   assert.equal(coerceCardTapAction({ action: "more-info" }), "more-info");
   assert.equal(coerceCardTapAction({ perform_action: "homeassistant.toggle" }), "toggle");
   assert.equal(coerceCardTapAction("[object Object]", "auto"), "auto");
+
+  const config = {
+    tap_action: "auto",
+    tap_service: "",
+    tap_service_data: "",
+    tap_service_target: "",
+  };
+  applyCardTapActionField(config, {
+    actionKey: "tap_action",
+    serviceKey: "tap_service",
+    serviceDataKey: "tap_service_data",
+    serviceTargetKey: "tap_service_target",
+  }, {
+    action: "perform-action",
+    perform_action: "lock.unlock",
+    data: { code: "2468" },
+    target: { entity_id: "lock.front_door" },
+  }, "auto");
+
+  assert.equal(config.tap_action, "service");
+  assert.equal(config.tap_service, "lock.unlock");
+  assert.deepEqual(JSON.parse(config.tap_service_data), { code: "2468" });
+  assert.deepEqual(JSON.parse(config.tap_service_target), { entity_id: "lock.front_door" });
+});
+
+test("entity card service actions pass explicit target instead of defaulting to card entity", () => {
+  const { Card } = loadCustomCardClass("nodalia-entity-card.js", "nodalia-entity-card");
+  assert.ok(Card, "entity card custom element should register");
+
+  const calls = [];
+  const card = new Card();
+  card._config = {
+    entity: "lock.back_door",
+    security: { strict_service_actions: false },
+  };
+  card._hass = {
+    callService: (...args) => {
+      calls.push(args);
+    },
+  };
+
+  card._callConfiguredService(
+    "lock.unlock",
+    "lock.back_door",
+    JSON.stringify({ code: "2468" }),
+    JSON.stringify({ entity_id: "lock.front_door" }),
+  );
+
+  assert.deepEqual(calls, [
+    ["lock", "unlock", { code: "2468" }, { entity_id: "lock.front_door" }],
+  ]);
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -893,12 +1005,62 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel resolves configured PIN before requiring manual entry", () => {
+test("alarm panel visible PIN input requires manual entry before stored-code fallback", () => {
   const source = read("nodalia-alarm-panel-card.js");
   assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
   assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
-  assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
   assert.match(source, /invokeHomeAssistantService/);
+});
+
+test("alarm panel does not disarm with a blank visible PIN even when a stored code exists", async () => {
+  const { Card, sandbox } = loadCustomCardClass("nodalia-alarm-panel-card.js", "nodalia-alarm-panel-card");
+  assert.ok(Card, "alarm panel custom element should register");
+
+  const calls = [];
+  const pinInput = new sandbox.HTMLInputElement();
+  let focusCount = 0;
+  pinInput.focus = () => {
+    focusCount += 1;
+  };
+
+  const card = new Card();
+  card._config = {
+    entity: "alarm_control_panel.home",
+    code: "1234",
+    code_entity: "",
+    show_code_input: true,
+    wrong_code_feedback_ms: 5000,
+    haptics: { enabled: false },
+  };
+  card._hass = {
+    callService: (...args) => {
+      calls.push(args);
+    },
+    states: {
+      "alarm_control_panel.home": {
+        state: "armed_away",
+        last_changed: "2026-06-20T11:00:00+00:00",
+        attributes: { code_format: "number" },
+      },
+    },
+  };
+  card.shadowRoot.querySelector = selector => (
+    selector === 'input[data-alarm-field="code"]' ? pinInput : null
+  );
+
+  card._runAlarmAction("alarm_disarm");
+  assert.deepEqual(calls, []);
+  assert.equal(focusCount, 1);
+
+  card._codeInput = "9999";
+  card._runAlarmAction("alarm_disarm");
+  await new Promise(resolve => setTimeout(resolve, 0));
+
+  assert.deepEqual(calls, [
+    ["alarm_control_panel", "alarm_disarm", { entity_id: "alarm_control_panel.home", code: "9999" }],
+  ]);
+  card._clearPinVerifyWatch();
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {

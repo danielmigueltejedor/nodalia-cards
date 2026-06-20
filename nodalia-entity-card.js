@@ -30,24 +30,28 @@ const DEFAULT_CONFIG = {
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
   navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
+  icon_tap_service_target: "",
   icon_tap_url: "",
   icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
+  hold_service_target: "",
   hold_url: "",
   hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
+  icon_hold_service_target: "",
   icon_hold_url: "",
   icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
@@ -55,11 +59,13 @@ const DEFAULT_CONFIG = {
   icon_double_tap_action: "",
   double_tap_service: "",
   double_tap_service_data: "",
+  double_tap_service_target: "",
   double_tap_url: "",
   double_tap_navigation_path: "",
   double_tap_new_tab: false,
   icon_double_tap_service: "",
   icon_double_tap_service_data: "",
+  icon_double_tap_service_target: "",
   icon_double_tap_url: "",
   icon_double_tap_navigation_path: "",
   icon_double_tap_new_tab: false,
@@ -639,6 +645,7 @@ function normalizeConfig(rawConfig) {
         entity: action.entity || "",
         service: action.service || "",
         service_data: action.service_data || "",
+        target: action.target || "",
       }))
     : [];
 
@@ -650,6 +657,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "tap_action",
       serviceKey: "tap_service",
       serviceDataKey: "tap_service_data",
+      serviceTargetKey: "tap_service_target",
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
@@ -658,6 +666,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "hold_action",
       serviceKey: "hold_service",
       serviceDataKey: "hold_service_data",
+      serviceTargetKey: "hold_service_target",
       urlKey: "hold_url",
       navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
@@ -666,6 +675,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "icon_tap_action",
       serviceKey: "icon_tap_service",
       serviceDataKey: "icon_tap_service_data",
+      serviceTargetKey: "icon_tap_service_target",
       urlKey: "icon_tap_url",
       navigationKey: "icon_navigation_path",
       newTabKey: "icon_tap_new_tab",
@@ -674,6 +684,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "icon_hold_action",
       serviceKey: "icon_hold_service",
       serviceDataKey: "icon_hold_service_data",
+      serviceTargetKey: "icon_hold_service_target",
       urlKey: "icon_hold_url",
       navigationKey: "icon_hold_navigation_path",
       newTabKey: "icon_hold_new_tab",
@@ -682,6 +693,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "double_tap_action",
       serviceKey: "double_tap_service",
       serviceDataKey: "double_tap_service_data",
+      serviceTargetKey: "double_tap_service_target",
       urlKey: "double_tap_url",
       navigationKey: "double_tap_navigation_path",
       newTabKey: "double_tap_new_tab",
@@ -690,6 +702,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "icon_double_tap_action",
       serviceKey: "icon_double_tap_service",
       serviceDataKey: "icon_double_tap_service_data",
+      serviceTargetKey: "icon_double_tap_service_target",
       urlKey: "icon_double_tap_url",
       navigationKey: "icon_double_tap_navigation_path",
       newTabKey: "icon_double_tap_new_tab",
@@ -706,21 +719,25 @@ function normalizeConfig(rawConfig) {
   }
   config.tap_service = String(config.tap_service ?? "").trim();
   config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_service_target = String(config.tap_service_target ?? "").trim();
   config.tap_url = String(config.tap_url ?? "").trim();
   config.navigation_path = String(config.navigation_path ?? "").trim();
   config.tap_new_tab = config.tap_new_tab === true;
   config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
   config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
+  config.icon_tap_service_target = String(config.icon_tap_service_target ?? "").trim();
   config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
   config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
   config.icon_tap_new_tab = config.icon_tap_new_tab === true;
   config.hold_service = String(config.hold_service ?? "").trim();
   config.hold_service_data = String(config.hold_service_data ?? "").trim();
+  config.hold_service_target = String(config.hold_service_target ?? "").trim();
   config.hold_url = String(config.hold_url ?? "").trim();
   config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.hold_new_tab = config.hold_new_tab === true;
   config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
+  config.icon_hold_service_target = String(config.icon_hold_service_target ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
@@ -733,11 +750,13 @@ function normalizeConfig(rawConfig) {
   config.language = String(config.language ?? "auto").trim() || "auto";
   config.double_tap_service = String(config.double_tap_service ?? "").trim();
   config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
+  config.double_tap_service_target = String(config.double_tap_service_target ?? "").trim();
   config.double_tap_url = String(config.double_tap_url ?? "").trim();
   config.double_tap_navigation_path = String(config.double_tap_navigation_path ?? "").trim();
   config.double_tap_new_tab = config.double_tap_new_tab === true;
   config.icon_double_tap_service = String(config.icon_double_tap_service ?? "").trim();
   config.icon_double_tap_service_data = String(config.icon_double_tap_service_data ?? "").trim();
+  config.icon_double_tap_service_target = String(config.icon_double_tap_service_target ?? "").trim();
   config.icon_double_tap_url = String(config.icon_double_tap_url ?? "").trim();
   config.icon_double_tap_navigation_path = String(config.icon_double_tap_navigation_path ?? "").trim();
   config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
@@ -1606,6 +1625,23 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _parseServiceTarget(rawValue) {
+    if (!rawValue) {
+      return null;
+    }
+
+    if (isObject(rawValue)) {
+      return Object.keys(rawValue).length ? rawValue : null;
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue);
+      return isObject(parsed) && Object.keys(parsed).length ? parsed : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   _isServiceAllowed(serviceValue) {
     const security = this._config?.security || {};
     if (security.strict_service_actions === false) {
@@ -1630,7 +1666,7 @@ class NodaliaEntityCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
+  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -1646,11 +1682,18 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
+    const target = this._parseServiceTarget(rawTarget);
+    if (!target && entityId && payload.entity_id === undefined) {
       payload.entity_id = entityId;
     }
 
-    this._hass.callService(domain, service, payload);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, data, serviceTarget) => Promise.resolve(
+        serviceTarget != null
+          ? hass?.callService?.(svcDomain, svc, data, serviceTarget)
+          : hass?.callService?.(svcDomain, svc, data),
+      ));
+    invoke(this, this._hass, domain, service, payload, target);
   }
 
   _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
@@ -1671,6 +1714,7 @@ class NodaliaEntityCard extends HTMLElement {
     const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     const tapService = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
     const tapServiceData = zone === "icon" ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+    const tapServiceTarget = zone === "icon" ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
     const tapUrl = zone === "icon" ? this._config?.icon_tap_url : this._config?.tap_url;
     const tapNewTab = zone === "icon" ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true;
 
@@ -1682,7 +1726,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(tapService, this._config?.entity, tapServiceData);
+        this._callConfiguredService(tapService, this._config?.entity, tapServiceData, tapServiceTarget);
         break;
       case "url":
         this._openConfiguredUrl(tapUrl, tapNewTab);
@@ -1706,12 +1750,14 @@ class NodaliaEntityCard extends HTMLElement {
     const holdAction = String(this._effectiveHoldAction(zone) || "none").trim().toLowerCase();
     let holdService = zone === "icon" ? this._config?.icon_hold_service : this._config?.hold_service;
     let holdServiceData = zone === "icon" ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
+    let holdServiceTarget = zone === "icon" ? this._config?.icon_hold_service_target : this._config?.hold_service_target;
     let holdUrl = zone === "icon" ? this._config?.icon_hold_url : this._config?.hold_url;
     let holdNewTab = zone === "icon" ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true;
     if (zone === "icon") {
       if (!String(holdService || "").trim()) {
         holdService = this._config?.hold_service;
         holdServiceData = this._config?.hold_service_data;
+        holdServiceTarget = this._config?.hold_service_target;
       }
       if (!String(holdUrl || "").trim()) {
         holdUrl = this._config?.hold_url;
@@ -1727,7 +1773,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(holdService, this._config?.entity, holdServiceData);
+        this._callConfiguredService(holdService, this._config?.entity, holdServiceData, holdServiceTarget);
         break;
       case "url":
         this._openConfiguredUrl(holdUrl, holdNewTab);
@@ -1751,12 +1797,14 @@ class NodaliaEntityCard extends HTMLElement {
     const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
     let doubleService = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
     let doubleServiceData = zone === "icon" ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
+    let doubleServiceTarget = zone === "icon" ? this._config?.icon_double_tap_service_target : this._config?.double_tap_service_target;
     let doubleUrl = zone === "icon" ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
     let doubleNewTab = zone === "icon" ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
     if (zone === "icon") {
       if (!String(doubleService || "").trim()) {
         doubleService = this._config?.double_tap_service;
         doubleServiceData = this._config?.double_tap_service_data;
+        doubleServiceTarget = this._config?.double_tap_service_target;
       }
       if (!String(doubleUrl || "").trim()) {
         doubleUrl = this._config?.double_tap_url;
@@ -1772,7 +1820,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(doubleService, this._config?.entity, doubleServiceData);
+        this._callConfiguredService(doubleService, this._config?.entity, doubleServiceData, doubleServiceTarget);
         break;
       case "url":
         this._openConfiguredUrl(doubleUrl, doubleNewTab);
@@ -1803,7 +1851,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(targetEntity);
         break;
       case "service":
-        this._callConfiguredService(action?.service, targetEntity, action?.service_data);
+        this._callConfiguredService(action?.service, targetEntity, action?.service_data, action?.target);
         break;
       default:
         break;
