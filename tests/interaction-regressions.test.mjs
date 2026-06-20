@@ -58,6 +58,10 @@ function loadCustomCardClass(file, tag) {
       return this.shadowRoot;
     }
 
+    addEventListener() {}
+
+    removeEventListener() {}
+
     dispatchEvent() {
       return true;
     }
