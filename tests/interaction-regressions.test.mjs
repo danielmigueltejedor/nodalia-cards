@@ -92,6 +92,10 @@ function loadCustomCardClass(file, tag) {
     HTMLButtonElement: FakeHTMLButtonElement,
     HTMLInputElement: FakeHTMLInputElement,
     navigator: {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
     setTimeout,
     window: null,
   };
@@ -450,7 +454,7 @@ test("entity card service actions pass explicit target instead of defaulting to 
     JSON.stringify({ entity_id: "lock.front_door" }),
   );
 
-  assert.deepEqual(calls, [
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
     ["lock", "unlock", { code: "2468" }, { entity_id: "lock.front_door" }],
   ]);
 });
@@ -1057,7 +1061,7 @@ test("alarm panel does not disarm with a blank visible PIN even when a stored co
   card._runAlarmAction("alarm_disarm");
   await new Promise(resolve => setTimeout(resolve, 0));
 
-  assert.deepEqual(calls, [
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
     ["alarm_control_panel", "alarm_disarm", { entity_id: "alarm_control_panel.home", code: "9999" }],
   ]);
   card._clearPinVerifyWatch();
