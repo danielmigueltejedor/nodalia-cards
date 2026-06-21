@@ -74,9 +74,9 @@ const DEFAULT_CONFIG = {
   quick_actions: [],
   language: "auto",
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
-    allowed_service_domains: ["homeassistant"],
+    allowed_service_domains: [],
   },
   haptics: {
     enabled: true,
@@ -1623,9 +1623,7 @@ class NodaliaEntityCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return normalizedService === "homeassistant.toggle"
-        || normalizedService === "homeassistant.turn_on"
-        || normalizedService === "homeassistant.turn_off";
+      return false;
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }

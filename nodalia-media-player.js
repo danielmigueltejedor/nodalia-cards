@@ -933,6 +933,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     const previousHass = this._hass;
     this._hass = hass;
 
+    if (!this.isConnected) {
+      return;
+    }
+
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
       return;
@@ -1248,7 +1252,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._displayArtworkByEntity.delete(entityId);
       }
 
-      if (rerenderOnReady) {
+      if (rerenderOnReady && this.isConnected) {
         this._lastRenderSignature = "";
         this._render();
       }
@@ -1910,6 +1914,14 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _syncTicker(players) {
+    if (!this.isConnected) {
+      if (this._mediaTicker) {
+        window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+      }
+      return;
+    }
+
     if (typeof document !== "undefined" && document.hidden) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);
@@ -1934,6 +1946,12 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     if (shouldTick && !this._mediaTicker) {
       this._mediaTicker = window.setInterval(() => {
+        if (!this.isConnected) {
+          window.clearInterval(this._mediaTicker);
+          this._mediaTicker = null;
+          return;
+        }
+
         if (typeof document !== "undefined" && document.hidden) {
           return;
         }
@@ -1964,6 +1982,10 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _onVisibilityChange() {
+    if (!this.isConnected) {
+      return;
+    }
+
     if (typeof document !== "undefined" && document.hidden) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);

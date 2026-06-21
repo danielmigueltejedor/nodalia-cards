@@ -928,9 +928,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getCodeValue(state) {
-    const manualPin = String(this._codeInput || "").trim();
-    if (manualPin) {
-      return manualPin;
+    if (this._shouldShowCodeInput(state)) {
+      return String(this._codeInput || "").trim();
     }
 
     const helperEntityId = String(this._config?.code_entity || "").trim();

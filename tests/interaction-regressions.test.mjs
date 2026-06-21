@@ -893,12 +893,26 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel resolves configured PIN before requiring manual entry", () => {
+test("alarm panel requires manual PIN when the code input is visible", () => {
   const source = read("nodalia-alarm-panel-card.js");
-  assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
-  assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
+  assert.match(source, /_getCodeValue\(state\) \{\s*if \(this\._shouldShowCodeInput\(state\)\) \{\s*return String\(this\._codeInput \|\| ""\)\.trim\(\);/);
   assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
   assert.match(source, /invokeHomeAssistantService/);
+});
+
+test("entity card keeps configured service actions strict by default", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /security:\s*\{\s*strict_service_actions: true,\s*allowed_services: \[\],\s*allowed_service_domains: \[\],/);
+  assert.match(source, /if \(!domains\.length && !services\.length\) \{\s*return false;\s*\}/);
+});
+
+test("media player does not restart progress ticker while disconnected", () => {
+  const source = read("nodalia-media-player.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*this\._hass = hass;[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}/);
+  assert.match(source, /_syncTicker\(players\) \{\s*if \(!this\.isConnected\) \{[\s\S]*window\.clearInterval\(this\._mediaTicker\);[\s\S]*return;/);
+  assert.match(source, /window\.setInterval\(\(\) => \{\s*if \(!this\.isConnected\) \{[\s\S]*window\.clearInterval\(this\._mediaTicker\);/);
+  assert.match(source, /if \(rerenderOnReady && this\.isConnected\) \{/);
+  assert.match(source, /_onVisibilityChange\(\) \{\s*if \(!this\.isConnected\) \{\s*return;\s*\}/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
