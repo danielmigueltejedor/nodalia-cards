@@ -41,22 +41,30 @@ const DEFAULT_CONFIG = {
   tap_action: "toggle",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
+  icon_tap_service_target: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
+  hold_service_target: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
+  icon_hold_service_target: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   security: {
     strict_service_actions: true,
@@ -193,28 +201,36 @@ function normalizeConfig(rawConfig) {
       actionKey: "tap_action",
       serviceKey: "tap_service",
       serviceDataKey: "tap_service_data",
+      serviceTargetKey: "tap_service_target",
       urlKey: "tap_url",
+      navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
     }, rawConfig?.tap_action ?? config.tap_action, "toggle");
     applyTap(config, {
       actionKey: "icon_tap_action",
       serviceKey: "icon_tap_service",
       serviceDataKey: "icon_tap_service_data",
+      serviceTargetKey: "icon_tap_service_target",
       urlKey: "icon_tap_url",
+      navigationKey: "icon_navigation_path",
       newTabKey: "icon_tap_new_tab",
     }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
     applyTap(config, {
       actionKey: "hold_action",
       serviceKey: "hold_service",
       serviceDataKey: "hold_service_data",
+      serviceTargetKey: "hold_service_target",
       urlKey: "hold_url",
+      navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
     }, rawConfig?.hold_action ?? config.hold_action, "more-info");
     applyTap(config, {
       actionKey: "icon_hold_action",
       serviceKey: "icon_hold_service",
       serviceDataKey: "icon_hold_service_data",
+      serviceTargetKey: "icon_hold_service_target",
       urlKey: "icon_hold_url",
+      navigationKey: "icon_hold_navigation_path",
       newTabKey: "icon_hold_new_tab",
     }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
   }
@@ -223,6 +239,16 @@ function normalizeConfig(rawConfig) {
   }
   if (String(config.icon_hold_action || "").trim() === "") {
     config.icon_hold_action = "";
+  }
+  config.navigation_path = String(config.navigation_path ?? "").trim();
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
+  config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
+  if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
+    config.navigation_path = config.tap_url;
+  }
+  if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
+    config.hold_navigation_path = config.hold_url;
   }
   return config;
 }
@@ -805,15 +831,21 @@ class NodaliaCoverCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callNamedService(service, data = {}) {
-    if (!this._hass || typeof this._hass.callService !== "function") return;
+  _callNamedService(service, data = {}, target = null) {
+    if (!this._hass || !service) return;
     if (!this._isServiceAllowed(service)) {
       window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Cover Card", service);
       return;
     }
     const [domain, serviceName] = String(service || "").split(".");
     if (!domain || !serviceName) return;
-    this._hass.callService(domain, serviceName, data);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, payload, svcTarget) => Promise.resolve(
+        svcTarget != null
+          ? hass?.callService?.(svcDomain, svc, payload, svcTarget)
+          : hass?.callService?.(svcDomain, svc, payload),
+      ));
+    invoke(this, this._hass, domain, serviceName, data, target);
   }
 
   _callCover(service, data = {}) {
@@ -854,11 +886,24 @@ class NodaliaCoverCard extends HTMLElement {
     const iconRaw = this._config?.icon_tap_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
     let action = String(raw || "toggle").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
     if (!allowed.has(action)) {
       action = "toggle";
     }
     if (action === "auto") {
+      const isIcon = zone === "icon";
+      const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
+      const navigationPath = isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path;
+      const url = isIcon ? this._config?.icon_tap_url : this._config?.tap_url;
+      if (String(service || "").trim()) {
+        return "service";
+      }
+      if (String(navigationPath || "").trim()) {
+        return "navigate";
+      }
+      if (String(url || "").trim()) {
+        return "url";
+      }
       return "toggle";
     }
     return action;
@@ -869,11 +914,24 @@ class NodaliaCoverCard extends HTMLElement {
     const iconRaw = this._config?.icon_hold_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
     let action = String(raw || "none").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
     if (!allowed.has(action)) {
       action = "none";
     }
     if (action === "auto") {
+      const isIcon = zone === "icon";
+      const service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
+      const navigationPath = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
+      const url = isIcon ? this._config?.icon_hold_url : this._config?.hold_url;
+      if (String(service || "").trim()) {
+        return "service";
+      }
+      if (String(navigationPath || "").trim()) {
+        return "navigate";
+      }
+      if (String(url || "").trim()) {
+        return "url";
+      }
       return "more-info";
     }
     return action;
@@ -902,6 +960,16 @@ class NodaliaCoverCard extends HTMLElement {
       this._navigate(url, newTab);
       return;
     }
+    if (action === "navigate") {
+      let path = isHold
+        ? (isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path)
+        : (isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path);
+      if (isHold && isIcon && !String(path || "").trim()) {
+        path = this._config?.hold_navigation_path;
+      }
+      this._navigate(path, false);
+      return;
+    }
     if (action === "service") {
       let service = isHold
         ? (isIcon ? this._config?.icon_hold_service : this._config?.hold_service)
@@ -909,12 +977,21 @@ class NodaliaCoverCard extends HTMLElement {
       let dataRaw = isHold
         ? (isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data)
         : (isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data);
+      let targetRaw = isHold
+        ? (isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target)
+        : (isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target);
       if (isHold && isIcon && !String(service || "").trim()) {
         service = this._config?.hold_service;
         dataRaw = this._config?.hold_service_data;
+        targetRaw = this._config?.hold_service_target;
       }
       const data = parseServiceData(dataRaw);
-      this._callNamedService(service, data);
+      const target = parseServiceData(targetRaw);
+      const hasExplicitTarget = Object.keys(target).length > 0;
+      if (this._config?.entity && data.entity_id === undefined && !hasExplicitTarget) {
+        data.entity_id = this._config.entity;
+      }
+      this._callNamedService(service, data, hasExplicitTarget ? target : null);
       return;
     }
     this._toggleCover();

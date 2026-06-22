@@ -335,12 +335,29 @@ test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", 
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   loadNodaliaUtils(sandbox);
-  const { coerceCardTapAction } = sandbox.window.NodaliaUtils;
+  const { coerceCardTapAction, applyCardTapActionField } = sandbox.window.NodaliaUtils;
 
   assert.equal(coerceCardTapAction({ action: "toggle" }), "toggle");
   assert.equal(coerceCardTapAction({ action: "more-info" }), "more-info");
   assert.equal(coerceCardTapAction({ perform_action: "homeassistant.toggle" }), "toggle");
   assert.equal(coerceCardTapAction("[object Object]", "auto"), "auto");
+
+  const config = {};
+  applyCardTapActionField(config, {
+    actionKey: "tap_action",
+    serviceKey: "tap_service",
+    serviceDataKey: "tap_service_data",
+    serviceTargetKey: "tap_service_target",
+  }, {
+    action: "perform-action",
+    perform_action: "lock.unlock",
+    data: { code: "1234" },
+    target: { entity_id: "lock.front_door" },
+  }, "auto");
+  assert.equal(config.tap_action, "service");
+  assert.equal(config.tap_service, "lock.unlock");
+  assert.equal(config.tap_service_data, JSON.stringify({ code: "1234" }));
+  assert.equal(config.tap_service_target, JSON.stringify({ entity_id: "lock.front_door" }));
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -893,12 +910,40 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel resolves configured PIN before requiring manual entry", () => {
+test("alarm panel requires manual PIN when code input is visible", () => {
   const source = read("nodalia-alarm-panel-card.js");
   assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
+  assert.match(source, /const code = requiresManualPin \? manualPin : this\._getCodeValue\(state\);/);
   assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
-  assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
   assert.match(source, /invokeHomeAssistantService/);
+});
+
+test("entity card preserves Lovelace action data and target for configured services", () => {
+  const utilsSource = read("nodalia-utils.js");
+  assert.match(utilsSource, /rawValue\.data \?\? rawValue\.service_data/);
+  assert.match(utilsSource, /rawValue\.target/);
+  assert.match(utilsSource, /serviceTargetKey/);
+
+  const entitySource = read("nodalia-entity-card.js");
+  assert.match(entitySource, /tap_service_target/);
+  assert.match(entitySource, /hasExplicitTarget/);
+  assert.match(entitySource, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
+});
+
+test("cover card respects navigate and service tap actions from Lovelace objects", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /navigationKey: "navigation_path"/);
+  assert.match(source, /"navigate"/);
+  assert.match(source, /if \(action === "navigate"\)/);
+  assert.match(source, /serviceTargetKey/);
+  assert.match(source, /hasExplicitTarget/);
+});
+
+test("media player avoids restarting progress ticker while disconnected", () => {
+  const source = read("nodalia-media-player.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*if \(!this\.isConnected\) \{[\s\S]*return;/);
+  assert.match(source, /_syncTicker\(players\) \{[\s\S]*if \(!this\.isConnected\) \{[\s\S]*clearInterval\(this\._mediaTicker\)/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {

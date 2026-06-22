@@ -926,12 +926,19 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._config = normalizeConfig(config);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    if (!this.isConnected) {
+      return;
+    }
     this._render();
   }
 
   set hass(hass) {
     const previousHass = this._hass;
     this._hass = hass;
+
+    if (!this.isConnected) {
+      return;
+    }
 
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
@@ -1910,6 +1917,14 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _syncTicker(players) {
+    if (!this.isConnected) {
+      if (this._mediaTicker) {
+        window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+      }
+      return;
+    }
+
     if (typeof document !== "undefined" && document.hidden) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);
