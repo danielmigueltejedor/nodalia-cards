@@ -90,6 +90,76 @@ function loadClimateCardClass() {
   return registry.get("nodalia-climate-card");
 }
 
+function loadCoverCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        removeEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    addEventListener() {}
+
+    removeEventListener() {}
+
+    dispatchEvent() {
+      return true;
+    }
+  }
+
+  class FakeHTMLInputElement extends FakeHTMLElement {}
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+        this.bubbles = init.bubbles;
+        this.composed = init.composed;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLInputElement: FakeHTMLInputElement,
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = {
+    ...sandbox,
+    history: { pushState() {} },
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() {},
+    open() {},
+  };
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-cover-card.js"), sandbox);
+  return registry.get("nodalia-cover-card");
+}
+
 function loadPowerFlowCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -341,6 +411,45 @@ test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", 
   assert.equal(coerceCardTapAction({ action: "more-info" }), "more-info");
   assert.equal(coerceCardTapAction({ perform_action: "homeassistant.toggle" }), "toggle");
   assert.equal(coerceCardTapAction("[object Object]", "auto"), "auto");
+});
+
+test("cover card resolves Lovelace tap_action objects without toggling", () => {
+  const CoverCard = loadCoverCardClass();
+  assert.ok(CoverCard, "cover card custom element should register");
+
+  const calls = [];
+  const events = [];
+  const card = new CoverCard();
+  card.dispatchEvent = event => {
+    events.push(event);
+    return true;
+  };
+  card._hass = {
+    callService: (...args) => calls.push(args),
+    states: {
+      "cover.garage": {
+        state: "closed",
+        attributes: {
+          current_position: 0,
+          friendly_name: "Garage",
+          supported_features: 15,
+        },
+      },
+    },
+  };
+
+  card.setConfig({
+    entity: "cover.garage",
+    tap_action: { action: "more-info" },
+    haptics: { enabled: false },
+  });
+  assert.equal(card._config.tap_action, "more-info");
+  assert.equal(card._resolveTapAction("body"), "more-info");
+
+  card._runAction("body");
+  assert.deepEqual(calls, [], "more-info tap must not call cover.open_cover/close_cover");
+  assert.equal(events.at(-1)?.type, "hass-more-info");
+  assert.deepEqual(events.at(-1)?.detail, { entityId: "cover.garage" });
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {

@@ -41,21 +41,25 @@ const DEFAULT_CONFIG = {
   tap_service: "",
   tap_service_data: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   security: {
     strict_service_actions: true,
@@ -177,6 +181,73 @@ function normalizeList(value) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyTap === "function") {
+    applyTap(config, {
+      actionKey: "tap_action",
+      serviceKey: "tap_service",
+      serviceDataKey: "tap_service_data",
+      urlKey: "tap_url",
+      navigationKey: "navigation_path",
+      newTabKey: "tap_new_tab",
+    }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+    applyTap(config, {
+      actionKey: "hold_action",
+      serviceKey: "hold_service",
+      serviceDataKey: "hold_service_data",
+      urlKey: "hold_url",
+      navigationKey: "hold_navigation_path",
+      newTabKey: "hold_new_tab",
+    }, rawConfig?.hold_action ?? config.hold_action, "none");
+    applyTap(config, {
+      actionKey: "icon_tap_action",
+      serviceKey: "icon_tap_service",
+      serviceDataKey: "icon_tap_service_data",
+      urlKey: "icon_tap_url",
+      navigationKey: "icon_navigation_path",
+      newTabKey: "icon_tap_new_tab",
+    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+    applyTap(config, {
+      actionKey: "icon_hold_action",
+      serviceKey: "icon_hold_service",
+      serviceDataKey: "icon_hold_service_data",
+      urlKey: "icon_hold_url",
+      navigationKey: "icon_hold_navigation_path",
+      newTabKey: "icon_hold_new_tab",
+    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+  }
+  if (String(config.icon_tap_action || "").trim() === "") {
+    config.icon_tap_action = "";
+  }
+  if (String(config.icon_hold_action || "").trim() === "") {
+    config.icon_hold_action = "";
+  }
+  config.tap_service = String(config.tap_service ?? "").trim();
+  config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_url = String(config.tap_url ?? "").trim();
+  config.navigation_path = String(config.navigation_path ?? "").trim();
+  config.tap_new_tab = config.tap_new_tab === true;
+  config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
+  config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
+  config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
+  config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
+  config.icon_tap_new_tab = config.icon_tap_new_tab === true;
+  config.hold_service = String(config.hold_service ?? "").trim();
+  config.hold_service_data = String(config.hold_service_data ?? "").trim();
+  config.hold_url = String(config.hold_url ?? "").trim();
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
+  config.hold_new_tab = config.hold_new_tab === true;
+  config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
+  config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
+  config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
+  config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
+    config.navigation_path = config.tap_url;
+  }
+  if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
+    config.hold_navigation_path = config.hold_url;
+  }
   config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode)
     ? config.compact_layout_mode
     : "auto";
@@ -781,6 +852,42 @@ class NodaliaCoverCard extends HTMLElement {
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
 
+  _navigationPathForZone(zone = "body", interaction = "tap") {
+    const isHold = interaction === "hold";
+    const pathKey = isHold ? "hold_navigation_path" : "navigation_path";
+    const iconPathKey = isHold ? "icon_hold_navigation_path" : "icon_navigation_path";
+    const urlKey = isHold ? "hold_url" : "tap_url";
+    const iconUrlKey = isHold ? "icon_hold_url" : "icon_tap_url";
+    if (zone === "icon") {
+      const iconPath = String(this._config?.[iconPathKey] ?? "").trim();
+      if (iconPath) {
+        return iconPath;
+      }
+      const inheritedBodyPath = String(this._config?.[pathKey] ?? "").trim();
+      if (inheritedBodyPath) {
+        return inheritedBodyPath;
+      }
+      return String(this._config?.[iconUrlKey] ?? "").trim() || String(this._config?.[urlKey] ?? "").trim();
+    }
+
+    return String(this._config?.[pathKey] ?? "").trim() || String(this._config?.[urlKey] ?? "").trim();
+  }
+
+  _navigateToPath(path) {
+    const navigationPath = String(path || "").trim();
+    if (!navigationPath) return;
+    if (this._hass?.navigate) {
+      this._hass.navigate(navigationPath);
+      return;
+    }
+    if (window?.history?.pushState && !navigationPath.includes("://")) {
+      window.history.pushState(null, "", navigationPath);
+      fireEvent(this, "location-changed", { replace: false });
+      return;
+    }
+    fireEvent(this, "hass-navigate", { path: navigationPath });
+  }
+
   _toggleCover(state = this._getState()) {
     const key = normalizeTextKey(state?.state);
     if (["open", "opening"].includes(key)) {
@@ -795,7 +902,7 @@ class NodaliaCoverCard extends HTMLElement {
     const iconRaw = this._config?.icon_tap_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
     let action = String(raw || "toggle").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     if (!allowed.has(action)) {
       action = "toggle";
     }
@@ -810,7 +917,7 @@ class NodaliaCoverCard extends HTMLElement {
     const iconRaw = this._config?.icon_hold_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
     let action = String(raw || "none").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     if (!allowed.has(action)) {
       action = "none";
     }
@@ -841,6 +948,10 @@ class NodaliaCoverCard extends HTMLElement {
         newTab = this._config?.hold_new_tab === true;
       }
       this._navigate(url, newTab);
+      return;
+    }
+    if (action === "navigate") {
+      this._navigateToPath(this._navigationPathForZone(zone, interaction));
       return;
     }
     if (action === "service") {

@@ -23,6 +23,8 @@ function loadScheduleStorageApi() {
     SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM: 5,
     SCHEDULE_TIMELINE_SNAP_MINUTES: 5,
     SCHEDULE_MIN_BLOCK_MINUTES: 15,
+    CARD_TAG: "nodalia-climate-card",
+    CARD_VERSION: "test",
     clamp: (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0)),
     isObject: value => value !== null && typeof value === "object" && !Array.isArray(value),
     createSetpointScheduleSlotId: () => "slot_generated",
@@ -128,4 +130,20 @@ test("forty weekly blocks fit within input_text 255 character limit", () => {
   assert.ok(compact.length <= 255, `expected <=255 chars for 40 slots, got ${compact.length}: ${compact}`);
   const restored = api.decodeSetpointScheduleStorageState(compact);
   assert.equal(restored.slots.length, 40);
+});
+
+test("oversized schedules do not return truncated helper payloads", () => {
+  const api = loadScheduleStorageApi();
+  const schedule = { enabled: true, slots: buildWeeklySlots(10) };
+
+  assert.equal(api.encodeSetpointScheduleStorageState(schedule), null);
+
+  const body = api.buildClimateSetpointScheduleWebhookBody({
+    entityId: "climate.living_room",
+    storageEntityId: "input_text.living_room_schedule",
+    friendlyName: "Living room",
+    schedule,
+  });
+  assert.equal(body.storage_state, null);
+  assert.equal(body.ha_action, null);
 });

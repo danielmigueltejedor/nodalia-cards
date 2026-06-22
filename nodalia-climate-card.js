@@ -1024,7 +1024,7 @@ function encodeSetpointScheduleStorageState(schedule) {
     return withinLimit.sort((left, right) => left.length - right.length)[0];
   }
 
-  return candidates.sort((left, right) => left.length - right.length)[0];
+  return null;
 }
 
 function normalizeSetpointScheduleWeekStartsOn(value) {
@@ -1271,7 +1271,7 @@ function buildClimateSetpointScheduleWebhookBody(options = {}) {
     automation_specs: automationSpecs,
     automation_yaml_bundle: automationYamlBundle,
     automation_id_prefix: entityId ? `nodalia_climate_${entityId.replace(".", "_")}_` : "nodalia_climate_",
-    ha_action: storageEntityId
+    ha_action: storageEntityId && storageState !== null
       ? {
         action: "input_text.set_value",
         target: { entity_id: storageEntityId },
@@ -1945,6 +1945,15 @@ class NodaliaClimateCard extends HTMLElement {
       friendlyName: this._getClimateName(state),
       cardVersion: CARD_VERSION,
     });
+    if (storageEntityId && body.storage_state === null) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.storageTooLarge",
+          "This schedule has too many blocks to fit in the configured helper. Remove some blocks before saving.",
+        ),
+      );
+      return;
+    }
 
     this._scheduleComposerSaving = true;
     this._scheduleComposerError = "";
