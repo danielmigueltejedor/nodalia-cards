@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.15] - 2026-05-29
+
+Fifteenth **`1.3.0`** **`alpha`**: Security and interaction regressions for alarm PIN, entity/cover actions, and media player lifecycle. Release channel **`1.3.0-alpha.15`**.
+
+### Fixed
+
+- **`alarm_panel`:** visible PIN input now requires manual entry; configured/helper codes apply only when the code field is hidden.
+- **`entity`:** Lovelace perform-action `data` and `target` are preserved during tap-action normalization and passed to Home Assistant service calls instead of defaulting to the card entity.
+- **`cover`:** normalized Lovelace tap/hold actions (more-info, navigate, service) no longer fall through to cover toggle.
+- **`media_player`:** progress ticker and hass-driven renders skip restart while the card is disconnected from the DOM.
+
+### Changed
+
+- **`tests`:** regression coverage for alarm PIN gating, entity action targets, cover navigate/service actions, and media-player disconnect guards.
+
 ## [1.3.0-alpha.14] - 2026-06-16
 
 Fourteenth **`1.3.0`** **`alpha`**: Entity Card select polish and press haptics. Release channel **`1.3.0-alpha.14`**.
