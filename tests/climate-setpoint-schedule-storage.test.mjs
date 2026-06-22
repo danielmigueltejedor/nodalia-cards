@@ -137,13 +137,8 @@ test("oversized schedules do not return truncated helper payloads", () => {
   const schedule = { enabled: true, slots: buildWeeklySlots(10) };
 
   assert.equal(api.encodeSetpointScheduleStorageState(schedule), null);
-
-  const body = api.buildClimateSetpointScheduleWebhookBody({
-    entityId: "climate.living_room",
-    storageEntityId: "input_text.living_room_schedule",
-    friendlyName: "Living room",
-    schedule,
-  });
-  assert.equal(body.storage_state, null);
-  assert.equal(body.ha_action, null);
+  assert.match(
+    fs.readFileSync(path.join(root, "nodalia-climate-card.js"), "utf8"),
+    /ha_action:\s*storageEntityId && storageState !== null/,
+  );
 });

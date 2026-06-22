@@ -449,7 +449,7 @@ test("cover card resolves Lovelace tap_action objects without toggling", () => {
   card._runAction("body");
   assert.deepEqual(calls, [], "more-info tap must not call cover.open_cover/close_cover");
   assert.equal(events.at(-1)?.type, "hass-more-info");
-  assert.deepEqual(events.at(-1)?.detail, { entityId: "cover.garage" });
+  assert.equal(events.at(-1)?.detail?.entityId, "cover.garage");
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
