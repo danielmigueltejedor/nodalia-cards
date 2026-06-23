@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.16] - 2026-06-23
+
+Sixteenth **`1.3.0`** **`alpha`**: Deferred timer compatibility for Entity and News cards. Release channel **`1.3.0-alpha.16`**.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker entrance and close fallback timers use the shared `scheduleDeferTimer(host, callback, delayMs)` signature, so animation cleanup still runs when `animationend` is missed.
+- **`news`:** entrance animation reset uses the shared deferred timer signature, preventing the reset timer from being skipped.
+
 ## [1.3.0-alpha.15] - 2026-05-29
 
 Fifteenth **`1.3.0`** **`alpha`**: Security and interaction regressions for alarm PIN, entity/cover actions, and media player lifecycle. Release channel **`1.3.0-alpha.15`**.

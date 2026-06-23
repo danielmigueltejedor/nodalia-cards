@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.0-alpha.15";
+const CARD_VERSION = "1.3.0-alpha.16";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1352,12 +1352,11 @@ class NodaliaEntityCard extends HTMLElement {
       };
 
       shell.addEventListener("animationend", finalizeRemoval, { once: true });
-      window.NodaliaUtils?.scheduleDeferTimer?.(
+      this._selectPickerCloseTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
         this,
-        "_selectPickerCloseTimer",
         finalizeRemoval,
         panelDuration + 80,
-      );
+      ) || 0;
     };
 
     const appendShell = () => {
@@ -1390,12 +1389,11 @@ class NodaliaEntityCard extends HTMLElement {
       };
 
       shellNode.addEventListener("animationend", finalizeEnter, { once: true });
-      window.NodaliaUtils?.scheduleDeferTimer?.(
+      this._selectPickerEnterTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
         this,
-        "_selectPickerEnterTimer",
         finalizeEnter,
         panelDuration + 80,
-      );
+      ) || 0;
     };
 
     if (!animations.enabled) {

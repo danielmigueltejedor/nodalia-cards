@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.0-alpha.15";
+const CARD_VERSION = "1.3.0-alpha.16";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
@@ -1684,7 +1684,6 @@ class NodaliaNewsCard extends HTMLElement {
       }
       this._entranceAnimationResetTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
         this,
-        "_entranceAnimationResetTimer",
         () => {
           this._entranceAnimationResetTimer = 0;
         },
