@@ -6,13 +6,13 @@
 
 The News Card renders headline-first news items from Home Assistant entities. Headlines use a serif editorial typography stack while metadata and summaries use the dashboard body font, keeping the card native to Nodalia and Home Assistant.
 
-**MVP limitation:** The News Card does not fetch news directly from external APIs in this first alpha. It renders news items already exposed to Home Assistant through entities or integrations.
+**Current limitation:** The News Card does not fetch news directly from external APIs. It renders news items already exposed to Home Assistant through entities or integrations.
 
 `items`, `articles`, `entries`, `news`, and `headlines` may be native JSON arrays or JSON strings (common with template sensors). Invalid JSON strings are ignored safely.
 
 ## Installation
 
-The card ships in the main Nodalia Cards HACS bundle. Add the versioned resource (for example `nodalia-cards-1.3.0-alpha.1.js`) to Lovelace resources, then use the YAML below.
+The card ships in the main Nodalia Cards HACS bundle. Add the versioned resource (for example `nodalia-cards-1.3.0.js`) to Lovelace resources, then use the YAML below.
 
 ## Simple example
 

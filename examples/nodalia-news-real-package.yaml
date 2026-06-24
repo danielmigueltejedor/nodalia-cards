@@ -4,7 +4,7 @@
 #
 # Requisitos:
 # - Feedreader configurado desde UI de Home Assistant
-# - Nodalia Cards >= 1.3.0-alpha.3
+# - Nodalia Cards >= 1.3.0
 #
 # Crea:
 # - sensor.nodalia_news_real
