@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -17,6 +17,8 @@ const FEATURE_ARM_AWAY = 2;
 const FEATURE_ARM_NIGHT = 4;
 const FEATURE_ARM_CUSTOM_BYPASS = 16;
 const FEATURE_ARM_VACATION = 32;
+const COVER_SET_POSITION = 4;
+const LOCK_LOCK = 2;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -43,7 +45,7 @@ const DEFAULT_CONFIG = {
   state_attribute: "",
   layout_mode: "auto",
   security: {
-    strict_service_actions: true,
+    strict_service_actions: false,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -317,6 +319,34 @@ function normalizeTextKey(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function parseNumericValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function entitySupportedFeatures(state) {
+  return Number(state?.attributes?.supported_features) || 0;
+}
+
+function entitySupportsFeature(state, flag) {
+  return (entitySupportedFeatures(state) & flag) !== 0;
+}
+
+function coverEntityIsOpen(state) {
+  const stateKey = normalizeTextKey(state?.state);
+  if (["open", "opening"].includes(stateKey)) {
+    return true;
+  }
+  if (["closed", "closing"].includes(stateKey)) {
+    return false;
+  }
+  const position = parseNumericValue(state?.attributes?.current_position);
+  return position !== null && position > 0;
+}
+
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
@@ -567,6 +597,22 @@ function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyTap === "function") {
+    applyTap(config, {
+      actionKey: "tap_action",
+      serviceKey: "tap_service",
+      serviceDataKey: "tap_service_data",
+      urlKey: "tap_url",
+      navigationKey: "navigation_path",
+      newTabKey: "tap_new_tab",
+    }, rawConfig?.tap_action ?? config.tap_action, "auto");
+  }
+  config.tap_action = String(config.tap_action ?? "auto").trim() || "auto";
+  config.tap_service = String(config.tap_service ?? "").trim();
+  config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_url = String(config.tap_url ?? "").trim();
+  config.tap_new_tab = config.tap_new_tab === true;
   return config;
 }
 
@@ -627,6 +673,9 @@ class NodaliaFavCard extends HTMLElement {
 
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
+    this._alarmMenuOpen = false;
+    this._applyHostGridSpan(false);
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   setConfig(config) {
@@ -691,6 +740,10 @@ class NodaliaFavCard extends HTMLElement {
       Array.isArray(this._config?.security?.allowed_services)
         ? this._config.security.allowed_services.join(",")
         : "",
+      this._config?.show_name !== false ? 1 : 0,
+      this._config?.show_state !== false ? 1 : 0,
+      String(this._config?.state_attribute || ""),
+      String(this._config?.name || ""),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "fav:", values }]);
@@ -801,6 +854,91 @@ class NodaliaFavCard extends HTMLElement {
 
   _canToggleEntity(state) {
     return this._isBinaryOnOff(state) || this._isHomeAssistantToggleable(state);
+  }
+
+  _usesDomainToggleService(state = this._getState()) {
+    const domain = this._getDomain(state?.entity_id);
+    return domain === "cover" || domain === "lock";
+  }
+
+  _invokeEntityService(domain, service, entityId, serviceData = {}) {
+    const serviceValue = `${domain}.${service}`;
+    if (!this._isServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fav Card", serviceValue);
+      return Promise.resolve(false);
+    }
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
+    return invoke(this, this._hass, domain, service, {
+      entity_id: entityId,
+      ...serviceData,
+    });
+  }
+
+  _toggleCoverEntity(state, entityId) {
+    if (coverEntityIsOpen(state)) {
+      if (entitySupportsFeature(state, COVER_SET_POSITION)) {
+        this._invokeEntityService("cover", "set_cover_position", entityId, { position: 0 });
+      } else {
+        this._invokeEntityService("cover", "close_cover", entityId);
+      }
+      return;
+    }
+
+    if (entitySupportsFeature(state, COVER_SET_POSITION)) {
+      this._invokeEntityService("cover", "set_cover_position", entityId, { position: 100 });
+    } else {
+      this._invokeEntityService("cover", "open_cover", entityId);
+    }
+  }
+
+  _toggleLockEntity(state, entityId) {
+    const stateKey = normalizeTextKey(state?.state);
+    if (["locking", "unlocking", "jammed", "unavailable", "unknown"].includes(stateKey)) {
+      return;
+    }
+
+    const features = entitySupportedFeatures(state);
+    if (stateKey === "locked") {
+      this._invokeEntityService("lock", "unlock", entityId);
+      return;
+    }
+
+    if (features & LOCK_LOCK) {
+      this._invokeEntityService("lock", "lock", entityId);
+    } else {
+      this._invokeEntityService("lock", "lock", entityId);
+    }
+  }
+
+  _toggleEntity(entityId = this._config?.entity) {
+    const state = this._hass?.states?.[entityId];
+    if (!this._hass || !entityId || !state) {
+      return;
+    }
+
+    if (this._isBinaryOnOff(state)) {
+      const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
+      this._invokeEntityService("homeassistant", service, entityId);
+      return;
+    }
+
+    const domain = this._getDomain(entityId);
+    if (domain === "cover") {
+      this._toggleCoverEntity(state, entityId);
+      return;
+    }
+
+    if (domain === "lock") {
+      this._toggleLockEntity(state, entityId);
+      return;
+    }
+
+    if (!this._isHomeAssistantToggleable(state)) {
+      return;
+    }
+
+    this._invokeEntityService("homeassistant", "toggle", entityId);
   }
 
   _isActiveState(state) {
@@ -971,7 +1109,9 @@ class NodaliaFavCard extends HTMLElement {
     const key = normalizeTextKey(attributeName);
 
     if (typeof value === "boolean") {
-      return value ? "Si" : "No";
+      const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en";
+      const pack = window.NodaliaI18n?.strings?.(lang) || window.NodaliaI18n?.strings?.("en") || {};
+      return value ? (pack.boolean?.yes || "Yes") : (pack.boolean?.no || "No");
     }
 
     if (typeof value === "number") {
@@ -1037,14 +1177,18 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getAlarmSupportedFeatures(state) {
-    const value = Number(state?.attributes?.supported_features);
+    const attrs = state?.attributes;
+    if (!attrs || !Object.prototype.hasOwnProperty.call(attrs, "supported_features")) {
+      return null;
+    }
+    const value = Number(attrs.supported_features);
     return Number.isFinite(value) ? value : 0;
   }
 
   _supportsAlarmMode(state, mode) {
     const features = this._getAlarmSupportedFeatures(state);
 
-    if (!features) {
+    if (features === null) {
       return true;
     }
 
@@ -1112,15 +1256,11 @@ class NodaliaFavCard extends HTMLElement {
     if (actionKey && actions?.[actionKey]) {
       return actions[actionKey];
     }
-    const fallbacks = {
-      disarm: "Disarm",
-      home: "Home",
-      away: "Away",
-      night: "Night",
-      vacation: "Vacation",
-      custom_bypass: "Custom",
-    };
-    return fallbacks[modeKey] || modeKey;
+    const enActions = window.NodaliaI18n?.strings?.("en")?.alarmPanel?.actions || {};
+    if (actionKey && enActions?.[actionKey]) {
+      return enActions[actionKey];
+    }
+    return modeKey;
   }
 
   _matchesAlarmMode(state, ...keys) {
@@ -1208,21 +1348,27 @@ class NodaliaFavCard extends HTMLElement {
         label: this._getAlarmActionLabel("home"),
         icon: "mdi:home-lock",
         service: "alarm_arm_home",
-        enabled: this._config?.alarm_show_arm_home !== false && currentModeKey !== "home",
+        enabled: this._config?.alarm_show_arm_home !== false
+          && this._supportsAlarmMode(state, "home")
+          && currentModeKey !== "home",
       },
       {
         key: "away",
         label: this._getAlarmActionLabel("away"),
         icon: "mdi:shield-lock",
         service: "alarm_arm_away",
-        enabled: this._config?.alarm_show_arm_away !== false && currentModeKey !== "away",
+        enabled: this._config?.alarm_show_arm_away !== false
+          && this._supportsAlarmMode(state, "away")
+          && currentModeKey !== "away",
       },
       {
         key: "night",
         label: this._getAlarmActionLabel("night"),
         icon: "mdi:weather-night",
         service: "alarm_arm_night",
-        enabled: this._config?.alarm_show_arm_night !== false && currentModeKey !== "night",
+        enabled: this._config?.alarm_show_arm_night !== false
+          && this._supportsAlarmMode(state, "night")
+          && currentModeKey !== "night",
       },
     ];
 
@@ -1277,34 +1423,13 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     this._triggerHaptic();
-    this._hass.callService("alarm_control_panel", service, payload);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, domain, service, data) => Promise.resolve(hass?.callService?.(domain, service, data)));
+    invoke(this, this._hass, "alarm_control_panel", service, payload);
     this._alarmMenuOpen = false;
     this._applyHostGridSpan(false);
     this._render();
     this._notifyLayoutChange();
-  }
-
-  _toggleEntity(entityId = this._config?.entity) {
-    const state = this._hass?.states?.[entityId];
-    if (!this._hass || !entityId || !state) {
-      return;
-    }
-
-    if (this._isBinaryOnOff(state)) {
-      const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
-      this._hass.callService("homeassistant", service, {
-        entity_id: entityId,
-      });
-      return;
-    }
-
-    if (!this._isHomeAssistantToggleable(state)) {
-      return;
-    }
-
-    this._hass.callService("homeassistant", "toggle", {
-      entity_id: entityId,
-    });
   }
 
   _openMoreInfo(entityId = this._config?.entity) {
@@ -1347,7 +1472,9 @@ class NodaliaFavCard extends HTMLElement {
       ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
       : [];
     if (!domains.length && !services.length) {
-      return false;
+      return normalizedService === "homeassistant.toggle"
+        || normalizedService === "homeassistant.turn_on"
+        || normalizedService === "homeassistant.turn_off";
     }
     return services.includes(normalizedService) || domains.includes(domain);
   }
@@ -1372,7 +1499,7 @@ class NodaliaFavCard extends HTMLElement {
       payload.entity_id = entityId;
     }
 
-    this._hass.callService(domain, service, payload);
+    this._invokeEntityService(domain, service, entityId, payload);
   }
 
   _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
@@ -1461,7 +1588,7 @@ class NodaliaFavCard extends HTMLElement {
       return;
     }
 
-    const tapAction = this._config?.tap_action || "auto";
+    const tapAction = String(this._config?.tap_action || "auto").trim().toLowerCase();
 
     switch (tapAction) {
       case "toggle":
@@ -1478,7 +1605,7 @@ class NodaliaFavCard extends HTMLElement {
         break;
       case "auto":
       default:
-        if (this._isBinaryOnOff(state)) {
+        if (this._isBinaryOnOff(state) || this._usesDomainToggleService(state)) {
           this._toggleEntity(this._config?.entity);
           return;
         }
@@ -1619,6 +1746,10 @@ class NodaliaFavCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
     const styles = config.styles || DEFAULT_CONFIG.styles;
@@ -2108,10 +2239,12 @@ class NodaliaFavCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -3240,6 +3373,7 @@ class NodaliaFavCardEditor extends HTMLElement {
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

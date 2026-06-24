@@ -1,0 +1,279 @@
+############################################################
+# 📰 PACKAGE: Nodalia News Real
+# Autor: Daniel / Nodalia
+#
+# Requisitos:
+# - Feedreader configurado desde UI de Home Assistant
+# - Nodalia Cards >= 1.3.0
+#
+# Crea:
+# - sensor.nodalia_news_real
+#
+# Tarjeta recomendada:
+#   entity: sensor.nodalia_news_real
+#   max_items: 10
+#   remember_items: false
+#
+# Fix acumulación: variables + state_attr(this.entity_id, 'items')
+############################################################
+
+template:
+  - trigger:
+      - platform: event
+        event_type: feedreader
+
+    variables:
+      ev_title: "{{ trigger.event.data.title | default('') | trim }}"
+      ev_feed_url: "{{ trigger.event.data.feed_url | default('') | trim }}"
+      ev_url: >-
+        {{ trigger.event.data.link
+           | default(trigger.event.data.url | default(trigger.event.data.id | default('')))
+           | trim }}
+      ev_published_raw: >-
+        {{ trigger.event.data.published
+           | default(trigger.event.data.updated | default(''))
+           | trim }}
+      ev_summary_html: >-
+        {{ trigger.event.data.summary
+           | default(trigger.event.data.description | default('')) }}
+
+      prev_items_json: >-
+        {% set prev = [] %}
+        {% set raw = none %}
+        {% if this.entity_id %}
+          {% set raw = state_attr(this.entity_id, 'items') %}
+        {% endif %}
+        {% if raw is none %}
+          {% set raw = this.attributes.items | default(none) %}
+        {% endif %}
+        {% if raw is string and raw | trim | length > 1 %}
+          {% set parsed = raw | from_json(default=[]) %}
+          {% if parsed is iterable and parsed is not string %}
+            {% set prev = parsed | list %}
+          {% endif %}
+        {% elif raw is iterable and raw is not string %}
+          {% set prev = raw | list %}
+        {% endif %}
+        {{ prev | to_json }}
+
+      merged_items_json: >-
+        {% set MAX_AGE_DAYS = 14 %}
+        {% set title = ev_title %}
+        {% set feed_url = ev_feed_url %}
+        {% set url = ev_url %}
+        {% set published_raw = ev_published_raw %}
+        {% set received_at = now().isoformat() %}
+        {% set published_ts = as_timestamp(published_raw, default=0) %}
+        {% set min_ts = as_timestamp(now() - timedelta(days=MAX_AGE_DAYS)) %}
+        {% if published_ts > 0 %}
+          {% set published = published_raw %}
+          {% set is_too_old = published_ts < min_ts %}
+        {% else %}
+          {% set published = received_at %}
+          {% set is_too_old = false %}
+        {% endif %}
+        {% set summary = ev_summary_html
+          | striptags | replace('\n', ' ') | replace('\r', ' ')
+          | replace('\t', ' ') | replace('&nbsp;', ' ')
+          | replace('  ', ' ') | truncate(340, true) | trim %}
+        {% set feed_l = feed_url | lower %}
+        {% set title_l = title | lower %}
+        {% set source = 'RSS' %}
+        {% set category = 'General' %}
+        {% if 'home-assistant.io' in feed_l %}
+          {% set source = 'Home Assistant' %}
+          {% set category = 'Domótica' %}
+        {% elif 'mundodeportivo.com' in feed_l %}
+          {% set source = 'Mundo Deportivo' %}
+          {% set category = 'Deporte' %}
+        {% elif 'rtve.es' in feed_l and 'deportes' in feed_l %}
+          {% set source = 'RTVE Deportes' %}
+          {% set category = 'Deporte' %}
+        {% elif 'rtve.es' in feed_l and ('ciencia' in feed_l or 'tecnologia' in feed_l or 'tecnología' in feed_l) %}
+          {% set source = 'RTVE Ciencia' %}
+          {% set category = 'Ciencia' %}
+        {% elif 'rtve.es' in feed_l %}
+          {% set source = 'RTVE Noticias' %}
+          {% set category = 'General' %}
+        {% elif 'feeds.elpais.com' in feed_l or 'elpais.com' in feed_l %}
+          {% set source = 'El País' %}
+          {% if 'tecnologia' in feed_l or 'tecnología' in feed_l %}
+            {% set category = 'Tecnología' %}
+          {% elif 'ciencia' in feed_l %}
+            {% set category = 'Ciencia' %}
+          {% elif 'economia' in feed_l or 'economía' in feed_l %}
+            {% set category = 'Economía' %}
+          {% else %}
+            {% set category = 'General' %}
+          {% endif %}
+        {% elif 'xatakahome.com' in feed_l %}
+          {% set source = 'Xataka Smart Home' %}
+          {% set category = 'Domótica' %}
+        {% elif 'xataka.com' in feed_l %}
+          {% set source = 'Xataka' %}
+          {% set category = 'Tecnología' %}
+        {% elif 'genbeta.com' in feed_l %}
+          {% set source = 'Genbeta' %}
+          {% set category = 'Tecnología' %}
+        {% elif 'applesfera.com' in feed_l %}
+          {% set source = 'Applesfera' %}
+          {% set category = 'Tecnología' %}
+        {% elif 'xatakamovil.com' in feed_l %}
+          {% set source = 'Xataka Móvil' %}
+          {% set category = 'Tecnología' %}
+        {% elif 'vidaextra.com' in feed_l %}
+          {% set source = 'VidaExtra' %}
+          {% set category = 'Videojuegos' %}
+        {% elif '3djuegos.com' in feed_l %}
+          {% set source = '3DJuegos' %}
+          {% set category = 'Videojuegos' %}
+        {% elif 'vandal.elespanol.com' in feed_l %}
+          {% set source = 'Vandal' %}
+          {% set category = 'Videojuegos' %}
+        {% elif 'as.com' in feed_l %}
+          {% set source = 'AS' %}
+          {% set category = 'Deporte' %}
+        {% elif 'formula1.com' in feed_l %}
+          {% set source = 'Formula 1' %}
+          {% set category = 'Deporte' %}
+        {% elif 'diariodeleon.es' in feed_l %}
+          {% set source = 'Diario de León' %}
+          {% set category = 'Local' %}
+        {% elif '20minutos.es' in feed_l %}
+          {% set source = '20minutos' %}
+          {% set category = 'General' %}
+        {% elif 'elperiodicodelaenergia.com' in feed_l %}
+          {% set source = 'El Periódico de la Energía' %}
+          {% set category = 'Energía' %}
+        {% elif 'agenciasinc.es' in feed_l %}
+          {% set source = 'Agencia SINC' %}
+          {% set category = 'Ciencia' %}
+        {% elif 'sciencedaily.com' in feed_l %}
+          {% set source = 'ScienceDaily' %}
+          {% set category = 'Ciencia' %}
+        {% endif %}
+        {% if category == 'General' %}
+          {% if 'palencia' in title_l or 'castilla y león' in title_l or 'castilla y leon' in title_l %}
+            {% set category = 'Local' %}
+          {% elif 'luz' in title_l or 'electricidad' in title_l or 'energía' in title_l or 'energia' in title_l or 'pvpc' in title_l %}
+            {% set category = 'Energía' %}
+          {% elif 'f1' in title_l or 'fórmula 1' in title_l or 'formula 1' in title_l or 'motogp' in title_l or 'nba' in title_l %}
+            {% set category = 'Deporte' %}
+          {% elif 'home assistant' in title_l or 'matter' in title_l or 'zigbee' in title_l or 'thread' in title_l %}
+            {% set category = 'Domótica' %}
+          {% endif %}
+        {% endif %}
+        {% set img = namespace(url='') %}
+        {% if trigger.event.data.image is defined and trigger.event.data.image %}
+          {% set img.url = trigger.event.data.image %}
+        {% elif trigger.event.data.media_content is defined and (trigger.event.data.media_content | count > 0) %}
+          {% set img.url = trigger.event.data.media_content[0].url | default('') %}
+        {% elif trigger.event.data.media_thumbnail is defined and trigger.event.data.media_thumbnail %}
+          {% set img.url = trigger.event.data.media_thumbnail %}
+        {% elif trigger.event.data.enclosures is defined and (trigger.event.data.enclosures | count > 0) %}
+          {% set img.url = trigger.event.data.enclosures[0].url | default('') %}
+        {% elif trigger.event.data.links is defined %}
+          {% for item_link in trigger.event.data.links %}
+            {% if img.url == '' and item_link.href is defined %}
+              {% set link_type = item_link.type | default('') %}
+              {% set link_rel = item_link.rel | default('') %}
+              {% if 'image' in link_type or link_rel == 'enclosure' %}
+                {% set img.url = item_link.href %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% if img.url == '' and ev_summary_html %}
+          {% set found_img = ev_summary_html | regex_findall_index('src="([^"]+)"', 0, '') %}
+          {% if found_img %}
+            {% set img.url = found_img %}
+          {% endif %}
+        {% endif %}
+        {% set new_item = {
+          "title": title,
+          "summary": summary,
+          "source": source,
+          "published": published,
+          "received_at": received_at,
+          "url": url,
+          "image": img.url,
+          "category": category
+        } %}
+        {% set prev = prev_items_json | from_json(default=[]) %}
+        {% set ns = namespace(items=[]) %}
+        {% if title not in ['', 'unknown', 'unavailable', 'Sin titular'] and not is_too_old %}
+          {% set ns.items = [new_item] %}
+        {% endif %}
+        {% for item in prev %}
+          {% set old_url = item.url | default('') %}
+          {% set old_title = item.title | default('') %}
+          {% if old_url != url and old_title != title %}
+            {% set ns.items = ns.items + [item] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.items[:10] | to_json }}
+
+    sensor:
+      - name: "Nodalia News Real"
+        unique_id: nodalia_news_real
+        icon: mdi:newspaper-variant-outline
+        state: "{{ (merged_items_json | from_json(default=[])) | count }}"
+        attributes:
+          items: "{{ merged_items_json }}"
+          total_items: "{{ (merged_items_json | from_json(default=[])) | count }}"
+          last_feed_url: "{{ ev_feed_url }}"
+          last_title: "{{ ev_title }}"
+          last_published: "{{ ev_published_raw }}"
+          last_event_time: "{{ now().isoformat() }}"
+          last_updated_text: "{{ now().strftime('%d/%m/%Y %H:%M') }}"
+          last_image: >-
+            {% set img = namespace(url='') %}
+            {% if trigger.event.data.image is defined and trigger.event.data.image %}
+              {% set img.url = trigger.event.data.image %}
+            {% elif trigger.event.data.media_content is defined and (trigger.event.data.media_content | count > 0) %}
+              {% set img.url = trigger.event.data.media_content[0].url | default('') %}
+            {% elif trigger.event.data.media_thumbnail is defined and trigger.event.data.media_thumbnail %}
+              {% set img.url = trigger.event.data.media_thumbnail %}
+            {% elif trigger.event.data.enclosures is defined and (trigger.event.data.enclosures | count > 0) %}
+              {% set img.url = trigger.event.data.enclosures[0].url | default('') %}
+            {% elif trigger.event.data.links is defined %}
+              {% for item_link in trigger.event.data.links %}
+                {% if img.url == '' and item_link.href is defined %}
+                  {% set link_type = item_link.type | default('') %}
+                  {% set link_rel = item_link.rel | default('') %}
+                  {% if 'image' in link_type or link_rel == 'enclosure' %}
+                    {% set img.url = item_link.href %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {% if img.url == '' and ev_summary_html %}
+              {% set found_img = ev_summary_html | regex_findall_index('src="([^"]+)"', 0, '') %}
+              {% if found_img %}
+                {% set img.url = found_img %}
+              {% endif %}
+            {% endif %}
+            {{ img.url }}
+          last_action: >-
+            {% set published_ts = as_timestamp(ev_published_raw, default=0) %}
+            {% set min_ts = as_timestamp(now() - timedelta(days=14)) %}
+            {% if ev_title in ['', 'unknown', 'unavailable', 'Sin titular'] %}
+              skipped
+            {% elif published_ts > 0 and published_ts < min_ts %}
+              skipped
+            {% else %}
+              stored
+            {% endif %}
+          last_reason: >-
+            {% set published_ts = as_timestamp(ev_published_raw, default=0) %}
+            {% set min_ts = as_timestamp(now() - timedelta(days=14)) %}
+            {% if ev_title in ['', 'unknown', 'unavailable', 'Sin titular'] %}
+              empty_title
+            {% elif published_ts > 0 and published_ts < min_ts %}
+              too_old
+            {% elif published_ts == 0 %}
+              no_valid_published_date_using_received_at
+            {% else %}
+              ok
+            {% endif %}
+          debug_prev_count: "{{ (prev_items_json | from_json(default=[])) | count }}"

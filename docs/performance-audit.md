@@ -1,9 +1,9 @@
 # Nodalia Cards — Performance & interaction audit
 
-**Date:** 2026-05-18 (pass 1–3); refreshed **2026-05-29** for stable **`1.2.1.1`**  
+**Date:** 2026-05-18 (pass 1–3); refreshed **2026-06-11** for stable **`1.2.1.1`**; **2026-06-12** for **`1.2.2-alpha.1`** (graph hover patch, calendar hass gate, fav parity)  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
 **Target environment:** Home Assistant Core 2025.1+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
-**Bundle size (minified HACS):** ~3.8 MB (`nodalia-cards-1.2.1.1.js`; optional split core + suite)
+**Bundle size (minified HACS):** ~3.8 MB (`nodalia-cards-1.2.2-alpha.1.js`; optional split core + suite)
 
 ---
 

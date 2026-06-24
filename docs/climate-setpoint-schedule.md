@@ -202,7 +202,7 @@ For each enabled slot, the card can build one automation that triggers at `start
 | end (minutes) | `((pi // 512) % 512) * 5` |
 | day index 0–6 | `(pi // 262144) % 8` → `['mon','tue',…][index]` |
 | disabled | `(pi // 2097152) % 2` |
-| temperature | `((pi // 4194304) % 256) + 5` |
+| temperature | `((pi // 4194304) % 256) + 5 + ((pi // 1073741824) % 4) / 4` (quarter-degree fractions in bits 30–31) |
 
 Full working template: [`examples/climate-setpoint-schedule-path-b.yaml`](../examples/climate-setpoint-schedule-path-b.yaml).
 

@@ -4,13 +4,48 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, and completed **`1.2.1.1-alpha.*`** hotfix builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, and completed **`1.3.0-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
-## [1.2.1.1] - 2026-05-29
+## [1.3.0] - 2026-06-25
+
+Stable **`1.3.0`** release on **`main`**. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.0.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **News Card:** new editorial `custom:nodalia-news-card` with simple, compact, and magazine layouts, source filtering, safe URL handling, render-failure guards, and shared helper history for consistent headlines across clients.
+- **Entity Card:** inline `select` / `input_select` picker with in-DOM open/close animations, immediate press haptics, entity pictures, improved Lovelace action normalization, and safer lock/cover domain services.
+- **Climate:** Path-B-compatible schedule storage prefers compact **v1/v2** payloads when they fit `input_text`, preserving quarter-degree setpoints without forcing binary **v3** storage for smaller schedules.
+- **Polish and stability:** Circular Gauge entrance animation, Power Flow home popup bubble, alarm PIN gating, media-player disconnect guards, deferred timer cleanup, and broad regression coverage.
+
+### Added
+
+- **`nodalia-news-card.js`:** News Card for Home Assistant entities that expose news items through attributes (`items`, `articles`, `entries`, `news`, or `headlines`), including magazine carousel mode.
+- **`news`:** `history_helper` / `mirror_history_local` shared history support, plus examples for helper-backed and real feedreader headline history.
+- **Docs / examples:** News Card docs and `examples/nodalia-news-real-package.yaml`.
+
+### Fixed
+
+- **`news`:** template-sensor JSON strings, unavailable/unknown sensors with cached items, missing entity loading, render exception fallback, source health, and carousel update regressions.
+- **`entity`:** select picker flicker, clipped active tint, stale fallback timers, immediate haptic feedback, cover/lock toggle routing, Lovelace service `data` / `target` preservation, and missing-state empty shell styling.
+- **`alarm_panel`:** visible PIN input requires manual entry, and manual PIN watchdog stays armed after resolved/no-op service calls until the alarm state changes.
+- **`climate`:** Path B automation compatibility for setpoint schedules and pre-webhook detection of oversized helper payloads.
+- **`cover` / `media_player`:** normalized tap/hold actions no longer fall through to toggles, and media-player tickers/renders do not restart while disconnected.
+- **`circular_gauge`:** entrance dial animation uses one smooth progress arc instead of striped per-segment tint tweening.
+- **`power_flow`:** home device popup summary bubble keeps the intended square aspect ratio.
+
+### Changed
+
+- **Release metadata:** promote **`1.3.0-alpha.*`** (alpha.1–alpha.17) to stable **`1.3.0`** on **`main`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.0.js`**; optional split **`nodalia-cards-core-1.3.0.js`** + **`nodalia-cards-suite-1.3.0.js`**.
+- **Tests:** regression suite expanded to **201** tests covering News Card, Entity Card select picker/timers, climate storage, action routing, lifecycle guards, and release manifest coherence.
+
+Per-alpha notes for **`1.3.0-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+## [1.2.1.1] - 2026-06-11
 
 Stable **`1.2.1.1`** hotfix on **`main`**. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.2.1.1.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
 

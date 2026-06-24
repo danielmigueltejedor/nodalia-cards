@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -924,8 +924,6 @@ class NodaliaCalendarCard extends HTMLElement {
 
   set hass(hass) {
     const hadHass = this._hadHass;
-    const prevLocale = this._hass?.locale?.language;
-    const prevLabelSig = hadHass ? this._getCalendarEntityLabelsSignature() : "";
     this._hass = hass;
     if (!hass) {
       this._unsubscribeWeatherForecast();
@@ -937,10 +935,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._refreshEvents();
       return;
     }
-    const nextLabelSig = this._getCalendarEntityLabelsSignature();
-    if (prevLocale !== hass.locale?.language || prevLabelSig !== nextLabelSig) {
-      this._renderIfChanged(true);
-    }
+    this._renderIfChanged(false);
   }
 
   _getLocale() {
@@ -2385,7 +2380,10 @@ class NodaliaCalendarCard extends HTMLElement {
     ) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(
-          "Nodalia Calendar Card: webhook bloqueado para usuario no administrador (security.allow_webhooks_for_non_admin=false).",
+          this._uiText(
+            "warnings.webhookBlockedNonAdmin",
+            "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).",
+          ),
         );
       }
       return false;
@@ -4439,10 +4437,12 @@ class NodaliaCalendarCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -788,12 +788,8 @@ class NodaliaGraphCard extends HTMLElement {
       return;
     }
     this._lastRenderSignature = nextSignature;
-    const hadHistory = this._historySeries.length > 0;
-    const hasEntities = this._getEntityEntries().length > 0;
     this._requestHistory();
-    if (!hasEntities || hadHistory) {
-      this._render();
-    }
+    this._render();
   }
 
   getCardSize() {
@@ -824,6 +820,11 @@ class NodaliaGraphCard extends HTMLElement {
       { prefix: "ts:", values: [trackedStates.join("|")] },
       { prefix: "a:", values: [this._activeSeriesEntityId || ""] },
       { prefix: "s:", values: [this._selectedSeriesEntityId || ""] },
+      { prefix: "cfg:", values: [
+        String(this._config?.name || ""),
+        Number(this._config?.hours_to_show ?? 24),
+        this._getEntityEntries().length,
+      ] },
     ]);
   }
 
@@ -858,7 +859,7 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   _getTitle() {
-    return this._config?.name || "Grafica";
+    return this._config?.name || this._graphCardUi("defaultTitle", "Graph");
   }
 
   _getIcon() {
@@ -1479,6 +1480,59 @@ class NodaliaGraphCard extends HTMLElement {
     });
   }
 
+  _syncTooltipContent(tooltip, hover) {
+    if (!(tooltip instanceof HTMLElement) || !hover) {
+      return;
+    }
+
+    let timeEl = tooltip.querySelector(".graph-card__tooltip-time");
+    if (!(timeEl instanceof HTMLElement)) {
+      timeEl = document.createElement("div");
+      timeEl.className = "graph-card__tooltip-time";
+      tooltip.appendChild(timeEl);
+    }
+    timeEl.textContent = hover.label || "";
+
+    let valuesEl = tooltip.querySelector(".graph-card__tooltip-values");
+    if (!(valuesEl instanceof HTMLElement)) {
+      valuesEl = document.createElement("div");
+      valuesEl.className = "graph-card__tooltip-values";
+      tooltip.appendChild(valuesEl);
+    }
+
+    const rows = hover.values || [];
+    while (valuesEl.children.length > rows.length) {
+      valuesEl.lastElementChild?.remove();
+    }
+
+    rows.forEach((item, index) => {
+      let row = valuesEl.children[index];
+      if (!(row instanceof HTMLElement)) {
+        row = document.createElement("div");
+        row.className = "graph-card__tooltip-row";
+        row.innerHTML = `
+          <span class="graph-card__tooltip-dot"></span>
+          <span class="graph-card__tooltip-name"></span>
+          <span class="graph-card__tooltip-value"></span>
+        `;
+        valuesEl.appendChild(row);
+      }
+
+      const dot = row.querySelector(".graph-card__tooltip-dot");
+      const nameEl = row.querySelector(".graph-card__tooltip-name");
+      const valueEl = row.querySelector(".graph-card__tooltip-value");
+      if (dot instanceof HTMLElement) {
+        dot.style.background = item.color || "var(--primary-color)";
+      }
+      if (nameEl instanceof HTMLElement) {
+        nameEl.textContent = item.name || "";
+      }
+      if (valueEl instanceof HTMLElement) {
+        valueEl.textContent = item.unit ? `${item.value} ${item.unit}` : String(item.value ?? "");
+      }
+    });
+  }
+
   _patchHoverOverlay() {
     if (!this.shadowRoot || !this._hoverChart) {
       return false;
@@ -1520,18 +1574,7 @@ class NodaliaGraphCard extends HTMLElement {
     tooltip.dataset.anchorXPct = anchorXPct.toFixed(4);
     tooltip.style.setProperty("--tooltip-tint", tooltipTint);
     tooltip.style.opacity = "1";
-    tooltip.innerHTML = `
-      <div class="graph-card__tooltip-time">${escapeHtml(hover.label)}</div>
-      <div class="graph-card__tooltip-values">
-        ${hover.values.map(item => `
-          <div class="graph-card__tooltip-row">
-            <span class="graph-card__tooltip-dot" style="background:${escapeHtml(item.color)};"></span>
-            <span class="graph-card__tooltip-name">${escapeHtml(item.name)}</span>
-            <span class="graph-card__tooltip-value">${escapeHtml(item.value)}${item.unit ? ` ${escapeHtml(item.unit)}` : ""}</span>
-          </div>
-        `).join("")}
-      </div>
-    `;
+    this._syncTooltipContent(tooltip, hover);
     this._scheduleTooltipPositionSync();
     return true;
   }
@@ -3776,10 +3819,12 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -5073,6 +5118,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

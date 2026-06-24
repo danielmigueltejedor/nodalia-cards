@@ -1,8 +1,9 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
+const COMPACT_LAYOUT_THRESHOLD = 150;
 
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -40,22 +41,30 @@ const DEFAULT_CONFIG = {
   tap_action: "toggle",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
+  icon_tap_service_target: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
+  hold_service_target: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
+  icon_hold_service_target: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   security: {
     strict_service_actions: true,
@@ -186,6 +195,61 @@ function normalizeConfig(rawConfig) {
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.security.allowed_services = normalizeList(config.security?.allowed_services);
   config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyTap === "function") {
+    applyTap(config, {
+      actionKey: "tap_action",
+      serviceKey: "tap_service",
+      serviceDataKey: "tap_service_data",
+      serviceTargetKey: "tap_service_target",
+      urlKey: "tap_url",
+      navigationKey: "navigation_path",
+      newTabKey: "tap_new_tab",
+    }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+    applyTap(config, {
+      actionKey: "icon_tap_action",
+      serviceKey: "icon_tap_service",
+      serviceDataKey: "icon_tap_service_data",
+      serviceTargetKey: "icon_tap_service_target",
+      urlKey: "icon_tap_url",
+      navigationKey: "icon_navigation_path",
+      newTabKey: "icon_tap_new_tab",
+    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+    applyTap(config, {
+      actionKey: "hold_action",
+      serviceKey: "hold_service",
+      serviceDataKey: "hold_service_data",
+      serviceTargetKey: "hold_service_target",
+      urlKey: "hold_url",
+      navigationKey: "hold_navigation_path",
+      newTabKey: "hold_new_tab",
+    }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+    applyTap(config, {
+      actionKey: "icon_hold_action",
+      serviceKey: "icon_hold_service",
+      serviceDataKey: "icon_hold_service_data",
+      serviceTargetKey: "icon_hold_service_target",
+      urlKey: "icon_hold_url",
+      navigationKey: "icon_hold_navigation_path",
+      newTabKey: "icon_hold_new_tab",
+    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+  }
+  if (String(config.icon_tap_action || "").trim() === "") {
+    config.icon_tap_action = "";
+  }
+  if (String(config.icon_hold_action || "").trim() === "") {
+    config.icon_hold_action = "";
+  }
+  config.navigation_path = String(config.navigation_path ?? "").trim();
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
+  config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
+  if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
+    config.navigation_path = config.tap_url;
+  }
+  if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
+    config.hold_navigation_path = config.hold_url;
+  }
   return config;
 }
 
@@ -615,6 +679,11 @@ class NodaliaCoverCard extends HTMLElement {
       attrs.current_position ?? "",
       attrs.current_tilt_position ?? "",
       attrs.supported_features ?? "",
+      this._config?.show_state === true ? 1 : 0,
+      this._config?.show_name !== false ? 1 : 0,
+      String(this._config?.name || ""),
+      String(this._config?.tap_action || ""),
+      String(this._config?.hold_action || ""),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "cover:", values }]);
@@ -690,7 +759,23 @@ class NodaliaCoverCard extends HTMLElement {
     const mode = this._config?.compact_layout_mode || "auto";
     if (mode === "always") return true;
     if (mode === "never") return false;
-    return false;
+    const configuredColumns = this._getConfiguredGridColumns();
+    if (configuredColumns !== null) {
+      return configuredColumns < 4;
+    }
+    const width = Math.round(this._cardWidth || this.clientWidth || 0);
+    return width > 0 && width <= COMPACT_LAYOUT_THRESHOLD;
+  }
+
+  _renderEmptyState() {
+    const title = escapeHtml(this._coverCardUi("emptyTitle", "Nodalia Cover Card"));
+    const body = escapeHtml(this._coverCardUi("emptyBody", "Set `entity` to a `cover.*` entity to show this card."));
+    return `
+      <ha-card class="cover-card cover-card--empty">
+        <div class="cover-card__empty-title">${title}</div>
+        <div class="cover-card__empty-text">${body}</div>
+      </ha-card>
+    `;
   }
 
   _triggerHaptic(styleOverride = null) {
@@ -746,15 +831,21 @@ class NodaliaCoverCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callNamedService(service, data = {}) {
-    if (!this._hass || typeof this._hass.callService !== "function") return;
+  _callNamedService(service, data = {}, target = null) {
+    if (!this._hass || !service) return;
     if (!this._isServiceAllowed(service)) {
       window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Cover Card", service);
       return;
     }
     const [domain, serviceName] = String(service || "").split(".");
     if (!domain || !serviceName) return;
-    this._hass.callService(domain, serviceName, data);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, payload, svcTarget) => Promise.resolve(
+        svcTarget != null
+          ? hass?.callService?.(svcDomain, svc, payload, svcTarget)
+          : hass?.callService?.(svcDomain, svc, payload),
+      ));
+    invoke(this, this._hass, domain, serviceName, data, target);
   }
 
   _callCover(service, data = {}) {
@@ -795,11 +886,24 @@ class NodaliaCoverCard extends HTMLElement {
     const iconRaw = this._config?.icon_tap_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
     let action = String(raw || "toggle").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
     if (!allowed.has(action)) {
       action = "toggle";
     }
     if (action === "auto") {
+      const isIcon = zone === "icon";
+      const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
+      const navigationPath = isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path;
+      const url = isIcon ? this._config?.icon_tap_url : this._config?.tap_url;
+      if (String(service || "").trim()) {
+        return "service";
+      }
+      if (String(navigationPath || "").trim()) {
+        return "navigate";
+      }
+      if (String(url || "").trim()) {
+        return "url";
+      }
       return "toggle";
     }
     return action;
@@ -810,11 +914,24 @@ class NodaliaCoverCard extends HTMLElement {
     const iconRaw = this._config?.icon_hold_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
     let action = String(raw || "none").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
     if (!allowed.has(action)) {
       action = "none";
     }
     if (action === "auto") {
+      const isIcon = zone === "icon";
+      const service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
+      const navigationPath = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
+      const url = isIcon ? this._config?.icon_hold_url : this._config?.hold_url;
+      if (String(service || "").trim()) {
+        return "service";
+      }
+      if (String(navigationPath || "").trim()) {
+        return "navigate";
+      }
+      if (String(url || "").trim()) {
+        return "url";
+      }
       return "more-info";
     }
     return action;
@@ -843,6 +960,16 @@ class NodaliaCoverCard extends HTMLElement {
       this._navigate(url, newTab);
       return;
     }
+    if (action === "navigate") {
+      let path = isHold
+        ? (isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path)
+        : (isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path);
+      if (isHold && isIcon && !String(path || "").trim()) {
+        path = this._config?.hold_navigation_path;
+      }
+      this._navigate(path, false);
+      return;
+    }
     if (action === "service") {
       let service = isHold
         ? (isIcon ? this._config?.icon_hold_service : this._config?.hold_service)
@@ -850,12 +977,21 @@ class NodaliaCoverCard extends HTMLElement {
       let dataRaw = isHold
         ? (isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data)
         : (isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data);
+      let targetRaw = isHold
+        ? (isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target)
+        : (isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target);
       if (isHold && isIcon && !String(service || "").trim()) {
         service = this._config?.hold_service;
         dataRaw = this._config?.hold_service_data;
+        targetRaw = this._config?.hold_service_target;
       }
       const data = parseServiceData(dataRaw);
-      this._callNamedService(service, data);
+      const target = parseServiceData(targetRaw);
+      const hasExplicitTarget = Object.keys(target).length > 0;
+      if (this._config?.entity && data.entity_id === undefined && !hasExplicitTarget) {
+        data.entity_id = this._config.entity;
+      }
+      this._callNamedService(service, data, hasExplicitTarget ? target : null);
       return;
     }
     this._toggleCover();
@@ -1248,6 +1384,10 @@ class NodaliaCoverCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 
@@ -1759,10 +1899,12 @@ class NodaliaCoverCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -2622,6 +2764,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
       control.addEventListener("value-changed", this._onShadowValueChanged);
     });
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

@@ -325,6 +325,8 @@
   "entityCard": {
     "emptyTitle": "Nodalia Entity Card",
     "emptyBody": "Configura `entity` para mostrar la tarjeta.",
+    "selectPickerTitle": "Elegir opción",
+    "selectPickerClose": "Cerrar",
     "binarySensor": {
       "doorOpen": "Abierta",
       "doorClosed": "Cerrada",
@@ -577,14 +579,35 @@
         "webhookMissing": "Configura el webhook de horario en el editor de la tarjeta.",
         "entityMissing": "Selecciona primero una entidad climate.",
         "webhookFailed": "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
-        "dualRangeUnsupported": "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío."
+        "dualRangeUnsupported": "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío.",
+        "storageTooLarge": "Este horario es demasiado grande para el helper input_text (255 caracteres). Reduce bloques o usa automatizaciones Path A en disco."
       }
     }
   },
   "graphCard": {
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "Configura `entities` con una o varias entidades numéricas para mostrar la gráfica.",
-    "emptyHistory": "Sin historial disponible"
+    "emptyHistory": "Sin historial disponible",
+    "defaultTitle": "Gráfica"
+  },
+  "newsCard": {
+    "title": "Noticias",
+    "emptyTitle": "No hay noticias disponibles",
+    "emptyBody": "Añade una entidad de noticias o revisa la fuente configurada.",
+    "loading": "Cargando noticias…",
+    "errorTitle": "Fuente de noticias no disponible",
+    "errorBody": "Revisa la entidad configurada o sus atributos.",
+    "readMore": "Leer más",
+    "sourceUnknown": "Fuente desconocida",
+    "categoryGeneral": "General",
+    "publishedNow": "Ahora",
+    "publishedMinutesAgo": "Hace {count} min",
+    "publishedHoursAgo": "Hace {count} h",
+    "publishedDaysAgo": "Hace {count} d",
+    "previousArticle": "Artículo anterior",
+    "nextArticle": "Artículo siguiente",
+    "articlePosition": "Artículo {current} de {total}",
+    "goToArticle": "Ir al artículo {index}"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",

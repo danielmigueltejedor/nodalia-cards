@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), and completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, and completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable).
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -10,7 +10,245 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.2.1.1-alpha.2] - 2026-05-29
+## [1.3.0-alpha.17] - 2026-06-25
+
+Seventeenth **`1.3.0`** **`alpha`**: Entity Card select picker timer cleanup. Release channel **`1.3.0-alpha.17`**.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker fallback timers are canceled when their `animationend` handler finishes, preventing stale callbacks from flipping picker animation state during rapid reopen/close sequences.
+
+### Changed
+
+- **`tests`:** Entity Card select picker regression coverage now checks cleanup of deferred animation timers.
+
+## [1.3.0-alpha.16] - 2026-06-23
+
+Sixteenth **`1.3.0`** **`alpha`**: Deferred timer compatibility for Entity and News cards. Release channel **`1.3.0-alpha.16`**.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker entrance and close fallback timers use the shared `scheduleDeferTimer(host, callback, delayMs)` signature, so animation cleanup still runs when `animationend` is missed.
+- **`news`:** entrance animation reset uses the shared deferred timer signature, preventing the reset timer from being skipped.
+
+## [1.3.0-alpha.15] - 2026-05-29
+
+Fifteenth **`1.3.0`** **`alpha`**: Security and interaction regressions for alarm PIN, entity/cover actions, and media player lifecycle. Release channel **`1.3.0-alpha.15`**.
+
+### Fixed
+
+- **`alarm_panel`:** visible PIN input now requires manual entry; configured/helper codes apply only when the code field is hidden.
+- **`entity`:** Lovelace perform-action `data` and `target` are preserved during tap-action normalization and passed to Home Assistant service calls instead of defaulting to the card entity.
+- **`cover`:** normalized Lovelace tap/hold actions (more-info, navigate, service) no longer fall through to cover toggle.
+- **`media_player`:** progress ticker and hass-driven renders skip restart while the card is disconnected from the DOM.
+
+### Changed
+
+- **`tests`:** regression coverage for alarm PIN gating, entity action targets, cover navigate/service actions, and media-player disconnect guards.
+
+## [1.3.0-alpha.14] - 2026-06-16
+
+Fourteenth **`1.3.0`** **`alpha`**: Entity Card select polish and press haptics. Release channel **`1.3.0-alpha.14`**.
+
+### Changed
+
+- **`entity`:** `select` / `input_select` cards no longer show chevron-down feedback arrows next to the state chip.
+- **`entity`:** haptic feedback fires on `pointerdown` for body, icon, quick actions, and select picker controls (including close), so every press is felt immediately.
+
+## [1.3.0-alpha.13] - 2026-06-16
+
+Thirteenth **`1.3.0`** **`alpha`**: Circular Gauge entrance animation polish. Release channel **`1.3.0-alpha.13`**.
+
+### Fixed
+
+- **`circular_gauge`:** entrance dial animation uses one smooth progress arc instead of tweening 40 tint segments, removing visible per-unit stripes while the thumb sweeps to the target value.
+
+## [1.3.0-alpha.12] - 2026-06-16
+
+Twelfth **`1.3.0`** **`alpha`**: Climate Path B schedule storage compatibility. Release channel **`1.3.0-alpha.12`**.
+
+### Fixed
+
+- **`climate`:** setpoint schedule encoder prefers Path-B-compatible **v1/v2** storage when it fits in `input_text` (255 chars), using **v3** binary only for larger schedules so Path B automations keep applying temperatures.
+- **`climate`:** packed **v2** slots preserve quarter-degree setpoints (e.g. 20.5°C) via spare packed bits; Path B template and docs updated to decode them.
+
+### Changed
+
+- **`tests`:** climate storage and entity-card lock toggle regression coverage tightened.
+
+## [1.3.0-alpha.11] - 2026-06-16
+
+Eleventh **`1.3.0`** **`alpha`**: Power Flow home popup bubble polish and news package example. Release channel **`1.3.0-alpha.11`**.
+
+### Added
+
+- **`examples`:** `nodalia-news-real-package.yaml` — server-side rolling RSS history (10 headlines) for `sensor.nodalia_news_real`.
+
+### Fixed
+
+- **`power_flow`:** home device popup summary bubble keeps a square aspect ratio (matches the main card node instead of a flattened wide pill).
+
+## [1.3.0-alpha.10] - 2026-06-16
+
+Tenth **`1.3.0`** **`alpha`**: News Card shared history and smoother magazine carousel. Release channel **`1.3.0-alpha.10`**.
+
+### Added
+
+- **`news`:** `history_helper` syncs article history through a Home Assistant `input_text` or `text` helper so iPhone, Mac, and other clients show the same headlines.
+- **`news`:** `mirror_history_local` keeps an optional browser cache when a helper is configured (default on).
+- **`examples`:** `news-history-helper.yaml` sample helper setup.
+- **`tests`:** compact helper round-trip, payload size budget, helper load, and carousel commit smoke coverage.
+
+### Changed
+
+- **`news`:** magazine carousel commits slide changes in-DOM with a 520 ms eased transition instead of full card re-renders on swipe or arrow navigation.
+- **`news`:** docs and visual editor fields for shared history configuration.
+
+### Fixed
+
+- **`utils` / editors:** wide editor dialogs no longer leave empty scroll space below the form when the live preview is taller (`bindEditorDialogLayoutFix` applied suite-wide).
+
+## [1.3.0-alpha.9] - 2026-06-16
+
+Ninth **`1.3.0`** **`alpha`**: News Card render regression hotfix. Release channel **`1.3.0-alpha.9`**.
+
+### Fixed
+
+- **`news`:** `_renderShell` now receives `density` and `layout` (fixes Lovelace **Configuration error: Can't find variable: density** introduced in alpha.8).
+
+## [1.3.0-alpha.8] - 2026-06-16
+
+Eighth **`1.3.0`** **`alpha`**: News Card source health and render fixes. Release channel **`1.3.0-alpha.8`**.
+
+### Fixed
+
+- **`news`:** show cached or live items even when the sensor state is `unavailable`/`unknown` (no longer blocks on `health.unavailable` before reading display items).
+- **`news`:** `getNewsSourceHealth` treats parsed items as healthy and stops infinite loading when `hass.states` is populated but the entity is missing.
+- **`news`:** render signature uses the incoming `hass` snapshot for health checks.
+- **`news`:** render failures are caught so Lovelace does not fall back to a configuration error.
+
+## [1.3.0-alpha.7] - 2026-06-16
+
+Seventh **`1.3.0`** **`alpha`**: Entity Card polish, lock/alarm/climate fixes. Release channel **`1.3.0-alpha.7`**.
+
+### Fixed
+
+- **`entity`:** select picker expand/collapse uses in-DOM shell animations instead of full re-render (no card flicker on open/close).
+- **`entity`:** active-state tint no longer shows a clipped square glow in light mode (`:host` overflow).
+- **`entity`**, **`fav`:** generic lock toggle calls `lock.unlock` for locked states instead of `lock.open` (avoids unlatching secured doors on tap).
+- **`alarm_panel`:** manual PIN watchdog stays armed after a resolved service call until the alarm entity state/`last_changed` changes (wrong-code feedback for slow/no-op integrations).
+- **`climate`:** setpoint schedule composer blocks saves when `storage_state` exceeds the `input_text` 255-character limit, before webhook delivery.
+
+### Added
+
+- **`tests`:** `high-severity-regressions.test.mjs` for fav cover/lock routing, lock unlock behavior, alarm PIN watchdog, and climate storage guard.
+
+## [1.3.0-alpha.6] - 2026-06-12
+
+Sixth **`1.3.0`** **`alpha`**: Entity Card select picker and News Card history. Release channel **`1.3.0-alpha.6`**.
+
+### Added
+
+- **`entity`:** `select.*` and `input_select.*` entities open an inline Nodalia-style option picker on tap (`tap_action: auto`) instead of more-info; calls `select.select_option` / `input_select.select_option`.
+- **`news`:** `remember_items` keeps a rolling local history up to `max_items` as RSS sensors publish new headlines.
+
+### Changed
+
+- **`news`:** visual editor aligned with the suite (sections, entity picker, toggle switches, i18n).
+
+## [1.3.0-alpha.5] - 2026-06-12
+
+Fifth **`1.3.0`** **`alpha`**: News Card article history and aligned visual editor. Release channel **`1.3.0-alpha.5`**.
+
+### Added
+
+- **`news`:** `remember_items` (default on) keeps a rolling local history up to `max_items` as the sensor receives new RSS headlines.
+
+### Changed
+
+- **`news`:** visual editor aligned with the suite (sections, entity picker, toggle switches, i18n).
+
+## [1.3.0-alpha.4] - 2026-06-12
+
+Fourth **`1.3.0`** **`alpha`**: News Card magazine carousel. Release channel **`1.3.0-alpha.4`**.
+
+### Changed
+
+- **`news`:** `magazine` layout shows one article at a time with horizontal swipe navigation, dot indicators, and prev/next controls (keyboard arrows supported).
+
+## [1.3.0-alpha.3] - 2026-06-12
+
+Third **`1.3.0`** **`alpha`**: News Card source readiness fix. Release channel **`1.3.0-alpha.3`**.
+
+### Fixed
+
+- **`news`:** no longer stuck on “Loading news…” when configured entities are already in `hass.states` but global hydration/`connected` flags are false (common on wall tablets).
+- **`news`:** entity states with `unknown`/`unavailable` still render when `items` attributes contain articles; numeric-key object lists coerced to arrays.
+
+## [1.3.0-alpha.2] - 2026-06-12
+
+Second **`1.3.0`** **`alpha`**: News Card template-sensor compatibility. Release channel **`1.3.0-alpha.2`**.
+
+### Fixed
+
+- **`news`:** `items`, `articles`, `entries`, `news`, and `headlines` attributes accept native arrays or JSON strings (Home Assistant template sensors); invalid JSON is treated as empty and the next attribute key is tried.
+
+## [1.3.0-alpha.1] - 2026-06-12
+
+First **`1.3.0`** **`alpha`**: introduces the new Nodalia News Card. Release channel **`1.3.0-alpha.1`**.
+
+First MVP of the News Card focusing on visual style, feed rendering, newspaper-like typography, and dashboard-friendly layout.
+
+### Added
+
+- New **`custom:nodalia-news-card`**.
+- Newspaper-inspired editorial layout for Home Assistant dashboards.
+- Support for single **`entity`** and multiple **`sources`**.
+- **`compact`**, **`magazine`**, and **`list`** layouts.
+- Headline-first visual hierarchy.
+- Basic filtering by age, source count, and keywords.
+- Safe article opening in a new tab.
+- English and Spanish runtime i18n keys.
+- Empty, loading, and error states.
+
+### Notes
+
+This is the first MVP of the News Card. It does not fetch external news APIs directly yet; it renders news items exposed through Home Assistant entities.
+
+## [1.2.2-alpha.2] - 2026-06-12
+
+Second **`1.2.2`** **`alpha`**: bugfix sweep from code audit. Release channel **`1.2.2-alpha.2`**.
+
+### Fixed
+
+- **Empty state:** entity, fav, person, alarm, cover, light, fan, humidifier, climate, weather, and circular-gauge cards render empty UI when entity state disappears instead of keeping stale content.
+- **`cover`:** `compact_layout_mode: auto` uses width/grid heuristics (parity with entity card).
+- **`fav`:** service security aligned with entity (`strict_service_actions: false` by default); all service calls respect allowlists when strict; alarm fallback modes honor `supported_features`; boolean attributes use runtime i18n; disconnect clears alarm grid span and defer timers.
+- **`alarm-panel` / `fav`:** distinguish missing `supported_features` (legacy) from explicit `0` (no arm modes).
+- **`graph`:** always renders on `set hass` while history loads; default title uses runtime i18n.
+- **`calendar`:** non-admin webhook guard log uses runtime i18n.
+- **`utils`:** `invokeHomeAssistantService` logs `callService` failures; shared `renderCardEmptyStateDocument` helper.
+
+### Changed
+
+- **Render signatures:** entity, fav, cover, alarm, and graph include display/config fields to avoid stale editor preview UI.
+
+## [1.2.2-alpha.1] - 2026-06-12
+
+First **`1.2.2`** **`alpha`**: bugfix and performance pass on top of stable **`1.2.1.1`**. Release channel **`1.2.2-alpha.1`**.
+
+### Fixed
+
+- **`fav`:** cover/lock tap parity with entity card; Lovelace `tap_action` objects via `applyCardTapActionField`; alarm mode labels from runtime i18n.
+- **`cover`:** Lovelace tap/hold action objects parsed in `normalizeConfig`.
+- **`entity`:** configured services use `invokeHomeAssistantService`.
+- **`calendar`:** `set hass` compares full render signature for weather/header updates.
+
+### Changed
+
+- **`graph`:** hover tooltip DOM patch via `_syncTooltipContent` (no `innerHTML` rebuild on pointer move).
+
+## [1.2.1.1-alpha.2] - 2026-06-11
 
 Second **`1.2.1.1`** hotfix **`alpha`**: person-card i18n and entity cover/lock tap services. Release channel **`1.2.1.1-alpha.2`**.
 
@@ -19,7 +257,7 @@ Second **`1.2.1.1`** hotfix **`alpha`**: person-card i18n and entity cover/lock 
 - **`person`:** location subtitle (`Home` / `Away`, zones) uses runtime i18n via `_personStrings()` instead of hardcoded Spanish in `_translateState`.
 - **`entity`:** cover tap toggles `open_cover` / `close_cover` (or `set_cover_position` 100/0); lock tap uses `lock.open` / `lock.lock` instead of `homeassistant.toggle`; `auto` tap also toggles cover/lock.
 
-## [1.2.1.1-alpha.1] - 2026-05-29
+## [1.2.1.1-alpha.1] - 2026-06-11
 
 First **`1.2.1.1`** hotfix **`alpha`**: entity-card toggles, person i18n, alarm PIN flow. Release channel **`1.2.1.1-alpha.1`**.
 

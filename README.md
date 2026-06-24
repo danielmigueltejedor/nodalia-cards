@@ -270,6 +270,7 @@ Major internal improvements:
 - `custom:nodalia-calendar-card`
 - `custom:nodalia-notifications-card`
 - `custom:nodalia-vacuum-card`
+- `custom:nodalia-news-card` — [`docs/cards/news-card.md`](./docs/cards/news-card.md)
 
 ---
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -678,6 +678,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       String(helperState?.state || ""),
       Boolean(this._isCompactLayout),
       Number(this._config?.wrong_code_feedback_ms) || 5000,
+      this._config?.show_state !== false ? 1 : 0,
+      this._pinErrorVisible === true ? 1 : 0,
+      String(this._config?.name || ""),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "alarm:", values }]);
@@ -814,14 +817,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _getSupportedFeatures(state) {
-    const value = Number(state?.attributes?.supported_features);
+    const attrs = state?.attributes;
+    if (!attrs || !Object.prototype.hasOwnProperty.call(attrs, "supported_features")) {
+      return null;
+    }
+    const value = Number(attrs.supported_features);
     return Number.isFinite(value) ? value : 0;
   }
 
   _supportsMode(state, mode) {
     const features = this._getSupportedFeatures(state);
 
-    if (!features) {
+    if (features === null) {
       return true;
     }
 
@@ -1111,8 +1118,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     };
 
     const requiresManualPin = this._shouldShowCodeInput(state);
-    const code = this._getCodeValue(state);
-    if (requiresManualPin && !code) {
+    const manualPin = String(this._codeInput || "").trim();
+    if (requiresManualPin && !manualPin) {
       this._triggerHaptic("warning");
       const input = this.shadowRoot?.querySelector?.('input[data-alarm-field="code"]');
       if (input instanceof HTMLInputElement) {
@@ -1121,11 +1128,11 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       return;
     }
 
+    const code = requiresManualPin ? manualPin : this._getCodeValue(state);
     if (code) {
       payload.code = code;
     }
 
-    const manualPin = String(this._codeInput || "").trim();
     const usedManualCode = requiresManualPin && manualPin !== "";
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, domain, svc, data) => Promise.resolve(hass?.callService?.(domain, svc, data)));
@@ -1158,12 +1165,6 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       };
 
       Promise.resolve(invoke(this, this._hass, "alarm_control_panel", service, payload))
-        .then(() => {
-          if (!this.isConnected) {
-            return;
-          }
-          this._clearPinVerifyWatch();
-        })
         .catch(() => {
           if (!this.isConnected) {
             return;
@@ -1310,6 +1311,10 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 
@@ -1884,6 +1889,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
@@ -3004,6 +3010,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
       }));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

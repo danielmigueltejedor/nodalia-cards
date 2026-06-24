@@ -53,7 +53,7 @@ function buildWeeklySlots(blocksPerDay = 2) {
   return slots;
 }
 
-test("schedule storage prefers v3 binary and round-trips", () => {
+test("schedule storage prefers Path B v2 when it fits and round-trips", () => {
   const api = loadScheduleStorageApi();
   const schedule = {
     enabled: true,
@@ -67,10 +67,9 @@ test("schedule storage prefers v3 binary and round-trips", () => {
     }],
   };
 
-  const legacy = JSON.stringify(schedule);
   const compact = api.encodeSetpointScheduleStorageState(schedule);
   const parsed = JSON.parse(compact);
-  assert.ok(parsed.v === 2 || parsed.v === 3, `expected v2 or v3, got v${parsed.v}`);
+  assert.equal(parsed.v, 2, "single-slot schedules should stay on Path B v2");
   assert.ok(compact.length <= 255);
 
   const restored = api.decodeSetpointScheduleStorageState(compact);
@@ -80,6 +79,26 @@ test("schedule storage prefers v3 binary and round-trips", () => {
   assert.equal(restored.slots[0].start, "02:20");
   assert.equal(restored.slots[0].end, "16:05");
   assert.equal(restored.slots[0].temperature, 21);
+});
+
+test("packed v2 storage preserves quarter-degree setpoints", () => {
+  const api = loadScheduleStorageApi();
+  const schedule = {
+    enabled: true,
+    slots: [{
+      id: "slot_decimal",
+      day: "tue",
+      start: "08:00",
+      end: "12:00",
+      temperature: 20.5,
+      enabled: true,
+    }],
+  };
+
+  const compact = api.encodeSetpointScheduleStorageState(schedule);
+  assert.equal(JSON.parse(compact).v, 2);
+  const restored = api.decodeSetpointScheduleStorageState(compact);
+  assert.equal(restored.slots[0].temperature, 20.5);
 });
 
 test("schedule storage still reads legacy verbose JSON and v1 arrays", () => {
@@ -94,7 +113,11 @@ test("fourteen weekly blocks fit within input_text 255 character limit", () => {
   const api = loadScheduleStorageApi();
   const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots: buildWeeklySlots(2) });
   assert.ok(compact.length <= 255, `expected <=255 chars, got ${compact.length}: ${compact}`);
-  assert.equal(JSON.parse(compact).v, 3, "fourteen blocks should use v3 binary");
+  const parsed = JSON.parse(compact);
+  assert.ok(parsed.v === 2 || parsed.v === 3, `expected v2 or v3, got v${parsed.v}`);
+  if (parsed.v === 2) {
+    assert.ok(Array.isArray(parsed.s) && parsed.s.length === 14);
+  }
 });
 
 test("forty weekly blocks fit within input_text 255 character limit", () => {
@@ -128,4 +151,13 @@ test("forty weekly blocks fit within input_text 255 character limit", () => {
   assert.ok(compact.length <= 255, `expected <=255 chars for 40 slots, got ${compact.length}: ${compact}`);
   const restored = api.decodeSetpointScheduleStorageState(compact);
   assert.equal(restored.slots.length, 40);
+});
+
+test("forty-five weekly blocks exceed input_text limit and are detectable", () => {
+  const api = loadScheduleStorageApi();
+  const slots = buildWeeklySlots(7);
+  assert.equal(slots.length, 49);
+  const compact = api.encodeSetpointScheduleStorageState({ enabled: true, slots: slots.slice(0, 45) });
+  assert.ok(compact.length > 255, `expected >255 chars for 45 slots, got ${compact.length}`);
+  assert.equal(api.isSetpointScheduleStorageStateWithinLimit(compact), false);
 });

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -13,9 +13,7 @@ const HAPTIC_PATTERNS = {
 const COMPACT_LAYOUT_THRESHOLD = 150;
 const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
 const COVER_SET_POSITION = 4;
-const LOCK_OPEN = 1;
 const LOCK_LOCK = 2;
-const LOCK_UNLOCK = 4;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -30,24 +28,28 @@ const DEFAULT_CONFIG = {
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
   navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
+  icon_tap_service_target: "",
   icon_tap_url: "",
   icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
+  hold_service_target: "",
   hold_url: "",
   hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
+  icon_hold_service_target: "",
   icon_hold_url: "",
   icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
@@ -55,11 +57,13 @@ const DEFAULT_CONFIG = {
   icon_double_tap_action: "",
   double_tap_service: "",
   double_tap_service_data: "",
+  double_tap_service_target: "",
   double_tap_url: "",
   double_tap_navigation_path: "",
   double_tap_new_tab: false,
   icon_double_tap_service: "",
   icon_double_tap_service_data: "",
+  icon_double_tap_service_target: "",
   icon_double_tap_url: "",
   icon_double_tap_navigation_path: "",
   icon_double_tap_new_tab: false,
@@ -489,6 +493,33 @@ function getEntityDomain(state) {
   return entityId.includes(".") ? entityId.split(".")[0] : "";
 }
 
+function isSelectDomainEntity(state) {
+  const domain = getEntityDomain(state);
+  return domain === "select" || domain === "input_select";
+}
+
+function getSelectEntityOptions(state) {
+  if (!state?.attributes) {
+    return [];
+  }
+  const options = state.attributes.options;
+  if (!Array.isArray(options)) {
+    return [];
+  }
+  return options.map(item => String(item ?? "").trim()).filter(Boolean);
+}
+
+function getSelectEntityCurrentValue(state) {
+  return String(state?.state ?? "").trim();
+}
+
+function humanizeSelectOptionLabel(raw) {
+  return String(raw ?? "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, match => match.toUpperCase())
+    .trim();
+}
+
 function entitySupportedFeatures(state) {
   return Number(state?.attributes?.supported_features) || 0;
 }
@@ -573,6 +604,10 @@ function getDynamicEntityIcon(state) {
     return stateKey === "on" ? "mdi:fan" : "mdi:fan-off";
   }
 
+  if (domain === "select" || domain === "input_select") {
+    return "mdi:format-list-bulleted";
+  }
+
   if (domain === "lock") {
     switch (stateKey) {
       case "unlocked":
@@ -650,6 +685,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "tap_action",
       serviceKey: "tap_service",
       serviceDataKey: "tap_service_data",
+      serviceTargetKey: "tap_service_target",
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
@@ -658,6 +694,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "hold_action",
       serviceKey: "hold_service",
       serviceDataKey: "hold_service_data",
+      serviceTargetKey: "hold_service_target",
       urlKey: "hold_url",
       navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
@@ -666,6 +703,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "icon_tap_action",
       serviceKey: "icon_tap_service",
       serviceDataKey: "icon_tap_service_data",
+      serviceTargetKey: "icon_tap_service_target",
       urlKey: "icon_tap_url",
       navigationKey: "icon_navigation_path",
       newTabKey: "icon_tap_new_tab",
@@ -674,6 +712,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "icon_hold_action",
       serviceKey: "icon_hold_service",
       serviceDataKey: "icon_hold_service_data",
+      serviceTargetKey: "icon_hold_service_target",
       urlKey: "icon_hold_url",
       navigationKey: "icon_hold_navigation_path",
       newTabKey: "icon_hold_new_tab",
@@ -682,6 +721,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "double_tap_action",
       serviceKey: "double_tap_service",
       serviceDataKey: "double_tap_service_data",
+      serviceTargetKey: "double_tap_service_target",
       urlKey: "double_tap_url",
       navigationKey: "double_tap_navigation_path",
       newTabKey: "double_tap_new_tab",
@@ -690,6 +730,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "icon_double_tap_action",
       serviceKey: "icon_double_tap_service",
       serviceDataKey: "icon_double_tap_service_data",
+      serviceTargetKey: "icon_double_tap_service_target",
       urlKey: "icon_double_tap_url",
       navigationKey: "icon_double_tap_navigation_path",
       newTabKey: "icon_double_tap_new_tab",
@@ -706,21 +747,25 @@ function normalizeConfig(rawConfig) {
   }
   config.tap_service = String(config.tap_service ?? "").trim();
   config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_service_target = String(config.tap_service_target ?? "").trim();
   config.tap_url = String(config.tap_url ?? "").trim();
   config.navigation_path = String(config.navigation_path ?? "").trim();
   config.tap_new_tab = config.tap_new_tab === true;
   config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
   config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
+  config.icon_tap_service_target = String(config.icon_tap_service_target ?? "").trim();
   config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
   config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
   config.icon_tap_new_tab = config.icon_tap_new_tab === true;
   config.hold_service = String(config.hold_service ?? "").trim();
   config.hold_service_data = String(config.hold_service_data ?? "").trim();
+  config.hold_service_target = String(config.hold_service_target ?? "").trim();
   config.hold_url = String(config.hold_url ?? "").trim();
   config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.hold_new_tab = config.hold_new_tab === true;
   config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
   config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
+  config.icon_hold_service_target = String(config.icon_hold_service_target ?? "").trim();
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
@@ -733,11 +778,13 @@ function normalizeConfig(rawConfig) {
   config.language = String(config.language ?? "auto").trim() || "auto";
   config.double_tap_service = String(config.double_tap_service ?? "").trim();
   config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
+  config.double_tap_service_target = String(config.double_tap_service_target ?? "").trim();
   config.double_tap_url = String(config.double_tap_url ?? "").trim();
   config.double_tap_navigation_path = String(config.double_tap_navigation_path ?? "").trim();
   config.double_tap_new_tab = config.double_tap_new_tab === true;
   config.icon_double_tap_service = String(config.icon_double_tap_service ?? "").trim();
   config.icon_double_tap_service_data = String(config.icon_double_tap_service_data ?? "").trim();
+  config.icon_double_tap_service_target = String(config.icon_double_tap_service_target ?? "").trim();
   config.icon_double_tap_url = String(config.icon_double_tap_url ?? "").trim();
   config.icon_double_tap_navigation_path = String(config.icon_double_tap_navigation_path ?? "").trim();
   config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
@@ -774,6 +821,10 @@ class NodaliaEntityCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._suppressNextEntityTap = false;
+    this._selectPickerOpen = false;
+    this._selectPickerAnimating = false;
+    this._selectPickerCloseTimer = 0;
+    this._selectPickerEnterTimer = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -799,7 +850,9 @@ class NodaliaEntityCard extends HTMLElement {
       this._render();
     });
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -820,7 +873,6 @@ class NodaliaEntityCard extends HTMLElement {
               if (!state) {
                 return;
               }
-              this._triggerHaptic();
               this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
               this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
               this._performHoldAction(state, zone);
@@ -851,6 +903,11 @@ class NodaliaEntityCard extends HTMLElement {
       this._entranceAnimationResetTimer = 0;
     }
     this._animateContentOnNextRender = true;
+    this._selectPickerOpen = false;
+    this._selectPickerAnimating = false;
+    this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
+    this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+    this.classList.remove("entity-card-host--select-open");
     this._lastRenderSignature = "";
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._clearOptimisticToggleTimer();
@@ -867,6 +924,9 @@ class NodaliaEntityCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._selectPickerOpen = false;
+    this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
+    this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
     this._animateContentOnNextRender = true;
     this._render();
   }
@@ -942,6 +1002,11 @@ class NodaliaEntityCard extends HTMLElement {
       `ihs:${String(this._config?.icon_hold_service || "")}`,
       `hu:${String(this._config?.hold_url || "")}`,
       `ihu:${String(this._config?.icon_hold_url || "")}`,
+      `sn:${this._config?.show_name !== false ? 1 : 0}`,
+      `ss:${this._config?.show_state !== false ? 1 : 0}`,
+      `nm:${String(this._config?.name || "")}`,
+      `sp:${this._selectPickerOpen ? 1 : 0}`,
+      `sel:${isSelectDomainEntity(state) ? getSelectEntityOptions(state).join("\u001f") : ""}`,
     ].join("|");
   }
 
@@ -1138,6 +1203,292 @@ class NodaliaEntityCard extends HTMLElement {
     return domain === "cover" || domain === "lock";
   }
 
+  _isSelectEntity(state = this._getActualState()) {
+    return isSelectDomainEntity(state) && getSelectEntityOptions(state).length > 0;
+  }
+
+  _getSelectOptions(state = this._getActualState()) {
+    return getSelectEntityOptions(state);
+  }
+
+  _getSelectCurrentValue(state = this._getActualState()) {
+    return getSelectEntityCurrentValue(state);
+  }
+
+  _formatSelectOptionLabel(option) {
+    const chipLabel = window.NodaliaI18n?.translateEntityStateChip?.(
+      this._hass,
+      this._config?.language ?? "auto",
+      option,
+    );
+    if (chipLabel) {
+      return chipLabel;
+    }
+    return humanizeSelectOptionLabel(option);
+  }
+
+  _shouldOpenSelectPickerOnTap(state, zone = "body") {
+    const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
+    if (tapAction !== "auto") {
+      return false;
+    }
+    if (isUnavailableState(state)) {
+      return false;
+    }
+    return this._isSelectEntity(state);
+  }
+
+  _getSelectPanelDuration(animations = this._getAnimationSettings()) {
+    return animations.enabled
+      ? Math.max(220, Math.round((animations.contentDuration || 420) * 0.72))
+      : 0;
+  }
+
+  _createMarkupNode(markup) {
+    if (!markup || typeof document === "undefined") {
+      return null;
+    }
+    const template = document.createElement("template");
+    template.innerHTML = String(markup).trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  _syncSelectPickerHostState(isOpen) {
+    this.classList.toggle("entity-card-host--select-open", isOpen === true);
+    const card = this.shadowRoot?.querySelector(".entity-card");
+    if (card instanceof HTMLElement) {
+      card.classList.toggle("entity-card--select-open", isOpen === true);
+    }
+  }
+
+  _getSelectPickerShellHost() {
+    return this.shadowRoot?.querySelector("[data-select-picker-shell]") || null;
+  }
+
+  _buildSelectPickerShellMarkup(state, accentColor, animationClass = "") {
+    const panelMarkup = this._renderSelectPickerPanel(state, accentColor);
+    if (!panelMarkup) {
+      return "";
+    }
+    const shellClass = animationClass
+      ? `entity-card__select-picker-shell ${animationClass}`.trim()
+      : "entity-card__select-picker-shell";
+    return `
+      <div class="${shellClass}">
+        <div class="entity-card__select-picker-inner">
+          ${panelMarkup}
+        </div>
+      </div>
+    `;
+  }
+
+  _refreshSelectPickerContent(state, accentColor, options = {}) {
+    const shellHost = this._getSelectPickerShellHost();
+    if (!(shellHost instanceof HTMLElement) || !this._isSelectEntity(state)) {
+      return;
+    }
+    const markup = this._buildSelectPickerShellMarkup(state, accentColor);
+    if (!markup) {
+      shellHost.replaceChildren();
+      return;
+    }
+    const shellNode = this._createMarkupNode(markup);
+    if (shellNode instanceof HTMLElement) {
+      shellHost.replaceChildren(shellNode);
+      return;
+    }
+    shellHost.innerHTML = markup;
+  }
+
+  _setSelectPickerVisibility(isOpen, state = this._getState()) {
+    const nextOpen = isOpen === true;
+    if (nextOpen === this._selectPickerOpen) {
+      if (!nextOpen) {
+        return;
+      }
+      if (!this._selectPickerAnimating) {
+        this._refreshSelectPickerContent(state, this._getAccentColor(state));
+      }
+      return;
+    }
+
+    this._selectPickerOpen = nextOpen;
+    this._syncSelectPickerHostState(nextOpen);
+
+    const shellHost = this._getSelectPickerShellHost();
+    if (!(shellHost instanceof HTMLElement) || !state || !this._isSelectEntity(state)) {
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    const accentColor = this._getAccentColor(state);
+    const panelDuration = this._getSelectPanelDuration(animations);
+    const existingShell = shellHost.querySelector(".entity-card__select-picker-shell");
+
+    this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
+    this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+
+    const clearShellHost = () => {
+      shellHost.replaceChildren();
+    };
+
+    const mountStaticShell = () => {
+      this._refreshSelectPickerContent(state, accentColor);
+    };
+
+    const removeShell = shell => {
+      if (!(shell instanceof HTMLElement)) {
+        clearShellHost();
+        this._selectPickerAnimating = false;
+        return;
+      }
+
+      this._selectPickerAnimating = true;
+      shell.classList.remove("entity-card__select-picker-shell--entering");
+      shell.classList.add("entity-card__select-picker-shell--leaving");
+
+      const finalizeRemoval = () => {
+        this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
+        if (shell.isConnected) {
+          shell.remove();
+        }
+        if (!shellHost.querySelector(".entity-card__select-picker-shell")) {
+          clearShellHost();
+        }
+        this._selectPickerAnimating = false;
+      };
+
+      shell.addEventListener("animationend", finalizeRemoval, { once: true });
+      this._selectPickerCloseTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
+        this,
+        finalizeRemoval,
+        panelDuration + 80,
+      ) || 0;
+    };
+
+    const appendShell = () => {
+      const markup = this._buildSelectPickerShellMarkup(
+        state,
+        accentColor,
+        animations.enabled ? "entity-card__select-picker-shell--entering" : "",
+      );
+      const shellNode = this._createMarkupNode(markup);
+      if (!(shellNode instanceof HTMLElement)) {
+        this._lastRenderSignature = "";
+        this._render();
+        return;
+      }
+
+      clearShellHost();
+      shellHost.appendChild(shellNode);
+      this._selectPickerAnimating = animations.enabled;
+
+      if (!animations.enabled) {
+        this._selectPickerAnimating = false;
+        return;
+      }
+
+      const finalizeEnter = () => {
+        this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+        if (shellNode.isConnected) {
+          shellNode.classList.remove("entity-card__select-picker-shell--entering");
+        }
+        this._selectPickerAnimating = false;
+      };
+
+      shellNode.addEventListener("animationend", finalizeEnter, { once: true });
+      this._selectPickerEnterTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
+        this,
+        finalizeEnter,
+        panelDuration + 80,
+      ) || 0;
+    };
+
+    if (!animations.enabled) {
+      if (existingShell instanceof HTMLElement) {
+        existingShell.remove();
+      }
+      if (nextOpen) {
+        mountStaticShell();
+      } else {
+        clearShellHost();
+      }
+      this._selectPickerAnimating = false;
+      return;
+    }
+
+    if (!nextOpen) {
+      if (existingShell instanceof HTMLElement) {
+        removeShell(existingShell);
+      } else {
+        clearShellHost();
+        this._selectPickerAnimating = false;
+      }
+      return;
+    }
+
+    if (existingShell instanceof HTMLElement) {
+      existingShell.classList.remove("entity-card__select-picker-shell--leaving");
+      mountStaticShell();
+      this._selectPickerAnimating = false;
+      return;
+    }
+
+    appendShell();
+  }
+
+  _openSelectPicker() {
+    if (this._selectPickerOpen) {
+      return;
+    }
+    this._setSelectPickerVisibility(true);
+  }
+
+  _closeSelectPicker() {
+    if (!this._selectPickerOpen) {
+      return;
+    }
+    this._setSelectPickerVisibility(false);
+  }
+
+  _toggleSelectPicker() {
+    if (this._selectPickerOpen) {
+      this._closeSelectPicker();
+      return;
+    }
+    this._openSelectPicker();
+  }
+
+  _clearSelectPickerAnimationTimer(timerKey) {
+    const timer = this[timerKey];
+    if (!timer || typeof window === "undefined") {
+      this[timerKey] = 0;
+      return;
+    }
+    window.clearTimeout(timer);
+    this._nodaliaDeferTimers?.delete?.(timer);
+    this[timerKey] = 0;
+  }
+
+  _selectEntityOption(optionValue) {
+    const entityId = this._config?.entity;
+    const state = this._getActualState();
+    if (!entityId || !state || isUnavailableState(state)) {
+      return;
+    }
+    const value = String(optionValue ?? "").trim();
+    if (!value) {
+      return;
+    }
+    const domain = this._getDomain(entityId);
+    const serviceDomain = domain === "input_select" ? "input_select" : "select";
+    this._invokeEntityService(serviceDomain, "select_option", entityId, { option: value });
+    this._closeSelectPicker();
+  }
+
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
@@ -1172,13 +1523,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
-      if (features & LOCK_OPEN) {
-        this._invokeEntityService("lock", "open", entityId);
-      } else if (features & LOCK_UNLOCK) {
-        this._invokeEntityService("lock", "unlock", entityId);
-      } else {
-        this._invokeEntityService("lock", "unlock", entityId);
-      }
+      this._invokeEntityService("lock", "unlock", entityId);
       return;
     }
 
@@ -1630,7 +1975,7 @@ class NodaliaEntityCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
+  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -1646,11 +1991,19 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
+    const target = this._parseServiceData(rawTarget);
+    const hasExplicitTarget = Object.keys(target).length > 0;
+    if (entityId && payload.entity_id === undefined && !hasExplicitTarget) {
       payload.entity_id = entityId;
     }
 
-    this._hass.callService(domain, service, payload);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
+        svcTarget != null
+          ? hass?.callService?.(svcDomain, svc, data, svcTarget)
+          : hass?.callService?.(svcDomain, svc, data),
+      ));
+    invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
   _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
@@ -1671,6 +2024,7 @@ class NodaliaEntityCard extends HTMLElement {
     const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     const tapService = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
     const tapServiceData = zone === "icon" ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+    const tapServiceTarget = zone === "icon" ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
     const tapUrl = zone === "icon" ? this._config?.icon_tap_url : this._config?.tap_url;
     const tapNewTab = zone === "icon" ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true;
 
@@ -1682,7 +2036,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(tapService, this._config?.entity, tapServiceData);
+        this._callConfiguredService(tapService, this._config?.entity, tapServiceData, tapServiceTarget);
         break;
       case "url":
         this._openConfiguredUrl(tapUrl, tapNewTab);
@@ -1692,6 +2046,10 @@ class NodaliaEntityCard extends HTMLElement {
         break;
       case "auto":
       default:
+        if (this._shouldOpenSelectPickerOnTap(state, zone)) {
+          this._toggleSelectPicker();
+          return;
+        }
         if (this._isBinaryOnOff(state) || this._usesDomainToggleService(state)) {
           this._toggleEntity(this._config?.entity);
           return;
@@ -1706,12 +2064,14 @@ class NodaliaEntityCard extends HTMLElement {
     const holdAction = String(this._effectiveHoldAction(zone) || "none").trim().toLowerCase();
     let holdService = zone === "icon" ? this._config?.icon_hold_service : this._config?.hold_service;
     let holdServiceData = zone === "icon" ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
+    let holdServiceTarget = zone === "icon" ? this._config?.icon_hold_service_target : this._config?.hold_service_target;
     let holdUrl = zone === "icon" ? this._config?.icon_hold_url : this._config?.hold_url;
     let holdNewTab = zone === "icon" ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true;
     if (zone === "icon") {
       if (!String(holdService || "").trim()) {
         holdService = this._config?.hold_service;
         holdServiceData = this._config?.hold_service_data;
+        holdServiceTarget = this._config?.hold_service_target;
       }
       if (!String(holdUrl || "").trim()) {
         holdUrl = this._config?.hold_url;
@@ -1727,7 +2087,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(holdService, this._config?.entity, holdServiceData);
+        this._callConfiguredService(holdService, this._config?.entity, holdServiceData, holdServiceTarget);
         break;
       case "url":
         this._openConfiguredUrl(holdUrl, holdNewTab);
@@ -1751,12 +2111,14 @@ class NodaliaEntityCard extends HTMLElement {
     const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
     let doubleService = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
     let doubleServiceData = zone === "icon" ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
+    let doubleServiceTarget = zone === "icon" ? this._config?.icon_double_tap_service_target : this._config?.double_tap_service_target;
     let doubleUrl = zone === "icon" ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
     let doubleNewTab = zone === "icon" ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
     if (zone === "icon") {
       if (!String(doubleService || "").trim()) {
         doubleService = this._config?.double_tap_service;
         doubleServiceData = this._config?.double_tap_service_data;
+        doubleServiceTarget = this._config?.double_tap_service_target;
       }
       if (!String(doubleUrl || "").trim()) {
         doubleUrl = this._config?.double_tap_url;
@@ -1772,7 +2134,7 @@ class NodaliaEntityCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(doubleService, this._config?.entity, doubleServiceData);
+        this._callConfiguredService(doubleService, this._config?.entity, doubleServiceData, doubleServiceTarget);
         break;
       case "url":
         this._openConfiguredUrl(doubleUrl, doubleNewTab);
@@ -1895,6 +2257,48 @@ class NodaliaEntityCard extends HTMLElement {
     }, safeDelay);
   }
 
+  _triggerEntityPressFeedback(action, actionTarget) {
+    const hapticStyle = action === "select-option" ? "selection" : null;
+    this._triggerHaptic(hapticStyle);
+
+    if (action === "body" || action === "icon") {
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+      return;
+    }
+
+    if (actionTarget instanceof HTMLElement) {
+      this._triggerPressAnimation(actionTarget);
+    }
+  }
+
+  _onShadowPointerDown(event) {
+    if (typeof event.button === "number" && event.button !== 0) {
+      return;
+    }
+
+    const actionTarget = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.entityAction);
+
+    if (!actionTarget) {
+      return;
+    }
+
+    const action = actionTarget.dataset.entityAction;
+    if (action === "body" || action === "icon") {
+      if (this._suppressNextEntityTap) {
+        return;
+      }
+      this._triggerEntityPressFeedback(action, actionTarget);
+      return;
+    }
+
+    if (action === "select-close" || action === "select-option" || action === "quick") {
+      this._triggerEntityPressFeedback(action, actionTarget);
+    }
+  }
+
   _onShadowClick(event) {
     const actionTarget = event
       .composedPath()
@@ -1910,6 +2314,17 @@ class NodaliaEntityCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    if (action === "select-close") {
+      this._closeSelectPicker();
+      return;
+    }
+
+    if (action === "select-option") {
+      const value = actionTarget.dataset.selectValue || "";
+      this._selectEntityOption(value);
+      return;
+    }
+
     if (action === "body" || action === "icon") {
       if (this._suppressNextEntityTap) {
         this._suppressNextEntityTap = false;
@@ -1920,18 +2335,12 @@ class NodaliaEntityCard extends HTMLElement {
         if (!this._canRunTapAction(state, zone)) {
           return;
         }
-        this._triggerHaptic();
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
         this._performTapAction(state, zone);
       };
       const runDouble = () => {
         if (!this._canRunDoubleTapAction(state, zone)) {
           return;
         }
-        this._triggerHaptic();
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
         this._performDoubleTapAction(state, zone);
       };
       if (this._canRunDoubleTapAction(state, zone) && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
@@ -1950,9 +2359,6 @@ class NodaliaEntityCard extends HTMLElement {
         return;
       }
 
-      this._triggerHaptic();
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-      this._triggerPressAnimation(actionTarget);
       this._performQuickAction(quickAction);
     }
   }
@@ -1972,6 +2378,57 @@ class NodaliaEntityCard extends HTMLElement {
     const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _renderSelectPickerPanel(state, accentColor) {
+    const options = this._getSelectOptions(state);
+    if (!options.length) {
+      return "";
+    }
+    const current = this._getSelectCurrentValue(state);
+    const pickerTitle = this._entityCardUi("selectPickerTitle", "Choose option");
+    const closeLabel = this._entityCardUi("selectPickerClose", "Close");
+
+    return `
+      <div
+        class="entity-card__select-picker"
+        role="listbox"
+        aria-label="${escapeHtml(pickerTitle)}"
+      >
+        <div class="entity-card__select-picker-head">
+          <span class="entity-card__select-picker-kicker">${escapeHtml(pickerTitle)}</span>
+          <button
+            type="button"
+            class="entity-card__select-picker-close"
+            data-entity-action="select-close"
+            aria-label="${escapeHtml(closeLabel)}"
+          >
+            <ha-icon icon="mdi:chevron-up"></ha-icon>
+          </button>
+        </div>
+        <div class="entity-card__select-options">
+          ${options.map(option => {
+            const isActive = normalizeTextKey(option) === normalizeTextKey(current);
+            const label = this._formatSelectOptionLabel(option);
+            return `
+              <button
+                type="button"
+                class="entity-card__select-option${isActive ? " is-active" : ""}"
+                data-entity-action="select-option"
+                data-select-value="${escapeHtml(option)}"
+                role="option"
+                aria-selected="${isActive ? "true" : "false"}"
+                style="--select-option-accent:${escapeHtml(accentColor)};"
+              >
+                <span class="entity-card__select-option-indicator" aria-hidden="true"></span>
+                <span class="entity-card__select-option-label">${escapeHtml(label)}</span>
+                ${isActive ? '<ha-icon class="entity-card__select-option-check" icon="mdi:check"></ha-icon>' : ""}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
   }
 
   _renderEmptyState() {
@@ -2002,6 +2459,10 @@ class NodaliaEntityCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (this._config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 
@@ -2055,6 +2516,7 @@ class NodaliaEntityCard extends HTMLElement {
     const showCopyBlock = showCopyHeader || chips.length > 0;
     const canRunBodyTap = this._canRunTapAction(state, "body");
     const canRunIconTap = this._canRunTapAction(state, "icon");
+    const isSelectEntity = this._isSelectEntity(state);
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
@@ -2071,7 +2533,13 @@ class NodaliaEntityCard extends HTMLElement {
         :host {
           --entity-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --entity-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --entity-card-select-panel-duration: ${animations.enabled ? Math.max(220, Math.round(animations.contentDuration * 0.72)) : 0}ms;
           display: block;
+          position: relative;
+        }
+
+        :host(.entity-card-host--select-open) {
+          z-index: 2;
         }
 
         * {
@@ -2099,6 +2567,7 @@ class NodaliaEntityCard extends HTMLElement {
           background: ${isActive
             ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
             : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          border-radius: inherit;
           content: "";
           inset: 0;
           pointer-events: none;
@@ -2110,6 +2579,7 @@ class NodaliaEntityCard extends HTMLElement {
           background:
             radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
           content: "";
           inset: 0;
           opacity: ${isActive ? "1" : "0"};
@@ -2357,6 +2827,235 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
+        ha-card.entity-card--select-open {
+          overflow: visible;
+        }
+
+        .entity-card__select-picker-shell-host {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .entity-card__select-picker-shell {
+          backface-visibility: hidden;
+          overflow: hidden;
+          will-change: max-height, opacity;
+        }
+
+        .entity-card__select-picker-inner {
+          backface-visibility: hidden;
+          display: grid;
+          will-change: opacity, transform;
+        }
+
+        .entity-card__select-picker-shell--entering {
+          animation: entity-card-select-shell-expand var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top center;
+        }
+
+        .entity-card__select-picker-shell--entering .entity-card__select-picker-inner {
+          animation: entity-card-select-panel-content-in var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          transform-origin: top center;
+        }
+
+        .entity-card__select-picker-shell--leaving {
+          animation: entity-card-select-shell-collapse var(--entity-card-select-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          pointer-events: none;
+          transform-origin: top center;
+        }
+
+        .entity-card__select-picker-shell--leaving .entity-card__select-picker-inner {
+          animation: entity-card-select-panel-content-out var(--entity-card-select-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
+          transform-origin: top center;
+        }
+
+        .entity-card__select-picker {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--accent-color, var(--primary-color)) 8%, color-mix(in srgb, var(--primary-text-color) 3%, transparent)) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%);
+          border: 1px solid color-mix(in srgb, var(--accent-color, var(--primary-color)) 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: calc(${styles.card.border_radius} - 8px);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
+            0 14px 28px color-mix(in srgb, var(--accent-color, var(--primary-color)) 12%, rgba(0, 0, 0, 0.18));
+          display: grid;
+          gap: 10px;
+          margin-top: 2px;
+          overflow: hidden;
+          padding: 10px;
+          transform-origin: top center;
+        }
+
+        .entity-card__select-picker-head {
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          min-width: 0;
+        }
+
+        .entity-card__select-picker-kicker {
+          color: var(--secondary-text-color);
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+
+        .entity-card__select-picker-close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 28px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 28px;
+        }
+
+        .entity-card__select-picker-close ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .entity-card__select-options {
+          display: grid;
+          gap: 8px;
+          max-height: min(240px, 42vh);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+        }
+
+        .entity-card__select-option {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: 14px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: grid;
+          font: inherit;
+          gap: 10px;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          min-height: 42px;
+          padding: 10px 12px;
+          text-align: left;
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+          width: 100%;
+        }
+
+        .entity-card__select-option:hover,
+        .entity-card__select-option:focus-visible {
+          background: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          outline: none;
+        }
+
+        .entity-card__select-option.is-active {
+          background: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 34%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          box-shadow: 0 8px 18px color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 14%, rgba(0, 0, 0, 0.12));
+        }
+
+        .entity-card__select-option-indicator {
+          background: color-mix(in srgb, var(--primary-text-color) 16%, transparent);
+          border-radius: 999px;
+          height: 8px;
+          width: 8px;
+        }
+
+        .entity-card__select-option.is-active .entity-card__select-option-indicator {
+          background: var(--select-option-accent, var(--primary-color));
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--select-option-accent, var(--primary-color)) 18%, transparent);
+        }
+
+        .entity-card__select-option-label {
+          font-size: 0.88rem;
+          font-weight: 600;
+          line-height: 1.25;
+          min-width: 0;
+        }
+
+        .entity-card__select-option-check {
+          --mdc-icon-size: 18px;
+          color: var(--select-option-accent, var(--primary-color));
+        }
+
+        @keyframes entity-card-select-shell-expand {
+          from {
+            max-height: 0;
+            opacity: 0;
+          }
+          to {
+            max-height: 320px;
+            opacity: 1;
+          }
+        }
+
+        @keyframes entity-card-select-shell-collapse {
+          from {
+            max-height: 320px;
+            opacity: 1;
+          }
+          to {
+            max-height: 0;
+            opacity: 0;
+          }
+        }
+
+        @keyframes entity-card-select-panel-content-in {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.96);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+
+        @keyframes entity-card-select-panel-content-out {
+          from {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(-6px) scaleY(0.98);
+          }
+        }
+
+        .entity-card__select-picker-shell--entering .entity-card__select-option {
+          animation: entity-card-select-option-in calc(var(--entity-card-select-panel-duration) * 0.82) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(1) { animation-delay: 70ms; }
+        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(2) { animation-delay: 95ms; }
+        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(3) { animation-delay: 120ms; }
+        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(4) { animation-delay: 145ms; }
+        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(5) { animation-delay: 170ms; }
+        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(n+6) { animation-delay: 195ms; }
+
+        @keyframes entity-card-select-option-in {
+          from {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .entity-card--select-open .entity-card__content {
+          align-content: start;
+        }
+
         .entity-card__actions {
           display: flex;
           flex-wrap: wrap;
@@ -2503,7 +3202,7 @@ class NodaliaEntityCard extends HTMLElement {
         `}
       </style>
       <ha-card
-        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
+        class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${isSelectEntity ? "entity-card--select" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         ${canRunBodyTap ? 'data-entity-action="body"' : ""}
       >
@@ -2527,7 +3226,11 @@ class NodaliaEntityCard extends HTMLElement {
                     ? `
                       <div class="entity-card__copy-header">
                         ${showTitle ? `<div class="entity-card__title">${escapeHtml(title)}</div>` : ""}
-                        ${placeStateChipOnTitleRow ? `<div class="entity-card__copy-header-chip">${stateChip}</div>` : ""}
+                        ${placeStateChipOnTitleRow ? `
+                          <div class="entity-card__copy-header-chip">
+                            ${stateChip}
+                          </div>
+                        ` : ""}
                       </div>
                     `
                     : ""}
@@ -2536,6 +3239,8 @@ class NodaliaEntityCard extends HTMLElement {
               `
               : ""}
           </div>
+
+          ${isSelectEntity ? '<div class="entity-card__select-picker-shell-host" data-select-picker-shell></div>' : ""}
 
           ${
             quickActions.length
@@ -2565,6 +3270,13 @@ class NodaliaEntityCard extends HTMLElement {
 
     if (shouldAnimateEntrance) {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
+
+    if (isSelectEntity) {
+      this._syncSelectPickerHostState(this._selectPickerOpen);
+      if (this._selectPickerOpen && !this._selectPickerAnimating) {
+        this._refreshSelectPickerContent(state, accentColor);
+      }
     }
   }
 }
@@ -2613,10 +3325,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -4093,6 +4807,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
       });
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

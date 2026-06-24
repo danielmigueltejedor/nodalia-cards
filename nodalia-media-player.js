@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -926,12 +926,19 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._config = normalizeConfig(config);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    if (!this.isConnected) {
+      return;
+    }
     this._render();
   }
 
   set hass(hass) {
     const previousHass = this._hass;
     this._hass = hass;
+
+    if (!this.isConnected) {
+      return;
+    }
 
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
@@ -1910,6 +1917,14 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _syncTicker(players) {
+    if (!this.isConnected) {
+      if (this._mediaTicker) {
+        window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+      }
+      return;
+    }
+
     if (typeof document !== "undefined" && document.hidden) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);
@@ -5323,10 +5338,12 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -6695,6 +6712,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

@@ -335,12 +335,29 @@ test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", 
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   loadNodaliaUtils(sandbox);
-  const { coerceCardTapAction } = sandbox.window.NodaliaUtils;
+  const { coerceCardTapAction, applyCardTapActionField } = sandbox.window.NodaliaUtils;
 
   assert.equal(coerceCardTapAction({ action: "toggle" }), "toggle");
   assert.equal(coerceCardTapAction({ action: "more-info" }), "more-info");
   assert.equal(coerceCardTapAction({ perform_action: "homeassistant.toggle" }), "toggle");
   assert.equal(coerceCardTapAction("[object Object]", "auto"), "auto");
+
+  const config = {};
+  applyCardTapActionField(config, {
+    actionKey: "tap_action",
+    serviceKey: "tap_service",
+    serviceDataKey: "tap_service_data",
+    serviceTargetKey: "tap_service_target",
+  }, {
+    action: "perform-action",
+    perform_action: "lock.unlock",
+    data: { code: "1234" },
+    target: { entity_id: "lock.front_door" },
+  }, "auto");
+  assert.equal(config.tap_action, "service");
+  assert.equal(config.tap_service, "lock.unlock");
+  assert.equal(config.tap_service_data, JSON.stringify({ code: "1234" }));
+  assert.equal(config.tap_service_target, JSON.stringify({ entity_id: "lock.front_door" }));
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -893,12 +910,40 @@ test("power flow editor catalog includes consumption chip translations", () => {
   assert.match(editorUi, /ed\.power_flow\.consumption_chips_title/);
 });
 
-test("alarm panel resolves configured PIN before requiring manual entry", () => {
+test("alarm panel requires manual PIN when code input is visible", () => {
   const source = read("nodalia-alarm-panel-card.js");
   assert.match(source, /const manualPin = String\(this\._codeInput \|\| ""\)\.trim\(\);/);
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
+  assert.match(source, /const code = requiresManualPin \? manualPin : this\._getCodeValue\(state\);/);
   assert.match(source, /if \(manualPin\) \{[\s\S]*return manualPin;[\s\S]*\}[\s\S]*const helperEntityId/);
-  assert.match(source, /if \(requiresManualPin && !code\) \{[\s\S]*return;/);
   assert.match(source, /invokeHomeAssistantService/);
+});
+
+test("entity card preserves Lovelace action data and target for configured services", () => {
+  const utilsSource = read("nodalia-utils.js");
+  assert.match(utilsSource, /rawValue\.data \?\? rawValue\.service_data/);
+  assert.match(utilsSource, /rawValue\.target/);
+  assert.match(utilsSource, /serviceTargetKey/);
+
+  const entitySource = read("nodalia-entity-card.js");
+  assert.match(entitySource, /tap_service_target/);
+  assert.match(entitySource, /hasExplicitTarget/);
+  assert.match(entitySource, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
+});
+
+test("cover card respects navigate and service tap actions from Lovelace objects", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /navigationKey: "navigation_path"/);
+  assert.match(source, /"navigate"/);
+  assert.match(source, /if \(action === "navigate"\)/);
+  assert.match(source, /serviceTargetKey/);
+  assert.match(source, /hasExplicitTarget/);
+});
+
+test("media player avoids restarting progress ticker while disconnected", () => {
+  const source = read("nodalia-media-player.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*if \(!this\.isConnected\) \{[\s\S]*return;/);
+  assert.match(source, /_syncTicker\(players\) \{[\s\S]*if \(!this\.isConnected\) \{[\s\S]*clearInterval\(this\._mediaTicker\)/);
 });
 
 test("cover card pointer controls avoid focus-driven dashboard scroll jumps", () => {
@@ -1158,6 +1203,20 @@ test("climate schedule composer keeps agenda scroll position across re-renders",
   assert.match(source, /this\._patchScheduleBlockDom\(slotId\);[\s\S]*this\._syncRenderSignature\(\)/);
 });
 
+test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function bindEditorDialogLayoutFix\(/);
+  assert.match(utils, /function clampEditorDialogScroll\(/);
+  assert.match(utils, /element-editor/);
+  assert.match(utils, /alignSelf = "flex-start"/);
+  for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js"]) {
+    const source = read(card);
+    assert.match(source, /bindEditorDialogLayoutFix\?\.\(this\)/);
+    assert.match(source, /releaseEditorDialogLayoutFix\?\.\(this\)/);
+    assert.match(source, /clampEditorDialogScroll\?\.\(this\)/);
+  }
+});
+
 test("slider bubble chrome does not trigger card body tap", () => {
   const utils = read("nodalia-utils.js");
   assert.match(utils, /function isNodaliaSliderChromeHit\(/);
@@ -1177,6 +1236,39 @@ test("slider bubble chrome does not trigger card body tap", () => {
   }
 });
 
+test("fav card matches entity cover lock toggle and tap action parsing", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /applyCardTapActionField/);
+  assert.match(source, /_toggleCoverEntity\(/);
+  assert.match(source, /_toggleLockEntity\(/);
+  assert.match(source, /_usesDomainToggleService\(state\)/);
+  assert.match(source, /stateKey === "locked"[\s\S]*lock", "unlock", entityId/);
+  assert.match(source, /invokeHomeAssistantService/);
+  assert.match(source, /_isBinaryOnOff\(state\) \|\| this\._usesDomainToggleService\(state\)/);
+  assert.doesNotMatch(source, /disarm: "Disarm"/);
+});
+
+test("cover card coerces Lovelace tap_action objects in normalizeConfig", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /applyCardTapActionField/);
+});
+
+test("graph card patches hover tooltip without full innerHTML rebuild", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /_syncTooltipContent\(/);
+  assert.doesNotMatch(source, /_patchHoverOverlay\(\) \{[\s\S]*tooltip\.innerHTML =/);
+});
+
+test("calendar card re-renders on hass updates when render signature changes", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*this\._renderIfChanged\(false\)/);
+});
+
+test("entity card configured services use invokeHomeAssistantService", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /_callConfiguredService[\s\S]*invokeHomeAssistantService/);
+});
+
 test("entity card toggle uses domain services for cover and lock entities", () => {
   const source = read("nodalia-entity-card.js");
   assert.match(source, /_toggleCoverEntity\(/);
@@ -1184,10 +1276,33 @@ test("entity card toggle uses domain services for cover and lock entities", () =
   assert.match(source, /cover", "open_cover"/);
   assert.match(source, /cover", "close_cover"/);
   assert.match(source, /set_cover_position", entityId, \{ position: 100 \}/);
-  assert.match(source, /lock", "open", entityId/);
+  assert.match(source, /stateKey === "locked"[\s\S]*lock", "unlock", entityId/);
+  assert.doesNotMatch(
+    source,
+    /if \(stateKey === "locked"\) \{[\s\S]*?lock", "open"/,
+    "entity card should not call lock.open for generic locked toggle",
+  );
   assert.match(source, /lock", "lock", entityId/);
   assert.match(source, /_usesDomainToggleService\(state\)/);
   assert.match(source, /applyCardTapActionField/);
+});
+
+test("entity card opens inline select picker for select and input_select entities", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /isSelectDomainEntity/);
+  assert.match(source, /_setSelectPickerVisibility\(/);
+  assert.match(source, /entity-card__select-picker-shell--entering/);
+  assert.match(source, /entity-card__select-picker-shell--leaving/);
+  assert.match(source, /select_option/);
+  assert.match(source, /_shouldOpenSelectPickerOnTap/);
+  assert.match(source, /data-entity-action="select-option"/);
+  assert.match(source, /_onShadowPointerDown/);
+  assert.match(source, /_triggerEntityPressFeedback/);
+  assert.match(source, /select-close[\s\S]*_triggerEntityPressFeedback/);
+  assert.match(source, /_clearSelectPickerAnimationTimer\(timerKey\)/);
+  assert.match(source, /this\._nodaliaDeferTimers\?\.delete\?\.\(timer\)/);
+  assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
+  assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {
@@ -1289,6 +1404,18 @@ test("circular gauge thumb follows dial arc via rotate orbit transform", () => {
   assert.match(source, /translateY\(calc\(-1 \* var\(--gauge-thumb-orbit/);
   assert.match(source, /setProperty\("--gauge-thumb-rotate"/);
   assert.doesNotMatch(source, /--gauge-thumb-left/);
+});
+
+test("circular gauge entrance animates a single smooth progress arc", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /gauge-card__dial--entrance-progress/);
+  assert.match(source, /data-progress-smooth/);
+  assert.match(source, /_finalizeGaugeEntranceProgress/);
+  assert.match(
+    source,
+    /if \(shouldAnimateEntrance\) \{[\s\S]*?return;[\s\S]*?\}/,
+    "entrance animation should not tween segmented dash stripes",
+  );
 });
 
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
@@ -1453,4 +1580,60 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
     source,
     /\/\/ Match entity\/weather cards: do not render \(or consume entrance\) before hass/,
   );
+});
+
+test("NodaliaUtils renders card empty state shell for missing entity state", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /function renderCardEmptyStateDocument\(/);
+  assert.match(utils, /\[class\$="--empty"\]/);
+  for (const file of [
+    "nodalia-entity-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-person-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /if \(!state\) \{[\s\S]*renderCardEmptyStateDocument/,
+      `${file} should render empty state when entity state is missing`,
+    );
+  }
+});
+
+test("cover card compact auto mode uses width and grid heuristics", () => {
+  const source = read("nodalia-cover-card.js");
+  assert.match(source, /COMPACT_LAYOUT_THRESHOLD/);
+  assert.match(source, /configuredColumns < 4/);
+  assert.doesNotMatch(source, /if \(mode === "auto"\)[\s\S]*return false;/);
+});
+
+test("fav card aligns service security with entity and cleans up alarm host span", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /strict_service_actions: false/);
+  assert.match(source, /_invokeEntityService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
+  assert.match(source, /disconnectedCallback\(\) \{[\s\S]*_applyHostGridSpan\(false\)/);
+  assert.match(source, /clearDeferTimers/);
+});
+
+test("alarm supported_features distinguishes missing attribute from explicit zero", () => {
+  for (const file of ["nodalia-alarm-panel-card.js", "nodalia-fav-card.js"]) {
+    const source = read(file);
+    assert.match(source, /hasOwnProperty\.call\(attrs, "supported_features"\)/, file);
+    assert.match(source, /if \(features === null\) \{[\s\S]*return true;/, file);
+  }
+});
+
+test("graph card always renders on hass while history loads", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /set hass\(hass\) \{[\s\S]*this\._requestHistory\(\);[\s\S]*this\._render\(\);/);
+  assert.doesNotMatch(source, /if \(!hasEntities \|\| hadHistory\)/);
+});
+
+test("invokeHomeAssistantService logs callService failures", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /callService failed/);
 });

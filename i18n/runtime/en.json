@@ -325,6 +325,8 @@
   "entityCard": {
     "emptyTitle": "Nodalia Entity Card",
     "emptyBody": "Set `entity` to show this card.",
+    "selectPickerTitle": "Choose option",
+    "selectPickerClose": "Close",
     "binarySensor": {
       "doorOpen": "Open",
       "doorClosed": "Closed",
@@ -577,14 +579,35 @@
         "webhookMissing": "Configure a setpoint schedule webhook in the card editor.",
         "entityMissing": "Select a climate entity first.",
         "webhookFailed": "Could not sync the schedule. Check the webhook and Home Assistant logs.",
-        "dualRangeUnsupported": "Weekly schedules are not supported while the thermostat uses a dual heat/cool range."
+        "dualRangeUnsupported": "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
+        "storageTooLarge": "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
       }
     }
   },
   "graphCard": {
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "Set `entities` to one or more numeric entities to show the chart.",
-    "emptyHistory": "No history available"
+    "emptyHistory": "No history available",
+    "defaultTitle": "Graph"
+  },
+  "newsCard": {
+    "title": "News",
+    "emptyTitle": "No news available",
+    "emptyBody": "Add a news entity or check your feed source.",
+    "loading": "Loading news…",
+    "errorTitle": "News source unavailable",
+    "errorBody": "Check your configured entity or source attributes.",
+    "readMore": "Read more",
+    "sourceUnknown": "Unknown source",
+    "categoryGeneral": "General",
+    "publishedNow": "Just now",
+    "publishedMinutesAgo": "{count} min ago",
+    "publishedHoursAgo": "{count} h ago",
+    "publishedDaysAgo": "{count} d ago",
+    "previousArticle": "Previous article",
+    "nextArticle": "Next article",
+    "articlePosition": "Article {current} of {total}",
+    "goToArticle": "Go to article {index}"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",
@@ -784,6 +807,9 @@
       "deleteRecurringDialog": "Choose how to delete the recurring event",
       "createHaEvent": "Create HA event",
       "close": "Close"
+    },
+    "warnings": {
+      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {

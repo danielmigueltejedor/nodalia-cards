@@ -1,0 +1,20 @@
+# Shared article history for Nodalia News Card (all dashboards / devices).
+# Home Assistant stores the JSON in this helper; each browser reads/writes the same state.
+#
+# Note: input_text values are limited to 255 characters. The card uses a compact JSON
+# format and may keep fewer headlines than max_items when syncing to the helper.
+
+input_text:
+  nodalia_news_history_dashboard:
+    name: Nodalia news history — dashboard
+    max: 255
+    initial: "[]"
+
+# Example card config:
+#
+# type: custom:nodalia-news-card
+# entity: sensor.nodalia_news_real
+# title: Últimas noticias
+# remember_items: true
+# history_helper: input_text.nodalia_news_history_dashboard
+# max_items: 5

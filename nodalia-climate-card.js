@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "1.2.1.1";
+const CARD_VERSION = "1.3.0";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -799,7 +799,10 @@ function packSetpointScheduleSlot(dayIdx, startMins, endMins, temperature, enabl
   }
 
   const day = clamp(Number(dayIdx), 0, 6);
-  const temp = clamp(Math.round(Number(temperature)) - 5, 0, 255);
+  const snappedTemp = Math.round(Number(temperature) * 4) / 4;
+  const tempInteger = Math.floor(snappedTemp);
+  const fractionQ = Math.round((snappedTemp - tempInteger) * 4) & 3;
+  const temp = clamp(tempInteger - 5, 0, 255);
   const disabled = enabled === false ? 1 : 0;
 
   return (
@@ -807,7 +810,8 @@ function packSetpointScheduleSlot(dayIdx, startMins, endMins, temperature, enabl
     (endQ << 9) |
     (day << 18) |
     (disabled << 21) |
-    (temp << 22)
+    (temp << 22) |
+    (fractionQ << 30)
   ) >>> 0;
 }
 
@@ -817,7 +821,9 @@ function unpackSetpointSchedulePacked(packedValue) {
   const endQ = (packed >> 9) & 0x1FF;
   const dayIdx = (packed >> 18) & 7;
   const disabled = (packed >> 21) & 1;
-  const temperature = ((packed >> 22) & 0xFF) + 5;
+  const temperatureInt = ((packed >> 22) & 0xFF) + 5;
+  const fractionQ = (packed >>> 30) & 3;
+  const temperature = temperatureInt + (fractionQ / 4);
   const startMins = startQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
   let endMins = endQ * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM;
   if (endMins <= startMins) {
@@ -961,7 +967,8 @@ function decodeSetpointScheduleStorageState(rawState) {
 
 function encodeSetpointScheduleStorageState(schedule) {
   const normalized = normalizeSetpointScheduleConfig(schedule);
-  const candidates = [];
+  const pathBCandidates = [];
+  const overflowCandidates = [];
 
   if (normalized.slots.length > 0) {
     const packed = normalized.slots.map(slot => {
@@ -979,7 +986,7 @@ function encodeSetpointScheduleStorageState(schedule) {
     if (normalized.enabled === false) {
       binaryPayload.e = 0;
     }
-    candidates.push(JSON.stringify(binaryPayload));
+    overflowCandidates.push(JSON.stringify(binaryPayload));
 
     const packedPayload = {
       v: SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED,
@@ -988,7 +995,7 @@ function encodeSetpointScheduleStorageState(schedule) {
     if (normalized.enabled === false) {
       packedPayload.e = 0;
     }
-    candidates.push(JSON.stringify(packedPayload));
+    pathBCandidates.push(JSON.stringify(packedPayload));
   }
 
   const rows = normalized.slots.map(slot => {
@@ -1009,22 +1016,32 @@ function encodeSetpointScheduleStorageState(schedule) {
   if (normalized.enabled === false) {
     legacyCompactPayload.e = 0;
   }
-  candidates.push(JSON.stringify(legacyCompactPayload));
+  pathBCandidates.push(JSON.stringify(legacyCompactPayload));
 
   if (!normalized.slots.length) {
-    const emptyPayload = { v: SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY, b: "", n: 0 };
+    const emptyPayload = { v: SETPOINT_SCHEDULE_STORAGE_VERSION, s: [] };
     if (normalized.enabled === false) {
       emptyPayload.e = 0;
     }
-    candidates.push(JSON.stringify(emptyPayload));
+    pathBCandidates.push(JSON.stringify(emptyPayload));
   }
 
-  const withinLimit = candidates.filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
+  const pathBWithinLimit = pathBCandidates.filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
+  if (pathBWithinLimit.length) {
+    return pathBWithinLimit.sort((left, right) => left.length - right.length)[0];
+  }
+
+  const withinLimit = [...overflowCandidates, ...pathBCandidates]
+    .filter(candidate => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
   if (withinLimit.length) {
     return withinLimit.sort((left, right) => left.length - right.length)[0];
   }
 
-  return candidates.sort((left, right) => left.length - right.length)[0];
+  return [...overflowCandidates, ...pathBCandidates].sort((left, right) => left.length - right.length)[0];
+}
+
+function isSetpointScheduleStorageStateWithinLimit(storageState) {
+  return String(storageState ?? "").length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX;
 }
 
 function normalizeSetpointScheduleWeekStartsOn(value) {
@@ -1945,6 +1962,16 @@ class NodaliaClimateCard extends HTMLElement {
       friendlyName: this._getClimateName(state),
       cardVersion: CARD_VERSION,
     });
+
+    if (!isSetpointScheduleStorageStateWithinLimit(body.storage_state)) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.storageTooLarge",
+          "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk.",
+        ),
+      );
+      return;
+    }
 
     this._scheduleComposerSaving = true;
     this._scheduleComposerError = "";
@@ -4975,6 +5002,10 @@ class NodaliaClimateCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
       return;
     }
 
@@ -6937,10 +6968,12 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -7682,10 +7715,12 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
   connectedCallback() {
     this._attachEditorShadowListeners();
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
   set hass(hass) {
@@ -8847,6 +8882,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

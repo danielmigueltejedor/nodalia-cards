@@ -32,6 +32,7 @@
     "coerceCardTapAction",
     "applyCardTapActionField",
     "invokeHomeAssistantService",
+    "renderCardEmptyStateDocument",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -734,6 +735,7 @@
     const actionKey = keys.actionKey || "tap_action";
     const serviceKey = keys.serviceKey || "tap_service";
     const serviceDataKey = keys.serviceDataKey || "tap_service_data";
+    const serviceTargetKey = keys.serviceTargetKey || "tap_service_target";
     const urlKey = keys.urlKey || "tap_url";
     const navigationKey = keys.navigationKey || "navigation_path";
     const newTabKey = keys.newTabKey || "tap_new_tab";
@@ -764,10 +766,16 @@
         config[actionKey] = "service";
       }
     }
-    if (rawValue.service_data !== undefined && rawValue.service_data !== null && !String(config[serviceDataKey] || "").trim()) {
-      config[serviceDataKey] = typeof rawValue.service_data === "string"
-        ? rawValue.service_data
-        : JSON.stringify(rawValue.service_data);
+    const dataPayload = rawValue.data ?? rawValue.service_data;
+    if (dataPayload !== undefined && dataPayload !== null && !String(config[serviceDataKey] || "").trim()) {
+      config[serviceDataKey] = typeof dataPayload === "string"
+        ? dataPayload
+        : JSON.stringify(dataPayload);
+    }
+    if (rawValue.target !== undefined && rawValue.target !== null && !String(config[serviceTargetKey] || "").trim()) {
+      config[serviceTargetKey] = typeof rawValue.target === "string"
+        ? rawValue.target
+        : JSON.stringify(rawValue.target);
     }
     if (rawValue.new_tab !== undefined) {
       config[newTabKey] = rawValue.new_tab === true;
@@ -785,7 +793,10 @@
           ? hass.callService(domain, service, payload, target)
           : hass.callService(domain, service, payload);
         return Promise.resolve(result);
-      } catch (_err) {
+      } catch (err) {
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("NodaliaUtils: callService failed", `${domain}.${service}`, err);
+        }
         return Promise.resolve(false);
       }
     }
@@ -871,6 +882,56 @@
       return `<ha-alert alert-type="warning">${safe}</ha-alert>`;
     }
     return `<div style="display:block;padding:16px;color:var(--error-color);">${safe}</div>`;
+  }
+
+  function renderCardEmptyStateDocument(innerHtml, options = {}) {
+    const markup = String(innerHtml ?? "").trim();
+    if (!markup) {
+      return "";
+    }
+    if (markup.includes("<style")) {
+      return markup;
+    }
+    const card = isObject(options.card) ? options.card : {};
+    const background = String(card.background ?? "var(--ha-card-background)");
+    const border = String(card.border ?? "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)");
+    const borderRadius = String(card.border_radius ?? "var(--ha-card-border-radius, 12px)");
+    const boxShadow = String(card.box_shadow ?? "var(--ha-card-box-shadow, none)");
+    const padding = String(card.padding ?? "16px");
+    return `
+      <style>
+        :host {
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        [class$="--empty"] {
+          background: ${background};
+          border: ${border};
+          border-radius: ${borderRadius};
+          box-shadow: ${boxShadow};
+          display: grid;
+          gap: 8px;
+          padding: ${padding};
+        }
+
+        [class$="__empty-title"] {
+          color: var(--primary-text-color);
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        [class$="__empty-text"] {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          line-height: 1.5;
+        }
+      </style>
+      ${markup}
+    `;
   }
 
   function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
@@ -1226,6 +1287,85 @@
     return normalized;
   }
 
+  /**
+   * Lovelace card dialog (.element-editor) stretches to match preview height on wide layouts.
+   * Short visual editors then scroll past their fields into empty space — align the pane to content.
+   */
+  function findLovelaceElementEditorPane(editorHost) {
+    if (!(editorHost instanceof HTMLElement)) {
+      return null;
+    }
+    let node = editorHost.parentElement;
+    while (node) {
+      if (node.classList?.contains("element-editor")) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function bindEditorDialogLayoutFix(editorHost) {
+    if (!(editorHost instanceof HTMLElement)) {
+      return;
+    }
+    releaseEditorDialogLayoutFix(editorHost);
+    const pane = findLovelaceElementEditorPane(editorHost);
+    if (!pane) {
+      return;
+    }
+    const previous = {
+      alignSelf: pane.style.alignSelf,
+      height: pane.style.height,
+      maxHeight: pane.style.maxHeight,
+      overflowY: pane.style.overflowY,
+    };
+    pane.style.alignSelf = "flex-start";
+    pane.style.height = "auto";
+    pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
+    pane.style.overflowY = "auto";
+    editorHost._nodaliaEditorDialogLayoutRelease = () => {
+      pane.style.alignSelf = previous.alignSelf;
+      pane.style.height = previous.height;
+      pane.style.maxHeight = previous.maxHeight;
+      pane.style.overflowY = previous.overflowY;
+    };
+  }
+
+  function releaseEditorDialogLayoutFix(editorHost) {
+    if (editorHost?._nodaliaEditorDialogLayoutRelease) {
+      editorHost._nodaliaEditorDialogLayoutRelease();
+      editorHost._nodaliaEditorDialogLayoutRelease = null;
+    }
+  }
+
+  function clampEditorDialogScroll(editorHost) {
+    if (!(editorHost instanceof HTMLElement) || typeof window === "undefined") {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      if (!editorHost.isConnected) {
+        return;
+      }
+      bindEditorDialogLayoutFix(editorHost);
+      let node = findLovelaceElementEditorPane(editorHost) || editorHost;
+      while (node && node !== document.documentElement) {
+        const style = getComputedStyle(node);
+        const scrollable =
+          /(auto|scroll|overlay)/.test(style.overflowY) &&
+          node.scrollHeight > node.clientHeight + 1;
+        if (scrollable) {
+          const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+          if (node.scrollTop > maxScroll) {
+            node.scrollTop = maxScroll;
+          }
+          break;
+        }
+        node = node.parentElement;
+      }
+    });
+  }
+
   function scheduleDeferTimer(host, callback, delayMs) {
     if (!host || typeof window === "undefined" || typeof callback !== "function") {
       return 0;
@@ -1273,6 +1413,10 @@
     coerceCardTapAction,
     applyCardTapActionField,
     invokeHomeAssistantService,
+    renderCardEmptyStateDocument,
+    bindEditorDialogLayoutFix,
+    releaseEditorDialogLayoutFix,
+    clampEditorDialogScroll,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,
