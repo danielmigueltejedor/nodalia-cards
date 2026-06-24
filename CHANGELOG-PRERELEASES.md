@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0-alpha.17] - 2026-06-25
+
+Seventeenth **`1.3.0`** **`alpha`**: Entity Card select picker timer cleanup. Release channel **`1.3.0-alpha.17`**.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker fallback timers are canceled when their `animationend` handler finishes, preventing stale callbacks from flipping picker animation state during rapid reopen/close sequences.
+
+### Changed
+
+- **`tests`:** Entity Card select picker regression coverage now checks cleanup of deferred animation timers.
+
 ## [1.3.0-alpha.16] - 2026-06-23
 
 Sixteenth **`1.3.0`** **`alpha`**: Deferred timer compatibility for Entity and News cards. Release channel **`1.3.0-alpha.16`**.
