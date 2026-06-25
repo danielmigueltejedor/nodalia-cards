@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -825,6 +825,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._selectPickerAnimating = false;
     this._selectPickerCloseTimer = 0;
     this._selectPickerEnterTimer = 0;
+    this._selectPickerAnimationToken = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -1005,7 +1006,6 @@ class NodaliaEntityCard extends HTMLElement {
       `sn:${this._config?.show_name !== false ? 1 : 0}`,
       `ss:${this._config?.show_state !== false ? 1 : 0}`,
       `nm:${String(this._config?.name || "")}`,
-      `sp:${this._selectPickerOpen ? 1 : 0}`,
       `sel:${isSelectDomainEntity(state) ? getSelectEntityOptions(state).join("\u001f") : ""}`,
     ].join("|");
   }
@@ -1330,6 +1330,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
     this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+    const animationToken = ++this._selectPickerAnimationToken;
 
     const clearShellHost = () => {
       shellHost.replaceChildren();
@@ -1351,6 +1352,9 @@ class NodaliaEntityCard extends HTMLElement {
       shell.classList.add("entity-card__select-picker-shell--leaving");
 
       const finalizeRemoval = () => {
+        if (animationToken !== this._selectPickerAnimationToken || this._selectPickerOpen) {
+          return;
+        }
         this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
         if (shell.isConnected) {
           shell.remove();
@@ -1392,6 +1396,13 @@ class NodaliaEntityCard extends HTMLElement {
       }
 
       const finalizeEnter = () => {
+        if (
+          animationToken !== this._selectPickerAnimationToken
+          || !this._selectPickerOpen
+          || shellNode.classList.contains("entity-card__select-picker-shell--leaving")
+        ) {
+          return;
+        }
         this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
         if (shellNode.isConnected) {
           shellNode.classList.remove("entity-card__select-picker-shell--entering");

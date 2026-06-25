@@ -1301,8 +1301,11 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /select-close[\s\S]*_triggerEntityPressFeedback/);
   assert.match(source, /_clearSelectPickerAnimationTimer\(timerKey\)/);
   assert.match(source, /this\._nodaliaDeferTimers\?\.delete\?\.\(timer\)/);
+  assert.match(source, /_selectPickerAnimationToken/);
+  assert.match(source, /animationToken !== this\._selectPickerAnimationToken/);
   assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
   assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
+  assert.doesNotMatch(source, /`sp:\$\{this\._selectPickerOpen \? 1 : 0\}`/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

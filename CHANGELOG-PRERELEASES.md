@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1-alpha.1] - 2026-06-25
+
+First **`1.3.1`** **`alpha`**: Entity Card select picker reliability. Release channel **`1.3.1-alpha.1`**.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker open/close is now DOM-local instead of changing the render signature, and stale animation callbacks are ignored across rapid taps. This prevents intermittent missed opens and small flickers when showing options.
+
 ## [1.3.0-alpha.17] - 2026-06-25
 
 Seventeenth **`1.3.0`** **`alpha`**: Entity Card select picker timer cleanup. Release channel **`1.3.0-alpha.17`**.
