@@ -1305,7 +1305,9 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /animationToken !== this\._selectPickerAnimationToken/);
   assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
   assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
+  assert.match(source, /_shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)[\s\S]*return;/);
   assert.doesNotMatch(source, /`sp:\$\{this\._selectPickerOpen \? 1 : 0\}`/);
+  assert.doesNotMatch(source, /entity-card-select-option-in/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1-alpha.2] - 2026-06-25
+
+Second **`1.3.1`** **`alpha`**: Entity Card select picker flicker polish. Release channel **`1.3.1-alpha.2`**.
+
+### Fixed
+
+- **`entity`:** `select` / `input_select` body and icon taps keep immediate haptics but skip the full content/icon press bounce when the tap only opens or closes the inline picker, and picker options no longer replay staggered fade-in animations. This removes the visible flicker while preserving reliable open/close behavior.
+
 ## [1.3.1-alpha.1] - 2026-06-25
 
 First **`1.3.1`** **`alpha`**: Entity Card select picker reliability. Release channel **`1.3.1-alpha.1`**.

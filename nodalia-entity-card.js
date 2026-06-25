@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.1-alpha.1";
+const CARD_VERSION = "1.3.1-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2273,6 +2273,9 @@ class NodaliaEntityCard extends HTMLElement {
     this._triggerHaptic(hapticStyle);
 
     if (action === "body" || action === "icon") {
+      if (this._shouldOpenSelectPickerOnTap(this._getState(), action)) {
+        return;
+      }
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
       return;
@@ -3038,28 +3041,6 @@ class NodaliaEntityCard extends HTMLElement {
           to {
             opacity: 0;
             transform: translateY(-6px) scaleY(0.98);
-          }
-        }
-
-        .entity-card__select-picker-shell--entering .entity-card__select-option {
-          animation: entity-card-select-option-in calc(var(--entity-card-select-panel-duration) * 0.82) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(1) { animation-delay: 70ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(2) { animation-delay: 95ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(3) { animation-delay: 120ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(4) { animation-delay: 145ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(5) { animation-delay: 170ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(n+6) { animation-delay: 195ms; }
-
-        @keyframes entity-card-select-option-in {
-          from {
-            opacity: 0;
-            transform: translateY(-6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
           }
         }
 
