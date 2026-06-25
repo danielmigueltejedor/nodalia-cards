@@ -574,6 +574,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
   assert.match(source, /mobile_notifications\.critical_alerts/);
+  assert.match(source, /background_mobile/);
+  assert.match(source, /nodalia_notifications_background_sync/);
+  assert.match(source, /_scheduleBackgroundMobileSync/);
+  assert.match(source, /await post\(webhookId, payload, this\._hass\)/);
   assert.match(source, /callService\("notify", "send_message"/);
   assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
   assert.match(source, /group:\s*"nodalia_notifications"/);
@@ -616,6 +620,12 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_queueMobileNotifications/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
+  const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
+  assert.match(backgroundPackage, /webhook_id: nodalia_notifications_background_sync/);
+  assert.match(backgroundPackage, /event_type: state_changed/);
+  assert.match(backgroundPackage, /input_text\.nodalia_notifications_background_config_01/);
+  assert.match(backgroundPackage, /notify\.send_message/);
+  assert.match(backgroundPackage, /from_json\(default=\{\}\)/);
   assert.match(source, /item\.severity !== "info"/);
   assert.match(source, /localStorage\.setItem\(this\._getStorageKey\(\)/);
   assert.match(source, /data-action="toggle-stack"/);

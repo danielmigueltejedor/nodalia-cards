@@ -137,13 +137,19 @@ Features include:
 - Expandable stacked notification UI
 - Persistent dismiss system
 - Smart contextual recommendations
-- Mobile notification delivery
+- Dashboard-driven mobile notification delivery
 - Calendar integrations
 - Vacuum / weather / humidity intelligence
 - Entity-specific overrides
 - Critical mobile alerts
 - Visual editor support
 - Animated transitions and compact mode
+
+Mobile delivery from the card runs in the Home Assistant frontend by default, so
+it needs a browser/session with the card loaded. For push notifications that
+must fire when no one is viewing Lovelace, enable the background webhook sync and
+paste the Home Assistant package in
+[`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
 
 ---
 
@@ -309,7 +315,20 @@ fan_entities:
   - fan.living_room
 vacuum_entities:
   - vacuum.robot
+mobile_notifications:
+  enabled: true
+  entities:
+    - notify.mobile_app_my_phone
+background_mobile:
+  enabled: true
+  webhook: nodalia_notifications_background_sync
 ```
+
+The card mirrors these alerts visually and can send mobile notifications while
+the dashboard is loaded. With `background_mobile.enabled`, it also syncs its
+configured entities and thresholds to Home Assistant by webhook so the package
+can send push notifications in the background. Start from
+[`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
 
 ---
 

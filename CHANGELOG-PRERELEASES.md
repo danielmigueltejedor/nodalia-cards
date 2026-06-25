@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1-alpha.3] - 2026-06-25
+
+Third **`1.3.1`** **`alpha`**: Notifications Card background mobile webhook sync. Release channel **`1.3.1-alpha.3`**.
+
+### Added
+
+- **`notifications`:** optional `background_mobile` webhook sync sends the card's configured notification entities, thresholds, mobile targets, and entity override text to Home Assistant so a fixed package can send push notifications in the background without editing entity lists in automations.
+- **`examples`:** `notifications-background-mobile-package.yaml` now stores card-synced config in chunked helpers and sends server-side mobile notifications from a single dynamic `state_changed` automation.
+
 ## [1.3.1-alpha.2] - 2026-06-25
 
 Second **`1.3.1`** **`alpha`**: Entity Card select picker flicker polish. Release channel **`1.3.1-alpha.2`**.

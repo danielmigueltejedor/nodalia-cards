@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.1-alpha.2";
+const CARD_VERSION = "1.3.1-alpha.3";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -74,10 +74,16 @@ const DEFAULT_CONFIG = {
     min_severity: "warning",
     critical_alerts: false,
   },
+  background_mobile: {
+    enabled: false,
+    webhook: "nodalia_notifications_background_sync",
+    chunk_size: 240,
+  },
   security: {
     strict_service_actions: false,
     allowed_services: [],
     allowed_service_domains: [],
+    allow_webhooks_for_non_admin: false,
   },
   haptics: {
     enabled: true,
@@ -433,8 +439,19 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
     ? String(config.mobile_notifications.min_severity).toLowerCase()
     : DEFAULT_CONFIG.mobile_notifications.min_severity;
+  config.background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
+  config.background_mobile.enabled = config.background_mobile.enabled === true;
+  config.background_mobile.webhook = String(config.background_mobile.webhook || "").trim();
+  config.background_mobile.chunk_size = Math.max(
+    120,
+    Math.min(240, Number(config.background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size),
+  );
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
+  if (config.security.allow_webhooks_for_non_admin === undefined) {
+    config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
+  }
+  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
   config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
   config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
   config.animations.enabled = config.animations.enabled !== false;
@@ -936,6 +953,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._trackedEntityIdsLength = 0;
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
+    this._backgroundMobileSyncTimer = 0;
+    this._lastBackgroundMobileSyncSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationTimer = 0;
     this._stackTransition = "";
@@ -1002,6 +1021,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._mobileNotifyTimer) {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
+    }
+    if (this._backgroundMobileSyncTimer) {
+      window.clearTimeout(this._backgroundMobileSyncTimer);
+      this._backgroundMobileSyncTimer = 0;
     }
     if (this._entranceAnimationTimer) {
       window.clearTimeout(this._entranceAnimationTimer);
@@ -1139,6 +1162,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._hass) {
       this._renderIfChanged(true);
     }
+    this._scheduleBackgroundMobileSync();
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
   }
@@ -1163,6 +1187,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._syncTrackedEntitiesStamp(hass);
     this._lastRenderSignature = nextSignature;
     this._renderIfChanged(true);
+    this._scheduleBackgroundMobileSync();
   }
 
   getCardSize() {
@@ -1179,6 +1204,126 @@ class NodaliaNotificationsCard extends HTMLElement {
       min_rows: 2,
       rows: "auto",
     };
+  }
+
+  _getBackgroundMobileConfigPayload() {
+    const config = this._config || normalizeConfig({});
+    const overrides = {};
+    (config.smart_entity_overrides || []).forEach(item => {
+      const entity = String(item?.entity || "").trim();
+      if (!entity) {
+        return;
+      }
+      overrides[entity] = {
+        title: String(item.title || ""),
+        message: String(item.message || ""),
+        tint_color: String(item.tint_color || ""),
+        mobile: String(item.mobile || "inherit"),
+      };
+    });
+    return {
+      version: 1,
+      card_version: CARD_VERSION,
+      source: CARD_TAG,
+      enabled: config.background_mobile?.enabled === true,
+      notify: {
+        enabled: config.mobile_notifications?.enabled === true,
+        entities: config.mobile_notifications?.entities || [],
+        services: config.mobile_notifications?.services || [],
+        min_severity: config.mobile_notifications?.min_severity || "warning",
+        critical_alerts: config.mobile_notifications?.critical_alerts === true,
+      },
+      thresholds: {
+        hot_temperature: config.thresholds.hot_temperature,
+        cold_temperature: config.thresholds.cold_temperature,
+        humidity_high: config.thresholds.humidity_high,
+        humidity_low: config.thresholds.humidity_low,
+        battery_low: config.thresholds.battery_low,
+        humidifier_fill_low: config.thresholds.humidifier_fill_low,
+        humidifier_fill_full: config.thresholds.humidifier_fill_full,
+        ink_low: config.thresholds.ink_low,
+      },
+      entities: {
+        vacuum: config.vacuum_entities || [],
+        vacuum_error: config.vacuum_error_entities || [],
+        door: config.door_entities || [],
+        window: config.window_entities || [],
+        motion: config.motion_entities || [],
+        temperature: config.temperature_entities || [],
+        humidity: config.humidity_entities || [],
+        battery: config.battery_entities || [],
+        humidifier_fill: config.humidifier_fill_entities || [],
+        humidifier_full: config.humidifier_full_entities || [],
+        ink: config.ink_entities || [],
+      },
+      overrides,
+    };
+  }
+
+  _buildBackgroundMobileWebhookPayload() {
+    const config = this._config?.background_mobile || {};
+    const chunkSize = Math.max(120, Math.min(240, Number(config.chunk_size) || 240));
+    const json = JSON.stringify(this._getBackgroundMobileConfigPayload());
+    const chunks = [];
+    for (let index = 0; index < json.length; index += chunkSize) {
+      chunks.push(json.slice(index, index + chunkSize));
+    }
+    return {
+      version: 1,
+      card_version: CARD_VERSION,
+      source: CARD_TAG,
+      chunk_count: chunks.length,
+      config_hash: notificationHash(json),
+      chunks,
+    };
+  }
+
+  _scheduleBackgroundMobileSync(delay = 320) {
+    const config = this._config?.background_mobile || {};
+    if (config.enabled !== true || !String(config.webhook || "").trim() || !this._hass || !this.isConnected) {
+      return;
+    }
+    if (this._backgroundMobileSyncTimer) {
+      window.clearTimeout(this._backgroundMobileSyncTimer);
+    }
+    this._backgroundMobileSyncTimer = window.setTimeout(() => {
+      this._backgroundMobileSyncTimer = 0;
+      void this._syncBackgroundMobileConfig();
+    }, Math.max(0, Math.min(3000, Number(delay) || 0)));
+  }
+
+  async _syncBackgroundMobileConfig() {
+    const webhookId = String(this._config?.background_mobile?.webhook || "").trim();
+    if (!webhookId || this._config?.background_mobile?.enabled !== true || !this.isConnected) {
+      return false;
+    }
+    if (
+      this._config?.security?.allow_webhooks_for_non_admin === false &&
+      !this._hass?.user?.is_admin
+    ) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
+      }
+      return false;
+    }
+    const payload = this._buildBackgroundMobileWebhookPayload();
+    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    if (signature === this._lastBackgroundMobileSyncSignature) {
+      return true;
+    }
+    const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+    if (typeof post !== "function") {
+      return false;
+    }
+    try {
+      const ok = Boolean(await post(webhookId, payload, this._hass));
+      if (ok) {
+        this._lastBackgroundMobileSyncSignature = signature;
+      }
+      return ok;
+    } catch (_error) {
+      return false;
+    }
   }
 
   _getStorageKey() {
