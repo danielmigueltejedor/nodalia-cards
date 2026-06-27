@@ -1307,6 +1307,9 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
   assert.match(source, /_shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)[\s\S]*return;/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
+  assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
+  assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
+  assert.match(source, /\.entity-card__select-picker-inner \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
   assert.doesNotMatch(source, /`sp:\$\{this\._selectPickerOpen \? 1 : 0\}`/);
   assert.doesNotMatch(source, /entity-card-select-option-in/);
 });

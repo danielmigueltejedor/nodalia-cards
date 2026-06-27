@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1-alpha.5] - 2026-06-27
+
+Fifth **`1.3.1`** **`alpha`**: Entity Card select picker corner polish. Release channel **`1.3.1-alpha.5`**.
+
+### Fixed
+
+- **`entity`:** open `select` / `input_select` pickers now clip the animated shell with the same rounded radius as the panel, removing square corner artifacts around the expanded option list.
+
 ## [1.3.1-alpha.4] - 2026-06-27
 
 Fourth **`1.3.1`** **`alpha`**: Entity Card compact select height and Home Assistant display states. Release channel **`1.3.1-alpha.4`**.
