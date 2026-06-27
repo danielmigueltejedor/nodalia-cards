@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.3.2-alpha.1";
+const CARD_VERSION = "1.3.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -728,6 +728,14 @@ function getConditionAccent(value) {
     default:
       return "var(--info-color, #71c0ff)";
   }
+}
+
+function getForecastIconColor(accentColor) {
+  const shouldDarken = window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(
+    { entity_id: "weather.forecast", attributes: { device_class: "temperature" } },
+    accentColor,
+  );
+  return shouldDarken ? "var(--primary-text-color)" : accentColor;
 }
 
 function normalizeConfig(rawConfig) {
@@ -1813,6 +1821,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const popupMarkup = popupPoint ? (() => {
       const item = popupPoint.item || {};
       const accent = getConditionAccent(item?.condition || state?.state);
+      const iconColor = getForecastIconColor(accent);
       const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
       const highLabel = formatNumber(this._convertTemperatureValue(
         getForecastTemperatureSeriesValue(item, "high"),
@@ -1848,7 +1857,7 @@ class NodaliaWeatherCard extends HTMLElement {
       return `
         <div
           class="weather-card__forecast-popup weather-card__forecast-popup--${vertical}"
-          style="--forecast-accent:${escapeHtml(accent)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
+          style="--forecast-accent:${escapeHtml(accent)}; --forecast-icon-color:${escapeHtml(iconColor)}; --forecast-popup-left:${escapeHtml(popupLeft)}; --forecast-popup-top:${escapeHtml(popupTop)};"
           data-weather-action="noop"
         >
           <button type="button" class="weather-card__forecast-popup-close" data-weather-action="close-forecast-popup" aria-label="${escapeHtml(wf("closeDetail") || "Close detail")}">
@@ -1873,6 +1882,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const hoverPreviewMarkup = hoverPreviewPoint ? (() => {
       const item = hoverPreviewPoint.item || {};
       const accent = getConditionAccent(item?.condition || state?.state);
+      const iconColor = getForecastIconColor(accent);
       const vertical = this._forecastHoverPreview?.vertical === "below" ? "below" : "above";
       const left = this._forecastHoverPreview?.left || "50%";
       const top = this._forecastHoverPreview?.top || "50%";
@@ -1888,7 +1898,7 @@ class NodaliaWeatherCard extends HTMLElement {
       return `
         <div
           class="weather-card__forecast-hover-preview weather-card__forecast-hover-preview--${vertical}"
-          style="--forecast-accent:${escapeHtml(accent)}; --forecast-preview-left:${escapeHtml(left)}; --forecast-preview-top:${escapeHtml(top)};"
+          style="--forecast-accent:${escapeHtml(accent)}; --forecast-icon-color:${escapeHtml(iconColor)}; --forecast-preview-left:${escapeHtml(left)}; --forecast-preview-top:${escapeHtml(top)};"
           data-weather-action="noop"
         >
           <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
@@ -2046,9 +2056,11 @@ class NodaliaWeatherCard extends HTMLElement {
                       ${
                         visibleItems.length
                           ? visibleItems.map((item, index) => {
+                            const accent = getConditionAccent(item?.condition || state?.state);
+                            const iconColor = getForecastIconColor(accent);
                             const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
                             return `
-                              <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(getConditionAccent(item?.condition || state?.state))}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
+                              <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(accent)}; --forecast-icon-color:${escapeHtml(iconColor)}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
                                 <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType, forecastLocale))}</div>
                                 <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(this._formatForecastTemperature(item, activeType, unitPrefs.targetTemperatureUnit))}</div>
@@ -2743,7 +2755,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-item > ha-icon {
           --mdc-icon-size: 22px;
-          color: var(--forecast-accent);
+          color: var(--forecast-icon-color, var(--forecast-accent));
         }
 
         .weather-card__forecast-temp {
@@ -2775,7 +2787,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-rain ha-icon {
           --mdc-icon-size: 11px;
-          color: var(--forecast-accent);
+          color: var(--forecast-icon-color, var(--forecast-accent));
         }
 
         .weather-card__forecast-chart {
@@ -2961,7 +2973,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-hover-preview ha-icon {
           --mdc-icon-size: 17px;
-          color: var(--forecast-accent);
+          color: var(--forecast-icon-color, var(--forecast-accent));
           flex: 0 0 auto;
         }
 
@@ -3020,7 +3032,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-popup-main ha-icon {
           --mdc-icon-size: 20px;
-          color: var(--forecast-accent);
+          color: var(--forecast-icon-color, var(--forecast-accent));
         }
 
         .weather-card__forecast-popup-main span {
@@ -3099,7 +3111,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__forecast-chart-chip > ha-icon {
           --mdc-icon-size: 18px;
-          color: var(--forecast-accent);
+          color: var(--forecast-icon-color, var(--forecast-accent));
         }
 
         .weather-card__forecast-chart-chip small {

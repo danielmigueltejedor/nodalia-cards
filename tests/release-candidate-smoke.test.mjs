@@ -321,6 +321,17 @@ test("weather forecast popups use an opaque theme-safe surface", () => {
   assert.match(source, /\.weather-card__forecast-hover-preview \{[\s\S]*?var\(--weather-card-popover-surface\);[\s\S]*?isolation: isolate;/);
 });
 
+test("weather forecast condition icons use a contrast-safe color", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /function getForecastIconColor\(accentColor\)/);
+  assert.match(source, /shouldDarkenBubbleIconGlyph\?\.\(/);
+  assert.match(source, /--forecast-icon-color:\$\{escapeHtml\(iconColor\)\}/);
+  assert.match(source, /\.weather-card__forecast-popup-main ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+  assert.match(source, /\.weather-card__forecast-hover-preview ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+  assert.match(source, /\.weather-card__forecast-item > ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+  assert.match(source, /\.weather-card__forecast-rain ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+});
+
 test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);

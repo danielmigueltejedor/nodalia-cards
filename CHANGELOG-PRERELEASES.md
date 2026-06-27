@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.2] - 2026-06-27
+
+Second **`1.3.2`** **`alpha`**: Weather forecast icon contrast. Release channel **`1.3.2-alpha.2`**.
+
+### Fixed
+
+- **`weather`:** forecast cards, chart hovers, and detail popups use a contrast-safe icon color when condition accents are too pale on tinted surfaces, keeping icons legible for states such as partly cloudy.
+
 ## [1.3.2-alpha.1] - 2026-06-27
 
 First **`1.3.2`** **`alpha`**: device slider action shadow polish. Release channel **`1.3.2-alpha.1`**.
