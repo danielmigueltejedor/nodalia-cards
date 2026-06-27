@@ -1298,7 +1298,6 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /data-entity-action="select-option"/);
   assert.match(source, /_onShadowPointerDown/);
   assert.match(source, /_triggerEntityPressFeedback/);
-  assert.match(source, /select-close[\s\S]*_triggerEntityPressFeedback/);
   assert.match(source, /_clearSelectPickerAnimationTimer\(timerKey\)/);
   assert.match(source, /this\._nodaliaDeferTimers\?\.delete\?\.\(timer\)/);
   assert.match(source, /_selectPickerAnimationToken/);
@@ -1310,6 +1309,9 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
   assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
   assert.match(source, /\.entity-card__select-picker-inner \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
+  assert.doesNotMatch(source, /entity-card__select-picker-head/);
+  assert.doesNotMatch(source, /entity-card__select-picker-kicker/);
+  assert.doesNotMatch(source, /entity-card__select-picker-close/);
   assert.doesNotMatch(source, /`sp:\$\{this\._selectPickerOpen \? 1 : 0\}`/);
   assert.doesNotMatch(source, /entity-card-select-option-in/);
 });

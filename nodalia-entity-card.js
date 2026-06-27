@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.1-alpha.5";
+const CARD_VERSION = "1.3.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2345,7 +2345,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (action === "select-close" || action === "select-option" || action === "quick") {
+    if (action === "select-option" || action === "quick") {
       this._triggerEntityPressFeedback(action, actionTarget);
     }
   }
@@ -2364,11 +2364,6 @@ class NodaliaEntityCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
-
-    if (action === "select-close") {
-      this._closeSelectPicker();
-      return;
-    }
 
     if (action === "select-option") {
       const value = actionTarget.dataset.selectValue || "";
@@ -2438,7 +2433,6 @@ class NodaliaEntityCard extends HTMLElement {
     }
     const current = this._getSelectCurrentValue(state);
     const pickerTitle = this._entityCardUi("selectPickerTitle", "Choose option");
-    const closeLabel = this._entityCardUi("selectPickerClose", "Close");
 
     return `
       <div
@@ -2446,17 +2440,6 @@ class NodaliaEntityCard extends HTMLElement {
         role="listbox"
         aria-label="${escapeHtml(pickerTitle)}"
       >
-        <div class="entity-card__select-picker-head">
-          <span class="entity-card__select-picker-kicker">${escapeHtml(pickerTitle)}</span>
-          <button
-            type="button"
-            class="entity-card__select-picker-close"
-            data-entity-action="select-close"
-            aria-label="${escapeHtml(closeLabel)}"
-          >
-            <ha-icon icon="mdi:chevron-up"></ha-icon>
-          </button>
-        </div>
         <div class="entity-card__select-options">
           ${options.map(option => {
             const isActive = normalizeTextKey(option) === normalizeTextKey(current);
@@ -2943,42 +2926,6 @@ class NodaliaEntityCard extends HTMLElement {
           overflow: hidden;
           padding: 10px;
           transform-origin: top center;
-        }
-
-        .entity-card__select-picker-head {
-          align-items: center;
-          display: flex;
-          gap: 8px;
-          justify-content: space-between;
-          min-width: 0;
-        }
-
-        .entity-card__select-picker-kicker {
-          color: var(--secondary-text-color);
-          font-size: 0.68rem;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .entity-card__select-picker-close {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--secondary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 28px;
-          justify-content: center;
-          margin: 0;
-          padding: 0;
-          width: 28px;
-        }
-
-        .entity-card__select-picker-close ha-icon {
-          --mdc-icon-size: 18px;
         }
 
         .entity-card__select-options {
