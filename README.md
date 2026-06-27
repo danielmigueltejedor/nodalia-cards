@@ -302,6 +302,10 @@ fan_entities:
   - fan.living_room
 vacuum_entities:
   - vacuum.robot
+temperature_entities:
+  - sensor.living_room_temperature
+outdoor_temperature_entities:
+  - sensor.outdoor_temperature
 mobile_notifications:
   enabled: true
   entities:
@@ -319,6 +323,10 @@ configured alert entities, thresholds, and `mobile_notifications.entities` to
 Home Assistant by webhook so the package can send push notifications in the
 background without duplicating notify targets in the automation YAML. Start from
 [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
+
+For comfort alerts, use indoor temperature/humidity entities for house
+recommendations. Outdoor temperature/humidity entities are kept separate so an
+outside cold morning does not trigger an indoor low-temperature alert.
 
 ---
 

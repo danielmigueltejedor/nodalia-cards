@@ -567,6 +567,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /window_entities/);
   assert.match(source, /temperature_entities/);
   assert.match(source, /humidity_entities/);
+  assert.match(source, /outdoor_temperature_entities/);
+  assert.match(source, /outdoor_humidity_entities/);
+  assert.match(source, /ed\.notifications\.entity_outdoor_temperature/);
+  assert.match(source, /ed\.notifications\.entity_outdoor_humidity/);
   assert.match(source, /battery_entities/);
   assert.match(source, /humidifier_fill_entities/);
   assert.match(source, /humidifier_full_entities/);
@@ -609,6 +613,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /rain_lookahead_hours/);
   assert.match(source, /function entityAreaKey/);
   assert.match(source, /_getFanTargetForSource/);
+  assert.match(source, /_getPresenceSensorForSource\(sourceEntityId\)/);
+  assert.match(source, /_presenceAllowsComfortNotification\(sourceEntityId\)/);
+  assert.match(source, /\.filter\(item => this\._presenceAllowsComfortNotification\(item\.entityId\)\)/);
+  assert.doesNotMatch(source, /\.\.\.this\._config\.weather_entities\.map\(entityId => \(\{[\s\S]*?numericState\(this\._hass\.states\?\.\[entityId\], "temperature"\)/);
   assert.match(source, /_buildWeatherNotifications/);
   assert.match(source, /_buildLevelNotifications/);
   assert.match(source, /shouldDarkenNotificationIconGlyph/);
@@ -639,6 +647,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /webhook_id: nodalia_notifications_background_sync/);
   assert.match(backgroundPackage, /event_type: state_changed/);
   assert.match(backgroundPackage, /input_text\.nodalia_notifications_background_config_01/);
+  assert.match(backgroundPackage, /nodalia_notifications_background_config_40: \{ max: 255 \}/);
+  assert.match(backgroundPackage, /count: 40/);
+  assert.match(backgroundPackage, /states\('input_text\.nodalia_notifications_background_config_40'\)/);
   assert.match(backgroundPackage, /notify\.send_message/);
   assert.match(backgroundPackage, /notify_entities: "\{\{ notify_cfg\.get\('entities', \[\]\) \}\}"/);
   assert.doesNotMatch(backgroundPackage, /notify_cfg\.get\('entities', \['notify\.mobile_app_my_phone'\]\)/);

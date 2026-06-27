@@ -57,6 +57,26 @@ input_text:
   nodalia_notifications_background_config_18: { max: 255 }
   nodalia_notifications_background_config_19: { max: 255 }
   nodalia_notifications_background_config_20: { max: 255 }
+  nodalia_notifications_background_config_21: { max: 255 }
+  nodalia_notifications_background_config_22: { max: 255 }
+  nodalia_notifications_background_config_23: { max: 255 }
+  nodalia_notifications_background_config_24: { max: 255 }
+  nodalia_notifications_background_config_25: { max: 255 }
+  nodalia_notifications_background_config_26: { max: 255 }
+  nodalia_notifications_background_config_27: { max: 255 }
+  nodalia_notifications_background_config_28: { max: 255 }
+  nodalia_notifications_background_config_29: { max: 255 }
+  nodalia_notifications_background_config_30: { max: 255 }
+  nodalia_notifications_background_config_31: { max: 255 }
+  nodalia_notifications_background_config_32: { max: 255 }
+  nodalia_notifications_background_config_33: { max: 255 }
+  nodalia_notifications_background_config_34: { max: 255 }
+  nodalia_notifications_background_config_35: { max: 255 }
+  nodalia_notifications_background_config_36: { max: 255 }
+  nodalia_notifications_background_config_37: { max: 255 }
+  nodalia_notifications_background_config_38: { max: 255 }
+  nodalia_notifications_background_config_39: { max: 255 }
+  nodalia_notifications_background_config_40: { max: 255 }
   nodalia_notifications_background_last_hash:
     max: 255
 
@@ -75,7 +95,7 @@ automation:
           chunks: "{{ trigger.json.chunks | default([], true) }}"
           config_hash: "{{ trigger.json.config_hash | default('', true) }}"
       - repeat:
-          count: 20
+          count: 40
           sequence:
             - action: input_text.set_value
               target:
@@ -127,7 +147,27 @@ automation:
             states('input_text.nodalia_notifications_background_config_17') ~
             states('input_text.nodalia_notifications_background_config_18') ~
             states('input_text.nodalia_notifications_background_config_19') ~
-            states('input_text.nodalia_notifications_background_config_20') %}
+            states('input_text.nodalia_notifications_background_config_20') ~
+            states('input_text.nodalia_notifications_background_config_21') ~
+            states('input_text.nodalia_notifications_background_config_22') ~
+            states('input_text.nodalia_notifications_background_config_23') ~
+            states('input_text.nodalia_notifications_background_config_24') ~
+            states('input_text.nodalia_notifications_background_config_25') ~
+            states('input_text.nodalia_notifications_background_config_26') ~
+            states('input_text.nodalia_notifications_background_config_27') ~
+            states('input_text.nodalia_notifications_background_config_28') ~
+            states('input_text.nodalia_notifications_background_config_29') ~
+            states('input_text.nodalia_notifications_background_config_30') ~
+            states('input_text.nodalia_notifications_background_config_31') ~
+            states('input_text.nodalia_notifications_background_config_32') ~
+            states('input_text.nodalia_notifications_background_config_33') ~
+            states('input_text.nodalia_notifications_background_config_34') ~
+            states('input_text.nodalia_notifications_background_config_35') ~
+            states('input_text.nodalia_notifications_background_config_36') ~
+            states('input_text.nodalia_notifications_background_config_37') ~
+            states('input_text.nodalia_notifications_background_config_38') ~
+            states('input_text.nodalia_notifications_background_config_39') ~
+            states('input_text.nodalia_notifications_background_config_40') %}
           {% set cfg = raw | from_json(default={}) %}
           {% set groups = cfg.get('entities', {}) %}
           {% set watched =
@@ -165,7 +205,27 @@ automation:
                states('input_text.nodalia_notifications_background_config_17') ~
                states('input_text.nodalia_notifications_background_config_18') ~
                states('input_text.nodalia_notifications_background_config_19') ~
-               states('input_text.nodalia_notifications_background_config_20') }}
+               states('input_text.nodalia_notifications_background_config_20') ~
+               states('input_text.nodalia_notifications_background_config_21') ~
+               states('input_text.nodalia_notifications_background_config_22') ~
+               states('input_text.nodalia_notifications_background_config_23') ~
+               states('input_text.nodalia_notifications_background_config_24') ~
+               states('input_text.nodalia_notifications_background_config_25') ~
+               states('input_text.nodalia_notifications_background_config_26') ~
+               states('input_text.nodalia_notifications_background_config_27') ~
+               states('input_text.nodalia_notifications_background_config_28') ~
+               states('input_text.nodalia_notifications_background_config_29') ~
+               states('input_text.nodalia_notifications_background_config_30') ~
+               states('input_text.nodalia_notifications_background_config_31') ~
+               states('input_text.nodalia_notifications_background_config_32') ~
+               states('input_text.nodalia_notifications_background_config_33') ~
+               states('input_text.nodalia_notifications_background_config_34') ~
+               states('input_text.nodalia_notifications_background_config_35') ~
+               states('input_text.nodalia_notifications_background_config_36') ~
+               states('input_text.nodalia_notifications_background_config_37') ~
+               states('input_text.nodalia_notifications_background_config_38') ~
+               states('input_text.nodalia_notifications_background_config_39') ~
+               states('input_text.nodalia_notifications_background_config_40') }}
           cfg: "{{ raw_config | from_json(default={}) }}"
           groups: "{{ cfg.get('entities', {}) }}"
           thresholds: "{{ cfg.get('thresholds', {}) }}"

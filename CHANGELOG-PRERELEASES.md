@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.6] - 2026-06-27
+
+Sixth **`1.3.2`** **`alpha`**: Notifications indoor/outdoor comfort and presence gating. Release channel **`1.3.2-alpha.6`**.
+
+### Added
+
+- **`notifications`:** visual editor distinguishes indoor temperature/humidity sensors from outdoor temperature/humidity sensors, so exterior values no longer trigger indoor comfort alerts.
+- **`notifications`:** hot-room fan/cooling recommendations now check same-room presence when a matching presence sensor is configured, only sending the alert while that room is occupied.
+
+### Changed
+
+- **`notifications`:** comfort hot/cold logic no longer treats `weather` entity temperature as an indoor temperature source; weather entities remain available for forecast/rain notifications.
+- **`notifications`:** background webhook payload includes the separated outdoor temperature/humidity lists while the package continues to watch only indoor comfort sensors for threshold push alerts.
+- **`examples`:** background mobile package capacity increased to **40** `input_text` chunks for larger synced configurations.
+
 ## [1.3.2-alpha.5] - 2026-06-27
 
 Fifth **`1.3.2`** **`alpha`**: Notifications background numeric state matching. Release channel **`1.3.2-alpha.5`**.

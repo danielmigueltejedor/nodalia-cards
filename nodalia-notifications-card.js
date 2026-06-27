@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.2-alpha.5";
+const CARD_VERSION = "1.3.2-alpha.6";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -35,6 +35,8 @@ const DEFAULT_CONFIG = {
   window_entities: [],
   temperature_entities: [],
   humidity_entities: [],
+  outdoor_temperature_entities: [],
+  outdoor_humidity_entities: [],
   battery_entities: [],
   humidifier_fill_entities: [],
   humidifier_full_entities: [],
@@ -403,6 +405,8 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
   config.temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
   config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
+  config.outdoor_temperature_entities = normalizeEntityList(config.outdoor_temperature_entities, ["sensor"]);
+  config.outdoor_humidity_entities = normalizeEntityList(config.outdoor_humidity_entities, ["sensor"]);
   config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
   config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
   config.humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
@@ -1251,6 +1255,8 @@ class NodaliaNotificationsCard extends HTMLElement {
         motion: config.motion_entities || [],
         temperature: config.temperature_entities || [],
         humidity: config.humidity_entities || [],
+        outdoor_temperature: config.outdoor_temperature_entities || [],
+        outdoor_humidity: config.outdoor_humidity_entities || [],
         battery: config.battery_entities || [],
         humidifier_fill: config.humidifier_fill_entities || [],
         humidifier_full: config.humidifier_full_entities || [],
@@ -1853,12 +1859,6 @@ class NodaliaNotificationsCard extends HTMLElement {
       return;
     }
     const tempSources = [
-      ...this._config.weather_entities.map(entityId => ({
-        entityId,
-        state: this._hass.states?.[entityId],
-        value: numericState(this._hass.states?.[entityId], "temperature"),
-        unit: this._hass.states?.[entityId]?.attributes?.temperature_unit || "°",
-      })),
       ...this._config.temperature_entities.map(entityId => ({
         entityId,
         state: this._hass.states?.[entityId],
@@ -1868,10 +1868,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     ].filter(item => item.state && item.value !== null);
     const hotCandidates = tempSources
       .filter(item => item.value >= this._config.thresholds.hot_temperature)
+      .filter(item => this._presenceAllowsComfortNotification(item.entityId))
       .map(item => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) }))
       .filter(item => item.fanTarget)
       .sort((left, right) => right.value - left.value);
-    const hottest = hotCandidates[0] || [...tempSources].sort((left, right) => right.value - left.value)[0];
+    const hottest = hotCandidates[0] || [...tempSources]
+      .filter(item => item.value >= this._config.thresholds.hot_temperature)
+      .filter(item => this._presenceAllowsComfortNotification(item.entityId))
+      .sort((left, right) => right.value - left.value)[0];
     const coolingClimateTarget = hottest?.value >= this._config.thresholds.hot_temperature
       ? this._getClimateTargetForSource(hottest.entityId, "cool")
       : null;
@@ -2018,6 +2022,30 @@ class NodaliaNotificationsCard extends HTMLElement {
       .filter(entityId => ["error", "fault", "fallo", "erro"].some(token => entityId.includes(token)))
       .sort((left, right) => left.localeCompare(right, sortLoc));
     return candidates.map(entityId => this._hass.states[entityId]).find(stateObj => this._getVacuumErrorValue(stateObj)) || null;
+  }
+
+  _getPresenceSensorForSource(sourceEntityId) {
+    const sensors = this._config.motion_entities.filter(entityId => this._hass?.states?.[entityId]);
+    if (!sensors.length) {
+      return null;
+    }
+    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+    if (sourceArea) {
+      const sameArea = sensors.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
+      if (sameArea) {
+        return sameArea;
+      }
+    }
+    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+    return sensors.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token))) || null;
+  }
+
+  _presenceAllowsComfortNotification(sourceEntityId) {
+    const presenceEntityId = this._getPresenceSensorForSource(sourceEntityId);
+    if (!presenceEntityId) {
+      return true;
+    }
+    return stateIsOn(this._hass?.states?.[presenceEntityId]);
   }
 
   _getFanTargetForSource(sourceEntityId) {
@@ -2555,6 +2583,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.window_entities,
       ...this._config.temperature_entities,
       ...this._config.humidity_entities,
+      ...this._config.outdoor_temperature_entities,
+      ...this._config.outdoor_humidity_entities,
       ...this._config.battery_entities,
       ...this._config.humidifier_fill_entities,
       ...this._config.humidifier_full_entities,
@@ -3824,6 +3854,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         return ["binary_sensor"];
       case "temperature_entities":
       case "humidity_entities":
+      case "outdoor_temperature_entities":
+      case "outdoor_humidity_entities":
       case "battery_entities":
       case "humidifier_fill_entities":
       case "humidifier_full_entities":
@@ -4251,6 +4283,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       ["window_entities", "ed.notifications.conn_label_window"],
       ["temperature_entities", "ed.notifications.conn_label_temperature"],
       ["humidity_entities", "ed.notifications.conn_label_humidity"],
+      ["outdoor_temperature_entities", "ed.notifications.conn_label_outdoor_temperature"],
+      ["outdoor_humidity_entities", "ed.notifications.conn_label_outdoor_humidity"],
       ["climate_entities", "ed.notifications.conn_label_climate"],
       ["humidifier_entities", "ed.notifications.conn_label_humidifier"],
       ["battery_entities", "ed.notifications.conn_label_battery"],
@@ -4778,6 +4812,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderEntityListField("ed.notifications.entity_windows", "window_entities", config.window_entities, { placeholder: "binary_sensor.ventana" })}
                   ${this._renderEntityListField("ed.notifications.entity_temperature", "temperature_entities", config.temperature_entities, { placeholder: "sensor.temperatura" })}
                   ${this._renderEntityListField("ed.notifications.entity_humidity", "humidity_entities", config.humidity_entities, { placeholder: "sensor.humedad" })}
+                  ${this._renderEntityListField("ed.notifications.entity_outdoor_temperature", "outdoor_temperature_entities", config.outdoor_temperature_entities, { placeholder: "sensor.temperatura_exterior" })}
+                  ${this._renderEntityListField("ed.notifications.entity_outdoor_humidity", "outdoor_humidity_entities", config.outdoor_humidity_entities, { placeholder: "sensor.humedad_exterior" })}
                   ${this._renderEntityListField("ed.notifications.entity_battery", "battery_entities", config.battery_entities, { placeholder: "sensor.pila_mando" })}
                   ${this._renderEntityListField("ed.notifications.entity_humidifier_tank", "humidifier_fill_entities", config.humidifier_fill_entities, { placeholder: "sensor.humidificador_deposito" })}
                   ${this._renderEntityListField("ed.notifications.entity_tank_full", "humidifier_full_entities", config.humidifier_full_entities, { placeholder: "sensor.deposito_sucio" })}
