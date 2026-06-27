@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.7] - 2026-06-27
+
+Seventh **`1.3.2`** **`alpha`**: Notifications background sync reliability. Release channel **`1.3.2-alpha.7`**.
+
+### Fixed
+
+- **`notifications`:** background mobile webhook sync is now kept pending when the card is configured before it is connected or before Home Assistant is available, then flushed once the card receives `hass`.
+- **`notifications`:** saving card configuration forces one background sync attempt and no longer skips it just because the previous rendered state signature was unchanged.
+- **`notifications`:** the visual editor also debounces and sends the background sync payload after emitting updated configuration, so saving webhook/mobile settings does not depend on the runtime card render timing.
+
 ## [1.3.2-alpha.6] - 2026-06-27
 
 Sixth **`1.3.2`** **`alpha`**: Notifications indoor/outdoor comfort and presence gating. Release channel **`1.3.2-alpha.6`**.
