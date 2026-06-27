@@ -1306,8 +1306,21 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
   assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
   assert.match(source, /_shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)[\s\S]*return;/);
+  assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
   assert.doesNotMatch(source, /`sp:\$\{this\._selectPickerOpen \? 1 : 0\}`/);
   assert.doesNotMatch(source, /entity-card-select-option-in/);
+});
+
+test("entity card prefers Home Assistant translated display state", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /function getHomeAssistantStateDisplayValue\(state, hass = null\)/);
+  assert.match(source, /hass\?\.formatEntityState/);
+  assert.match(source, /attrs\.state_translated/);
+  assert.match(source, /attrs\.translated_state/);
+  assert.match(source, /attrs\.state_display/);
+  assert.match(source, /attrs\.display_state/);
+  assert.match(source, /const displayValue = getHomeAssistantStateDisplayValue\(state, this\._hass\);[\s\S]*if \(displayValue\) \{[\s\S]*return displayValue;/);
+  assert.match(source, /`sd:\$\{getHomeAssistantStateDisplayValue\(state, hass\)\}`/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

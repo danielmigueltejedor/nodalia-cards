@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.1-alpha.3";
+const CARD_VERSION = "1.3.1-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -520,6 +520,38 @@ function humanizeSelectOptionLabel(raw) {
     .trim();
 }
 
+function getHomeAssistantStateDisplayValue(state, hass = null) {
+  const attrs = state?.attributes || {};
+  const rawState = String(state?.state ?? "").trim();
+  const formatters = [
+    hass?.formatEntityState,
+    typeof window !== "undefined" ? window.hass?.formatEntityState : null,
+  ];
+  for (const formatter of formatters) {
+    if (typeof formatter !== "function") {
+      continue;
+    }
+    try {
+      const formatted = String(formatter.call(hass || window.hass, state) ?? "").trim();
+      if (formatted && formatted !== rawState) {
+        return formatted;
+      }
+    } catch (_error) {
+      // Some HA builds expose formatter helpers with different call signatures.
+    }
+  }
+  const candidates = [
+    attrs.state_translated,
+    attrs.translated_state,
+    attrs.state_display,
+    attrs.display_state,
+    attrs.friendly_state,
+  ];
+  return candidates
+    .map(value => String(value ?? "").trim())
+    .find(value => value && value !== rawState) || "";
+}
+
 function entitySupportedFeatures(state) {
   return Number(state?.attributes?.supported_features) || 0;
 }
@@ -975,6 +1007,7 @@ class NodaliaEntityCard extends HTMLElement {
       `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
       `e:${entityId}`,
       `s:${String(state?.state || "")}`,
+      `sd:${getHomeAssistantStateDisplayValue(state, hass)}`,
       `o:${String(attrs._nodalia_optimistic_toggle || "")}`,
       `lu:${String(state?.last_updated || state?.last_changed || "")}`,
       `sa:${configuredStateAttribute}`,
@@ -1573,6 +1606,10 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _translateStateValue(state) {
+    const displayValue = getHomeAssistantStateDisplayValue(state, this._hass);
+    if (displayValue) {
+      return displayValue;
+    }
     const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
     const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
     return window.NodaliaI18n.translateEntityState(
@@ -2848,6 +2885,10 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__select-picker-shell-host {
           min-width: 0;
           width: 100%;
+        }
+
+        .entity-card:not(.entity-card--select-open) .entity-card__select-picker-shell-host {
+          display: none;
         }
 
         .entity-card__select-picker-shell {

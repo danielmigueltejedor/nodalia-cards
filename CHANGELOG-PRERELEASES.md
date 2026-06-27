@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1-alpha.4] - 2026-06-27
+
+Fourth **`1.3.1`** **`alpha`**: Entity Card compact select height and Home Assistant display states. Release channel **`1.3.1-alpha.4`**.
+
+### Fixed
+
+- **`entity`:** compact `select` / `input_select` cards hide the empty picker shell while closed, so closed compact select cards keep the same height as other compact Entity Cards.
+- **`entity`:** state chips prefer Home Assistant frontend display formatting (`formatEntityState`) and HA-provided display attributes before falling back to Nodalia's built-in state dictionary, so integration-localized enum states such as comfort labels display correctly.
+
 ## [1.3.1-alpha.3] - 2026-06-25
 
 Third **`1.3.1`** **`alpha`**: Notifications Card background mobile webhook sync. Release channel **`1.3.1-alpha.3`**.
