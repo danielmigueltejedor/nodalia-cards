@@ -22,6 +22,9 @@
 # Notes:
 # - The package does not keep its own notify entity list. It reads the synced
 #   `mobile_notifications.entities` from the card webhook payload.
+# - The `state_changed` trigger is intentionally broad because the watched
+#   entity list is synced dynamically through the webhook. Conditions below
+#   discard non-watched entities before notification actions run.
 # - Treat the webhook_id like a password if you set local_only: false.
 # - Calendar/weather forecast alerts are still best handled by dedicated HA
 #   automations because they depend on periodic forecast/calendar queries, not
@@ -168,19 +171,19 @@ automation:
           thresholds: "{{ cfg.get('thresholds', {}) }}"
           notify_cfg: "{{ cfg.get('notify', {}) }}"
           entity_id: "{{ trigger.event.data.entity_id }}"
-          new_state: "{{ trigger.event.data.new_state }}"
-          old_state: "{{ trigger.event.data.old_state }}"
-          new_value: "{{ new_state.state | float(none) }}"
-          old_value: "{{ old_state.state | float(none) if old_state is not none else none }}"
-          friendly: "{{ new_state.attributes.friendly_name | default(entity_id, true) }}"
-          unit: "{{ new_state.attributes.unit_of_measurement | default('', true) }}"
+          new_state_value: "{{ trigger.event.data.new_state.state | default('', true) }}"
+          old_state_value: "{{ trigger.event.data.old_state.state | default('', true) if trigger.event.data.old_state is not none else '' }}"
+          new_value: "{{ new_state_value | float(none) }}"
+          old_value: "{{ old_state_value | float(none) if old_state_value != '' else none }}"
+          friendly: "{{ trigger.event.data.new_state.attributes.friendly_name | default(entity_id, true) }}"
+          unit: "{{ trigger.event.data.new_state.attributes.unit_of_measurement | default('', true) }}"
           override: "{{ cfg.get('overrides', {}).get(entity_id, {}) }}"
           match_kind: >-
             {% set e = entity_id %}
-            {% set n = new_state.state | lower %}
-            {% set o = old_state.state | lower if old_state is not none else '' %}
-            {% set nv = new_state.state | float(none) %}
-            {% set ov = old_state.state | float(none) if old_state is not none else none %}
+            {% set n = new_state_value | lower %}
+            {% set o = old_state_value | lower %}
+            {% set nv = new_value %}
+            {% set ov = old_value %}
             {% if e in groups.get('door', []) and n == 'on' and o != 'on' %}door
             {% elif e in groups.get('window', []) and n == 'on' and o != 'on' %}window
             {% elif e in groups.get('motion', []) and n == 'on' and o != 'on' %}motion
@@ -219,9 +222,9 @@ automation:
             {% endif %}
           default_message: >-
             {% if new_value is number %}
-              {{ friendly }} is at {{ new_state.state }}{{ unit }}.
+              {{ friendly }} is at {{ new_state_value }}{{ unit }}.
             {% elif match_kind == 'vacuum' %}
-              {{ friendly }} is {{ new_state.state }}.
+              {{ friendly }} is {{ new_state_value }}.
             {% else %}
               {{ friendly }}.
             {% endif %}
@@ -231,8 +234,8 @@ automation:
             {{ message_template
               | replace('{source}', friendly)
               | replace('{name}', friendly)
-              | replace('{value}', (new_state.state ~ unit))
-              | replace('{state}', new_state.state) }}
+              | replace('{value}', (new_state_value ~ unit))
+              | replace('{state}', new_state_value) }}
           notify_entities: "{{ notify_cfg.get('entities', []) }}"
           notify_services: "{{ notify_cfg.get('services', []) }}"
           tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"

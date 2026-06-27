@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.5] - 2026-06-27
+
+Fifth **`1.3.2`** **`alpha`**: Notifications background numeric state matching. Release channel **`1.3.2-alpha.5`**.
+
+### Fixed
+
+- **`notifications`:** background mobile package keeps `state_changed` state values as explicit scalar variables before threshold checks, so numeric alerts such as low ink at `10%` match and send instead of being skipped after object-to-string conversion.
+- **`examples`:** background mobile package notes clarify that the broad `state_changed` trigger is required for webhook-synced dynamic entity lists, with conditions discarding non-watched changes before notification actions run.
+
 ## [1.3.2-alpha.4] - 2026-06-27
 
 Fourth **`1.3.2`** **`alpha`**: Notifications background package notify targets. Release channel **`1.3.2-alpha.4`**.

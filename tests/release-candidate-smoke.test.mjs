@@ -642,6 +642,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /notify\.send_message/);
   assert.match(backgroundPackage, /notify_entities: "\{\{ notify_cfg\.get\('entities', \[\]\) \}\}"/);
   assert.doesNotMatch(backgroundPackage, /notify_cfg\.get\('entities', \['notify\.mobile_app_my_phone'\]\)/);
+  assert.match(backgroundPackage, /new_state_value: "\{\{ trigger\.event\.data\.new_state\.state/);
+  assert.match(backgroundPackage, /old_state_value: "\{\{ trigger\.event\.data\.old_state\.state/);
+  assert.match(backgroundPackage, /\{% set nv = new_value %\}/);
+  assert.match(backgroundPackage, /\{% elif e in groups\.get\('ink', \[\]\) and nv is number and nv <= thresholds\.get\('ink_low', 15\)/);
+  assert.doesNotMatch(backgroundPackage, /new_state: "\{\{ trigger\.event\.data\.new_state \}\}"/);
   assert.match(backgroundPackage, /from_json\(default=\{\}\)/);
   assert.match(source, /item\.severity !== "info"/);
   assert.match(source, /localStorage\.setItem\(this\._getStorageKey\(\)/);
