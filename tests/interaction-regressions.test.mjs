@@ -1089,6 +1089,41 @@ test("fan and humidifier slider empty animation stays in sync while controls lea
   }
 });
 
+test("fan humidifier and cover slider action shadows are not clipped while open", () => {
+  const expectations = [
+    {
+      file: "nodalia-fan-card.js",
+      shell: "fan-card__controls-shell",
+      leaving: "fan-card__controls-shell--leaving",
+      row: "fan-card__slider-row",
+      actions: "fan-card__slider-actions",
+    },
+    {
+      file: "nodalia-humidifier-card.js",
+      shell: "humidifier-card__controls-shell",
+      leaving: "humidifier-card__controls-shell--leaving",
+      row: "humidifier-card__slider-row",
+      actions: "humidifier-card__slider-actions",
+    },
+    {
+      file: "nodalia-cover-card.js",
+      shell: "fan-card__controls-shell",
+      leaving: null,
+      row: "fan-card__slider-row",
+      actions: "fan-card__slider-actions",
+    },
+  ];
+  for (const item of expectations) {
+    const source = read(item.file);
+    assert.match(source, new RegExp(`\\.${item.shell} \\{[\\s\\S]*overflow: visible;`));
+    if (item.leaving) {
+      assert.match(source, new RegExp(`\\.${item.leaving} \\{[\\s\\S]*overflow: hidden;`));
+    }
+    assert.match(source, new RegExp(`\\.${item.row} \\{[\\s\\S]*overflow: visible;`));
+    assert.match(source, new RegExp(`\\.${item.actions} \\{[\\s\\S]*padding-block: 10px;`));
+  }
+});
+
 test("fan and humidifier animations keep progress across fast state confirmations", () => {
   const fan = read("nodalia-fan-card.js");
   const humidifier = read("nodalia-humidifier-card.js");

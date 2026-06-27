@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.1] - 2026-06-27
+
+First **`1.3.2`** **`alpha`**: device slider action shadow polish. Release channel **`1.3.2-alpha.1`**.
+
+### Fixed
+
+- **`fan` / `humidifier` / `cover`:** slider-side action buttons keep visible overflow and vertical breathing room while controls are open, preventing button shadows from being clipped into square corner artifacts.
+
 ## [1.3.1-alpha.5] - 2026-06-27
 
 Fifth **`1.3.1`** **`alpha`**: Entity Card select picker corner polish. Release channel **`1.3.1-alpha.5`**.
