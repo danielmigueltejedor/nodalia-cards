@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.2.1.1-2ea44f)
+![Package](https://img.shields.io/badge/package-1.3.1-2ea44f)
 ![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -48,79 +48,66 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.2.1.1
+# 🚀 What’s new in 1.3.1
 
-**Current stable `1.2.1.1`** — hotfix for person-card i18n, entity-card cover/lock toggles, alarm PIN flow, and Lovelace tap-action parsing. Match **`nodalia-cards-1.2.1.1.js`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current stable `1.3.1`** — focused polish for the Entity Card `select` / `input_select` picker and background mobile delivery for the Notifications Card. Match **`nodalia-cards-1.3.1.js`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
-### Alpha.4 highlights
+### Entity Card select polish
 
-- Calendar disconnect invalidates refresh runs; weather forecast WS guarded.
-- `joinParts` on insignia, person, fan, humidifier, weather, alarm, gauge.
-- Notifications/power-flow/media skip work when signature unchanged.
-- Vacuum select + advance-vacuum internal services aligned with strict mode.
+- Inline `select` / `input_select` pickers open and close reliably across rapid taps.
+- Compact select cards keep the same closed height as other compact Entity Cards.
+- Open select pickers show only the available options, without the extra “Choose option” header or chevron button.
+- Picker animation shells clip to the same rounded panel radius, avoiding square corner artifacts.
 
-### Alpha.3 highlights
+### Home Assistant display states
 
-- Media-player / climate async guards; graph hover without full re-render.
-- Lighter render signatures (advance-vacuum, climate, cover, vacuum, fav).
-- Shared editor color resolver on 10 more cards; strict services opt-in on media/nav/climate/vacuum.
+- Entity Card state chips prefer Home Assistant frontend formatting and HA-provided display attributes before falling back to Nodalia’s built-in state dictionary.
+- Integration-provided enum labels can display as their localized/human value instead of the raw state key.
 
-### Alpha.2 highlights
+### Notifications background mobile sync
 
-- Shared **`scheduleDeferTimer`** — press/panel timers cleared on card disconnect.
-- Scenes empty state: no redundant re-render on every HA poll.
-- Power-flow diagram nodes: per-tint icon contrast.
-- Calendar / notifications: async refresh respects disconnected lifecycle.
-
-### Alpha.1 highlights
-
-- Calendar editor: guarded config path updates (security).
-- Advance Vacuum: admin-only webhooks by default; async lifecycle guards on map actions.
-- Graph card: fewer redundant renders while history loads.
-- Light / Climate / Scenes: improved bubble icon contrast and proportional light icon sizing.
-- Power Flow: lighter render signatures on busy dashboards.
+- Notifications Card can sync configured notification entities, thresholds, mobile targets, and override text to Home Assistant through `background_mobile`.
+- [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml) provides a fixed package so background push delivery can follow card configuration without editing automations per entity.
 
 ---
 
-# 📦 Stable 1.2.0
+# 📦 Stable 1.3.0
 
-**Stable release `1.2.0`** on **`main`** — **`nodalia-cards-1.2.0.js`**. Full release notes: [`CHANGELOG.md`](./CHANGELOG.md).
+**Stable release `1.3.0`** — **`nodalia-cards-1.3.0.js`**. Full release notes: [`CHANGELOG.md`](./CHANGELOG.md).
 
-## 🎬 Scenes Card
+## 🗞️ News Card
 
-New card for Home Assistant **`scene.*`** entities:
+New **`custom:nodalia-news-card`** for Home Assistant entities that expose headline attributes:
 
-- Grid or list layout with per-scene tint
-- Tap to **`scene.turn_on`** with launch feedback (no dashboard scroll jump)
-- Optional more-info / hold actions
-- Visual editor, haptics, and Nodalia styling
-
----
-
-## 🌡️ Climate setpoint schedule
-
-Weekly consigna agenda on the Climate Card:
-
-- Fullscreen composer with drag/resize time blocks
-- Save via webhook + optional **`input_text`** helper (compact **v2** / **v3** storage)
-- Path A (per-slot YAML on disk) or Path B (single automation) — see [`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)
-- WebSocket **`webhook/handle`** from Lovelace for reliable automation triggers
+- Simple, compact, and magazine layouts
+- Source filtering, safe URL handling, and render-failure guards
+- Shared helper history for consistent headlines across clients
+- Real feedreader package example in [`examples/nodalia-news-real-package.yaml`](./examples/nodalia-news-real-package.yaml)
 
 ---
 
-## ⚡ Power Flow — home popup & consumption
+## 🧩 Entity Card select support
 
-- Tap **Home** to open a device breakdown overlay (individual loads + flows)
-- Optional day/month **consumption chips** on the card header
-- Visual editor: native entity selectors and card-based individual rows
+- Inline `select` / `input_select` picker inside the Entity Card
+- Immediate press haptics for body, icon, quick actions, and picker controls
+- Safer cover/lock domain services and Lovelace action preservation
+- Entity pictures in the main icon bubble
 
 ---
 
-## 🔒 Security & interaction (1.2.x)
+## 🌡️ Climate schedule compatibility
 
-- Climate schedule webhooks default to **admin-only** (opt in for non-admin dashboards)
-- Slider bubble / control chrome no longer toggles light, fan, humidifier, or cover
-- Editor **`setByPath`** blocks prototype pollution keys
+- Path-B-compatible setpoint schedule storage prefers compact **v1/v2** payloads when they fit `input_text`
+- Quarter-degree setpoints are preserved without forcing binary **v3** storage for smaller schedules
+- Schedule docs and examples remain in [`docs/climate-setpoint-schedule.md`](./docs/climate-setpoint-schedule.md)
+
+---
+
+## ✨ Stability and polish
+
+- Circular Gauge entrance animation uses one smooth progress arc
+- Power Flow home popup bubble keeps the intended square aspect ratio
+- Alarm PIN gating, media-player disconnect guards, deferred timer cleanup, and broad regression coverage
 
 ---
 
@@ -137,13 +124,19 @@ Features include:
 - Expandable stacked notification UI
 - Persistent dismiss system
 - Smart contextual recommendations
-- Mobile notification delivery
+- Dashboard-driven mobile notification delivery
 - Calendar integrations
 - Vacuum / weather / humidity intelligence
 - Entity-specific overrides
 - Critical mobile alerts
 - Visual editor support
 - Animated transitions and compact mode
+
+Mobile delivery from the card runs in the Home Assistant frontend by default, so
+it needs a browser/session with the card loaded. For push notifications that
+must fire when no one is viewing Lovelace, enable the background webhook sync and
+paste the Home Assistant package in
+[`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
 
 ---
 
@@ -309,7 +302,31 @@ fan_entities:
   - fan.living_room
 vacuum_entities:
   - vacuum.robot
+temperature_entities:
+  - sensor.living_room_temperature
+outdoor_temperature_entities:
+  - sensor.outdoor_temperature
+mobile_notifications:
+  enabled: true
+  entities:
+    - notify.iphone_de_daniel
+    - notify.iphone_de_angelica
+    - notify.samsung_s23_de_papa
+background_mobile:
+  enabled: true
+  webhook: nodalia_notifications_background_sync
 ```
+
+The card mirrors these alerts visually and can send mobile notifications while
+the dashboard is loaded. With `background_mobile.enabled`, it also syncs its
+configured alert entities, thresholds, and `mobile_notifications.entities` to
+Home Assistant by webhook so the package can send push notifications in the
+background without duplicating notify targets in the automation YAML. Start from
+[`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
+
+For comfort alerts, use indoor temperature/humidity entities for house
+recommendations. Outdoor temperature/humidity entities are kept separate so an
+outside cold morning does not trigger an indoor low-temperature alert.
 
 ---
 
@@ -370,7 +387,7 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.2.1.1.js
+/hacsfiles/nodalia-cards/nodalia-cards-1.3.1.js
 ```
 
 HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.

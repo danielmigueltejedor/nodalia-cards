@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.2-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -520,6 +520,38 @@ function humanizeSelectOptionLabel(raw) {
     .trim();
 }
 
+function getHomeAssistantStateDisplayValue(state, hass = null) {
+  const attrs = state?.attributes || {};
+  const rawState = String(state?.state ?? "").trim();
+  const formatters = [
+    hass?.formatEntityState,
+    typeof window !== "undefined" ? window.hass?.formatEntityState : null,
+  ];
+  for (const formatter of formatters) {
+    if (typeof formatter !== "function") {
+      continue;
+    }
+    try {
+      const formatted = String(formatter.call(hass || window.hass, state) ?? "").trim();
+      if (formatted && formatted !== rawState) {
+        return formatted;
+      }
+    } catch (_error) {
+      // Some HA builds expose formatter helpers with different call signatures.
+    }
+  }
+  const candidates = [
+    attrs.state_translated,
+    attrs.translated_state,
+    attrs.state_display,
+    attrs.display_state,
+    attrs.friendly_state,
+  ];
+  return candidates
+    .map(value => String(value ?? "").trim())
+    .find(value => value && value !== rawState) || "";
+}
+
 function entitySupportedFeatures(state) {
   return Number(state?.attributes?.supported_features) || 0;
 }
@@ -825,6 +857,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._selectPickerAnimating = false;
     this._selectPickerCloseTimer = 0;
     this._selectPickerEnterTimer = 0;
+    this._selectPickerAnimationToken = 0;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (!entry) {
@@ -974,6 +1007,7 @@ class NodaliaEntityCard extends HTMLElement {
       `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
       `e:${entityId}`,
       `s:${String(state?.state || "")}`,
+      `sd:${getHomeAssistantStateDisplayValue(state, hass)}`,
       `o:${String(attrs._nodalia_optimistic_toggle || "")}`,
       `lu:${String(state?.last_updated || state?.last_changed || "")}`,
       `sa:${configuredStateAttribute}`,
@@ -1005,7 +1039,6 @@ class NodaliaEntityCard extends HTMLElement {
       `sn:${this._config?.show_name !== false ? 1 : 0}`,
       `ss:${this._config?.show_state !== false ? 1 : 0}`,
       `nm:${String(this._config?.name || "")}`,
-      `sp:${this._selectPickerOpen ? 1 : 0}`,
       `sel:${isSelectDomainEntity(state) ? getSelectEntityOptions(state).join("\u001f") : ""}`,
     ].join("|");
   }
@@ -1330,6 +1363,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
     this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+    const animationToken = ++this._selectPickerAnimationToken;
 
     const clearShellHost = () => {
       shellHost.replaceChildren();
@@ -1351,6 +1385,9 @@ class NodaliaEntityCard extends HTMLElement {
       shell.classList.add("entity-card__select-picker-shell--leaving");
 
       const finalizeRemoval = () => {
+        if (animationToken !== this._selectPickerAnimationToken || this._selectPickerOpen) {
+          return;
+        }
         this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
         if (shell.isConnected) {
           shell.remove();
@@ -1392,6 +1429,13 @@ class NodaliaEntityCard extends HTMLElement {
       }
 
       const finalizeEnter = () => {
+        if (
+          animationToken !== this._selectPickerAnimationToken
+          || !this._selectPickerOpen
+          || shellNode.classList.contains("entity-card__select-picker-shell--leaving")
+        ) {
+          return;
+        }
         this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
         if (shellNode.isConnected) {
           shellNode.classList.remove("entity-card__select-picker-shell--entering");
@@ -1562,6 +1606,10 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _translateStateValue(state) {
+    const displayValue = getHomeAssistantStateDisplayValue(state, this._hass);
+    if (displayValue) {
+      return displayValue;
+    }
     const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
     const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
     return window.NodaliaI18n.translateEntityState(
@@ -2262,6 +2310,9 @@ class NodaliaEntityCard extends HTMLElement {
     this._triggerHaptic(hapticStyle);
 
     if (action === "body" || action === "icon") {
+      if (this._shouldOpenSelectPickerOnTap(this._getState(), action)) {
+        return;
+      }
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
       return;
@@ -2294,7 +2345,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (action === "select-close" || action === "select-option" || action === "quick") {
+    if (action === "select-option" || action === "quick") {
       this._triggerEntityPressFeedback(action, actionTarget);
     }
   }
@@ -2313,11 +2364,6 @@ class NodaliaEntityCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
-
-    if (action === "select-close") {
-      this._closeSelectPicker();
-      return;
-    }
 
     if (action === "select-option") {
       const value = actionTarget.dataset.selectValue || "";
@@ -2387,7 +2433,6 @@ class NodaliaEntityCard extends HTMLElement {
     }
     const current = this._getSelectCurrentValue(state);
     const pickerTitle = this._entityCardUi("selectPickerTitle", "Choose option");
-    const closeLabel = this._entityCardUi("selectPickerClose", "Close");
 
     return `
       <div
@@ -2395,17 +2440,6 @@ class NodaliaEntityCard extends HTMLElement {
         role="listbox"
         aria-label="${escapeHtml(pickerTitle)}"
       >
-        <div class="entity-card__select-picker-head">
-          <span class="entity-card__select-picker-kicker">${escapeHtml(pickerTitle)}</span>
-          <button
-            type="button"
-            class="entity-card__select-picker-close"
-            data-entity-action="select-close"
-            aria-label="${escapeHtml(closeLabel)}"
-          >
-            <ha-icon icon="mdi:chevron-up"></ha-icon>
-          </button>
-        </div>
         <div class="entity-card__select-options">
           ${options.map(option => {
             const isActive = normalizeTextKey(option) === normalizeTextKey(current);
@@ -2832,19 +2866,28 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__select-picker-shell-host {
+          border-radius: calc(${styles.card.border_radius} - 8px);
           min-width: 0;
+          overflow: hidden;
           width: 100%;
+        }
+
+        .entity-card:not(.entity-card--select-open) .entity-card__select-picker-shell-host {
+          display: none;
         }
 
         .entity-card__select-picker-shell {
           backface-visibility: hidden;
+          border-radius: inherit;
           overflow: hidden;
           will-change: max-height, opacity;
         }
 
         .entity-card__select-picker-inner {
           backface-visibility: hidden;
+          border-radius: inherit;
           display: grid;
+          overflow: hidden;
           will-change: opacity, transform;
         }
 
@@ -2883,42 +2926,6 @@ class NodaliaEntityCard extends HTMLElement {
           overflow: hidden;
           padding: 10px;
           transform-origin: top center;
-        }
-
-        .entity-card__select-picker-head {
-          align-items: center;
-          display: flex;
-          gap: 8px;
-          justify-content: space-between;
-          min-width: 0;
-        }
-
-        .entity-card__select-picker-kicker {
-          color: var(--secondary-text-color);
-          font-size: 0.68rem;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .entity-card__select-picker-close {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--secondary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 28px;
-          justify-content: center;
-          margin: 0;
-          padding: 0;
-          width: 28px;
-        }
-
-        .entity-card__select-picker-close ha-icon {
-          --mdc-icon-size: 18px;
         }
 
         .entity-card__select-options {
@@ -3027,28 +3034,6 @@ class NodaliaEntityCard extends HTMLElement {
           to {
             opacity: 0;
             transform: translateY(-6px) scaleY(0.98);
-          }
-        }
-
-        .entity-card__select-picker-shell--entering .entity-card__select-option {
-          animation: entity-card-select-option-in calc(var(--entity-card-select-panel-duration) * 0.82) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(1) { animation-delay: 70ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(2) { animation-delay: 95ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(3) { animation-delay: 120ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(4) { animation-delay: 145ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(5) { animation-delay: 170ms; }
-        .entity-card__select-picker-shell--entering .entity-card__select-option:nth-child(n+6) { animation-delay: 195ms; }
-
-        @keyframes entity-card-select-option-in {
-          from {
-            opacity: 0;
-            transform: translateY(-6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
           }
         }
 

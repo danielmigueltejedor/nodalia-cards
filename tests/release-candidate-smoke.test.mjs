@@ -321,6 +321,17 @@ test("weather forecast popups use an opaque theme-safe surface", () => {
   assert.match(source, /\.weather-card__forecast-hover-preview \{[\s\S]*?var\(--weather-card-popover-surface\);[\s\S]*?isolation: isolate;/);
 });
 
+test("weather forecast condition icons use a contrast-safe color", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /function getForecastIconColor\(accentColor\)/);
+  assert.match(source, /shouldDarkenBubbleIconGlyph\?\.\(/);
+  assert.match(source, /--forecast-icon-color:\$\{escapeHtml\(iconColor\)\}/);
+  assert.match(source, /\.weather-card__forecast-popup-main ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+  assert.match(source, /\.weather-card__forecast-hover-preview ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+  assert.match(source, /\.weather-card__forecast-item > ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+  assert.match(source, /\.weather-card__forecast-rain ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+});
+
 test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
@@ -556,6 +567,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /window_entities/);
   assert.match(source, /temperature_entities/);
   assert.match(source, /humidity_entities/);
+  assert.match(source, /outdoor_temperature_entities/);
+  assert.match(source, /outdoor_humidity_entities/);
+  assert.match(source, /ed\.notifications\.entity_outdoor_temperature/);
+  assert.match(source, /ed\.notifications\.entity_outdoor_humidity/);
   assert.match(source, /battery_entities/);
   assert.match(source, /humidifier_fill_entities/);
   assert.match(source, /humidifier_full_entities/);
@@ -574,6 +589,14 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
   assert.match(source, /mobile_notifications\.critical_alerts/);
+  assert.match(source, /background_mobile/);
+  assert.match(source, /background_mobile\.enabled/);
+  assert.match(source, /background_mobile\.webhook/);
+  assert.match(source, /ed\.notifications\.background_mobile_webhook/);
+  assert.match(source, /entities: config\.mobile_notifications\?\.entities \|\| \[\]/);
+  assert.match(source, /nodalia_notifications_background_sync/);
+  assert.match(source, /_scheduleBackgroundMobileSync/);
+  assert.match(source, /await post\(webhookId, payload, this\._hass\)/);
   assert.match(source, /callService\("notify", "send_message"/);
   assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
   assert.match(source, /group:\s*"nodalia_notifications"/);
@@ -590,6 +613,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /rain_lookahead_hours/);
   assert.match(source, /function entityAreaKey/);
   assert.match(source, /_getFanTargetForSource/);
+  assert.match(source, /_getPresenceSensorForSource\(sourceEntityId\)/);
+  assert.match(source, /_presenceAllowsComfortNotification\(sourceEntityId\)/);
+  assert.match(source, /\.filter\(item => this\._presenceAllowsComfortNotification\(item\.entityId\)\)/);
+  assert.doesNotMatch(source, /\.\.\.this\._config\.weather_entities\.map\(entityId => \(\{[\s\S]*?numericState\(this\._hass\.states\?\.\[entityId\], "temperature"\)/);
   assert.match(source, /_buildWeatherNotifications/);
   assert.match(source, /_buildLevelNotifications/);
   assert.match(source, /shouldDarkenNotificationIconGlyph/);
@@ -616,6 +643,22 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_queueMobileNotifications/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
+  const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
+  assert.match(backgroundPackage, /webhook_id: nodalia_notifications_background_sync/);
+  assert.match(backgroundPackage, /event_type: state_changed/);
+  assert.match(backgroundPackage, /input_text\.nodalia_notifications_background_config_01/);
+  assert.match(backgroundPackage, /nodalia_notifications_background_config_40: \{ max: 255 \}/);
+  assert.match(backgroundPackage, /count: 40/);
+  assert.match(backgroundPackage, /states\('input_text\.nodalia_notifications_background_config_40'\)/);
+  assert.match(backgroundPackage, /notify\.send_message/);
+  assert.match(backgroundPackage, /notify_entities: "\{\{ notify_cfg\.get\('entities', \[\]\) \}\}"/);
+  assert.doesNotMatch(backgroundPackage, /notify_cfg\.get\('entities', \['notify\.mobile_app_my_phone'\]\)/);
+  assert.match(backgroundPackage, /new_state_value: "\{\{ trigger\.event\.data\.new_state\.state/);
+  assert.match(backgroundPackage, /old_state_value: "\{\{ trigger\.event\.data\.old_state\.state/);
+  assert.match(backgroundPackage, /\{% set nv = new_value %\}/);
+  assert.match(backgroundPackage, /\{% elif e in groups\.get\('ink', \[\]\) and nv is number and nv <= thresholds\.get\('ink_low', 15\)/);
+  assert.doesNotMatch(backgroundPackage, /new_state: "\{\{ trigger\.event\.data\.new_state \}\}"/);
+  assert.match(backgroundPackage, /from_json\(default=\{\}\)/);
   assert.match(source, /item\.severity !== "info"/);
   assert.match(source, /localStorage\.setItem\(this\._getStorageKey\(\)/);
   assert.match(source, /data-action="toggle-stack"/);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.2-alpha.6";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -35,6 +35,8 @@ const DEFAULT_CONFIG = {
   window_entities: [],
   temperature_entities: [],
   humidity_entities: [],
+  outdoor_temperature_entities: [],
+  outdoor_humidity_entities: [],
   battery_entities: [],
   humidifier_fill_entities: [],
   humidifier_full_entities: [],
@@ -74,10 +76,16 @@ const DEFAULT_CONFIG = {
     min_severity: "warning",
     critical_alerts: false,
   },
+  background_mobile: {
+    enabled: false,
+    webhook: "nodalia_notifications_background_sync",
+    chunk_size: 240,
+  },
   security: {
     strict_service_actions: false,
     allowed_services: [],
     allowed_service_domains: [],
+    allow_webhooks_for_non_admin: false,
   },
   haptics: {
     enabled: true,
@@ -397,6 +405,8 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
   config.temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
   config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
+  config.outdoor_temperature_entities = normalizeEntityList(config.outdoor_temperature_entities, ["sensor"]);
+  config.outdoor_humidity_entities = normalizeEntityList(config.outdoor_humidity_entities, ["sensor"]);
   config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
   config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
   config.humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
@@ -433,8 +443,19 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
     ? String(config.mobile_notifications.min_severity).toLowerCase()
     : DEFAULT_CONFIG.mobile_notifications.min_severity;
+  config.background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
+  config.background_mobile.enabled = config.background_mobile.enabled === true;
+  config.background_mobile.webhook = String(config.background_mobile.webhook || "").trim();
+  config.background_mobile.chunk_size = Math.max(
+    120,
+    Math.min(240, Number(config.background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size),
+  );
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
+  if (config.security.allow_webhooks_for_non_admin === undefined) {
+    config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
+  }
+  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
   config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
   config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
   config.animations.enabled = config.animations.enabled !== false;
@@ -936,6 +957,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._trackedEntityIdsLength = 0;
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
+    this._backgroundMobileSyncTimer = 0;
+    this._lastBackgroundMobileSyncSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationTimer = 0;
     this._stackTransition = "";
@@ -1002,6 +1025,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._mobileNotifyTimer) {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
+    }
+    if (this._backgroundMobileSyncTimer) {
+      window.clearTimeout(this._backgroundMobileSyncTimer);
+      this._backgroundMobileSyncTimer = 0;
     }
     if (this._entranceAnimationTimer) {
       window.clearTimeout(this._entranceAnimationTimer);
@@ -1139,6 +1166,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._hass) {
       this._renderIfChanged(true);
     }
+    this._scheduleBackgroundMobileSync();
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
   }
@@ -1163,6 +1191,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._syncTrackedEntitiesStamp(hass);
     this._lastRenderSignature = nextSignature;
     this._renderIfChanged(true);
+    this._scheduleBackgroundMobileSync();
   }
 
   getCardSize() {
@@ -1179,6 +1208,128 @@ class NodaliaNotificationsCard extends HTMLElement {
       min_rows: 2,
       rows: "auto",
     };
+  }
+
+  _getBackgroundMobileConfigPayload() {
+    const config = this._config || normalizeConfig({});
+    const overrides = {};
+    (config.smart_entity_overrides || []).forEach(item => {
+      const entity = String(item?.entity || "").trim();
+      if (!entity) {
+        return;
+      }
+      overrides[entity] = {
+        title: String(item.title || ""),
+        message: String(item.message || ""),
+        tint_color: String(item.tint_color || ""),
+        mobile: String(item.mobile || "inherit"),
+      };
+    });
+    return {
+      version: 1,
+      card_version: CARD_VERSION,
+      source: CARD_TAG,
+      enabled: config.background_mobile?.enabled === true,
+      notify: {
+        enabled: config.mobile_notifications?.enabled === true,
+        entities: config.mobile_notifications?.entities || [],
+        services: config.mobile_notifications?.services || [],
+        min_severity: config.mobile_notifications?.min_severity || "warning",
+        critical_alerts: config.mobile_notifications?.critical_alerts === true,
+      },
+      thresholds: {
+        hot_temperature: config.thresholds.hot_temperature,
+        cold_temperature: config.thresholds.cold_temperature,
+        humidity_high: config.thresholds.humidity_high,
+        humidity_low: config.thresholds.humidity_low,
+        battery_low: config.thresholds.battery_low,
+        humidifier_fill_low: config.thresholds.humidifier_fill_low,
+        humidifier_fill_full: config.thresholds.humidifier_fill_full,
+        ink_low: config.thresholds.ink_low,
+      },
+      entities: {
+        vacuum: config.vacuum_entities || [],
+        vacuum_error: config.vacuum_error_entities || [],
+        door: config.door_entities || [],
+        window: config.window_entities || [],
+        motion: config.motion_entities || [],
+        temperature: config.temperature_entities || [],
+        humidity: config.humidity_entities || [],
+        outdoor_temperature: config.outdoor_temperature_entities || [],
+        outdoor_humidity: config.outdoor_humidity_entities || [],
+        battery: config.battery_entities || [],
+        humidifier_fill: config.humidifier_fill_entities || [],
+        humidifier_full: config.humidifier_full_entities || [],
+        ink: config.ink_entities || [],
+      },
+      overrides,
+    };
+  }
+
+  _buildBackgroundMobileWebhookPayload() {
+    const config = this._config?.background_mobile || {};
+    const chunkSize = Math.max(120, Math.min(240, Number(config.chunk_size) || 240));
+    const json = JSON.stringify(this._getBackgroundMobileConfigPayload());
+    const chunks = [];
+    for (let index = 0; index < json.length; index += chunkSize) {
+      chunks.push(json.slice(index, index + chunkSize));
+    }
+    return {
+      version: 1,
+      card_version: CARD_VERSION,
+      source: CARD_TAG,
+      chunk_count: chunks.length,
+      config_hash: notificationHash(json),
+      chunks,
+    };
+  }
+
+  _scheduleBackgroundMobileSync(delay = 320) {
+    const config = this._config?.background_mobile || {};
+    if (config.enabled !== true || !String(config.webhook || "").trim() || !this._hass || !this.isConnected) {
+      return;
+    }
+    if (this._backgroundMobileSyncTimer) {
+      window.clearTimeout(this._backgroundMobileSyncTimer);
+    }
+    this._backgroundMobileSyncTimer = window.setTimeout(() => {
+      this._backgroundMobileSyncTimer = 0;
+      void this._syncBackgroundMobileConfig();
+    }, Math.max(0, Math.min(3000, Number(delay) || 0)));
+  }
+
+  async _syncBackgroundMobileConfig() {
+    const webhookId = String(this._config?.background_mobile?.webhook || "").trim();
+    if (!webhookId || this._config?.background_mobile?.enabled !== true || !this.isConnected) {
+      return false;
+    }
+    if (
+      this._config?.security?.allow_webhooks_for_non_admin === false &&
+      !this._hass?.user?.is_admin
+    ) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
+      }
+      return false;
+    }
+    const payload = this._buildBackgroundMobileWebhookPayload();
+    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    if (signature === this._lastBackgroundMobileSyncSignature) {
+      return true;
+    }
+    const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+    if (typeof post !== "function") {
+      return false;
+    }
+    try {
+      const ok = Boolean(await post(webhookId, payload, this._hass));
+      if (ok) {
+        this._lastBackgroundMobileSyncSignature = signature;
+      }
+      return ok;
+    } catch (_error) {
+      return false;
+    }
   }
 
   _getStorageKey() {
@@ -1708,12 +1859,6 @@ class NodaliaNotificationsCard extends HTMLElement {
       return;
     }
     const tempSources = [
-      ...this._config.weather_entities.map(entityId => ({
-        entityId,
-        state: this._hass.states?.[entityId],
-        value: numericState(this._hass.states?.[entityId], "temperature"),
-        unit: this._hass.states?.[entityId]?.attributes?.temperature_unit || "°",
-      })),
       ...this._config.temperature_entities.map(entityId => ({
         entityId,
         state: this._hass.states?.[entityId],
@@ -1723,10 +1868,14 @@ class NodaliaNotificationsCard extends HTMLElement {
     ].filter(item => item.state && item.value !== null);
     const hotCandidates = tempSources
       .filter(item => item.value >= this._config.thresholds.hot_temperature)
+      .filter(item => this._presenceAllowsComfortNotification(item.entityId))
       .map(item => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) }))
       .filter(item => item.fanTarget)
       .sort((left, right) => right.value - left.value);
-    const hottest = hotCandidates[0] || [...tempSources].sort((left, right) => right.value - left.value)[0];
+    const hottest = hotCandidates[0] || [...tempSources]
+      .filter(item => item.value >= this._config.thresholds.hot_temperature)
+      .filter(item => this._presenceAllowsComfortNotification(item.entityId))
+      .sort((left, right) => right.value - left.value)[0];
     const coolingClimateTarget = hottest?.value >= this._config.thresholds.hot_temperature
       ? this._getClimateTargetForSource(hottest.entityId, "cool")
       : null;
@@ -1873,6 +2022,30 @@ class NodaliaNotificationsCard extends HTMLElement {
       .filter(entityId => ["error", "fault", "fallo", "erro"].some(token => entityId.includes(token)))
       .sort((left, right) => left.localeCompare(right, sortLoc));
     return candidates.map(entityId => this._hass.states[entityId]).find(stateObj => this._getVacuumErrorValue(stateObj)) || null;
+  }
+
+  _getPresenceSensorForSource(sourceEntityId) {
+    const sensors = this._config.motion_entities.filter(entityId => this._hass?.states?.[entityId]);
+    if (!sensors.length) {
+      return null;
+    }
+    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+    if (sourceArea) {
+      const sameArea = sensors.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
+      if (sameArea) {
+        return sameArea;
+      }
+    }
+    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+    return sensors.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token))) || null;
+  }
+
+  _presenceAllowsComfortNotification(sourceEntityId) {
+    const presenceEntityId = this._getPresenceSensorForSource(sourceEntityId);
+    if (!presenceEntityId) {
+      return true;
+    }
+    return stateIsOn(this._hass?.states?.[presenceEntityId]);
   }
 
   _getFanTargetForSource(sourceEntityId) {
@@ -2410,6 +2583,8 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.window_entities,
       ...this._config.temperature_entities,
       ...this._config.humidity_entities,
+      ...this._config.outdoor_temperature_entities,
+      ...this._config.outdoor_humidity_entities,
       ...this._config.battery_entities,
       ...this._config.humidifier_fill_entities,
       ...this._config.humidifier_full_entities,
@@ -3679,6 +3854,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         return ["binary_sensor"];
       case "temperature_entities":
       case "humidity_entities":
+      case "outdoor_temperature_entities":
+      case "outdoor_humidity_entities":
       case "battery_entities":
       case "humidifier_fill_entities":
       case "humidifier_full_entities":
@@ -4106,6 +4283,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       ["window_entities", "ed.notifications.conn_label_window"],
       ["temperature_entities", "ed.notifications.conn_label_temperature"],
       ["humidity_entities", "ed.notifications.conn_label_humidity"],
+      ["outdoor_temperature_entities", "ed.notifications.conn_label_outdoor_temperature"],
+      ["outdoor_humidity_entities", "ed.notifications.conn_label_outdoor_humidity"],
       ["climate_entities", "ed.notifications.conn_label_climate"],
       ["humidifier_entities", "ed.notifications.conn_label_humidifier"],
       ["battery_entities", "ed.notifications.conn_label_battery"],
@@ -4633,6 +4812,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderEntityListField("ed.notifications.entity_windows", "window_entities", config.window_entities, { placeholder: "binary_sensor.ventana" })}
                   ${this._renderEntityListField("ed.notifications.entity_temperature", "temperature_entities", config.temperature_entities, { placeholder: "sensor.temperatura" })}
                   ${this._renderEntityListField("ed.notifications.entity_humidity", "humidity_entities", config.humidity_entities, { placeholder: "sensor.humedad" })}
+                  ${this._renderEntityListField("ed.notifications.entity_outdoor_temperature", "outdoor_temperature_entities", config.outdoor_temperature_entities, { placeholder: "sensor.temperatura_exterior" })}
+                  ${this._renderEntityListField("ed.notifications.entity_outdoor_humidity", "outdoor_humidity_entities", config.outdoor_humidity_entities, { placeholder: "sensor.humedad_exterior" })}
                   ${this._renderEntityListField("ed.notifications.entity_battery", "battery_entities", config.battery_entities, { placeholder: "sensor.pila_mando" })}
                   ${this._renderEntityListField("ed.notifications.entity_humidifier_tank", "humidifier_fill_entities", config.humidifier_fill_entities, { placeholder: "sensor.humidificador_deposito" })}
                   ${this._renderEntityListField("ed.notifications.entity_tank_full", "humidifier_full_entities", config.humidifier_full_entities, { placeholder: "sensor.deposito_sucio" })}
@@ -4702,6 +4883,34 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 `
                 : ""
             }
+            <div class="editor-action editor-field--full">
+              <div class="editor-action__header">
+                <div>
+                  <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_title"))}</div>
+                  <div class="editor-action__subtitle">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_hint"))}</div>
+                </div>
+              </div>
+              <div class="editor-grid">
+                ${this._renderCheckboxField(
+                  "ed.notifications.background_mobile_enabled",
+                  "background_mobile.enabled",
+                  config.background_mobile?.enabled === true,
+                )}
+                ${
+                  config.background_mobile?.enabled === true
+                    ? this._renderTextField(
+                      "ed.notifications.background_mobile_webhook",
+                      "background_mobile.webhook",
+                      config.background_mobile?.webhook,
+                      {
+                        placeholder: "nodalia_notifications_background_sync",
+                        fullWidth: true,
+                      },
+                    )
+                    : ""
+                }
+              </div>
+            </div>
           </div>
         </section>
         <section class="editor-section">

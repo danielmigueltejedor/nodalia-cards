@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, and completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), and completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable).
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,104 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.3.2-alpha.6] - 2026-06-27
+
+Sixth **`1.3.2`** **`alpha`**: Notifications indoor/outdoor comfort and presence gating. Release channel **`1.3.2-alpha.6`**.
+
+### Added
+
+- **`notifications`:** visual editor distinguishes indoor temperature/humidity sensors from outdoor temperature/humidity sensors, so exterior values no longer trigger indoor comfort alerts.
+- **`notifications`:** hot-room fan/cooling recommendations now check same-room presence when a matching presence sensor is configured, only sending the alert while that room is occupied.
+
+### Changed
+
+- **`notifications`:** comfort hot/cold logic no longer treats `weather` entity temperature as an indoor temperature source; weather entities remain available for forecast/rain notifications.
+- **`notifications`:** background webhook payload includes the separated outdoor temperature/humidity lists while the package continues to watch only indoor comfort sensors for threshold push alerts.
+- **`examples`:** background mobile package capacity increased to **40** `input_text` chunks for larger synced configurations.
+
+## [1.3.2-alpha.5] - 2026-06-27
+
+Fifth **`1.3.2`** **`alpha`**: Notifications background numeric state matching. Release channel **`1.3.2-alpha.5`**.
+
+### Fixed
+
+- **`notifications`:** background mobile package keeps `state_changed` state values as explicit scalar variables before threshold checks, so numeric alerts such as low ink at `10%` match and send instead of being skipped after object-to-string conversion.
+- **`examples`:** background mobile package notes clarify that the broad `state_changed` trigger is required for webhook-synced dynamic entity lists, with conditions discarding non-watched changes before notification actions run.
+
+## [1.3.2-alpha.4] - 2026-06-27
+
+Fourth **`1.3.2`** **`alpha`**: Notifications background package notify targets. Release channel **`1.3.2-alpha.4`**.
+
+### Changed
+
+- **`notifications`:** background mobile package reads notify targets directly from the card-synced `mobile_notifications.entities` webhook payload instead of keeping a fallback notify entity in the automation YAML.
+
+## [1.3.2-alpha.3] - 2026-06-27
+
+Third **`1.3.2`** **`alpha`**: Notifications background webhook editor. Release channel **`1.3.2-alpha.3`**.
+
+### Added
+
+- **`notifications`:** visual editor now exposes background mobile webhook sync, including the enable toggle and webhook ID field for the package-driven background notification flow.
+
+## [1.3.2-alpha.2] - 2026-06-27
+
+Second **`1.3.2`** **`alpha`**: Weather forecast icon contrast. Release channel **`1.3.2-alpha.2`**.
+
+### Fixed
+
+- **`weather`:** forecast cards, chart hovers, and detail popups use a contrast-safe icon color when condition accents are too pale on tinted surfaces, keeping icons legible for states such as partly cloudy.
+
+## [1.3.2-alpha.1] - 2026-06-27
+
+First **`1.3.2`** **`alpha`**: device slider action shadow polish. Release channel **`1.3.2-alpha.1`**.
+
+### Fixed
+
+- **`fan` / `humidifier` / `cover`:** slider-side action buttons keep visible overflow and vertical breathing room while controls are open, preventing button shadows from being clipped into square corner artifacts.
+
+## [1.3.1-alpha.5] - 2026-06-27
+
+Fifth **`1.3.1`** **`alpha`**: Entity Card select picker corner polish. Release channel **`1.3.1-alpha.5`**.
+
+### Fixed
+
+- **`entity`:** open `select` / `input_select` pickers now clip the animated shell with the same rounded radius as the panel, removing square corner artifacts around the expanded option list.
+
+## [1.3.1-alpha.4] - 2026-06-27
+
+Fourth **`1.3.1`** **`alpha`**: Entity Card compact select height and Home Assistant display states. Release channel **`1.3.1-alpha.4`**.
+
+### Fixed
+
+- **`entity`:** compact `select` / `input_select` cards hide the empty picker shell while closed, so closed compact select cards keep the same height as other compact Entity Cards.
+- **`entity`:** state chips prefer Home Assistant frontend display formatting (`formatEntityState`) and HA-provided display attributes before falling back to Nodalia's built-in state dictionary, so integration-localized enum states such as comfort labels display correctly.
+
+## [1.3.1-alpha.3] - 2026-06-25
+
+Third **`1.3.1`** **`alpha`**: Notifications Card background mobile webhook sync. Release channel **`1.3.1-alpha.3`**.
+
+### Added
+
+- **`notifications`:** optional `background_mobile` webhook sync sends the card's configured notification entities, thresholds, mobile targets, and entity override text to Home Assistant so a fixed package can send push notifications in the background without editing entity lists in automations.
+- **`examples`:** `notifications-background-mobile-package.yaml` now stores card-synced config in chunked helpers and sends server-side mobile notifications from a single dynamic `state_changed` automation.
+
+## [1.3.1-alpha.2] - 2026-06-25
+
+Second **`1.3.1`** **`alpha`**: Entity Card select picker flicker polish. Release channel **`1.3.1-alpha.2`**.
+
+### Fixed
+
+- **`entity`:** `select` / `input_select` body and icon taps keep immediate haptics but skip the full content/icon press bounce when the tap only opens or closes the inline picker, and picker options no longer replay staggered fade-in animations. This removes the visible flicker while preserving reliable open/close behavior.
+
+## [1.3.1-alpha.1] - 2026-06-25
+
+First **`1.3.1`** **`alpha`**: Entity Card select picker reliability. Release channel **`1.3.1-alpha.1`**.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker open/close is now DOM-local instead of changing the render signature, and stale animation callbacks are ignored across rapid taps. This prevents intermittent missed opens and small flickers when showing options.
 
 ## [1.3.0-alpha.17] - 2026-06-25
 

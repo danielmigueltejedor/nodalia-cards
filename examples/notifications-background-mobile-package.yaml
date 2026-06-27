@@ -1,0 +1,328 @@
+# Nodalia Notifications background mobile package
+#
+# Goal:
+# - Paste this package once.
+# - In the Notifications Card YAML set:
+#
+#   background_mobile:
+#     enabled: true
+#     webhook: nodalia_notifications_background_sync
+#   mobile_notifications:
+#     enabled: true
+#     entities:
+#       - notify.iphone_de_daniel
+#       - notify.iphone_de_angelica
+#       - notify.samsung_s23_de_papa
+#
+# The card sends its configured entities, thresholds, mobile targets, and
+# entity override text to this package through the webhook. Home Assistant then
+# sends push notifications in the background, even when no Lovelace dashboard is
+# open. You do not need to edit entity lists in these automations.
+#
+# Notes:
+# - The package does not keep its own notify entity list. It reads the synced
+#   `mobile_notifications.entities` from the card webhook payload.
+# - The `state_changed` trigger is intentionally broad because the watched
+#   entity list is synced dynamically through the webhook. Conditions below
+#   discard non-watched entities before notification actions run.
+# - Treat the webhook_id like a password if you set local_only: false.
+# - Calendar/weather forecast alerts are still best handled by dedicated HA
+#   automations because they depend on periodic forecast/calendar queries, not
+#   only entity state_changed events.
+
+input_boolean:
+  nodalia_background_mobile_notifications:
+    name: Nodalia background mobile notifications
+    icon: mdi:bell-ring-outline
+    initial: true
+
+input_text:
+  nodalia_notifications_background_config_01: { max: 255 }
+  nodalia_notifications_background_config_02: { max: 255 }
+  nodalia_notifications_background_config_03: { max: 255 }
+  nodalia_notifications_background_config_04: { max: 255 }
+  nodalia_notifications_background_config_05: { max: 255 }
+  nodalia_notifications_background_config_06: { max: 255 }
+  nodalia_notifications_background_config_07: { max: 255 }
+  nodalia_notifications_background_config_08: { max: 255 }
+  nodalia_notifications_background_config_09: { max: 255 }
+  nodalia_notifications_background_config_10: { max: 255 }
+  nodalia_notifications_background_config_11: { max: 255 }
+  nodalia_notifications_background_config_12: { max: 255 }
+  nodalia_notifications_background_config_13: { max: 255 }
+  nodalia_notifications_background_config_14: { max: 255 }
+  nodalia_notifications_background_config_15: { max: 255 }
+  nodalia_notifications_background_config_16: { max: 255 }
+  nodalia_notifications_background_config_17: { max: 255 }
+  nodalia_notifications_background_config_18: { max: 255 }
+  nodalia_notifications_background_config_19: { max: 255 }
+  nodalia_notifications_background_config_20: { max: 255 }
+  nodalia_notifications_background_config_21: { max: 255 }
+  nodalia_notifications_background_config_22: { max: 255 }
+  nodalia_notifications_background_config_23: { max: 255 }
+  nodalia_notifications_background_config_24: { max: 255 }
+  nodalia_notifications_background_config_25: { max: 255 }
+  nodalia_notifications_background_config_26: { max: 255 }
+  nodalia_notifications_background_config_27: { max: 255 }
+  nodalia_notifications_background_config_28: { max: 255 }
+  nodalia_notifications_background_config_29: { max: 255 }
+  nodalia_notifications_background_config_30: { max: 255 }
+  nodalia_notifications_background_config_31: { max: 255 }
+  nodalia_notifications_background_config_32: { max: 255 }
+  nodalia_notifications_background_config_33: { max: 255 }
+  nodalia_notifications_background_config_34: { max: 255 }
+  nodalia_notifications_background_config_35: { max: 255 }
+  nodalia_notifications_background_config_36: { max: 255 }
+  nodalia_notifications_background_config_37: { max: 255 }
+  nodalia_notifications_background_config_38: { max: 255 }
+  nodalia_notifications_background_config_39: { max: 255 }
+  nodalia_notifications_background_config_40: { max: 255 }
+  nodalia_notifications_background_last_hash:
+    max: 255
+
+automation:
+  - id: nodalia_notifications_background_sync_config
+    alias: "Nodalia Notifications | Sync background mobile config"
+    mode: restart
+    triggers:
+      - trigger: webhook
+        webhook_id: nodalia_notifications_background_sync
+        allowed_methods:
+          - POST
+        local_only: false
+    actions:
+      - variables:
+          chunks: "{{ trigger.json.chunks | default([], true) }}"
+          config_hash: "{{ trigger.json.config_hash | default('', true) }}"
+      - repeat:
+          count: 40
+          sequence:
+            - action: input_text.set_value
+              target:
+                entity_id: "input_text.nodalia_notifications_background_config_{{ '%02d' | format(repeat.index) }}"
+              data:
+                value: "{{ chunks[repeat.index - 1] if (chunks | count) >= repeat.index else '' }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.nodalia_notifications_background_last_hash
+        data:
+          value: "{{ config_hash }}"
+      - event: nodalia_notifications_background_config_updated
+        event_data:
+          config_hash: "{{ config_hash }}"
+          chunk_count: "{{ chunks | count }}"
+
+  - id: nodalia_notifications_background_state_push
+    alias: "Nodalia Notifications | Background mobile state push"
+    mode: queued
+    max: 20
+    triggers:
+      - trigger: event
+        event_type: state_changed
+    conditions:
+      - condition: state
+        entity_id: input_boolean.nodalia_background_mobile_notifications
+        state: "on"
+      - condition: template
+        value_template: "{{ trigger.event.data.new_state is not none }}"
+      - condition: template
+        value_template: >
+          {% set raw =
+            states('input_text.nodalia_notifications_background_config_01') ~
+            states('input_text.nodalia_notifications_background_config_02') ~
+            states('input_text.nodalia_notifications_background_config_03') ~
+            states('input_text.nodalia_notifications_background_config_04') ~
+            states('input_text.nodalia_notifications_background_config_05') ~
+            states('input_text.nodalia_notifications_background_config_06') ~
+            states('input_text.nodalia_notifications_background_config_07') ~
+            states('input_text.nodalia_notifications_background_config_08') ~
+            states('input_text.nodalia_notifications_background_config_09') ~
+            states('input_text.nodalia_notifications_background_config_10') ~
+            states('input_text.nodalia_notifications_background_config_11') ~
+            states('input_text.nodalia_notifications_background_config_12') ~
+            states('input_text.nodalia_notifications_background_config_13') ~
+            states('input_text.nodalia_notifications_background_config_14') ~
+            states('input_text.nodalia_notifications_background_config_15') ~
+            states('input_text.nodalia_notifications_background_config_16') ~
+            states('input_text.nodalia_notifications_background_config_17') ~
+            states('input_text.nodalia_notifications_background_config_18') ~
+            states('input_text.nodalia_notifications_background_config_19') ~
+            states('input_text.nodalia_notifications_background_config_20') ~
+            states('input_text.nodalia_notifications_background_config_21') ~
+            states('input_text.nodalia_notifications_background_config_22') ~
+            states('input_text.nodalia_notifications_background_config_23') ~
+            states('input_text.nodalia_notifications_background_config_24') ~
+            states('input_text.nodalia_notifications_background_config_25') ~
+            states('input_text.nodalia_notifications_background_config_26') ~
+            states('input_text.nodalia_notifications_background_config_27') ~
+            states('input_text.nodalia_notifications_background_config_28') ~
+            states('input_text.nodalia_notifications_background_config_29') ~
+            states('input_text.nodalia_notifications_background_config_30') ~
+            states('input_text.nodalia_notifications_background_config_31') ~
+            states('input_text.nodalia_notifications_background_config_32') ~
+            states('input_text.nodalia_notifications_background_config_33') ~
+            states('input_text.nodalia_notifications_background_config_34') ~
+            states('input_text.nodalia_notifications_background_config_35') ~
+            states('input_text.nodalia_notifications_background_config_36') ~
+            states('input_text.nodalia_notifications_background_config_37') ~
+            states('input_text.nodalia_notifications_background_config_38') ~
+            states('input_text.nodalia_notifications_background_config_39') ~
+            states('input_text.nodalia_notifications_background_config_40') %}
+          {% set cfg = raw | from_json(default={}) %}
+          {% set groups = cfg.get('entities', {}) %}
+          {% set watched =
+            groups.get('vacuum', []) +
+            groups.get('vacuum_error', []) +
+            groups.get('door', []) +
+            groups.get('window', []) +
+            groups.get('motion', []) +
+            groups.get('temperature', []) +
+            groups.get('humidity', []) +
+            groups.get('battery', []) +
+            groups.get('humidifier_fill', []) +
+            groups.get('humidifier_full', []) +
+            groups.get('ink', []) %}
+          {{ cfg.get('enabled') == true and cfg.get('notify', {}).get('enabled') == true and trigger.event.data.entity_id in watched }}
+    actions:
+      - variables:
+          raw_config: >
+            {{ states('input_text.nodalia_notifications_background_config_01') ~
+               states('input_text.nodalia_notifications_background_config_02') ~
+               states('input_text.nodalia_notifications_background_config_03') ~
+               states('input_text.nodalia_notifications_background_config_04') ~
+               states('input_text.nodalia_notifications_background_config_05') ~
+               states('input_text.nodalia_notifications_background_config_06') ~
+               states('input_text.nodalia_notifications_background_config_07') ~
+               states('input_text.nodalia_notifications_background_config_08') ~
+               states('input_text.nodalia_notifications_background_config_09') ~
+               states('input_text.nodalia_notifications_background_config_10') ~
+               states('input_text.nodalia_notifications_background_config_11') ~
+               states('input_text.nodalia_notifications_background_config_12') ~
+               states('input_text.nodalia_notifications_background_config_13') ~
+               states('input_text.nodalia_notifications_background_config_14') ~
+               states('input_text.nodalia_notifications_background_config_15') ~
+               states('input_text.nodalia_notifications_background_config_16') ~
+               states('input_text.nodalia_notifications_background_config_17') ~
+               states('input_text.nodalia_notifications_background_config_18') ~
+               states('input_text.nodalia_notifications_background_config_19') ~
+               states('input_text.nodalia_notifications_background_config_20') ~
+               states('input_text.nodalia_notifications_background_config_21') ~
+               states('input_text.nodalia_notifications_background_config_22') ~
+               states('input_text.nodalia_notifications_background_config_23') ~
+               states('input_text.nodalia_notifications_background_config_24') ~
+               states('input_text.nodalia_notifications_background_config_25') ~
+               states('input_text.nodalia_notifications_background_config_26') ~
+               states('input_text.nodalia_notifications_background_config_27') ~
+               states('input_text.nodalia_notifications_background_config_28') ~
+               states('input_text.nodalia_notifications_background_config_29') ~
+               states('input_text.nodalia_notifications_background_config_30') ~
+               states('input_text.nodalia_notifications_background_config_31') ~
+               states('input_text.nodalia_notifications_background_config_32') ~
+               states('input_text.nodalia_notifications_background_config_33') ~
+               states('input_text.nodalia_notifications_background_config_34') ~
+               states('input_text.nodalia_notifications_background_config_35') ~
+               states('input_text.nodalia_notifications_background_config_36') ~
+               states('input_text.nodalia_notifications_background_config_37') ~
+               states('input_text.nodalia_notifications_background_config_38') ~
+               states('input_text.nodalia_notifications_background_config_39') ~
+               states('input_text.nodalia_notifications_background_config_40') }}
+          cfg: "{{ raw_config | from_json(default={}) }}"
+          groups: "{{ cfg.get('entities', {}) }}"
+          thresholds: "{{ cfg.get('thresholds', {}) }}"
+          notify_cfg: "{{ cfg.get('notify', {}) }}"
+          entity_id: "{{ trigger.event.data.entity_id }}"
+          new_state_value: "{{ trigger.event.data.new_state.state | default('', true) }}"
+          old_state_value: "{{ trigger.event.data.old_state.state | default('', true) if trigger.event.data.old_state is not none else '' }}"
+          new_value: "{{ new_state_value | float(none) }}"
+          old_value: "{{ old_state_value | float(none) if old_state_value != '' else none }}"
+          friendly: "{{ trigger.event.data.new_state.attributes.friendly_name | default(entity_id, true) }}"
+          unit: "{{ trigger.event.data.new_state.attributes.unit_of_measurement | default('', true) }}"
+          override: "{{ cfg.get('overrides', {}).get(entity_id, {}) }}"
+          match_kind: >-
+            {% set e = entity_id %}
+            {% set n = new_state_value | lower %}
+            {% set o = old_state_value | lower %}
+            {% set nv = new_value %}
+            {% set ov = old_value %}
+            {% if e in groups.get('door', []) and n == 'on' and o != 'on' %}door
+            {% elif e in groups.get('window', []) and n == 'on' and o != 'on' %}window
+            {% elif e in groups.get('motion', []) and n == 'on' and o != 'on' %}motion
+            {% elif e in groups.get('vacuum', []) and n in ['error', 'unavailable'] and o != n %}vacuum
+            {% elif e in groups.get('vacuum_error', []) and n not in ['ok', 'none', 'unknown', 'unavailable', '0', ''] and o != n %}vacuum
+            {% elif e in groups.get('temperature', []) and nv is number and nv >= thresholds.get('hot_temperature', 27) and (ov is not number or ov < thresholds.get('hot_temperature', 27)) %}hot
+            {% elif e in groups.get('temperature', []) and nv is number and nv <= thresholds.get('cold_temperature', 17) and (ov is not number or ov > thresholds.get('cold_temperature', 17)) %}cold
+            {% elif e in groups.get('humidity', []) and nv is number and nv >= thresholds.get('humidity_high', 70) and (ov is not number or ov < thresholds.get('humidity_high', 70)) %}humidity_high
+            {% elif e in groups.get('humidity', []) and nv is number and nv <= thresholds.get('humidity_low', 30) and (ov is not number or ov > thresholds.get('humidity_low', 30)) %}humidity_low
+            {% elif e in groups.get('battery', []) and nv is number and nv <= thresholds.get('battery_low', 20) and (ov is not number or ov > thresholds.get('battery_low', 20)) %}battery_low
+            {% elif e in groups.get('humidifier_fill', []) and nv is number and nv <= thresholds.get('humidifier_fill_low', 20) and (ov is not number or ov > thresholds.get('humidifier_fill_low', 20)) %}humidifier_fill_low
+            {% elif e in groups.get('humidifier_full', []) and nv is number and nv >= thresholds.get('humidifier_fill_full', 90) and (ov is not number or ov < thresholds.get('humidifier_fill_full', 90)) %}humidifier_fill_full
+            {% elif e in groups.get('ink', []) and nv is number and nv <= thresholds.get('ink_low', 15) and (ov is not number or ov > thresholds.get('ink_low', 15)) %}ink_low
+            {% endif %}
+          severity: >-
+            {% if match_kind in ['vacuum'] %}critical
+            {% elif match_kind in ['motion', 'cold'] %}info
+            {% else %}warning
+            {% endif %}
+          min_severity_score: "{{ {'info': 1, 'success': 2, 'warning': 3, 'critical': 4}.get(notify_cfg.get('min_severity', 'warning'), 3) }}"
+          severity_score: "{{ {'info': 1, 'success': 2, 'warning': 3, 'critical': 4}.get(severity, 1) }}"
+          default_title: >-
+            {% if match_kind == 'door' %}Door open
+            {% elif match_kind == 'window' %}Window open
+            {% elif match_kind == 'motion' %}Motion detected
+            {% elif match_kind == 'vacuum' %}Robot needs attention
+            {% elif match_kind == 'hot' %}Hot inside
+            {% elif match_kind == 'cold' %}Low temperature
+            {% elif match_kind == 'humidity_high' %}High humidity
+            {% elif match_kind == 'humidity_low' %}Low humidity
+            {% elif match_kind == 'battery_low' %}Low battery
+            {% elif match_kind == 'humidifier_fill_low' %}Low tank
+            {% elif match_kind == 'humidifier_fill_full' %}Tank full
+            {% elif match_kind == 'ink_low' %}Low ink
+            {% else %}Nodalia
+            {% endif %}
+          default_message: >-
+            {% if new_value is number %}
+              {{ friendly }} is at {{ new_state_value }}{{ unit }}.
+            {% elif match_kind == 'vacuum' %}
+              {{ friendly }} is {{ new_state_value }}.
+            {% else %}
+              {{ friendly }}.
+            {% endif %}
+          title: "{{ override.get('title') or default_title }}"
+          message_template: "{{ override.get('message') or default_message }}"
+          message: >-
+            {{ message_template
+              | replace('{source}', friendly)
+              | replace('{name}', friendly)
+              | replace('{value}', (new_state_value ~ unit))
+              | replace('{state}', new_state_value) }}
+          notify_entities: "{{ notify_cfg.get('entities', []) }}"
+          notify_services: "{{ notify_cfg.get('services', []) }}"
+          tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"
+      - condition: template
+        value_template: "{{ match_kind != '' and (severity_score | int) >= (min_severity_score | int) }}"
+      - if:
+          - condition: template
+            value_template: "{{ notify_entities | count > 0 }}"
+        then:
+          - action: notify.send_message
+            target:
+              entity_id: "{{ notify_entities }}"
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              data:
+                tag: "{{ tag }}"
+                group: nodalia_notifications
+                ttl: "{{ 0 if notify_cfg.get('critical_alerts') == true and severity == 'critical' else omit }}"
+                priority: "{{ 'high' if notify_cfg.get('critical_alerts') == true and severity == 'critical' else omit }}"
+      - repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"
+                data:
+                  tag: "{{ tag }}"
+                  group: nodalia_notifications

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.2-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2950,7 +2950,7 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__controls-shell {
           backface-visibility: hidden;
           margin-top: var(--fan-card-controls-gap);
-          overflow: hidden;
+          overflow: visible;
           will-change: margin-top, max-height, opacity;
         }
 
@@ -2974,6 +2974,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__controls-shell--leaving {
           animation: fan-card-controls-collapse var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-controls-delay, 0ms) both;
+          overflow: hidden;
           pointer-events: none;
           transform-origin: top;
         }
@@ -2996,6 +2997,7 @@ class NodaliaFanCard extends HTMLElement {
           flex: 0 0 auto;
           gap: 12px;
           justify-content: flex-end;
+          padding-block: 10px;
         }
 
         .fan-card__control {
@@ -3046,6 +3048,7 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
+          overflow: visible;
           padding-inline: 4px;
         }
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.2-alpha.6";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -1595,6 +1595,7 @@ class NodaliaCoverCard extends HTMLElement {
           flex: 0 0 auto;
           gap: 12px;
           justify-content: flex-end;
+          padding-block: 10px;
         }
         .fan-card__view--sliders,
         .fan-card__view--arrows {
@@ -1729,6 +1730,7 @@ class NodaliaCoverCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
+          overflow: visible;
           padding-inline: 4px;
         }
         .fan-card__slider-row--solo,

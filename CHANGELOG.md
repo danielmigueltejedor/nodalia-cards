@@ -4,11 +4,43 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, and completed **`1.3.0-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, and completed **`1.3.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+## [1.3.1] - 2026-06-27
+
+Stable **`1.3.1`** release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.1.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Entity Card:** `select` / `input_select` pickers are more reliable, more compact, and cleaner visually, with no visible header/chevron when expanded.
+- **Notifications Card:** optional background mobile webhook sync lets a fixed Home Assistant package follow the entities and triggers configured in the card.
+- **State labels:** Entity Card state chips prefer Home Assistant display formatting before Nodalia fallback dictionaries, so integration-localized enum states can render correctly.
+
+### Added
+
+- **`notifications`:** optional `background_mobile` webhook sync for configured notification entities, thresholds, mobile targets, and entity override text.
+- **`examples`:** `notifications-background-mobile-package.yaml` for server-side mobile push delivery driven by card-synced configuration.
+
+### Fixed
+
+- **`entity`:** inline `select` / `input_select` picker open/close no longer depends on render-signature changes, and stale animation callbacks are ignored across rapid taps.
+- **`entity`:** picker flicker is reduced by avoiding content/icon press bounce for picker-only taps and removing staggered option fade-ins.
+- **`entity`:** compact select cards keep the same closed height as other compact Entity Cards by hiding the empty picker shell while closed.
+- **`entity`:** open select pickers clip their animated shell to the rounded panel radius, avoiding square corner artifacts.
+- **`entity`:** expanded select pickers show only the option list, without the visible “Choose option” header or chevron close button.
+- **`entity`:** state chips prefer Home Assistant frontend display formatting and HA-provided display attributes before falling back to Nodalia's built-in state dictionary.
+
+### Changed
+
+- **Release metadata:** promote **`1.3.1-alpha.*`** (alpha.1–alpha.5) to stable **`1.3.1`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.1.js`**; optional split **`nodalia-cards-core-1.3.1.js`** + **`nodalia-cards-suite-1.3.1.js`**.
+- **Tests:** regression suite expanded to **202** tests covering Entity Card select picker layout/display behavior and Notifications Card background sync.
+
+Per-alpha notes for **`1.3.1-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.3.0] - 2026-06-25
 

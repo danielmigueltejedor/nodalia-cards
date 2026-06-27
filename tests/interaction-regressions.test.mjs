@@ -1089,6 +1089,41 @@ test("fan and humidifier slider empty animation stays in sync while controls lea
   }
 });
 
+test("fan humidifier and cover slider action shadows are not clipped while open", () => {
+  const expectations = [
+    {
+      file: "nodalia-fan-card.js",
+      shell: "fan-card__controls-shell",
+      leaving: "fan-card__controls-shell--leaving",
+      row: "fan-card__slider-row",
+      actions: "fan-card__slider-actions",
+    },
+    {
+      file: "nodalia-humidifier-card.js",
+      shell: "humidifier-card__controls-shell",
+      leaving: "humidifier-card__controls-shell--leaving",
+      row: "humidifier-card__slider-row",
+      actions: "humidifier-card__slider-actions",
+    },
+    {
+      file: "nodalia-cover-card.js",
+      shell: "fan-card__controls-shell",
+      leaving: null,
+      row: "fan-card__slider-row",
+      actions: "fan-card__slider-actions",
+    },
+  ];
+  for (const item of expectations) {
+    const source = read(item.file);
+    assert.match(source, new RegExp(`\\.${item.shell} \\{[\\s\\S]*overflow: visible;`));
+    if (item.leaving) {
+      assert.match(source, new RegExp(`\\.${item.leaving} \\{[\\s\\S]*overflow: hidden;`));
+    }
+    assert.match(source, new RegExp(`\\.${item.row} \\{[\\s\\S]*overflow: visible;`));
+    assert.match(source, new RegExp(`\\.${item.actions} \\{[\\s\\S]*padding-block: 10px;`));
+  }
+});
+
 test("fan and humidifier animations keep progress across fast state confirmations", () => {
   const fan = read("nodalia-fan-card.js");
   const humidifier = read("nodalia-humidifier-card.js");
@@ -1298,11 +1333,34 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /data-entity-action="select-option"/);
   assert.match(source, /_onShadowPointerDown/);
   assert.match(source, /_triggerEntityPressFeedback/);
-  assert.match(source, /select-close[\s\S]*_triggerEntityPressFeedback/);
   assert.match(source, /_clearSelectPickerAnimationTimer\(timerKey\)/);
   assert.match(source, /this\._nodaliaDeferTimers\?\.delete\?\.\(timer\)/);
+  assert.match(source, /_selectPickerAnimationToken/);
+  assert.match(source, /animationToken !== this\._selectPickerAnimationToken/);
   assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
   assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
+  assert.match(source, /_shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)[\s\S]*return;/);
+  assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
+  assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
+  assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
+  assert.match(source, /\.entity-card__select-picker-inner \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
+  assert.doesNotMatch(source, /entity-card__select-picker-head/);
+  assert.doesNotMatch(source, /entity-card__select-picker-kicker/);
+  assert.doesNotMatch(source, /entity-card__select-picker-close/);
+  assert.doesNotMatch(source, /`sp:\$\{this\._selectPickerOpen \? 1 : 0\}`/);
+  assert.doesNotMatch(source, /entity-card-select-option-in/);
+});
+
+test("entity card prefers Home Assistant translated display state", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /function getHomeAssistantStateDisplayValue\(state, hass = null\)/);
+  assert.match(source, /hass\?\.formatEntityState/);
+  assert.match(source, /attrs\.state_translated/);
+  assert.match(source, /attrs\.translated_state/);
+  assert.match(source, /attrs\.state_display/);
+  assert.match(source, /attrs\.display_state/);
+  assert.match(source, /const displayValue = getHomeAssistantStateDisplayValue\(state, this\._hass\);[\s\S]*if \(displayValue\) \{[\s\S]*return displayValue;/);
+  assert.match(source, /`sd:\$\{getHomeAssistantStateDisplayValue\(state, hass\)\}`/);
 });
 
 test("entity card supports in-app navigate tap action with navigation_path", () => {

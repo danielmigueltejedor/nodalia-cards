@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.2-alpha.6";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3164,7 +3164,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__controls-shell {
           backface-visibility: hidden;
           margin-top: var(--humidifier-card-controls-gap);
-          overflow: hidden;
+          overflow: visible;
           will-change: margin-top, max-height, opacity;
         }
 
@@ -3188,6 +3188,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card__controls-shell--leaving {
           animation: humidifier-card-controls-collapse var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-controls-delay, 0ms) both;
+          overflow: hidden;
           pointer-events: none;
           transform-origin: top;
         }
@@ -3202,6 +3203,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: minmax(0, 1fr) auto;
+          overflow: visible;
           padding-inline: 4px;
         }
 
@@ -3271,6 +3273,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           flex: 0 0 auto;
           gap: 12px;
           justify-content: flex-end;
+          padding-block: 10px;
         }
 
         .humidifier-card__slider {
