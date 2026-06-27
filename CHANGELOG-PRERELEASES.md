@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.4] - 2026-06-27
+
+Fourth **`1.3.2`** **`alpha`**: Notifications background package notify targets. Release channel **`1.3.2-alpha.4`**.
+
+### Changed
+
+- **`notifications`:** background mobile package reads notify targets directly from the card-synced `mobile_notifications.entities` webhook payload instead of keeping a fallback notify entity in the automation YAML.
+
 ## [1.3.2-alpha.3] - 2026-06-27
 
 Third **`1.3.2`** **`alpha`**: Notifications background webhook editor. Release channel **`1.3.2-alpha.3`**.

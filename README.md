@@ -305,7 +305,9 @@ vacuum_entities:
 mobile_notifications:
   enabled: true
   entities:
-    - notify.mobile_app_my_phone
+    - notify.iphone_de_daniel
+    - notify.iphone_de_angelica
+    - notify.samsung_s23_de_papa
 background_mobile:
   enabled: true
   webhook: nodalia_notifications_background_sync
@@ -313,8 +315,9 @@ background_mobile:
 
 The card mirrors these alerts visually and can send mobile notifications while
 the dashboard is loaded. With `background_mobile.enabled`, it also syncs its
-configured entities and thresholds to Home Assistant by webhook so the package
-can send push notifications in the background. Start from
+configured alert entities, thresholds, and `mobile_notifications.entities` to
+Home Assistant by webhook so the package can send push notifications in the
+background without duplicating notify targets in the automation YAML. Start from
 [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
 
 ---

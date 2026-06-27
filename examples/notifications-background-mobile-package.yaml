@@ -10,7 +10,9 @@
 #   mobile_notifications:
 #     enabled: true
 #     entities:
-#       - notify.mobile_app_my_phone
+#       - notify.iphone_de_daniel
+#       - notify.iphone_de_angelica
+#       - notify.samsung_s23_de_papa
 #
 # The card sends its configured entities, thresholds, mobile targets, and
 # entity override text to this package through the webhook. Home Assistant then
@@ -18,8 +20,8 @@
 # open. You do not need to edit entity lists in these automations.
 #
 # Notes:
-# - Replace the default notify.mobile_app_my_phone only if you want this package
-#   to send somewhere before the card has synced for the first time.
+# - The package does not keep its own notify entity list. It reads the synced
+#   `mobile_notifications.entities` from the card webhook payload.
 # - Treat the webhook_id like a password if you set local_only: false.
 # - Calendar/weather forecast alerts are still best handled by dedicated HA
 #   automations because they depend on periodic forecast/calendar queries, not
@@ -231,7 +233,7 @@ automation:
               | replace('{name}', friendly)
               | replace('{value}', (new_state.state ~ unit))
               | replace('{state}', new_state.state) }}
-          notify_entities: "{{ notify_cfg.get('entities', ['notify.mobile_app_my_phone']) }}"
+          notify_entities: "{{ notify_cfg.get('entities', []) }}"
           notify_services: "{{ notify_cfg.get('services', []) }}"
           tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"
       - condition: template
