@@ -323,13 +323,24 @@ test("weather forecast popups use an opaque theme-safe surface", () => {
 
 test("weather forecast condition icons use a contrast-safe color", () => {
   const source = read("nodalia-weather-card.js");
-  assert.match(source, /function getForecastIconColor\(accentColor\)/);
-  assert.match(source, /shouldDarkenBubbleIconGlyph\?\.\(/);
+  assert.match(source, /function getConditionReadableIconColor\(value, accentColor = getConditionAccent\(value\)\)/);
+  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} \$\{accentWeight\}%, var\(--primary-text-color\)\)/);
+  assert.match(source, /const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor/);
+  assert.match(source, /color: \$\{conditionIconColor\};/);
+  assert.match(source, /getForecastIconColor\(accent, conditionValue\)/);
   assert.match(source, /--forecast-icon-color:\$\{escapeHtml\(iconColor\)\}/);
   assert.match(source, /\.weather-card__forecast-popup-main ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
   assert.match(source, /\.weather-card__forecast-hover-preview ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
   assert.match(source, /\.weather-card__forecast-item > ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
   assert.match(source, /\.weather-card__forecast-rain ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
+});
+
+test("graph unavailable badge keeps help icon centered and dark", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?color: #1f2330;/);
+  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?display: inline-flex;[\s\S]*?justify-content: center;/);
+  assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?position: static;/);
+  assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
 });
 
 test("Norwegian language aliases resolve to official no locale", () => {

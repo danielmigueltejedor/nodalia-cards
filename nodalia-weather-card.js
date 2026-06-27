@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.3.2-alpha.7";
+const CARD_VERSION = "1.3.2-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -730,12 +730,18 @@ function getConditionAccent(value) {
   }
 }
 
-function getForecastIconColor(accentColor) {
-  const shouldDarken = window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(
-    { entity_id: "weather.forecast", attributes: { device_class: "temperature" } },
-    accentColor,
-  );
-  return shouldDarken ? "var(--primary-text-color)" : accentColor;
+function getConditionReadableIconColor(value, accentColor = getConditionAccent(value)) {
+  const key = normalizeTextKey(value);
+  const accentWeight = key === "sunny"
+    ? 66
+    : key === "lightning" || key === "exceptional"
+      ? 70
+      : 76;
+  return `color-mix(in srgb, ${accentColor} ${accentWeight}%, var(--primary-text-color))`;
+}
+
+function getForecastIconColor(accentColor, conditionValue = "") {
+  return getConditionReadableIconColor(conditionValue, accentColor);
 }
 
 function normalizeConfig(rawConfig) {
@@ -1820,8 +1826,9 @@ class NodaliaWeatherCard extends HTMLElement {
     ));
     const popupMarkup = popupPoint ? (() => {
       const item = popupPoint.item || {};
-      const accent = getConditionAccent(item?.condition || state?.state);
-      const iconColor = getForecastIconColor(accent);
+      const conditionValue = item?.condition || state?.state;
+      const accent = getConditionAccent(conditionValue);
+      const iconColor = getForecastIconColor(accent, conditionValue);
       const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
       const highLabel = formatNumber(this._convertTemperatureValue(
         getForecastTemperatureSeriesValue(item, "high"),
@@ -1881,8 +1888,9 @@ class NodaliaWeatherCard extends HTMLElement {
     })() : "";
     const hoverPreviewMarkup = hoverPreviewPoint ? (() => {
       const item = hoverPreviewPoint.item || {};
-      const accent = getConditionAccent(item?.condition || state?.state);
-      const iconColor = getForecastIconColor(accent);
+      const conditionValue = item?.condition || state?.state;
+      const accent = getConditionAccent(conditionValue);
+      const iconColor = getForecastIconColor(accent, conditionValue);
       const vertical = this._forecastHoverPreview?.vertical === "below" ? "below" : "above";
       const left = this._forecastHoverPreview?.left || "50%";
       const top = this._forecastHoverPreview?.top || "50%";
@@ -2056,8 +2064,9 @@ class NodaliaWeatherCard extends HTMLElement {
                       ${
                         visibleItems.length
                           ? visibleItems.map((item, index) => {
-                            const accent = getConditionAccent(item?.condition || state?.state);
-                            const iconColor = getForecastIconColor(accent);
+                            const conditionValue = item?.condition || state?.state;
+                            const accent = getConditionAccent(conditionValue);
+                            const iconColor = getForecastIconColor(accent, conditionValue);
                             const precipitationLabel = getForecastPrecipitationLabel(item, precipitationUnit);
                             return `
                               <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(accent)}; --forecast-icon-color:${escapeHtml(iconColor)}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
@@ -2154,6 +2163,11 @@ class NodaliaWeatherCard extends HTMLElement {
     const shouldAnimateForecast = animations.enabled && this._animateForecastOnNextRender;
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
+    const configuredIconColor = String(styles.icon.color || "").trim();
+    const defaultIconColor = String(DEFAULT_CONFIG.styles.icon.color || "").trim();
+    const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor
+      ? configuredIconColor
+      : getConditionReadableIconColor(state?.state, accentColor);
     const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
     const cardBorder = !configuredBorder || configuredBorder === defaultBorder
       ? `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`
@@ -2259,7 +2273,7 @@ class NodaliaWeatherCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
             0 14px 28px rgba(0, 0, 0, 0.14);
-          color: ${styles.icon.color};
+          color: ${conditionIconColor};
           display: inline-flex;
           height: ${styles.icon.size};
           justify-content: center;

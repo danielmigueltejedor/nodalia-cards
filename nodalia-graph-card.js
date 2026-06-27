@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.3.2-alpha.7";
+const CARD_VERSION = "1.3.2-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2462,10 +2462,12 @@ class NodaliaGraphCard extends HTMLElement {
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
+          color: #1f2330;
           display: inline-flex;
+          flex: 0 0 18px;
           height: 18px;
           justify-content: center;
+          line-height: 1;
           position: absolute;
           right: -4px;
           top: -3px;
@@ -2474,9 +2476,16 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          width: 11px;
+          --mdc-icon-size: 12px;
+          display: block;
+          flex: 0 0 12px;
+          height: 12px;
+          left: auto;
+          line-height: 1;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 12px;
         }
 
         .graph-card__value {

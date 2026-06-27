@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.8] - 2026-06-27
+
+Eighth **`1.3.2`** **`alpha`**: Graph unavailable badge and Weather icon contrast. Release channel **`1.3.2-alpha.8`**.
+
+### Fixed
+
+- **`graph`:** unavailable entity badges keep the help icon centered inside the orange circle and use dark glyph contrast to match the rest of the card family.
+- **`weather`:** condition icons keep their characteristic weather color while mixing toward theme text color for contrast, so sunny/cloudy forecast icons remain recognizable but more legible on tinted light cards.
+
 ## [1.3.2-alpha.7] - 2026-06-27
 
 Seventh **`1.3.2`** **`alpha`**: Notifications background sync reliability. Release channel **`1.3.2-alpha.7`**.
