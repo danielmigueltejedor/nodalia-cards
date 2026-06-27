@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.2-alpha.2";
+const CARD_VERSION = "1.3.2-alpha.3";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -4847,6 +4847,34 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 `
                 : ""
             }
+            <div class="editor-action editor-field--full">
+              <div class="editor-action__header">
+                <div>
+                  <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_title"))}</div>
+                  <div class="editor-action__subtitle">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_hint"))}</div>
+                </div>
+              </div>
+              <div class="editor-grid">
+                ${this._renderCheckboxField(
+                  "ed.notifications.background_mobile_enabled",
+                  "background_mobile.enabled",
+                  config.background_mobile?.enabled === true,
+                )}
+                ${
+                  config.background_mobile?.enabled === true
+                    ? this._renderTextField(
+                      "ed.notifications.background_mobile_webhook",
+                      "background_mobile.webhook",
+                      config.background_mobile?.webhook,
+                      {
+                        placeholder: "nodalia_notifications_background_sync",
+                        fullWidth: true,
+                      },
+                    )
+                    : ""
+                }
+              </div>
+            </div>
           </div>
         </section>
         <section class="editor-section">

@@ -586,6 +586,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobile_notifications\.entities/);
   assert.match(source, /mobile_notifications\.critical_alerts/);
   assert.match(source, /background_mobile/);
+  assert.match(source, /background_mobile\.enabled/);
+  assert.match(source, /background_mobile\.webhook/);
+  assert.match(source, /ed\.notifications\.background_mobile_webhook/);
   assert.match(source, /nodalia_notifications_background_sync/);
   assert.match(source, /_scheduleBackgroundMobileSync/);
   assert.match(source, /await post\(webhookId, payload, this\._hass\)/);

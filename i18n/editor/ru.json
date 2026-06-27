@@ -1167,5 +1167,9 @@
   "ed.weather.unit_system": "Система единиц",
   "ed.weather.wind_kmh": "км/ч",
   "ed.weather.wind_mph": "миль в час",
-  "ed.weather.wind_speed_unit": "Единица измерения скорости ветра"
+  "ed.weather.wind_speed_unit": "Единица измерения скорости ветра",
+  "ed.notifications.background_mobile_title": "Background mobile sync",
+  "ed.notifications.background_mobile_hint": "Send the card configuration to the Home Assistant package by webhook so mobile notifications can fire even when Lovelace is closed.",
+  "ed.notifications.background_mobile_enabled": "Enable background webhook sync",
+  "ed.notifications.background_mobile_webhook": "Background sync webhook ID"
 }

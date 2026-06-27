@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.3] - 2026-06-27
+
+Third **`1.3.2`** **`alpha`**: Notifications background webhook editor. Release channel **`1.3.2-alpha.3`**.
+
+### Added
+
+- **`notifications`:** visual editor now exposes background mobile webhook sync, including the enable toggle and webhook ID field for the package-driven background notification flow.
+
 ## [1.3.2-alpha.2] - 2026-06-27
 
 Second **`1.3.2`** **`alpha`**: Weather forecast icon contrast. Release channel **`1.3.2-alpha.2`**.
