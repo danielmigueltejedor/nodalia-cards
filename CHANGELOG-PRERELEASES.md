@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.10] - 2026-06-28
+
+Tenth **`1.3.2`** **`alpha`**: Notifications mobile info threshold. Release channel **`1.3.2-alpha.10`**.
+
+### Changed
+
+- **`notifications`:** mobile notification minimum severity now labels the `info` option as "Everything, including info", making it clear from the visual editor that presence/motion and other info-level alerts can also be pushed.
+- **`notifications`:** background mobile webhook payload and mobile delivery tests now explicitly protect the synced `mobile_notifications.min_severity` behavior.
+
 ## [1.3.2-alpha.9] - 2026-06-28
 
 Ninth **`1.3.2`** **`alpha`**: Weather metric chip contrast and Notifications package filtering. Release channel **`1.3.2-alpha.9`**.

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.2-alpha.9";
+const CARD_VERSION = "1.3.2-alpha.10";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -4958,7 +4958,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                     config.mobile_notifications?.critical_alerts === true,
                   )}
                   ${this._renderSelectField("ed.notifications.mobile_min_severity", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
-                    { value: "info", label: "ed.notifications.severity_info" },
+                    { value: "info", label: "ed.notifications.mobile_severity_all_info" },
                     { value: "success", label: "ed.notifications.severity_ok" },
                     { value: "warning", label: "ed.notifications.severity_warning" },
                     { value: "critical", label: "ed.notifications.severity_critical" },

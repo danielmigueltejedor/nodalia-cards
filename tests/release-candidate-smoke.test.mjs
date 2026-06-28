@@ -605,6 +605,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobile_notifications/);
   assert.match(source, /mobile_notifications\.entities/);
   assert.match(source, /mobile_notifications\.critical_alerts/);
+  assert.match(source, /mobile_notifications\.min_severity/);
+  assert.match(source, /ed\.notifications\.mobile_severity_all_info/);
   assert.match(source, /background_mobile/);
   assert.match(source, /background_mobile\.enabled/);
   assert.match(source, /background_mobile\.webhook/);
