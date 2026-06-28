@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.3-alpha.1] - 2026-06-28
+
+First **`1.3.3`** **`alpha`**: Notifications background duplicate and heat spam fixes. Release channel **`1.3.3-alpha.1`**.
+
+### Fixed
+
+- **`notifications`:** when background mobile sync is enabled, the live card no longer sends its own foreground mobile pushes, preventing duplicate notifications while the Home Assistant package is handling delivery.
+- **`examples`:** background mobile package only sends temperature/humidity/level threshold notifications when the value crosses into the alert range, instead of repeating on every tiny numeric variation while already over the threshold.
+- **`examples`:** background mobile package replaces common smart-message placeholders such as **`{fan}`** and uses Spanish default titles for package-generated alerts.
+
 ## [1.3.2-alpha.11] - 2026-06-28
 
 Eleventh **`1.3.2`** **`alpha`**: Graph mobile legend chip shadow fix. Release channel **`1.3.2-alpha.11`**.

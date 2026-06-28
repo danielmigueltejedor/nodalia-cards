@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.2";
+const CARD_VERSION = "1.3.3-alpha.1";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2479,6 +2479,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     const config = this._config.mobile_notifications;
     const policy = String(item?.mobilePolicy || "inherit").toLowerCase();
     if (policy === "off") {
+      return false;
+    }
+    if (this._config.background_mobile?.enabled === true) {
       return false;
     }
     const targets = [

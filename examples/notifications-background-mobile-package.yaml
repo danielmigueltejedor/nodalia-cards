@@ -277,14 +277,14 @@ automation:
             {% elif e in groups.get('motion', []) and n == 'on' and o != 'on' %}motion
             {% elif e in groups.get('vacuum', []) and n in ['error', 'unavailable'] and o != n %}vacuum
             {% elif e in groups.get('vacuum_error', []) and n not in ['ok', 'none', 'unknown', 'unavailable', '0', ''] and o != n %}vacuum
-            {% elif e in groups.get('temperature', []) and nv != none and nv >= thresholds.get('hot_temperature', 27) and (ov == none or ov < thresholds.get('hot_temperature', 27) or ov != nv) %}hot
-            {% elif e in groups.get('temperature', []) and nv != none and nv <= thresholds.get('cold_temperature', 17) and (ov == none or ov > thresholds.get('cold_temperature', 17) or ov != nv) %}cold
-            {% elif e in groups.get('humidity', []) and nv != none and nv >= thresholds.get('humidity_high', 70) and (ov == none or ov < thresholds.get('humidity_high', 70) or ov != nv) %}humidity_high
-            {% elif e in groups.get('humidity', []) and nv != none and nv <= thresholds.get('humidity_low', 30) and (ov == none or ov > thresholds.get('humidity_low', 30) or ov != nv) %}humidity_low
-            {% elif e in groups.get('battery', []) and nv != none and nv <= thresholds.get('battery_low', 20) and (ov == none or ov > thresholds.get('battery_low', 20) or ov != nv) %}battery_low
-            {% elif e in groups.get('humidifier_fill', []) and nv != none and nv <= thresholds.get('humidifier_fill_low', 20) and (ov == none or ov > thresholds.get('humidifier_fill_low', 20) or ov != nv) %}humidifier_fill_low
-            {% elif e in groups.get('humidifier_full', []) and nv != none and nv >= thresholds.get('humidifier_fill_full', 90) and (ov == none or ov < thresholds.get('humidifier_fill_full', 90) or ov != nv) %}humidifier_fill_full
-            {% elif e in groups.get('ink', []) and nv != none and nv <= thresholds.get('ink_low', 15) and (ov == none or ov > thresholds.get('ink_low', 15) or ov != nv) %}ink_low
+            {% elif e in groups.get('temperature', []) and nv != none and nv >= thresholds.get('hot_temperature', 27) and (ov == none or ov < thresholds.get('hot_temperature', 27)) %}hot
+            {% elif e in groups.get('temperature', []) and nv != none and nv <= thresholds.get('cold_temperature', 17) and (ov == none or ov > thresholds.get('cold_temperature', 17)) %}cold
+            {% elif e in groups.get('humidity', []) and nv != none and nv >= thresholds.get('humidity_high', 70) and (ov == none or ov < thresholds.get('humidity_high', 70)) %}humidity_high
+            {% elif e in groups.get('humidity', []) and nv != none and nv <= thresholds.get('humidity_low', 30) and (ov == none or ov > thresholds.get('humidity_low', 30)) %}humidity_low
+            {% elif e in groups.get('battery', []) and nv != none and nv <= thresholds.get('battery_low', 20) and (ov == none or ov > thresholds.get('battery_low', 20)) %}battery_low
+            {% elif e in groups.get('humidifier_fill', []) and nv != none and nv <= thresholds.get('humidifier_fill_low', 20) and (ov == none or ov > thresholds.get('humidifier_fill_low', 20)) %}humidifier_fill_low
+            {% elif e in groups.get('humidifier_full', []) and nv != none and nv >= thresholds.get('humidifier_fill_full', 90) and (ov == none or ov < thresholds.get('humidifier_fill_full', 90)) %}humidifier_fill_full
+            {% elif e in groups.get('ink', []) and nv != none and nv <= thresholds.get('ink_low', 15) and (ov == none or ov > thresholds.get('ink_low', 15)) %}ink_low
             {% endif %}
           severity: >-
             {% if match_kind in ['vacuum'] %}critical
@@ -294,18 +294,18 @@ automation:
           min_severity_score: "{{ {'info': 1, 'success': 2, 'warning': 3, 'critical': 4}.get(notify_cfg.get('min_severity', 'warning'), 3) }}"
           severity_score: "{{ {'info': 1, 'success': 2, 'warning': 3, 'critical': 4}.get(severity, 1) }}"
           default_title: >-
-            {% if match_kind == 'door' %}Door open
-            {% elif match_kind == 'window' %}Window open
-            {% elif match_kind == 'motion' %}Motion detected
-            {% elif match_kind == 'vacuum' %}Robot needs attention
-            {% elif match_kind == 'hot' %}Hot inside
-            {% elif match_kind == 'cold' %}Low temperature
-            {% elif match_kind == 'humidity_high' %}High humidity
-            {% elif match_kind == 'humidity_low' %}Low humidity
-            {% elif match_kind == 'battery_low' %}Low battery
-            {% elif match_kind == 'humidifier_fill_low' %}Low tank
-            {% elif match_kind == 'humidifier_fill_full' %}Tank full
-            {% elif match_kind == 'ink_low' %}Low ink
+            {% if match_kind == 'door' %}Puerta abierta
+            {% elif match_kind == 'window' %}Ventana abierta
+            {% elif match_kind == 'motion' %}Presencia detectada
+            {% elif match_kind == 'vacuum' %}Robot necesita atención
+            {% elif match_kind == 'hot' %}Temperatura alta
+            {% elif match_kind == 'cold' %}Temperatura baja
+            {% elif match_kind == 'humidity_high' %}Humedad alta
+            {% elif match_kind == 'humidity_low' %}Humedad baja
+            {% elif match_kind == 'battery_low' %}Batería baja
+            {% elif match_kind == 'humidifier_fill_low' %}Depósito bajo
+            {% elif match_kind == 'humidifier_fill_full' %}Depósito lleno
+            {% elif match_kind == 'ink_low' %}Tinta baja
             {% else %}Nodalia
             {% endif %}
           default_message: >-
@@ -323,7 +323,12 @@ automation:
               | replace('{source}', friendly)
               | replace('{name}', friendly)
               | replace('{value}', (new_state_value ~ unit))
-              | replace('{state}', new_state_value) }}
+              | replace('{state}', new_state_value)
+              | replace('{threshold}', '')
+              | replace('{fan}', 'ventilador')
+              | replace('{climate}', 'aire acondicionado')
+              | replace('{media}', friendly)
+              | replace('{time}', '') }}
           notify_entities: "{{ notify_cfg.get('entities', []) }}"
           notify_services: "{{ notify_cfg.get('services', []) }}"
           tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"

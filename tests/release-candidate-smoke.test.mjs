@@ -671,6 +671,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /!text\.includes\(":"\)/);
   assert.match(source, /!this\._canPruneDismissedToken\(id\)/);
   assert.match(source, /_queueMobileNotifications/);
+  assert.match(source, /this\._config\.background_mobile\?\.enabled === true/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
   const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
@@ -701,6 +702,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /trigger\.event\.data\.old_state\.state != trigger\.event\.data\.new_state\.state/);
   assert.match(backgroundPackage, /new_value: "\{\{ new_state_value \| replace\('%', ''\) \| float\(none\) \}\}"/);
   assert.match(backgroundPackage, /\{% set nv = new_state_value \| replace\('%', ''\) \| float\(none\) %\}/);
+  assert.match(backgroundPackage, /nv >= thresholds\.get\('hot_temperature', 27\) and \(ov == none or ov < thresholds\.get\('hot_temperature', 27\)\)/);
+  assert.doesNotMatch(backgroundPackage, /hot_temperature', 27\)[^\n]*or ov != nv/);
+  assert.match(backgroundPackage, /\| replace\('\{fan\}', 'ventilador'\)/);
   assert.match(backgroundPackage, /\{% elif e in groups\.get\('ink', \[\]\) and nv != none and nv <= thresholds\.get\('ink_low', 15\)/);
   assert.match(backgroundPackage, /override_mobile != 'off'/);
   assert.doesNotMatch(backgroundPackage, /new_state: "\{\{ trigger\.event\.data\.new_state \}\}"/);
