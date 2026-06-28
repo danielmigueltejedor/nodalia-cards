@@ -763,6 +763,7 @@
   "ed.notifications.mobile_critical_legacy": "旧版服务上的关键警报",
   "ed.notifications.mobile_inherit": "继承",
   "ed.notifications.mobile_min_severity": "最低严重级别",
+  "ed.notifications.mobile_severity_all_info": "Everything, including info",
   "ed.notifications.mobile_notify_entities": "Notify 实体",
   "ed.notifications.mobile_notify_legacy": "旧版 notify 服务",
   "ed.notifications.mobile_off": "不发送",
