@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.11] - 2026-06-28
+
+Eleventh **`1.3.2`** **`alpha`**: Graph mobile legend chip shadow fix. Release channel **`1.3.2-alpha.11`**.
+
+### Fixed
+
+- **`graph`:** mobile legend chips no longer use an external active shadow inside the horizontal scroll rail, preventing Safari/iOS from clipping the glow into a rectangular block with sharp corners.
+
 ## [1.3.2-alpha.10] - 2026-06-28
 
 Tenth **`1.3.2`** **`alpha`**: Notifications mobile info threshold. Release channel **`1.3.2-alpha.10`**.

@@ -348,6 +348,13 @@ test("graph unavailable badge keeps help icon centered and dark", () => {
   assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
 });
 
+test("graph mobile legend chips avoid clipped active shadows", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /@media \(max-width: 640px\) \{[\s\S]*?\.graph-card__primary-row \.graph-card__legend \{[\s\S]*?overflow-x: auto;/);
+  assert.match(source, /@media \(max-width: 640px\) \{[\s\S]*?\.graph-card__primary-row \.graph-card__legend \{[\s\S]*?padding-block: 6px;/);
+  assert.match(source, /@media \(max-width: 640px\) \{[\s\S]*?\.graph-card__primary-row \.graph-card__legend-item--active \{[\s\S]*?box-shadow:\s*[\s\S]*?inset 0 1px 0/);
+});
+
 test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "1.3.2-alpha.10";
+const CARD_VERSION = "1.3.2-alpha.11";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
