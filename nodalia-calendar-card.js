@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.3.3-alpha.2";
+const CARD_VERSION = "1.3.3-alpha.3";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1222,13 +1222,35 @@ class NodaliaCalendarCard extends HTMLElement {
   _groupsByDayKey(groups) {
     const map = new Map();
     groups.forEach(group => {
-      const ev = group.events[0];
-      const d = ev ? eventDate(ev.start) : null;
+      const d = group.dayDate instanceof Date && !Number.isNaN(group.dayDate.getTime())
+        ? group.dayDate
+        : eventDate(group.events?.[0]?.start);
       if (d) {
         map.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, group);
       }
     });
     return map;
+  }
+
+  _expandedRangeGroups(groups, config, locale) {
+    const map = this._groupsByDayKey(groups);
+    const days = Math.max(1, Number(config.days_to_show) || daysFromTimeRange(config.time_range || DEFAULT_CONFIG.time_range));
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Array.from({ length: days }, (_, index) => {
+      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      const existing = map.get(key);
+      if (existing) {
+        return existing;
+      }
+      return {
+        label: formatDateLabel(date, locale),
+        dayKey: key,
+        dayDate: date,
+        events: [],
+      };
+    });
   }
 
   _weekdayHeadersMondayFirst(locale) {
@@ -1397,10 +1419,11 @@ class NodaliaCalendarCard extends HTMLElement {
         </div>
       `;
     }
+    const displayGroups = this._expandedRangeGroups(groups, config, locale);
     const rowClass = mode === "column" ? "calendar-expanded__column" : "calendar-expanded__horizontal";
     return `
       <div class="${rowClass}">
-        ${groups
+        ${displayGroups
           .map(
             group => `
           <div class="calendar-expanded__col">
@@ -1409,7 +1432,9 @@ class NodaliaCalendarCard extends HTMLElement {
               ${this._renderWeatherBadge(group.dayDate, weatherByDay, "calendar-expanded__weather")}
             </div>
             <div class="calendar-expanded__col-events">
-              ${group.events.map(ev => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("")}
+              ${group.events.length
+                ? group.events.map(ev => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("")
+                : `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>`}
             </div>
           </div>
         `,
@@ -4038,9 +4063,7 @@ class NodaliaCalendarCard extends HTMLElement {
                 ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>`
                 : this._error
                   ? `<div class="calendar-error">${escapeHtml(this._error)}</div>`
-                  : !hasEvents
-                    ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No events in this range."))}</div>`
-                    : this._renderExpandedBody(groups, config, locale, weatherByDay)
+                  : this._renderExpandedBody(groups, config, locale, weatherByDay)
             }
           </div>
           ${this._nativeEventComposerMarkup()}

@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.3-alpha.3] - 2026-06-28
+
+Third **`1.3.3`** **`alpha`**: Calendar empty expanded views. Release channel **`1.3.3-alpha.3`**.
+
+### Fixed
+
+- **`calendar`:** expanded calendar popups now keep showing the selected day/week/month style view even when there are no scheduled events, filling empty days in the range instead of replacing the popup with a single no-events message.
+
 ## [1.3.3-alpha.2] - 2026-06-28
 
 Second **`1.3.3`** **`alpha`**: Notifications review follow-up and Weather defensive guards. Release channel **`1.3.3-alpha.2`**.

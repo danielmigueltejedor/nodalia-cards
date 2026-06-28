@@ -184,6 +184,9 @@ test("calendar expanded popup reuses daily weather badges", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /_renderWeatherBadge\(dayDate, weatherByDay/);
   assert.match(source, /this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
+  assert.match(source, /_expandedRangeGroups\(groups, config, locale\)/);
+  assert.match(source, /const displayGroups = this\._expandedRangeGroups\(groups, config, locale\)/);
+  assert.match(source, /<div class="calendar-expanded__body">[\s\S]*this\._error[\s\S]*: this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
   assert.match(source, /calendar-expanded__month-weather/);
   assert.match(source, /calendar-expanded__day-detail-heading/);
   assert.match(source, /calendar-expanded__col-head/);
