@@ -689,6 +689,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /states\('input_text\.nodalia_notifications_background_config_40'\)/);
   assert.match(backgroundPackage, /notify\.send_message/);
   assert.match(backgroundPackage, /notify_entities: "\{\{ notify_cfg\.get\('entities', \[\]\) \}\}"/);
+  const notifySendMessageBlock = backgroundPackage.match(/- action: notify\.send_message[\s\S]*?(?=\n      - repeat:)/)?.[0] || "";
+  assert.doesNotMatch(notifySendMessageBlock, /\n\s+data:\n\s+tag:/);
+  assert.doesNotMatch(notifySendMessageBlock, /\n\s+ttl:/);
+  assert.doesNotMatch(notifySendMessageBlock, /\n\s+priority:/);
   assert.doesNotMatch(backgroundPackage, /notify_cfg\.get\('entities', \['notify\.mobile_app_my_phone'\]\)/);
   assert.match(backgroundPackage, /new_state_value: "\{\{ trigger\.event\.data\.new_state\.state/);
   assert.match(backgroundPackage, /old_state_value: "\{\{ trigger\.event\.data\.old_state\.state/);

@@ -339,11 +339,6 @@ automation:
             data:
               title: "{{ title }}"
               message: "{{ message }}"
-              data:
-                tag: "{{ tag }}"
-                group: nodalia_notifications
-                ttl: "{{ 0 if notify_cfg.get('critical_alerts') == true and severity == 'critical' else omit }}"
-                priority: "{{ 'high' if notify_cfg.get('critical_alerts') == true and severity == 'critical' else omit }}"
       - repeat:
           for_each: "{{ notify_services }}"
           sequence:
