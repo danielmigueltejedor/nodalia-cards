@@ -763,6 +763,7 @@
   "ed.notifications.mobile_critical_legacy": "Kritische Warnungen zu älteren Diensten",
   "ed.notifications.mobile_inherit": "Erben",
   "ed.notifications.mobile_min_severity": "Minimaler Schweregrad",
+  "ed.notifications.mobile_severity_all_info": "Everything, including info",
   "ed.notifications.mobile_notify_entities": "Entitäten benachrichtigen",
   "ed.notifications.mobile_notify_legacy": "Ältere Benachrichtigungsdienste",
   "ed.notifications.mobile_off": "Nicht senden",
