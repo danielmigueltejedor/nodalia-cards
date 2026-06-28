@@ -24,7 +24,8 @@
 #   `mobile_notifications.entities` from the card webhook payload.
 # - The `state_changed` trigger is intentionally broad because the watched
 #   entity list is synced dynamically through the webhook. Conditions below
-#   discard non-watched entities before notification actions run.
+#   discard attribute-only changes and non-watched entities before notification
+#   actions run.
 # - Treat the webhook_id like a password if you set local_only: false.
 # - Calendar/weather forecast alerts are still best handled by dedicated HA
 #   automations because they depend on periodic forecast/calendar queries, not
@@ -112,10 +113,11 @@ automation:
           config_hash: "{{ config_hash }}"
           chunk_count: "{{ chunks | count }}"
 
-  - id: nodalia_notifications_background_state_push
-    alias: "Nodalia Notifications | Background mobile state push"
-    mode: queued
-    max: 20
+  - id: nodalia_notifications_background_state_filter
+    alias: "Nodalia Notifications | Background mobile state filter"
+    mode: parallel
+    max: 50
+    max_exceeded: silent
     triggers:
       - trigger: event
         event_type: state_changed
@@ -125,6 +127,10 @@ automation:
         state: "on"
       - condition: template
         value_template: "{{ trigger.event.data.new_state is not none }}"
+      - condition: template
+        value_template: >
+          {{ trigger.event.data.old_state is none or
+             trigger.event.data.old_state.state != trigger.event.data.new_state.state }}
       - condition: template
         value_template: >
           {% set raw =
@@ -184,6 +190,27 @@ automation:
             groups.get('ink', []) %}
           {{ cfg.get('enabled') == true and cfg.get('notify', {}).get('enabled') == true and trigger.event.data.entity_id in watched }}
     actions:
+      - event: nodalia_notifications_background_watched_state_changed
+        event_data:
+          entity_id: "{{ trigger.event.data.entity_id }}"
+          new_state_value: "{{ trigger.event.data.new_state.state | default('', true) }}"
+          old_state_value: "{{ trigger.event.data.old_state.state | default('', true) if trigger.event.data.old_state is not none else '' }}"
+          friendly: "{{ trigger.event.data.new_state.attributes.friendly_name | default(trigger.event.data.entity_id, true) }}"
+          unit: "{{ trigger.event.data.new_state.attributes.unit_of_measurement | default('', true) }}"
+
+  - id: nodalia_notifications_background_state_push
+    alias: "Nodalia Notifications | Background mobile state push"
+    mode: parallel
+    max: 20
+    max_exceeded: silent
+    triggers:
+      - trigger: event
+        event_type: nodalia_notifications_background_watched_state_changed
+    conditions:
+      - condition: state
+        entity_id: input_boolean.nodalia_background_mobile_notifications
+        state: "on"
+    actions:
       - variables:
           raw_config: >
             {{ states('input_text.nodalia_notifications_background_config_01') ~
@@ -231,32 +258,33 @@ automation:
           thresholds: "{{ cfg.get('thresholds', {}) }}"
           notify_cfg: "{{ cfg.get('notify', {}) }}"
           entity_id: "{{ trigger.event.data.entity_id }}"
-          new_state_value: "{{ trigger.event.data.new_state.state | default('', true) }}"
-          old_state_value: "{{ trigger.event.data.old_state.state | default('', true) if trigger.event.data.old_state is not none else '' }}"
-          new_value: "{{ new_state_value | float(none) }}"
-          old_value: "{{ old_state_value | float(none) if old_state_value != '' else none }}"
-          friendly: "{{ trigger.event.data.new_state.attributes.friendly_name | default(entity_id, true) }}"
-          unit: "{{ trigger.event.data.new_state.attributes.unit_of_measurement | default('', true) }}"
+          new_state_value: "{{ trigger.event.data.new_state_value | default('', true) }}"
+          old_state_value: "{{ trigger.event.data.old_state_value | default('', true) }}"
+          new_value: "{{ new_state_value | replace('%', '') | float(none) }}"
+          old_value: "{{ old_state_value | replace('%', '') | float(none) if old_state_value not in ['', 'unknown', 'unavailable', 'none'] else none }}"
+          friendly: "{{ trigger.event.data.friendly | default(entity_id, true) }}"
+          unit: "{{ trigger.event.data.unit | default('', true) }}"
           override: "{{ cfg.get('overrides', {}).get(entity_id, {}) }}"
+          override_mobile: "{{ override.get('mobile', 'inherit') }}"
           match_kind: >-
             {% set e = entity_id %}
             {% set n = new_state_value | lower %}
             {% set o = old_state_value | lower %}
-            {% set nv = new_value %}
-            {% set ov = old_value %}
+            {% set nv = new_state_value | replace('%', '') | float(none) %}
+            {% set ov = old_state_value | replace('%', '') | float(none) if old_state_value not in ['', 'unknown', 'unavailable', 'none'] else none %}
             {% if e in groups.get('door', []) and n == 'on' and o != 'on' %}door
             {% elif e in groups.get('window', []) and n == 'on' and o != 'on' %}window
             {% elif e in groups.get('motion', []) and n == 'on' and o != 'on' %}motion
             {% elif e in groups.get('vacuum', []) and n in ['error', 'unavailable'] and o != n %}vacuum
             {% elif e in groups.get('vacuum_error', []) and n not in ['ok', 'none', 'unknown', 'unavailable', '0', ''] and o != n %}vacuum
-            {% elif e in groups.get('temperature', []) and nv is number and nv >= thresholds.get('hot_temperature', 27) and (ov is not number or ov < thresholds.get('hot_temperature', 27)) %}hot
-            {% elif e in groups.get('temperature', []) and nv is number and nv <= thresholds.get('cold_temperature', 17) and (ov is not number or ov > thresholds.get('cold_temperature', 17)) %}cold
-            {% elif e in groups.get('humidity', []) and nv is number and nv >= thresholds.get('humidity_high', 70) and (ov is not number or ov < thresholds.get('humidity_high', 70)) %}humidity_high
-            {% elif e in groups.get('humidity', []) and nv is number and nv <= thresholds.get('humidity_low', 30) and (ov is not number or ov > thresholds.get('humidity_low', 30)) %}humidity_low
-            {% elif e in groups.get('battery', []) and nv is number and nv <= thresholds.get('battery_low', 20) and (ov is not number or ov > thresholds.get('battery_low', 20)) %}battery_low
-            {% elif e in groups.get('humidifier_fill', []) and nv is number and nv <= thresholds.get('humidifier_fill_low', 20) and (ov is not number or ov > thresholds.get('humidifier_fill_low', 20)) %}humidifier_fill_low
-            {% elif e in groups.get('humidifier_full', []) and nv is number and nv >= thresholds.get('humidifier_fill_full', 90) and (ov is not number or ov < thresholds.get('humidifier_fill_full', 90)) %}humidifier_fill_full
-            {% elif e in groups.get('ink', []) and nv is number and nv <= thresholds.get('ink_low', 15) and (ov is not number or ov > thresholds.get('ink_low', 15)) %}ink_low
+            {% elif e in groups.get('temperature', []) and nv != none and nv >= thresholds.get('hot_temperature', 27) and (ov == none or ov < thresholds.get('hot_temperature', 27) or ov != nv) %}hot
+            {% elif e in groups.get('temperature', []) and nv != none and nv <= thresholds.get('cold_temperature', 17) and (ov == none or ov > thresholds.get('cold_temperature', 17) or ov != nv) %}cold
+            {% elif e in groups.get('humidity', []) and nv != none and nv >= thresholds.get('humidity_high', 70) and (ov == none or ov < thresholds.get('humidity_high', 70) or ov != nv) %}humidity_high
+            {% elif e in groups.get('humidity', []) and nv != none and nv <= thresholds.get('humidity_low', 30) and (ov == none or ov > thresholds.get('humidity_low', 30) or ov != nv) %}humidity_low
+            {% elif e in groups.get('battery', []) and nv != none and nv <= thresholds.get('battery_low', 20) and (ov == none or ov > thresholds.get('battery_low', 20) or ov != nv) %}battery_low
+            {% elif e in groups.get('humidifier_fill', []) and nv != none and nv <= thresholds.get('humidifier_fill_low', 20) and (ov == none or ov > thresholds.get('humidifier_fill_low', 20) or ov != nv) %}humidifier_fill_low
+            {% elif e in groups.get('humidifier_full', []) and nv != none and nv >= thresholds.get('humidifier_fill_full', 90) and (ov == none or ov < thresholds.get('humidifier_fill_full', 90) or ov != nv) %}humidifier_fill_full
+            {% elif e in groups.get('ink', []) and nv != none and nv <= thresholds.get('ink_low', 15) and (ov == none or ov > thresholds.get('ink_low', 15) or ov != nv) %}ink_low
             {% endif %}
           severity: >-
             {% if match_kind in ['vacuum'] %}critical
@@ -281,7 +309,7 @@ automation:
             {% else %}Nodalia
             {% endif %}
           default_message: >-
-            {% if new_value is number %}
+            {% if new_value != none %}
               {{ friendly }} is at {{ new_state_value }}{{ unit }}.
             {% elif match_kind == 'vacuum' %}
               {{ friendly }} is {{ new_state_value }}.
@@ -300,7 +328,7 @@ automation:
           notify_services: "{{ notify_cfg.get('services', []) }}"
           tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"
       - condition: template
-        value_template: "{{ match_kind != '' and (severity_score | int) >= (min_severity_score | int) }}"
+        value_template: "{{ match_kind != '' and override_mobile != 'off' and (severity_score | int) >= (min_severity_score | int) }}"
       - if:
           - condition: template
             value_template: "{{ notify_entities | count > 0 }}"

@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.2-alpha.9] - 2026-06-28
+
+Ninth **`1.3.2`** **`alpha`**: Weather metric chip contrast and Notifications package filtering. Release channel **`1.3.2-alpha.9`**.
+
+### Fixed
+
+- **`weather`:** humidity, wind, and pressure chips use their own readable metric colors instead of inheriting the current condition tint, keeping icons legible on sunny/light-tinted cards.
+- **`examples`:** background mobile package now splits the broad `state_changed` listener into a watched-entity filter event and a push automation that only receives Nodalia-filtered changes, making traces and low-ink delivery more reliable.
+- **`examples`:** background mobile package ignores attribute-only changes, accepts numeric strings with `%`, runs the filter in parallel, and respects `mobile: off` overrides.
+
 ## [1.3.2-alpha.8] - 2026-06-27
 
 Eighth **`1.3.2`** **`alpha`**: Graph unavailable badge and Weather icon contrast. Release channel **`1.3.2-alpha.8`**.

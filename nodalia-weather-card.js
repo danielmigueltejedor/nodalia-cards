@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.3.2-alpha.8";
+const CARD_VERSION = "1.3.2-alpha.9";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -742,6 +742,10 @@ function getConditionReadableIconColor(value, accentColor = getConditionAccent(v
 
 function getForecastIconColor(accentColor, conditionValue = "") {
   return getConditionReadableIconColor(conditionValue, accentColor);
+}
+
+function getMetricReadableIconColor(accentColor) {
+  return `color-mix(in srgb, ${accentColor} 72%, var(--primary-text-color))`;
 }
 
 function normalizeConfig(rawConfig) {
@@ -1570,13 +1574,13 @@ class NodaliaWeatherCard extends HTMLElement {
     runTap();
   }
 
-  _renderChip(icon, label, accentColor) {
+  _renderChip(icon, label, accentColor, iconColor = getMetricReadableIconColor(accentColor)) {
     if (!label) {
       return "";
     }
 
     return `
-      <div class="weather-card__chip" style="--chip-accent:${escapeHtml(accentColor)};">
+      <div class="weather-card__chip" style="--chip-accent:${escapeHtml(accentColor)}; --chip-icon-color:${escapeHtml(iconColor)};">
         <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
         <span>${escapeHtml(label)}</span>
       </div>
@@ -2149,13 +2153,13 @@ class NodaliaWeatherCard extends HTMLElement {
     const temperatureLabel = this._formatTemperature(state);
     const chips = [
       config.show_humidity_chip !== false
-        ? this._renderChip("mdi:water-percent", this._formatHumidity(state), accentColor)
+        ? this._renderChip("mdi:water-percent", this._formatHumidity(state), "#59aef9")
         : "",
       config.show_wind_chip !== false
-        ? this._renderChip("mdi:weather-windy", this._formatWind(state), accentColor)
+        ? this._renderChip("mdi:weather-windy", this._formatWind(state), "#7dd7d0")
         : "",
       config.show_pressure_chip === true
-        ? this._renderChip("mdi:gauge", this._formatPressure(state), accentColor)
+        ? this._renderChip("mdi:gauge", this._formatPressure(state), "#8fa4b8")
         : "",
     ].filter(Boolean);
     const tapEnabled = String(config.tap_action || "more-info") !== "none";
@@ -2464,7 +2468,7 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__chip ha-icon {
           --mdc-icon-size: 13px;
-          color: var(--chip-accent);
+          color: var(--chip-icon-color, var(--chip-accent));
         }
 
         .weather-card__chip span {
