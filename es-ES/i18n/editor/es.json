@@ -763,6 +763,7 @@
   "ed.notifications.mobile_critical_legacy": "Alertas críticas en servicios legacy",
   "ed.notifications.mobile_inherit": "Heredar",
   "ed.notifications.mobile_min_severity": "Severidad mínima",
+  "ed.notifications.mobile_severity_all_info": "Everything, including info",
   "ed.notifications.mobile_notify_entities": "Entidades notify",
   "ed.notifications.mobile_notify_legacy": "Servicios notify legacy",
   "ed.notifications.mobile_off": "No enviar",
