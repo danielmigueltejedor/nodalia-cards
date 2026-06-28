@@ -763,6 +763,7 @@
   "ed.notifications.mobile_critical_legacy": "Σημαντικές ειδοποιήσεις για υπηρεσίες παλαιού τύπου",
   "ed.notifications.mobile_inherit": "Κληρονομώ",
   "ed.notifications.mobile_min_severity": "Ελάχιστη σοβαρότητα",
+  "ed.notifications.mobile_severity_all_info": "Everything, including info",
   "ed.notifications.mobile_notify_entities": "Ειδοποίηση οντοτήτων",
   "ed.notifications.mobile_notify_legacy": "Υπηρεσίες ειδοποιήσεων παλαιού τύπου",
   "ed.notifications.mobile_off": "Μην στείλετε",
