@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.3-alpha.2] - 2026-06-28
+
+Second **`1.3.3`** **`alpha`**: Notifications review follow-up and Weather defensive guards. Release channel **`1.3.3-alpha.2`**.
+
+### Changed
+
+- **`examples`:** background mobile package reuses the already parsed numeric state variables inside threshold matching, keeping the anti-spam crossing logic easier to maintain.
+- **`notifications`:** background webhook payload reads threshold values defensively.
+- **`weather`:** condition icon color handling now guards malformed style objects explicitly while preserving the contrast-safe condition tinting.
+
 ## [1.3.3-alpha.1] - 2026-06-28
 
 First **`1.3.3`** **`alpha`**: Notifications background duplicate and heat spam fixes. Release channel **`1.3.3-alpha.1`**.

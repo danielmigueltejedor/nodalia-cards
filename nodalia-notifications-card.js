@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.3-alpha.1";
+const CARD_VERSION = "1.3.3-alpha.2";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -940,14 +940,14 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       critical_alerts: config.mobile_notifications?.critical_alerts === true,
     },
     thresholds: {
-      hot_temperature: config.thresholds.hot_temperature,
-      cold_temperature: config.thresholds.cold_temperature,
-      humidity_high: config.thresholds.humidity_high,
-      humidity_low: config.thresholds.humidity_low,
-      battery_low: config.thresholds.battery_low,
-      humidifier_fill_low: config.thresholds.humidifier_fill_low,
-      humidifier_fill_full: config.thresholds.humidifier_fill_full,
-      ink_low: config.thresholds.ink_low,
+      hot_temperature: config.thresholds?.hot_temperature,
+      cold_temperature: config.thresholds?.cold_temperature,
+      humidity_high: config.thresholds?.humidity_high,
+      humidity_low: config.thresholds?.humidity_low,
+      battery_low: config.thresholds?.battery_low,
+      humidifier_fill_low: config.thresholds?.humidifier_fill_low,
+      humidifier_fill_full: config.thresholds?.humidifier_fill_full,
+      ink_low: config.thresholds?.ink_low,
     },
     entities: {
       vacuum: config.vacuum_entities || [],

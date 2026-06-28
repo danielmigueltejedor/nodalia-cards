@@ -324,12 +324,14 @@ test("weather forecast popups use an opaque theme-safe surface", () => {
 test("weather forecast condition icons use a contrast-safe color", () => {
   const source = read("nodalia-weather-card.js");
   assert.match(source, /function getConditionReadableIconColor\(value, accentColor = getConditionAccent\(value\)\)/);
+  assert.match(source, /const key = normalizeTextKey\(value \|\| ""\)/);
   assert.match(source, /color-mix\(in srgb, \$\{accentColor\} \$\{accentWeight\}%, var\(--primary-text-color\)\)/);
   assert.match(source, /function getMetricReadableIconColor\(accentColor\)/);
   assert.match(source, /--chip-icon-color:\$\{escapeHtml\(iconColor\)\}/);
   assert.match(source, /this\._renderChip\("mdi:water-percent", this\._formatHumidity\(state\), "#59aef9"\)/);
   assert.match(source, /this\._renderChip\("mdi:weather-windy", this\._formatWind\(state\), "#7dd7d0"\)/);
   assert.match(source, /\.weather-card__chip ha-icon \{[\s\S]*?color: var\(--chip-icon-color, var\(--chip-accent\)\);/);
+  assert.match(source, /const configuredIconColor = String\(styles\?\.icon\?\.color \|\| ""\)\.trim\(\)/);
   assert.match(source, /const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor/);
   assert.match(source, /color: \$\{conditionIconColor\};/);
   assert.match(source, /getForecastIconColor\(accent, conditionValue\)/);
@@ -701,7 +703,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /old_state_value: "\{\{ trigger\.event\.data\.old_state_value/);
   assert.match(backgroundPackage, /trigger\.event\.data\.old_state\.state != trigger\.event\.data\.new_state\.state/);
   assert.match(backgroundPackage, /new_value: "\{\{ new_state_value \| replace\('%', ''\) \| float\(none\) \}\}"/);
-  assert.match(backgroundPackage, /\{% set nv = new_state_value \| replace\('%', ''\) \| float\(none\) %\}/);
+  assert.match(backgroundPackage, /\{% set nv = new_value %\}/);
+  assert.match(backgroundPackage, /\{% set ov = old_value %\}/);
   assert.match(backgroundPackage, /nv >= thresholds\.get\('hot_temperature', 27\) and \(ov == none or ov < thresholds\.get\('hot_temperature', 27\)\)/);
   assert.doesNotMatch(backgroundPackage, /hot_temperature', 27\)[^\n]*or ov != nv/);
   assert.match(backgroundPackage, /\| replace\('\{fan\}', 'ventilador'\)/);
@@ -727,6 +730,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /tint_color/);
   assert.match(source, /animations\.enabled/);
   assert.match(source, /data-editor-toggle="animations"/);
+  assert.match(source, /config\.thresholds\?\.hot_temperature/);
   assert.match(source, /editor-section__toggle-button/);
   assert.match(source, /_editorLabel\(s\)/);
   assert.match(source, /this\._editorLabel\(label\)/);
