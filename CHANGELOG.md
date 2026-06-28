@@ -4,11 +4,46 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, and completed **`1.3.1-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, and completed **`1.3.2-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+## [1.3.2] - 2026-06-28
+
+Stable **`1.3.2`** release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.2.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Notifications Card:** background mobile push sync is more reliable, with editor controls for webhook setup, indoor/outdoor comfort separation, presence-gated hot-room suggestions, configurable info-level delivery, and a Home Assistant package that filters noisy `state_changed` events before pushing.
+- **Weather Card:** condition and metric icons keep their recognizable colors while improving contrast on tinted light cards.
+- **Graph Card:** unavailable badges and mobile legend chips avoid clipped/incorrect icon and shadow artifacts.
+
+### Added
+
+- **`notifications`:** visual editor controls for background mobile webhook sync.
+- **`notifications`:** visual editor separates indoor temperature/humidity sensors from outdoor temperature/humidity sensors.
+- **`notifications`:** hot-room fan/cooling recommendations can be gated by same-room presence sensors.
+
+### Fixed
+
+- **`examples`:** background mobile package supports larger synced configs, accepts numeric strings with `%`, ignores attribute-only changes, filters watched entities before push handling, respects `mobile: off`, and uses the modern `notify.send_message` payload shape for notify entities.
+- **`notifications`:** background webhook sync stays pending until the card is connected and Home Assistant is available, and saving editor config forces a sync attempt.
+- **`notifications`:** low-level alerts such as ink at `10%` match correctly in the background package.
+- **`weather`:** forecast, condition, humidity, wind, and pressure icons/chips keep readable accent colors on sunny/light-tinted cards.
+- **`graph`:** unavailable entity badges keep the help icon centered inside the orange circle and use dark glyph contrast.
+- **`graph`:** mobile legend chips avoid the iOS/Safari clipped shadow rectangle in horizontal scroll rails.
+- **`fan` / `humidifier` / `cover`:** slider-side action button shadows are no longer clipped while controls are open.
+
+### Changed
+
+- **`notifications`:** mobile notification minimum severity labels `info` as “Everything, including info” in the visual editor.
+- **Release metadata:** promote **`1.3.2-alpha.*`** (alpha.1-alpha.11) to stable **`1.3.2`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.2.js`**; optional split **`nodalia-cards-core-1.3.2.js`** + **`nodalia-cards-suite-1.3.2.js`**.
+- **Tests:** regression suite expanded to **206** tests covering Notifications background mobile delivery, Weather icon contrast, Graph mobile chip shadows, and the related release metadata.
+
+Per-alpha notes for **`1.3.2-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.3.1] - 2026-06-27
 

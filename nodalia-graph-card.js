@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.3.2-alpha.6";
+const CARD_VERSION = "1.3.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2462,10 +2462,12 @@ class NodaliaGraphCard extends HTMLElement {
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
+          color: #1f2330;
           display: inline-flex;
+          flex: 0 0 18px;
           height: 18px;
           justify-content: center;
+          line-height: 1;
           position: absolute;
           right: -4px;
           top: -3px;
@@ -2474,9 +2476,16 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__unavailable-badge ha-icon {
-          --mdc-icon-size: 11px;
-          height: 11px;
-          width: 11px;
+          --mdc-icon-size: 12px;
+          display: block;
+          flex: 0 0 12px;
+          height: 12px;
+          left: auto;
+          line-height: 1;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 12px;
         }
 
         .graph-card__value {
@@ -2996,7 +3005,7 @@ class NodaliaGraphCard extends HTMLElement {
             min-width: 0;
             overflow-x: auto;
             overscroll-behavior-x: contain;
-            padding-block: 4px;
+            padding-block: 6px;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
           }
@@ -3004,6 +3013,13 @@ class NodaliaGraphCard extends HTMLElement {
           .graph-card__primary-row .graph-card__legend-item {
             flex-shrink: 0;
             max-width: min(52vw, 160px);
+          }
+
+          .graph-card__primary-row .graph-card__legend-item--active {
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--legend-color) 18%, rgba(255, 255, 255, 0.18)),
+              inset 0 -1px 0 color-mix(in srgb, var(--legend-color) 12%, rgba(0, 0, 0, 0.08)),
+              0 0 0 1px color-mix(in srgb, var(--legend-color) 10%, transparent);
           }
         }
       </style>

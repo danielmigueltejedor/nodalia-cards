@@ -10,6 +10,62 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.3-alpha.1] - 2026-06-28
+
+First **`1.3.3`** **`alpha`**: Notifications background duplicate and heat spam fixes. Release channel **`1.3.3-alpha.1`**.
+
+### Fixed
+
+- **`notifications`:** when background mobile sync is enabled, the live card no longer sends its own foreground mobile pushes, preventing duplicate notifications while the Home Assistant package is handling delivery.
+- **`examples`:** background mobile package only sends temperature/humidity/level threshold notifications when the value crosses into the alert range, instead of repeating on every tiny numeric variation while already over the threshold.
+- **`examples`:** background mobile package replaces common smart-message placeholders such as **`{fan}`** and uses Spanish default titles for package-generated alerts.
+
+## [1.3.2-alpha.11] - 2026-06-28
+
+Eleventh **`1.3.2`** **`alpha`**: Graph mobile legend chip shadow fix. Release channel **`1.3.2-alpha.11`**.
+
+### Fixed
+
+- **`graph`:** mobile legend chips no longer use an external active shadow inside the horizontal scroll rail, preventing Safari/iOS from clipping the glow into a rectangular block with sharp corners.
+
+## [1.3.2-alpha.10] - 2026-06-28
+
+Tenth **`1.3.2`** **`alpha`**: Notifications mobile info threshold. Release channel **`1.3.2-alpha.10`**.
+
+### Changed
+
+- **`notifications`:** mobile notification minimum severity now labels the `info` option as "Everything, including info", making it clear from the visual editor that presence/motion and other info-level alerts can also be pushed.
+- **`notifications`:** background mobile webhook payload and mobile delivery tests now explicitly protect the synced `mobile_notifications.min_severity` behavior.
+
+## [1.3.2-alpha.9] - 2026-06-28
+
+Ninth **`1.3.2`** **`alpha`**: Weather metric chip contrast and Notifications package filtering. Release channel **`1.3.2-alpha.9`**.
+
+### Fixed
+
+- **`weather`:** humidity, wind, and pressure chips use their own readable metric colors instead of inheriting the current condition tint, keeping icons legible on sunny/light-tinted cards.
+- **`examples`:** background mobile package now splits the broad `state_changed` listener into a watched-entity filter event and a push automation that only receives Nodalia-filtered changes, making traces and low-ink delivery more reliable.
+- **`examples`:** background mobile package ignores attribute-only changes, accepts numeric strings with `%`, runs the filter in parallel, and respects `mobile: off` overrides.
+
+## [1.3.2-alpha.8] - 2026-06-27
+
+Eighth **`1.3.2`** **`alpha`**: Graph unavailable badge and Weather icon contrast. Release channel **`1.3.2-alpha.8`**.
+
+### Fixed
+
+- **`graph`:** unavailable entity badges keep the help icon centered inside the orange circle and use dark glyph contrast to match the rest of the card family.
+- **`weather`:** condition icons keep their characteristic weather color while mixing toward theme text color for contrast, so sunny/cloudy forecast icons remain recognizable but more legible on tinted light cards.
+
+## [1.3.2-alpha.7] - 2026-06-27
+
+Seventh **`1.3.2`** **`alpha`**: Notifications background sync reliability. Release channel **`1.3.2-alpha.7`**.
+
+### Fixed
+
+- **`notifications`:** background mobile webhook sync is now kept pending when the card is configured before it is connected or before Home Assistant is available, then flushed once the card receives `hass`.
+- **`notifications`:** saving card configuration forces one background sync attempt and no longer skips it just because the previous rendered state signature was unchanged.
+- **`notifications`:** the visual editor also debounces and sends the background sync payload after emitting updated configuration, so saving webhook/mobile settings does not depend on the runtime card render timing.
+
 ## [1.3.2-alpha.6] - 2026-06-27
 
 Sixth **`1.3.2`** **`alpha`**: Notifications indoor/outdoor comfort and presence gating. Release channel **`1.3.2-alpha.6`**.
