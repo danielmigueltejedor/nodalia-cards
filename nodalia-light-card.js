@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.3.3-alpha.3";
+const CARD_VERSION = "1.3.3-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2891,6 +2891,15 @@ class NodaliaLightCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const darkenBubbleIconGlyph =
       isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+    const configuredOnIconColor = String(styles.icon.on_color ?? "").trim();
+    const defaultOnIconColor = String(DEFAULT_CONFIG.styles.icon.on_color ?? "").trim();
+    const lightIconColor = isOn
+      ? (
+          configuredOnIconColor && configuredOnIconColor !== defaultOnIconColor
+            ? configuredOnIconColor
+            : `color-mix(in srgb, ${accentColor} ${darkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))`
+        )
+      : styles.icon.off_color;
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
@@ -3542,7 +3551,7 @@ class NodaliaLightCard extends HTMLElement {
             ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
             : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
-          color: ${isOn ? styles.icon.on_color : styles.icon.off_color};
+          color: ${lightIconColor};
           cursor: pointer;
           height: ${styles.icon.size};
           width: ${styles.icon.size};
@@ -3556,11 +3565,7 @@ class NodaliaLightCard extends HTMLElement {
         .light-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           align-items: center;
-          color: ${
-            darkenBubbleIconGlyph
-              ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
-              : (isOn ? styles.icon.on_color : styles.icon.off_color)
-          };
+          color: ${lightIconColor};
           display: inline-flex;
           height: calc(${styles.icon.size} * 0.46);
           justify-content: center;

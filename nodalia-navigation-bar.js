@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "1.3.3-alpha.3";
+const CARD_VERSION = "1.3.3-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2830,7 +2830,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
             : ""
         }
         ${collapseMarkup}
-        ${statusMarkup}
         <div class="media-player__content">
           ${topPlayerNameMarkup}
           <div class="media-player__hero">
@@ -2842,7 +2841,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
               }
             </div>
             <div class="media-player__meta">
-              <div class="media-player__title">${escapeHtml(title)}</div>
+              <div class="media-player__title-row">
+                <div class="media-player__title">${escapeHtml(title)}</div>
+                ${statusMarkup}
+              </div>
               ${subtitleMarkup}
             </div>
           </div>
@@ -3929,7 +3931,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           display: grid;
           gap: 14px;
           grid-template-columns: ${config.styles.media_player.artwork_size} minmax(0, 1fr);
-          padding-right: clamp(52px, 24vw, 168px);
+          padding-right: 42px;
         }
 
         .media-player__artwork {
@@ -3960,6 +3962,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player__meta {
           display: grid;
           gap: 4px;
+          min-width: 0;
+        }
+
+        .media-player__title-row {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
         }
 
@@ -3996,12 +4006,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player__status-wrap {
           display: flex;
           justify-content: flex-end;
-          max-width: calc(100% - 28px);
+          min-width: 0;
           pointer-events: none;
-          position: absolute;
-          right: 14px;
-          top: 48px;
-          z-index: 2;
         }
 
         .media-player__transport-row {

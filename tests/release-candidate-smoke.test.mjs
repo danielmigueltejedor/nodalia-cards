@@ -152,6 +152,21 @@ test("navigation runtime css sanitizer guard is present in source", () => {
   assert.ok(source.includes("\\b@import\\b"));
 });
 
+test("navigation media player status chip stays in title flow", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /<div class="media-player__title-row">[\s\S]*<div class="media-player__title">\$\{escapeHtml\(title\)\}<\/div>[\s\S]*\$\{statusMarkup\}/);
+  assert.match(source, /\.media-player__title-row \{[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(source, /\.media-player__status-wrap \{[\s\S]*min-width: 0;/);
+  assert.doesNotMatch(source, /\.media-player__status-wrap \{[^}]*position: absolute;/);
+});
+
+test("light card default on icon color follows current light tint with contrast", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /const lightIconColor = isOn[\s\S]*color-mix\(in srgb, \$\{accentColor\} \$\{darkenBubbleIconGlyph \? 42 : 72\}%, var\(--primary-text-color\)\)/);
+  assert.match(source, /const configuredOnIconColor = String\(styles\.icon\.on_color \?\? ""\)\.trim\(\)/);
+  assert.match(source, /\.light-card__icon ha-icon \{[\s\S]*color: \$\{lightIconColor\};/);
+});
+
 test("calendar runtime css sanitizer and webhook admin guard are present", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);

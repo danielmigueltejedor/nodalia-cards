@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.3-alpha.4] - 2026-06-29
+
+Fourth **`1.3.3`** **`alpha`**: Navigation media title flow and Light icon tint. Release channel **`1.3.3-alpha.4`**.
+
+### Fixed
+
+- **`navigation`:** media player status chips now live in the title row layout, so long track titles ellipsize before the "playing" chip instead of overlapping it on mobile.
+- **`light`:** default light icons now use a contrast-safe mix of the current light color and theme text color, matching the card tint while staying readable.
+
 ## [1.3.3-alpha.3] - 2026-06-28
 
 Third **`1.3.3`** **`alpha`**: Calendar empty expanded views. Release channel **`1.3.3-alpha.3`**.
