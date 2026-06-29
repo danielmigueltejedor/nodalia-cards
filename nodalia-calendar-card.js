@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.3.3";
+const CARD_VERSION = "1.3.4-alpha.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2279,6 +2279,12 @@ class NodaliaCalendarCard extends HTMLElement {
     const y = dayDate.getFullYear();
     const m = dayDate.getMonth();
     const d = dayDate.getDate();
+    const today = new Date();
+    const todayTs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const targetTs = new Date(y, m, d).getTime();
+    if (targetTs < todayTs) {
+      return null;
+    }
     const keyLocal = `${y}-${m}-${d}`;
     if (weatherByDay.has(keyLocal)) {
       return weatherByDay.get(keyLocal);
@@ -2291,9 +2297,9 @@ class NodaliaCalendarCard extends HTMLElement {
     // Last-resort fallback: nearest forecast day (within +/- 1 day).
     let nearest = null;
     let nearestDiff = Number.POSITIVE_INFINITY;
-    const targetTs = new Date(y, m, d).getTime();
     for (const [k, value] of weatherByDay.entries()) {
-      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(k));
+      const key = String(k);
+      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key);
       if (!parsed) {
         continue;
       }
@@ -2303,7 +2309,11 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!Number.isFinite(ky) || !Number.isFinite(km) || !Number.isFinite(kd)) {
         continue;
       }
-      const rowTs = new Date(ky, Math.max(0, km - 1), kd).getTime();
+      const rowMonth = /^\d{4}-\d{2}-\d{2}$/.test(key) ? km - 1 : km;
+      if (ky !== y || rowMonth !== m) {
+        continue;
+      }
+      const rowTs = new Date(ky, rowMonth, kd).getTime();
       const diff = Math.abs(rowTs - targetTs);
       if (diff < nearestDiff) {
         nearestDiff = diff;

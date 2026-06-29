@@ -193,6 +193,9 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
   assert.match(source, /item\.temperature_2m_min/);
+  assert.match(source, /const rowMonth = \/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(key\) \? km - 1 : km/);
+  assert.match(source, /if \(targetTs < todayTs\) \{[\s\S]*return null;[\s\S]*\}/);
+  assert.match(source, /if \(ky !== y \|\| rowMonth !== m\) \{[\s\S]*continue;[\s\S]*\}/);
 });
 
 test("calendar expanded popup reuses daily weather badges", () => {

@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.4-alpha.1] - 2026-06-29
+
+First **`1.3.4`** **`alpha`**: Calendar forecast month boundary fix. Release channel **`1.3.4-alpha.1`**.
+
+### Fixed
+
+- **`calendar`:** month-view weather badges no longer reinterpret next-month forecast keys as current-month days, and past days in the current month no longer show forecast badges.
+
 ## [1.3.3-alpha.4] - 2026-06-29
 
 Fourth **`1.3.3`** **`alpha`**: Navigation media title flow and Light icon tint. Release channel **`1.3.3-alpha.4`**.
