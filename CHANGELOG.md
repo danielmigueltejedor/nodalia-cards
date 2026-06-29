@@ -4,11 +4,28 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, completed **`1.3.2-alpha.*`** builds, and completed **`1.3.3-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, completed **`1.3.2-alpha.*`** builds, completed **`1.3.3-alpha.*`** builds, and completed **`1.3.4-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+## [1.3.4] - 2026-06-29
+
+Stable **`1.3.4`** release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.4.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Fixed
+
+- **`calendar`:** month-view weather badges no longer reinterpret next-month forecast keys as current-month days, and past days in the current month no longer show forecast badges.
+
+### Changed
+
+- **Release metadata:** promote **`1.3.4-alpha.1`** to stable **`1.3.4`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.4.js`**; optional split **`nodalia-cards-core-1.3.4.js`** + **`nodalia-cards-suite-1.3.4.js`**.
+- **HACS:** added the official HACS validation workflow for plugin/default-store readiness.
+- **Tests:** regression suite remains at **208** tests, including the calendar forecast month-boundary guard.
+
+Per-alpha notes for **`1.3.4-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.3.3] - 2026-06-29
 
