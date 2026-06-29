@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), and completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), and completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable).
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,41 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.3.4-alpha.1] - 2026-06-29
+
+First **`1.3.4`** **`alpha`**: Calendar forecast month boundary fix. Release channel **`1.3.4-alpha.1`**.
+
+### Fixed
+
+- **`calendar`:** month-view weather badges no longer reinterpret next-month forecast keys as current-month days, and past days in the current month no longer show forecast badges.
+
+## [1.3.3-alpha.4] - 2026-06-29
+
+Fourth **`1.3.3`** **`alpha`**: Navigation media title flow and Light icon tint. Release channel **`1.3.3-alpha.4`**.
+
+### Fixed
+
+- **`navigation`:** media player status chips now live in the title row layout, so long track titles ellipsize before the "playing" chip instead of overlapping it on mobile.
+- **`light`:** default light icons now use a contrast-safe mix of the current light color and theme text color, matching the card tint while staying readable.
+
+## [1.3.3-alpha.3] - 2026-06-28
+
+Third **`1.3.3`** **`alpha`**: Calendar empty expanded views. Release channel **`1.3.3-alpha.3`**.
+
+### Fixed
+
+- **`calendar`:** expanded calendar popups now keep showing the selected day/week/month style view even when there are no scheduled events, filling empty days in the range instead of replacing the popup with a single no-events message.
+
+## [1.3.3-alpha.2] - 2026-06-28
+
+Second **`1.3.3`** **`alpha`**: Notifications review follow-up and Weather defensive guards. Release channel **`1.3.3-alpha.2`**.
+
+### Changed
+
+- **`examples`:** background mobile package reuses the already parsed numeric state variables inside threshold matching, keeping the anti-spam crossing logic easier to maintain.
+- **`notifications`:** background webhook payload reads threshold values defensively.
+- **`weather`:** condition icon color handling now guards malformed style objects explicitly while preserving the contrast-safe condition tinting.
 
 ## [1.3.3-alpha.1] - 2026-06-28
 

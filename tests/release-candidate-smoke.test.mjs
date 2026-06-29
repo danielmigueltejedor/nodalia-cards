@@ -152,6 +152,21 @@ test("navigation runtime css sanitizer guard is present in source", () => {
   assert.ok(source.includes("\\b@import\\b"));
 });
 
+test("navigation media player status chip stays in title flow", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /<div class="media-player__title-row">[\s\S]*<div class="media-player__title">\$\{escapeHtml\(title\)\}<\/div>[\s\S]*\$\{statusMarkup\}/);
+  assert.match(source, /\.media-player__title-row \{[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(source, /\.media-player__status-wrap \{[\s\S]*min-width: 0;/);
+  assert.doesNotMatch(source, /\.media-player__status-wrap \{[^}]*position: absolute;/);
+});
+
+test("light card default on icon color follows current light tint with contrast", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /const lightIconColor = isOn[\s\S]*color-mix\(in srgb, \$\{accentColor\} \$\{darkenBubbleIconGlyph \? 42 : 72\}%, var\(--primary-text-color\)\)/);
+  assert.match(source, /const configuredOnIconColor = String\(styles\.icon\.on_color \?\? ""\)\.trim\(\)/);
+  assert.match(source, /\.light-card__icon ha-icon \{[\s\S]*color: \$\{lightIconColor\};/);
+});
+
 test("calendar runtime css sanitizer and webhook admin guard are present", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function sanitizeCssRuntimeValue\(value\)/);
@@ -178,12 +193,18 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
   assert.match(source, /item\.temperature_2m_min/);
+  assert.match(source, /const rowMonth = \/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(key\) \? km - 1 : km/);
+  assert.match(source, /if \(targetTs < todayTs\) \{[\s\S]*return null;[\s\S]*\}/);
+  assert.match(source, /if \(ky !== y \|\| rowMonth !== m\) \{[\s\S]*continue;[\s\S]*\}/);
 });
 
 test("calendar expanded popup reuses daily weather badges", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /_renderWeatherBadge\(dayDate, weatherByDay/);
   assert.match(source, /this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
+  assert.match(source, /_expandedRangeGroups\(groups, config, locale\)/);
+  assert.match(source, /const displayGroups = this\._expandedRangeGroups\(groups, config, locale\)/);
+  assert.match(source, /<div class="calendar-expanded__body">[\s\S]*this\._error[\s\S]*: this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
   assert.match(source, /calendar-expanded__month-weather/);
   assert.match(source, /calendar-expanded__day-detail-heading/);
   assert.match(source, /calendar-expanded__col-head/);
@@ -324,12 +345,14 @@ test("weather forecast popups use an opaque theme-safe surface", () => {
 test("weather forecast condition icons use a contrast-safe color", () => {
   const source = read("nodalia-weather-card.js");
   assert.match(source, /function getConditionReadableIconColor\(value, accentColor = getConditionAccent\(value\)\)/);
+  assert.match(source, /const key = normalizeTextKey\(value \|\| ""\)/);
   assert.match(source, /color-mix\(in srgb, \$\{accentColor\} \$\{accentWeight\}%, var\(--primary-text-color\)\)/);
   assert.match(source, /function getMetricReadableIconColor\(accentColor\)/);
   assert.match(source, /--chip-icon-color:\$\{escapeHtml\(iconColor\)\}/);
   assert.match(source, /this\._renderChip\("mdi:water-percent", this\._formatHumidity\(state\), "#59aef9"\)/);
   assert.match(source, /this\._renderChip\("mdi:weather-windy", this\._formatWind\(state\), "#7dd7d0"\)/);
   assert.match(source, /\.weather-card__chip ha-icon \{[\s\S]*?color: var\(--chip-icon-color, var\(--chip-accent\)\);/);
+  assert.match(source, /const configuredIconColor = String\(styles\?\.icon\?\.color \|\| ""\)\.trim\(\)/);
   assert.match(source, /const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor/);
   assert.match(source, /color: \$\{conditionIconColor\};/);
   assert.match(source, /getForecastIconColor\(accent, conditionValue\)/);
@@ -701,7 +724,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /old_state_value: "\{\{ trigger\.event\.data\.old_state_value/);
   assert.match(backgroundPackage, /trigger\.event\.data\.old_state\.state != trigger\.event\.data\.new_state\.state/);
   assert.match(backgroundPackage, /new_value: "\{\{ new_state_value \| replace\('%', ''\) \| float\(none\) \}\}"/);
-  assert.match(backgroundPackage, /\{% set nv = new_state_value \| replace\('%', ''\) \| float\(none\) %\}/);
+  assert.match(backgroundPackage, /\{% set nv = new_value %\}/);
+  assert.match(backgroundPackage, /\{% set ov = old_value %\}/);
   assert.match(backgroundPackage, /nv >= thresholds\.get\('hot_temperature', 27\) and \(ov == none or ov < thresholds\.get\('hot_temperature', 27\)\)/);
   assert.doesNotMatch(backgroundPackage, /hot_temperature', 27\)[^\n]*or ov != nv/);
   assert.match(backgroundPackage, /\| replace\('\{fan\}', 'ventilador'\)/);
@@ -727,6 +751,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /tint_color/);
   assert.match(source, /animations\.enabled/);
   assert.match(source, /data-editor-toggle="animations"/);
+  assert.match(source, /config\.thresholds\?\.hot_temperature/);
   assert.match(source, /editor-section__toggle-button/);
   assert.match(source, /_editorLabel\(s\)/);
   assert.match(source, /this\._editorLabel\(label\)/);

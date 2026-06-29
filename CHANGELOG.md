@@ -4,11 +4,56 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, and completed **`1.3.2-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, completed **`1.3.2-alpha.*`** builds, completed **`1.3.3-alpha.*`** builds, and completed **`1.3.4-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+## [1.3.4] - 2026-06-29
+
+Stable **`1.3.4`** release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.4.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Fixed
+
+- **`calendar`:** month-view weather badges no longer reinterpret next-month forecast keys as current-month days, and past days in the current month no longer show forecast badges.
+
+### Changed
+
+- **Release metadata:** promote **`1.3.4-alpha.1`** to stable **`1.3.4`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.4.js`**; optional split **`nodalia-cards-core-1.3.4.js`** + **`nodalia-cards-suite-1.3.4.js`**.
+- **HACS:** added the official HACS validation workflow for plugin/default-store readiness.
+- **Tests:** regression suite remains at **208** tests, including the calendar forecast month-boundary guard.
+
+Per-alpha notes for **`1.3.4-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
+## [1.3.3] - 2026-06-29
+
+Stable **`1.3.3`** release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.3.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Notifications Card:** background mobile push delivery no longer duplicates foreground card pushes, avoids heat/level notification spam, and keeps smart-message placeholders readable in package-driven notifications.
+- **Calendar Card:** expanded popups keep showing useful day/week/month-style views even when there are no scheduled events.
+- **Navigation Bar / Light Card:** mobile media titles no longer overlap the playing chip, and Light Card icons now tint from the current light color with contrast-safe mixing.
+
+### Fixed
+
+- **`notifications`:** foreground mobile delivery is disabled while `background_mobile.enabled` is true, preventing duplicate mobile pushes.
+- **`examples`:** background mobile package only sends threshold alerts when values cross into the alert range, reuses parsed numeric state variables, uses Spanish default package titles, and normalizes common placeholders such as **`{fan}`**.
+- **`notifications`:** background webhook payload reads thresholds defensively.
+- **`weather`:** condition icon color handling guards malformed style objects.
+- **`calendar`:** expanded popups keep rendering the selected range view when there are no events, with empty day placeholders instead of a full-popup no-events message.
+- **`navigation`:** media player status chips live in the title row so long track titles ellipsize before the chip on mobile.
+- **`light`:** default on-state icons use a contrast-safe mix of the current light color and theme text color.
+
+### Changed
+
+- **Release metadata:** promote **`1.3.3-alpha.*`** (alpha.1-alpha.4) to stable **`1.3.3`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.3.js`**; optional split **`nodalia-cards-core-1.3.3.js`** + **`nodalia-cards-suite-1.3.3.js`**.
+- **Tests:** regression suite expanded to **208** tests covering background mobile delivery, calendar empty expanded views, navigation media title flow, and Light Card icon tinting.
+
+Per-alpha notes for **`1.3.3-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.3.2] - 2026-06-28
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.3.3-alpha.1";
+const CARD_VERSION = "1.3.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -731,7 +731,7 @@ function getConditionAccent(value) {
 }
 
 function getConditionReadableIconColor(value, accentColor = getConditionAccent(value)) {
-  const key = normalizeTextKey(value);
+  const key = normalizeTextKey(value || "");
   const accentWeight = key === "sunny"
     ? 66
     : key === "lightning" || key === "exceptional"
@@ -2167,8 +2167,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const shouldAnimateForecast = animations.enabled && this._animateForecastOnNextRender;
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
-    const configuredIconColor = String(styles.icon.color || "").trim();
-    const defaultIconColor = String(DEFAULT_CONFIG.styles.icon.color || "").trim();
+    const configuredIconColor = String(styles?.icon?.color || "").trim();
+    const defaultIconColor = String(DEFAULT_CONFIG?.styles?.icon?.color || "").trim();
     const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor
       ? configuredIconColor
       : getConditionReadableIconColor(state?.state, accentColor);

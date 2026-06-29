@@ -270,8 +270,8 @@ automation:
             {% set e = entity_id %}
             {% set n = new_state_value | lower %}
             {% set o = old_state_value | lower %}
-            {% set nv = new_state_value | replace('%', '') | float(none) %}
-            {% set ov = old_state_value | replace('%', '') | float(none) if old_state_value not in ['', 'unknown', 'unavailable', 'none'] else none %}
+            {% set nv = new_value %}
+            {% set ov = old_value %}
             {% if e in groups.get('door', []) and n == 'on' and o != 'on' %}door
             {% elif e in groups.get('window', []) and n == 'on' and o != 'on' %}window
             {% elif e in groups.get('motion', []) and n == 'on' and o != 'on' %}motion
