@@ -26,7 +26,8 @@
 #   entity list is synced dynamically through the webhook. Conditions below
 #   discard attribute-only changes and non-watched entities before notification
 #   actions run.
-# - Treat the webhook_id like a password if you set local_only: false.
+# - Keep local_only: true unless you intentionally need unauthenticated remote
+#   webhook access, and treat the webhook_id like a password if you change it.
 # - Calendar/weather forecast alerts are still best handled by dedicated HA
 #   automations because they depend on periodic forecast/calendar queries, not
 #   only entity state_changed events.
@@ -90,11 +91,13 @@ automation:
         webhook_id: nodalia_notifications_background_sync
         allowed_methods:
           - POST
-        local_only: false
+        local_only: true
     actions:
       - variables:
           chunks: "{{ trigger.json.chunks | default([], true) }}"
           config_hash: "{{ trigger.json.config_hash | default('', true) }}"
+      - condition: template
+        value_template: "{{ (chunks | count) <= 40 }}"
       - repeat:
           count: 40
           sequence:

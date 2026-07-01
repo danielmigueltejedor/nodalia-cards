@@ -2,6 +2,7 @@ const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
 const CARD_VERSION = "1.3.4";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
+const BACKGROUND_MOBILE_MAX_CHUNKS = 40;
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -987,6 +988,16 @@ function buildBackgroundMobileWebhookPayload(rawConfig) {
   };
 }
 
+function getBackgroundMobileSyncSignature(webhookId, payload) {
+  return `${String(webhookId || "").trim()}:${payload.config_hash}:${payload.chunk_count}`;
+}
+
+function warnBackgroundMobilePayloadTooLarge(payload, context = "Nodalia Notifications Card") {
+  if (typeof console !== "undefined" && typeof console.warn === "function") {
+    console.warn(`${context}: background mobile sync payload has ${payload.chunk_count} chunks, but the package stores only ${BACKGROUND_MOBILE_MAX_CHUNKS}; sync skipped to avoid truncating the notification config.`);
+  }
+}
+
 class NodaliaNotificationsCard extends HTMLElement {
   static getStubConfig(hass) {
     const first = prefix => Object.keys(hass?.states || {}).find(entityId => entityId.startsWith(`${prefix}.`)) || "";
@@ -1297,6 +1308,23 @@ class NodaliaNotificationsCard extends HTMLElement {
     return buildBackgroundMobileWebhookPayload(this._config);
   }
 
+  _getBackgroundMobileSyncSignature(webhookId = this._config?.background_mobile?.webhook) {
+    const payload = this._buildBackgroundMobileWebhookPayload();
+    if (payload.chunk_count > BACKGROUND_MOBILE_MAX_CHUNKS) {
+      return "";
+    }
+    return getBackgroundMobileSyncSignature(webhookId, payload);
+  }
+
+  _backgroundMobileDeliveryActive() {
+    const background = this._config?.background_mobile || {};
+    if (background.enabled !== true || !String(background.webhook || "").trim()) {
+      return false;
+    }
+    const signature = this._getBackgroundMobileSyncSignature(background.webhook);
+    return Boolean(signature && signature === this._lastBackgroundMobileSyncSignature);
+  }
+
   _scheduleBackgroundMobileSync(delay = 320, options = {}) {
     const config = this._config?.background_mobile || {};
     if (options.force === true) {
@@ -1331,7 +1359,13 @@ class NodaliaNotificationsCard extends HTMLElement {
       return false;
     }
     const payload = this._buildBackgroundMobileWebhookPayload();
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    if (payload.chunk_count > BACKGROUND_MOBILE_MAX_CHUNKS) {
+      warnBackgroundMobilePayloadTooLarge(payload);
+      this._lastBackgroundMobileSyncSignature = "";
+      this._pendingBackgroundMobileSync = true;
+      return false;
+    }
+    const signature = getBackgroundMobileSyncSignature(webhookId, payload);
     const force = this._forceNextBackgroundMobileSync === true;
     this._forceNextBackgroundMobileSync = false;
     if (!force && signature === this._lastBackgroundMobileSyncSignature) {
@@ -2481,7 +2515,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (policy === "off") {
       return false;
     }
-    if (this._config.background_mobile?.enabled === true) {
+    if (this._backgroundMobileDeliveryActive()) {
       return false;
     }
     const targets = [
@@ -3870,7 +3904,12 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       return false;
     }
     const payload = buildBackgroundMobileWebhookPayload(normalized);
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    if (payload.chunk_count > BACKGROUND_MOBILE_MAX_CHUNKS) {
+      warnBackgroundMobilePayloadTooLarge(payload, "Nodalia Notifications Card editor");
+      this._lastBackgroundMobileSyncSignature = "";
+      return false;
+    }
+    const signature = getBackgroundMobileSyncSignature(webhookId, payload);
     if (signature === this._lastBackgroundMobileSyncSignature) {
       return true;
     }
