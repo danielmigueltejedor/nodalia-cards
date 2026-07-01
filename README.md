@@ -323,6 +323,8 @@ configured alert entities, thresholds, and `mobile_notifications.entities` to
 Home Assistant by webhook so the package can send push notifications in the
 background without duplicating notify targets in the automation YAML. Start from
 [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
+Keep the package webhook `local_only: true` unless you intentionally expose it
+remotely, and change the webhook ID if you need a custom shared secret.
 
 For comfort alerts, use indoor temperature/humidity entities for house
 recommendations. Outdoor temperature/humidity entities are kept separate so an

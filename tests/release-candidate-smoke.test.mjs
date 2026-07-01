@@ -643,6 +643,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /ed\.notifications\.background_mobile_webhook/);
   assert.match(source, /entities: config\.mobile_notifications\?\.entities \|\| \[\]/);
   assert.match(source, /nodalia_notifications_background_sync/);
+  assert.match(source, /BACKGROUND_MOBILE_MAX_CHUNKS = 40/);
+  assert.match(source, /payload\.chunk_count > BACKGROUND_MOBILE_MAX_CHUNKS/);
   assert.match(source, /_scheduleBackgroundMobileSync/);
   assert.match(source, /_pendingBackgroundMobileSync/);
   assert.match(source, /_forceNextBackgroundMobileSync/);
@@ -694,11 +696,12 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /!text\.includes\(":"\)/);
   assert.match(source, /!this\._canPruneDismissedToken\(id\)/);
   assert.match(source, /_queueMobileNotifications/);
-  assert.match(source, /this\._config\.background_mobile\?\.enabled === true/);
+  assert.match(source, /_backgroundMobileDeliveryActive\(\)/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
   const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
   assert.match(backgroundPackage, /webhook_id: nodalia_notifications_background_sync/);
+  assert.match(backgroundPackage, /local_only: true/);
   assert.match(backgroundPackage, /id: nodalia_notifications_background_state_filter/);
   assert.match(backgroundPackage, /event_type: state_changed/);
   assert.match(backgroundPackage, /event: nodalia_notifications_background_watched_state_changed/);
@@ -709,6 +712,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /max_exceeded: silent/);
   assert.match(backgroundPackage, /input_text\.nodalia_notifications_background_config_01/);
   assert.match(backgroundPackage, /nodalia_notifications_background_config_40: \{ max: 255 \}/);
+  assert.match(backgroundPackage, /\(chunks \| count\) <= 40/);
   assert.match(backgroundPackage, /count: 40/);
   assert.match(backgroundPackage, /states\('input_text\.nodalia_notifications_background_config_40'\)/);
   assert.match(backgroundPackage, /notify\.send_message/);
