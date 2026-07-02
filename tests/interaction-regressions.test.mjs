@@ -1244,12 +1244,16 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /function clampEditorDialogScroll\(/);
   assert.match(utils, /element-editor/);
   assert.match(utils, /alignSelf = "flex-start"/);
-  for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js"]) {
+  assert.match(utils, /minHeight = "0"/);
+  for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js", "nodalia-notifications-card.js"]) {
     const source = read(card);
     assert.match(source, /bindEditorDialogLayoutFix\?\.\(this\)/);
     assert.match(source, /releaseEditorDialogLayoutFix\?\.\(this\)/);
     assert.match(source, /clampEditorDialogScroll\?\.\(this\)/);
   }
+  const notifications = read("nodalia-notifications-card.js");
+  assert.match(notifications, /overflow-anchor: none/);
+  assert.match(notifications, /\.editor-section:last-child\s*\{[\s\S]*margin-bottom: 0/);
 });
 
 test("slider bubble chrome does not trigger card body tap", () => {

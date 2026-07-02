@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.4";
+const CARD_VERSION = "1.3.5-alpha.1";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -4501,17 +4501,17 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           </div>
         </div>
         <div class="editor-grid">
+          ${this._renderSelectField("ed.notifications.field_mobile", `smart_entity_overrides.${index}.mobile`, item.mobile, [
+            { value: "inherit", label: "ed.notifications.mobile_inherit" },
+            { value: "on", label: "ed.notifications.mobile_on" },
+            { value: "off", label: "ed.notifications.mobile_off" },
+          ], { fullWidth: true })}
           ${this._renderTextField("ed.notifications.field_title_entity_only", `smart_entity_overrides.${index}.title`, item.title, { placeholder: "ed.notifications.placeholder_use_global_title" })}
           ${this._renderColorField("ed.notifications.field_color_entity_only", `smart_entity_overrides.${index}.tint_color`, item.tint_color)}
           ${this._renderTextareaField("ed.notifications.field_message_entity_only", `smart_entity_overrides.${index}.message`, item.message, { placeholder: "ed.notifications.placeholder_use_global_message" })}
           ${this._renderTextField("ed.notifications.field_url_label", `smart_entity_overrides.${index}.action_label`, item.action_label, { placeholder: "ed.notifications.url_label_placeholder" })}
           ${this._renderNotificationTapActionFields(`smart_entity_overrides.${index}.tap_action`, item.tap_action)}
           ${this._renderTextField("ed.notifications.field_url_entity_only", `smart_entity_overrides.${index}.url`, item.url, { placeholder: "https://...", fullWidth: true })}
-          ${this._renderSelectField("ed.notifications.field_mobile", `smart_entity_overrides.${index}.mobile`, item.mobile, [
-            { value: "inherit", label: "ed.notifications.mobile_inherit" },
-            { value: "on", label: "ed.notifications.mobile_on" },
-            { value: "off", label: "ed.notifications.mobile_off" },
-          ])}
         </div>
       </div>
     `).join("");
@@ -4600,6 +4600,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       <style>
         :host {
           display: block;
+          overflow-anchor: none;
         }
         * {
           box-sizing: border-box;
@@ -4608,6 +4609,8 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           color: var(--primary-text-color);
           display: grid;
           gap: 16px;
+          margin: 0;
+          overflow-anchor: none;
         }
         .editor-section {
           background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
@@ -4615,7 +4618,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           border-radius: 16px;
           display: grid;
           gap: 14px;
+          margin: 0;
           padding: 14px;
+        }
+        .editor-section:last-child {
+          margin-bottom: 0;
         }
         .editor-section__header {
           display: grid;

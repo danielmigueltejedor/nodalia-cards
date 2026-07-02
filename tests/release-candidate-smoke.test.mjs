@@ -163,7 +163,8 @@ test("navigation media player status chip stays in title flow", () => {
 test("light card default on icon color follows current light tint with contrast", () => {
   const source = read("nodalia-light-card.js");
   assert.match(source, /const lightIconColor = isOn[\s\S]*color-mix\(in srgb, \$\{accentColor\} \$\{darkenBubbleIconGlyph \? 42 : 72\}%, var\(--primary-text-color\)\)/);
-  assert.match(source, /const configuredOnIconColor = String\(styles\.icon\.on_color \?\? ""\)\.trim\(\)/);
+  assert.match(source, /const configuredOnIconColor = String\(styles\?\.icon\?\.on_color \?\? ""\)\.trim\(\)/);
+  assert.match(source, /: styles\?\.icon\?\.off_color/);
   assert.match(source, /\.light-card__icon ha-icon \{[\s\S]*color: \$\{lightIconColor\};/);
 });
 
@@ -193,7 +194,9 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
   assert.match(source, /item\.temperature_2m_min/);
-  assert.match(source, /const rowMonth = \/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(key\) \? km - 1 : km/);
+  assert.match(source, /String\(date\.getMonth\(\) \+ 1\)\.padStart\(2, "0"\)/);
+  assert.match(source, /const rowKey = forecastDayKey\(k\)/);
+  assert.match(source, /const rowMonth = km - 1/);
   assert.match(source, /if \(targetTs < todayTs\) \{[\s\S]*return null;[\s\S]*\}/);
   assert.match(source, /if \(ky !== y \|\| rowMonth !== m\) \{[\s\S]*continue;[\s\S]*\}/);
 });
@@ -203,6 +206,7 @@ test("calendar expanded popup reuses daily weather badges", () => {
   assert.match(source, /_renderWeatherBadge\(dayDate, weatherByDay/);
   assert.match(source, /this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
   assert.match(source, /_expandedRangeGroups\(groups, config, locale\)/);
+  assert.match(source, /dayDate: existing\.dayDate instanceof Date && !Number\.isNaN\(existing\.dayDate\.getTime\(\)\)/);
   assert.match(source, /const displayGroups = this\._expandedRangeGroups\(groups, config, locale\)/);
   assert.match(source, /<div class="calendar-expanded__body">[\s\S]*this\._error[\s\S]*: this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
   assert.match(source, /calendar-expanded__month-weather/);

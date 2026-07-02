@@ -1317,16 +1317,19 @@
     const previous = {
       alignSelf: pane.style.alignSelf,
       height: pane.style.height,
+      minHeight: pane.style.minHeight,
       maxHeight: pane.style.maxHeight,
       overflowY: pane.style.overflowY,
     };
     pane.style.alignSelf = "flex-start";
     pane.style.height = "auto";
+    pane.style.minHeight = "0";
     pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
     pane.style.overflowY = "auto";
     editorHost._nodaliaEditorDialogLayoutRelease = () => {
       pane.style.alignSelf = previous.alignSelf;
       pane.style.height = previous.height;
+      pane.style.minHeight = previous.minHeight;
       pane.style.maxHeight = previous.maxHeight;
       pane.style.overflowY = previous.overflowY;
     };

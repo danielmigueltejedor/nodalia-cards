@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "1.3.4";
+const CARD_VERSION = "1.3.5-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2891,15 +2891,15 @@ class NodaliaLightCard extends HTMLElement {
     const accentColor = this._getAccentColor(state);
     const darkenBubbleIconGlyph =
       isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
-    const configuredOnIconColor = String(styles.icon.on_color ?? "").trim();
-    const defaultOnIconColor = String(DEFAULT_CONFIG.styles.icon.on_color ?? "").trim();
+    const configuredOnIconColor = String(styles?.icon?.on_color ?? "").trim();
+    const defaultOnIconColor = String(DEFAULT_CONFIG?.styles?.icon?.on_color ?? "").trim();
     const lightIconColor = isOn
       ? (
           configuredOnIconColor && configuredOnIconColor !== defaultOnIconColor
             ? configuredOnIconColor
             : `color-mix(in srgb, ${accentColor} ${darkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))`
         )
-      : styles.icon.off_color;
+      : styles?.icon?.off_color;
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const title = this._getLightName(state);
     const icon = this._getLightIcon(state);
