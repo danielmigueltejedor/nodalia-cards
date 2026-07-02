@@ -1246,14 +1246,20 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /"releaseEditorDialogLayoutFix"/);
   assert.match(utils, /"clampEditorDialogScroll"/);
   assert.match(utils, /element-editor/);
+  assert.match(utils, /function getComposedParentElement\(/);
+  assert.match(utils, /root instanceof ShadowRoot \? root\.host : null/);
+  assert.match(utils, /function getEditorDialogScrollAncestors\(/);
   assert.match(utils, /alignSelf = "flex-start"/);
   assert.match(utils, /minHeight = "0"/);
+  assert.match(utils, /node\.style\.overscrollBehaviorY = "contain"/);
   assert.match(utils, /const contentRect = editorContent instanceof HTMLElement/);
   assert.match(utils, /const emptyBottomGap = scrollportRect\.bottom - contentRect\.bottom/);
   assert.match(utils, /node\.scrollTop = Math\.max\(0, node\.scrollTop - Math\.ceil\(emptyBottomGap\)\)/);
   assert.match(utils, /window\.addEventListener\("scroll", onScroll, true\)/);
+  assert.match(utils, /scrollAncestors\.forEach\(node => node\.addEventListener\("scroll", onScroll/);
   assert.match(utils, /runEditorDialogScrollClamp\(editorHost\)/);
   assert.match(utils, /window\.removeEventListener\("scroll", onScroll, true\)/);
+  assert.match(utils, /scrollAncestors\.forEach\(node => node\.removeEventListener\("scroll", onScroll\)\)/);
   assert.doesNotMatch(utils, /editorHost\.style\.height = `\$\{Math\.ceil\(editorContent\.getBoundingClientRect\(\)\.height\)\}px`/);
   assert.doesNotMatch(utils, /editorHost\.style\.overflow = "hidden"/);
   for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js", "nodalia-notifications-card.js"]) {

@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.7] - 2026-07-03
+
+Seventh **`1.3.5`** **`alpha`**: Shadow DOM dialog scroll clamp. Release channel **`1.3.5-alpha.7`**.
+
+### Fixed
+
+- **`editor`:** shared visual editor scroll clamp now walks Home Assistant's composed DOM tree across shadow roots and attaches to the actual Lovelace dialog scroll ancestors, preventing the Notifications editor from scrolling into empty bottom space when the real scroll container sits outside the card editor shadow tree.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.6.js`** so dashboards still pointing at the previous alpha receive the Shadow DOM scroll fix.
+
 ## [1.3.5-alpha.6] - 2026-07-03
 
 Sixth **`1.3.5`** **`alpha`**: Persistent Notifications editor scroll clamp. Release channel **`1.3.5-alpha.6`**.
