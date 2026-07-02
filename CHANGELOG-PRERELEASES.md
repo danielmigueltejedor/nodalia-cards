@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.6] - 2026-07-03
+
+Sixth **`1.3.5`** **`alpha`**: Persistent Notifications editor scroll clamp. Release channel **`1.3.5-alpha.6`**.
+
+### Fixed
+
+- **`editor`:** Notifications visual editor now keeps a live scroll clamp attached while the Lovelace edit dialog is open, preventing wheel/trackpad scrolling from repeatedly drifting past the bottom of the real form into empty space.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.5.js`** so dashboards still pointing at the previous alpha receive the persistent scroll fix.
+
 ## [1.3.5-alpha.5] - 2026-07-03
 
 Fifth **`1.3.5`** **`alpha`**: Notifications editor scroll clamp follow-up. Release channel **`1.3.5-alpha.5`**.

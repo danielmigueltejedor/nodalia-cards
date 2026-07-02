@@ -1251,6 +1251,9 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /const contentRect = editorContent instanceof HTMLElement/);
   assert.match(utils, /const emptyBottomGap = scrollportRect\.bottom - contentRect\.bottom/);
   assert.match(utils, /node\.scrollTop = Math\.max\(0, node\.scrollTop - Math\.ceil\(emptyBottomGap\)\)/);
+  assert.match(utils, /window\.addEventListener\("scroll", onScroll, true\)/);
+  assert.match(utils, /runEditorDialogScrollClamp\(editorHost\)/);
+  assert.match(utils, /window\.removeEventListener\("scroll", onScroll, true\)/);
   assert.doesNotMatch(utils, /editorHost\.style\.height = `\$\{Math\.ceil\(editorContent\.getBoundingClientRect\(\)\.height\)\}px`/);
   assert.doesNotMatch(utils, /editorHost\.style\.overflow = "hidden"/);
   for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js", "nodalia-notifications-card.js"]) {

@@ -1312,11 +1312,14 @@
     if (!(editorHost instanceof HTMLElement)) {
       return;
     }
-    releaseEditorDialogLayoutFix(editorHost);
     const pane = findLovelaceElementEditorPane(editorHost);
     if (!pane) {
       return;
     }
+    if (editorHost._nodaliaEditorDialogLayoutRelease && editorHost._nodaliaEditorDialogLayoutPane === pane) {
+      return;
+    }
+    releaseEditorDialogLayoutFix(editorHost);
     const previous = {
       alignSelf: pane.style.alignSelf,
       height: pane.style.height,
@@ -1331,13 +1334,30 @@
     pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
     pane.style.overflowY = "auto";
     pane.style.overflowAnchor = "none";
+    const onScroll = () => {
+      if (editorHost._nodaliaEditorDialogClampFrame) {
+        return;
+      }
+      editorHost._nodaliaEditorDialogClampFrame = window.requestAnimationFrame(() => {
+        editorHost._nodaliaEditorDialogClampFrame = 0;
+        runEditorDialogScrollClamp(editorHost);
+      });
+    };
+    window.addEventListener("scroll", onScroll, true);
+    editorHost._nodaliaEditorDialogLayoutPane = pane;
     editorHost._nodaliaEditorDialogLayoutRelease = () => {
+      window.removeEventListener("scroll", onScroll, true);
+      if (editorHost._nodaliaEditorDialogClampFrame) {
+        window.cancelAnimationFrame(editorHost._nodaliaEditorDialogClampFrame);
+        editorHost._nodaliaEditorDialogClampFrame = 0;
+      }
       pane.style.alignSelf = previous.alignSelf;
       pane.style.height = previous.height;
       pane.style.minHeight = previous.minHeight;
       pane.style.maxHeight = previous.maxHeight;
       pane.style.overflowY = previous.overflowY;
       pane.style.overflowAnchor = previous.overflowAnchor;
+      editorHost._nodaliaEditorDialogLayoutPane = null;
     };
   }
 
@@ -1345,6 +1365,37 @@
     if (editorHost?._nodaliaEditorDialogLayoutRelease) {
       editorHost._nodaliaEditorDialogLayoutRelease();
       editorHost._nodaliaEditorDialogLayoutRelease = null;
+    }
+  }
+
+  function runEditorDialogScrollClamp(editorHost) {
+    if (!(editorHost instanceof HTMLElement) || !editorHost.isConnected) {
+      return;
+    }
+    const editorContent = editorHost.shadowRoot?.querySelector(".editor") || editorHost;
+    const contentRect = editorContent instanceof HTMLElement
+      ? editorContent.getBoundingClientRect()
+      : null;
+    let node = findLovelaceElementEditorPane(editorHost) || editorHost;
+    while (node && node !== document.documentElement) {
+      const style = getComputedStyle(node);
+      const scrollable =
+        /(auto|scroll|overlay)/.test(style.overflowY) &&
+        node.scrollHeight > node.clientHeight + 1;
+      if (scrollable) {
+        const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+        if (node.scrollTop > maxScroll) {
+          node.scrollTop = maxScroll;
+        }
+        if (contentRect) {
+          const scrollportRect = node.getBoundingClientRect();
+          const emptyBottomGap = scrollportRect.bottom - contentRect.bottom;
+          if (emptyBottomGap > 1 && node.scrollTop > 0) {
+            node.scrollTop = Math.max(0, node.scrollTop - Math.ceil(emptyBottomGap));
+          }
+        }
+      }
+      node = node.parentElement;
     }
   }
 
@@ -1357,31 +1408,7 @@
         return;
       }
       bindEditorDialogLayoutFix(editorHost);
-      const editorContent = editorHost.shadowRoot?.querySelector(".editor") || editorHost;
-      const contentRect = editorContent instanceof HTMLElement
-        ? editorContent.getBoundingClientRect()
-        : null;
-      let node = findLovelaceElementEditorPane(editorHost) || editorHost;
-      while (node && node !== document.documentElement) {
-        const style = getComputedStyle(node);
-        const scrollable =
-          /(auto|scroll|overlay)/.test(style.overflowY) &&
-          node.scrollHeight > node.clientHeight + 1;
-        if (scrollable) {
-          const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
-          if (node.scrollTop > maxScroll) {
-            node.scrollTop = maxScroll;
-          }
-          if (contentRect) {
-            const scrollportRect = node.getBoundingClientRect();
-            const emptyBottomGap = scrollportRect.bottom - contentRect.bottom;
-            if (emptyBottomGap > 1 && node.scrollTop > 0) {
-              node.scrollTop = Math.max(0, node.scrollTop - Math.ceil(emptyBottomGap));
-            }
-          }
-        }
-        node = node.parentElement;
-      }
+      runEditorDialogScrollClamp(editorHost);
     });
   }
 
