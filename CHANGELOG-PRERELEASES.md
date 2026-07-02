@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.8] - 2026-07-03
+
+Eighth **`1.3.5`** **`alpha`**: Lovelace preview pane scroll containment. Release channel **`1.3.5-alpha.8`**.
+
+### Fixed
+
+- **`editor`:** shared visual editor scroll fix now also contains the Lovelace card preview pane while the dialog is open, preventing wheel scrolling over the preview side from moving the editor into empty bottom space.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.7.js`** so dashboards still pointing at the previous alpha receive the preview-pane scroll fix.
+
 ## [1.3.5-alpha.7] - 2026-07-03
 
 Seventh **`1.3.5`** **`alpha`**: Shadow DOM dialog scroll clamp. Release channel **`1.3.5-alpha.7`**.

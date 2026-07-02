@@ -1330,15 +1330,56 @@
     return nodes;
   }
 
+  function isLikelyLovelacePreviewPane(node) {
+    if (!(node instanceof HTMLElement)) {
+      return false;
+    }
+    const marker = [
+      node.localName,
+      node.id,
+      typeof node.className === "string" ? node.className : "",
+      node.getAttribute?.("part") || "",
+    ].join(" ").toLowerCase();
+    return marker.includes("preview") || marker.includes("card-preview");
+  }
+
+  function getEditorDialogPreviewPanes(editorHost) {
+    const pane = findLovelaceElementEditorPane(editorHost);
+    const nodes = [];
+    const seen = new Set();
+    const add = node => {
+      if (!(node instanceof HTMLElement) || seen.has(node) || node === pane || node.contains(editorHost)) {
+        return;
+      }
+      seen.add(node);
+      nodes.push(node);
+    };
+    let node = pane;
+    while (node) {
+      const parent = getComposedParentElement(node);
+      if (!parent) {
+        break;
+      }
+      Array.from(parent.children || []).forEach(child => {
+        if (!(child instanceof HTMLElement) || child === node || child.contains(editorHost)) {
+          return;
+        }
+        if (isLikelyLovelacePreviewPane(child) || child.scrollHeight > child.clientHeight + 1) {
+          add(child);
+        }
+        child.querySelectorAll?.('[class*="preview" i], [id*="preview" i], [part*="preview" i]').forEach(add);
+      });
+      node = parent;
+    }
+    return nodes;
+  }
+
   function bindEditorDialogLayoutFix(editorHost) {
     if (!(editorHost instanceof HTMLElement)) {
       return;
     }
     const pane = findLovelaceElementEditorPane(editorHost);
     if (!pane) {
-      return;
-    }
-    if (editorHost._nodaliaEditorDialogLayoutRelease && editorHost._nodaliaEditorDialogLayoutPane === pane) {
       return;
     }
     releaseEditorDialogLayoutFix(editorHost);
@@ -1351,10 +1392,18 @@
       overflowAnchor: pane.style.overflowAnchor,
     };
     const scrollAncestors = getEditorDialogScrollAncestors(editorHost);
+    const previewPanes = getEditorDialogPreviewPanes(editorHost);
     const previousAncestors = scrollAncestors.map(node => ({
       node,
       overscrollBehaviorY: node.style.overscrollBehaviorY,
       overflowAnchor: node.style.overflowAnchor,
+    }));
+    const previousPreviewPanes = previewPanes.map(node => ({
+      node,
+      overscrollBehaviorY: node.style.overscrollBehaviorY,
+      overflowAnchor: node.style.overflowAnchor,
+      overflowY: node.style.overflowY,
+      scrollTop: node.scrollTop,
     }));
     pane.style.alignSelf = "flex-start";
     pane.style.height = "auto";
@@ -1366,6 +1415,12 @@
       node.style.overscrollBehaviorY = "contain";
       node.style.overflowAnchor = "none";
     });
+    previousPreviewPanes.forEach(({ node }) => {
+      node.style.overscrollBehaviorY = "contain";
+      node.style.overflowAnchor = "none";
+      node.style.overflowY = "hidden";
+      node.scrollTop = 0;
+    });
     const onScroll = () => {
       if (editorHost._nodaliaEditorDialogClampFrame) {
         return;
@@ -1375,12 +1430,18 @@
         runEditorDialogScrollClamp(editorHost);
       });
     };
+    const onPreviewWheel = event => {
+      event.preventDefault();
+      onScroll();
+    };
     window.addEventListener("scroll", onScroll, true);
     scrollAncestors.forEach(node => node.addEventListener("scroll", onScroll, { passive: true }));
+    previewPanes.forEach(node => node.addEventListener("wheel", onPreviewWheel, { passive: false }));
     editorHost._nodaliaEditorDialogLayoutPane = pane;
     editorHost._nodaliaEditorDialogLayoutRelease = () => {
       window.removeEventListener("scroll", onScroll, true);
       scrollAncestors.forEach(node => node.removeEventListener("scroll", onScroll));
+      previewPanes.forEach(node => node.removeEventListener("wheel", onPreviewWheel));
       if (editorHost._nodaliaEditorDialogClampFrame) {
         window.cancelAnimationFrame(editorHost._nodaliaEditorDialogClampFrame);
         editorHost._nodaliaEditorDialogClampFrame = 0;
@@ -1388,6 +1449,12 @@
       previousAncestors.forEach(({ node, overscrollBehaviorY, overflowAnchor }) => {
         node.style.overscrollBehaviorY = overscrollBehaviorY;
         node.style.overflowAnchor = overflowAnchor;
+      });
+      previousPreviewPanes.forEach(({ node, overscrollBehaviorY, overflowAnchor, overflowY, scrollTop }) => {
+        node.style.overscrollBehaviorY = overscrollBehaviorY;
+        node.style.overflowAnchor = overflowAnchor;
+        node.style.overflowY = overflowY;
+        node.scrollTop = scrollTop;
       });
       pane.style.alignSelf = previous.alignSelf;
       pane.style.height = previous.height;
@@ -1434,6 +1501,11 @@
         }
       }
     }
+    getEditorDialogPreviewPanes(editorHost).forEach(node => {
+      if (node.scrollTop > 0) {
+        node.scrollTop = 0;
+      }
+    });
   }
 
   function clampEditorDialogScroll(editorHost) {
