@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.5] - 2026-07-03
+
+Fifth **`1.3.5`** **`alpha`**: Notifications editor scroll clamp follow-up. Release channel **`1.3.5-alpha.5`**.
+
+### Fixed
+
+- **`editor`:** Notifications visual editor no longer applies a fixed clipped height to the custom editor element; instead it clamps parent scroll only when the real form bottom has drifted above the visible editor area, preventing empty bottom scroll without hiding later sections.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.4.js`** so dashboards still pointing at the previous alpha receive the corrected scroll logic.
+
 ## [1.3.5-alpha.4] - 2026-07-02
 
 Fourth **`1.3.5`** **`alpha`**: Notifications editor mobile policy visibility. Release channel **`1.3.5-alpha.4`**.

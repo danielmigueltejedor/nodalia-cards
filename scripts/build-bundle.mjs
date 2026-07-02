@@ -121,6 +121,7 @@ const compatLoaderFiles = [
   "nodalia-cards-1.3.5-alpha.1.js",
   "nodalia-cards-1.3.5-alpha.2.js",
   "nodalia-cards-1.3.5-alpha.3.js",
+  "nodalia-cards-1.3.5-alpha.4.js",
 ];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;

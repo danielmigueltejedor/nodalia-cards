@@ -1346,10 +1346,6 @@
       editorHost._nodaliaEditorDialogLayoutRelease();
       editorHost._nodaliaEditorDialogLayoutRelease = null;
     }
-    if (editorHost?._nodaliaEditorHostStyleRelease) {
-      editorHost._nodaliaEditorHostStyleRelease();
-      editorHost._nodaliaEditorHostStyleRelease = null;
-    }
   }
 
   function clampEditorDialogScroll(editorHost) {
@@ -1362,23 +1358,9 @@
       }
       bindEditorDialogLayoutFix(editorHost);
       const editorContent = editorHost.shadowRoot?.querySelector(".editor") || editorHost;
-      if (editorContent instanceof HTMLElement) {
-        if (!editorHost._nodaliaEditorHostStyleRelease) {
-          const previousHost = {
-            minHeight: editorHost.style.minHeight,
-            height: editorHost.style.height,
-            overflow: editorHost.style.overflow,
-          };
-          editorHost._nodaliaEditorHostStyleRelease = () => {
-            editorHost.style.minHeight = previousHost.minHeight;
-            editorHost.style.height = previousHost.height;
-            editorHost.style.overflow = previousHost.overflow;
-          };
-        }
-        editorHost.style.minHeight = "0";
-        editorHost.style.height = `${Math.ceil(editorContent.getBoundingClientRect().height)}px`;
-        editorHost.style.overflow = "hidden";
-      }
+      const contentRect = editorContent instanceof HTMLElement
+        ? editorContent.getBoundingClientRect()
+        : null;
       let node = findLovelaceElementEditorPane(editorHost) || editorHost;
       while (node && node !== document.documentElement) {
         const style = getComputedStyle(node);
@@ -1389,6 +1371,13 @@
           const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
           if (node.scrollTop > maxScroll) {
             node.scrollTop = maxScroll;
+          }
+          if (contentRect) {
+            const scrollportRect = node.getBoundingClientRect();
+            const emptyBottomGap = scrollportRect.bottom - contentRect.bottom;
+            if (emptyBottomGap > 1 && node.scrollTop > 0) {
+              node.scrollTop = Math.max(0, node.scrollTop - Math.ceil(emptyBottomGap));
+            }
           }
         }
         node = node.parentElement;
