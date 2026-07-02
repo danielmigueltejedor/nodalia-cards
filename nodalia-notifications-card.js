@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "1.3.5-alpha.3";
+const CARD_VERSION = "1.3.5-alpha.4";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -298,6 +298,7 @@ function normalizeSmartNotificationOptions(value) {
     url: String(row.url || "").trim(),
     action_label: String(row.action_label || "").trim(),
     tap_action: normalizeNotificationTapAction(row.tap_action),
+    mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
   };
 }
 
@@ -376,6 +377,7 @@ function normalizeCustomNotifications(value, options = {}) {
             : "",
         url: String(row.url || "").trim(),
         tap_action: normalizeNotificationTapAction(row.tap_action),
+        mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
       };
       if (keepDrafts && row._draft === true) {
         normalized._draft = true;
@@ -939,6 +941,16 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       min_severity: config.mobile_notifications?.min_severity || "warning",
       critical_alerts: config.mobile_notifications?.critical_alerts === true,
     },
+    smart: Object.fromEntries(
+      Object.entries(config.smart_notifications || {}).map(([key, item]) => [
+        key,
+        {
+          title: String(item?.title || ""),
+          message: String(item?.message || ""),
+          mobile: String(item?.mobile || "inherit"),
+        },
+      ]),
+    ),
     thresholds: {
       hot_temperature: config.thresholds?.hot_temperature,
       cold_temperature: config.thresholds?.cold_temperature,
@@ -1735,7 +1747,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         source: friendlyName(hass, event._entity),
         entity: event._entity,
         tintColor: this._smartTint("calendar", event._entity),
-        mobilePolicy: this._smartMobilePolicy(event._entity),
+        mobilePolicy: this._smartMobilePolicyForKind("calendar", event._entity),
         createdAt: start.getTime(),
         action: this._smartAction("calendar", {
           label: this._text("actions.openCalendar", "Open calendar"),
@@ -1779,7 +1791,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           source: name,
           entity: entityId,
           tintColor: this._smartTint("vacuum", entityId),
-          mobilePolicy: this._smartMobilePolicy(entityId),
+          mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
           action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "View robot"), type: "more-info", entity: entityId }, "", entityId),
         });
@@ -1794,7 +1806,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           source: name,
           entity: entityId,
           tintColor: this._smartTint("vacuum", entityId),
-          mobilePolicy: this._smartMobilePolicy(entityId),
+          mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
           action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continue"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId),
         });
@@ -1811,7 +1823,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           source: name,
           entity: entityId,
           tintColor: this._smartTint("vacuum", entityId),
-          mobilePolicy: this._smartMobilePolicy(entityId),
+          mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
           action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "View robot"), type: "more-info", entity: entityId }, "", entityId),
         });
@@ -1831,7 +1843,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           source: sourceName,
           entity: entityId,
           tintColor: this._smartTint("motion", entityId),
-          mobilePolicy: this._smartMobilePolicy(entityId),
+          mobilePolicy: this._smartMobilePolicyForKind("motion", entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
           action: this._smartAction("motion", { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, "", entityId),
         });
@@ -1855,7 +1867,7 @@ class NodaliaNotificationsCard extends HTMLElement {
             source: sourceName,
             entity: entityId,
             tintColor: this._smartTint(kind, entityId),
-            mobilePolicy: this._smartMobilePolicy(entityId),
+            mobilePolicy: this._smartMobilePolicyForKind(kind, entityId),
             createdAt: Date.parse(state.last_changed || "") || Date.now(),
             action: this._smartAction(kind, { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, "", entityId),
           });
@@ -1924,7 +1936,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         source: sourceName,
         entity: hottest.entityId,
         tintColor: this._smartTint("hot", hottest.entityId),
-        mobilePolicy: this._smartMobilePolicy(hottest.entityId),
+        mobilePolicy: this._smartMobilePolicyForKind("hot", hottest.entityId),
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
         action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Turn on fan"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }, "", hottest.entityId),
       });
@@ -1945,7 +1957,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         source: sourceName,
         entity: hottest.entityId,
         tintColor: this._smartTint("hot", hottest.entityId),
-        mobilePolicy: this._smartMobilePolicy(hottest.entityId),
+        mobilePolicy: this._smartMobilePolicyForKind("hot", hottest.entityId),
         createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
         action: this._smartAction("hot", { label: this._text("actions.turnOnCooling", "Enable cooling"), type: "service", service: "climate.set_hvac_mode", entity: coolingClimateTarget, serviceData: { hvac_mode: "cool" }, internal: true }, "", hottest.entityId),
       });
@@ -1963,7 +1975,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         source: sourceName,
         entity: coldest.entityId,
         tintColor: this._smartTint("cold", coldest.entityId),
-        mobilePolicy: this._smartMobilePolicy(coldest.entityId),
+        mobilePolicy: this._smartMobilePolicyForKind("cold", coldest.entityId),
         createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
         action: this._smartAction("cold", heatingClimateTarget ? { label: this._text("actions.turnOnHeat", "Enable heating"), type: "service", service: "climate.set_hvac_mode", entity: heatingClimateTarget, serviceData: { hvac_mode: "heat" }, internal: true } : null, "", coldest.entityId),
       });
@@ -1994,7 +2006,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           source: sourceName,
           entity: entityId,
           tintColor: this._smartTint(smartKind, entityId),
-          mobilePolicy: this._smartMobilePolicy(entityId),
+          mobilePolicy: this._smartMobilePolicyForKind(smartKind, entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
           action: this._smartAction(
             smartKind,
@@ -2146,7 +2158,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         source: mediaName,
         entity: mediaTarget,
         tintColor: this._smartTint("media_left_on", mediaTarget),
-        mobilePolicy: this._smartMobilePolicy(mediaTarget),
+        mobilePolicy: this._smartMobilePolicyForKind("media_left_on", mediaTarget),
         createdAt: Date.now(),
         action: this._smartAction("media_left_on", { label: this._text("actions.turnOff", "Turn off"), type: "service", service: "media_player.turn_off", entity: mediaTarget, internal: true }, "", mediaTarget),
       });
@@ -2259,6 +2271,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     return override?.mobile || "inherit";
   }
 
+  _smartMobilePolicyForKind(kind, entityId = "") {
+    return this._smartConfig(kind, entityId).mobile || "inherit";
+  }
+
   _buildWeatherNotifications(add) {
     if (!this._config.smart_recommendations || !this._hass || !this._config.weather_entities.length) {
       return;
@@ -2295,7 +2311,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         source: sourceName,
         entity: entityId,
         tintColor: this._smartTint("rain", entityId),
-        mobilePolicy: this._smartMobilePolicy(entityId),
+        mobilePolicy: this._smartMobilePolicyForKind("rain", entityId),
         createdAt: rainy.date.getTime(),
         action: this._smartAction("rain", { label: this._text("actions.viewWeather", "View weather"), type: "more-info", entity: entityId }, "", entityId),
       });
@@ -2383,7 +2399,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           source: sourceName,
           entity: entityId,
           tintColor: this._smartTint(group.kind, entityId),
-          mobilePolicy: this._smartMobilePolicy(entityId),
+          mobilePolicy: this._smartMobilePolicyForKind(group.kind, entityId),
           createdAt: Date.parse(state.last_changed || "") || Date.now(),
           action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, group.urlLabel, entityId),
         });
@@ -2408,6 +2424,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         tintColor: item.tint_color || "",
         severity: item.severity || "info",
         source: entityName,
+        mobilePolicy: item.mobile || "inherit",
         createdAt: item.entity ? Date.parse(this._hass?.states?.[item.entity]?.last_changed || "") || Date.now() : Date.now(),
         action: this._buildCustomAction(item),
       });
@@ -4453,6 +4470,14 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     `;
   }
 
+  _renderMobilePolicyField(field, value, options = {}) {
+    return this._renderSelectField(options.label || "ed.notifications.field_mobile", field, normalizeSmartEntityMobile(value), [
+      { value: "inherit", label: "ed.notifications.mobile_inherit" },
+      { value: "on", label: "ed.notifications.mobile_on" },
+      { value: "off", label: "ed.notifications.mobile_off" },
+    ], { fullWidth: options.fullWidth !== false });
+  }
+
   _renderSmartNotificationOptions(config) {
     const rows = [
       ["hot", "ed.notifications.smart_hot", "ed.notifications.smart_ph_hot_title", "ed.notifications.smart_ph_hot_message"],
@@ -4476,6 +4501,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderTextField("ed.notifications.field_custom_title", `smart_notifications.${key}.title`, item.title, { placeholder: titlePlaceholder })}
             ${this._renderColorField("ed.notifications.field_tint_color", `smart_notifications.${key}.tint_color`, item.tint_color)}
+            ${this._renderMobilePolicyField(`smart_notifications.${key}.mobile`, item.mobile)}
             ${this._renderTextareaField("ed.notifications.field_custom_message", `smart_notifications.${key}.message`, item.message, { placeholder: messagePlaceholder })}
             ${this._renderTextField("ed.notifications.field_url_label", `smart_notifications.${key}.action_label`, item.action_label, { placeholder: "ed.notifications.url_label_placeholder", fullWidth: true })}
             ${this._renderNotificationTapActionFields(`smart_notifications.${key}.tap_action`, item.tap_action)}
@@ -4501,11 +4527,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           </div>
         </div>
         <div class="editor-grid">
-          ${this._renderSelectField("ed.notifications.field_mobile", `smart_entity_overrides.${index}.mobile`, item.mobile, [
-            { value: "inherit", label: "ed.notifications.mobile_inherit" },
-            { value: "on", label: "ed.notifications.mobile_on" },
-            { value: "off", label: "ed.notifications.mobile_off" },
-          ], { fullWidth: true })}
+          ${this._renderMobilePolicyField(`smart_entity_overrides.${index}.mobile`, item.mobile)}
           ${this._renderTextField("ed.notifications.field_title_entity_only", `smart_entity_overrides.${index}.title`, item.title, { placeholder: "ed.notifications.placeholder_use_global_title" })}
           ${this._renderColorField("ed.notifications.field_color_entity_only", `smart_entity_overrides.${index}.tint_color`, item.tint_color)}
           ${this._renderTextareaField("ed.notifications.field_message_entity_only", `smart_entity_overrides.${index}.message`, item.message, { placeholder: "ed.notifications.placeholder_use_global_message" })}
@@ -4542,6 +4564,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
             { value: "critical", label: "ed.notifications.severity_critical" },
           ])}
           ${this._renderColorField("ed.notifications.field_custom_tint", `custom_notifications.${index}.tint_color`, item.tint_color, { fullWidth: true })}
+          ${this._renderMobilePolicyField(`custom_notifications.${index}.mobile`, item.mobile)}
           ${this._renderEntityPickerField("ed.notifications.field_optional_entity", `custom_notifications.${index}.entity`, item.entity, { fullWidth: true })}
           ${this._renderTextField("ed.notifications.field_optional_attribute", `custom_notifications.${index}.attribute`, item.attribute, { placeholder: "temperature" })}
           ${this._renderSelectField("ed.notifications.field_condition", `custom_notifications.${index}.condition`, item.condition, [

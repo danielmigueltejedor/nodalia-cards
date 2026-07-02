@@ -33,6 +33,9 @@
     "applyCardTapActionField",
     "invokeHomeAssistantService",
     "renderCardEmptyStateDocument",
+    "bindEditorDialogLayoutFix",
+    "releaseEditorDialogLayoutFix",
+    "clampEditorDialogScroll",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -1320,18 +1323,21 @@
       minHeight: pane.style.minHeight,
       maxHeight: pane.style.maxHeight,
       overflowY: pane.style.overflowY,
+      overflowAnchor: pane.style.overflowAnchor,
     };
     pane.style.alignSelf = "flex-start";
     pane.style.height = "auto";
     pane.style.minHeight = "0";
     pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
     pane.style.overflowY = "auto";
+    pane.style.overflowAnchor = "none";
     editorHost._nodaliaEditorDialogLayoutRelease = () => {
       pane.style.alignSelf = previous.alignSelf;
       pane.style.height = previous.height;
       pane.style.minHeight = previous.minHeight;
       pane.style.maxHeight = previous.maxHeight;
       pane.style.overflowY = previous.overflowY;
+      pane.style.overflowAnchor = previous.overflowAnchor;
     };
   }
 
@@ -1339,6 +1345,10 @@
     if (editorHost?._nodaliaEditorDialogLayoutRelease) {
       editorHost._nodaliaEditorDialogLayoutRelease();
       editorHost._nodaliaEditorDialogLayoutRelease = null;
+    }
+    if (editorHost?._nodaliaEditorHostStyleRelease) {
+      editorHost._nodaliaEditorHostStyleRelease();
+      editorHost._nodaliaEditorHostStyleRelease = null;
     }
   }
 
@@ -1351,6 +1361,24 @@
         return;
       }
       bindEditorDialogLayoutFix(editorHost);
+      const editorContent = editorHost.shadowRoot?.querySelector(".editor") || editorHost;
+      if (editorContent instanceof HTMLElement) {
+        if (!editorHost._nodaliaEditorHostStyleRelease) {
+          const previousHost = {
+            minHeight: editorHost.style.minHeight,
+            height: editorHost.style.height,
+            overflow: editorHost.style.overflow,
+          };
+          editorHost._nodaliaEditorHostStyleRelease = () => {
+            editorHost.style.minHeight = previousHost.minHeight;
+            editorHost.style.height = previousHost.height;
+            editorHost.style.overflow = previousHost.overflow;
+          };
+        }
+        editorHost.style.minHeight = "0";
+        editorHost.style.height = `${Math.ceil(editorContent.getBoundingClientRect().height)}px`;
+        editorHost.style.overflow = "hidden";
+      }
       let node = findLovelaceElementEditorPane(editorHost) || editorHost;
       while (node && node !== document.documentElement) {
         const style = getComputedStyle(node);
@@ -1362,7 +1390,6 @@
           if (node.scrollTop > maxScroll) {
             node.scrollTop = maxScroll;
           }
-          break;
         }
         node = node.parentElement;
       }

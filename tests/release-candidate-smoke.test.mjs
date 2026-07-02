@@ -17,6 +17,7 @@ test("published package files and bundle manifest stay coherent", () => {
     "nodalia-cards-1.3.4.js",
     "nodalia-cards-1.3.5-alpha.1.js",
     "nodalia-cards-1.3.5-alpha.2.js",
+    "nodalia-cards-1.3.5-alpha.3.js",
   ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
@@ -589,6 +590,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.url/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.tap_action/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
+  assert.match(source, /smart_notifications\.\$\{key\}\.mobile/);
+  assert.match(source, /custom_notifications\.\$\{index\}\.mobile/);
+  assert.match(source, /mobilePolicy: item\.mobile \|\| "inherit"/);
+  assert.match(source, /_smartMobilePolicyForKind\(group\.kind, entityId\)/);
+  assert.match(source, /smart: Object\.fromEntries/);
   assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
   assert.match(source, /mobilePolicy/);
@@ -658,6 +664,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /background_mobile\.webhook/);
   assert.match(source, /ed\.notifications\.background_mobile_webhook/);
   assert.match(source, /entities: config\.mobile_notifications\?\.entities \|\| \[\]/);
+  assert.match(source, /mobile: String\(item\?\.mobile \|\| "inherit"\)/);
   assert.match(source, /nodalia_notifications_background_sync/);
   assert.match(source, /_scheduleBackgroundMobileSync/);
   assert.match(source, /_pendingBackgroundMobileSync/);
@@ -720,6 +727,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /event: nodalia_notifications_background_watched_state_changed/);
   assert.match(backgroundPackage, /id: nodalia_notifications_background_state_push/);
   assert.match(backgroundPackage, /event_type: nodalia_notifications_background_watched_state_changed/);
+  assert.match(backgroundPackage, /smart_cfg: "\{\{ cfg\.get\('smart', \{\}\) \}\}"/);
+  assert.match(backgroundPackage, /smart_override: "\{\{ smart_cfg\.get\(match_kind, \{\}\) if match_kind != '' else \{\} \}\}"/);
+  assert.match(backgroundPackage, /smart_mobile: "\{\{ smart_override\.get\('mobile', 'inherit'\) \}\}"/);
+  assert.match(backgroundPackage, /smart_mobile != 'off'/);
   assert.match(backgroundPackage, /mode: parallel/);
   assert.match(backgroundPackage, /max: 50/);
   assert.match(backgroundPackage, /max_exceeded: silent/);

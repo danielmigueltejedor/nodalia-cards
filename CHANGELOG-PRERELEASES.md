@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.4] - 2026-07-02
+
+Fourth **`1.3.5`** **`alpha`**: Notifications editor mobile policy visibility. Release channel **`1.3.5-alpha.4`**.
+
+### Fixed
+
+- **`notifications`:** visual editor now shows the per-item mobile notification policy inside each smart alert and each custom notification, not only in per-entity smart overrides.
+- **`notifications`:** smart alert and custom notification mobile policies are respected by foreground pushes, and smart alert policies are synced to the background Home Assistant package.
+- **`editor`:** shared editor dialog scroll fix now forces stale utility bundles to refresh and clamps the editor host to its real content height, preventing extra empty scroll below the Notifications editor.
+
 ## [1.3.5-alpha.3] - 2026-07-02
 
 Third **`1.3.5`** **`alpha`**: legacy resource compatibility aliases. Release channel **`1.3.5-alpha.3`**.
