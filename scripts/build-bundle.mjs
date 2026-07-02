@@ -166,7 +166,7 @@ const manifest = {
   contentSha256_12: fullHash,
   file: bundleFile,
   loaderFile,
-  hacsFile: versionedLoaderFile,
+  hacsFile: loaderFile,
   splitCoreFile: coreFile,
   splitCoreSha256_12: coreHash,
   splitSuiteFile: suiteFile,

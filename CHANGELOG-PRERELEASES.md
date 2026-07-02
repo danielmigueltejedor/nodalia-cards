@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.2] - 2026-07-02
+
+Second **`1.3.5`** **`alpha`**: HACS entrypoint restore. Release channel **`1.3.5-alpha.2`**.
+
+### Fixed
+
+- **`hacs`:** package metadata now uses the stable **`nodalia-cards.js`** HACS filename again, preventing Home Assistant from continuing to load an older versioned Lovelace resource after installing a prerelease.
+
 ## [1.3.5-alpha.1] - 2026-07-02
 
 First **`1.3.5`** **`alpha`**: Notifications per-entity mobile policy and editor scroll fix. Release channel **`1.3.5-alpha.1`**.

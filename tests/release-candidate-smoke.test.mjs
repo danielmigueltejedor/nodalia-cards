@@ -11,7 +11,8 @@ test("published package files and bundle manifest stay coherent", () => {
   const pkg = JSON.parse(read("package.json"));
   const hacs = JSON.parse(read("hacs.json"));
   const manifest = read("nodalia-cards.manifest.js");
-  const expectedHacsFile = `nodalia-cards-${pkg.version}.js`;
+  const expectedHacsFile = "nodalia-cards.js";
+  const expectedVersionedFile = `nodalia-cards-${pkg.version}.js`;
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
   assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
@@ -20,6 +21,7 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
+  assert.ok(pkg.files.includes(expectedVersionedFile), `${expectedVersionedFile} should be published`);
 
   const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
   const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
