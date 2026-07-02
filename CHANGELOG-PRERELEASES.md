@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.9] - 2026-07-03
+
+Ninth **`1.3.5`** **`alpha`**: Softer visual editor bottom clamp. Release channel **`1.3.5-alpha.9`**.
+
+### Fixed
+
+- **`editor`:** shared visual editor scroll clamp now leaves a normal bottom breathing gap before correcting empty-space drift, so the Notifications editor reaches its lower edge smoothly instead of bouncing slightly upward.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.8.js`** so dashboards still pointing at the previous alpha receive the softer clamp.
+
 ## [1.3.5-alpha.8] - 2026-07-03
 
 Eighth **`1.3.5`** **`alpha`**: Lovelace preview pane scroll containment. Release channel **`1.3.5-alpha.8`**.

@@ -1294,6 +1294,8 @@
    * Lovelace card dialog (.element-editor) stretches to match preview height on wide layouts.
    * Short visual editors then scroll past their fields into empty space — align the pane to content.
    */
+  const EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX = 96;
+
   function findLovelaceElementEditorPane(editorHost) {
     if (!(editorHost instanceof HTMLElement)) {
       return null;
@@ -1495,8 +1497,11 @@
         if (contentRect) {
           const scrollportRect = node.getBoundingClientRect();
           const emptyBottomGap = scrollportRect.bottom - contentRect.bottom;
-          if (emptyBottomGap > 1 && node.scrollTop > 0) {
-            node.scrollTop = Math.max(0, node.scrollTop - Math.ceil(emptyBottomGap));
+          if (emptyBottomGap > EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX && node.scrollTop > 0) {
+            node.scrollTop = Math.max(
+              0,
+              node.scrollTop - Math.ceil(emptyBottomGap - EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX)
+            );
           }
         }
       }

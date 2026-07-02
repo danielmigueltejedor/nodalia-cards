@@ -1256,9 +1256,11 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /node\.style\.overscrollBehaviorY = "contain"/);
   assert.match(utils, /node\.style\.overflowY = "hidden"/);
   assert.match(utils, /node\.addEventListener\("wheel", onPreviewWheel, \{ passive: false \}\)/);
+  assert.match(utils, /EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX = 96/);
   assert.match(utils, /const contentRect = editorContent instanceof HTMLElement/);
   assert.match(utils, /const emptyBottomGap = scrollportRect\.bottom - contentRect\.bottom/);
-  assert.match(utils, /node\.scrollTop = Math\.max\(0, node\.scrollTop - Math\.ceil\(emptyBottomGap\)\)/);
+  assert.match(utils, /emptyBottomGap > EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX/);
+  assert.match(utils, /Math\.ceil\(emptyBottomGap - EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX\)/);
   assert.match(utils, /getEditorDialogPreviewPanes\(editorHost\)\.forEach\(node =>/);
   assert.match(utils, /window\.addEventListener\("scroll", onScroll, true\)/);
   assert.match(utils, /scrollAncestors\.forEach\(node => node\.addEventListener\("scroll", onScroll/);
