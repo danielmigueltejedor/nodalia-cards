@@ -1,7 +1,7 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.3.5-alpha.2-2ea44f)
+![Package](https://img.shields.io/badge/package-1.3.5-alpha.3-2ea44f)
 ![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
@@ -48,9 +48,9 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.3.5-alpha.2
+# 🚀 What’s new in 1.3.5-alpha.3
 
-**Current alpha `1.3.5-alpha.2`** — install/update through HACS using **`nodalia-cards.js`**. This prerelease keeps the Notifications Card fixes from alpha.1 and restores the stable HACS entrypoint so Home Assistant does not keep loading an older versioned resource. Stable release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current alpha `1.3.5-alpha.3`** — install/update through HACS using **`nodalia-cards.js`**. This prerelease keeps the Notifications Card fixes from alpha.1, restores the stable HACS entrypoint, and also ships compatibility aliases for older versioned resources so Home Assistant stops serving stale JS. Stable release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ### Calendar and Weather fixes
 
@@ -393,7 +393,7 @@ The main entrypoint is:
 /hacsfiles/nodalia-cards/nodalia-cards.js
 ```
 
-HACS uses the stable `nodalia-cards.js` entrypoint and the bundle reports its loaded version in `window.__NODALIA_BUNDLE__`.
+HACS uses the stable `nodalia-cards.js` entrypoint and the bundle reports its loaded version in `window.__NODALIA_BUNDLE__`. Compatibility aliases are also shipped for older versioned resource URLs.
 
 No manual resource setup is normally required.
 

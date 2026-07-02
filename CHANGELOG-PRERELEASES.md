@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.3] - 2026-07-02
+
+Third **`1.3.5`** **`alpha`**: legacy resource compatibility aliases. Release channel **`1.3.5-alpha.3`**.
+
+### Fixed
+
+- **`hacs`:** package now ships compatibility aliases for recent versioned resource URLs, including **`nodalia-cards-1.3.4.js`**, so Home Assistant dashboards still pointing at an older resource path receive the current bundle instead of stale local JS.
+
 ## [1.3.5-alpha.2] - 2026-07-02
 
 Second **`1.3.5`** **`alpha`**: HACS entrypoint restore. Release channel **`1.3.5-alpha.2`**.

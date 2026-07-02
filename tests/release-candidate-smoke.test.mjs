@@ -13,6 +13,11 @@ test("published package files and bundle manifest stay coherent", () => {
   const manifest = read("nodalia-cards.manifest.js");
   const expectedHacsFile = "nodalia-cards.js";
   const expectedVersionedFile = `nodalia-cards-${pkg.version}.js`;
+  const expectedCompatFiles = [
+    "nodalia-cards-1.3.4.js",
+    "nodalia-cards-1.3.5-alpha.1.js",
+    "nodalia-cards-1.3.5-alpha.2.js",
+  ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
   assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
@@ -22,6 +27,11 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
   assert.ok(pkg.files.includes(expectedVersionedFile), `${expectedVersionedFile} should be published`);
+  expectedCompatFiles.forEach(file => {
+    assert.ok(manifest.includes(`"${file}"`), `${file} should be listed as a compatibility loader`);
+    assert.ok(pkg.files.includes(file), `${file} should be published`);
+    assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist after bundle`);
+  });
 
   const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
   const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
