@@ -257,6 +257,7 @@ automation:
           groups: "{{ cfg.get('entities', {}) }}"
           thresholds: "{{ cfg.get('thresholds', {}) }}"
           notify_cfg: "{{ cfg.get('notify', {}) }}"
+          smart_cfg: "{{ cfg.get('smart', {}) }}"
           entity_id: "{{ trigger.event.data.entity_id }}"
           new_state_value: "{{ trigger.event.data.new_state_value | default('', true) }}"
           old_state_value: "{{ trigger.event.data.old_state_value | default('', true) }}"
@@ -286,6 +287,8 @@ automation:
             {% elif e in groups.get('humidifier_full', []) and nv != none and nv >= thresholds.get('humidifier_fill_full', 90) and (ov == none or ov < thresholds.get('humidifier_fill_full', 90)) %}humidifier_fill_full
             {% elif e in groups.get('ink', []) and nv != none and nv <= thresholds.get('ink_low', 15) and (ov == none or ov > thresholds.get('ink_low', 15)) %}ink_low
             {% endif %}
+          smart_override: "{{ smart_cfg.get(match_kind, {}) if match_kind != '' else {} }}"
+          smart_mobile: "{{ smart_override.get('mobile', 'inherit') }}"
           severity: >-
             {% if match_kind in ['vacuum'] %}critical
             {% elif match_kind in ['motion', 'cold'] %}info
@@ -316,8 +319,8 @@ automation:
             {% else %}
               {{ friendly }}.
             {% endif %}
-          title: "{{ override.get('title') or default_title }}"
-          message_template: "{{ override.get('message') or default_message }}"
+          title: "{{ override.get('title') or smart_override.get('title') or default_title }}"
+          message_template: "{{ override.get('message') or smart_override.get('message') or default_message }}"
           message: >-
             {{ message_template
               | replace('{source}', friendly)
@@ -333,7 +336,7 @@ automation:
           notify_services: "{{ notify_cfg.get('services', []) }}"
           tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"
       - condition: template
-        value_template: "{{ match_kind != '' and override_mobile != 'off' and (severity_score | int) >= (min_severity_score | int) }}"
+        value_template: "{{ match_kind != '' and override_mobile != 'off' and smart_mobile != 'off' and (severity_score | int) >= (min_severity_score | int) }}"
       - if:
           - condition: template
             value_template: "{{ notify_entities | count > 0 }}"

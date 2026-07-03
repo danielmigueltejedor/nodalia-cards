@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), and completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), and completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable).
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,98 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [1.3.5-alpha.10] - 2026-07-03
+
+Tenth **`1.3.5`** **`alpha`**: Scrollable Lovelace preview pane. Release channel **`1.3.5-alpha.10`**.
+
+### Fixed
+
+- **`editor`:** Lovelace card preview panes can scroll internally again when the rendered preview is taller than the available editor space, while boundary wheel events remain contained so the dialog does not drift into empty space.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.9.js`** so dashboards still pointing at the previous alpha receive the preview scroll restoration.
+
+## [1.3.5-alpha.9] - 2026-07-03
+
+Ninth **`1.3.5`** **`alpha`**: Softer visual editor bottom clamp. Release channel **`1.3.5-alpha.9`**.
+
+### Fixed
+
+- **`editor`:** shared visual editor scroll clamp now leaves a normal bottom breathing gap before correcting empty-space drift, so the Notifications editor reaches its lower edge smoothly instead of bouncing slightly upward.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.8.js`** so dashboards still pointing at the previous alpha receive the softer clamp.
+
+## [1.3.5-alpha.8] - 2026-07-03
+
+Eighth **`1.3.5`** **`alpha`**: Lovelace preview pane scroll containment. Release channel **`1.3.5-alpha.8`**.
+
+### Fixed
+
+- **`editor`:** shared visual editor scroll fix now also contains the Lovelace card preview pane while the dialog is open, preventing wheel scrolling over the preview side from moving the editor into empty bottom space.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.7.js`** so dashboards still pointing at the previous alpha receive the preview-pane scroll fix.
+
+## [1.3.5-alpha.7] - 2026-07-03
+
+Seventh **`1.3.5`** **`alpha`**: Shadow DOM dialog scroll clamp. Release channel **`1.3.5-alpha.7`**.
+
+### Fixed
+
+- **`editor`:** shared visual editor scroll clamp now walks Home Assistant's composed DOM tree across shadow roots and attaches to the actual Lovelace dialog scroll ancestors, preventing the Notifications editor from scrolling into empty bottom space when the real scroll container sits outside the card editor shadow tree.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.6.js`** so dashboards still pointing at the previous alpha receive the Shadow DOM scroll fix.
+
+## [1.3.5-alpha.6] - 2026-07-03
+
+Sixth **`1.3.5`** **`alpha`**: Persistent Notifications editor scroll clamp. Release channel **`1.3.5-alpha.6`**.
+
+### Fixed
+
+- **`editor`:** Notifications visual editor now keeps a live scroll clamp attached while the Lovelace edit dialog is open, preventing wheel/trackpad scrolling from repeatedly drifting past the bottom of the real form into empty space.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.5.js`** so dashboards still pointing at the previous alpha receive the persistent scroll fix.
+
+## [1.3.5-alpha.5] - 2026-07-03
+
+Fifth **`1.3.5`** **`alpha`**: Notifications editor scroll clamp follow-up. Release channel **`1.3.5-alpha.5`**.
+
+### Fixed
+
+- **`editor`:** Notifications visual editor no longer applies a fixed clipped height to the custom editor element; instead it clamps parent scroll only when the real form bottom has drifted above the visible editor area, preventing empty bottom scroll without hiding later sections.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.4.js`** so dashboards still pointing at the previous alpha receive the corrected scroll logic.
+
+## [1.3.5-alpha.4] - 2026-07-02
+
+Fourth **`1.3.5`** **`alpha`**: Notifications editor mobile policy visibility. Release channel **`1.3.5-alpha.4`**.
+
+### Fixed
+
+- **`notifications`:** visual editor now shows the per-item mobile notification policy inside each smart alert and each custom notification, not only in per-entity smart overrides.
+- **`notifications`:** smart alert and custom notification mobile policies are respected by foreground pushes, and smart alert policies are synced to the background Home Assistant package.
+- **`editor`:** shared editor dialog scroll fix now forces stale utility bundles to refresh and clamps the editor host to its real content height, preventing extra empty scroll below the Notifications editor.
+
+## [1.3.5-alpha.3] - 2026-07-02
+
+Third **`1.3.5`** **`alpha`**: legacy resource compatibility aliases. Release channel **`1.3.5-alpha.3`**.
+
+### Fixed
+
+- **`hacs`:** package now ships compatibility aliases for recent versioned resource URLs, including **`nodalia-cards-1.3.4.js`**, so Home Assistant dashboards still pointing at an older resource path receive the current bundle instead of stale local JS.
+
+## [1.3.5-alpha.2] - 2026-07-02
+
+Second **`1.3.5`** **`alpha`**: HACS entrypoint restore. Release channel **`1.3.5-alpha.2`**.
+
+### Fixed
+
+- **`hacs`:** package metadata now uses the stable **`nodalia-cards.js`** HACS filename again, preventing Home Assistant from continuing to load an older versioned Lovelace resource after installing a prerelease.
+
+## [1.3.5-alpha.1] - 2026-07-02
+
+First **`1.3.5`** **`alpha`**: Notifications per-entity mobile policy and editor scroll fix. Release channel **`1.3.5-alpha.1`**.
+
+### Added
+
+- **`notifications`:** visual editor exposes the per-entity mobile notification policy first in each smart entity override, making it easy to silence mobile pushes for noisy entities while keeping the card alert visible.
+
+### Fixed
+
+- **`notifications`:** visual editor no longer leaves extra empty scroll space below the final settings section inside the Lovelace editor dialog.
 
 ## [1.3.4-alpha.1] - 2026-06-29
 

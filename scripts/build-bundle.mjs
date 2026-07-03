@@ -116,9 +116,21 @@ const loaderFile = "nodalia-cards.js";
 const versionedLoaderFile = `nodalia-cards-${pkg.version}.js`;
 const coreFile = `nodalia-cards-core-${pkg.version}.js`;
 const suiteFile = `nodalia-cards-suite-${pkg.version}.js`;
+const compatLoaderFiles = [
+  "nodalia-cards-1.3.4.js",
+  "nodalia-cards-1.3.5-alpha.1.js",
+  "nodalia-cards-1.3.5-alpha.2.js",
+  "nodalia-cards-1.3.5-alpha.3.js",
+  "nodalia-cards-1.3.5-alpha.4.js",
+  "nodalia-cards-1.3.5-alpha.5.js",
+  "nodalia-cards-1.3.5-alpha.6.js",
+  "nodalia-cards-1.3.5-alpha.7.js",
+  "nodalia-cards-1.3.5-alpha.8.js",
+  "nodalia-cards-1.3.5-alpha.9.js",
+];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
-const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile]);
+const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile, ...compatLoaderFiles]);
 for (const name of fs.readdirSync(root)) {
   if (!VERSIONED_BUNDLE_PATTERN.test(name) || keepVersionedBundles.has(name)) {
     continue;
@@ -144,18 +156,11 @@ const suiteFooter = `;if(typeof window!=="undefined"){window.__NODALIA_SUITE__=$
   requiresCore: coreFile,
 })};if(!window.NodaliaUtils&&typeof console!=="undefined"&&typeof console.warn==="function"){console.warn("[nodalia-cards] Load ${coreFile} before ${suiteFile}.");}if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards suite %c v${pkg.version} (${suiteHash}) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}`;
 
-const inlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
+const inlineLoaderFooter = file => `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
   mode: "inline",
   pkgVersion: pkg.version,
   contentSha256_12: fullHash,
-  file: loaderFile,
-})};}`;
-
-const versionedInlineLoaderFooter = `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
-  mode: "inline",
-  pkgVersion: pkg.version,
-  contentSha256_12: fullHash,
-  file: versionedLoaderFile,
+  file,
   fallbackFile: loaderFile,
   splitCoreFile: coreFile,
   splitSuiteFile: suiteFile,
@@ -166,7 +171,8 @@ const manifest = {
   contentSha256_12: fullHash,
   file: bundleFile,
   loaderFile,
-  hacsFile: versionedLoaderFile,
+  hacsFile: loaderFile,
+  compatLoaderFiles,
   splitCoreFile: coreFile,
   splitCoreSha256_12: coreHash,
   splitSuiteFile: suiteFile,
@@ -183,8 +189,11 @@ export const splitSuiteFile = ${JSON.stringify(suiteFile)};
 
 fs.writeFileSync(path.join(root, bundleFile), `${fullBody}\n${fullFooter}\n`);
 fs.writeFileSync(path.join(root, manifestFile), manifestSource);
-fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter}\n`);
-fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${versionedInlineLoaderFooter}\n`);
+fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
+fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
+compatLoaderFiles.forEach(file => {
+  fs.writeFileSync(path.join(root, file), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(file)}\n`);
+});
 fs.writeFileSync(path.join(root, coreFile), `${coreBody}\n${coreFooter}\n`);
 fs.writeFileSync(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n`);
 

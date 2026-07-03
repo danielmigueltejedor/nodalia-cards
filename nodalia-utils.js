@@ -33,6 +33,9 @@
     "applyCardTapActionField",
     "invokeHomeAssistantService",
     "renderCardEmptyStateDocument",
+    "bindEditorDialogLayoutFix",
+    "releaseEditorDialogLayoutFix",
+    "clampEditorDialogScroll",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -1291,6 +1294,8 @@
    * Lovelace card dialog (.element-editor) stretches to match preview height on wide layouts.
    * Short visual editors then scroll past their fields into empty space — align the pane to content.
    */
+  const EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX = 96;
+
   function findLovelaceElementEditorPane(editorHost) {
     if (!(editorHost instanceof HTMLElement)) {
       return null;
@@ -1300,35 +1305,172 @@
       if (node.classList?.contains("element-editor")) {
         return node;
       }
-      node = node.parentElement;
+      node = getComposedParentElement(node);
     }
     return null;
+  }
+
+  function getComposedParentElement(node) {
+    if (!(node instanceof HTMLElement)) {
+      return null;
+    }
+    if (node.parentElement) {
+      return node.parentElement;
+    }
+    const root = typeof node.getRootNode === "function" ? node.getRootNode() : null;
+    const host = root instanceof ShadowRoot ? root.host : null;
+    return host instanceof HTMLElement ? host : null;
+  }
+
+  function getEditorDialogScrollAncestors(editorHost) {
+    const nodes = [];
+    let node = findLovelaceElementEditorPane(editorHost) || editorHost;
+    while (node && node !== document.documentElement) {
+      nodes.push(node);
+      node = getComposedParentElement(node);
+    }
+    return nodes;
+  }
+
+  function isLikelyLovelacePreviewPane(node) {
+    if (!(node instanceof HTMLElement)) {
+      return false;
+    }
+    const marker = [
+      node.localName,
+      node.id,
+      typeof node.className === "string" ? node.className : "",
+      node.getAttribute?.("part") || "",
+    ].join(" ").toLowerCase();
+    return marker.includes("preview") || marker.includes("card-preview");
+  }
+
+  function getEditorDialogPreviewPanes(editorHost) {
+    const pane = findLovelaceElementEditorPane(editorHost);
+    const nodes = [];
+    const seen = new Set();
+    const add = node => {
+      if (!(node instanceof HTMLElement) || seen.has(node) || node === pane || node.contains(editorHost)) {
+        return;
+      }
+      seen.add(node);
+      nodes.push(node);
+    };
+    let node = pane;
+    while (node) {
+      const parent = getComposedParentElement(node);
+      if (!parent) {
+        break;
+      }
+      Array.from(parent.children || []).forEach(child => {
+        if (!(child instanceof HTMLElement) || child === node || child.contains(editorHost)) {
+          return;
+        }
+        if (isLikelyLovelacePreviewPane(child) || child.scrollHeight > child.clientHeight + 1) {
+          add(child);
+        }
+        child.querySelectorAll?.('[class*="preview" i], [id*="preview" i], [part*="preview" i]').forEach(add);
+      });
+      node = parent;
+    }
+    return nodes;
   }
 
   function bindEditorDialogLayoutFix(editorHost) {
     if (!(editorHost instanceof HTMLElement)) {
       return;
     }
-    releaseEditorDialogLayoutFix(editorHost);
     const pane = findLovelaceElementEditorPane(editorHost);
     if (!pane) {
       return;
     }
+    releaseEditorDialogLayoutFix(editorHost);
     const previous = {
       alignSelf: pane.style.alignSelf,
       height: pane.style.height,
+      minHeight: pane.style.minHeight,
       maxHeight: pane.style.maxHeight,
       overflowY: pane.style.overflowY,
+      overflowAnchor: pane.style.overflowAnchor,
     };
+    const scrollAncestors = getEditorDialogScrollAncestors(editorHost);
+    const previewPanes = getEditorDialogPreviewPanes(editorHost);
+    const previousAncestors = scrollAncestors.map(node => ({
+      node,
+      overscrollBehaviorY: node.style.overscrollBehaviorY,
+      overflowAnchor: node.style.overflowAnchor,
+    }));
+    const previousPreviewPanes = previewPanes.map(node => ({
+      node,
+      overscrollBehaviorY: node.style.overscrollBehaviorY,
+      overflowAnchor: node.style.overflowAnchor,
+      overflowY: node.style.overflowY,
+      scrollTop: node.scrollTop,
+    }));
     pane.style.alignSelf = "flex-start";
     pane.style.height = "auto";
+    pane.style.minHeight = "0";
     pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
     pane.style.overflowY = "auto";
+    pane.style.overflowAnchor = "none";
+    previousAncestors.forEach(({ node }) => {
+      node.style.overscrollBehaviorY = "contain";
+      node.style.overflowAnchor = "none";
+    });
+    previousPreviewPanes.forEach(({ node }) => {
+      node.style.overscrollBehaviorY = "contain";
+      node.style.overflowAnchor = "none";
+      node.style.overflowY = "auto";
+    });
+    const onScroll = () => {
+      if (editorHost._nodaliaEditorDialogClampFrame) {
+        return;
+      }
+      editorHost._nodaliaEditorDialogClampFrame = window.requestAnimationFrame(() => {
+        editorHost._nodaliaEditorDialogClampFrame = 0;
+        runEditorDialogScrollClamp(editorHost);
+      });
+    };
+    const onPreviewWheel = event => {
+      const node = event.currentTarget;
+      const deltaY = Number(event.deltaY) || 0;
+      if (canPreviewPaneScroll(node, deltaY)) {
+        event.stopPropagation();
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      onScroll();
+    };
+    window.addEventListener("scroll", onScroll, true);
+    scrollAncestors.forEach(node => node.addEventListener("scroll", onScroll, { passive: true }));
+    previewPanes.forEach(node => node.addEventListener("wheel", onPreviewWheel, { passive: false }));
+    editorHost._nodaliaEditorDialogLayoutPane = pane;
     editorHost._nodaliaEditorDialogLayoutRelease = () => {
+      window.removeEventListener("scroll", onScroll, true);
+      scrollAncestors.forEach(node => node.removeEventListener("scroll", onScroll));
+      previewPanes.forEach(node => node.removeEventListener("wheel", onPreviewWheel));
+      if (editorHost._nodaliaEditorDialogClampFrame) {
+        window.cancelAnimationFrame(editorHost._nodaliaEditorDialogClampFrame);
+        editorHost._nodaliaEditorDialogClampFrame = 0;
+      }
+      previousAncestors.forEach(({ node, overscrollBehaviorY, overflowAnchor }) => {
+        node.style.overscrollBehaviorY = overscrollBehaviorY;
+        node.style.overflowAnchor = overflowAnchor;
+      });
+      previousPreviewPanes.forEach(({ node, overscrollBehaviorY, overflowAnchor, overflowY, scrollTop }) => {
+        node.style.overscrollBehaviorY = overscrollBehaviorY;
+        node.style.overflowAnchor = overflowAnchor;
+        node.style.overflowY = overflowY;
+        node.scrollTop = scrollTop;
+      });
       pane.style.alignSelf = previous.alignSelf;
       pane.style.height = previous.height;
+      pane.style.minHeight = previous.minHeight;
       pane.style.maxHeight = previous.maxHeight;
       pane.style.overflowY = previous.overflowY;
+      pane.style.overflowAnchor = previous.overflowAnchor;
+      editorHost._nodaliaEditorDialogLayoutPane = null;
     };
   }
 
@@ -1337,6 +1479,58 @@
       editorHost._nodaliaEditorDialogLayoutRelease();
       editorHost._nodaliaEditorDialogLayoutRelease = null;
     }
+  }
+
+  function runEditorDialogScrollClamp(editorHost) {
+    if (!(editorHost instanceof HTMLElement) || !editorHost.isConnected) {
+      return;
+    }
+    const editorContent = editorHost.shadowRoot?.querySelector(".editor") || editorHost;
+    const contentRect = editorContent instanceof HTMLElement
+      ? editorContent.getBoundingClientRect()
+      : null;
+    const nodes = getEditorDialogScrollAncestors(editorHost);
+    for (const node of nodes) {
+      const style = getComputedStyle(node);
+      const scrollable =
+        /(auto|scroll|overlay)/.test(style.overflowY) &&
+        node.scrollHeight > node.clientHeight + 1;
+      if (scrollable) {
+        const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+        if (node.scrollTop > maxScroll) {
+          node.scrollTop = maxScroll;
+        }
+        if (contentRect) {
+          const scrollportRect = node.getBoundingClientRect();
+          const emptyBottomGap = scrollportRect.bottom - contentRect.bottom;
+          if (emptyBottomGap > EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX && node.scrollTop > 0) {
+            node.scrollTop = Math.max(
+              0,
+              node.scrollTop - Math.ceil(emptyBottomGap - EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX)
+            );
+          }
+        }
+      }
+    }
+    getEditorDialogPreviewPanes(editorHost).forEach(node => {
+      const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+      if (node.scrollTop > maxScroll) {
+        node.scrollTop = maxScroll;
+      }
+    });
+  }
+
+  function canPreviewPaneScroll(node, deltaY) {
+    if (!(node instanceof HTMLElement) || !Number.isFinite(deltaY) || deltaY === 0) {
+      return false;
+    }
+    const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+    if (maxScroll <= 1) {
+      return false;
+    }
+    return deltaY > 0
+      ? node.scrollTop < maxScroll - 1
+      : node.scrollTop > 1;
   }
 
   function clampEditorDialogScroll(editorHost) {
@@ -1348,21 +1542,7 @@
         return;
       }
       bindEditorDialogLayoutFix(editorHost);
-      let node = findLovelaceElementEditorPane(editorHost) || editorHost;
-      while (node && node !== document.documentElement) {
-        const style = getComputedStyle(node);
-        const scrollable =
-          /(auto|scroll|overlay)/.test(style.overflowY) &&
-          node.scrollHeight > node.clientHeight + 1;
-        if (scrollable) {
-          const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
-          if (node.scrollTop > maxScroll) {
-            node.scrollTop = maxScroll;
-          }
-          break;
-        }
-        node = node.parentElement;
-      }
+      runEditorDialogScrollClamp(editorHost);
     });
   }
 

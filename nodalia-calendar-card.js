@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "1.3.4";
+const CARD_VERSION = "1.3.5-alpha.10";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -451,12 +451,16 @@ function weatherConditionIcon(value) {
 }
 
 function forecastDayKey(value) {
+  const formatDateKey = date => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return "";
+    }
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  };
   if (typeof value === "number" && Number.isFinite(value)) {
     const ms = value > 1e12 ? value : value * 1000;
     const parsedNum = new Date(ms);
-    if (!Number.isNaN(parsedNum.getTime())) {
-      return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
-    }
+    return formatDateKey(parsedNum);
   }
   const raw = String(value ?? "").trim();
   if (!raw) {
@@ -467,9 +471,7 @@ function forecastDayKey(value) {
     if (Number.isFinite(numeric)) {
       const ms = raw.length >= 13 ? numeric : numeric * 1000;
       const parsedNum = new Date(ms);
-      if (!Number.isNaN(parsedNum.getTime())) {
-        return `${parsedNum.getFullYear()}-${parsedNum.getMonth()}-${parsedNum.getDate()}`;
-      }
+      return formatDateKey(parsedNum);
     }
   }
   const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
@@ -478,14 +480,11 @@ function forecastDayKey(value) {
     const m = Number(datePrefixMatch[2]) - 1;
     const d = Number(datePrefixMatch[3]);
     if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
-      return `${y}-${m}-${d}`;
+      return formatDateKey(new Date(y, m, d));
     }
   }
   const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-  return `${parsed.getFullYear()}-${parsed.getMonth()}-${parsed.getDate()}`;
+  return formatDateKey(parsed);
 }
 
 function withForecastDateFromKey(key, value) {
@@ -1242,7 +1241,12 @@ class NodaliaCalendarCard extends HTMLElement {
       const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
       const existing = map.get(key);
       if (existing) {
-        return existing;
+        return {
+          ...existing,
+          dayDate: existing.dayDate instanceof Date && !Number.isNaN(existing.dayDate.getTime())
+            ? existing.dayDate
+            : date,
+        };
       }
       return {
         label: formatDateLabel(date, locale),
@@ -2285,31 +2289,20 @@ class NodaliaCalendarCard extends HTMLElement {
     if (targetTs < todayTs) {
       return null;
     }
-    const keyLocal = `${y}-${m}-${d}`;
-    if (weatherByDay.has(keyLocal)) {
-      return weatherByDay.get(keyLocal);
-    }
-    // Fallback for integrations that expose zero-padded date-like keys.
-    const keyPadded = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    if (weatherByDay.has(keyPadded)) {
-      return weatherByDay.get(keyPadded);
+    const key = forecastDayKey(new Date(y, m, d));
+    if (weatherByDay.has(key)) {
+      return weatherByDay.get(key);
     }
     // Last-resort fallback: nearest forecast day (within +/- 1 day).
     let nearest = null;
     let nearestDiff = Number.POSITIVE_INFINITY;
     for (const [k, value] of weatherByDay.entries()) {
-      const key = String(k);
-      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key);
-      if (!parsed) {
+      const rowKey = forecastDayKey(k);
+      if (!rowKey) {
         continue;
       }
-      const ky = Number(parsed[1]);
-      const km = Number(parsed[2]);
-      const kd = Number(parsed[3]);
-      if (!Number.isFinite(ky) || !Number.isFinite(km) || !Number.isFinite(kd)) {
-        continue;
-      }
-      const rowMonth = /^\d{4}-\d{2}-\d{2}$/.test(key) ? km - 1 : km;
+      const [ky, km, kd] = rowKey.split("-").map(Number);
+      const rowMonth = km - 1;
       if (ky !== y || rowMonth !== m) {
         continue;
       }

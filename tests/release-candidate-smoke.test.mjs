@@ -11,7 +11,20 @@ test("published package files and bundle manifest stay coherent", () => {
   const pkg = JSON.parse(read("package.json"));
   const hacs = JSON.parse(read("hacs.json"));
   const manifest = read("nodalia-cards.manifest.js");
-  const expectedHacsFile = `nodalia-cards-${pkg.version}.js`;
+  const expectedHacsFile = "nodalia-cards.js";
+  const expectedVersionedFile = `nodalia-cards-${pkg.version}.js`;
+  const expectedCompatFiles = [
+    "nodalia-cards-1.3.4.js",
+    "nodalia-cards-1.3.5-alpha.1.js",
+    "nodalia-cards-1.3.5-alpha.2.js",
+    "nodalia-cards-1.3.5-alpha.3.js",
+    "nodalia-cards-1.3.5-alpha.4.js",
+    "nodalia-cards-1.3.5-alpha.5.js",
+    "nodalia-cards-1.3.5-alpha.6.js",
+    "nodalia-cards-1.3.5-alpha.7.js",
+    "nodalia-cards-1.3.5-alpha.8.js",
+    "nodalia-cards-1.3.5-alpha.9.js",
+  ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
   assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
@@ -20,6 +33,12 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
+  assert.ok(pkg.files.includes(expectedVersionedFile), `${expectedVersionedFile} should be published`);
+  expectedCompatFiles.forEach(file => {
+    assert.ok(manifest.includes(`"${file}"`), `${file} should be listed as a compatibility loader`);
+    assert.ok(pkg.files.includes(file), `${file} should be published`);
+    assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist after bundle`);
+  });
 
   const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
   const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
@@ -163,7 +182,8 @@ test("navigation media player status chip stays in title flow", () => {
 test("light card default on icon color follows current light tint with contrast", () => {
   const source = read("nodalia-light-card.js");
   assert.match(source, /const lightIconColor = isOn[\s\S]*color-mix\(in srgb, \$\{accentColor\} \$\{darkenBubbleIconGlyph \? 42 : 72\}%, var\(--primary-text-color\)\)/);
-  assert.match(source, /const configuredOnIconColor = String\(styles\.icon\.on_color \?\? ""\)\.trim\(\)/);
+  assert.match(source, /const configuredOnIconColor = String\(styles\?\.icon\?\.on_color \?\? ""\)\.trim\(\)/);
+  assert.match(source, /: styles\?\.icon\?\.off_color/);
   assert.match(source, /\.light-card__icon ha-icon \{[\s\S]*color: \$\{lightIconColor\};/);
 });
 
@@ -193,7 +213,9 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
   assert.match(source, /item\.temperature_2m_min/);
-  assert.match(source, /const rowMonth = \/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(key\) \? km - 1 : km/);
+  assert.match(source, /String\(date\.getMonth\(\) \+ 1\)\.padStart\(2, "0"\)/);
+  assert.match(source, /const rowKey = forecastDayKey\(k\)/);
+  assert.match(source, /const rowMonth = km - 1/);
   assert.match(source, /if \(targetTs < todayTs\) \{[\s\S]*return null;[\s\S]*\}/);
   assert.match(source, /if \(ky !== y \|\| rowMonth !== m\) \{[\s\S]*continue;[\s\S]*\}/);
 });
@@ -203,6 +225,7 @@ test("calendar expanded popup reuses daily weather badges", () => {
   assert.match(source, /_renderWeatherBadge\(dayDate, weatherByDay/);
   assert.match(source, /this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
   assert.match(source, /_expandedRangeGroups\(groups, config, locale\)/);
+  assert.match(source, /dayDate: existing\.dayDate instanceof Date && !Number\.isNaN\(existing\.dayDate\.getTime\(\)\)/);
   assert.match(source, /const displayGroups = this\._expandedRangeGroups\(groups, config, locale\)/);
   assert.match(source, /<div class="calendar-expanded__body">[\s\S]*this\._error[\s\S]*: this\._renderExpandedBody\(groups, config, locale, weatherByDay\)/);
   assert.match(source, /calendar-expanded__month-weather/);
@@ -573,6 +596,11 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.url/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.tap_action/);
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
+  assert.match(source, /smart_notifications\.\$\{key\}\.mobile/);
+  assert.match(source, /custom_notifications\.\$\{index\}\.mobile/);
+  assert.match(source, /mobilePolicy: item\.mobile \|\| "inherit"/);
+  assert.match(source, /_smartMobilePolicyForKind\(group\.kind, entityId\)/);
+  assert.match(source, /smart: Object\.fromEntries/);
   assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
   assert.match(source, /mobilePolicy/);
@@ -642,6 +670,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /background_mobile\.webhook/);
   assert.match(source, /ed\.notifications\.background_mobile_webhook/);
   assert.match(source, /entities: config\.mobile_notifications\?\.entities \|\| \[\]/);
+  assert.match(source, /mobile: String\(item\?\.mobile \|\| "inherit"\)/);
   assert.match(source, /nodalia_notifications_background_sync/);
   assert.match(source, /_scheduleBackgroundMobileSync/);
   assert.match(source, /_pendingBackgroundMobileSync/);
@@ -704,6 +733,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /event: nodalia_notifications_background_watched_state_changed/);
   assert.match(backgroundPackage, /id: nodalia_notifications_background_state_push/);
   assert.match(backgroundPackage, /event_type: nodalia_notifications_background_watched_state_changed/);
+  assert.match(backgroundPackage, /smart_cfg: "\{\{ cfg\.get\('smart', \{\}\) \}\}"/);
+  assert.match(backgroundPackage, /smart_override: "\{\{ smart_cfg\.get\(match_kind, \{\}\) if match_kind != '' else \{\} \}\}"/);
+  assert.match(backgroundPackage, /smart_mobile: "\{\{ smart_override\.get\('mobile', 'inherit'\) \}\}"/);
+  assert.match(backgroundPackage, /smart_mobile != 'off'/);
   assert.match(backgroundPackage, /mode: parallel/);
   assert.match(backgroundPackage, /max: 50/);
   assert.match(backgroundPackage, /max_exceeded: silent/);

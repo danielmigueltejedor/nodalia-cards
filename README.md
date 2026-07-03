@@ -1,8 +1,8 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.3.4-2ea44f)
-![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
+![Package](https://img.shields.io/badge/package-1.3.5-alpha.10-2ea44f)
+![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -48,32 +48,35 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.3.1
+# 🚀 What’s new in 1.3.5-alpha.10
 
-**Current stable `1.3.1`** — focused polish for the Entity Card `select` / `input_select` picker and background mobile delivery for the Notifications Card. Match **`nodalia-cards-1.3.1.js`**. Release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Current alpha `1.3.5-alpha.10`** — install/update through HACS using **`nodalia-cards.js`**. This prerelease keeps the Notifications editor overscroll containment while restoring legitimate scroll inside the Lovelace card preview, so tall previews can still be inspected fully without dragging the dialog into empty space. Stable release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
-### Entity Card select polish
+### Calendar and Weather fixes
 
-- Inline `select` / `input_select` pickers open and close reliably across rapid taps.
-- Compact select cards keep the same closed height as other compact Entity Cards.
-- Open select pickers show only the available options, without the extra “Choose option” header or chevron button.
-- Picker animation shells clip to the same rounded panel radius, avoiding square corner artifacts.
+- Calendar expanded popups keep the day/week/month view even when there are no events.
+- Calendar weather badges map forecast days across month boundaries correctly, including end-of-month forecasts into the next month.
+- Weather condition and metric icons keep readable contrast on tinted cards.
 
-### Home Assistant display states
+### Notifications background delivery
 
-- Entity Card state chips prefer Home Assistant frontend formatting and HA-provided display attributes before falling back to Nodalia’s built-in state dictionary.
-- Integration-provided enum labels can display as their localized/human value instead of the raw state key.
+- Background mobile sync sends configured entities, thresholds, targets, and override text through the Home Assistant package.
+- The example package filters watched entities before pushing, avoids duplicate foreground/background delivery, and only sends numeric threshold alerts when crossing into the alert range.
+- The visual editor exposes the minimum mobile severity so info-level alerts can be enabled when desired.
+- Per-entity overrides can now silence mobile pushes for noisy entities while keeping the alert visible in the card.
+- The visual editor no longer leaves extra empty scroll space below the final settings section.
 
-### Notifications background mobile sync
+### Mobile visual polish
 
-- Notifications Card can sync configured notification entities, thresholds, mobile targets, and override text to Home Assistant through `background_mobile`.
-- [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml) provides a fixed package so background push delivery can follow card configuration without editing automations per entity.
+- Graph legend chips avoid clipped iOS shadows in horizontal scroll rails.
+- Navigation media titles ellipsize cleanly before the “playing” chip on mobile.
+- Light Card icons use a contrast-safe color mix based on the current light color.
 
 ---
 
-# 📦 Stable 1.3.0
+# 📦 Stable 1.3.0 foundation
 
-**Stable release `1.3.0`** — **`nodalia-cards-1.3.0.js`**. Full release notes: [`CHANGELOG.md`](./CHANGELOG.md).
+**Stable release `1.3.0`** — **`nodalia-cards-1.3.0.js`** introduced the News Card and the broader 1.3.x foundation. Full release notes: [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## 🗞️ News Card
 
@@ -387,10 +390,10 @@ HACS automatically adds the Lovelace resource.
 The main entrypoint is:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards-1.3.1.js
+/hacsfiles/nodalia-cards/nodalia-cards.js
 ```
 
-HACS uses the versioned entrypoint so each update gets a fresh Lovelace resource URL. The unversioned `nodalia-cards.js` file remains a self-contained fallback for direct/manual use.
+HACS uses the stable `nodalia-cards.js` entrypoint and the bundle reports its loaded version in `window.__NODALIA_BUNDLE__`. Compatibility aliases are also shipped for older versioned resource URLs.
 
 No manual resource setup is normally required.
 
