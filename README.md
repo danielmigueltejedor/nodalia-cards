@@ -1,8 +1,8 @@
 # 🎨 Nodalia Cards
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant)
-![Package](https://img.shields.io/badge/package-1.3.5-alpha.10-2ea44f)
-![Release channel](https://img.shields.io/badge/release%20channel-alpha-f59e0b)
+![Package](https://img.shields.io/badge/package-1.3.5-2ea44f)
+![Release channel](https://img.shields.io/badge/release%20channel-stable-2ea44f)
 ![Stable](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable)
 ![Pre-release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=pre-release)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -48,9 +48,9 @@ Animations and interactions in action:
 
 ---
 
-# 🚀 What’s new in 1.3.5-alpha.10
+# 🚀 What’s new in 1.3.5
 
-**Current alpha `1.3.5-alpha.10`** — install/update through HACS using **`nodalia-cards.js`**. This prerelease keeps the Notifications editor overscroll containment while restoring legitimate scroll inside the Lovelace card preview, so tall previews can still be inspected fully without dragging the dialog into empty space. Stable release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+**Stable release `1.3.5`** — install/update through HACS using **`nodalia-cards.js`**. This release stabilizes the 1.3.5 alpha line with Notifications visual-editor mobile policy controls, background mobile refinements, calendar/weather fixes, and Lovelace editor scroll containment that prevents empty bottom drift while keeping tall previews scrollable. Full release notes: [`CHANGELOG.md`](./CHANGELOG.md); alpha history: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ### Calendar and Weather fixes
 

@@ -4,11 +4,43 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, completed **`1.3.2-alpha.*`** builds, completed **`1.3.3-alpha.*`** builds, and completed **`1.3.4-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, completed **`1.3.2-alpha.*`** builds, completed **`1.3.3-alpha.*`** builds, completed **`1.3.4-alpha.*`** builds, and completed **`1.3.5-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+## [1.3.5] - 2026-07-03
+
+Stable **`1.3.5`** release. Installs match **`package.json`**, **`hacs.json`**, **`nodalia-cards.manifest.js`**, **`nodalia-cards-1.3.5.js`**, **`__NODALIA_BUNDLE__.pkgVersion`**, and bundled **`CARD_VERSION`** on all published card modules.
+
+### Highlights
+
+- **Notifications Card:** per-entity, smart-alert, and custom-notification mobile push policy controls are available in the visual editor, so noisy alerts can stay visible in the card without pushing to mobile.
+- **Editor polish:** Lovelace visual editors no longer drift into empty bottom space, while tall card previews remain scrollable inside the preview pane.
+- **1.3.x polish carried forward:** calendar/weather month-boundary fixes, navigation media title flow, Light Card icon tinting, Weather icon contrast, and Graph mobile chip shadow fixes are included in the stable bundle.
+
+### Added
+
+- **`notifications`:** visual editor controls for individual mobile notification policy on smart entity overrides, smart alerts, and custom notifications.
+
+### Fixed
+
+- **`editor`:** shared Lovelace editor layout fix walks Home Assistant shadow roots, clamps real dialog scroll ancestors, contains preview-pane overscroll, preserves tall preview scrolling, and softens the bottom-edge correction.
+- **`calendar`:** empty expanded calendar views keep showing day/week/month layouts, and weather badges handle next-month forecast dates correctly.
+- **`notifications`:** background mobile delivery avoids foreground duplicates, threshold spam, malformed placeholder text, and preserves package-side filtering.
+- **`weather`:** condition and metric icons stay contrast-safe on tinted cards.
+- **`navigation`:** media player titles ellipsize before the playing chip on mobile.
+- **`light`:** icons tint from the current light color with contrast-safe mixing.
+- **`graph`:** mobile legend chips avoid clipped iOS/Safari shadows.
+
+### Changed
+
+- **Release metadata:** promote **`1.3.5-alpha.*`** (alpha.1-alpha.10) to stable **`1.3.5`**.
+- **Bundle:** versioned HACS entrypoint **`nodalia-cards-1.3.5.js`**; optional split **`nodalia-cards-core-1.3.5.js`** + **`nodalia-cards-suite-1.3.5.js`**.
+- **Tests:** regression suite remains at **208** tests, including editor scroll containment, preview-pane scroll restoration, calendar forecast mapping, and Notifications background delivery.
+
+Per-alpha notes for **`1.3.5-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [1.3.4] - 2026-06-29
 
