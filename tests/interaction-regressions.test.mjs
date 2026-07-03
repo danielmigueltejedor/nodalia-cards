@@ -139,6 +139,55 @@ function loadPowerFlowCardClass() {
   return registry.get("nodalia-power-flow-card");
 }
 
+function loadNotificationsCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    localStorage: {
+      getItem() { return null; },
+      setItem() {},
+      removeItem() {},
+    },
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  sandbox.window.NodaliaUtils = {
+    deepClone(value) {
+      return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+    },
+    registerCustomCard() {},
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
+  return registry.get("nodalia-notifications-card");
+}
+
 test("graph tooltip keeps document hover watch guards", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /_onDocumentPointerMove\(/);
@@ -288,6 +337,28 @@ test("notifications mobile sent state only marks successful deliveries", () => {
   assert.match(source, /Promise\.all\(\[[\s\S]*\]\)\.then\(results => \{/);
   assert.match(source, /const delivered = results\.some\(Boolean\)/);
   assert.match(source, /if \(delivered\) \{\s*this\._mobileSent\.add\(hash\);/);
+});
+
+test("notifications smart entity mobile inherit keeps kind policy", () => {
+  const NotificationsCard = loadNotificationsCardClass();
+  const card = new NotificationsCard();
+  card._config = {
+    smart_notifications: {
+      hot: { title: "Hot", mobile: "off" },
+      cold: { title: "Cold", mobile: "on" },
+    },
+    smart_entity_overrides: [
+      { entity: "sensor.living_room_temperature", title: "Living room", mobile: "inherit" },
+      { entity: "sensor.bedroom_temperature", mobile: "on" },
+      { entity: "sensor.office_temperature", mobile: "off" },
+    ],
+  };
+
+  assert.equal(card._smartMobilePolicyForKind("hot", "sensor.living_room_temperature"), "off");
+  assert.equal(card._smartMobilePolicyForKind("cold", "sensor.living_room_temperature"), "on");
+  assert.equal(card._smartMobilePolicyForKind("hot", "sensor.bedroom_temperature"), "on");
+  assert.equal(card._smartMobilePolicyForKind("hot", "sensor.office_temperature"), "off");
+  assert.equal(card._smartTitle("hot", "", "Fallback", {}, "sensor.living_room_temperature"), "Living room");
 });
 
 test("calendar native webhook failures show composer errors", () => {

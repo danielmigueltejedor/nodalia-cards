@@ -2186,6 +2186,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!override) {
       return base;
     }
+    const overrideMobile = normalizeSmartEntityMobile(override.mobile);
     return {
       ...base,
       ...Object.fromEntries(
@@ -2194,7 +2195,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           .filter(([, value]) => String(value || "").trim()),
       ),
       ...(hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {}),
-      mobile: override.mobile || "inherit",
+      mobile: overrideMobile === "inherit" ? normalizeSmartEntityMobile(base.mobile) : overrideMobile,
     };
   }
 
