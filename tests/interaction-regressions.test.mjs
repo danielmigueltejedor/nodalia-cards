@@ -1254,7 +1254,10 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /alignSelf = "flex-start"/);
   assert.match(utils, /minHeight = "0"/);
   assert.match(utils, /node\.style\.overscrollBehaviorY = "contain"/);
-  assert.match(utils, /node\.style\.overflowY = "hidden"/);
+  assert.match(utils, /node\.style\.overflowY = "auto"/);
+  assert.match(utils, /function canPreviewPaneScroll\(/);
+  assert.match(utils, /canPreviewPaneScroll\(node, deltaY\)/);
+  assert.match(utils, /event\.stopPropagation\(\)/);
   assert.match(utils, /node\.addEventListener\("wheel", onPreviewWheel, \{ passive: false \}\)/);
   assert.match(utils, /EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX = 96/);
   assert.match(utils, /const contentRect = editorContent instanceof HTMLElement/);

@@ -1420,8 +1420,7 @@
     previousPreviewPanes.forEach(({ node }) => {
       node.style.overscrollBehaviorY = "contain";
       node.style.overflowAnchor = "none";
-      node.style.overflowY = "hidden";
-      node.scrollTop = 0;
+      node.style.overflowY = "auto";
     });
     const onScroll = () => {
       if (editorHost._nodaliaEditorDialogClampFrame) {
@@ -1433,7 +1432,14 @@
       });
     };
     const onPreviewWheel = event => {
+      const node = event.currentTarget;
+      const deltaY = Number(event.deltaY) || 0;
+      if (canPreviewPaneScroll(node, deltaY)) {
+        event.stopPropagation();
+        return;
+      }
       event.preventDefault();
+      event.stopPropagation();
       onScroll();
     };
     window.addEventListener("scroll", onScroll, true);
@@ -1507,10 +1513,24 @@
       }
     }
     getEditorDialogPreviewPanes(editorHost).forEach(node => {
-      if (node.scrollTop > 0) {
-        node.scrollTop = 0;
+      const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+      if (node.scrollTop > maxScroll) {
+        node.scrollTop = maxScroll;
       }
     });
+  }
+
+  function canPreviewPaneScroll(node, deltaY) {
+    if (!(node instanceof HTMLElement) || !Number.isFinite(deltaY) || deltaY === 0) {
+      return false;
+    }
+    const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+    if (maxScroll <= 1) {
+      return false;
+    }
+    return deltaY > 0
+      ? node.scrollTop < maxScroll - 1
+      : node.scrollTop > 1;
   }
 
   function clampEditorDialogScroll(editorHost) {

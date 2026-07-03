@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.5-alpha.10] - 2026-07-03
+
+Tenth **`1.3.5`** **`alpha`**: Scrollable Lovelace preview pane. Release channel **`1.3.5-alpha.10`**.
+
+### Fixed
+
+- **`editor`:** Lovelace card preview panes can scroll internally again when the rendered preview is taller than the available editor space, while boundary wheel events remain contained so the dialog does not drift into empty space.
+- **`hacs`:** compatibility aliases now include **`nodalia-cards-1.3.5-alpha.9.js`** so dashboards still pointing at the previous alpha receive the preview scroll restoration.
+
 ## [1.3.5-alpha.9] - 2026-07-03
 
 Ninth **`1.3.5`** **`alpha`**: Softer visual editor bottom clamp. Release channel **`1.3.5-alpha.9`**.
