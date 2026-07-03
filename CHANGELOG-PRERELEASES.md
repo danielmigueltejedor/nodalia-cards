@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable), and completed **`1.3.5-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.5]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable), and completed **`1.3.5-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.5]`** shipped as stable), and **`2.0.0-alpha.*`** prereleases.
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,39 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [2.0.0-alpha.2] - 2026-07-03
+
+Second **`2.0.0`** **`alpha`**: Notifications 2.0 mobile policy and context delivery. Release channel **`2.0.0-alpha.2`**.
+
+### Added
+
+- **`notifications`:** normalized mobile push policies for `auto`, `push`, `card_only`, and `off` across smart entity overrides, smart alerts, custom notifications, and external alerts.
+- **`notifications`:** default mobile policy, quiet hours, away/home context gating, cooldown, similar-alert grouping, and external alert preparation for future Camera/Security events.
+- **`notifications`:** visual editor sections for mobile delivery, context controls, and per-alert policy.
+- **`examples`:** background mobile package support for policy-aware delivery, quiet hours, cooldown, presence context, and future external alerts.
+- **`i18n`:** English and Spanish labels for Notifications 2.0 mobile policy, context, delivery state, and external alert controls.
+- **`tests`:** regression coverage for mobile policy normalization, context gating, cooldown, threshold crossing, external alerts, editor output, and background payload delivery.
+
+### Changed
+
+- **`notifications`:** background mobile sync now carries normalized delivery metadata while preserving 1.3.x configuration compatibility.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.2`.
+
+## [2.0.0-alpha.1] - 2026-07-03
+
+First **`2.0.0`** **`alpha`**: introduces the new Nodalia Camera Card. Release channel **`2.0.0-alpha.1`**.
+
+### Added
+
+- **`camera`:** new `custom:nodalia-camera-card` with Nodalia-style camera preview, status chips, empty/unavailable states, basic expanded view, and initial visual editor.
+- **`camera`:** initial layouts for `live`, `snapshot`, `compact`, and `security`, with architecture prepared for future Frigate/event timeline integrations.
+- **`i18n`:** English and Spanish runtime labels for Camera Card states, editor fields, and expanded view controls.
+- **`tests`:** initial Camera Card registration, render, editor, and expanded-view regression coverage.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.1`.
 
 ## [1.3.5-alpha.10] - 2026-07-03
 

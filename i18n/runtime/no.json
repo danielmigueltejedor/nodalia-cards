@@ -676,6 +676,18 @@
     "empty": {
       "title": "Alt rolig",
       "message": "Du har ingen aktive varsler"
+    },
+    "mobile": {
+      "pushEnabled": "Push enabled",
+      "cardOnly": "Visible in card only",
+      "silencedQuietHours": "Silenced by quiet hours",
+      "silencedCooldown": "Silenced by cooldown",
+      "blockedSeverity": "Blocked by severity",
+      "blockedContext": "Blocked by context",
+      "off": "Off",
+      "cameraEvent": "Camera event",
+      "securityEvent": "Security event",
+      "externalAlert": "External alert"
     }
   },
   "calendarCard": {

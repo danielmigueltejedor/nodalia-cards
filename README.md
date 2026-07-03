@@ -267,6 +267,7 @@ Major internal improvements:
 - `custom:nodalia-notifications-card`
 - `custom:nodalia-vacuum-card`
 - `custom:nodalia-news-card` — [`docs/cards/news-card.md`](./docs/cards/news-card.md)
+- `custom:nodalia-camera-card`
 
 ---
 

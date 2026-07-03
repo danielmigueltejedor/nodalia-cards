@@ -42,6 +42,7 @@ const CARD_PARTS = [
   "nodalia-notifications-card.js",
   "nodalia-vacuum-card.js",
   "nodalia-news-card.js",
+  "nodalia-camera-card.js",
 ];
 
 const ALL_PARTS = [...CORE_PARTS, ...CARD_PARTS];
@@ -118,6 +119,7 @@ const coreFile = `nodalia-cards-core-${pkg.version}.js`;
 const suiteFile = `nodalia-cards-suite-${pkg.version}.js`;
 const compatLoaderFiles = [
   "nodalia-cards-1.3.4.js",
+  "nodalia-cards-1.3.5.js",
 ];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;

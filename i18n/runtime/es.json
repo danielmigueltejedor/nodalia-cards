@@ -314,6 +314,24 @@
     "emptyBody": "Configura `entity` para mostrar la tarjeta.",
     "defaultName": "Persona"
   },
+  "cameraCard": {
+    "cardDescription": "Vista previa de cámara estilo Nodalia con chips de estado y vista expandida.",
+    "live": "En vivo",
+    "snapshot": "Instantánea",
+    "offline": "Sin conexión",
+    "unknown": "Desconocido",
+    "unavailable": "No disponible",
+    "recording": "Grabando",
+    "lastUpdated": "Actualizado {time}",
+    "emptyTitle": "Nodalia Camera Card",
+    "emptyBody": "Configura `entity` para mostrar la tarjeta.",
+    "defaultName": "Cámara",
+    "cameraUnavailable": "Cámara no disponible",
+    "noCameraEntity": "Sin entidad de cámara",
+    "openCamera": "Abrir cámara",
+    "close": "Cerrar",
+    "expand": "Expandir"
+  },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
     "emptyBody": "Añade entidades escena en el editor de la tarjeta.",
@@ -705,6 +723,18 @@
       "dismiss": "Borrar notificación",
       "showLess": "Mostrar menos",
       "showAll": "Mostrar todas las notificaciones"
+    },
+    "mobile": {
+      "pushEnabled": "Push activado",
+      "cardOnly": "Visible solo en la tarjeta",
+      "silencedQuietHours": "Silenciado por horas de silencio",
+      "silencedCooldown": "Silenciado por cooldown",
+      "blockedSeverity": "Bloqueado por severidad",
+      "blockedContext": "Bloqueado por contexto",
+      "off": "Desactivado",
+      "cameraEvent": "Evento de cámara",
+      "securityEvent": "Evento de seguridad",
+      "externalAlert": "Alerta externa"
     },
     "empty": {
       "title": "Todo en calma",

@@ -536,6 +536,24 @@
         emptyBody: "Configure `entity` to show the card.",
         defaultName: "Person"
       },
+      cameraCard: {
+        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
+        live: "Live",
+        snapshot: "Snapshot",
+        offline: "Offline",
+        unknown: "Unknown",
+        unavailable: "Unavailable",
+        recording: "Recording",
+        lastUpdated: "Last updated {time}",
+        emptyTitle: "Nodalia Camera Card",
+        emptyBody: "Set `entity` to show this card.",
+        defaultName: "Camera",
+        cameraUnavailable: "Camera unavailable",
+        noCameraEntity: "No camera entity",
+        openCamera: "Open camera",
+        close: "Close",
+        expand: "Expand"
+      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Add scene entities in the card editor.",
@@ -548,6 +566,7 @@
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Set `entity` to show this card.",
         selectPickerTitle: "Choose option",
+        selectPickerClose: "Close",
         binarySensor: {
           doorOpen: "Open",
           doorClosed: "Closed",
@@ -800,7 +819,8 @@
             webhookMissing: "Configure a setpoint schedule webhook in the card editor.",
             entityMissing: "Select a climate entity first.",
             webhookFailed: "Could not sync the schedule. Check the webhook and Home Assistant logs.",
-            dualRangeUnsupported: "Weekly schedules are not supported while the thermostat uses a dual heat/cool range."
+            dualRangeUnsupported: "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
+            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
           }
         }
       },
@@ -827,8 +847,7 @@
         previousArticle: "Previous article",
         nextArticle: "Next article",
         articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}",
-        historyHelperHint: "Configure history_helper with an input_text helper for shared history across devices."
+        goToArticle: "Go to article {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -930,6 +949,18 @@
           dismiss: "Dismiss notification",
           showLess: "Show less",
           showAll: "Show all notifications"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       favCard: {
@@ -1712,6 +1743,18 @@
         empty: {
           title: "Alles ruhig",
           message: "Du hast keine aktuellen Warnungen"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -2556,6 +2599,18 @@
         empty: {
           title: "Όλα ήσυχα",
           message: "Δεν έχετε ενεργές ειδοποιήσεις"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -3093,6 +3148,24 @@
         emptyBody: "Configura `entity` para mostrar la tarjeta.",
         defaultName: "Persona"
       },
+      cameraCard: {
+        cardDescription: "Vista previa de cámara estilo Nodalia con chips de estado y vista expandida.",
+        live: "En vivo",
+        snapshot: "Instantánea",
+        offline: "Sin conexión",
+        unknown: "Desconocido",
+        unavailable: "No disponible",
+        recording: "Grabando",
+        lastUpdated: "Actualizado {time}",
+        emptyTitle: "Nodalia Camera Card",
+        emptyBody: "Configura `entity` para mostrar la tarjeta.",
+        defaultName: "Cámara",
+        cameraUnavailable: "Cámara no disponible",
+        noCameraEntity: "Sin entidad de cámara",
+        openCamera: "Abrir cámara",
+        close: "Cerrar",
+        expand: "Expandir"
+      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Añade entidades escena en el editor de la tarjeta.",
@@ -3105,6 +3178,7 @@
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Configura `entity` para mostrar la tarjeta.",
         selectPickerTitle: "Elegir opción",
+        selectPickerClose: "Cerrar",
         binarySensor: {
           doorOpen: "Abierta",
           doorClosed: "Cerrada",
@@ -3357,7 +3431,8 @@
             webhookMissing: "Configura el webhook de horario en el editor de la tarjeta.",
             entityMissing: "Selecciona primero una entidad climate.",
             webhookFailed: "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
-            dualRangeUnsupported: "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío."
+            dualRangeUnsupported: "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío.",
+            storageTooLarge: "Este horario es demasiado grande para el helper input_text (255 caracteres). Reduce bloques o usa automatizaciones Path A en disco."
           }
         }
       },
@@ -3482,6 +3557,18 @@
           dismiss: "Borrar notificación",
           showLess: "Mostrar menos",
           showAll: "Mostrar todas las notificaciones"
+        },
+        mobile: {
+          pushEnabled: "Push activado",
+          cardOnly: "Visible solo en la tarjeta",
+          silencedQuietHours: "Silenciado por horas de silencio",
+          silencedCooldown: "Silenciado por cooldown",
+          blockedSeverity: "Bloqueado por severidad",
+          blockedContext: "Bloqueado por contexto",
+          off: "Desactivado",
+          cameraEvent: "Evento de cámara",
+          securityEvent: "Evento de seguridad",
+          externalAlert: "Alerta externa"
         },
         empty: {
           title: "Todo en calma",
@@ -4265,6 +4352,18 @@
         empty: {
           title: "Tout est calme",
           message: "Vous n’avez aucune alerte en cours"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -5109,6 +5208,18 @@
         empty: {
           title: "Tutto tranquillo",
           message: "Non hai avvisi attivi"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -5953,6 +6064,18 @@
         empty: {
           title: "Alles rustig",
           message: "Je hebt geen actieve meldingen"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -6852,6 +6975,18 @@
         empty: {
           title: "Alt rolig",
           message: "Du har ingen aktive varsler"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -7641,6 +7776,18 @@
         empty: {
           title: "Tudo calmo",
           message: "Não tem alertas ativos"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -8485,6 +8632,18 @@
         empty: {
           title: "Totul e liniște",
           message: "Nu ai alerte active"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -9329,6 +9488,18 @@
         empty: {
           title: "Всё спокойно",
           message: "У вас нет активных оповещений"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
@@ -10173,6 +10344,18 @@
         empty: {
           title: "一切平静",
           message: "当前没有警报"
+        },
+        mobile: {
+          pushEnabled: "Push enabled",
+          cardOnly: "Visible in card only",
+          silencedQuietHours: "Silenced by quiet hours",
+          silencedCooldown: "Silenced by cooldown",
+          blockedSeverity: "Blocked by severity",
+          blockedContext: "Blocked by context",
+          off: "Off",
+          cameraEvent: "Camera event",
+          securityEvent: "Security event",
+          externalAlert: "External alert"
         }
       },
       calendarCard: {
