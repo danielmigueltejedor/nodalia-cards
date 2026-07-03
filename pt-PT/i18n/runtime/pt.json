@@ -314,6 +314,24 @@
     "emptyBody": "Defina `entity` para mostrar este cartão.",
     "defaultName": "Pessoa"
   },
+  "cameraCard": {
+    "cardDescription": "Nodalia-style camera preview with status chips and expanded view.",
+    "live": "Live",
+    "snapshot": "Snapshot",
+    "offline": "Offline",
+    "unknown": "Unknown",
+    "unavailable": "Unavailable",
+    "recording": "Recording",
+    "lastUpdated": "Last updated {time}",
+    "emptyTitle": "Nodalia Camera Card",
+    "emptyBody": "Set `entity` to show this card.",
+    "defaultName": "Camera",
+    "cameraUnavailable": "Camera unavailable",
+    "noCameraEntity": "No camera entity",
+    "openCamera": "Open camera",
+    "close": "Close",
+    "expand": "Expand"
+  },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
     "emptyBody": "Add scene entities in the card editor.",
@@ -709,6 +727,18 @@
       "dismiss": "Apagar notificação",
       "showLess": "Mostrar menos",
       "showAll": "Mostrar todas as notificações"
+    },
+    "mobile": {
+      "pushEnabled": "Push enabled",
+      "cardOnly": "Visible in card only",
+      "silencedQuietHours": "Silenced by quiet hours",
+      "silencedCooldown": "Silenced by cooldown",
+      "blockedSeverity": "Blocked by severity",
+      "blockedContext": "Blocked by context",
+      "off": "Off",
+      "cameraEvent": "Camera event",
+      "securityEvent": "Security event",
+      "externalAlert": "External alert"
     }
   },
   "favCard": {
