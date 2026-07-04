@@ -1273,7 +1273,13 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /previewPanes\.forEach\(node => node\.removeEventListener\("wheel", onPreviewWheel\)\)/);
   assert.doesNotMatch(utils, /editorHost\.style\.height = `\$\{Math\.ceil\(editorContent\.getBoundingClientRect\(\)\.height\)\}px`/);
   assert.doesNotMatch(utils, /editorHost\.style\.overflow = "hidden"/);
-  for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js", "nodalia-notifications-card.js"]) {
+  for (const card of [
+    "nodalia-news-card.js",
+    "nodalia-entity-card.js",
+    "nodalia-scenes-card.js",
+    "nodalia-notifications-card.js",
+    "nodalia-alarm-panel-card.js",
+  ]) {
     const source = read(card);
     assert.match(source, /bindEditorDialogLayoutFix\?\.\(this\)/);
     assert.match(source, /releaseEditorDialogLayoutFix\?\.\(this\)/);

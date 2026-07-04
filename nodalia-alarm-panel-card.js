@@ -1894,6 +1894,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
     if (this._emitConfigTimer) {
       window.clearTimeout(this._emitConfigTimer);
       this._emitConfigTimer = 0;
