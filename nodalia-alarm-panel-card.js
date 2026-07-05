@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "2.0.0-alpha.2";
+const CARD_VERSION = "2.0.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1894,6 +1894,7 @@ class NodaliaAlarmPanelCardEditor extends HTMLElement {
 
   disconnectedCallback() {
     this._detachEditorShadowListeners();
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
     if (this._emitConfigTimer) {
       window.clearTimeout(this._emitConfigTimer);
       this._emitConfigTimer = 0;

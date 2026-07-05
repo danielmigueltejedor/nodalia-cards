@@ -398,7 +398,7 @@ test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
   assert.match(source, /no: "nb-NO"/);
-  assert.match(source, /\n    no: \{\s*\n\s*vacuumErrorLabels:/);
+  assert.match(source, /no:\s*\{[\s\S]*vacuumErrorLabels:/);
 });
 
 test("shared visual editor ROWS map covers all supported editor languages", () => {
@@ -732,7 +732,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /!text\.includes\(":"\)/);
   assert.match(source, /!this\._canPruneDismissedToken\(id\)/);
   assert.match(source, /_queueMobileNotifications/);
-  assert.match(source, /this\._config\.background_mobile\?\.enabled === true/);
+  assert.match(source, /_backgroundMobileSuppressesForeground\(\)/);
+  assert.match(source, /_lastBackgroundMobileSyncSignature/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
   const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");

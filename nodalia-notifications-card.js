@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.0.0-alpha.2";
+const CARD_VERSION = "2.0.0-alpha.3";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -318,6 +318,7 @@ function normalizeSmartNotificationOptions(value) {
 }
 
 const MOBILE_POLICY_VALUES = new Set(["auto", "push", "card_only", "off"]);
+const BACKGROUND_MOBILE_MAX_CHUNKS = 40;
 const MOBILE_DELIVERY_STATES = new Set([
   "allowed",
   "card_only",
@@ -355,8 +356,42 @@ function normalizeMobilePolicy(value) {
   return "auto";
 }
 
+function resolveSmartEntityMobilePolicy(overrideMobile, baseMobile) {
+  if (!isExplicitSmartEntityMobile(overrideMobile)) {
+    return normalizeMobilePolicy(baseMobile ?? "auto");
+  }
+  return normalizeMobilePolicy(overrideMobile);
+}
+
+function backgroundMobilePayloadOverLimit(payload) {
+  return Number(payload?.chunk_count) > BACKGROUND_MOBILE_MAX_CHUNKS;
+}
+
 function normalizeSmartEntityMobile(value) {
   return normalizeMobilePolicy(value);
+}
+
+function normalizeSmartEntityOverrideMobile(value) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return "inherit";
+  }
+  const raw = String(value).trim().toLowerCase();
+  if (raw === "inherit") {
+    return "inherit";
+  }
+  return normalizeSmartEntityMobile(value);
+}
+
+function isExplicitSmartEntityMobile(value) {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  const raw = String(value).trim().toLowerCase();
+  if (!raw || raw === "inherit" || raw === "auto") {
+    return false;
+  }
+  const normalized = normalizeMobilePolicy(value);
+  return normalized === "push" || normalized === "off" || normalized === "card_only";
 }
 
 function parseClockMinutes(value) {
@@ -579,7 +614,7 @@ function normalizeSmartEntityOverrides(value) {
         url: String(row.url || "").trim(),
         action_label: String(row.action_label || "").trim(),
         tap_action: normalizeNotificationTapAction(row.tap_action),
-        mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
+        mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
       };
     })
     .filter(item => {
@@ -587,7 +622,7 @@ function normalizeSmartEntityOverrides(value) {
         return false;
       }
       seen.add(item.entity);
-      return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || hasNotificationTapAction(item.tap_action) || item.mobile !== "auto");
+      return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || hasNotificationTapAction(item.tap_action) || isExplicitSmartEntityMobile(item.mobile));
     });
 }
 
@@ -1185,7 +1220,7 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       title: String(item.title || ""),
       message: String(item.message || ""),
       tint_color: String(item.tint_color || ""),
-      mobile: normalizeMobilePolicy(item.mobile),
+      ...(isExplicitSmartEntityMobile(item.mobile) ? { mobile: normalizeMobilePolicy(item.mobile) } : {}),
     };
   });
   return {
@@ -1279,6 +1314,8 @@ function buildBackgroundMobileWebhookPayload(rawConfig) {
     card_version: CARD_VERSION,
     source: CARD_TAG,
     chunk_count: chunks.length,
+    max_chunks: BACKGROUND_MOBILE_MAX_CHUNKS,
+    over_limit: chunks.length > BACKGROUND_MOBILE_MAX_CHUNKS,
     config_hash: notificationHash(json),
     chunks,
   };
@@ -1632,6 +1669,15 @@ class NodaliaNotificationsCard extends HTMLElement {
       return false;
     }
     const payload = this._buildBackgroundMobileWebhookPayload();
+    if (backgroundMobilePayloadOverLimit(payload)) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
+        );
+      }
+      this._pendingBackgroundMobileSync = true;
+      return false;
+    }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     const force = this._forceNextBackgroundMobileSync === true;
     this._forceNextBackgroundMobileSync = false;
@@ -2599,7 +2645,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           .filter(([, value]) => String(value || "").trim()),
       ),
       ...(hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {}),
-      mobile: normalizeMobilePolicy(override?.mobile ?? base.mobile ?? "auto"),
+      mobile: resolveSmartEntityMobilePolicy(override?.mobile, base.mobile ?? "auto"),
     };
   }
 
@@ -2933,8 +2979,16 @@ class NodaliaNotificationsCard extends HTMLElement {
     return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
   }
 
+  _backgroundMobileSuppressesForeground() {
+    const background = this._config?.background_mobile || {};
+    if (background.enabled !== true) {
+      return false;
+    }
+    return Boolean(this._lastBackgroundMobileSyncSignature);
+  }
+
   _shouldSendMobileNotification(item) {
-    if (this._config.background_mobile?.enabled === true) {
+    if (this._backgroundMobileSuppressesForeground()) {
       return false;
     }
     if (!item?.id) {
@@ -4180,6 +4234,10 @@ if (typeof globalThis !== "undefined") {
     resolveMobileDeliveryState,
     getBackgroundMobileConfigPayload,
     buildBackgroundMobileWebhookPayload,
+    backgroundMobilePayloadOverLimit,
+    BACKGROUND_MOBILE_MAX_CHUNKS,
+    resolveSmartEntityMobilePolicy,
+    isExplicitSmartEntityMobile,
     pushExternalAlerts: NodaliaNotificationsCard.pushExternalAlerts,
   };
 }
@@ -4383,6 +4441,14 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       return false;
     }
     const payload = buildBackgroundMobileWebhookPayload(normalized);
+    if (backgroundMobilePayloadOverLimit(payload)) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          `Nodalia Notifications Card editor: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
+        );
+      }
+      return false;
+    }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     if (signature === this._lastBackgroundMobileSyncSignature) {
       return true;

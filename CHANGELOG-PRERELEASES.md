@@ -10,6 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.3] - 2026-07-06
+
+Third **`2.0.0`** **`alpha`**: Room Summary Card and Nodalia Menu Card. Release channel **`2.0.0-alpha.3`**.
+
+### Added
+
+- **`room_summary`:** new `custom:nodalia-room-summary-card` for room-level dashboards, with temperature, humidity, presence, lights, covers, climate, camera, media, security indicators, quick actions, multiple layouts, empty states, and initial visual editor.
+- **`menu`:** new `custom:nodalia-menu-card` for Nodalia-style horizontal dashboard navigation, with navigate/helper/action modes, active item detection, badges, mobile scrolling, variants, and initial visual editor.
+- **`i18n`:** English and Spanish runtime labels for Room Summary and Menu Card configuration, states, layouts, actions, and editor fields.
+- **`tests`:** regression coverage for Room Summary rendering, entity fallbacks, quick actions, Menu Card navigation/helper/action modes, active state, badges, and editor output.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.3`.
+
+### Fixed
+
+- **`notifications`:** background mobile sync now rejects configs larger than the 40-chunk package limit instead of marking truncated payloads as successful; foreground push is suppressed only after a successful background sync.
+- **`notifications`:** smart entity overrides with default `inherit` mobile no longer mask kind-level `off`/`push` policies when only title, message, or color are customized.
+- **`examples`:** background mobile package defaults to `local_only: true` and rejects oversized webhook payloads before writing helper chunks.
+- **`alarm_panel`:** visual editor releases the shared Lovelace dialog layout fix on disconnect, preventing leaked scroll listeners after closing the editor.
+
 ## [2.0.0-alpha.2] - 2026-07-03
 
 Second **`2.0.0`** **`alpha`**: Notifications 2.0 mobile policy and context delivery. Release channel **`2.0.0-alpha.2`**.

@@ -1,0 +1,16 @@
+type: custom:nodalia-room-summary-card
+name: Salón
+icon: mdi:sofa
+layout: standard
+temperature: sensor.salon_temperature
+humidity: sensor.salon_humidity
+presence: binary_sensor.salon_presence
+climate: climate.salon
+lights:
+  - light.salon_main
+  - light.salon_ambient
+covers:
+  - cover.salon_blind
+camera: camera.salon
+media_player: media_player.salon
+show_quick_actions: true

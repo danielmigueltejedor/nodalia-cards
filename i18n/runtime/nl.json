@@ -173,6 +173,13 @@
     "recently played tracks": "Onlangs afgespeelde nummers",
     "browseFallback": "Item"
   },
+  "mediaBrowser": {
+    "loading": "Loading media...",
+    "empty": "No items available here.",
+    "playItem": "Play {title}",
+    "dialog": "Media browser",
+    "eyebrow": "Media Browser"
+  },
   "vacuumSimple": {
     "quiet": "Stil",
     "silent": "Stil",
@@ -215,6 +222,40 @@
       "oscillationOn": "Turn oscillation on",
       "oscillationOff": "Turn oscillation off",
       "showModes": "Show modes"
+    }
+  },
+  "lightCard": {
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Stel `entity` in op een `light.*`-entiteit om deze kaart te tonen.",
+    "controlModes": {
+      "brightness": "Helderheid tonen",
+      "temperature": "Temperatuur tonen",
+      "color": "Kleur tonen"
+    },
+    "sections": {
+      "temperature": "Temperatuur",
+      "color": "Kleur",
+      "presets": "Voorinstellingen"
+    },
+    "temperaturePresets": {
+      "warm": "Warm",
+      "neutral": "Neutraal",
+      "cool": "Koel"
+    }
+  },
+  "common": {
+    "aria": {
+      "togglePower": "In- of uitschakelen",
+      "back": "Back",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "playPause": "Play or pause",
+      "volumeDown": "Volume down",
+      "volumeUp": "Volume up",
+      "openMedia": "Open media",
+      "navigationBar": "Navigation bar",
+      "mediaPlayers": "Media players"
     }
   },
   "alarmPanel": {
@@ -273,7 +314,83 @@
     "emptyBody": "Stel `entity` in om deze kaart te tonen.",
     "defaultName": "Persoon"
   },
+  "cameraCard": {
+    "cardDescription": "Nodalia-style camera preview with status chips and expanded view.",
+    "live": "Live",
+    "snapshot": "Snapshot",
+    "offline": "Offline",
+    "unknown": "Unknown",
+    "unavailable": "Unavailable",
+    "recording": "Recording",
+    "lastUpdated": "Last updated {time}",
+    "emptyTitle": "Nodalia Camera Card",
+    "emptyBody": "Set `entity` to show this card.",
+    "defaultName": "Camera",
+    "cameraUnavailable": "Camera unavailable",
+    "noCameraEntity": "No camera entity",
+    "openCamera": "Open camera",
+    "close": "Close",
+    "expand": "Expand"
+  },
+  "roomSummaryCard": {
+    "cardDescription": "Room overview with climate, occupancy, lights, and covers.",
+    "emptyTitle": "Nodalia Room Summary Card",
+    "emptyBody": "Set a room name and connect room entities.",
+    "defaultName": "Room",
+    "temperature": "Temperature",
+    "humidity": "Humidity",
+    "climateLabel": "Climate",
+    "occupied": "Occupied",
+    "vacant": "Vacant",
+    "comfortable": "Comfortable",
+    "hot": "Hot",
+    "cold": "Cold",
+    "humid": "Humid",
+    "dry": "Dry",
+    "lights": "Lights",
+    "lightsOn": "{count} on",
+    "lightsOff": "All off",
+    "covers": "Covers",
+    "coversOpen": "{count} open",
+    "coversClosed": "All closed",
+    "doorOpen": "Door open",
+    "windowOpen": "Window open",
+    "lockUnlocked": "Unlocked",
+    "alert": "Alert",
+    "securityIssue": "Security issue",
+    "cameraOffline": "Camera offline",
+    "mediaPlaying": "Playing",
+    "turnOnLights": "Turn on lights",
+    "turnOffLights": "Turn off lights",
+    "openCovers": "Open covers",
+    "closeCovers": "Close covers",
+    "openCamera": "Open camera",
+    "climateDetails": "Climate details",
+    "mediaPlayer": "Media player",
+    "power": "Power",
+    "airQuality": "Air quality",
+    "entityUnavailable": "Unavailable",
+    "noRoomData": "No room data"
+  },
+  "menuCard": {
+    "cardDescription": "Nodalia-style horizontal dashboard navigation with badges and active item.",
+    "emptyTitle": "Nodalia Menu Card",
+    "emptyBody": "Add menu items in the card editor.",
+    "activeItem": "Active item"
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Voeg scène-entiteiten toe in de kaarteditor.",
+    "defaultName": "Scènes",
+    "unavailable": "Niet beschikbaar",
+    "subtitle": "Tik op een sfeer om te starten",
+    "moods": "sferen"
+  },
   "entityCard": {
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Stel `entity` in om deze kaart te tonen.",
+    "selectPickerTitle": "Choose option",
+    "selectPickerClose": "Close",
     "binarySensor": {
       "doorOpen": "Open",
       "doorClosed": "Gesloten",
@@ -345,11 +462,11 @@
       "good": "Goed",
       "fair": "Redelijk",
       "poor": "Slecht"
-    },
-    "emptyTitle": "Nodalia Entity Card",
-    "emptyBody": "Stel `entity` in om deze kaart te tonen."
+    }
   },
   "weatherCard": {
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Stel `entity` in om het weer te tonen.",
     "conditions": {
       "clear_night": "Heldere nacht",
       "cloudy": "Bewolkt",
@@ -425,11 +542,16 @@
         "met": "Meteorologisch",
         "monitor": "Monitoren"
       }
-    },
-    "emptyTitle": "Nodalia Weather Card",
-    "emptyBody": "Stel `entity` in om het weer te tonen."
+    }
   },
   "humidifierCard": {
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Stel `entity` in op een `humidifier.*`-entiteit om deze kaart te tonen.",
+    "aria": {
+      "targetHumidity": "Target humidity",
+      "showModes": "Show modes",
+      "showSpeeds": "Show speeds"
+    },
     "modes": {
       "auto": "Auto",
       "automatic": "Auto",
@@ -463,16 +585,11 @@
       "idle": "Inactief",
       "unavailable": "Niet beschikbaar",
       "unknown": "Onbekend"
-    },
-    "emptyTitle": "Nodalia Humidifier Card",
-    "emptyBody": "Stel `entity` in op een `humidifier.*`-entiteit om deze kaart te tonen.",
-    "aria": {
-      "targetHumidity": "Target humidity",
-      "showModes": "Show modes",
-      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Stel `entity` in op een `climate.*`-entiteit om deze kaart te tonen.",
     "modes": {
       "off": "Uit",
       "heat": "Verwarmen",
@@ -526,30 +643,65 @@
         "webhookMissing": "Configureer een webhook voor het weekschema in de kaarteditor.",
         "entityMissing": "Selecteer eerst een climate-entiteit.",
         "webhookFailed": "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
-        "dualRangeUnsupported": "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt."
+        "dualRangeUnsupported": "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt.",
+        "storageTooLarge": "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
       }
-    },
-    "emptyTitle": "Nodalia Climate Card",
-    "emptyBody": "Stel `entity` in op een `climate.*`-entiteit om deze kaart te tonen."
+    }
   },
   "graphCard": {
-    "emptyHistory": "Geen geschiedenis beschikbaar",
     "emptyTitle": "Nodalia Graph Card",
-    "emptyBody": "Stel `entities` in op een of meer numerieke entiteiten om de grafiek te tonen."
+    "emptyBody": "Stel `entities` in op een of meer numerieke entiteiten om de grafiek te tonen.",
+    "emptyHistory": "Geen geschiedenis beschikbaar",
+    "defaultTitle": "Graph"
   },
-  "favCard": {
-    "disarmedF": "Uitgeschakeld",
-    "armed_home": "Thuis",
-    "armed_away": "Afwezig",
-    "armed_night": "Nacht",
-    "armed_vacation": "Vakantie",
-    "armed_custom_bypass": "Aangepast",
-    "arming": "Inschakelen",
-    "disarming": "Uitschakelen",
-    "pending": "In behandeling",
-    "triggered": "Getriggerd",
-    "emptyTitle": "Nodalia Fav Card",
-    "emptyBody": "Stel `entity` in om de favoriet te tonen."
+  "newsCard": {
+    "title": "News",
+    "emptyTitle": "No news available",
+    "emptyBody": "Add a news entity or check your feed source.",
+    "loading": "Loading news…",
+    "errorTitle": "News source unavailable",
+    "errorBody": "Check your configured entity or source attributes.",
+    "readMore": "Read more",
+    "sourceUnknown": "Unknown source",
+    "categoryGeneral": "General",
+    "publishedNow": "Just now",
+    "publishedMinutesAgo": "{count} min ago",
+    "publishedHoursAgo": "{count} h ago",
+    "publishedDaysAgo": "{count} d ago",
+    "previousArticle": "Previous article",
+    "nextArticle": "Next article",
+    "articlePosition": "Article {current} of {total}",
+    "goToArticle": "Go to article {index}"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Stel `entity` in op een numerieke entiteit om de wijzerplaat te tonen."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Stel `entity` in op een `vacuum.*`-entiteit om deze kaart te tonen."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Configureer `entity` of basisinhoud om de badge te tonen."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Stel `entity` of `players` in om een speler te tonen.",
+    "aria": {
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "playPause": "Play or pause",
+      "showVolume": "Show volume",
+      "sources": "Sources",
+      "switchSource": "Switch source",
+      "switchToSource": "Switch to {source}",
+      "volume": "Volume",
+      "selectPlayer": "Select player {index}",
+      "play": "Play",
+      "hidePlayer": "Hide player",
+      "showPlayer": "Show player"
+    }
   },
   "notificationsCard": {
     "fallbackEvent": "Afspraak",
@@ -562,7 +714,6 @@
       "vacuumPaused": "Robot gepauzeerd",
       "cleaningStarted": "Schoonmaak gestart",
       "returningDock": "Robot keert terug naar dock",
-      "mediaLeftOn": "Multimedia aan zonder aanwezigheid",
       "motionDetected": "Beweging gedetecteerd",
       "doorOpen": "Deur open",
       "windowOpen": "Raam open",
@@ -571,23 +722,24 @@
       "rainSoon": "Binnenkort regen",
       "batteryLow": "Batterij bijna leeg",
       "humidifierFillLow": "Tank bijna leeg",
+      "humidifierFillFull": "Tank vol",
       "inkLow": "Inkt bijna op",
       "humidityHigh": "Hoge luchtvochtigheid",
       "humidityLow": "Lage luchtvochtigheid",
       "customFallback": "Melding",
-      "humidifierFillFull": "Tank vol"
+      "mediaLeftOn": "Multimedia aan zonder aanwezigheid"
     },
     "messages": {
       "vacuumAttention": "{name} heeft status {state}.",
       "vacuumPaused": "{name} is gepauzeerd of wacht.",
       "vacuumState": "{name}: {state}.",
       "hot": "{source} geeft {value} aan. Je kunt {fan} inschakelen.",
-      "hotClimate": "{source} geeft {value} aan. Je kunt koeling op {climate} inschakelen.",
-      "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid.",
       "rainSoon": "{source} verwacht regen rond {time}. Als er was buiten hangt, controleer die even.",
       "lowLevel": "{source} staat op {value}.",
+      "highLevel": "{source} staat op {value}.",
       "sensorValue": "{source} geeft {value} aan.",
-      "highLevel": "{source} staat op {value}."
+      "hotClimate": "{source} geeft {value} aan. Je kunt koeling op {climate} inschakelen.",
+      "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid."
     },
     "actions": {
       "openCalendar": "Kalender openen",
@@ -595,17 +747,17 @@
       "continue": "Doorgaan",
       "viewSensor": "Sensor bekijken",
       "turnOnFan": "Ventilator inschakelen",
-      "turnOnCooling": "Koeling inschakelen",
-      "turnOnHeat": "Verwarming inschakelen",
-      "turnOnDehumidifier": "Luchtontvochtiger inschakelen",
-      "turnOff": "Uitschakelen",
       "viewWeather": "Weer bekijken",
       "buyBattery": "Batterij kopen",
       "buyInk": "Inkt kopen",
       "run": "Uitvoeren",
       "toggle": "Schakelen",
       "open": "Openen",
-      "less": "Minder"
+      "less": "Minder",
+      "turnOnCooling": "Koeling inschakelen",
+      "turnOnHeat": "Verwarming inschakelen",
+      "turnOnDehumidifier": "Luchtontvochtiger inschakelen",
+      "turnOff": "Uitschakelen"
     },
     "severity": {
       "critical": "Kritiek",
@@ -613,14 +765,14 @@
       "success": "OK",
       "info": "Info"
     },
+    "empty": {
+      "title": "Alles rustig",
+      "message": "Je hebt geen actieve meldingen"
+    },
     "aria": {
       "dismiss": "Melding verwijderen",
       "showLess": "Minder tonen",
       "showAll": "Alle meldingen tonen"
-    },
-    "empty": {
-      "title": "Alles rustig",
-      "message": "Je hebt geen actieve meldingen"
     },
     "mobile": {
       "pushEnabled": "Push enabled",
@@ -634,6 +786,20 @@
       "securityEvent": "Security event",
       "externalAlert": "External alert"
     }
+  },
+  "favCard": {
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Stel `entity` in om de favoriet te tonen.",
+    "disarmedF": "Uitgeschakeld",
+    "armed_home": "Thuis",
+    "armed_away": "Afwezig",
+    "armed_night": "Nacht",
+    "armed_vacation": "Vakantie",
+    "armed_custom_bypass": "Aangepast",
+    "arming": "Inschakelen",
+    "disarming": "Uitschakelen",
+    "pending": "In behandeling",
+    "triggered": "Getriggerd"
   },
   "calendarCard": {
     "allDay": "Hele dag",
@@ -703,13 +869,6 @@
       "createEvent": "Kon de afspraak niet maken.",
       "createEventWithMessage": "Kon de afspraak niet maken: {message}"
     },
-    "aria": {
-      "newEventDialog": "Nieuwe agenda-afspraak",
-      "deleteEvent": "Afspraak verwijderen",
-      "createHaEvent": "HA-afspraak maken",
-      "close": "Sluiten",
-      "deleteRecurringDialog": "Kies hoe de terugkerende afspraak wordt verwijderd"
-    },
     "deleteRecurrence": {
       "title": "Terugkerende afspraak verwijderen",
       "message": "Deze afspraak maakt deel uit van een reeks. Wat wil je verwijderen?",
@@ -717,6 +876,16 @@
       "thisAndFuture": "Deze en alle volgende",
       "deleteFailed": "Afspraak kon niet worden verwijderd. Probeer het opnieuw.",
       "deleteFailedWithMessage": "Afspraak kon niet worden verwijderd: {message}"
+    },
+    "aria": {
+      "newEventDialog": "Nieuwe agenda-afspraak",
+      "deleteEvent": "Afspraak verwijderen",
+      "deleteRecurringDialog": "Kies hoe de terugkerende afspraak wordt verwijderd",
+      "createHaEvent": "HA-afspraak maken",
+      "close": "Sluiten"
+    },
+    "warnings": {
+      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {
@@ -773,84 +942,5 @@
     "check_clean_carouse": "Controleer de schoonmaakcarrousel",
     "audio_error": "Audiofout",
     "water_empty": "Watertank leeg"
-  },
-  "lightCard": {
-    "controlModes": {
-      "brightness": "Helderheid tonen",
-      "temperature": "Temperatuur tonen",
-      "color": "Kleur tonen"
-    },
-    "sections": {
-      "temperature": "Temperatuur",
-      "color": "Kleur",
-      "presets": "Voorinstellingen"
-    },
-    "temperaturePresets": {
-      "warm": "Warm",
-      "neutral": "Neutraal",
-      "cool": "Koel"
-    },
-    "emptyTitle": "Nodalia Light Card",
-    "emptyBody": "Stel `entity` in op een `light.*`-entiteit om deze kaart te tonen."
-  },
-  "common": {
-    "aria": {
-      "togglePower": "In- of uitschakelen",
-      "back": "Back",
-      "close": "Close",
-      "previous": "Previous",
-      "next": "Next",
-      "playPause": "Play or pause",
-      "volumeDown": "Volume down",
-      "volumeUp": "Volume up",
-      "openMedia": "Open media",
-      "navigationBar": "Navigation bar",
-      "mediaPlayers": "Media players"
-    }
-  },
-  "scenes": {
-    "emptyTitle": "Nodalia Scenes Card",
-    "emptyBody": "Voeg scène-entiteiten toe in de kaarteditor.",
-    "defaultName": "Scènes",
-    "unavailable": "Niet beschikbaar",
-    "subtitle": "Tik op een sfeer om te starten",
-    "moods": "sferen"
-  },
-  "circularGaugeCard": {
-    "emptyTitle": "Nodalia Circular Gauge Card",
-    "emptyBody": "Stel `entity` in op een numerieke entiteit om de wijzerplaat te tonen."
-  },
-  "vacuumCard": {
-    "emptyTitle": "Nodalia Vacuum Card",
-    "emptyBody": "Stel `entity` in op een `vacuum.*`-entiteit om deze kaart te tonen."
-  },
-  "insigniaCard": {
-    "emptyTitle": "Nodalia Insignia Card",
-    "emptyBody": "Configureer `entity` of basisinhoud om de badge te tonen."
-  },
-  "mediaPlayerCard": {
-    "emptyTitle": "Nodalia Media Player",
-    "emptyBody": "Stel `entity` of `players` in om een speler te tonen.",
-    "aria": {
-      "turnOn": "Turn on",
-      "turnOff": "Turn off",
-      "playPause": "Play or pause",
-      "showVolume": "Show volume",
-      "sources": "Sources",
-      "switchSource": "Switch source",
-      "switchToSource": "Switch to {source}",
-      "volume": "Volume",
-      "selectPlayer": "Select player {index}",
-      "play": "Play",
-      "hidePlayer": "Hide player",
-      "showPlayer": "Show player"
-    }
-  },
-  "mediaBrowser": {
-    "loading": "Loading media...",
-    "empty": "No items available here.",
-    "playItem": "Play {title}",
-    "dialog": "Media browser",
-    "eyebrow": "Media Browser"
   }
 }

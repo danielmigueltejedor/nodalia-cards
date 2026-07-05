@@ -43,6 +43,8 @@ const CARD_PARTS = [
   "nodalia-vacuum-card.js",
   "nodalia-news-card.js",
   "nodalia-camera-card.js",
+  "nodalia-room-summary-card.js",
+  "nodalia-menu-card.js",
 ];
 
 const ALL_PARTS = [...CORE_PARTS, ...CARD_PARTS];

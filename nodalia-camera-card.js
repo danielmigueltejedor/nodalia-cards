@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.2";
+const CARD_VERSION = "2.0.0-alpha.3";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security"]);
 const TAP_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
 const HOLD_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);

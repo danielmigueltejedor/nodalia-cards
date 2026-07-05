@@ -268,6 +268,8 @@ Major internal improvements:
 - `custom:nodalia-vacuum-card`
 - `custom:nodalia-news-card` — [`docs/cards/news-card.md`](./docs/cards/news-card.md)
 - `custom:nodalia-camera-card`
+- `custom:nodalia-room-summary-card`
+- `custom:nodalia-menu-card`
 
 ---
 
@@ -327,6 +329,11 @@ configured alert entities, thresholds, and `mobile_notifications.entities` to
 Home Assistant by webhook so the package can send push notifications in the
 background without duplicating notify targets in the automation YAML. Start from
 [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
+
+Keep the example webhook on `local_only: true` unless you deliberately expose
+the sync endpoint remotely. The package stores the synced JSON across 40
+`input_text` helpers (255 characters each); oversized card configs are rejected
+instead of being truncated.
 
 For comfort alerts, use indoor temperature/humidity entities for house
 recommendations. Outdoor temperature/humidity entities are kept separate so an

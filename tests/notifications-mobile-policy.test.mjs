@@ -236,9 +236,53 @@ test("editor emits normalized mobile policy values", () => {
   assert.match(source, /stripEqualToDefaults/);
 });
 
-test("foreground push is skipped when background sync is enabled", () => {
+test("foreground push is skipped only after background sync succeeds", () => {
   const source = read("nodalia-notifications-card.js");
-  assert.match(source, /background_mobile\?\.enabled === true[\s\S]*return false/);
+  assert.match(source, /_backgroundMobileSuppressesForeground\(\)/);
+  assert.match(source, /_lastBackgroundMobileSyncSignature/);
+  assert.match(source, /background\.enabled !== true[\s\S]*return false/);
+});
+
+test("background payload rejects configs exceeding 40 chunks", () => {
+  const oversized = {
+    background_mobile: { enabled: true, chunk_size: 120 },
+    custom_notifications: Array.from({ length: 80 }, (_, index) => ({
+      title: `Alert ${index}`,
+      message: "x".repeat(180),
+      severity: "warning",
+    })),
+  };
+  const payload = mobile.buildBackgroundMobileWebhookPayload(oversized);
+  assert.ok(mobile.backgroundMobilePayloadOverLimit(payload));
+  assert.equal(payload.over_limit, true);
+  assert.ok(payload.chunk_count > mobile.BACKGROUND_MOBILE_MAX_CHUNKS);
+});
+
+test("smart entity override inherit preserves kind-level mobile off", () => {
+  const config = {
+    smart_notifications: { hot: { mobile: "off" } },
+    smart_entity_overrides: [{ entity: "sensor.living_temp", title: "Custom title", mobile: "inherit" }],
+  };
+  const normalized = mobile.resolveSmartEntityMobilePolicy("inherit", config.smart_notifications.hot.mobile);
+  assert.equal(normalized, "off");
+});
+
+test("smart entity override explicit off overrides kind push", () => {
+  const resolved = mobile.resolveSmartEntityMobilePolicy("off", "push");
+  assert.equal(resolved, "off");
+});
+
+test("smart entity override inherit does not override kind off when only customizing text", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /resolveSmartEntityMobilePolicy\(override\?\.mobile, base\.mobile/);
+  assert.match(source, /normalizeSmartEntityOverrideMobile/);
+});
+
+test("background package rejects oversized payloads and uses local_only", () => {
+  const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
+  assert.match(backgroundPackage, /local_only: true/);
+  assert.match(backgroundPackage, /chunk_count > 40/);
+  assert.match(backgroundPackage, /Rejected background mobile payload/);
 });
 
 test("threshold crossing remains in background package templates", () => {
@@ -247,6 +291,6 @@ test("threshold crossing remains in background package templates", () => {
   assert.match(backgroundPackage, /old_state\.state != trigger\.event\.data\.new_state\.state/);
 });
 
-test("notifications card version is 2.0.0-alpha.2", () => {
-  assert.match(read("nodalia-notifications-card.js"), /CARD_VERSION = "2\.0\.0-alpha\.2"/);
+test("notifications card version is 2.0.0-alpha.3", () => {
+  assert.match(read("nodalia-notifications-card.js"), /CARD_VERSION = "2\.0\.0-alpha\.3"/);
 });

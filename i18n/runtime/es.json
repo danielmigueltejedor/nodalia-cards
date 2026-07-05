@@ -332,6 +332,52 @@
     "close": "Cerrar",
     "expand": "Expandir"
   },
+  "roomSummaryCard": {
+    "cardDescription": "Resumen de habitación con clima, presencia, luces, persianas, seguridad y acciones rápidas.",
+    "emptyTitle": "Nodalia Room Summary Card",
+    "emptyBody": "Define un nombre de habitación y conecta las entidades de la estancia.",
+    "defaultName": "Habitación",
+    "temperature": "Temperatura",
+    "humidity": "Humedad",
+    "climateLabel": "Clima",
+    "occupied": "Ocupada",
+    "vacant": "Vacía",
+    "comfortable": "Confortable",
+    "hot": "Caliente",
+    "cold": "Fría",
+    "humid": "Húmeda",
+    "dry": "Seca",
+    "lights": "Luces",
+    "lightsOn": "{count} encendidas",
+    "lightsOff": "Todas apagadas",
+    "covers": "Persianas",
+    "coversOpen": "{count} abiertas",
+    "coversClosed": "Todas cerradas",
+    "doorOpen": "Puerta abierta",
+    "windowOpen": "Ventana abierta",
+    "lockUnlocked": "Desbloqueada",
+    "alert": "Alerta",
+    "securityIssue": "Problema de seguridad",
+    "cameraOffline": "Cámara offline",
+    "mediaPlaying": "Reproduciendo",
+    "turnOnLights": "Encender luces",
+    "turnOffLights": "Apagar luces",
+    "openCovers": "Abrir persianas",
+    "closeCovers": "Cerrar persianas",
+    "openCamera": "Abrir cámara",
+    "climateDetails": "Detalles del clima",
+    "mediaPlayer": "Reproductor",
+    "power": "Consumo",
+    "airQuality": "Calidad del aire",
+    "entityUnavailable": "No disponible",
+    "noRoomData": "Sin datos de habitación"
+  },
+  "menuCard": {
+    "cardDescription": "Navegación horizontal estilo Nodalia con badges e ítem activo.",
+    "emptyTitle": "Nodalia Menu Card",
+    "emptyBody": "Añade ítems de menú en el editor de la tarjeta.",
+    "activeItem": "Ítem activo"
+  },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
     "emptyBody": "Añade entidades escena en el editor de la tarjeta.",
@@ -668,7 +714,6 @@
       "vacuumPaused": "Robot pausado",
       "cleaningStarted": "Limpieza iniciada",
       "returningDock": "Robot volviendo a base",
-      "mediaLeftOn": "Multimedia encendido sin presencia",
       "motionDetected": "Movimiento detectado",
       "doorOpen": "Puerta abierta",
       "windowOpen": "Ventana abierta",
@@ -681,19 +726,20 @@
       "inkLow": "Tinta baja",
       "humidityHigh": "Humedad alta",
       "humidityLow": "Humedad baja",
-      "customFallback": "Notificación"
+      "customFallback": "Notificación",
+      "mediaLeftOn": "Multimedia encendido sin presencia"
     },
     "messages": {
       "vacuumAttention": "{name} está en estado {state}.",
       "vacuumPaused": "{name} está pausado o esperando.",
       "vacuumState": "{name}: {state}.",
       "hot": "{source} marca {value}. Puedes encender {fan}.",
-      "hotClimate": "{source} marca {value}. Puedes activar frío en {climate}.",
-      "mediaLeftOn": "{media} sigue encendido y {source} no detecta presencia.",
       "rainSoon": "{source} prevé lluvia sobre {time}. Si tienes ropa tendida, conviene revisarla.",
       "lowLevel": "{source} queda en {value}.",
       "highLevel": "{source} está al {value}.",
-      "sensorValue": "{source} marca {value}."
+      "sensorValue": "{source} marca {value}.",
+      "hotClimate": "{source} marca {value}. Puedes activar frío en {climate}.",
+      "mediaLeftOn": "{media} sigue encendido y {source} no detecta presencia."
     },
     "actions": {
       "openCalendar": "Abrir calendario",
@@ -701,23 +747,27 @@
       "continue": "Continuar",
       "viewSensor": "Ver sensor",
       "turnOnFan": "Encender ventilador",
-      "turnOnCooling": "Activar frío",
-      "turnOnHeat": "Activar calor",
-      "turnOnDehumidifier": "Encender deshumidificador",
-      "turnOff": "Apagar",
       "viewWeather": "Ver tiempo",
       "buyBattery": "Comprar pila",
       "buyInk": "Comprar tinta",
       "run": "Ejecutar",
       "toggle": "Alternar",
       "open": "Abrir",
-      "less": "Menos"
+      "less": "Menos",
+      "turnOnCooling": "Activar frío",
+      "turnOnHeat": "Activar calor",
+      "turnOnDehumidifier": "Encender deshumidificador",
+      "turnOff": "Apagar"
     },
     "severity": {
       "critical": "Crítica",
       "warning": "Aviso",
       "success": "OK",
       "info": "Info"
+    },
+    "empty": {
+      "title": "Todo en calma",
+      "message": "No tienes alertas pendientes"
     },
     "aria": {
       "dismiss": "Borrar notificación",
@@ -735,10 +785,6 @@
       "cameraEvent": "Evento de cámara",
       "securityEvent": "Evento de seguridad",
       "externalAlert": "Alerta externa"
-    },
-    "empty": {
-      "title": "Todo en calma",
-      "message": "No tienes alertas pendientes"
     }
   },
   "favCard": {
@@ -837,6 +883,9 @@
       "deleteRecurringDialog": "Elegir cómo eliminar el evento recurrente",
       "createHaEvent": "Crear evento HA",
       "close": "Cerrar"
+    },
+    "warnings": {
+      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {

@@ -26,6 +26,7 @@
 #   entity list is synced dynamically through the webhook. Conditions below
 #   discard attribute-only changes and non-watched entities before notification
 #   actions run.
+# - Keep local_only: true unless you intentionally expose the webhook remotely.
 # - Treat the webhook_id like a password if you set local_only: false.
 # - Calendar/weather forecast alerts are still best handled by dedicated HA
 #   automations because they depend on periodic forecast/calendar queries, not
@@ -90,28 +91,41 @@ automation:
         webhook_id: nodalia_notifications_background_sync
         allowed_methods:
           - POST
-        local_only: false
+        local_only: true
     actions:
       - variables:
           chunks: "{{ trigger.json.chunks | default([], true) }}"
           config_hash: "{{ trigger.json.config_hash | default('', true) }}"
-      - repeat:
-          count: 40
-          sequence:
-            - action: input_text.set_value
-              target:
-                entity_id: "input_text.nodalia_notifications_background_config_{{ '%02d' | format(repeat.index) }}"
-              data:
-                value: "{{ chunks[repeat.index - 1] if (chunks | count) >= repeat.index else '' }}"
-      - action: input_text.set_value
-        target:
-          entity_id: input_text.nodalia_notifications_background_last_hash
-        data:
-          value: "{{ config_hash }}"
-      - event: nodalia_notifications_background_config_updated
-        event_data:
-          config_hash: "{{ config_hash }}"
           chunk_count: "{{ chunks | count }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ chunk_count > 40 }}"
+            sequence:
+              - stop: "Rejected background mobile payload: chunk_count {{ chunk_count }} exceeds 40"
+          - conditions:
+              - condition: template
+                value_template: "{{ chunk_count < 1 }}"
+            sequence:
+              - stop: "Rejected background mobile payload: empty chunk list"
+        default:
+          - repeat:
+              count: 40
+              sequence:
+                - action: input_text.set_value
+                  target:
+                    entity_id: "input_text.nodalia_notifications_background_config_{{ '%02d' | format(repeat.index) }}"
+                  data:
+                    value: "{{ chunks[repeat.index - 1] if chunk_count >= repeat.index else '' }}"
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.nodalia_notifications_background_last_hash
+            data:
+              value: "{{ config_hash }}"
+          - event: nodalia_notifications_background_config_updated
+            event_data:
+              config_hash: "{{ config_hash }}"
+              chunk_count: "{{ chunk_count }}"
 
   - id: nodalia_notifications_background_state_filter
     alias: "Nodalia Notifications | Background mobile state filter"
