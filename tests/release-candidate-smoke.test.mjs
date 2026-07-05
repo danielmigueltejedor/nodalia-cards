@@ -590,6 +590,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /smart_notifications\.\$\{key\}\.mobile/);
   assert.match(source, /custom_notifications\.\$\{index\}\.mobile/);
   assert.match(source, /mobilePolicy: item\.mobile \|\| "inherit"/);
+  assert.match(source, /mobile: override\.mobile && override\.mobile !== "inherit" \? override\.mobile : base\.mobile \|\| "inherit"/);
   assert.match(source, /_smartMobilePolicyForKind\(group\.kind, entityId\)/);
   assert.match(source, /smart: Object\.fromEntries/);
   assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);

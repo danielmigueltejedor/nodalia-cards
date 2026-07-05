@@ -2194,7 +2194,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           .filter(([, value]) => String(value || "").trim()),
       ),
       ...(hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {}),
-      mobile: override.mobile || "inherit",
+      mobile: override.mobile && override.mobile !== "inherit" ? override.mobile : base.mobile || "inherit",
     };
   }
 
