@@ -1260,7 +1260,7 @@ if (!customElements.get(EDITOR_TAG)) customElements.define(EDITOR_TAG, NodaliaRo
 (function registerRoomSummaryCard() {
   const lang = window.NodaliaI18n?.resolveLanguage?.(null, "auto") ?? "en";
   const pack = window.NodaliaI18n?.strings?.(lang)?.roomSummaryCard || window.NodaliaI18n?.strings?.("en")?.roomSummaryCard || {};
-  window.NodaliaUtils?.registerCustomCard?.({
+  window.NodaliaUtils.registerCustomCard({
     type: CARD_TAG,
     name: "Nodalia Room Summary Card",
     description: String(pack.cardDescription || "Room overview for Nodalia dashboards."),

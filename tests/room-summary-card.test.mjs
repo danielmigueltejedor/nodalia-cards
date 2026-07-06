@@ -11,7 +11,7 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 function loadRoomSummaryHelpers() {
   const sandbox = {
     URL,
-    window: { NodaliaUtils: {} },
+    window: { NodaliaUtils: { registerCustomCard() {} } },
     customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
     globalThis: {},

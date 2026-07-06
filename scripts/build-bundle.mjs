@@ -122,6 +122,10 @@ const suiteFile = `nodalia-cards-suite-${pkg.version}.js`;
 const compatLoaderFiles = [
   "nodalia-cards-1.3.4.js",
   "nodalia-cards-1.3.5.js",
+  "nodalia-cards-2.0.0-alpha.3.js",
+  "nodalia-cards-2.0.0-alpha.4.js",
+  "nodalia-cards-2.0.0-alpha.5.js",
+  "nodalia-cards-2.0.0-alpha.6.js",
 ];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;

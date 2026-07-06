@@ -1764,7 +1764,7 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaMenuCardEditor);
 }
 
-window.NodaliaUtils?.registerCustomCard?.({
+window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,
   name: "Nodalia Menu Card",
   description: "Navigation/helper/action menu with active detection, badges, and variant styles.",

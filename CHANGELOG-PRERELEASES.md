@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.7] - 2026-07-07
+
+Seventh **`2.0.0`** **`alpha`**: restore compatibility aliases for versioned bundle URLs. Release channel **`2.0.0-alpha.7`**.
+
+### Fixed
+
+- **`bundle`:** compatibility aliases now include **`nodalia-cards-2.0.0-alpha.3.js`** through **`nodalia-cards-2.0.0-alpha.6.js`**, so dashboards that still point at a pinned alpha resource keep loading the current bundle (Camera, Room Summary, and Menu Card included).
+- **`room_summary` / `menu`:** card picker registration now uses the same non-optional `registerCustomCard` path as the rest of the suite.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.7`.
+
 ## [2.0.0-alpha.6] - 2026-07-07
 
 Sixth **`2.0.0`** **`alpha`**: security hardening parity and Room Summary / Menu visual alignment. Release channel **`2.0.0-alpha.6`**.
