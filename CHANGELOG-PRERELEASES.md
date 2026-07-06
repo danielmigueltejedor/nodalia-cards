@@ -10,6 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.5] - 2026-07-06
+
+Fifth **`2.0.0`** **`alpha`**: Room Summary editor fixes and Camera Card feed/mosaic/actions. Release channel **`2.0.0-alpha.5`**.
+
+### Added
+
+- **`camera`:** multi-camera mosaic layout (up to 4 cameras) with automatic 2-up, 3-up, and 2×2 grids.
+- **`camera`:** `presentation: feed` edge-to-edge camera preview (no card padding by default).
+- **`camera`:** `expanded_actions` buttons in the expanded camera overlay (lights, locks, services, toggle).
+- **`camera_editor`:** cameras list, presentation mode, and expanded actions sections in the visual editor.
+- **`examples`:** `camera-card-mosaic.yaml` based on real multi-camera dashboard usage.
+
+### Fixed
+
+- **`room_summary_editor`:** entity pickers no longer collapse on click; add-entity now creates editable rows instead of being stripped by normalization.
+
+### Changed
+
+- **`camera`:** default presentation is feed-style with hidden name/state/chips unless enabled.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.5`.
+
 ## [2.0.0-alpha.4] - 2026-07-06
 
 Fourth **`2.0.0`** **`alpha`**: visual parity pass for Camera, Room Summary, and Menu. Release channel **`2.0.0-alpha.4`**.

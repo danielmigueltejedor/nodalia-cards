@@ -627,19 +627,45 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
+    this._editorShadowListenersAttached = false;
     this._onInput = this._onInput.bind(this);
     this._onClick = this._onClick.bind(this);
+    this._onValueChanged = this._onValueChanged.bind(this);
   }
 
   connectedCallback() {
+    this._attachEditorShadowListeners();
     window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
   }
 
   disconnectedCallback() {
+    this._detachEditorShadowListeners();
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  setConfig(config) { this._config = normalizeConfig(config || {}); this._render(); }
+  _attachEditorShadowListeners() {
+    if (this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.addEventListener("input", this._onInput);
+    this.shadowRoot.addEventListener("change", this._onInput);
+    this.shadowRoot.addEventListener("click", this._onClick);
+    this.shadowRoot.addEventListener("value-changed", this._onValueChanged);
+    this._editorShadowListenersAttached = true;
+  }
+
+  _detachEditorShadowListeners() {
+    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.removeEventListener("input", this._onInput);
+    this.shadowRoot.removeEventListener("change", this._onInput);
+    this.shadowRoot.removeEventListener("click", this._onClick);
+    this.shadowRoot.removeEventListener("value-changed", this._onValueChanged);
+    this._editorShadowListenersAttached = false;
+  }
+
+  setConfig(config) { this._config = mergeConfig(DEFAULT_CONFIG, config || {}); this._render(); }
   set hass(hass) {
     this._hass = hass;
     this.shadowRoot?.querySelectorAll("[data-mount='entity']").forEach(h => this._mountPicker(h));
@@ -649,11 +675,12 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     return window.NodaliaI18n?.editorStr?.(this._hass, this._config?.language ?? "auto", key) || key;
   }
 
-  _emit() {
-    const next = normalizeConfig(this._config);
-    this._config = next;
-    this._render();
-    fireEvent(this, "config-changed", { config: stripEqualToDefaults(next) || {} });
+  _emitConfig(reRender = false) {
+    const outgoing = stripEqualToDefaults(normalizeConfig(this._config), DEFAULT_CONFIG);
+    fireEvent(this, "config-changed", { config: outgoing || {} });
+    if (reRender) {
+      this._render();
+    }
   }
 
   _onInput(e) {
@@ -661,24 +688,41 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (!input?.dataset?.field) return;
     e.stopPropagation();
     setByPath(this._config, input.dataset.field, input.type === "checkbox" ? input.checked : input.value);
-    if (e.type === "change") this._emit();
+    if (e.type === "change") this._emitConfig(false);
+  }
+
+  _onValueChanged(e) {
+    const host = e.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+    if (!host?.dataset?.field) {
+      return;
+    }
+    e.stopPropagation();
+    setByPath(this._config, host.dataset.field, String(e.detail?.value || "").trim());
+    this._emitConfig(false);
   }
 
   _onClick(e) {
     const btn = e.composedPath().find(n => n instanceof HTMLElement && n.dataset?.act);
     if (!btn) return;
     e.preventDefault();
+    e.stopPropagation();
     const list = btn.dataset.list;
     const idx = Number(btn.dataset.index);
     if (btn.dataset.act === "add" && list) {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       this._config[list].push("");
-      this._emit();
+      this._emitConfig(true);
+      return;
     }
     if (btn.dataset.act === "remove" && list && Number.isInteger(idx)) {
+      if (!Array.isArray(this._config[list])) this._config[list] = [];
       this._config[list].splice(idx, 1);
-      this._emit();
+      this._emitConfig(true);
     }
+  }
+
+  _editorList(listKey) {
+    return Array.isArray(this._config[listKey]) ? this._config[listKey] : [];
   }
 
   _field(label, field, value, opts = {}) {
@@ -706,7 +750,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _listSection(title, hint, listKey, domains) {
-    const rows = this._config[listKey] || [];
+    const rows = this._editorList(listKey);
     return `<section class="editor-section editor-section--nested"><div class="editor-section__header">
       <div><div class="editor-section__title">${escapeHtml(this._editorLabel(title))}</div>
       <div class="editor-section__hint">${escapeHtml(this._editorLabel(hint))}</div></div>
@@ -719,19 +763,22 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
 
   _mountPicker(host) {
     if (!(host instanceof HTMLElement)) return;
+    if (host.querySelector("ha-entity-picker")) {
+      return;
+    }
     const field = host.dataset.field || "";
     const domains = String(host.dataset.domains || "").split(",").filter(Boolean);
     const picker = document.createElement("ha-entity-picker");
+    picker.dataset.field = field;
     picker.hass = this._hass;
     picker.value = getByPath(this._config, field) || "";
     if (domains.length) picker.includeDomains = domains;
     picker.allowCustomEntity = true;
-    picker.addEventListener("value-changed", ev => { setByPath(this._config, field, ev.detail?.value || ""); this._emit(); });
     host.replaceChildren(picker);
   }
 
   _render() {
-    const c = normalizeConfig(this._config || {});
+    const c = this._config || {};
     this.shadowRoot.innerHTML = `<style>
       :host { display: block; overflow-anchor: none; }
       * { box-sizing: border-box; }
@@ -897,12 +944,8 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ${this._check("ed.room_summary.show_quick_actions", "show_quick_actions", c.show_quick_actions)}
       </div></section>
     </div>`;
-    this.shadowRoot.removeEventListener("input", this._onInput);
-    this.shadowRoot.removeEventListener("change", this._onInput);
-    this.shadowRoot.removeEventListener("click", this._onClick);
-    this.shadowRoot.addEventListener("input", this._onInput);
-    this.shadowRoot.addEventListener("change", this._onInput);
-    this.shadowRoot.addEventListener("click", this._onClick);
+    this._detachEditorShadowListeners();
+    this._attachEditorShadowListeners();
     this.shadowRoot.querySelectorAll("[data-mount='entity']").forEach(h => this._mountPicker(h));
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }

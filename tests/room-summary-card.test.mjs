@@ -168,6 +168,8 @@ test("room summary editor emits valid config and preserves unknown fields", () =
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /config-changed/);
+  assert.match(source, /_emitConfig\(true\)/);
+  assert.match(source, /value-changed/);
   const merged = rs.normalizeConfig({ name: "Salon", custom_dashboard_flag: true });
   assert.equal(merged.custom_dashboard_flag, true);
 });

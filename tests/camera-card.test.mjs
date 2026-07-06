@@ -13,8 +13,11 @@ function loadCameraHelpers() {
   const helperSource = `${source.split("class NodaliaCameraCard")[0]}
     globalThis.__cameraHelpers = {
       normalizeConfig,
+      normalizeCameras,
+      normalizeExpandedActions,
       DEFAULT_CONFIG,
       LAYOUT_MODES,
+      MAX_CAMERAS,
     };
   `;
   const sandbox = {
@@ -62,10 +65,59 @@ test("camera normalizeConfig accepts layout and tap action objects", () => {
   assert.equal(config.tap_service, "camera.turn_on");
 });
 
+test("camera normalizeCameras supports up to four entities and mosaic layout", () => {
+  const config = helpers.normalizeConfig({
+    cameras: [
+      "camera.aqara_g410",
+      "camera.aqara_g5_pro",
+      "camera.aqara_g100",
+    ],
+    layout: "live",
+  });
+  assert.equal(config.cameras.length, 3);
+  assert.equal(config.cameras[0], "camera.aqara_g410");
+  assert.equal(config.cameras[1], "camera.aqara_g5_pro");
+  assert.equal(config.cameras[2], "camera.aqara_g100");
+  assert.equal(config.layout, "mosaic");
+  assert.equal(config.presentation, "feed");
+});
+
+test("camera normalizeExpandedActions keeps action entities", () => {
+  const config = helpers.normalizeConfig({
+    entity: "camera.entrada",
+    expanded_actions: [
+      {
+        entity: "light.foco_jardin",
+        name: "Jardín",
+        icon: "mdi:outdoor-lamp",
+        tap_action: "toggle",
+      },
+      {
+        entity: "lock.puerta",
+        name: "Abrir",
+        tap_action: "service",
+        tap_service: "lock.open",
+        tap_service_data: "{\"entity_id\":\"lock.puerta\"}",
+      },
+    ],
+  });
+  assert.equal(config.expanded_actions.length, 2);
+  assert.equal(config.expanded_actions[0].entity, "light.foco_jardin");
+  assert.equal(config.expanded_actions[1].tap_service, "lock.open");
+});
+
+test("camera card renders mosaic markup for multiple cameras", () => {
+  const source = read("nodalia-camera-card.js");
+  assert.match(source, /camera-card__mosaic--three/);
+  assert.match(source, /camera-card__mosaic--four/);
+  assert.match(source, /camera-card__expanded-actions/);
+  assert.match(source, /presentation/);
+});
+
 test("camera card renders empty state without throwing when entity is missing", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /renderCardEmptyStateDocument/);
-  assert.match(source, /if \(!state\) \{[\s\S]*renderCardEmptyStateDocument/);
+  assert.match(source, /if \(!cameraIds\.length\)/);
   assert.match(source, /const config = this\._config \|\| \{\}/);
 });
 
@@ -94,13 +146,13 @@ test("camera configured services respect strict security and explicit targets", 
   assert.match(source, /_isServiceAllowed/);
   assert.match(source, /invokeHomeAssistantService/);
   assert.match(source, /hasExplicitTarget/);
-  assert.doesNotMatch(source, /lock\.open/);
+  assert.match(source, /_performExpandedAction/);
 });
 
 test("camera visual editor normalizes config and mounts camera entity picker", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /class NodaliaCameraCardEditor/);
-  assert.match(source, /includeDomains = \["camera"\]/);
+  assert.match(source, /picker\.includeDomains = domains\.length \? domains : \["camera"\]/);
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /bindEditorDialogLayoutFix/);
   assert.match(source, /ed\.camera\.layout_live/);
