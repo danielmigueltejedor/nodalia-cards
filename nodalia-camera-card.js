@@ -1355,6 +1355,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
     return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" ${checked ? "checked" : ""} />
+        <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(this._editorLabel(label))}</span>
       </label>
     `;
@@ -1396,16 +1397,30 @@ class NodaliaCameraCardEditor extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
-        .editor { display: grid; gap: 14px; }
-        .editor-section { display: grid; gap: 12px; }
+        * { box-sizing: border-box; }
+        .editor { color: var(--primary-text-color); display: grid; gap: 16px; }
+        .editor-section {
+          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 18px;
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+        }
+        .editor-section:last-child { margin-bottom: 0; }
         .editor-section__header { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
-        .editor-section__title { font-size: 14px; font-weight: 700; }
+        .editor-section__title { font-size: 15px; font-weight: 700; }
         .editor-section__hint { color: var(--secondary-text-color); font-size: 12px; line-height: 1.45; }
-        .editor-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .editor-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .editor-grid--stacked, .editor-field--full { grid-column: 1 / -1; }
-        .editor-field, .editor-toggle { display: grid; gap: 6px; }
-        .editor-field > span, .editor-toggle > span { font-size: 12px; font-weight: 600; }
+        .editor-field, .editor-toggle { display: grid; gap: 6px; min-width: 0; }
+        .editor-field > span, .editor-toggle > span:not(.editor-toggle__switch) {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 600;
+        }
         .editor-field input, .editor-field select, .editor-field textarea {
+          appearance: none;
           background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
@@ -1417,7 +1432,52 @@ class NodaliaCameraCardEditor extends HTMLElement {
         }
         .editor-field textarea { min-height: 76px; resize: vertical; }
         .editor-control-host, .editor-control-host > * { display: block; width: 100%; }
-        .editor-toggle { align-items: center; cursor: pointer; grid-template-columns: auto minmax(0, 1fr); min-height: 40px; }
+        .editor-toggle {
+          align-items: center;
+          column-gap: 10px;
+          cursor: pointer;
+          grid-template-columns: auto minmax(0, 1fr);
+          min-height: 40px;
+          position: relative;
+        }
+        .editor-toggle input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+        .editor-toggle__switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 22px;
+          position: relative;
+          transition: background 160ms ease, border-color 160ms ease;
+          width: 40px;
+        }
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+        .editor-toggle input:checked + .editor-toggle__switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+        .editor-toggle input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
+        }
+        .editor-section__actions { display: flex; flex-wrap: wrap; gap: 8px; }
         @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
       </style>
       <div class="editor">

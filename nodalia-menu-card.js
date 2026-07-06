@@ -28,12 +28,30 @@ const DEFAULT_CONFIG = {
   active_source: "url",
   active: "",
   target: "",
+  language: "auto",
   show_labels: true,
   show_icons: true,
   show_badges: true,
   show_zero_badge: false,
   scroll: true,
   items: [],
+  styles: {
+    card: {
+      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
+      border: "1px solid var(--divider-color)",
+      border_radius: "28px",
+      box_shadow: "var(--ha-card-box-shadow)",
+      padding: "10px 12px",
+    },
+    item: {
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      color: "var(--primary-text-color)",
+      active_background: "color-mix(in srgb, var(--primary-text-color) 10%, transparent)",
+      active_color: "var(--primary-text-color)",
+      border: "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      active_border: "color-mix(in srgb, var(--primary-text-color) 16%, transparent)",
+    },
+  },
 };
 
 const STUB_CONFIG = {
@@ -422,6 +440,8 @@ function normalizeConfig(rawConfig) {
   config.show_zero_badge = config.show_zero_badge === true;
   config.scroll = config.scroll !== false;
   config.items = normalizeMenuItems(config.items);
+  config.language = String(config.language ?? "auto").trim() || "auto";
+  config.styles = mergeConfig(DEFAULT_CONFIG.styles, config.styles || {});
   return config;
 }
 
@@ -854,18 +874,20 @@ class NodaliaMenuCard extends HTMLElement {
   }
 
   _renderEmptyState() {
+    const cardStyles = DEFAULT_CONFIG.styles.card;
     return `
       <style>
         :host { display: block; }
         * { box-sizing: border-box; }
         ha-card {
-          background: var(--ha-card-background, #1d1f24);
-          border: 1px dashed color-mix(in srgb, var(--primary-text-color) 20%, transparent);
-          border-radius: 18px;
-          color: var(--secondary-text-color);
+          background: ${cardStyles.background};
+          border: ${cardStyles.border};
+          border-radius: ${cardStyles.border_radius};
+          box-shadow: ${cardStyles.box_shadow};
+          color: var(--primary-text-color);
           display: grid;
           gap: 8px;
-          padding: 16px;
+          padding: ${cardStyles.padding};
         }
         .menu-empty-title {
           color: var(--primary-text-color);
@@ -873,11 +895,12 @@ class NodaliaMenuCard extends HTMLElement {
           font-weight: 700;
         }
         .menu-empty-body {
+          color: var(--secondary-text-color);
           font-size: 12px;
           line-height: 1.45;
         }
       </style>
-      <ha-card>
+      <ha-card class="menu-card menu-card--empty">
         <div class="menu-empty-title">Nodalia Menu Card</div>
         <div class="menu-empty-body">Add at least one menu item in the visual editor.</div>
       </ha-card>
@@ -901,22 +924,41 @@ class NodaliaMenuCard extends HTMLElement {
     const badgesVisible = config.show_badges !== false;
     const scrollEnabled = config.scroll !== false;
 
+    const itemStyles = config.styles?.item || DEFAULT_CONFIG.styles.item;
+    const cardStyles = config.styles?.card || DEFAULT_CONFIG.styles.card;
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
+          --menu-card-background: ${cardStyles.background};
+          --menu-card-border: ${cardStyles.border};
+          --menu-card-radius: ${cardStyles.border_radius};
+          --menu-card-shadow: ${cardStyles.box_shadow};
+          --menu-card-padding: ${cardStyles.padding};
           --menu-height: 48px;
           --menu-radius: 14px;
           --menu-gap: 6px;
           --menu-font-size: 12px;
-          --menu-active-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
-          --menu-active-color: var(--primary-color);
-          --menu-item-bg: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          --menu-item-border: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          --menu-item-color: var(--primary-text-color);
-          --menu-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+          --menu-active-bg: ${itemStyles.active_background};
+          --menu-active-color: ${itemStyles.active_color};
+          --menu-active-border: ${itemStyles.active_border};
+          --menu-item-bg: ${itemStyles.background};
+          --menu-item-border: ${itemStyles.border};
+          --menu-item-color: ${itemStyles.color};
+          --menu-shadow: var(--ha-card-box-shadow, 0 8px 20px rgba(0, 0, 0, 0.16));
         }
         * { box-sizing: border-box; }
+
+        ha-card {
+          background: var(--menu-card-background);
+          border: var(--menu-card-border);
+          border-radius: var(--menu-card-radius);
+          box-shadow: var(--menu-card-shadow);
+          color: var(--primary-text-color);
+          overflow: visible;
+          padding: var(--menu-card-padding);
+        }
 
         .menu-wrap {
           position: relative;
@@ -981,13 +1023,13 @@ class NodaliaMenuCard extends HTMLElement {
 
         .menu-item.is-active {
           background: var(--menu-active-bg);
-          border-color: color-mix(in srgb, var(--menu-active-color) 38%, transparent);
+          border-color: var(--menu-active-border);
           color: var(--menu-active-color);
-          box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .menu-item:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--primary-color) 70%, #ffffff);
+          outline: 2px solid color-mix(in srgb, var(--primary-text-color) 35%, transparent);
           outline-offset: 1px;
         }
 
@@ -1047,7 +1089,7 @@ class NodaliaMenuCard extends HTMLElement {
         }
 
         .menu-wrap--pill .menu-item.is-active {
-          box-shadow: 0 8px 18px color-mix(in srgb, var(--primary-color) 20%, rgba(0, 0, 0, 0.14));
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .menu-wrap--dock {
@@ -1067,7 +1109,7 @@ class NodaliaMenuCard extends HTMLElement {
         }
 
         .menu-wrap--dock .menu-item.is-active {
-          background: color-mix(in srgb, var(--primary-color) 24%, transparent);
+          background: var(--menu-active-bg);
         }
 
         .menu-wrap--glass {
@@ -1126,7 +1168,8 @@ class NodaliaMenuCard extends HTMLElement {
           }
         }
       </style>
-      <div class="menu-wrap menu-wrap--${escapeHtml(variant)}">
+      <ha-card class="menu-card menu-card--${escapeHtml(variant)}">
+        <div class="menu-wrap menu-wrap--${escapeHtml(variant)}">
         <div class="menu-track ${scrollEnabled ? "is-scrollable" : ""}" role="tablist" aria-label="Nodalia menu">
           ${config.items.map((item, index) => {
     const itemLabel = this._resolveDisplayName(item);
@@ -1156,7 +1199,8 @@ class NodaliaMenuCard extends HTMLElement {
           `;
   }).join("")}
         </div>
-      </div>
+        </div>
+      </ha-card>
     `;
   }
 }
@@ -1343,10 +1387,18 @@ class NodaliaMenuCardEditor extends HTMLElement {
     }
   }
 
+  _editorLabel(key) {
+    if (typeof key !== "string") {
+      return String(key ?? "");
+    }
+    return window.NodaliaI18n?.editorStr?.(this._hass, this._config?.language ?? "auto", key) || key;
+  }
+
   _renderTextField(label, field, value, options = {}) {
+    const tLabel = typeof label === "string" && label.startsWith("ed.") ? this._editorLabel(label) : label;
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <input
           type="${escapeHtml(options.type || "text")}"
           data-field="${escapeHtml(field)}"
@@ -1360,10 +1412,11 @@ class NodaliaMenuCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = typeof label === "string" && label.startsWith("ed.") ? this._editorLabel(label) : label;
     const normalizedValue = isObject(value) ? JSON.stringify(value) : String(value ?? "");
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <textarea
           data-field="${escapeHtml(field)}"
           ${options.valueType ? `data-value-type="${escapeHtml(options.valueType)}"` : ""}
@@ -1374,34 +1427,42 @@ class NodaliaMenuCardEditor extends HTMLElement {
   }
 
   _renderSelectField(label, field, value, options, renderOptions = {}) {
+    const tLabel = typeof label === "string" && label.startsWith("ed.") ? this._editorLabel(label) : label;
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
-          ${(options || []).map(option => `
+          ${(options || []).map(option => {
+    const optionLabel = typeof option.label === "string" && option.label.startsWith("ed.")
+      ? this._editorLabel(option.label)
+      : option.label;
+    return `
             <option value="${escapeHtml(option.value)}" ${String(option.value) === String(value) ? "selected" : ""}>
-              ${escapeHtml(option.label)}
+              ${escapeHtml(optionLabel)}
             </option>
-          `).join("")}
+          `;
+  }).join("")}
         </select>
       </label>
     `;
   }
 
   _renderCheckboxField(label, field, checked) {
+    const tLabel = typeof label === "string" && label.startsWith("ed.") ? this._editorLabel(label) : label;
     return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
       </label>
     `;
   }
 
   _renderEntityPickerField(label, field, value, includeDomains = []) {
+    const tLabel = typeof label === "string" && label.startsWith("ed.") ? this._editorLabel(label) : label;
     return `
       <label class="editor-field editor-field--full">
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(tLabel)}</span>
         <div
           class="editor-control-host"
           data-mounted-control="entity-picker"
@@ -1456,23 +1517,23 @@ class NodaliaMenuCardEditor extends HTMLElement {
     return `
       <div class="item-card">
         <div class="item-card__header">
-          <div class="item-card__title">Item ${index + 1}</div>
+          <div class="item-card__title">${escapeHtml(this._editorLabel("ed.menu.item_id"))} ${index + 1}</div>
           <div class="item-card__actions">
             <button type="button" data-action="move-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button>
             <button type="button" data-action="move-down" data-index="${index}" ${index >= total - 1 ? "disabled" : ""}>↓</button>
-            <button type="button" data-action="remove-item" data-index="${index}" class="danger">Remove</button>
+            <button type="button" data-action="remove-item" data-index="${index}" class="danger">${escapeHtml(this._editorLabel("ed.menu.remove_item"))}</button>
           </div>
         </div>
         <div class="editor-grid">
-          ${this._renderTextField("id", `items.${index}.id`, item.id, { placeholder: "home", clearable: true })}
-          ${this._renderTextField("name", `items.${index}.name`, item.name, { placeholder: "Home", clearable: true })}
-          ${this._renderTextField("icon", `items.${index}.icon`, item.icon, { placeholder: "mdi:home-outline", clearable: true })}
-          ${this._renderTextField("navigation_path", `items.${index}.navigation_path`, item.navigation_path, { placeholder: "/lovelace/home", clearable: true })}
-          ${this._renderTextField("value", `items.${index}.value`, item.value, { placeholder: "Home", clearable: true })}
-          ${this._renderTextField("badge", `items.${index}.badge`, item.badge, { placeholder: "3", clearable: true })}
-          ${this._renderTextField("badge_entity", `items.${index}.badge_entity`, item.badge_entity, { placeholder: "sensor.notifications", fullWidth: true, clearable: true })}
-          ${this._renderTextField("badge_color", `items.${index}.badge_color`, item.badge_color, { placeholder: "var(--error-color)", fullWidth: true, clearable: true })}
-          ${this._renderTextareaField("tap_action (JSON object)", `items.${index}.tap_action`, item.tap_action, {
+          ${this._renderTextField("ed.menu.item_id", `items.${index}.id`, item.id, { placeholder: "home", clearable: true })}
+          ${this._renderTextField("ed.menu.item_name", `items.${index}.name`, item.name, { placeholder: "Home", clearable: true })}
+          ${this._renderTextField("ed.menu.item_icon", `items.${index}.icon`, item.icon, { placeholder: "mdi:home-outline", clearable: true })}
+          ${this._renderTextField("ed.menu.item_navigation_path", `items.${index}.navigation_path`, item.navigation_path, { placeholder: "/lovelace/home", clearable: true })}
+          ${this._renderTextField("ed.menu.item_value", `items.${index}.value`, item.value, { placeholder: "home", clearable: true })}
+          ${this._renderTextField("ed.menu.item_badge", `items.${index}.badge`, item.badge, { placeholder: "3", clearable: true })}
+          ${this._renderTextField("ed.menu.item_badge_entity", `items.${index}.badge_entity`, item.badge_entity, { placeholder: "sensor.notifications", fullWidth: true, clearable: true })}
+          ${this._renderTextField("ed.menu.item_badge_color", `items.${index}.badge_color`, item.badge_color, { placeholder: "var(--error-color)", fullWidth: true, clearable: true })}
+          ${this._renderTextareaField("ed.menu.item_tap_action", `items.${index}.tap_action`, item.tap_action, {
     valueType: "json",
     clearable: true,
   })}
@@ -1484,52 +1545,49 @@ class NodaliaMenuCardEditor extends HTMLElement {
   _render() {
     const config = this._config || normalizeConfig({});
     const items = Array.isArray(config.items) ? config.items : [];
+    const variantOptions = MENU_VARIANTS.map(value => ({ value, label: `ed.menu.variant_${value}` }));
+    const modeOptions = MENU_MODES.map(value => ({ value, label: `ed.menu.mode_${value}` }));
+    const activeSourceOptions = ACTIVE_SOURCES.map(value => ({ value, label: `ed.menu.active_source_${value}` }));
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; }
+        :host { display: block; overflow-anchor: none; }
         * { box-sizing: border-box; }
-        .editor { display: grid; gap: 14px; }
-        .section {
+        .editor { color: var(--primary-text-color); display: grid; gap: 16px; }
+        .editor-section {
           background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 16px;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 18px;
           display: grid;
-          gap: 12px;
-          padding: 14px;
+          gap: 14px;
+          padding: 16px;
         }
-        .section__title {
-          font-size: 14px;
-          font-weight: 700;
-        }
-        .section__hint {
+        .editor-section:last-child { margin-bottom: 0; }
+        .editor-section__header { display: grid; gap: 4px; }
+        .editor-section__title { font-size: 15px; font-weight: 700; }
+        .editor-section__hint {
           color: var(--secondary-text-color);
           font-size: 12px;
           line-height: 1.45;
         }
         .editor-grid {
           display: grid;
-          gap: 10px;
+          gap: 12px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        .editor-field {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-        .editor-field span,
-        .editor-toggle span {
+        .editor-field, .editor-toggle { display: grid; gap: 6px; min-width: 0; }
+        .editor-field--full { grid-column: 1 / -1; }
+        .editor-field > span, .editor-toggle > span:not(.editor-toggle__switch) {
+          color: var(--secondary-text-color);
           font-size: 12px;
           font-weight: 600;
         }
         .editor-field input,
         .editor-field select,
         .editor-field textarea {
+          appearance: none;
           background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 12px;
           color: var(--primary-text-color);
           font: inherit;
@@ -1543,53 +1601,59 @@ class NodaliaMenuCardEditor extends HTMLElement {
         }
         .editor-toggle {
           align-items: center;
+          column-gap: 10px;
           cursor: pointer;
-          display: grid;
-          gap: 10px;
-          grid-template-columns: auto 1fr;
+          grid-template-columns: auto minmax(0, 1fr);
           min-height: 40px;
+          position: relative;
         }
         .editor-toggle input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
           opacity: 0;
+          pointer-events: none;
           position: absolute;
-          width: 1px;
-          height: 1px;
         }
         .editor-toggle__switch {
-          background: color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          display: inline-block;
+          display: inline-flex;
           height: 22px;
           position: relative;
-          width: 38px;
+          transition: background 160ms ease, border-color 160ms ease;
+          width: 40px;
         }
-        .editor-toggle__switch::after {
-          background: #fff;
+        .editor-toggle__switch::before {
+          background: rgba(255, 255, 255, 0.92);
           border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
           content: "";
           height: 18px;
-          left: 2px;
+          left: 1px;
           position: absolute;
-          top: 2px;
+          top: 1px;
           transition: transform 160ms ease;
           width: 18px;
         }
         .editor-toggle input:checked + .editor-toggle__switch {
           background: var(--primary-color);
+          border-color: var(--primary-color);
         }
-        .editor-toggle input:checked + .editor-toggle__switch::after {
-          transform: translateX(16px);
+        .editor-toggle input:checked + .editor-toggle__switch::before {
+          transform: translateX(18px);
         }
-        .section__actions,
+        .editor-section__actions,
         .item-card__actions {
           display: flex;
-          gap: 8px;
           flex-wrap: wrap;
+          gap: 8px;
         }
         button {
           appearance: none;
           background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           color: var(--primary-text-color);
           cursor: pointer;
@@ -1599,23 +1663,15 @@ class NodaliaMenuCardEditor extends HTMLElement {
           min-height: 34px;
           padding: 0 12px;
         }
-        button.danger {
-          color: var(--error-color);
-        }
-        button:disabled {
-          cursor: default;
-          opacity: 0.5;
-        }
-        .item-list {
-          display: grid;
-          gap: 10px;
-        }
+        button.danger { color: var(--error-color); }
+        button:disabled { cursor: default; opacity: 0.45; }
+        .item-list { display: grid; gap: 12px; }
         .item-card {
           background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius: 14px;
           display: grid;
-          gap: 10px;
+          gap: 12px;
           padding: 12px;
         }
         .item-card__header {
@@ -1624,10 +1680,7 @@ class NodaliaMenuCardEditor extends HTMLElement {
           gap: 10px;
           justify-content: space-between;
         }
-        .item-card__title {
-          font-size: 13px;
-          font-weight: 700;
-        }
+        .item-card__title { font-size: 13px; font-weight: 700; }
         .editor-control-host,
         .editor-control-host > * {
           display: block;
@@ -1639,39 +1692,41 @@ class NodaliaMenuCardEditor extends HTMLElement {
           line-height: 1.45;
         }
         @media (max-width: 640px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
+          .editor-grid { grid-template-columns: 1fr; }
         }
       </style>
       <div class="editor">
-        <section class="section">
-          <div class="section__title">General</div>
-          <div class="section__hint">Configure behavior, active detection, and rendering options.</div>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.menu.general_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.menu.general_section_hint"))}</div>
+          </div>
           <div class="editor-grid">
-            ${this._renderSelectField("variant", "variant", config.variant, MENU_VARIANTS.map(value => ({ value, label: value })))}
-            ${this._renderSelectField("mode", "mode", config.mode, MENU_MODES.map(value => ({ value, label: value })))}
-            ${this._renderSelectField("active_source", "active_source", config.active_source, ACTIVE_SOURCES.map(value => ({ value, label: value })))}
-            ${this._renderTextField("active (manual mode)", "active", config.active, { placeholder: "item id", clearable: true })}
-            ${this._renderEntityPickerField("target (helper entity)", "target", config.target, ["input_select", "select"])}
-            ${this._renderCheckboxField("show_labels", "show_labels", config.show_labels !== false)}
-            ${this._renderCheckboxField("show_icons", "show_icons", config.show_icons !== false)}
-            ${this._renderCheckboxField("show_badges", "show_badges", config.show_badges !== false)}
-            ${this._renderCheckboxField("show_zero_badge", "show_zero_badge", config.show_zero_badge === true)}
-            ${this._renderCheckboxField("scroll", "scroll", config.scroll !== false)}
+            ${this._renderSelectField("ed.menu.variant", "variant", config.variant, variantOptions)}
+            ${this._renderSelectField("ed.menu.mode", "mode", config.mode, modeOptions)}
+            ${this._renderSelectField("ed.menu.active_source", "active_source", config.active_source, activeSourceOptions)}
+            ${this._renderTextField("ed.menu.active", "active", config.active, { placeholder: "home", clearable: true })}
+            ${this._renderEntityPickerField("ed.menu.target", "target", config.target, ["input_select", "select"])}
+            ${this._renderCheckboxField("ed.menu.show_labels", "show_labels", config.show_labels !== false)}
+            ${this._renderCheckboxField("ed.menu.show_icons", "show_icons", config.show_icons !== false)}
+            ${this._renderCheckboxField("ed.menu.show_badges", "show_badges", config.show_badges !== false)}
+            ${this._renderCheckboxField("ed.menu.show_zero_badge", "show_zero_badge", config.show_zero_badge === true)}
+            ${this._renderCheckboxField("ed.menu.scroll", "scroll", config.scroll !== false)}
           </div>
         </section>
 
-        <section class="section">
-          <div class="section__title">Items</div>
-          <div class="section__hint">Add, remove, and reorder items. Tap action JSON is used in action mode.</div>
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.menu.items_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.menu.items_section_hint"))}</div>
+          </div>
           <div class="item-list">
             ${items.length
     ? items.map((item, index) => this._renderItemCard(item, index, items.length)).join("")
-    : `<div class="empty-items">No items yet.</div>`}
+    : `<div class="empty-items">${escapeHtml(this._editorLabel("ed.menu.items_empty"))}</div>`}
           </div>
-          <div class="section__actions">
-            <button type="button" data-action="add-item">Add item</button>
+          <div class="editor-section__actions">
+            <button type="button" data-action="add-item">${escapeHtml(this._editorLabel("ed.menu.add_item"))}</button>
           </div>
         </section>
       </div>

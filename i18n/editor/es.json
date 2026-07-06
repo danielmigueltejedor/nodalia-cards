@@ -536,6 +536,7 @@
   "ed.menu.general_section_title": "General",
   "ed.menu.haptics": "Háptica",
   "ed.menu.item_badge": "Badge",
+  "ed.menu.item_badge_color": "Color del badge",
   "ed.menu.item_badge_entity": "Entidad badge",
   "ed.menu.item_icon": "Icono",
   "ed.menu.item_id": "Id del ítem",

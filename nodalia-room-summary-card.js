@@ -631,13 +631,23 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._onClick = this._onClick.bind(this);
   }
 
+  connectedCallback() {
+    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+  }
+
+  disconnectedCallback() {
+    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+  }
+
   setConfig(config) { this._config = normalizeConfig(config || {}); this._render(); }
   set hass(hass) {
     this._hass = hass;
     this.shadowRoot?.querySelectorAll("[data-mount='entity']").forEach(h => this._mountPicker(h));
   }
 
-  _label(k) { return window.NodaliaEditorUi?.label?.(k) ?? k; }
+  _editorLabel(key) {
+    return window.NodaliaI18n?.editorStr?.(this._hass, this._config?.language ?? "auto", key) || key;
+  }
 
   _emit() {
     const next = normalizeConfig(this._config);
@@ -672,31 +682,38 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _field(label, field, value, opts = {}) {
-    return `<label class="f ${opts.full ? "f--full" : ""}"><span>${escapeHtml(this._label(label))}</span>
-      <input data-field="${escapeHtml(field)}" value="${escapeHtml(value ?? "")}" placeholder="${escapeHtml(opts.ph ? this._label(opts.ph) : "")}" /></label>`;
+    return `<label class="editor-field ${opts.full ? "editor-field--full" : ""}"><span>${escapeHtml(this._editorLabel(label))}</span>
+      <input data-field="${escapeHtml(field)}" value="${escapeHtml(value ?? "")}" placeholder="${escapeHtml(opts.ph ? this._editorLabel(opts.ph) : "")}" /></label>`;
   }
 
   _check(label, field, checked) {
-    return `<label class="f"><input type="checkbox" data-field="${escapeHtml(field)}" ${checked ? "checked" : ""} /><span>${escapeHtml(this._label(label))}</span></label>`;
+    return `<label class="editor-toggle">
+      <input type="checkbox" data-field="${escapeHtml(field)}" ${checked ? "checked" : ""} />
+      <span class="editor-toggle__switch" aria-hidden="true"></span>
+      <span>${escapeHtml(this._editorLabel(label))}</span>
+    </label>`;
   }
 
   _select(label, field, value, options) {
-    return `<label class="f"><span>${escapeHtml(this._label(label))}</span><select data-field="${escapeHtml(field)}">
-      ${options.map(o => `<option value="${escapeHtml(o.v)}" ${String(value) === o.v ? "selected" : ""}>${escapeHtml(this._label(o.l))}</option>`).join("")}
+    return `<label class="editor-field"><span>${escapeHtml(this._editorLabel(label))}</span><select data-field="${escapeHtml(field)}">
+      ${options.map(o => `<option value="${escapeHtml(o.v)}" ${String(value) === o.v ? "selected" : ""}>${escapeHtml(this._editorLabel(o.l))}</option>`).join("")}
     </select></label>`;
   }
 
   _entity(label, field, value, domains = []) {
-    return `<label class="f f--full"><span>${escapeHtml(this._label(label))}</span>
-      <div data-mount="entity" data-field="${escapeHtml(field)}" data-domains="${escapeHtml(domains.join(","))}"></div></label>`;
+    return `<label class="editor-field editor-field--full"><span>${escapeHtml(this._editorLabel(label))}</span>
+      <div class="editor-control-host" data-mount="entity" data-field="${escapeHtml(field)}" data-domains="${escapeHtml(domains.join(","))}"></div></label>`;
   }
 
   _listSection(title, hint, listKey, domains) {
     const rows = this._config[listKey] || [];
-    return `<section class="sec"><div class="sec__head"><div><div class="sec__title">${escapeHtml(this._label(title))}</div><div class="sec__hint">${escapeHtml(this._label(hint))}</div></div>
-      <button type="button" data-act="add" data-list="${escapeHtml(listKey)}">${escapeHtml(this._label("ed.room_summary.add_entity"))}</button></div>
-      ${rows.length ? rows.map((id, i) => `<div class="sec"><div class="sec__head"><span>${i + 1}</span><button type="button" data-act="remove" data-list="${escapeHtml(listKey)}" data-index="${i}">${escapeHtml(this._label("ed.room_summary.remove_entity"))}</button></div>
-        ${this._entity("ed.room_summary.entity", `${listKey}.${i}`, id, domains)}</div>`).join("") : `<div class="empty">${escapeHtml(this._label("ed.room_summary.list_empty"))}</div>`}
+    return `<section class="editor-section editor-section--nested"><div class="editor-section__header">
+      <div><div class="editor-section__title">${escapeHtml(this._editorLabel(title))}</div>
+      <div class="editor-section__hint">${escapeHtml(this._editorLabel(hint))}</div></div>
+      <button type="button" data-act="add" data-list="${escapeHtml(listKey)}">${escapeHtml(this._editorLabel("ed.room_summary.add_entity"))}</button></div>
+      ${rows.length ? rows.map((id, i) => `<div class="item-card"><div class="item-card__header"><span class="item-card__title">${i + 1}</span>
+        <button type="button" class="danger" data-act="remove" data-list="${escapeHtml(listKey)}" data-index="${i}">${escapeHtml(this._editorLabel("ed.room_summary.remove_entity"))}</button></div>
+        ${this._entity("ed.room_summary.entity", `${listKey}.${i}`, id, domains)}</div>`).join("") : `<div class="empty">${escapeHtml(this._editorLabel("ed.room_summary.list_empty"))}</div>`}
     </section>`;
   }
 
@@ -716,13 +733,124 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   _render() {
     const c = normalizeConfig(this._config || {});
     this.shadowRoot.innerHTML = `<style>
-      :host{display:block}.editor{display:grid;gap:14px}.sec{background:color-mix(in srgb,var(--primary-text-color) 2%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 7%,transparent);border-radius:16px;display:grid;gap:10px;padding:14px}
-      .sec__title{font-size:14px;font-weight:700}.sec__hint{font-size:12px;color:var(--secondary-text-color)}.sec__head{display:flex;justify-content:space-between;gap:10px;align-items:start}
-      .grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}.f{display:grid;gap:6px;font-size:12px;font-weight:600}.f--full{grid-column:1/-1}
-      .f input,.f select{width:100%;min-height:40px;border-radius:12px;border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);padding:10px 12px;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);color:var(--primary-text-color);font:inherit}
-      .empty{color:var(--secondary-text-color);font-size:12px}@media(max-width:640px){.grid{grid-template-columns:1fr}}
+      :host { display: block; overflow-anchor: none; }
+      * { box-sizing: border-box; }
+      .editor { color: var(--primary-text-color); display: grid; gap: 16px; }
+      .editor-section {
+        background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+        border-radius: 18px;
+        display: grid;
+        gap: 14px;
+        padding: 16px;
+      }
+      .editor-section:last-child { margin-bottom: 0; }
+      .editor-section--nested {
+        background: color-mix(in srgb, var(--primary-text-color) 1.5%, transparent);
+        border-radius: 14px;
+        padding: 12px;
+      }
+      .editor-section__header { align-items: start; display: flex; gap: 10px; justify-content: space-between; }
+      .editor-section__title { font-size: 15px; font-weight: 700; }
+      .editor-section__hint { color: var(--secondary-text-color); font-size: 12px; line-height: 1.45; }
+      .editor-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .editor-field, .editor-toggle { display: grid; gap: 6px; min-width: 0; }
+      .editor-field--full { grid-column: 1 / -1; }
+      .editor-field > span, .editor-toggle > span:not(.editor-toggle__switch) {
+        color: var(--secondary-text-color);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .editor-field input, .editor-field select {
+        appearance: none;
+        background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        border-radius: 12px;
+        color: var(--primary-text-color);
+        font: inherit;
+        min-height: 40px;
+        padding: 10px 12px;
+        width: 100%;
+      }
+      .editor-control-host, .editor-control-host > * { display: block; width: 100%; }
+      .editor-toggle {
+        align-items: center;
+        column-gap: 10px;
+        cursor: pointer;
+        grid-template-columns: auto minmax(0, 1fr);
+        min-height: 40px;
+        position: relative;
+      }
+      .editor-toggle input {
+        block-size: 1px;
+        inline-size: 1px;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+      }
+      .editor-toggle__switch {
+        background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+        border-radius: 999px;
+        display: inline-flex;
+        height: 22px;
+        position: relative;
+        transition: background 160ms ease, border-color 160ms ease;
+        width: 40px;
+      }
+      .editor-toggle__switch::before {
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 999px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+        content: "";
+        height: 18px;
+        left: 1px;
+        position: absolute;
+        top: 1px;
+        transition: transform 160ms ease;
+        width: 18px;
+      }
+      .editor-toggle input:checked + .editor-toggle__switch {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+      .editor-toggle input:checked + .editor-toggle__switch::before {
+        transform: translateX(18px);
+      }
+      button {
+        appearance: none;
+        background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        border-radius: 999px;
+        color: var(--primary-text-color);
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        min-height: 34px;
+        padding: 0 12px;
+      }
+      button.danger { color: var(--error-color); }
+      .item-card {
+        background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+        border-radius: 14px;
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+      }
+      .item-card__header { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
+      .item-card__title { font-size: 13px; font-weight: 700; }
+      .empty { color: var(--secondary-text-color); font-size: 12px; line-height: 1.45; }
+      @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
     </style><div class="editor">
-      <section class="sec"><div class="sec__title">${escapeHtml(this._label("ed.room_summary.general_section_title"))}</div><div class="grid">
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.room_summary.general_section_title"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.room_summary.general_section_hint"))}</div>
+        </div>
+        <div class="editor-grid">
         ${this._field("ed.room_summary.name", "name", c.name, { ph: "ed.room_summary.name_placeholder", full: true })}
         ${this._field("ed.room_summary.icon", "icon", c.icon)}
         ${this._select("ed.room_summary.layout", "layout", c.layout, [
@@ -732,7 +860,12 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ])}
         ${this._field("ed.room_summary.image", "image", c.image, { full: true })}
       </div></section>
-      <section class="sec"><div class="sec__title">${escapeHtml(this._label("ed.room_summary.entities_section_title"))}</div><div class="grid">
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.room_summary.entities_section_title"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.room_summary.entities_section_hint"))}</div>
+        </div>
+        <div class="editor-grid">
         ${this._entity("ed.room_summary.temperature_entity", "temperature", c.temperature, ["sensor"])}
         ${this._entity("ed.room_summary.humidity_entity", "humidity", c.humidity, ["sensor"])}
         ${this._entity("ed.room_summary.presence_entity", "presence", c.presence, ["binary_sensor", "device_tracker", "person"])}
@@ -749,7 +882,12 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       ${this._listSection("ed.room_summary.locks_section_title", "ed.room_summary.locks_section_hint", "locks", ["lock"])}
       ${this._listSection("ed.room_summary.alerts_section_title", "ed.room_summary.alerts_section_hint", "alerts", ["binary_sensor"])}
       </section>
-      <section class="sec"><div class="sec__title">${escapeHtml(this._label("ed.room_summary.display_section_title"))}</div><div class="grid">
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.room_summary.display_section_title"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.room_summary.display_section_hint"))}</div>
+        </div>
+        <div class="editor-grid">
         ${this._check("ed.room_summary.show_temperature", "show_temperature", c.show_temperature)}
         ${this._check("ed.room_summary.show_humidity", "show_humidity", c.show_humidity)}
         ${this._check("ed.room_summary.show_presence", "show_presence", c.show_presence)}
@@ -766,6 +904,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this.shadowRoot.addEventListener("change", this._onInput);
     this.shadowRoot.addEventListener("click", this._onClick);
     this.shadowRoot.querySelectorAll("[data-mount='entity']").forEach(h => this._mountPicker(h));
+    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }
 

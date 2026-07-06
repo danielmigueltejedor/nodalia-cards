@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.4] - 2026-07-06
+
+Fourth **`2.0.0`** **`alpha`**: visual parity pass for Camera, Room Summary, and Menu. Release channel **`2.0.0-alpha.4`**.
+
+### Changed
+
+- **`menu`:** runtime visual style aligned with Nodalia card surfaces (neutral active state, unified card container, and consistent empty state).
+- **`menu_editor`:** visual editor moved to the shared Nodalia editor style with localized labels and translated option values.
+- **`camera_editor`:** visual editor sections, labels, fields, and toggles now follow the shared Nodalia editor surface styling.
+- **`room_summary_editor`:** visual editor rewritten to use shared Nodalia editor layout, i18n label resolution, and dialog layout fix lifecycle hooks.
+- **`i18n`:** added `ed.menu.item_badge_color` in editor locales and regenerated editor catalog bundle.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.4`.
+
 ## [2.0.0-alpha.3] - 2026-07-06
 
 Third **`2.0.0`** **`alpha`**: Room Summary Card and Nodalia Menu Card. Release channel **`2.0.0-alpha.3`**.
