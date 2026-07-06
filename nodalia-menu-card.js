@@ -34,6 +34,7 @@ const DEFAULT_CONFIG = {
   show_badges: true,
   show_zero_badge: false,
   scroll: true,
+  haptics: { enabled: true, style: "medium", fallback_vibrate: false },
   items: [],
   styles: {
     card: {
@@ -41,7 +42,7 @@ const DEFAULT_CONFIG = {
       border: "1px solid var(--divider-color)",
       border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "10px 12px",
+      padding: "14px",
     },
     item: {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
@@ -641,8 +642,25 @@ class NodaliaMenuCard extends HTMLElement {
     this._render();
   }
 
-  _triggerHaptic() {
-    fireEvent(this, "haptic", "selection", { bubbles: true, composed: true });
+  _triggerHaptic(style = this._config?.haptics?.style) {
+    if (this._config?.haptics?.enabled === false) {
+      return;
+    }
+    try {
+      fireEvent(this, "haptic", String(style || "medium"));
+    } catch (_error) {
+      // Ignore dispatch issues.
+    }
+  }
+
+  _t(key, fallback, values = {}) {
+    const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.menuCard || window.NodaliaI18n?.strings?.("en")?.menuCard || {};
+    let text = pack[key] ?? fallback ?? key;
+    Object.entries(values).forEach(([token, value]) => {
+      text = text.replace(new RegExp(`\\{${token}\\}`, "g"), String(value));
+    });
+    return text;
   }
 
   _resolveDisplayName(item) {
@@ -874,37 +892,13 @@ class NodaliaMenuCard extends HTMLElement {
   }
 
   _renderEmptyState() {
-    const cardStyles = DEFAULT_CONFIG.styles.card;
-    return `
-      <style>
-        :host { display: block; }
-        * { box-sizing: border-box; }
-        ha-card {
-          background: ${cardStyles.background};
-          border: ${cardStyles.border};
-          border-radius: ${cardStyles.border_radius};
-          box-shadow: ${cardStyles.box_shadow};
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 8px;
-          padding: ${cardStyles.padding};
-        }
-        .menu-empty-title {
-          color: var(--primary-text-color);
-          font-size: 14px;
-          font-weight: 700;
-        }
-        .menu-empty-body {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-      </style>
+    const cardStyles = (this._config || DEFAULT_CONFIG).styles?.card || DEFAULT_CONFIG.styles.card;
+    const body = `
       <ha-card class="menu-card menu-card--empty">
-        <div class="menu-empty-title">Nodalia Menu Card</div>
-        <div class="menu-empty-body">Add at least one menu item in the visual editor.</div>
-      </ha-card>
-    `;
+        <div class="menu-empty-title">${escapeHtml(this._t("emptyTitle", "Nodalia Menu Card"))}</div>
+        <div class="menu-empty-body">${escapeHtml(this._t("emptyBody", "Add menu items in the card editor."))}</div>
+      </ha-card>`;
+    return window.NodaliaUtils?.renderCardEmptyStateDocument?.(body, { card: cardStyles }) ?? body;
   }
 
   _render() {
@@ -956,12 +950,27 @@ class NodaliaMenuCard extends HTMLElement {
           border-radius: var(--menu-card-radius);
           box-shadow: var(--menu-card-shadow);
           color: var(--primary-text-color);
+          display: block;
+          isolation: isolate;
           overflow: visible;
           padding: var(--menu-card-padding);
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        ha-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .menu-wrap {
           position: relative;
+          z-index: 1;
         }
 
         .menu-track {
@@ -1474,43 +1483,52 @@ class NodaliaMenuCardEditor extends HTMLElement {
     `;
   }
 
+  _renderIconPickerField(label, field, value, options = {}) {
+    const tLabel = typeof label === "string" && label.startsWith("ed.") ? this._editorLabel(label) : label;
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(tLabel)}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="icon-picker"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(inputValue)}"
+        ></div>
+      </div>
+    `;
+  }
+
   _mountEntityPicker(host) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
-    const field = host.dataset.field || "";
-    const currentValue = host.dataset.value || "";
+    window.NodaliaUtils?.mountEntityPickerHost?.(host, {
+      hass: this._hass,
+      field: host.dataset.field || "",
+      value: host.dataset.value || getByPath(this._config, host.dataset.field || "") || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
     const includeDomains = String(host.dataset.includeDomains || "")
       .split(",")
       .map(item => item.trim())
       .filter(Boolean);
-
-    if (customElements.get("ha-entity-picker")) {
-      const picker = document.createElement("ha-entity-picker");
-      picker.hass = this._hass;
-      picker.value = currentValue;
-      picker.allowCustomEntity = true;
-      if (includeDomains.length) {
-        picker.includeDomains = includeDomains;
-      }
-      picker.dataset.field = field;
-      picker.addEventListener("value-changed", event => {
-        setByPath(this._config, field, String(event.detail?.value || "").trim());
-        this._config = normalizeConfig(this._config);
-        this._emitConfig();
-      });
-      host.replaceChildren(picker);
-      return;
+    const picker = host.querySelector("ha-entity-picker");
+    if (picker && includeDomains.length) {
+      picker.includeDomains = includeDomains;
     }
+  }
 
-    host.replaceChildren();
-    const fallback = document.createElement("input");
-    fallback.type = "text";
-    fallback.value = currentValue;
-    fallback.placeholder = "entity_id";
-    fallback.dataset.field = field;
-    fallback.addEventListener("change", this._onShadowInput);
-    host.append(fallback);
+  _mountIconPicker(host) {
+    window.NodaliaUtils?.mountIconPickerHost?.(host, {
+      hass: this._hass,
+      value: host.dataset.value || getByPath(this._config, host.dataset.field || "") || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
   }
 
   _renderItemCard(item, index, total) {
@@ -1527,11 +1545,11 @@ class NodaliaMenuCardEditor extends HTMLElement {
         <div class="editor-grid">
           ${this._renderTextField("ed.menu.item_id", `items.${index}.id`, item.id, { placeholder: "home", clearable: true })}
           ${this._renderTextField("ed.menu.item_name", `items.${index}.name`, item.name, { placeholder: "Home", clearable: true })}
-          ${this._renderTextField("ed.menu.item_icon", `items.${index}.icon`, item.icon, { placeholder: "mdi:home-outline", clearable: true })}
+          ${this._renderIconPickerField("ed.menu.item_icon", `items.${index}.icon`, item.icon)}
           ${this._renderTextField("ed.menu.item_navigation_path", `items.${index}.navigation_path`, item.navigation_path, { placeholder: "/lovelace/home", clearable: true })}
           ${this._renderTextField("ed.menu.item_value", `items.${index}.value`, item.value, { placeholder: "home", clearable: true })}
           ${this._renderTextField("ed.menu.item_badge", `items.${index}.badge`, item.badge, { placeholder: "3", clearable: true })}
-          ${this._renderTextField("ed.menu.item_badge_entity", `items.${index}.badge_entity`, item.badge_entity, { placeholder: "sensor.notifications", fullWidth: true, clearable: true })}
+          ${this._renderEntityPickerField("ed.menu.item_badge_entity", `items.${index}.badge_entity`, item.badge_entity, ["sensor", "binary_sensor", "input_number"])}
           ${this._renderTextField("ed.menu.item_badge_color", `items.${index}.badge_color`, item.badge_color, { placeholder: "var(--error-color)", fullWidth: true, clearable: true })}
           ${this._renderTextareaField("ed.menu.item_tap_action", `items.${index}.tap_action`, item.tap_action, {
     valueType: "json",
@@ -1734,6 +1752,9 @@ class NodaliaMenuCardEditor extends HTMLElement {
 
     this.shadowRoot.querySelectorAll('[data-mounted-control="entity-picker"]').forEach(host => {
       this._mountEntityPicker(host);
+    });
+    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => {
+      this._mountIconPicker(host);
     });
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }

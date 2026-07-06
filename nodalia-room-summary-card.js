@@ -65,13 +65,21 @@ const DEFAULT_CONFIG = {
       gap: "12px",
     },
     icon: {
-      size: "44px",
-      background: "color-mix(in srgb, var(--primary-color) 16%, transparent)",
-      color: "var(--primary-color)",
+      size: "38px",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      color: "var(--primary-text-color)",
     },
-    title_size: "15px",
-    metric_size: "13px",
+    control: {
+      size: "36px",
+      accent_color: "var(--primary-text-color)",
+      accent_background: "rgba(113, 192, 255, 0.18)",
+    },
+    chip_height: "24px",
+    chip_font_size: "11px",
+    chip_padding: "0 9px",
     chip_border_radius: "999px",
+    title_size: "12px",
+    metric_size: "13px",
     accent: "var(--primary-color)",
   },
 };
@@ -329,6 +337,14 @@ function fireEvent(node, type, detail, options) {
   }));
 }
 
+function moveListItem(list, fromIndex, toIndex) {
+  if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+    return;
+  }
+  const [item] = list.splice(fromIndex, 1);
+  list.splice(toIndex, 0, item);
+}
+
 class NodaliaRoomSummaryCard extends HTMLElement {
   static async getConfigElement() { return document.createElement(EDITOR_TAG); }
   static getStubConfig() { return deepClone(STUB_CONFIG); }
@@ -559,9 +575,20 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const quickActions = this._quickActions(summary, config);
     const animate = config.animations?.enabled !== false && this._animateContentOnNextRender;
     const chipRadius = escapeHtml(styles.chip_border_radius || "999px");
+    const chipHeight = escapeHtml(styles.chip_height || "24px");
+    const chipFontSize = escapeHtml(styles.chip_font_size || "11px");
+    const chipPadding = escapeHtml(styles.chip_padding || "0 9px");
+    const accentColor = escapeHtml(styles.accent || "var(--primary-color)");
+    const controlSize = escapeHtml(styles.control?.size || "36px");
+    const controlAccentBg = escapeHtml(styles.control?.accent_background || "rgba(113, 192, 255, 0.18)");
+    const controlAccentColor = escapeHtml(styles.control?.accent_color || "var(--primary-text-color)");
     const compact = layout === "compact";
     const security = layout === "security";
     const climateLayout = layout === "climate";
+    const density = config.density === "compact" ? "compact" : "comfortable";
+    const effectivePadding = density === "compact" ? "10px 12px" : styles.card.padding;
+    const effectiveGap = density === "compact" ? "8px" : styles.card.gap;
+    const isActive = Boolean(summary.lights_on || summary.media_playing || summary.occupied || summary.comfortable);
 
     const hero = image && !compact ? `
       <div class="room-summary-card__hero" style="background-image:url('${escapeHtml(image)}')">
@@ -572,24 +599,127 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       <style>
         :host { display:block; --room-summary-duration:${config.animations?.enabled ? config.animations.content_duration : 0}ms; }
         * { box-sizing:border-box; }
-        ha-card { background:${styles.card.background}; border:${styles.card.border}; border-radius:${styles.card.border_radius}; box-shadow:${styles.card.box_shadow}; overflow:hidden; color:var(--primary-text-color); }
-        .room-summary-card__content { display:grid; gap:${styles.card.gap}; padding:${styles.card.padding}; position:relative; }
+        ha-card {
+          background:${styles.card.background};
+          border:${styles.card.border};
+          border-radius:${styles.card.border_radius};
+          box-shadow:${styles.card.box_shadow};
+          color:var(--primary-text-color);
+          display:block;
+          isolation:isolate;
+          overflow:hidden;
+          position:relative;
+          transition:background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        ha-card::before {
+          background:${isActive
+    ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+    : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          border-radius:inherit;
+          content:"";
+          inset:0;
+          pointer-events:none;
+          position:absolute;
+          z-index:0;
+        }
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius:inherit;
+          content:"";
+          inset:0;
+          opacity:${isActive ? "1" : "0"};
+          pointer-events:none;
+          position:absolute;
+          z-index:0;
+        }
+        .room-summary-card__content { display:grid; gap:${effectiveGap}; padding:${effectivePadding}; position:relative; z-index:1; }
         .room-summary-card__content--enter { animation:room-rise calc(var(--room-summary-duration)*0.9) cubic-bezier(.22,.84,.26,1) both; }
         .room-summary-card__hero { background:center/cover no-repeat; border-radius:18px; height:88px; overflow:hidden; position:relative; }
         .room-summary-card__hero-overlay { background:linear-gradient(180deg, transparent, color-mix(in srgb, var(--ha-card-background) 88%, black)); inset:0; position:absolute; }
-        .room-summary-card__header { align-items:center; display:grid; gap:12px; grid-template-columns:auto minmax(0,1fr) auto; }
-        .room-summary-card__icon { align-items:center; background:${styles.icon.background}; border-radius:16px; color:${styles.icon.color}; display:inline-flex; height:${styles.icon.size}; justify-content:center; width:${styles.icon.size}; }
-        .room-summary-card__icon ha-icon { --mdc-icon-size:calc(${styles.icon.size} * 0.52); }
-        .room-summary-card__title { font-size:${styles.title_size}; font-weight:700; line-height:1.2; overflow-wrap:anywhere; }
+        .room-summary-card__header { align-items:center; display:grid; gap:10px; grid-template-columns:auto minmax(0,1fr) auto; min-width:0; }
+        .room-summary-card__icon {
+          align-items:center;
+          background:${styles.icon.background};
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius:calc(${styles.icon.size} * 0.42);
+          color:${styles.icon.color};
+          display:inline-flex;
+          flex:0 0 auto;
+          height:${styles.icon.size};
+          justify-content:center;
+          width:${styles.icon.size};
+        }
+        .room-summary-card__icon ha-icon { --mdc-icon-size:calc(${styles.icon.size} * 0.48); }
+        .room-summary-card__title { font-size:${styles.title_size}; font-weight:700; line-height:1.25; min-width:0; overflow-wrap:anywhere; }
         .room-summary-card__metrics { display:grid; gap:8px; grid-template-columns:repeat(${compact ? Math.min(metrics.length || 1, 2) : Math.min(metrics.length || 1, 3)}, minmax(0,1fr)); }
-        .room-summary-card__metric { background:color-mix(in srgb, var(--primary-text-color) 4%, transparent); border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent); border-radius:16px; display:grid; gap:4px; min-height:${climateLayout ? "72px" : "64px"}; padding:10px 12px; }
-        .room-summary-card__metric-label { align-items:center; color:var(--secondary-text-color); display:inline-flex; font-size:11px; gap:6px; }
+        .room-summary-card__metric {
+          background:color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius:16px;
+          display:grid;
+          gap:4px;
+          min-height:${climateLayout ? "72px" : "64px"};
+          min-width:0;
+          padding:10px 12px;
+        }
+        .room-summary-card__metric-label { align-items:center; color:var(--secondary-text-color); display:inline-flex; font-size:11px; font-weight:600; gap:6px; min-width:0; }
         .room-summary-card__metric-value { font-size:${climateLayout ? "16px" : styles.metric_size}; font-weight:700; line-height:1.2; overflow-wrap:anywhere; }
-        .room-summary-card__chips, .room-summary-card__actions { display:flex; flex-wrap:wrap; gap:8px; }
-        .room-summary-card__chip, .room-summary-card__action { align-items:center; border-radius:${chipRadius}; display:inline-flex; font-size:11px; font-weight:600; gap:6px; line-height:1; padding:7px 10px; }
-        .room-summary-card__chip--active, .room-summary-card__action { background:color-mix(in srgb, var(--primary-color) 16%, transparent); color:var(--primary-color); border:0; cursor:pointer; }
-        .room-summary-card__chip--warn { background:color-mix(in srgb, var(--warning-color,#f59e0b) 16%, transparent); color:var(--warning-color,#f59e0b); }
+        .room-summary-card__chips, .room-summary-card__actions { display:flex; flex-wrap:wrap; gap:6px; min-width:0; }
+        .room-summary-card__chip {
+          align-items:center;
+          background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius:${chipRadius};
+          color:var(--secondary-text-color);
+          display:inline-flex;
+          flex:0 0 auto;
+          font-size:${chipFontSize};
+          font-weight:600;
+          gap:6px;
+          line-height:1;
+          max-width:100%;
+          min-height:${chipHeight};
+          min-width:0;
+          overflow:hidden;
+          padding:${chipPadding};
+          text-overflow:ellipsis;
+          white-space:nowrap;
+        }
+        .room-summary-card__chip ha-icon { --mdc-icon-size:14px; flex:0 0 auto; }
+        .room-summary-card__chip--active {
+          background:color-mix(in srgb, ${accentColor} 16%, transparent);
+          border-color:color-mix(in srgb, ${accentColor} 22%, transparent);
+          color:${accentColor};
+        }
+        .room-summary-card__chip--warn {
+          background:color-mix(in srgb, var(--warning-color,#f59e0b) 14%, transparent);
+          border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 22%, transparent);
+          color:var(--warning-color,#f59e0b);
+        }
         .room-summary-card__chip--muted { background:color-mix(in srgb, var(--primary-text-color) 6%, transparent); color:var(--secondary-text-color); }
+        .room-summary-card__action {
+          align-items:center;
+          appearance:none;
+          background:${controlAccentBg};
+          border:1px solid color-mix(in srgb, ${controlAccentColor} 12%, transparent);
+          border-radius:calc(${controlSize} * 0.35);
+          color:${controlAccentColor};
+          cursor:pointer;
+          display:inline-flex;
+          font:inherit;
+          font-size:11px;
+          font-weight:700;
+          gap:6px;
+          line-height:1;
+          min-height:${controlSize};
+          padding:0 12px;
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
+        }
+        .room-summary-card__action:hover { border-color:color-mix(in srgb, ${controlAccentColor} 24%, transparent); }
+        .room-summary-card__action:active { transform:scale(0.98); }
+        .room-summary-card__action ha-icon { --mdc-icon-size:16px; }
         .room-summary-card__body { cursor:${config.tap_action !== "none" ? "pointer" : "default"}; }
         .room-summary-card--security { box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--warning-color,#f59e0b) 18%, transparent); }
         @keyframes room-rise { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -625,12 +755,14 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig({});
+    this._config = mergeConfig(DEFAULT_CONFIG, {});
     this._hass = null;
+    this._entityOptionsSignature = "";
     this._editorShadowListenersAttached = false;
-    this._onInput = this._onInput.bind(this);
-    this._onClick = this._onClick.bind(this);
-    this._onValueChanged = this._onValueChanged.bind(this);
+    this._pendingEditorControlTags = new Set();
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
   }
 
   connectedCallback() {
@@ -647,10 +779,10 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (this._editorShadowListenersAttached || !this.shadowRoot) {
       return;
     }
-    this.shadowRoot.addEventListener("input", this._onInput);
-    this.shadowRoot.addEventListener("change", this._onInput);
-    this.shadowRoot.addEventListener("click", this._onClick);
-    this.shadowRoot.addEventListener("value-changed", this._onValueChanged);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
     this._editorShadowListenersAttached = true;
   }
 
@@ -658,17 +790,104 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (!this._editorShadowListenersAttached || !this.shadowRoot) {
       return;
     }
-    this.shadowRoot.removeEventListener("input", this._onInput);
-    this.shadowRoot.removeEventListener("change", this._onInput);
-    this.shadowRoot.removeEventListener("click", this._onClick);
-    this.shadowRoot.removeEventListener("value-changed", this._onValueChanged);
+    this.shadowRoot.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot.removeEventListener("change", this._onShadowInput);
+    this.shadowRoot.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
     this._editorShadowListenersAttached = false;
   }
 
-  setConfig(config) { this._config = mergeConfig(DEFAULT_CONFIG, config || {}); this._render(); }
+  setConfig(config) {
+    const focusState = this._captureFocusState();
+    this._config = mergeConfig(DEFAULT_CONFIG, config || {});
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
   set hass(hass) {
+    const nextSignature = this._getEntityOptionsSignature(hass);
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
     this._hass = hass;
-    this.shadowRoot?.querySelectorAll("[data-mount='entity']").forEach(h => this._mountPicker(h));
+    this._entityOptionsSignature = nextSignature;
+    if (!shouldRender) {
+      this.shadowRoot?.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+      return;
+    }
+    const focusState = this._captureFocusState();
+    this._render();
+    this._restoreFocusState(focusState);
+  }
+
+  _getEntityOptionsSignature(hass = this._hass) {
+    return window.NodaliaUtils?.editorFilteredStatesSignature?.(hass, this._config?.language ?? "auto") || "";
+  }
+
+  _captureFocusState() {
+    const active = this.shadowRoot?.activeElement;
+    if (
+      !(
+        active instanceof HTMLInputElement
+        || active instanceof HTMLTextAreaElement
+        || active instanceof HTMLSelectElement
+      )
+    ) {
+      return null;
+    }
+    return {
+      field: active.dataset?.field || "",
+      start: typeof active.selectionStart === "number" ? active.selectionStart : null,
+      end: typeof active.selectionEnd === "number" ? active.selectionEnd : null,
+    };
+  }
+
+  _restoreFocusState(focusState) {
+    if (!focusState?.field) {
+      return;
+    }
+    const next = this.shadowRoot?.querySelector(`[data-field="${CSS.escape(focusState.field)}"]`);
+    if (
+      !(
+        next instanceof HTMLInputElement
+        || next instanceof HTMLTextAreaElement
+        || next instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+    next.focus();
+    if (typeof focusState.start === "number" && typeof focusState.end === "number" && typeof next.setSelectionRange === "function") {
+      next.setSelectionRange(focusState.start, focusState.end);
+    }
+  }
+
+  _watchEditorControlTag(tagName) {
+    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+      return;
+    }
+    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+      return;
+    }
+    this._pendingEditorControlTags.add(tagName);
+    customElements
+      .whenDefined(tagName)
+      .then(() => {
+        this._pendingEditorControlTags.delete(tagName);
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+          return;
+        }
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      })
+      .catch(() => {
+        this._pendingEditorControlTags.delete(tagName);
+      });
+  }
+
+  _ensureEditorControlsReady() {
+    this._watchEditorControlTag("ha-entity-picker");
+    this._watchEditorControlTag("ha-selector");
+    this._watchEditorControlTag("ha-icon-picker");
   }
 
   _editorLabel(key) {
@@ -683,7 +902,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     }
   }
 
-  _onInput(e) {
+  _onShadowInput(e) {
     const input = e.composedPath().find(n => n instanceof HTMLInputElement || n instanceof HTMLSelectElement || n instanceof HTMLTextAreaElement);
     if (!input?.dataset?.field) return;
     e.stopPropagation();
@@ -691,7 +910,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (e.type === "change") this._emitConfig(false);
   }
 
-  _onValueChanged(e) {
+  _onShadowValueChanged(e) {
     const host = e.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
     if (!host?.dataset?.field) {
       return;
@@ -701,7 +920,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._emitConfig(false);
   }
 
-  _onClick(e) {
+  _onShadowClick(e) {
     const btn = e.composedPath().find(n => n instanceof HTMLElement && n.dataset?.act);
     if (!btn) return;
     e.preventDefault();
@@ -718,11 +937,32 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       this._config[list].splice(idx, 1);
       this._emitConfig(true);
+      return;
+    }
+    if (btn.dataset.act === "move-up" && list && Number.isInteger(idx)) {
+      if (!Array.isArray(this._config[list])) this._config[list] = [];
+      moveListItem(this._config[list], idx, idx - 1);
+      this._emitConfig(true);
+      return;
+    }
+    if (btn.dataset.act === "move-down" && list && Number.isInteger(idx)) {
+      if (!Array.isArray(this._config[list])) this._config[list] = [];
+      moveListItem(this._config[list], idx, idx + 1);
+      this._emitConfig(true);
     }
   }
 
   _editorList(listKey) {
     return Array.isArray(this._config[listKey]) ? this._config[listKey] : [];
+  }
+
+  _entityLabel(entityId) {
+    const id = String(entityId || "").trim();
+    if (!id) {
+      return this._editorLabel("ed.room_summary.entity");
+    }
+    const friendly = String(this._hass?.states?.[id]?.attributes?.friendly_name || "").trim();
+    return friendly && friendly !== id ? `${friendly} (${id})` : id;
   }
 
   _field(label, field, value, opts = {}) {
@@ -745,36 +985,75 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _entity(label, field, value, domains = []) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
     return `<label class="editor-field editor-field--full"><span>${escapeHtml(this._editorLabel(label))}</span>
-      <div class="editor-control-host" data-mount="entity" data-field="${escapeHtml(field)}" data-domains="${escapeHtml(domains.join(","))}"></div></label>`;
+      <div
+        class="editor-control-host"
+        data-mounted-control="entity"
+        data-field="${escapeHtml(field)}"
+        data-value="${escapeHtml(inputValue)}"
+        data-include-domains="${escapeHtml(domains.join(","))}"
+      ></div></label>`;
+  }
+
+  _iconField(label, field, value) {
+    const inputValue = value === undefined || value === null ? "" : String(value);
+    return `<div class="editor-field">
+      <span>${escapeHtml(this._editorLabel(label))}</span>
+      <div
+        class="editor-control-host"
+        data-mounted-control="icon-picker"
+        data-field="${escapeHtml(field)}"
+        data-value="${escapeHtml(inputValue)}"
+      ></div>
+    </div>`;
   }
 
   _listSection(title, hint, listKey, domains) {
     const rows = this._editorList(listKey);
+    const total = rows.length;
+    const moveUp = this._editorLabel("ed.notifications.move_up");
+    const moveDown = this._editorLabel("ed.notifications.move_down");
     return `<section class="editor-section editor-section--nested"><div class="editor-section__header">
       <div><div class="editor-section__title">${escapeHtml(this._editorLabel(title))}</div>
       <div class="editor-section__hint">${escapeHtml(this._editorLabel(hint))}</div></div>
       <button type="button" data-act="add" data-list="${escapeHtml(listKey)}">${escapeHtml(this._editorLabel("ed.room_summary.add_entity"))}</button></div>
-      ${rows.length ? rows.map((id, i) => `<div class="item-card"><div class="item-card__header"><span class="item-card__title">${i + 1}</span>
-        <button type="button" class="danger" data-act="remove" data-list="${escapeHtml(listKey)}" data-index="${i}">${escapeHtml(this._editorLabel("ed.room_summary.remove_entity"))}</button></div>
+      ${rows.length ? rows.map((id, i) => `<div class="item-card"><div class="item-card__header">
+        <span class="item-card__title">${escapeHtml(this._entityLabel(id))}</span>
+        <div class="item-card__actions">
+          <button type="button" data-act="move-up" data-list="${escapeHtml(listKey)}" data-index="${i}" ${i === 0 ? "disabled" : ""} title="${escapeHtml(moveUp)}">↑</button>
+          <button type="button" data-act="move-down" data-list="${escapeHtml(listKey)}" data-index="${i}" ${i >= total - 1 ? "disabled" : ""} title="${escapeHtml(moveDown)}">↓</button>
+          <button type="button" class="danger" data-act="remove" data-list="${escapeHtml(listKey)}" data-index="${i}">${escapeHtml(this._editorLabel("ed.room_summary.remove_entity"))}</button>
+        </div></div>
         ${this._entity("ed.room_summary.entity", `${listKey}.${i}`, id, domains)}</div>`).join("") : `<div class="empty">${escapeHtml(this._editorLabel("ed.room_summary.list_empty"))}</div>`}
     </section>`;
   }
 
-  _mountPicker(host) {
+  _mountEntityPicker(host) {
     if (!(host instanceof HTMLElement)) return;
-    if (host.querySelector("ha-entity-picker")) {
-      return;
+    window.NodaliaUtils?.mountEntityPickerHost?.(host, {
+      hass: this._hass,
+      field: host.dataset.field || "entity",
+      value: host.dataset.value || getByPath(this._config, host.dataset.field || "") || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
+    const domains = String(host.dataset.includeDomains || "").split(",").map(item => item.trim()).filter(Boolean);
+    const picker = host.querySelector("ha-entity-picker");
+    if (picker && domains.length) {
+      picker.includeDomains = domains;
     }
-    const field = host.dataset.field || "";
-    const domains = String(host.dataset.domains || "").split(",").filter(Boolean);
-    const picker = document.createElement("ha-entity-picker");
-    picker.dataset.field = field;
-    picker.hass = this._hass;
-    picker.value = getByPath(this._config, field) || "";
-    if (domains.length) picker.includeDomains = domains;
-    picker.allowCustomEntity = true;
-    host.replaceChildren(picker);
+  }
+
+  _mountIconPicker(host) {
+    window.NodaliaUtils?.mountIconPickerHost?.(host, {
+      hass: this._hass,
+      value: host.dataset.value || getByPath(this._config, host.dataset.field || "") || "",
+      onShadowInput: this._onShadowInput,
+      onShadowValueChanged: this._onShadowValueChanged,
+      copyDatasetFromHost: true,
+    });
   }
 
   _render() {
@@ -879,6 +1158,8 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         padding: 0 12px;
       }
       button.danger { color: var(--error-color); }
+      button:disabled { cursor: default; opacity: 0.45; }
+      .item-card__actions { display: flex; flex-wrap: wrap; gap: 8px; }
       .item-card {
         background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
         border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -899,11 +1180,15 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         </div>
         <div class="editor-grid">
         ${this._field("ed.room_summary.name", "name", c.name, { ph: "ed.room_summary.name_placeholder", full: true })}
-        ${this._field("ed.room_summary.icon", "icon", c.icon)}
+        ${this._iconField("ed.room_summary.icon", "icon", c.icon)}
         ${this._select("ed.room_summary.layout", "layout", c.layout, [
           { v: "compact", l: "ed.room_summary.layout_compact" }, { v: "standard", l: "ed.room_summary.layout_standard" },
           { v: "detailed", l: "ed.room_summary.layout_detailed" }, { v: "security", l: "ed.room_summary.layout_security" },
           { v: "climate", l: "ed.room_summary.layout_climate" },
+        ])}
+        ${this._select("ed.entity.density", "density", c.density, [
+          { v: "comfortable", l: "ed.entity.density_comfortable" },
+          { v: "compact", l: "ed.entity.density_compact" },
         ])}
         ${this._field("ed.room_summary.image", "image", c.image, { full: true })}
       </div></section>
@@ -941,12 +1226,31 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ${this._check("ed.room_summary.show_climate", "show_climate", c.show_climate)}
         ${this._check("ed.room_summary.show_lights", "show_lights", c.show_lights)}
         ${this._check("ed.room_summary.show_covers", "show_covers", c.show_covers)}
+        ${this._check("ed.room_summary.show_camera", "show_camera", c.show_camera)}
+        ${this._check("ed.room_summary.show_media", "show_media", c.show_media)}
+        ${this._check("ed.room_summary.show_security", "show_security", c.show_security)}
+        ${this._check("ed.room_summary.show_power", "show_power", c.show_power)}
         ${this._check("ed.room_summary.show_quick_actions", "show_quick_actions", c.show_quick_actions)}
+      </div></section>
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.room_summary.actions_section_title"))}</div>
+          <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.room_summary.actions_section_hint"))}</div>
+        </div>
+        <div class="editor-grid">
+        ${this._select("ed.room_summary.tap_action", "tap_action", c.tap_action, [
+          { v: "none", l: "ed.room_summary.tap_none" },
+          { v: "more-info", l: "ed.room_summary.tap_more_info" },
+          { v: "navigate", l: "ed.room_summary.tap_navigate" },
+        ])}
+        ${this._field("ed.room_summary.navigation_path", "navigation_path", c.navigation_path, { full: true, ph: "ed.room_summary.navigation_path" })}
       </div></section>
     </div>`;
     this._detachEditorShadowListeners();
     this._attachEditorShadowListeners();
-    this.shadowRoot.querySelectorAll("[data-mount='entity']").forEach(h => this._mountPicker(h));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
+    this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
 }

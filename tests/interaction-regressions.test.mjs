@@ -1727,3 +1727,34 @@ test("invokeHomeAssistantService logs callService failures", () => {
   const utils = read("nodalia-utils.js");
   assert.match(utils, /callService failed/);
 });
+
+test("fav card requires manual alarm PIN when code input is visible", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /const requiresManualPin = this\._shouldShowAlarmCodeInput\(state\)/);
+  assert.match(source, /if \(requiresManualPin && !manualPin\) \{[\s\S]*return;/);
+  assert.match(source, /const code = requiresManualPin \? manualPin : this\._getAlarmCodeValue\(state\)/);
+  assert.match(source, /if \(this\._shouldShowAlarmCodeInput\(state\)\) \{[\s\S]*return "";/);
+});
+
+test("fav card preserves Lovelace service target for configured tap actions", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /serviceTargetKey: "tap_service_target"/);
+  assert.match(source, /tap_service_target/);
+  assert.match(source, /hasExplicitTarget/);
+  assert.match(source, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
+});
+
+test("entity card gates built-in lock cover and select services with strict allowlist", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /_invokeEntityService\(domain, service, entityId, serviceData = \{\}\) \{[\s\S]*_isServiceAllowed\(serviceValue\)/);
+  assert.match(source, /select_option/);
+});
+
+test("notifications card drains pending foreground mobile queue in batches", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /_mobileNotifyQueue/);
+  assert.match(source, /_enqueueMobileNotifications/);
+  assert.match(source, /_scheduleMobileNotifyDrain/);
+  assert.match(source, /this\._mobileNotifyQueue\.splice\(0, 4\)/);
+  assert.match(source, /if \(this\._mobileNotifyQueue\.length\) \{[\s\S]*_scheduleMobileNotifyDrain/);
+});

@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.6] - 2026-07-07
+
+Sixth **`2.0.0`** **`alpha`**: security hardening parity and Room Summary / Menu visual alignment. Release channel **`2.0.0-alpha.6`**.
+
+### Fixed
+
+- **`fav`:** alarm actions now require a manually entered PIN whenever the visible code input is shown; stored/helper codes are no longer used as fallback in that state.
+- **`fav`:** Lovelace `perform-action` tap targets are preserved through normalization and service invocation (`tap_service_target`).
+- **`entity`:** built-in lock, cover, and select service invocations now respect `security.strict_service_actions` allowlists.
+- **`notifications`:** smart entity overrides with `mobile: inherit` resolve through the kind-level mobile policy instead of erasing per-kind `off` rules.
+- **`notifications`:** background mobile sync rejects payloads larger than the 40 helper chunks supported by the HA package.
+- **`notifications`:** foreground mobile delivery keeps a pending queue and drains alerts in batches instead of dropping them while a send timer is active.
+
+### Changed
+
+- **`room_summary` / `menu`:** runtime styling aligned with Entity/Light Card surfaces; editors use shared entity/icon pickers, list reorder, and expanded display sections.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.6`.
+
 ## [2.0.0-alpha.5] - 2026-07-06
 
 Fifth **`2.0.0`** **`alpha`**: Room Summary editor fixes and Camera Card feed/mosaic/actions. Release channel **`2.0.0-alpha.5`**.

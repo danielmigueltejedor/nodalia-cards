@@ -1361,6 +1361,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._mobileCooldownMap = {};
     this._runtimeExternalAlerts = [];
     this._mobileNotifyTimer = 0;
+    this._mobileNotifyQueue = [];
     this._lastRenderSignature = "";
     this._trackedEntityIdsCache = null;
     this._trackedEntityRevision = null;
@@ -1441,6 +1442,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
     }
+    this._mobileNotifyQueue = [];
     if (this._backgroundMobileSyncTimer) {
       window.clearTimeout(this._backgroundMobileSyncTimer);
       this._backgroundMobileSyncTimer = 0;
@@ -3001,15 +3003,45 @@ class NodaliaNotificationsCard extends HTMLElement {
     return !this._mobileSent.has(this._dismissKey(item.id));
   }
 
-  _queueMobileNotifications(items) {
-    const pending = items.filter(item => this._shouldSendMobileNotification(item));
-    if (!pending.length || this._mobileNotifyTimer) {
+  _enqueueMobileNotifications(items) {
+    const queue = this._mobileNotifyQueue || (this._mobileNotifyQueue = []);
+    for (const item of items) {
+      if (!item?.id) {
+        continue;
+      }
+      const key = this._dismissKey(item.id);
+      if (queue.some(entry => this._dismissKey(entry.id) === key)) {
+        continue;
+      }
+      queue.push(item);
+    }
+  }
+
+  _scheduleMobileNotifyDrain() {
+    if (this._mobileNotifyTimer || !this._mobileNotifyQueue?.length) {
       return;
     }
     this._mobileNotifyTimer = window.setTimeout(() => {
       this._mobileNotifyTimer = 0;
-      this._flushMobileNotifications(pending.slice(0, 4));
+      const batch = this._mobileNotifyQueue.splice(0, 4);
+      if (!batch.length) {
+        return;
+      }
+      Promise.resolve(this._flushMobileNotifications(batch)).finally(() => {
+        if (this._mobileNotifyQueue.length) {
+          this._scheduleMobileNotifyDrain();
+        }
+      });
     }, 450);
+  }
+
+  _queueMobileNotifications(items) {
+    const pending = items.filter(item => this._shouldSendMobileNotification(item));
+    if (!pending.length) {
+      return;
+    }
+    this._enqueueMobileNotifications(pending);
+    this._scheduleMobileNotifyDrain();
   }
 
   _buildLegacyMobilePayload(item, hash) {

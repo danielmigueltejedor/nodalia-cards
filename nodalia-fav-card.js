@@ -29,6 +29,7 @@ const DEFAULT_CONFIG = {
   tap_action: "auto",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
   tap_new_tab: false,
   alarm_code: "",
@@ -603,6 +604,7 @@ function normalizeConfig(rawConfig) {
       actionKey: "tap_action",
       serviceKey: "tap_service",
       serviceDataKey: "tap_service_data",
+      serviceTargetKey: "tap_service_target",
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
@@ -611,6 +613,7 @@ function normalizeConfig(rawConfig) {
   config.tap_action = String(config.tap_action ?? "auto").trim() || "auto";
   config.tap_service = String(config.tap_service ?? "").trim();
   config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_service_target = String(config.tap_service_target ?? "").trim();
   config.tap_url = String(config.tap_url ?? "").trim();
   config.tap_new_tab = config.tap_new_tab === true;
   return config;
@@ -1384,11 +1387,13 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getAlarmCodeValue(state) {
+    const manualPin = String(this._alarmCodeInput || "").trim();
+    if (manualPin) {
+      return manualPin;
+    }
+
     if (this._shouldShowAlarmCodeInput(state)) {
-      const manualCode = String(this._alarmCodeInput || "").trim();
-      if (manualCode) {
-        return manualCode;
-      }
+      return "";
     }
 
     const helperEntityId = String(this._config?.alarm_code_entity || "").trim();
@@ -1417,7 +1422,19 @@ class NodaliaFavCard extends HTMLElement {
     const payload = {
       entity_id: this._config.entity,
     };
-    const code = this._getAlarmCodeValue(state);
+
+    const requiresManualPin = this._shouldShowAlarmCodeInput(state);
+    const manualPin = String(this._alarmCodeInput || "").trim();
+    if (requiresManualPin && !manualPin) {
+      this._triggerHaptic("warning");
+      const input = this.shadowRoot?.querySelector?.('input[data-fav-alarm-ignore="true"]');
+      if (input instanceof HTMLInputElement) {
+        input.focus();
+      }
+      return;
+    }
+
+    const code = requiresManualPin ? manualPin : this._getAlarmCodeValue(state);
     if (code) {
       payload.code = code;
     }
@@ -1479,7 +1496,7 @@ class NodaliaFavCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
+  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -1495,11 +1512,19 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
+    const target = this._parseServiceData(rawTarget);
+    const hasExplicitTarget = Object.keys(target).length > 0;
+    if (entityId && payload.entity_id === undefined && !hasExplicitTarget) {
       payload.entity_id = entityId;
     }
 
-    this._invokeEntityService(domain, service, entityId, payload);
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
+      || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
+        svcTarget != null
+          ? hass?.callService?.(svcDomain, svc, data, svcTarget)
+          : hass?.callService?.(svcDomain, svc, data),
+      ));
+    invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
   _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
@@ -1598,7 +1623,12 @@ class NodaliaFavCard extends HTMLElement {
         this._openMoreInfo(this._config?.entity);
         break;
       case "service":
-        this._callConfiguredService(this._config?.tap_service, this._config?.entity, this._config?.tap_service_data);
+        this._callConfiguredService(
+          this._config?.tap_service,
+          this._config?.entity,
+          this._config?.tap_service_data,
+          this._config?.tap_service_target,
+        );
         break;
       case "url":
         this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab);
