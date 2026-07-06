@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.8] - 2026-07-07
+
+Eighth **`2.0.0`** **`alpha`**: fix broken GitHub release tags that pointed at the stable **`1.3.5`** commit instead of the 2.0 bundle. Release channel **`2.0.0-alpha.8`**.
+
+### Fixed
+
+- **`release`:** GitHub tags **`v2.0.0-alpha.6`** and **`v2.0.0-alpha.7`** were accidentally attached to the stable **`1.3.5`** commit, so HACS installs of those alphas never shipped Camera, Room Summary, or Menu Card even though the cards exist in the repo.
+- **`bundle`:** compatibility aliases now include **`nodalia-cards-2.0.0-alpha.7.js`**.
+
+### Added
+
+- **`tests`:** release smoke test now asserts every module listed in **`CARD_PARTS`** is present in both the full bundle and the suite split.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.8`.
+
 ## [2.0.0-alpha.7] - 2026-07-07
 
 Seventh **`2.0.0`** **`alpha`**: restore compatibility aliases for versioned bundle URLs. Release channel **`2.0.0-alpha.7`**.

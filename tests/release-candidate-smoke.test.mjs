@@ -7,6 +7,24 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
+function cardPartsFromBuildScript() {
+  const source = read("scripts/build-bundle.mjs");
+  const match = source.match(/const CARD_PARTS = \[([\s\S]*?)\];/);
+  assert.ok(match, "build-bundle.mjs should declare CARD_PARTS");
+  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+}
+
+test("bundle registers every card listed in build-bundle CARD_PARTS", () => {
+  const bundle = read("nodalia-cards.js");
+  const suite = read(`nodalia-cards-suite-${JSON.parse(read("package.json")).version}.js`);
+  cardPartsFromBuildScript().forEach(file => {
+    const cardTag = file.replace(/\.js$/, "");
+    const escaped = cardTag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(bundle, new RegExp(`"${escaped}"`), `${cardTag} should ship in nodalia-cards.js`);
+    assert.match(suite, new RegExp(`"${escaped}"`), `${cardTag} should ship in split suite bundle`);
+  });
+});
+
 test("published package files and bundle manifest stay coherent", () => {
   const pkg = JSON.parse(read("package.json"));
   const hacs = JSON.parse(read("hacs.json"));
@@ -20,6 +38,8 @@ test("published package files and bundle manifest stay coherent", () => {
     "nodalia-cards-2.0.0-alpha.4.js",
     "nodalia-cards-2.0.0-alpha.5.js",
     "nodalia-cards-2.0.0-alpha.6.js",
+    "nodalia-cards-2.0.0-alpha.7.js",
+    "nodalia-cards-2.0.0-alpha.8.js",
   ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
