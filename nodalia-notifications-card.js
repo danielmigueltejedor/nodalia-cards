@@ -2,6 +2,7 @@ const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
 const CARD_VERSION = "1.3.5";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
+const BACKGROUND_MOBILE_MAX_CHUNKS = 40;
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -989,6 +990,9 @@ function buildBackgroundMobileWebhookPayload(rawConfig) {
   for (let index = 0; index < json.length; index += chunkSize) {
     chunks.push(json.slice(index, index + chunkSize));
   }
+  if (chunks.length > BACKGROUND_MOBILE_MAX_CHUNKS) {
+    throw new Error(`Background mobile sync payload uses ${chunks.length} chunks, but the Home Assistant package stores ${BACKGROUND_MOBILE_MAX_CHUNKS}.`);
+  }
   return {
     version: 1,
     card_version: CARD_VERSION,
@@ -1036,6 +1040,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastWeatherRefresh = 0;
     this._lastDismissedHelperState = "";
     this._mobileSent = new Set();
+    this._mobilePending = new Map();
     this._mobileNotifyTimer = 0;
     this._lastRenderSignature = "";
     this._trackedEntityIdsCache = null;
@@ -1116,6 +1121,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._mobileNotifyTimer);
       this._mobileNotifyTimer = 0;
     }
+    this._mobilePending.clear();
     if (this._backgroundMobileSyncTimer) {
       window.clearTimeout(this._backgroundMobileSyncTimer);
       this._backgroundMobileSyncTimer = 0;
@@ -1342,7 +1348,16 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       return false;
     }
-    const payload = this._buildBackgroundMobileWebhookPayload();
+    let payload;
+    try {
+      payload = this._buildBackgroundMobileWebhookPayload();
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Notifications Card: background mobile sync payload is too large for the Home Assistant package.", error);
+      }
+      this._pendingBackgroundMobileSync = true;
+      return false;
+    }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     const force = this._forceNextBackgroundMobileSync === true;
     this._forceNextBackgroundMobileSync = false;
@@ -2194,7 +2209,9 @@ class NodaliaNotificationsCard extends HTMLElement {
           .filter(([, value]) => String(value || "").trim()),
       ),
       ...(hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {}),
-      mobile: override.mobile || "inherit",
+      mobile: normalizeSmartEntityMobile(override.mobile) === "inherit"
+        ? normalizeSmartEntityMobile(base.mobile)
+        : normalizeSmartEntityMobile(override.mobile),
     };
   }
 
@@ -2516,12 +2533,23 @@ class NodaliaNotificationsCard extends HTMLElement {
 
   _queueMobileNotifications(items) {
     const pending = items.filter(item => this._shouldSendMobileNotification(item));
-    if (!pending.length || this._mobileNotifyTimer) {
+    pending.forEach(item => {
+      this._mobilePending.set(this._dismissKey(item.id), item);
+    });
+    if (!this._mobilePending.size || this._mobileNotifyTimer) {
       return;
     }
     this._mobileNotifyTimer = window.setTimeout(() => {
       this._mobileNotifyTimer = 0;
-      this._flushMobileNotifications(pending.slice(0, 4));
+      const batch = [...this._mobilePending.values()].slice(0, 4);
+      batch.forEach(item => {
+        this._mobilePending.delete(this._dismissKey(item.id));
+      });
+      Promise.resolve(this._flushMobileNotifications(batch)).finally(() => {
+        if (this._mobilePending.size && this.isConnected) {
+          this._queueMobileNotifications([]);
+        }
+      });
     }, 450);
   }
 
@@ -3886,7 +3914,15 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       }
       return false;
     }
-    const payload = buildBackgroundMobileWebhookPayload(normalized);
+    let payload;
+    try {
+      payload = buildBackgroundMobileWebhookPayload(normalized);
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Notifications Card editor: background mobile sync payload is too large for the Home Assistant package.", error);
+      }
+      return false;
+    }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     if (signature === this._lastBackgroundMobileSyncSignature) {
       return true;

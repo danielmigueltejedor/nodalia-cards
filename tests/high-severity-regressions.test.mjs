@@ -51,6 +51,29 @@ test("alarm panel keeps PIN watchdog armed after resolved service calls", () => 
   );
 });
 
+test("fav card requires manual PIN when alarm code input is visible", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /const requiresManualPin = this\._shouldShowAlarmCodeInput\(state\);/);
+  assert.match(source, /const manualCode = String\(this\._alarmCodeInput \|\| ""\)\.trim\(\);/);
+  assert.match(source, /if \(requiresManualPin && !manualCode\) \{[\s\S]*?return;/);
+  assert.match(source, /const code = requiresManualPin \? manualCode : this\._getAlarmCodeValue\(state\);/);
+});
+
+test("fav card preserves Lovelace service targets for tap actions", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /tap_service_target/);
+  assert.match(source, /serviceTargetKey: "tap_service_target"/);
+  assert.match(source, /_callConfiguredService\(serviceValue, entityId = this\._config\?\.entity, rawData = "", rawTarget = ""\)/);
+  assert.match(source, /const hasExplicitTarget = Object\.keys\(target\)\.length > 0;/);
+  assert.match(source, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
+});
+
+test("entity card strict service actions gate built-in domain invocations", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /_invokeEntityService\(domain, service, entityId, serviceData = \{\}\) \{[\s\S]*?const serviceValue = `\$\{domain\}\.\$\{service\}`;/);
+  assert.match(source, /if \(!this\._isServiceAllowed\(serviceValue\)\) \{[\s\S]*?warnStrictServiceDenied\?\.\("Nodalia Entity Card", serviceValue\);[\s\S]*?return Promise\.resolve\(false\);/);
+});
+
 test("climate schedule composer blocks oversized storage_state before webhook delivery", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /function isSetpointScheduleStorageStateWithinLimit/);

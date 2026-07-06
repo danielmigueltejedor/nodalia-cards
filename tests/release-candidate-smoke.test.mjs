@@ -662,6 +662,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /ed\.notifications\.background_mobile_webhook/);
   assert.match(source, /entities: config\.mobile_notifications\?\.entities \|\| \[\]/);
   assert.match(source, /mobile: String\(item\?\.mobile \|\| "inherit"\)/);
+  assert.match(source, /const BACKGROUND_MOBILE_MAX_CHUNKS = 40;/);
+  assert.match(source, /if \(chunks\.length > BACKGROUND_MOBILE_MAX_CHUNKS\) \{[\s\S]*?throw new Error/);
   assert.match(source, /nodalia_notifications_background_sync/);
   assert.match(source, /_scheduleBackgroundMobileSync/);
   assert.match(source, /_pendingBackgroundMobileSync/);
@@ -694,6 +696,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_buildLevelNotifications/);
   assert.match(source, /shouldDarkenNotificationIconGlyph/);
   assert.match(source, /_smartMessage/);
+  assert.match(source, /mobile: normalizeSmartEntityMobile\(override\.mobile\) === "inherit"\s*\? normalizeSmartEntityMobile\(base\.mobile\)\s*: normalizeSmartEntityMobile\(override\.mobile\)/);
   assert.match(source, /_smartAction/);
   assert.match(source, /_notificationChips\(item\)/);
   assert.doesNotMatch(source, /chips\.push\(\{ kind: "value", label: source \}\)/);
@@ -714,6 +717,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /!text\.includes\(":"\)/);
   assert.match(source, /!this\._canPruneDismissedToken\(id\)/);
   assert.match(source, /_queueMobileNotifications/);
+  assert.match(source, /this\._mobilePending = new Map\(\);/);
+  assert.match(source, /this\._mobilePending\.set\(this\._dismissKey\(item\.id\), item\);/);
+  assert.match(source, /const batch = \[\.\.\.this\._mobilePending\.values\(\)\]\.slice\(0, 4\);/);
+  assert.match(source, /this\._queueMobileNotifications\(\[\]\);/);
   assert.match(source, /this\._config\.background_mobile\?\.enabled === true/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
