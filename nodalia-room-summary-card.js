@@ -72,14 +72,14 @@ const DEFAULT_CONFIG = {
     control: {
       size: "36px",
       accent_color: "var(--primary-text-color)",
-      accent_background: "rgba(113, 192, 255, 0.18)",
+      accent_background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
     },
     chip_height: "24px",
     chip_font_size: "11px",
     chip_padding: "0 9px",
     chip_border_radius: "999px",
-    title_size: "12px",
-    metric_size: "13px",
+    title_size: "16px",
+    metric_size: "14px",
     accent: "var(--primary-color)",
   },
 };
@@ -589,6 +589,16 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const effectivePadding = density === "compact" ? "10px 12px" : styles.card.padding;
     const effectiveGap = density === "compact" ? "8px" : styles.card.gap;
     const isActive = Boolean(summary.lights_on || summary.media_playing || summary.occupied || summary.comfortable);
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+    const cardBackground = isActive ? onCardBackground : styles.card.background;
+    const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
+    const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
+    const iconBackground = isActive
+      ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+      : styles.icon.background;
+    const iconColor = isActive ? accentColor : styles.icon.color;
 
     const hero = image && !compact ? `
       <div class="room-summary-card__hero" style="background-image:url('${escapeHtml(image)}')">
@@ -600,10 +610,10 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         :host { display:block; --room-summary-duration:${config.animations?.enabled ? config.animations.content_duration : 0}ms; }
         * { box-sizing:border-box; }
         ha-card {
-          background:${styles.card.background};
-          border:${styles.card.border};
+          background:${cardBackground};
+          border:${cardBorder};
           border-radius:${styles.card.border_radius};
-          box-shadow:${styles.card.box_shadow};
+          box-shadow:${cardShadow};
           color:var(--primary-text-color);
           display:block;
           isolation:isolate;
@@ -641,10 +651,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-summary-card__header { align-items:center; display:grid; gap:10px; grid-template-columns:auto minmax(0,1fr) auto; min-width:0; }
         .room-summary-card__icon {
           align-items:center;
-          background:${styles.icon.background};
-          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius:calc(${styles.icon.size} * 0.42);
-          color:${styles.icon.color};
+          background:${iconBackground};
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius:999px;
+          box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
+          color:${iconColor};
           display:inline-flex;
           flex:0 0 auto;
           height:${styles.icon.size};
@@ -655,9 +666,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-summary-card__title { font-size:${styles.title_size}; font-weight:700; line-height:1.25; min-width:0; overflow-wrap:anywhere; }
         .room-summary-card__metrics { display:grid; gap:8px; grid-template-columns:repeat(${compact ? Math.min(metrics.length || 1, 2) : Math.min(metrics.length || 1, 3)}, minmax(0,1fr)); }
         .room-summary-card__metric {
-          background:color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          background:color-mix(in srgb, var(--primary-text-color) 3%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius:16px;
+          border-radius:18px;
           display:grid;
           gap:4px;
           min-height:${climateLayout ? "72px" : "64px"};
@@ -672,6 +683,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border-radius:${chipRadius};
+          box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           color:var(--secondary-text-color);
           display:inline-flex;
           flex:0 0 auto;
@@ -703,21 +715,22 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           align-items:center;
           appearance:none;
           background:${controlAccentBg};
-          border:1px solid color-mix(in srgb, ${controlAccentColor} 12%, transparent);
-          border-radius:calc(${controlSize} * 0.35);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius:999px;
+          box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           color:${controlAccentColor};
           cursor:pointer;
           display:inline-flex;
           font:inherit;
           font-size:11px;
-          font-weight:700;
+          font-weight:600;
           gap:6px;
           line-height:1;
           min-height:${controlSize};
-          padding:0 12px;
-          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
+          padding:0 14px;
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
-        .room-summary-card__action:hover { border-color:color-mix(in srgb, ${controlAccentColor} 24%, transparent); }
+        .room-summary-card__action:hover { border-color:color-mix(in srgb, var(--primary-text-color) 16%, transparent); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 8px 18px rgba(0, 0, 0, 0.12); }
         .room-summary-card__action:active { transform:scale(0.98); }
         .room-summary-card__action ha-icon { --mdc-icon-size:16px; }
         .room-summary-card__body { cursor:${config.tap_action !== "none" ? "pointer" : "default"}; }

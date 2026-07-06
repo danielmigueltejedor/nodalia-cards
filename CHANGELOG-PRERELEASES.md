@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.9] - 2026-07-07
+
+Ninth **`2.0.0`** **`alpha`**: Camera, Room Summary, and Menu Card visual parity with core Nodalia cards. Release channel **`2.0.0-alpha.9`**.
+
+### Changed
+
+- **`room_summary`:** active card shell (gradient, accent border, glow), circular icon bubble with depth, softer metric tiles, neutral quick-action pills, larger title typography.
+- **`menu`:** removed segmented double-frame chrome, pill items aligned to core chip styling, accent active state, card glow when a tab is active.
+- **`camera`:** 28px card radius with divider border, core chip tokens, card-mode preview inset radius, feed layout keeps flush media with padded header/chips, expand bubble matches entity controls.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.9`.
+
 ## [2.0.0-alpha.8] - 2026-07-07
 
 Eighth **`2.0.0`** **`alpha`**: fix broken GitHub release tags that pointed at the stable **`1.3.5`** commit instead of the 2.0 bundle. Release channel **`2.0.0-alpha.8`**.

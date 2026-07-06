@@ -38,20 +38,21 @@ const DEFAULT_CONFIG = {
   items: [],
   styles: {
     card: {
-      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
+      background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
       border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
+      padding: "10px 12px",
     },
     item: {
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
-      active_background: "color-mix(in srgb, var(--primary-text-color) 10%, transparent)",
+      active_background: "color-mix(in srgb, var(--primary-color) 16%, transparent)",
       active_color: "var(--primary-text-color)",
       border: "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
-      active_border: "color-mix(in srgb, var(--primary-text-color) 16%, transparent)",
+      active_border: "color-mix(in srgb, var(--primary-color) 24%, transparent)",
     },
+    accent: "var(--primary-color)",
   },
 };
 
@@ -920,6 +921,8 @@ class NodaliaMenuCard extends HTMLElement {
 
     const itemStyles = config.styles?.item || DEFAULT_CONFIG.styles.item;
     const cardStyles = config.styles?.card || DEFAULT_CONFIG.styles.card;
+    const accentColor = escapeHtml(config.styles?.accent || DEFAULT_CONFIG.styles.accent || "var(--primary-color)");
+    const hasActiveItem = Boolean(this._activeItemId);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -930,10 +933,10 @@ class NodaliaMenuCard extends HTMLElement {
           --menu-card-radius: ${cardStyles.border_radius};
           --menu-card-shadow: ${cardStyles.box_shadow};
           --menu-card-padding: ${cardStyles.padding};
-          --menu-height: 48px;
-          --menu-radius: 14px;
+          --menu-height: 40px;
+          --menu-radius: 999px;
           --menu-gap: 6px;
-          --menu-font-size: 12px;
+          --menu-font-size: 11px;
           --menu-active-bg: ${itemStyles.active_background};
           --menu-active-color: ${itemStyles.active_color};
           --menu-active-border: ${itemStyles.active_border};
@@ -952,7 +955,7 @@ class NodaliaMenuCard extends HTMLElement {
           color: var(--primary-text-color);
           display: block;
           isolation: isolate;
-          overflow: visible;
+          overflow: hidden;
           padding: var(--menu-card-padding);
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -965,6 +968,20 @@ class NodaliaMenuCard extends HTMLElement {
           inset: 0;
           pointer-events: none;
           position: absolute;
+          z-index: 0;
+        }
+
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${hasActiveItem ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
           z-index: 0;
         }
 
@@ -1005,18 +1022,19 @@ class NodaliaMenuCard extends HTMLElement {
           background: var(--menu-item-bg);
           border: 1px solid var(--menu-item-border);
           border-radius: var(--menu-radius);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           color: var(--menu-item-color);
           cursor: pointer;
           display: inline-flex;
           flex: 0 0 auto;
           font: inherit;
           font-size: var(--menu-font-size);
-          font-weight: 700;
+          font-weight: 600;
           gap: 8px;
           justify-content: center;
           min-height: var(--menu-height);
           min-width: 54px;
-          padding: 0 12px;
+          padding: 0 14px;
           position: relative;
           transition: background 180ms ease, transform 150ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
           white-space: nowrap;
@@ -1033,8 +1051,8 @@ class NodaliaMenuCard extends HTMLElement {
         .menu-item.is-active {
           background: var(--menu-active-bg);
           border-color: var(--menu-active-border);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 8px 18px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.12));
           color: var(--menu-active-color);
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
         }
 
         .menu-item:focus-visible {
@@ -1081,14 +1099,14 @@ class NodaliaMenuCard extends HTMLElement {
         }
 
         .menu-wrap--segmented {
-          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 16px;
-          padding: 6px;
+          background: transparent;
+          border: none;
+          border-radius: 0;
+          padding: 0;
         }
 
         .menu-wrap--segmented .menu-track {
-          gap: 4px;
+          gap: 6px;
         }
 
         .menu-wrap--pill .menu-item {

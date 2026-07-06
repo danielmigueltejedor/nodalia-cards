@@ -51,21 +51,24 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "none",
-      border_radius: "18px",
+      border: "1px solid var(--divider-color)",
+      border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
-      padding: "0",
-      gap: "0",
+      padding: "14px",
+      gap: "10px",
     },
     preview: {
       aspect_ratio: "16 / 9",
-      border_radius: "0",
+      border_radius: "18px",
       overlay_strength: 0.42,
       min_height: "220px",
-      mosaic_gap: "0px",
+      mosaic_gap: "8px",
     },
-    title_size: "14px",
+    title_size: "15px",
     subtitle_size: "12px",
+    chip_height: "24px",
+    chip_font_size: "11px",
+    chip_padding: "0 9px",
     chip_border_radius: "999px",
   },
 };
@@ -1051,7 +1054,15 @@ class NodaliaCameraCard extends HTMLElement {
     const overlayStrength = clamp(Number(styles.preview?.overlay_strength) || DEFAULT_CONFIG.styles.preview.overlay_strength, 0.1, 0.8);
     const previewAspect = String(styles.preview?.aspect_ratio || DEFAULT_CONFIG.styles.preview.aspect_ratio);
     const previewMinHeight = String(styles.preview?.min_height || DEFAULT_CONFIG.styles.preview.min_height || "220px");
-    const mosaicGap = String(styles.preview?.mosaic_gap || DEFAULT_CONFIG.styles.preview.mosaic_gap || "0px");
+    const mosaicGap = String(styles.preview?.mosaic_gap || DEFAULT_CONFIG.styles.preview.mosaic_gap || "8px");
+    const chipHeight = escapeHtml(String(styles.chip_height || DEFAULT_CONFIG.styles.chip_height || "24px"));
+    const chipFontSize = escapeHtml(String(styles.chip_font_size || DEFAULT_CONFIG.styles.chip_font_size || "11px"));
+    const chipPadding = escapeHtml(String(styles.chip_padding || DEFAULT_CONFIG.styles.chip_padding || "0 9px"));
+    const effectivePadding = feedLayout ? "0" : (styles.card.padding || DEFAULT_CONFIG.styles.card.padding);
+    const effectiveGap = feedLayout ? "0" : (styles.card.gap || DEFAULT_CONFIG.styles.card.gap);
+    const previewRadius = feedLayout
+      ? "0"
+      : escapeHtml(String(styles.preview?.border_radius || DEFAULT_CONFIG.styles.preview.border_radius || "18px"));
     const cardBackground = unavailable
       ? styles.card.background
       : securityLayout
@@ -1083,14 +1094,28 @@ class NodaliaCameraCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${styles.card.box_shadow};
           color: var(--primary-text-color);
+          isolation: isolate;
           overflow: hidden;
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        ha-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .camera-card__content {
           display: grid;
-          gap: ${styles.card.gap};
-          padding: ${styles.card.padding};
+          gap: ${effectiveGap};
+          padding: ${effectivePadding};
+          position: relative;
+          z-index: 1;
         }
 
         .camera-card__content--entering {
@@ -1100,14 +1125,18 @@ class NodaliaCameraCard extends HTMLElement {
         .camera-card__preview {
           aspect-ratio: ${previewAspect};
           background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: ${styles.preview?.border_radius || "20px"};
+          border-radius: ${previewRadius};
           min-height: ${previewMinHeight};
           overflow: hidden;
           position: relative;
         }
 
         .camera-card--feed .camera-card__preview {
-          border-radius: ${styles.preview?.border_radius || "0"};
+          border-radius: 0;
+        }
+
+        .camera-card--feed ha-card::before {
+          display: none;
         }
 
         .camera-card--feed .camera-card__overlay {
@@ -1203,14 +1232,15 @@ class NodaliaCameraCard extends HTMLElement {
 
         .camera-card__expand {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 10%, rgba(0, 0, 0, 0.28));
+          background: color-mix(in srgb, var(--primary-text-color) 8%, rgba(0, 0, 0, 0.32));
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
           bottom: 12px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
-          height: 36px;
+          height: 38px;
           justify-content: center;
           left: auto;
           margin: 0;
@@ -1218,7 +1248,12 @@ class NodaliaCameraCard extends HTMLElement {
           position: absolute;
           right: 12px;
           top: auto;
-          width: 36px;
+          transition: transform 150ms ease, box-shadow 180ms ease;
+          width: 38px;
+        }
+
+        .camera-card__expand:active {
+          transform: scale(0.96);
         }
 
         .camera-card__header {
@@ -1226,6 +1261,27 @@ class NodaliaCameraCard extends HTMLElement {
           display: grid;
           gap: 4px;
           min-width: 0;
+          padding: ${feedLayout ? "12px 14px 0" : "0"};
+        }
+
+        .camera-card__chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          padding: ${feedLayout ? "0 14px 12px" : "0"};
+        }
+
+        .camera-card__chip {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: ${chipBorderRadius};
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          display: inline-flex;
+          font-size: ${chipFontSize};
+          font-weight: 600;
+          line-height: 1;
+          min-height: ${chipHeight};
+          padding: ${chipPadding};
         }
 
         .camera-card__title {
@@ -1237,25 +1293,6 @@ class NodaliaCameraCard extends HTMLElement {
         .camera-card__state {
           color: var(--secondary-text-color);
           font-size: ${styles.subtitle_size};
-        }
-
-        .camera-card__chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-
-        .camera-card__chip {
-          align-items: center;
-          border-radius: ${chipBorderRadius};
-          display: inline-flex;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          line-height: 1;
-          min-height: 22px;
-          padding: 0 10px;
-          text-transform: uppercase;
         }
 
         .camera-card__chip--live {
