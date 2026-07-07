@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.12] - 2026-07-07
+
+Twelfth **`2.0.0`** **`alpha`**: republish after fixing a stale `v2.0.0-alpha.11` tag that briefly pointed at **1.3.5**. Release channel **`2.0.0-alpha.12`**.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.12` so HACS fetches a fresh resource URL.
+
 ## [2.0.0-alpha.11] - 2026-07-07
 
 Eleventh **`2.0.0`** **`alpha`**: Room Summary Hub editor fix and visual polish. Release channel **`2.0.0-alpha.11`**.
