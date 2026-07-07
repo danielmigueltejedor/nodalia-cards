@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.10] - 2026-07-07
+
+Tenth **`2.0.0`** **`alpha`**: Room Summary Hub layout for per-room device control. Release channel **`2.0.0-alpha.10`**.
+
+### Added
+
+- **`room_summary`:** new default **`hub`** layout with a home view (room hero bubble, temperature/humidity metrics, contextual quick actions, main media strip) and a right-side icon-only navigation rail.
+- **`room_summary`:** hub sub-panels for lights (toggle + brightness), covers, climate, vacuums, and media player controls.
+- **`room_summary`:** `vacuums` and `fans` entity lists for hub navigation and hot-room fan quick actions.
+- **`i18n` / `editor`:** hub layout plus vacuum/fan section labels.
+
+### Changed
+
+- **`room_summary`:** default layout is now **`hub`** instead of **`standard`**.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.10`.
+
 ## [2.0.0-alpha.9] - 2026-07-07
 
 Ninth **`2.0.0`** **`alpha`**: Camera, Room Summary, and Menu Card visual parity with core Nodalia cards. Release channel **`2.0.0-alpha.9`**.

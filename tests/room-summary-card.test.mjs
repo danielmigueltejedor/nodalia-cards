@@ -164,6 +164,26 @@ test("room summary normalizeConfig accepts scalar and list entity fields", () =>
   assert.equal(config.covers[0], "cover.a");
 });
 
+test("room summary hub layout exposes navigation rail and panels", () => {
+  const source = read("nodalia-room-summary-card.js");
+  assert.match(source, /layout: "hub"/);
+  assert.match(source, /_renderHub\(/);
+  assert.match(source, /room-hub__rail/);
+  assert.match(source, /`nav:\$\{item\.id\}`/);
+  assert.match(source, /_renderHubLightPanel/);
+  assert.match(source, /_renderHubVacuumPanel/);
+});
+
+test("room summary normalizeConfig accepts vacuums and fans", () => {
+  const config = rs.normalizeConfig({
+    vacuums: "vacuum.kitchen",
+    fans: ["fan.bedroom", "fan.bedroom"],
+  });
+  assert.equal(config.vacuums.length, 1);
+  assert.equal(config.vacuums[0], "vacuum.kitchen");
+  assert.equal(config.fans.length, 1);
+});
+
 test("room summary editor emits valid config and preserves unknown fields", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /stripEqualToDefaults/);

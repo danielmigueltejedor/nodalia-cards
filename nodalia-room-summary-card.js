@@ -2,7 +2,8 @@ const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
 const CARD_VERSION = "2.0.0-alpha.3";
 
-const LAYOUT_MODES = new Set(["compact", "standard", "detailed", "security", "climate"]);
+const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
+const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "media"]);
 const DENSITY_MODES = new Set(["comfortable", "compact"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
 
@@ -11,7 +12,7 @@ const DEFAULT_CONFIG = {
   icon: "mdi:floor-plan",
   image: "",
   language: "auto",
-  layout: "standard",
+  layout: "hub",
   density: "comfortable",
   temperature: "",
   humidity: "",
@@ -20,6 +21,8 @@ const DEFAULT_CONFIG = {
   climate: "",
   camera: "",
   media_player: "",
+  vacuums: [],
+  fans: [],
   power: "",
   air_quality: "",
   lights: [],
@@ -84,7 +87,19 @@ const DEFAULT_CONFIG = {
   },
 };
 
-const STUB_CONFIG = { name: "Living room", icon: "mdi:sofa", layout: "standard" };
+const STUB_CONFIG = {
+  name: "Living room",
+  icon: "mdi:sofa",
+  layout: "hub",
+  temperature: "sensor.living_room_temperature",
+  humidity: "sensor.living_room_humidity",
+  presence: "binary_sensor.living_room_presence",
+  lights: ["light.living_room"],
+  covers: ["cover.living_room_blind"],
+  climate: "climate.living_room",
+  vacuums: ["vacuum.living_room"],
+  media_player: "media_player.living_room",
+};
 
 function isObject(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
 function deepClone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
@@ -189,7 +204,7 @@ function normalizeConfig(rawConfig = {}) {
   config.icon = String(config.icon ?? DEFAULT_CONFIG.icon).trim() || DEFAULT_CONFIG.icon;
   config.image = String(config.image ?? "").trim();
   config.language = String(config.language ?? "auto").trim() || "auto";
-  config.layout = LAYOUT_MODES.has(normalizeTextKey(config.layout)) ? normalizeTextKey(config.layout) : "standard";
+  config.layout = LAYOUT_MODES.has(normalizeTextKey(config.layout)) ? normalizeTextKey(config.layout) : "hub";
   config.density = DENSITY_MODES.has(normalizeTextKey(config.density)) ? normalizeTextKey(config.density) : "comfortable";
 
   config.temperature = entityScalar(config.temperature, config.temperature_entity);
@@ -199,6 +214,8 @@ function normalizeConfig(rawConfig = {}) {
   config.climate = entityScalar(config.climate, config.climate_entity);
   config.camera = entityScalar(config.camera);
   config.media_player = entityScalar(config.media_player);
+  config.vacuums = entityList(config.vacuums, config.vacuum, config.vacuum_entities);
+  config.fans = entityList(config.fans, config.fan_entities);
   config.power = entityScalar(config.power);
   config.air_quality = entityScalar(config.air_quality);
 
@@ -247,6 +264,7 @@ function hasRoomContent(config) {
     || c.temperature || c.humidity || c.presence || c.occupancy || c.climate
     || c.camera || c.media_player || c.power || c.air_quality
     || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
+    || (c.vacuums || []).length || (c.fans || []).length
     || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length,
   );
 }
@@ -356,17 +374,22 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._hass = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._activePanel = "home";
+    this._panelTransition = false;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("input", this._onShadowInput);
     this._animateContentOnNextRender = true;
     if (this._hass) { this._lastRenderSignature = ""; this._render(); }
   }
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("input", this._onShadowInput);
     this._lastRenderSignature = "";
   }
 
@@ -387,7 +410,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._render();
   }
 
-  getCardSize() { return this._config?.layout === "compact" ? 2 : 3; }
+  getCardSize() {
+    const layout = this._config?.layout || "hub";
+    if (layout === "hub") return 4;
+    return layout === "compact" ? 2 : 3;
+  }
   getGridOptions() { return { rows: "auto", columns: "full", min_rows: this.getCardSize() }; }
 
   _t(key, fallback, values = {}) {
@@ -399,7 +426,185 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
-    return `${JSON.stringify(normalizeConfig(this._config))}|${buildRoomSummary(hass, this._config).lightsOn}`;
+    const config = normalizeConfig(this._config);
+    if (config.layout === "hub") {
+      const ids = [
+        config.temperature, config.humidity, config.presence, config.climate,
+        config.media_player, ...(config.lights || []), ...(config.covers || []),
+        ...(config.vacuums || []), ...(config.fans || []),
+      ].filter(Boolean);
+      const states = ids.map(id => {
+        const state = hass?.states?.[id];
+        return state ? `${id}:${state.state}:${state.last_changed}` : `${id}:missing`;
+      }).join("|");
+      return `${this._activePanel}|${states}|${JSON.stringify(config)}`;
+    }
+    return `${JSON.stringify(config)}|${buildRoomSummary(hass, config).lightsOn}`;
+  }
+
+  _entityLabel(entityId) {
+    const state = getState(this._hass, entityId);
+    return String(state?.attributes?.friendly_name || entityId || "").trim() || entityId;
+  }
+
+  _entityIcon(entityId, fallback = "mdi:help-circle-outline") {
+    const state = getState(this._hass, entityId);
+    return String(state?.attributes?.icon || fallback).trim() || fallback;
+  }
+
+  _lightBrightnessPct(state) {
+    if (!state || typeof state.attributes?.brightness !== "number") return 0;
+    return Math.max(1, Math.min(100, Math.round((state.attributes.brightness / 255) * 100)));
+  }
+
+  _supportsLightBrightness(state) {
+    return Boolean(state && typeof state.attributes?.brightness === "number");
+  }
+
+  _getHubNavItems(config, summary) {
+    const items = [];
+    if (config.lights?.length) {
+      items.push({
+        id: "lights",
+        icon: summary?.lights_on ? "mdi:lightbulb-on" : "mdi:lightbulb-outline",
+        label: this._t("lights", "Lights"),
+      });
+    }
+    if (config.covers?.length) {
+      items.push({ id: "covers", icon: "mdi:window-shutter", label: this._t("covers", "Covers") });
+    }
+    if (config.climate) {
+      items.push({ id: "climate", icon: "mdi:home-thermometer-outline", label: this._t("climateLabel", "Climate") });
+    }
+    if (config.vacuums?.length) {
+      items.push({ id: "vacuum", icon: "mdi:robot-vacuum", label: this._t("vacuum", "Vacuum") });
+    }
+    if (config.media_player) {
+      items.push({
+        id: "media",
+        icon: summary?.media_playing ? "mdi:play-circle" : "mdi:play-circle-outline",
+        label: this._t("mediaPlayer", "Media player"),
+      });
+    }
+    return items;
+  }
+
+  _getContextualActions(summary, config) {
+    if (config.show_quick_actions === false) return [];
+    const actions = [];
+    if (config.lights?.length) {
+      actions.push({
+        id: summary.lights_on ? "lights_off" : "lights_on",
+        icon: summary.lights_on ? "mdi:lightbulb-off" : "mdi:lightbulb-on",
+        label: summary.lights_on ? this._t("turnOffLights", "Turn off lights") : this._t("turnOnLights", "Turn on lights"),
+      });
+    }
+    if (config.covers?.length) {
+      actions.push({
+        id: summary.cover_open ? "covers_close" : "covers_open",
+        icon: summary.cover_open ? "mdi:window-shutter" : "mdi:window-shutter-open",
+        label: summary.cover_open ? this._t("closeCovers", "Close covers") : this._t("openCovers", "Open covers"),
+      });
+    }
+    if (summary.hot && config.fans?.length) {
+      const fanOff = config.fans.every(id => {
+        const state = getState(this._hass, id);
+        return !state || !stateIsOn(state);
+      });
+      if (fanOff) {
+        actions.push({
+          id: "fans_on",
+          icon: "mdi:fan",
+          label: this._t("turnOnFans", "Turn on fans"),
+        });
+      }
+    }
+    if (config.show_presence && summary.occupied) {
+      actions.push({ id: "presence", icon: "mdi:account-check", label: this._t("occupied", "Occupied"), readonly: true });
+    } else if (config.show_presence && summary.empty) {
+      actions.push({ id: "presence", icon: "mdi:account-off-outline", label: this._t("vacant", "Vacant"), readonly: true });
+    }
+    if (summary.security_issue) {
+      actions.push({ id: "security", icon: "mdi:shield-alert", label: this._t("securityIssue", "Security issue"), warn: true });
+    }
+    if (summary.hot) actions.push({ id: "comfort_hot", icon: "mdi:fire", label: this._t("hot", "Hot"), warn: true, readonly: true });
+    if (summary.humid) actions.push({ id: "comfort_humid", icon: "mdi:water-percent", label: this._t("humid", "Humid"), warn: true, readonly: true });
+    return actions;
+  }
+
+  _setHubPanel(panel) {
+    const next = HUB_PANELS.has(panel) ? panel : "home";
+    if (next === this._activePanel) return;
+    this._activePanel = next;
+    this._panelTransition = true;
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    this._triggerHaptic();
+    this._render();
+  }
+
+  _toggleEntity(entityId) {
+    const state = getState(this._hass, entityId);
+    const domain = entityDomain(entityId);
+    if (!state || !domain) return;
+    this._triggerHaptic();
+    if (domain === "light") {
+      void this._invoke("light", stateIsOn(state) ? "turn_off" : "turn_on", { entity_id: entityId });
+      return;
+    }
+    if (domain === "fan") {
+      void this._invoke("fan", stateIsOn(state) ? "turn_off" : "turn_on", { entity_id: entityId });
+      return;
+    }
+    if (domain === "cover") {
+      void this._invoke("cover", stateIsOpen(state) ? "close_cover" : "open_cover", { entity_id: entityId });
+      return;
+    }
+    if (domain === "switch") {
+      void this._invoke("switch", stateIsOn(state) ? "turn_off" : "turn_on", { entity_id: entityId });
+    }
+  }
+
+  _runVacuumService(entityId, service) {
+    if (!entityId) return;
+    this._triggerHaptic();
+    void this._invoke("vacuum", service, { entity_id: entityId });
+  }
+
+  _runClimateDelta(entityId, delta) {
+    const state = getState(this._hass, entityId);
+    if (!state) return;
+    const current = finiteNumber(state.attributes?.temperature);
+    if (current === null) return;
+    this._triggerHaptic();
+    void this._invoke("climate", "set_temperature", { entity_id: entityId, temperature: current + delta });
+  }
+
+  _runMediaControl(control) {
+    const entityId = this._config?.media_player;
+    if (!entityId) return;
+    this._triggerHaptic();
+    if (control === "play_pause") {
+      const state = getState(this._hass, entityId);
+      const playing = normalizeTextKey(state?.state) === "playing";
+      void this._invoke("media_player", playing ? "media_pause" : "media_play", { entity_id: entityId });
+      return;
+    }
+    if (control === "next") void this._invoke("media_player", "media_next_track", { entity_id: entityId });
+    if (control === "prev") void this._invoke("media_player", "media_previous_track", { entity_id: entityId });
+  }
+
+  _onShadowInput(event) {
+    const el = event.target;
+    if (!(el instanceof HTMLInputElement) || el.type !== "range") return;
+    const entityId = String(el.dataset.entityId || "").trim();
+    if (!entityId) return;
+    const pct = Number(el.value);
+    if (!Number.isFinite(pct)) return;
+    void this._invoke("light", "turn_on", {
+      entity_id: entityId,
+      brightness: Math.max(1, Math.min(255, Math.round((pct / 100) * 255))),
+    });
   }
 
   _triggerHaptic() {
@@ -464,6 +669,10 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
     if (action === "media" && cfg.media_player) {
       fireEvent(this, "hass-more-info", { entityId: cfg.media_player });
+      return;
+    }
+    if (action === "fans_on" && cfg.fans?.length) {
+      void this._invoke("fan", "turn_on", { entity_id: cfg.fans });
     }
   }
 
@@ -473,9 +682,44 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     const action = el.dataset.roomAction;
-    if (action === "primary") this._performCardAction("tap");
-    else if (action === "hold") this._performCardAction("hold");
-    else if (action?.startsWith("quick:")) this._runQuickAction(action.slice(6));
+    if (action === "primary") {
+      this._performCardAction("tap");
+      return;
+    }
+    if (action === "hold") {
+      this._performCardAction("hold");
+      return;
+    }
+    if (action?.startsWith("nav:")) {
+      this._setHubPanel(action.slice(4));
+      return;
+    }
+    if (action?.startsWith("toggle:")) {
+      this._toggleEntity(action.slice(7));
+      return;
+    }
+    if (action?.startsWith("vacuum:")) {
+      const [, service, entityId] = action.split(":");
+      this._runVacuumService(entityId, service);
+      return;
+    }
+    if (action?.startsWith("cover:")) {
+      const [, service, entityId] = action.split(":");
+      if (!entityId) return;
+      this._triggerHaptic();
+      void this._invoke("cover", service, { entity_id: entityId });
+      return;
+    }
+    if (action?.startsWith("climate:")) {
+      const [, delta, entityId] = action.split(":");
+      this._runClimateDelta(entityId, Number(delta));
+      return;
+    }
+    if (action?.startsWith("media:")) {
+      this._runMediaControl(action.slice(6));
+      return;
+    }
+    if (action?.startsWith("quick:")) this._runQuickAction(action.slice(6));
   }
 
   _chips(summary, config) {
@@ -550,6 +794,345 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return actions;
   }
 
+  _renderHubBubble(icon, action, { active = false, large = false, label = "" } = {}) {
+    const classes = [
+      "room-hub__bubble",
+      active ? "room-hub__bubble--active" : "",
+      large ? "room-hub__bubble--large" : "",
+    ].filter(Boolean).join(" ");
+    return `<button type="button" class="${classes}" data-room-action="${escapeHtml(action)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label || icon)}">
+      <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+    </button>`;
+  }
+
+  _renderHubRail(navItems, activePanel) {
+    const bubbles = [];
+    if (activePanel !== "home") {
+      bubbles.push(this._renderHubBubble("mdi:home", "nav:home", {
+        active: false,
+        label: this._t("hubHome", "Home"),
+      }));
+    }
+    navItems
+      .filter(item => activePanel === "home" || item.id !== activePanel)
+      .forEach(item => {
+        bubbles.push(this._renderHubBubble(item.icon, `nav:${item.id}`, {
+          active: activePanel === item.id,
+          label: item.label,
+        }));
+      });
+    return `<aside class="room-hub__rail" aria-label="${escapeHtml(this._t("hubNavigation", "Room navigation"))}">
+      ${bubbles.join("")}
+    </aside>`;
+  }
+
+  _renderHubHomeMedia(config, summary) {
+    if (!config.media_player || config.show_media === false) return "";
+    const state = getState(this._hass, config.media_player);
+    if (!state || isUnavailable(state)) return "";
+    const title = String(state.attributes?.media_title || state.attributes?.friendly_name || "").trim();
+    const artist = String(state.attributes?.media_artist || "").trim();
+    const playing = summary.media_playing;
+    return `<div class="room-hub__media-strip">
+      <div class="room-hub__media-copy">
+        <div class="room-hub__media-title">${escapeHtml(title || this._t("mediaPlayer", "Media player"))}</div>
+        ${artist ? `<div class="room-hub__media-artist">${escapeHtml(artist)}</div>` : ""}
+      </div>
+      <div class="room-hub__media-controls">
+        <button type="button" class="room-hub__mini-control" data-room-action="media:prev" aria-label="Previous"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
+        <button type="button" class="room-hub__mini-control room-hub__mini-control--primary" data-room-action="media:play_pause" aria-label="Play/Pause">
+          <ha-icon icon="${playing ? "mdi:pause" : "mdi:play"}"></ha-icon>
+        </button>
+        <button type="button" class="room-hub__mini-control" data-room-action="media:next" aria-label="Next"><ha-icon icon="mdi:skip-next"></ha-icon></button>
+      </div>
+    </div>`;
+  }
+
+  _renderHubHome(config, summary, styles, accentColor) {
+    const title = config.name || this._t("defaultName", "Room");
+    const image = window.NodaliaUtils?.sanitizeActionUrl?.(config.image, { allowRelative: true }) || "";
+    const contextual = this._getContextualActions(summary, config);
+    const heroStyle = image ? ` style="background-image:url('${escapeHtml(image)}')"` : "";
+    const metricBubbles = [];
+    if (config.show_temperature && config.temperature && summary.temperature !== "—") {
+      metricBubbles.push(`<div class="room-hub__metric-bubble" title="${escapeHtml(this._t("temperature", "Temperature"))}">
+        <ha-icon icon="mdi:thermometer"></ha-icon><span>${escapeHtml(summary.temperature)}</span>
+      </div>`);
+    }
+    if (config.show_humidity && config.humidity && summary.humidity !== "—") {
+      metricBubbles.push(`<div class="room-hub__metric-bubble" title="${escapeHtml(this._t("humidity", "Humidity"))}">
+        <ha-icon icon="mdi:water-percent"></ha-icon><span>${escapeHtml(summary.humidity)}</span>
+      </div>`);
+    }
+    return `<div class="room-hub__home">
+      <div class="room-hub__hero"${heroStyle}>
+        <div class="room-hub__hero-overlay"></div>
+        <div class="room-hub__hero-center">
+          ${this._renderHubBubble(config.icon, "primary", { large: true, label: title })}
+          <div class="room-hub__hero-title">${escapeHtml(title)}</div>
+        </div>
+        ${metricBubbles.length ? `<div class="room-hub__metric-row">${metricBubbles.join("")}</div>` : ""}
+      </div>
+      ${contextual.length ? `<div class="room-hub__context-actions">${contextual.map(action => `
+        <button type="button" class="room-hub__context-action ${action.warn ? "room-hub__context-action--warn" : ""} ${action.readonly ? "room-hub__context-action--readonly" : ""}"
+          data-room-action="${action.readonly ? "" : `quick:${escapeHtml(action.id)}`}" ${action.readonly ? "disabled" : ""}>
+          <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon><span>${escapeHtml(action.label)}</span>
+        </button>`).join("")}</div>` : ""}
+      ${this._renderHubHomeMedia(config, summary)}
+    </div>`;
+  }
+
+  _renderHubLightPanel(config) {
+    return `<div class="room-hub__panel room-hub__panel--lights">
+      <div class="room-hub__panel-title">${escapeHtml(this._t("lights", "Lights"))}</div>
+      <div class="room-hub__device-list">${(config.lights || []).map(entityId => {
+    const state = getState(this._hass, entityId);
+    const on = state && stateIsOn(state);
+    const supportsBrightness = this._supportsLightBrightness(state);
+    const brightness = this._lightBrightnessPct(state);
+    return `<article class="room-hub__device-card ${on ? "is-on" : ""}">
+      <button type="button" class="room-hub__device-bubble" data-room-action="toggle:${escapeHtml(entityId)}" aria-label="${escapeHtml(this._entityLabel(entityId))}">
+        <ha-icon icon="${escapeHtml(on ? "mdi:lightbulb-on" : this._entityIcon(entityId, "mdi:lightbulb-outline"))}"></ha-icon>
+      </button>
+      <div class="room-hub__device-body">
+        <div class="room-hub__device-name">${escapeHtml(this._entityLabel(entityId))}</div>
+        <div class="room-hub__device-state">${escapeHtml(state && !isUnavailable(state) ? String(state.state) : this._t("entityUnavailable", "Unavailable"))}</div>
+        ${supportsBrightness ? `<input type="range" min="1" max="100" value="${brightness}" data-entity-id="${escapeHtml(entityId)}" aria-label="Brightness">` : ""}
+      </div>
+    </article>`;
+  }).join("")}</div>
+    </div>`;
+  }
+
+  _renderHubCoverPanel(config) {
+    return `<div class="room-hub__panel room-hub__panel--covers">
+      <div class="room-hub__panel-title">${escapeHtml(this._t("covers", "Covers"))}</div>
+      <div class="room-hub__device-list">${(config.covers || []).map(entityId => {
+    const state = getState(this._hass, entityId);
+    const position = finiteNumber(state?.attributes?.current_position);
+    return `<article class="room-hub__device-card">
+      <button type="button" class="room-hub__device-bubble" data-room-action="toggle:${escapeHtml(entityId)}">
+        <ha-icon icon="${escapeHtml(this._entityIcon(entityId, "mdi:window-shutter"))}"></ha-icon>
+      </button>
+      <div class="room-hub__device-body">
+        <div class="room-hub__device-name">${escapeHtml(this._entityLabel(entityId))}</div>
+        <div class="room-hub__device-state">${escapeHtml(position !== null ? `${position}%` : String(state?.state || "—"))}</div>
+        <div class="room-hub__device-controls">
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:open_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:stop_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:stop"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:close_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+        </div>
+      </div>
+    </article>`;
+  }).join("")}</div>
+    </div>`;
+  }
+
+  _renderHubClimatePanel(config) {
+    const entityId = config.climate;
+    const state = getState(this._hass, entityId);
+    const current = finiteNumber(state?.attributes?.current_temperature);
+    const target = finiteNumber(state?.attributes?.temperature);
+    const unit = String(state?.attributes?.unit_of_measurement || "°C").trim();
+    const mode = String(state?.attributes?.hvac_mode || state?.state || "—");
+    return `<div class="room-hub__panel room-hub__panel--climate">
+      <div class="room-hub__panel-title">${escapeHtml(this._entityLabel(entityId))}</div>
+      <div class="room-hub__climate-dial">
+        <div class="room-hub__climate-value">${escapeHtml(current !== null ? `${current}${unit}` : "—")}</div>
+        <div class="room-hub__climate-target">${escapeHtml(target !== null ? `${this._t("target", "Target")} ${target}${unit}` : mode)}</div>
+        <div class="room-hub__device-controls">
+          <button type="button" class="room-hub__mini-control" data-room-action="climate:-1:${escapeHtml(entityId)}"><ha-icon icon="mdi:minus"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="climate:1:${escapeHtml(entityId)}"><ha-icon icon="mdi:plus"></ha-icon></button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  _renderHubVacuumPanel(config) {
+    return `<div class="room-hub__panel room-hub__panel--vacuum">
+      <div class="room-hub__panel-title">${escapeHtml(this._t("vacuum", "Vacuum"))}</div>
+      <div class="room-hub__device-list">${(config.vacuums || []).map(entityId => {
+    const state = getState(this._hass, entityId);
+    const battery = finiteNumber(state?.attributes?.battery_level);
+    return `<article class="room-hub__device-card">
+      <button type="button" class="room-hub__device-bubble" data-room-action="toggle:${escapeHtml(entityId)}">
+        <ha-icon icon="${escapeHtml(this._entityIcon(entityId, "mdi:robot-vacuum"))}"></ha-icon>
+      </button>
+      <div class="room-hub__device-body">
+        <div class="room-hub__device-name">${escapeHtml(this._entityLabel(entityId))}</div>
+        <div class="room-hub__device-state">${escapeHtml(String(state?.state || "—"))}${battery !== null ? ` · ${battery}%` : ""}</div>
+        <div class="room-hub__device-controls">
+          <button type="button" class="room-hub__mini-control" data-room-action="vacuum:start:${escapeHtml(entityId)}"><ha-icon icon="mdi:play"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="vacuum:pause:${escapeHtml(entityId)}"><ha-icon icon="mdi:pause"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="vacuum:stop:${escapeHtml(entityId)}"><ha-icon icon="mdi:stop"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="vacuum:return_to_base:${escapeHtml(entityId)}"><ha-icon icon="mdi:home-import-outline"></ha-icon></button>
+        </div>
+      </div>
+    </article>`;
+  }).join("")}</div>
+    </div>`;
+  }
+
+  _renderHubMediaPanel(config, summary) {
+    const entityId = config.media_player;
+    const state = getState(this._hass, entityId);
+    const title = String(state?.attributes?.media_title || this._entityLabel(entityId)).trim();
+    const artist = String(state?.attributes?.media_artist || "").trim();
+    const playing = summary.media_playing;
+    return `<div class="room-hub__panel room-hub__panel--media">
+      <div class="room-hub__panel-title">${escapeHtml(this._t("mediaPlayer", "Media player"))}</div>
+      <div class="room-hub__media-panel">
+        <div class="room-hub__media-title">${escapeHtml(title)}</div>
+        ${artist ? `<div class="room-hub__media-artist">${escapeHtml(artist)}</div>` : ""}
+        <div class="room-hub__media-controls room-hub__media-controls--large">
+          <button type="button" class="room-hub__mini-control" data-room-action="media:prev"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control room-hub__mini-control--primary" data-room-action="media:play_pause">
+            <ha-icon icon="${playing ? "mdi:pause" : "mdi:play"}"></ha-icon>
+          </button>
+          <button type="button" class="room-hub__mini-control" data-room-action="media:next"><ha-icon icon="mdi:skip-next"></ha-icon></button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  _renderHubPanelContent(panel, config, summary) {
+    if (panel === "lights") return this._renderHubLightPanel(config);
+    if (panel === "covers") return this._renderHubCoverPanel(config);
+    if (panel === "climate") return this._renderHubClimatePanel(config);
+    if (panel === "vacuum") return this._renderHubVacuumPanel(config);
+    if (panel === "media") return this._renderHubMediaPanel(config, summary);
+    return this._renderHubHome(config, summary);
+  }
+
+  _renderHub() {
+    const config = normalizeConfig(this._config || {});
+    const summary = buildRoomSummary(this._hass, config);
+    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const accentColor = escapeHtml(styles.accent || "var(--primary-color)");
+    const activePanel = HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
+    const navItems = this._getHubNavItems(config, summary);
+    const animate = config.animations?.enabled !== false && (this._animateContentOnNextRender || this._panelTransition);
+    const isActive = Boolean(summary.lights_on || summary.media_playing || summary.occupied || summary.comfortable);
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+    const cardBackground = isActive ? onCardBackground : styles.card.background;
+    const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
+    const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; --room-hub-duration:${config.animations?.enabled ? config.animations.content_duration : 0}ms; }
+        * { box-sizing:border-box; }
+        ha-card {
+          background:${cardBackground};
+          border:${cardBorder};
+          border-radius:${styles.card.border_radius};
+          box-shadow:${cardShadow};
+          color:var(--primary-text-color);
+          display:block;
+          isolation:isolate;
+          overflow:hidden;
+          position:relative;
+          transition:background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        ha-card::before {
+          background:${isActive
+    ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+    : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          border-radius:inherit; content:""; inset:0; pointer-events:none; position:absolute; z-index:0;
+        }
+        ha-card::after {
+          background:radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius:inherit; content:""; inset:0; opacity:${isActive ? "1" : "0"}; pointer-events:none; position:absolute; z-index:0;
+        }
+        .room-hub { display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; min-height:220px; padding:${styles.card.padding}; position:relative; z-index:1; }
+        .room-hub__stage { min-width:0; }
+        .room-hub__stage--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1) both; }
+        .room-hub__rail { align-items:center; display:flex; flex-direction:column; gap:8px; justify-content:flex-start; }
+        .room-hub__bubble {
+          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px;
+          box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,0.14);
+          color:var(--primary-text-color); cursor:pointer; display:inline-flex; height:42px; justify-content:center; padding:0; width:42px;
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        .room-hub__bubble--large { height:72px; width:72px; }
+        .room-hub__bubble--active, .room-hub__device-card.is-on .room-hub__device-bubble {
+          background:color-mix(in srgb, ${accentColor} 20%, transparent);
+          border-color:color-mix(in srgb, ${accentColor} 28%, transparent);
+          color:${accentColor};
+        }
+        .room-hub__bubble ha-icon, .room-hub__device-bubble ha-icon { --mdc-icon-size:20px; }
+        .room-hub__bubble--large ha-icon { --mdc-icon-size:34px; }
+        .room-hub__bubble:active, .room-hub__mini-control:active { transform:scale(0.96); }
+        .room-hub__hero {
+          background:center/cover no-repeat var(--ha-card-background); border-radius:22px; display:grid; gap:12px; min-height:180px;
+          overflow:hidden; padding:16px; position:relative;
+        }
+        .room-hub__hero-overlay { background:linear-gradient(180deg, rgba(0,0,0,.08), color-mix(in srgb, var(--ha-card-background) 84%, black)); inset:0; position:absolute; }
+        .room-hub__hero-center, .room-hub__metric-row, .room-hub__context-actions, .room-hub__media-strip, .room-hub__device-list, .room-hub__media-panel { position:relative; z-index:1; }
+        .room-hub__hero-center { align-items:center; display:grid; gap:10px; justify-items:center; text-align:center; }
+        .room-hub__hero-title { font-size:${styles.title_size}; font-weight:700; line-height:1.2; }
+        .room-hub__metric-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+        .room-hub__metric-bubble {
+          align-items:center; backdrop-filter:blur(8px); background:color-mix(in srgb, var(--ha-card-background) 72%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; display:inline-flex;
+          font-size:12px; font-weight:700; gap:6px; min-height:34px; padding:0 12px;
+        }
+        .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:6px; }
+        .room-hub__context-action {
+          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
+          cursor:pointer; display:inline-flex; font:inherit; font-size:11px; font-weight:600; gap:6px; min-height:32px; padding:0 12px;
+        }
+        .room-hub__context-action--warn { border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 24%, transparent); color:var(--warning-color,#f59e0b); }
+        .room-hub__context-action--readonly { cursor:default; opacity:.92; }
+        .room-hub__media-strip, .room-hub__device-card, .room-hub__climate-dial, .room-hub__media-panel {
+          background:color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent); border-radius:18px;
+        }
+        .room-hub__media-strip { align-items:center; display:flex; gap:10px; justify-content:space-between; margin-top:10px; padding:10px 12px; }
+        .room-hub__media-copy { min-width:0; }
+        .room-hub__media-title, .room-hub__device-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__media-artist, .room-hub__device-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__media-controls, .room-hub__device-controls { align-items:center; display:flex; gap:6px; }
+        .room-hub__media-controls--large { justify-content:center; margin-top:12px; }
+        .room-hub__mini-control {
+          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
+          cursor:pointer; display:inline-flex; height:34px; justify-content:center; width:34px;
+        }
+        .room-hub__mini-control--primary { background:color-mix(in srgb, ${accentColor} 18%, transparent); border-color:color-mix(in srgb, ${accentColor} 24%, transparent); color:${accentColor}; height:40px; width:40px; }
+        .room-hub__panel-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+        .room-hub__device-list { display:grid; gap:10px; }
+        .room-hub__device-card { align-items:center; display:grid; gap:10px; grid-template-columns:auto minmax(0,1fr); padding:12px; }
+        .room-hub__device-bubble { height:46px; width:46px; }
+        .room-hub__device-body { display:grid; gap:8px; min-width:0; }
+        .room-hub__device-body input[type="range"] { width:100%; }
+        .room-hub__climate-dial { display:grid; gap:10px; justify-items:center; padding:18px; text-align:center; }
+        .room-hub__climate-value { font-size:28px; font-weight:700; line-height:1; }
+        .room-hub__climate-target { color:var(--secondary-text-color); font-size:12px; }
+        .room-hub__media-panel { padding:16px; }
+        @keyframes room-hub-slide { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+        @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
+        @media (prefers-reduced-motion:reduce) { .room-hub__stage--enter { animation:none; } }
+      </style>
+      <ha-card class="room-summary-card room-summary-card--hub">
+        <div class="room-hub">
+          <div class="room-hub__stage ${animate ? "room-hub__stage--enter" : ""}">
+            ${activePanel === "home"
+    ? this._renderHubHome(config, summary, styles, accentColor)
+    : this._renderHubPanelContent(activePanel, config, summary)}
+          </div>
+          ${navItems.length ? this._renderHubRail(navItems, activePanel) : ""}
+        </div>
+      </ha-card>`;
+    this._animateContentOnNextRender = false;
+    this._panelTransition = false;
+  }
+
   _renderEmpty() {
     return `<ha-card class="room-summary-card room-summary-card--empty">
       <div class="room-summary-card__empty-title">${escapeHtml(this._t("emptyTitle", "Nodalia Room Summary Card"))}</div>
@@ -562,6 +1145,10 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const config = normalizeConfig(this._config || {});
     if (!hasRoomContent(config)) {
       this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(this._renderEmpty(), { card: config.styles?.card }) ?? this._renderEmpty();
+      return;
+    }
+    if (config.layout === "hub") {
+      this._renderHub();
       return;
     }
 
@@ -1195,6 +1782,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ${this._field("ed.room_summary.name", "name", c.name, { ph: "ed.room_summary.name_placeholder", full: true })}
         ${this._iconField("ed.room_summary.icon", "icon", c.icon)}
         ${this._select("ed.room_summary.layout", "layout", c.layout, [
+          { v: "hub", l: "ed.room_summary.layout_hub" },
           { v: "compact", l: "ed.room_summary.layout_compact" }, { v: "standard", l: "ed.room_summary.layout_standard" },
           { v: "detailed", l: "ed.room_summary.layout_detailed" }, { v: "security", l: "ed.room_summary.layout_security" },
           { v: "climate", l: "ed.room_summary.layout_climate" },
@@ -1222,6 +1810,8 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       </div>
       ${this._listSection("ed.room_summary.lights_section_title", "ed.room_summary.lights_section_hint", "lights", ["light"])}
       ${this._listSection("ed.room_summary.covers_section_title", "ed.room_summary.covers_section_hint", "covers", ["cover"])}
+      ${this._listSection("ed.room_summary.vacuums_section_title", "ed.room_summary.vacuums_section_hint", "vacuums", ["vacuum"])}
+      ${this._listSection("ed.room_summary.fans_section_title", "ed.room_summary.fans_section_hint", "fans", ["fan"])}
       ${this._listSection("ed.room_summary.doors_section_title", "ed.room_summary.doors_section_hint", "doors", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.windows_section_title", "ed.room_summary.windows_section_hint", "windows", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.locks_section_title", "ed.room_summary.locks_section_hint", "locks", ["lock"])}
