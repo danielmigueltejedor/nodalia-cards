@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.11] - 2026-07-07
+
+Eleventh **`2.0.0`** **`alpha`**: Room Summary Hub editor fix and visual polish. Release channel **`2.0.0-alpha.11`**.
+
+### Fixed
+
+- **Room Summary editor:** use `editorStatesSignature` instead of calling `editorFilteredStatesSignature` without a predicate (Safari error `S is not a function` / configuration error).
+- **Room Summary Hub:** remove nested gray containers; lights/vacuum/covers/media panels use Nodalia-style pill rows with icon bubbles, active gradients, and brightness sliders.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.11`.
+
 ## [2.0.0-alpha.10] - 2026-07-07
 
 Tenth **`2.0.0`** **`alpha`**: Room Summary Hub layout for per-room device control. Release channel **`2.0.0-alpha.10`**.

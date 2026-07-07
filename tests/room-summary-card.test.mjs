@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.3"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.11"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -184,12 +184,21 @@ test("room summary normalizeConfig accepts vacuums and fans", () => {
   assert.equal(config.fans.length, 1);
 });
 
+test("room summary hub layout uses nodalia-style light rows", () => {
+  const source = read("nodalia-room-summary-card.js");
+  assert.match(source, /room-hub__light-row/);
+  assert.match(source, /_renderHubLightRow/);
+  assert.doesNotMatch(source, /room-hub__device-card/);
+});
+
 test("room summary editor emits valid config and preserves unknown fields", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /config-changed/);
   assert.match(source, /_emitConfig\(true\)/);
   assert.match(source, /value-changed/);
+  assert.match(source, /editorStatesSignature/);
+  assert.doesNotMatch(source, /editorFilteredStatesSignature\?\.\(hass, this\._config\?\.language/);
   const merged = rs.normalizeConfig({ name: "Salon", custom_dashboard_flag: true });
   assert.equal(merged.custom_dashboard_flag, true);
 });

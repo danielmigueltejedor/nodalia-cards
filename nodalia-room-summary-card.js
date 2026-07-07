@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.11";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "media"]);
@@ -361,6 +361,41 @@ function moveListItem(list, fromIndex, toIndex) {
   }
   const [item] = list.splice(fromIndex, 1);
   list.splice(toIndex, 0, item);
+}
+
+function isUnsafeConfigPathKey(key) {
+  return key === "__proto__" || key === "constructor" || key === "prototype";
+}
+
+function getByPath(target, path) {
+  const parts = String(path || "").split(".");
+  let cursor = target;
+  for (const key of parts) {
+    if (!key) {
+      return undefined;
+    }
+    if (!isObject(cursor) && !Array.isArray(cursor)) {
+      return undefined;
+    }
+    cursor = cursor[key];
+  }
+  return cursor;
+}
+
+function setByPath(target, path, value) {
+  const parts = String(path || "").split(".");
+  if (!parts.length || parts.some(isUnsafeConfigPathKey)) {
+    return;
+  }
+  let cursor = target;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const key = parts[index];
+    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+  cursor[parts[parts.length - 1]] = value;
 }
 
 class NodaliaRoomSummaryCard extends HTMLElement {
@@ -882,36 +917,46 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </div>`;
   }
 
-  _renderHubLightPanel(config) {
-    return `<div class="room-hub__panel room-hub__panel--lights">
-      <div class="room-hub__panel-title">${escapeHtml(this._t("lights", "Lights"))}</div>
-      <div class="room-hub__device-list">${(config.lights || []).map(entityId => {
+  _renderHubLightRow(entityId, accentColor) {
     const state = getState(this._hass, entityId);
     const on = state && stateIsOn(state);
     const supportsBrightness = this._supportsLightBrightness(state);
     const brightness = this._lightBrightnessPct(state);
-    return `<article class="room-hub__device-card ${on ? "is-on" : ""}">
-      <button type="button" class="room-hub__device-bubble" data-room-action="toggle:${escapeHtml(entityId)}" aria-label="${escapeHtml(this._entityLabel(entityId))}">
-        <ha-icon icon="${escapeHtml(on ? "mdi:lightbulb-on" : this._entityIcon(entityId, "mdi:lightbulb-outline"))}"></ha-icon>
+    const label = this._entityLabel(entityId);
+    const icon = on ? "mdi:lightbulb-on" : this._entityIcon(entityId, "mdi:lightbulb-outline");
+    const stateLabel = state && !isUnavailable(state) ? String(state.state) : this._t("entityUnavailable", "Unavailable");
+    return `<article class="room-hub__light-row ${on ? "is-on" : ""}">
+      <button type="button" class="room-hub__light-icon" data-room-action="toggle:${escapeHtml(entityId)}" aria-label="${escapeHtml(label)}">
+        <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
       </button>
-      <div class="room-hub__device-body">
-        <div class="room-hub__device-name">${escapeHtml(this._entityLabel(entityId))}</div>
-        <div class="room-hub__device-state">${escapeHtml(state && !isUnavailable(state) ? String(state.state) : this._t("entityUnavailable", "Unavailable"))}</div>
-        ${supportsBrightness ? `<input type="range" min="1" max="100" value="${brightness}" data-entity-id="${escapeHtml(entityId)}" aria-label="Brightness">` : ""}
+      <div class="room-hub__light-body">
+        <div class="room-hub__light-top">
+          <div class="room-hub__light-copy">
+            <div class="room-hub__light-name">${escapeHtml(label)}</div>
+            <div class="room-hub__light-state">${escapeHtml(stateLabel)}${supportsBrightness && on ? ` · ${brightness}%` : ""}</div>
+          </div>
+        </div>
+        ${supportsBrightness ? `<div class="room-hub__light-slider-wrap">
+          <input type="range" class="room-hub__light-slider" min="1" max="100" value="${brightness}" data-entity-id="${escapeHtml(entityId)}" aria-label="${escapeHtml(this._t("brightness", "Brightness"))}" style="--brightness:${brightness};" />
+        </div>` : ""}
       </div>
     </article>`;
-  }).join("")}</div>
+  }
+
+  _renderHubLightPanel(config, accentColor) {
+    return `<div class="room-hub__panel room-hub__panel--lights">
+      <div class="room-hub__device-list">${(config.lights || []).map(entityId => this._renderHubLightRow(entityId, accentColor)).join("")}</div>
     </div>`;
   }
 
   _renderHubCoverPanel(config) {
     return `<div class="room-hub__panel room-hub__panel--covers">
-      <div class="room-hub__panel-title">${escapeHtml(this._t("covers", "Covers"))}</div>
       <div class="room-hub__device-list">${(config.covers || []).map(entityId => {
     const state = getState(this._hass, entityId);
     const position = finiteNumber(state?.attributes?.current_position);
-    return `<article class="room-hub__device-card">
-      <button type="button" class="room-hub__device-bubble" data-room-action="toggle:${escapeHtml(entityId)}">
+    const open = state && stateIsOpen(state);
+    return `<article class="room-hub__device-row ${open ? "is-on" : ""}">
+      <button type="button" class="room-hub__device-icon" data-room-action="toggle:${escapeHtml(entityId)}">
         <ha-icon icon="${escapeHtml(this._entityIcon(entityId, "mdi:window-shutter"))}"></ha-icon>
       </button>
       <div class="room-hub__device-body">
@@ -936,7 +981,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const unit = String(state?.attributes?.unit_of_measurement || "°C").trim();
     const mode = String(state?.attributes?.hvac_mode || state?.state || "—");
     return `<div class="room-hub__panel room-hub__panel--climate">
-      <div class="room-hub__panel-title">${escapeHtml(this._entityLabel(entityId))}</div>
       <div class="room-hub__climate-dial">
         <div class="room-hub__climate-value">${escapeHtml(current !== null ? `${current}${unit}` : "—")}</div>
         <div class="room-hub__climate-target">${escapeHtml(target !== null ? `${this._t("target", "Target")} ${target}${unit}` : mode)}</div>
@@ -950,12 +994,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
 
   _renderHubVacuumPanel(config) {
     return `<div class="room-hub__panel room-hub__panel--vacuum">
-      <div class="room-hub__panel-title">${escapeHtml(this._t("vacuum", "Vacuum"))}</div>
       <div class="room-hub__device-list">${(config.vacuums || []).map(entityId => {
     const state = getState(this._hass, entityId);
     const battery = finiteNumber(state?.attributes?.battery_level);
-    return `<article class="room-hub__device-card">
-      <button type="button" class="room-hub__device-bubble" data-room-action="toggle:${escapeHtml(entityId)}">
+    const active = state && normalizeTextKey(state.state) !== "docked" && normalizeTextKey(state.state) !== "idle";
+    return `<article class="room-hub__device-row ${active ? "is-on" : ""}">
+      <button type="button" class="room-hub__device-icon" data-room-action="toggle:${escapeHtml(entityId)}">
         <ha-icon icon="${escapeHtml(this._entityIcon(entityId, "mdi:robot-vacuum"))}"></ha-icon>
       </button>
       <div class="room-hub__device-body">
@@ -980,10 +1024,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const artist = String(state?.attributes?.media_artist || "").trim();
     const playing = summary.media_playing;
     return `<div class="room-hub__panel room-hub__panel--media">
-      <div class="room-hub__panel-title">${escapeHtml(this._t("mediaPlayer", "Media player"))}</div>
       <div class="room-hub__media-panel">
-        <div class="room-hub__media-title">${escapeHtml(title)}</div>
-        ${artist ? `<div class="room-hub__media-artist">${escapeHtml(artist)}</div>` : ""}
+        <div class="room-hub__media-copy">
+          <div class="room-hub__media-title">${escapeHtml(title)}</div>
+          ${artist ? `<div class="room-hub__media-artist">${escapeHtml(artist)}</div>` : ""}
+        </div>
         <div class="room-hub__media-controls room-hub__media-controls--large">
           <button type="button" class="room-hub__mini-control" data-room-action="media:prev"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
           <button type="button" class="room-hub__mini-control room-hub__mini-control--primary" data-room-action="media:play_pause">
@@ -995,13 +1040,13 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </div>`;
   }
 
-  _renderHubPanelContent(panel, config, summary) {
-    if (panel === "lights") return this._renderHubLightPanel(config);
+  _renderHubPanelContent(panel, config, summary, styles, accentColor) {
+    if (panel === "lights") return this._renderHubLightPanel(config, accentColor);
     if (panel === "covers") return this._renderHubCoverPanel(config);
     if (panel === "climate") return this._renderHubClimatePanel(config);
     if (panel === "vacuum") return this._renderHubVacuumPanel(config);
     if (panel === "media") return this._renderHubMediaPanel(config, summary);
-    return this._renderHubHome(config, summary);
+    return this._renderHubHome(config, summary, styles, accentColor);
   }
 
   _renderHub() {
@@ -1059,62 +1104,76 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           transition:transform 150ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         .room-hub__bubble--large { height:72px; width:72px; }
-        .room-hub__bubble--active, .room-hub__device-card.is-on .room-hub__device-bubble {
+        .room-hub__bubble--active, .room-hub__light-row.is-on .room-hub__light-icon, .room-hub__device-row.is-on .room-hub__device-icon {
           background:color-mix(in srgb, ${accentColor} 20%, transparent);
           border-color:color-mix(in srgb, ${accentColor} 28%, transparent);
           color:${accentColor};
         }
-        .room-hub__bubble ha-icon, .room-hub__device-bubble ha-icon { --mdc-icon-size:20px; }
+        .room-hub__bubble ha-icon, .room-hub__light-icon ha-icon, .room-hub__device-icon ha-icon { --mdc-icon-size:20px; }
         .room-hub__bubble--large ha-icon { --mdc-icon-size:34px; }
-        .room-hub__bubble:active, .room-hub__mini-control:active { transform:scale(0.96); }
+        .room-hub__bubble:active, .room-hub__mini-control:active, .room-hub__light-icon:active, .room-hub__device-icon:active { transform:scale(0.96); }
         .room-hub__hero {
-          background:center/cover no-repeat var(--ha-card-background); border-radius:22px; display:grid; gap:12px; min-height:180px;
-          overflow:hidden; padding:16px; position:relative;
+          background:center/cover no-repeat transparent; border-radius:24px; display:grid; gap:12px; min-height:168px;
+          overflow:hidden; padding:8px 4px 0; position:relative;
         }
-        .room-hub__hero-overlay { background:linear-gradient(180deg, rgba(0,0,0,.08), color-mix(in srgb, var(--ha-card-background) 84%, black)); inset:0; position:absolute; }
+        .room-hub__hero-overlay { background:linear-gradient(180deg, transparent, color-mix(in srgb, var(--ha-card-background) 42%, transparent)); inset:0; position:absolute; }
         .room-hub__hero-center, .room-hub__metric-row, .room-hub__context-actions, .room-hub__media-strip, .room-hub__device-list, .room-hub__media-panel { position:relative; z-index:1; }
         .room-hub__hero-center { align-items:center; display:grid; gap:10px; justify-items:center; text-align:center; }
         .room-hub__hero-title { font-size:${styles.title_size}; font-weight:700; line-height:1.2; }
         .room-hub__metric-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
         .room-hub__metric-bubble {
-          align-items:center; backdrop-filter:blur(8px); background:color-mix(in srgb, var(--ha-card-background) 72%, transparent);
+          align-items:center; backdrop-filter:blur(8px); background:color-mix(in srgb, var(--ha-card-background) 58%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; display:inline-flex;
           font-size:12px; font-weight:700; gap:6px; min-height:34px; padding:0 12px;
         }
         .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:6px; }
         .room-hub__context-action {
-          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
           cursor:pointer; display:inline-flex; font:inherit; font-size:11px; font-weight:600; gap:6px; min-height:32px; padding:0 12px;
         }
         .room-hub__context-action--warn { border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 24%, transparent); color:var(--warning-color,#f59e0b); }
         .room-hub__context-action--readonly { cursor:default; opacity:.92; }
-        .room-hub__media-strip, .room-hub__device-card, .room-hub__climate-dial, .room-hub__media-panel {
-          background:color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-          border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent); border-radius:18px;
-        }
-        .room-hub__media-strip { align-items:center; display:flex; gap:10px; justify-content:space-between; margin-top:10px; padding:10px 12px; }
+        .room-hub__media-strip { align-items:center; display:flex; gap:10px; justify-content:space-between; margin-top:8px; padding:4px 0 0; }
         .room-hub__media-copy { min-width:0; }
-        .room-hub__media-title, .room-hub__device-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .room-hub__media-artist, .room-hub__device-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .room-hub__media-controls, .room-hub__device-controls { align-items:center; display:flex; gap:6px; }
-        .room-hub__media-controls--large { justify-content:center; margin-top:12px; }
+        .room-hub__media-title, .room-hub__device-name, .room-hub__light-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__media-artist, .room-hub__device-state, .room-hub__light-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__media-controls, .room-hub__device-controls { align-items:center; display:flex; flex-wrap:wrap; gap:6px; }
+        .room-hub__media-controls--large { justify-content:center; margin-top:0; }
         .room-hub__mini-control {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
           cursor:pointer; display:inline-flex; height:34px; justify-content:center; width:34px;
         }
         .room-hub__mini-control--primary { background:color-mix(in srgb, ${accentColor} 18%, transparent); border-color:color-mix(in srgb, ${accentColor} 24%, transparent); color:${accentColor}; height:40px; width:40px; }
-        .room-hub__panel-title { font-size:14px; font-weight:700; margin-bottom:10px; }
         .room-hub__device-list { display:grid; gap:10px; }
-        .room-hub__device-card { align-items:center; display:grid; gap:10px; grid-template-columns:auto minmax(0,1fr); padding:12px; }
-        .room-hub__device-bubble { height:46px; width:46px; }
-        .room-hub__device-body { display:grid; gap:8px; min-width:0; }
-        .room-hub__device-body input[type="range"] { width:100%; }
-        .room-hub__climate-dial { display:grid; gap:10px; justify-items:center; padding:18px; text-align:center; }
+        .room-hub__light-row, .room-hub__device-row {
+          align-items:center; background:var(--ha-card-background); border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius:28px; box-shadow:var(--ha-card-box-shadow); display:grid; gap:12px; grid-template-columns:auto minmax(0,1fr);
+          min-height:72px; padding:12px 14px; transition:background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        .room-hub__light-row.is-on, .room-hub__device-row.is-on {
+          background:linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, var(--ha-card-background)) 0%, var(--ha-card-background) 72%);
+          border-color:color-mix(in srgb, ${accentColor} 24%, var(--divider-color));
+          box-shadow:var(--ha-card-box-shadow), 0 12px 24px color-mix(in srgb, ${accentColor} 12%, rgba(0,0,0,0.12));
+        }
+        .room-hub__light-icon, .room-hub__device-icon {
+          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
+          cursor:pointer; display:inline-flex; height:46px; justify-content:center; width:46px;
+        }
+        .room-hub__light-body, .room-hub__device-body { display:grid; gap:8px; min-width:0; }
+        .room-hub__light-top { align-items:center; display:flex; gap:8px; min-width:0; }
+        .room-hub__light-copy { min-width:0; }
+        .room-hub__light-slider-wrap { padding-top:2px; }
+        .room-hub__light-slider {
+          accent-color:${accentColor}; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius:999px; height:8px; width:100%;
+        }
+        .room-hub__climate-dial { display:grid; gap:10px; justify-items:center; padding:8px 0; text-align:center; }
         .room-hub__climate-value { font-size:28px; font-weight:700; line-height:1; }
         .room-hub__climate-target { color:var(--secondary-text-color); font-size:12px; }
-        .room-hub__media-panel { padding:16px; }
+        .room-hub__media-panel { align-items:center; display:flex; flex-direction:column; gap:14px; justify-content:center; min-height:160px; padding:8px 0; text-align:center; }
         @keyframes room-hub-slide { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
         @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
         @media (prefers-reduced-motion:reduce) { .room-hub__stage--enter { animation:none; } }
@@ -1124,7 +1183,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           <div class="room-hub__stage ${animate ? "room-hub__stage--enter" : ""}">
             ${activePanel === "home"
     ? this._renderHubHome(config, summary, styles, accentColor)
-    : this._renderHubPanelContent(activePanel, config, summary)}
+    : this._renderHubPanelContent(activePanel, config, summary, styles, accentColor)}
           </div>
           ${navItems.length ? this._renderHubRail(navItems, activePanel) : ""}
         </div>
@@ -1419,7 +1478,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils?.editorFilteredStatesSignature?.(hass, this._config?.language ?? "auto") || "";
+    return window.NodaliaUtils?.editorStatesSignature?.(hass, this._config?.language ?? "auto") || "";
   }
 
   _captureFocusState() {
@@ -1881,25 +1940,4 @@ if (typeof globalThis !== "undefined") {
     formatMetric,
     getState,
   };
-}
-
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key || (!isObject(cursor) && !Array.isArray(cursor))) return undefined;
-    cursor = cursor[key];
-  }
-  return cursor;
-}
-
-function setByPath(target, path, value) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (let i = 0; i < parts.length - 1; i += 1) {
-    const key = parts[i];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) cursor[key] = /^\d+$/.test(parts[i + 1]) ? [] : {};
-    cursor = cursor[key];
-  }
-  cursor[parts[parts.length - 1]] = value;
 }
