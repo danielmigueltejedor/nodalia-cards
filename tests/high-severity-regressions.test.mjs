@@ -3,11 +3,73 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+function loadNotificationsCardSandbox() {
+  const registry = new Map();
+  class TestElement {
+    constructor() {
+      this.isConnected = true;
+      this.shadowRoot = null;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        querySelectorAll() {
+          return [];
+        },
+      };
+      return this.shadowRoot;
+    }
+  }
+  const sandbox = {
+    console: {
+      warn() {},
+    },
+    customElements: {
+      get(tag) {
+        return registry.get(tag);
+      },
+      define(tag, ctor) {
+        registry.set(tag, ctor);
+      },
+    },
+    HTMLElement: TestElement,
+    window: {
+      NodaliaUtils: {
+        registerCustomCard() {},
+      },
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
+  return { sandbox, registry };
+}
+
+function backgroundMobileConfigWithMessage(message) {
+  return {
+    background_mobile: {
+      enabled: true,
+      webhook: "nodalia_notifications_background_sync",
+      chunk_size: 240,
+    },
+    mobile_notifications: {
+      enabled: true,
+      entities: ["notify.test_phone"],
+    },
+    smart_notifications: {
+      hot: {
+        message,
+      },
+    },
+  };
 }
 
 test("fav card routes cover and lock auto taps through domain services", () => {
@@ -60,4 +122,41 @@ test("climate schedule composer blocks oversized storage_state before webhook de
     "storage guard should run before saving/webhook dispatch",
   );
   assert.match(source, /errors\.storageTooLarge/);
+});
+
+test("notifications background mobile sync rejects configs beyond package chunk capacity", async () => {
+  const { sandbox, registry } = loadNotificationsCardSandbox();
+  const buildPayload = sandbox.buildBackgroundMobileWebhookPayload;
+  assert.equal(typeof buildPayload, "function");
+
+  const basePayload = buildPayload(backgroundMobileConfigWithMessage(""));
+  const baseLength = basePayload.chunks.join("").length;
+  const maxChunks = 40;
+  const chunkSize = 240;
+  const fortyChunkMessage = "x".repeat((maxChunks - 1) * chunkSize + 1 - baseLength);
+  const acceptedPayload = buildPayload(backgroundMobileConfigWithMessage(fortyChunkMessage));
+  assert.equal(acceptedPayload.chunk_count, maxChunks);
+  assert.equal(acceptedPayload.chunks.length, maxChunks);
+
+  const tooLargeMessage = "x".repeat(maxChunks * chunkSize + 1 - baseLength);
+  assert.throws(
+    () => buildPayload(backgroundMobileConfigWithMessage(tooLargeMessage)),
+    /exceeds the 40-chunk Home Assistant package capacity/,
+  );
+
+  let posted = false;
+  sandbox.window.NodaliaUtils.postHomeAssistantWebhook = async () => {
+    posted = true;
+    return true;
+  };
+  const Card = registry.get("nodalia-notifications-card");
+  const card = new Card();
+  card._hass = { user: { is_admin: true } };
+  card._config = backgroundMobileConfigWithMessage(tooLargeMessage);
+
+  const ok = await card._syncBackgroundMobileConfig();
+  assert.equal(ok, false);
+  assert.equal(posted, false);
+  assert.equal(card._pendingBackgroundMobileSync, true);
+  assert.equal(card._lastBackgroundMobileSyncSignature, "");
 });
