@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.15";
+const CARD_VERSION = "2.0.0-alpha.16";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "media"]);
@@ -21,6 +21,7 @@ const DEFAULT_CONFIG = {
   climate: "",
   camera: "",
   media_player: "",
+  media_players: [],
   vacuums: [],
   fans: [],
   power: "",
@@ -148,6 +149,21 @@ function entityList(...values) {
   return [];
 }
 
+function hubMediaPlayerIds(config) {
+  const c = normalizeConfig(config || {});
+  const ids = [];
+  const seen = new Set();
+  const push = id => {
+    const normalized = String(id || "").trim();
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    ids.push(normalized);
+  };
+  push(c.media_player);
+  (c.media_players || []).forEach(push);
+  return ids;
+}
+
 function escapeHtml(v) {
   return String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -265,6 +281,10 @@ function normalizeConfig(rawConfig = {}) {
   config.climate = entityScalar(config.climate, config.climate_entity);
   config.camera = entityScalar(config.camera);
   config.media_player = entityScalar(config.media_player);
+  config.media_players = entityList(config.media_players, config.media_player_entities);
+  if (config.media_player) {
+    config.media_players = config.media_players.filter(id => id !== config.media_player);
+  }
   config.vacuums = entityList(config.vacuums, config.vacuum, config.vacuum_entities);
   config.fans = entityList(config.fans, config.fan_entities);
   config.power = entityScalar(config.power);
@@ -314,6 +334,7 @@ function hasRoomContent(config) {
     String(c.name || "").trim()
     || c.temperature || c.humidity || c.presence || c.occupancy || c.climate
     || c.camera || c.media_player || c.power || c.air_quality
+    || (c.media_players || []).length
     || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
     || (c.vacuums || []).length || (c.fans || []).length
     || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length,
@@ -576,7 +597,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         label: this._t("fans", "Fans"),
       });
     }
-    if (config.media_player) {
+    if (hubMediaPlayerIds(config).length) {
       items.push({
         id: "media",
         icon: summary?.media_playing ? "mdi:play-circle" : "mdi:play-circle-outline",
@@ -1004,58 +1025,26 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
   }
 
-  _hubEmbeddedCardStyles(config) {
-    const parent = deepClone(normalizeConfig(config).styles);
-    const accent = parent.accent || "var(--primary-color)";
-    parent.card = {
-      ...parent.card,
-      background: "transparent",
-      border: "none",
-      box_shadow: "none",
-      padding: "0",
-      gap: "10px",
-    };
-    parent.icon = {
-      ...parent.icon,
-      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      color: "var(--primary-text-color)",
-    };
-    parent.control = {
-      ...parent.control,
-      accent_color: parent.control?.accent_color || "var(--primary-text-color)",
-      accent_background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-    };
-    return parent;
-  }
-
-  _hubMediaPlayerStylePack(config) {
+  _hubEmbeddedAccentPack(config) {
     const parent = deepClone(normalizeConfig(config).styles);
     const accent = parent.accent || "var(--primary-color)";
     return {
-      player: {
-        background: "transparent",
-        border: "none",
-        box_shadow: "none",
-        padding: "0",
-        min_height: "auto",
-        artwork_size: "52px",
-        tv_artwork_size: "58px",
-        control_size: "30px",
-        title_size: "12px",
-        subtitle_size: "10px",
-        slider_wrap_height: "44px",
-        slider_height: "12px",
-        slider_thumb_size: "22px",
-        progress_color: accent,
-        progress_background: `color-mix(in srgb, ${accent} 18%, transparent)`,
-        overlay_color: "rgba(0, 0, 0, 0.32)",
-        dot_size: "8px",
-        active_tint_color: accent,
-        accent_color: parent.control?.accent_color || "var(--primary-text-color)",
-        accent_background: parent.control?.accent_background || `color-mix(in srgb, ${accent} 18%, transparent)`,
-        border_radius: "0",
+      ...parent,
+      accent,
+      control: {
+        ...parent.control,
+        accent_background: parent.control?.accent_background || `color-mix(in srgb, ${accent} 14%, transparent)`,
       },
-      browser: deepClone(parent.browser || {}),
+    };
+  }
+
+  _hubMediaPlayerStylePack(config) {
+    const accent = normalizeConfig(config).styles?.accent || "var(--primary-color)";
+    return {
+      player: {
+        progress_color: accent,
+        active_tint_color: accent,
+      },
     };
   }
 
@@ -1063,7 +1052,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (!this.shadowRoot) return;
     const config = normalizeConfig(this._config || {});
     const pack = this._hubEmbedStylePack(config);
-    const embeddedStyles = this._hubEmbeddedCardStyles(config);
+    const embeddedStyles = this._hubEmbeddedAccentPack(config);
     const mediaStyles = this._hubMediaPlayerStylePack(config);
 
     const mount = (host, tagName, extra = {}) => {
@@ -1082,6 +1071,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this.shadowRoot.querySelectorAll('[data-hub-embed="light"]').forEach(host => {
       mount(host, "nodalia-light-card", {
         auto_expand: true,
+        compact_layout_mode: "never",
         show_brightness: true,
         show_slider_mode_buttons: true,
         show_color_controls: true,
@@ -1111,6 +1101,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         show_slider: true,
         show_preset_modes: true,
         show_oscillation: true,
+        compact_layout_mode: "never",
         tap_action: "toggle",
         icon_tap_action: "toggle",
         styles: embeddedStyles,
@@ -1123,7 +1114,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         layout: {
           fixed: false,
           reserve_space: false,
-          reserve_height: "auto",
         },
         styles: mediaStyles,
       });
@@ -1269,8 +1259,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _renderHubMediaPanel(config) {
-    if (!config.media_player) return "";
-    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts([config.media_player], "media")}</div>`;
+    const ids = hubMediaPlayerIds(config);
+    if (!ids.length) return "";
+    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(ids, "media")}</div>`;
   }
 
   _renderHubPanelContent(panel, config, summary, styles, accentColor) {
@@ -1303,6 +1294,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       <style>
         :host { display:block; --room-hub-duration:${config.animations?.enabled ? config.animations.content_duration : 0}ms; }
         * { box-sizing:border-box; }
+        ha-card.room-summary-card--hub {
+          overflow: visible;
+        }
         ha-card {
           background:${cardBackground};
           border:${cardBorder};
@@ -1326,8 +1320,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
           border-radius:inherit; content:""; inset:0; opacity:${isActive ? "1" : "0"}; pointer-events:none; position:absolute; z-index:0;
         }
-        .room-hub { display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; min-height:220px; padding:${styles.card.padding}; position:relative; z-index:1; }
-        .room-hub__stage { min-width:0; }
+        .room-hub { display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; min-height:220px; overflow:visible; padding:${styles.card.padding}; position:relative; z-index:1; }
+        .room-hub__stage { min-width:0; overflow:visible; }
         .room-hub__stage--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1) both; }
         .room-hub__rail { align-items:center; display:flex; flex-direction:column; gap:8px; justify-content:flex-start; }
         .room-hub__bubble {
@@ -1417,27 +1411,19 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           cursor:pointer; display:inline-flex; height:46px; justify-content:center; width:46px;
         }
         .room-hub__device-body { display:grid; gap:8px; min-width:0; }
-        .room-hub__embed-list { display:grid; gap:10px; }
-        .room-hub__embed-host { display:block; min-width:0; width:100%; }
+        .room-hub__embed-list { display:grid; gap:10px; overflow:visible; }
+        .room-hub__panel--embed { overflow:visible; }
+        .room-hub__embed-host { display:block; min-width:0; overflow:visible; width:100%; }
         .room-hub__embed-host--media { margin-top:8px; }
         .room-hub__embed-host > nodalia-light-card,
         .room-hub__embed-host > nodalia-vacuum-card,
         .room-hub__embed-host > nodalia-fan-card,
-        .room-hub__embed-host > nodalia-media-player { display:block; width:100%; }
+        .room-hub__embed-host > nodalia-media-player { display:block; max-width:100%; overflow:visible; width:100%; }
         .room-hub__embed-host > nodalia-light-card .light-card.is-off,
-        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off,
-        .room-hub__embed-host > nodalia-vacuum-card .vacuum-card,
-        .room-hub__embed-host > nodalia-media-player .media-player-card--idle {
-          background: transparent !important;
-          border-color: transparent !important;
-          box-shadow: none !important;
-        }
-        .room-hub__embed-host > nodalia-light-card .light-card.is-off::before,
-        .room-hub__embed-host > nodalia-light-card .light-card.is-off::after,
-        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off::before,
-        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off::after,
-        .room-hub__embed-host > nodalia-media-player .media-player-card--idle::before {
-          opacity: 0 !important;
+        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border-color: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          box-shadow: none;
         }
         .room-hub__device-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .room-hub__device-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -2219,6 +2205,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       ${this._listSection("ed.room_summary.covers_section_title", "ed.room_summary.covers_section_hint", "covers", ["cover"])}
       ${this._listSection("ed.room_summary.vacuums_section_title", "ed.room_summary.vacuums_section_hint", "vacuums", ["vacuum"])}
       ${this._listSection("ed.room_summary.fans_section_title", "ed.room_summary.fans_section_hint", "fans", ["fan"])}
+      ${this._listSection("ed.room_summary.media_players_section_title", "ed.room_summary.media_players_section_hint", "media_players", ["media_player"])}
       ${this._listSection("ed.room_summary.doors_section_title", "ed.room_summary.doors_section_hint", "doors", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.windows_section_title", "ed.room_summary.windows_section_hint", "windows", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.locks_section_title", "ed.room_summary.locks_section_hint", "locks", ["lock"])}
@@ -2298,6 +2285,7 @@ if (typeof globalThis !== "undefined") {
     LAYOUT_MODES,
     normalizeConfig,
     normalizeEntityField,
+    hubMediaPlayerIds,
     buildRoomSummary,
     hasRoomContent,
     formatMetric,

@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.16] - 2026-07-08
+
+Sixteenth **`2.0.0`** **`alpha`**: fix Hub embedded card clipping and restore real media player styling. Release channel **`2.0.0-alpha.16`**.
+
+### Added
+
+- **Room Summary Hub:** `media_players[]` list for additional players in the media sub-panel (primary `media_player` stays on the home screen).
+
+### Fixed
+
+- **Room Summary Hub embeds:** remove aggressive transparent/zero-padding overrides that clipped lights, vacuums, and fans.
+- **Room Summary Hub:** `overflow: visible` on hub card and embed hosts so expanded controls are not cut off.
+- **Room Summary Hub media:** embed uses native `nodalia-media-player` card chrome (rounded player, album art) with only accent tint overrides.
+- **Room Summary Hub lights/fans:** force `compact_layout_mode: never` inside embeds for full-width controls.
+
 ## [2.0.0-alpha.15] - 2026-07-08
 
 Fifteenth **`2.0.0`** **`alpha`**: remove Menu Card from the bundle and ship Room Summary Hub polish. Release channel **`2.0.0-alpha.15`** (GitHub **prerelease**).

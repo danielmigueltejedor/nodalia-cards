@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.15"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.16"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -186,6 +186,16 @@ test("room summary normalizeConfig accepts vacuums and fans", () => {
   assert.equal(config.fans.length, 1);
 });
 
+test("room summary hub media players combine primary and extras", () => {
+  const config = rs.normalizeConfig({
+    media_player: "media_player.salon",
+    media_players: ["media_player.kitchen", "media_player.salon"],
+  });
+  assert.equal(rs.hubMediaPlayerIds(config).join("|"), "media_player.salon|media_player.kitchen");
+  assert.equal(config.media_players.length, 1);
+  assert.equal(config.media_players[0], "media_player.kitchen");
+});
+
 test("room summary hub layout uses embedded nodalia cards and flat home header", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /data-hub-embed="light"/);
@@ -196,7 +206,10 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /room-hub__home-header/);
   assert.match(source, /room-hub__status-chips/);
   assert.match(source, /more-info:/);
-  assert.match(source, /show_quick_brightness: false/);
+  assert.match(source, /compact_layout_mode: "never"/);
+  assert.match(source, /media_players/);
+  assert.match(source, /hubMediaPlayerIds/);
+  assert.match(source, /room-summary-card--hub[\s\S]*overflow:\s*visible/);
   assert.match(source, /nodalia-media-player/);
   assert.match(source, /styles\.accent/);
   assert.doesNotMatch(source, /room-hub__hero/);

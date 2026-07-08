@@ -1070,6 +1070,8 @@
   "ed.room_summary.locks_section_hint": "Locks shown in security summaries only.",
   "ed.room_summary.locks_section_title": "Locks",
   "ed.room_summary.media_player_entity": "Media player",
+  "ed.room_summary.media_players_section_hint": "Extra players in the Hub media panel. The primary media player above stays on the home screen.",
+  "ed.room_summary.media_players_section_title": "Additional media players",
   "ed.room_summary.motion_section_hint": "Optional motion sensors for active alerts.",
   "ed.room_summary.motion_section_title": "Motion",
   "ed.room_summary.name": "Room name",
