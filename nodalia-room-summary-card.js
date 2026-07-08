@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.16";
+const CARD_VERSION = "2.0.0-alpha.17";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "media"]);
@@ -85,6 +85,21 @@ const DEFAULT_CONFIG = {
     title_size: "16px",
     metric_size: "14px",
     accent: "var(--primary-color)",
+    embed_off_tint: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+    hub: {
+      metric_chip_font_size: "10px",
+      metric_chip_height: "24px",
+      metric_chip_padding: "0 8px",
+      metric_chip_icon_size: "13px",
+      context_action_size: "34px",
+      context_action_icon_size: "18px",
+      embed_title_size: "11px",
+      embed_chip_font_size: "10px",
+      embed_chip_height: "22px",
+      embed_chip_padding: "0 7px",
+      device_name_size: "12px",
+      device_state_size: "10px",
+    },
   },
 };
 
@@ -215,6 +230,9 @@ function getEditorColorFallbackValue(field) {
   const normalizedField = String(field ?? "");
   if (normalizedField === "styles.accent" || normalizedField.endsWith(".accent")) {
     return "var(--primary-color)";
+  }
+  if (normalizedField.endsWith("embed_off_tint")) {
+    return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
   }
   if (normalizedField.endsWith("background")) {
     return "var(--ha-card-background)";
@@ -687,9 +705,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const next = HUB_PANELS.has(panel) ? panel : "home";
     if (next === this._activePanel) return;
     this._activePanel = next;
-    this._panelTransition = true;
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
     this._triggerHaptic();
     this._render();
   }
@@ -1027,9 +1042,15 @@ class NodaliaRoomSummaryCard extends HTMLElement {
 
   _hubEmbeddedAccentPack(config) {
     const parent = deepClone(normalizeConfig(config).styles);
+    const hub = parent.hub || {};
+    const hubDefaults = DEFAULT_CONFIG.styles.hub;
     const accent = parent.accent || "var(--primary-color)";
     return {
       ...parent,
+      title_size: hub.embed_title_size || hubDefaults.embed_title_size,
+      chip_font_size: hub.embed_chip_font_size || hubDefaults.embed_chip_font_size,
+      chip_height: hub.embed_chip_height || hubDefaults.embed_chip_height,
+      chip_padding: hub.embed_chip_padding || hubDefaults.embed_chip_padding,
       accent,
       control: {
         ...parent.control,
@@ -1110,6 +1131,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this.shadowRoot.querySelectorAll('[data-hub-embed="media"]').forEach(host => {
       mount(host, "nodalia-media-player", {
         show_state: false,
+        show_device_chip: false,
         album_cover_background: true,
         layout: {
           fixed: false,
@@ -1130,6 +1152,20 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return `<button type="button" class="room-hub__room-icon" data-room-action="primary" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
       <ha-icon icon="${escapeHtml(icon || "mdi:floor-plan")}"></ha-icon>
     </button>`;
+  }
+
+  _renderHubHeader(config, summary, styles) {
+    const title = config.name || this._t("defaultName", "Room");
+    const statusChips = this._renderHubStatusChips(config, summary);
+    return `<header class="room-hub__header room-hub__home-header">
+      ${this._renderHubRoomIcon(config.icon, title, styles)}
+      <div class="room-hub__room-copy">
+        <div class="room-hub__room-title-row">
+          <div class="room-hub__room-title">${escapeHtml(title)}</div>
+          ${statusChips ? `<div class="room-hub__status-chips">${statusChips}</div>` : ""}
+        </div>
+      </div>
+    </header>`;
   }
 
   _renderHubStatusChips(config, summary) {
@@ -1178,26 +1214,16 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _renderHubHome(config, summary, styles, accentColor) {
-    const title = config.name || this._t("defaultName", "Room");
     const image = window.NodaliaUtils?.sanitizeActionUrl?.(config.image, { allowRelative: true }) || "";
     const contextual = this._getContextualActions(summary, config);
-    const statusChips = this._renderHubStatusChips(config, summary);
     const homeClass = image ? "room-hub__home room-hub__home--image" : "room-hub__home";
     const homeStyle = image ? ` style="--room-hub-bg-image:url('${escapeHtml(image)}')"` : "";
     return `<div class="${homeClass}"${homeStyle}>
-      <header class="room-hub__home-header">
-        ${this._renderHubRoomIcon(config.icon, title, styles)}
-        <div class="room-hub__room-copy">
-          <div class="room-hub__room-title-row">
-            <div class="room-hub__room-title">${escapeHtml(title)}</div>
-            ${statusChips ? `<div class="room-hub__status-chips">${statusChips}</div>` : ""}
-          </div>
-        </div>
-      </header>
       ${contextual.length ? `<div class="room-hub__context-actions">${contextual.map(action => `
         <button type="button" class="room-hub__context-action ${action.warn ? "room-hub__context-action--warn" : ""}"
-          data-room-action="quick:${escapeHtml(action.id)}">
-          <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon><span>${escapeHtml(action.label)}</span>
+          data-room-action="quick:${escapeHtml(action.id)}"
+          aria-label="${escapeHtml(action.label)}" title="${escapeHtml(action.label)}">
+          <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
         </button>`).join("")}</div>` : ""}
       ${this._renderHubHomeMedia(config)}
     </div>`;
@@ -1278,17 +1304,23 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const config = normalizeConfig(this._config || {});
     const summary = buildRoomSummary(this._hass, config);
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    const hubStyles = styles.hub || DEFAULT_CONFIG.styles.hub;
     const accentColor = escapeHtml(styles.accent || "var(--primary-color)");
+    const hubMetricFont = escapeHtml(hubStyles.metric_chip_font_size || DEFAULT_CONFIG.styles.hub.metric_chip_font_size);
+    const hubMetricHeight = escapeHtml(hubStyles.metric_chip_height || DEFAULT_CONFIG.styles.hub.metric_chip_height);
+    const hubMetricPadding = escapeHtml(hubStyles.metric_chip_padding || DEFAULT_CONFIG.styles.hub.metric_chip_padding);
+    const hubMetricIcon = escapeHtml(hubStyles.metric_chip_icon_size || DEFAULT_CONFIG.styles.hub.metric_chip_icon_size);
+    const hubActionSize = escapeHtml(hubStyles.context_action_size || DEFAULT_CONFIG.styles.hub.context_action_size);
+    const hubActionIcon = escapeHtml(hubStyles.context_action_icon_size || DEFAULT_CONFIG.styles.hub.context_action_icon_size);
+    const hubDeviceName = escapeHtml(hubStyles.device_name_size || DEFAULT_CONFIG.styles.hub.device_name_size);
+    const hubDeviceState = escapeHtml(hubStyles.device_state_size || DEFAULT_CONFIG.styles.hub.device_state_size);
     const activePanel = HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
     const navItems = this._getHubNavItems(config, summary);
-    const animate = config.animations?.enabled !== false && (this._animateContentOnNextRender || this._panelTransition);
-    const isActive = Boolean(summary.lights_on || summary.media_playing || summary.occupied || summary.comfortable);
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
-    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
-    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = isActive ? onCardBackground : styles.card.background;
-    const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
-    const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
+    const animate = config.animations?.enabled !== false && this._animateContentOnNextRender;
+    const cardBackground = styles.card.background;
+    const cardBorder = styles.card.border;
+    const cardShadow = styles.card.box_shadow;
+    const embedOffTint = escapeHtml(styles.embed_off_tint || DEFAULT_CONFIG.styles.embed_off_tint);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1310,19 +1342,18 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           transition:background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         ha-card::before {
-          background:${isActive
-    ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
-    : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          background:linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
           border-radius:inherit; content:""; inset:0; pointer-events:none; position:absolute; z-index:0;
         }
         ha-card::after {
           background:radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
-          border-radius:inherit; content:""; inset:0; opacity:${isActive ? "1" : "0"}; pointer-events:none; position:absolute; z-index:0;
+          border-radius:inherit; content:""; inset:0; opacity:0; pointer-events:none; position:absolute; z-index:0;
         }
         .room-hub { display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; min-height:220px; overflow:visible; padding:${styles.card.padding}; position:relative; z-index:1; }
-        .room-hub__stage { min-width:0; overflow:visible; }
-        .room-hub__stage--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1) both; }
+        .room-hub__stage { display:grid; gap:12px; min-width:0; overflow:visible; }
+        .room-hub__body { min-width:0; overflow:visible; }
+        .room-hub__body--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1) both; }
         .room-hub__rail { align-items:center; display:flex; flex-direction:column; gap:8px; justify-content:flex-start; }
         .room-hub__bubble {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -1349,8 +1380,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           background:linear-gradient(135deg, color-mix(in srgb, var(--ha-card-background) 72%, transparent), color-mix(in srgb, var(--ha-card-background) 90%, transparent));
           border-radius:inherit; content:""; inset:0; pointer-events:none; position:absolute; z-index:0;
         }
-        .room-hub__home-header, .room-hub__context-actions, .room-hub__device-list, .room-hub__embed-list { position:relative; z-index:1; }
-        .room-hub__home-header { align-items:flex-start; display:grid; gap:12px; grid-template-columns:auto minmax(0,1fr); }
+        .room-hub__header, .room-hub__context-actions, .room-hub__device-list, .room-hub__embed-list { position:relative; z-index:1; }
+        .room-hub__header { align-items:flex-start; display:grid; gap:12px; grid-template-columns:auto minmax(0,1fr); }
         .room-hub__room-icon {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent); border-radius:999px; color:var(--primary-text-color);
@@ -1361,12 +1392,13 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__room-copy { display:grid; gap:8px; min-width:0; padding-top:2px; width:100%; }
         .room-hub__room-title-row { align-items:center; display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; min-width:0; width:100%; }
         .room-hub__room-title { flex:1 1 auto; font-size:${styles.title_size}; font-weight:700; line-height:1.2; min-width:0; overflow-wrap:anywhere; }
-        .room-hub__status-chips { align-items:center; display:flex; flex:0 1 auto; flex-wrap:wrap; gap:6px; justify-content:flex-end; margin-left:auto; }
+        .room-hub__status-chips { align-items:center; display:flex; flex:0 1 auto; flex-wrap:wrap; gap:4px; justify-content:flex-end; margin-left:auto; }
         .room-hub__metric-bubble {
           align-items:center; appearance:none; border:1px solid transparent; border-radius:999px; cursor:pointer;
-          display:inline-flex; font:inherit; font-size:12px; font-weight:700; gap:6px; min-height:32px; padding:0 12px;
+          display:inline-flex; font:inherit; font-size:${hubMetricFont}; font-weight:700; gap:4px; line-height:1; min-height:${hubMetricHeight}; padding:${hubMetricPadding};
           transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
         }
+        .room-hub__metric-bubble ha-icon { --mdc-icon-size:${hubMetricIcon}; flex:0 0 auto; }
         .room-hub__metric-bubble:active { transform:scale(0.97); }
         .room-hub__metric-bubble--temperature {
           background:color-mix(in srgb, var(--warning-color, #f6b73c) 18%, var(--ha-card-background));
@@ -1392,8 +1424,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__context-action {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
-          cursor:pointer; display:inline-flex; font:inherit; font-size:11px; font-weight:600; gap:6px; min-height:32px; padding:0 12px;
+          cursor:pointer; display:inline-flex; font:inherit; height:${hubActionSize}; justify-content:center; padding:0; width:${hubActionSize};
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
         }
+        .room-hub__context-action ha-icon { --mdc-icon-size:${hubActionIcon}; }
+        .room-hub__context-action:active { transform:scale(0.96); }
         .room-hub__context-action--warn { border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 24%, transparent); color:var(--warning-color,#f59e0b); }
         .room-hub__device-list { display:grid; gap:10px; }
         .room-hub__device-row {
@@ -1421,12 +1456,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__embed-host > nodalia-media-player { display:block; max-width:100%; overflow:visible; width:100%; }
         .room-hub__embed-host > nodalia-light-card .light-card.is-off,
         .room-hub__embed-host > nodalia-fan-card .fan-card.is-off {
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border-color: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          background: ${embedOffTint};
+          border-color: color-mix(in srgb, ${embedOffTint} 55%, var(--divider-color));
           box-shadow: none;
         }
-        .room-hub__device-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .room-hub__device-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__device-name { font-size:${hubDeviceName}; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__device-state { color:var(--secondary-text-color); font-size:${hubDeviceState}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .room-hub__device-controls { align-items:center; display:flex; flex-wrap:wrap; gap:6px; }
         .room-hub__mini-control {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -1437,22 +1472,24 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__climate-dial { display:grid; gap:10px; justify-items:center; padding:8px 0; text-align:center; }
         .room-hub__climate-value { font-size:28px; font-weight:700; line-height:1; }
         .room-hub__climate-target { color:var(--secondary-text-color); font-size:12px; }
-        @keyframes room-hub-slide { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes room-hub-slide { from { opacity:0.94; transform:translateX(-4px); } to { opacity:1; transform:translateX(0); } }
         @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
-        @media (prefers-reduced-motion:reduce) { .room-hub__stage--enter { animation:none; } }
+        @media (prefers-reduced-motion:reduce) { .room-hub__body--enter { animation:none; } }
       </style>
       <ha-card class="room-summary-card room-summary-card--hub">
         <div class="room-hub">
-          <div class="room-hub__stage ${animate ? "room-hub__stage--enter" : ""}">
-            ${activePanel === "home"
+          <div class="room-hub__stage">
+            ${this._renderHubHeader(config, summary, styles)}
+            <div class="room-hub__body ${animate ? "room-hub__body--enter" : ""}">
+              ${activePanel === "home"
     ? this._renderHubHome(config, summary, styles, accentColor)
     : this._renderHubPanelContent(activePanel, config, summary, styles, accentColor)}
+            </div>
           </div>
           ${navItems.length ? this._renderHubRail(navItems, activePanel) : ""}
         </div>
       </ha-card>`;
     this._animateContentOnNextRender = false;
-    this._panelTransition = false;
     this._mountHubEmbeddedCards();
   }
 
@@ -1498,17 +1535,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const density = config.density === "compact" ? "compact" : "comfortable";
     const effectivePadding = density === "compact" ? "10px 12px" : styles.card.padding;
     const effectiveGap = density === "compact" ? "8px" : styles.card.gap;
-    const isActive = Boolean(summary.lights_on || summary.media_playing || summary.occupied || summary.comfortable);
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
-    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
-    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = isActive ? onCardBackground : styles.card.background;
-    const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
-    const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
-    const iconBackground = isActive
-      ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
-      : styles.icon.background;
-    const iconColor = isActive ? accentColor : styles.icon.color;
+    const cardBackground = styles.card.background;
+    const cardBorder = styles.card.border;
+    const cardShadow = styles.card.box_shadow;
+    const iconBackground = styles.icon.background;
+    const iconColor = styles.icon.color;
 
     const hero = image && !compact ? `
       <div class="room-summary-card__hero" style="background-image:url('${escapeHtml(image)}')">
@@ -1532,9 +1563,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           transition:background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         ha-card::before {
-          background:${isActive
-    ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
-    : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          background:linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
           border-radius:inherit;
           content:"";
           inset:0;
@@ -1549,7 +1578,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           border-radius:inherit;
           content:"";
           inset:0;
-          opacity:${isActive ? "1" : "0"};
+          opacity:0;
           pointer-events:none;
           position:absolute;
           z-index:0;
@@ -2255,6 +2284,26 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ${this._showStyleSection ? `<div class="editor-grid">
           ${this._renderColorField("ed.entity.style_accent_color", "styles.accent", c.styles?.accent)}
           ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", c.styles?.card?.background)}
+          ${this._renderColorField("ed.room_summary.style_embed_off_tint", "styles.embed_off_tint", c.styles?.embed_off_tint)}
+          <div class="editor-section__hint editor-field--full">${escapeHtml(this._editorLabel("ed.room_summary.styles_typography_hint"))}</div>
+          ${this._field("ed.room_summary.style_title_size", "styles.title_size", c.styles?.title_size)}
+          ${this._field("ed.room_summary.style_metric_size", "styles.metric_size", c.styles?.metric_size)}
+          ${this._field("ed.entity.style_chip_height", "styles.chip_height", c.styles?.chip_height)}
+          ${this._field("ed.entity.style_chip_font", "styles.chip_font_size", c.styles?.chip_font_size)}
+          ${this._field("ed.entity.style_chip_padding", "styles.chip_padding", c.styles?.chip_padding)}
+          <div class="editor-section__hint editor-field--full">${escapeHtml(this._editorLabel("ed.room_summary.hub_styles_section_hint"))}</div>
+          ${this._field("ed.room_summary.style_hub_metric_chip_font", "styles.hub.metric_chip_font_size", c.styles?.hub?.metric_chip_font_size)}
+          ${this._field("ed.room_summary.style_hub_metric_chip_height", "styles.hub.metric_chip_height", c.styles?.hub?.metric_chip_height)}
+          ${this._field("ed.room_summary.style_hub_metric_chip_padding", "styles.hub.metric_chip_padding", c.styles?.hub?.metric_chip_padding)}
+          ${this._field("ed.room_summary.style_hub_metric_chip_icon", "styles.hub.metric_chip_icon_size", c.styles?.hub?.metric_chip_icon_size)}
+          ${this._field("ed.room_summary.style_hub_context_action_size", "styles.hub.context_action_size", c.styles?.hub?.context_action_size)}
+          ${this._field("ed.room_summary.style_hub_context_action_icon", "styles.hub.context_action_icon_size", c.styles?.hub?.context_action_icon_size)}
+          ${this._field("ed.room_summary.style_hub_embed_title_size", "styles.hub.embed_title_size", c.styles?.hub?.embed_title_size)}
+          ${this._field("ed.room_summary.style_hub_embed_chip_font", "styles.hub.embed_chip_font_size", c.styles?.hub?.embed_chip_font_size)}
+          ${this._field("ed.room_summary.style_hub_embed_chip_height", "styles.hub.embed_chip_height", c.styles?.hub?.embed_chip_height)}
+          ${this._field("ed.room_summary.style_hub_embed_chip_padding", "styles.hub.embed_chip_padding", c.styles?.hub?.embed_chip_padding)}
+          ${this._field("ed.room_summary.style_hub_device_name_size", "styles.hub.device_name_size", c.styles?.hub?.device_name_size)}
+          ${this._field("ed.room_summary.style_hub_device_state_size", "styles.hub.device_state_size", c.styles?.hub?.device_state_size)}
         </div>` : ""}
       </section>
     </div>`;

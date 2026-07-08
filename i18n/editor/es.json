@@ -1311,5 +1311,22 @@
   "ed.weather.unit_system": "Sistema de unidades",
   "ed.weather.wind_kmh": "km/h",
   "ed.weather.wind_mph": "mph",
-  "ed.weather.wind_speed_unit": "Unidad de viento"
+  "ed.weather.wind_speed_unit": "Unidad de viento",
+  "ed.room_summary.style_embed_off_tint": "Tinte apagado (embebidas)",
+  "ed.room_summary.styles_typography_hint": "Tamaños generales de texto y chips (layout estándar)",
+  "ed.room_summary.style_title_size": "Tamaño título habitación",
+  "ed.room_summary.style_metric_size": "Tamaño valor métrica",
+  "ed.room_summary.hub_styles_section_hint": "Tipografía del layout hub",
+  "ed.room_summary.style_hub_metric_chip_font": "Texto chips estado (temp/humedad/presencia)",
+  "ed.room_summary.style_hub_metric_chip_height": "Alto chips estado",
+  "ed.room_summary.style_hub_metric_chip_padding": "Relleno chips estado",
+  "ed.room_summary.style_hub_metric_chip_icon": "Tamaño icono chips estado",
+  "ed.room_summary.style_hub_context_action_size": "Tamaño botones acción rápida",
+  "ed.room_summary.style_hub_context_action_icon": "Tamaño icono acción rápida",
+  "ed.room_summary.style_hub_embed_title_size": "Título dispositivos embebidos (luces/ventiladores)",
+  "ed.room_summary.style_hub_embed_chip_font": "Texto chips embebidos",
+  "ed.room_summary.style_hub_embed_chip_height": "Alto chips embebidos",
+  "ed.room_summary.style_hub_embed_chip_padding": "Relleno chips embebidos",
+  "ed.room_summary.style_hub_device_name_size": "Tamaño nombre dispositivo (persianas)",
+  "ed.room_summary.style_hub_device_state_size": "Tamaño estado dispositivo (persianas)"
 }

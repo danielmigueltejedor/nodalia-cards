@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.17] - 2026-07-08
+
+Seventeenth **`2.0.0`** **`alpha`**: Room Summary Hub design polish, typography controls, and stable card tinting. Release channel **`2.0.0-alpha.17`**.
+
+### Added
+
+- **Room Summary Hub:** persistent header (room icon, name, status chips) on all sub-panels.
+- **Room Summary Hub:** icon-only contextual quick actions with accessible labels.
+- **Room Summary editor:** `styles.embed_off_tint` color picker for embedded off-state cards.
+- **Room Summary editor:** typography controls for general chips/metrics and hub-specific sizes (status chips, quick actions, embedded device titles/chips, cover rows).
+- **Media player:** `show_device_chip` config flag (hub embeds hide the device name chip).
+
+### Changed
+
+- **Room Summary Hub:** smaller default status chips and compact icon-only quick actions.
+- **Room Summary Hub:** smaller embedded light/fan/vacuum titles and chips via `styles.hub.*` defaults.
+- **Room Summary Hub:** panel switches no longer replay the entry animation (reduces flicker).
+- **Room Summary card:** background, border, and overlays stay at the configured default tint — no accent highlight when lights, media, or presence are active.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.17`.
+
 ## [2.0.0-alpha.16] - 2026-07-08
 
 Sixteenth **`2.0.0`** **`alpha`**: fix Hub embedded card clipping and restore real media player styling. Release channel **`2.0.0-alpha.16`**.

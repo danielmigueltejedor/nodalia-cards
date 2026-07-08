@@ -1311,5 +1311,22 @@
   "ed.weather.unit_system": "Unit system",
   "ed.weather.wind_kmh": "km/h",
   "ed.weather.wind_mph": "mph",
-  "ed.weather.wind_speed_unit": "Wind speed unit"
+  "ed.weather.wind_speed_unit": "Wind speed unit",
+  "ed.room_summary.style_embed_off_tint": "Off tint (embedded cards)",
+  "ed.room_summary.styles_typography_hint": "General font and chip sizes (standard layout)",
+  "ed.room_summary.style_title_size": "Room title size",
+  "ed.room_summary.style_metric_size": "Metric value size",
+  "ed.room_summary.hub_styles_section_hint": "Hub layout typography",
+  "ed.room_summary.style_hub_metric_chip_font": "Status chip text (temp/humidity/presence)",
+  "ed.room_summary.style_hub_metric_chip_height": "Status chip height",
+  "ed.room_summary.style_hub_metric_chip_padding": "Status chip padding",
+  "ed.room_summary.style_hub_metric_chip_icon": "Status chip icon size",
+  "ed.room_summary.style_hub_context_action_size": "Quick action button size",
+  "ed.room_summary.style_hub_context_action_icon": "Quick action icon size",
+  "ed.room_summary.style_hub_embed_title_size": "Embedded device title (lights/fans/vacuum)",
+  "ed.room_summary.style_hub_embed_chip_font": "Embedded chip text size",
+  "ed.room_summary.style_hub_embed_chip_height": "Embedded chip height",
+  "ed.room_summary.style_hub_embed_chip_padding": "Embedded chip padding",
+  "ed.room_summary.style_hub_device_name_size": "Device name size (covers)",
+  "ed.room_summary.style_hub_device_state_size": "Device state size (covers)"
 }

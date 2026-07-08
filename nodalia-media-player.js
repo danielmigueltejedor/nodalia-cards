@@ -159,6 +159,7 @@ const DEFAULT_CONFIG = {
   players: [],
   show: true,
   show_state: false,
+  show_device_chip: true,
   album_cover_background: true,
   show_unavailable_badge: true,
   haptics: {
@@ -3334,7 +3335,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           normalizeTextKey(title) !== normalizeTextKey(playerLabel) ||
           !hasActiveMediaContent
         );
-    const showTopChip = !!playerLabel && (
+    const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (
       isTvPlayer
         ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
         : !hasActiveMediaContent || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
