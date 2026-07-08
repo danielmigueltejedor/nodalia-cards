@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.12"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.13"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -172,6 +172,8 @@ test("room summary hub layout exposes navigation rail and panels", () => {
   assert.match(source, /`nav:\$\{item\.id\}`/);
   assert.match(source, /_renderHubLightPanel/);
   assert.match(source, /_renderHubVacuumPanel/);
+  assert.match(source, /_renderHubFanPanel/);
+  assert.match(source, /"fans"/);
 });
 
 test("room summary normalizeConfig accepts vacuums and fans", () => {
@@ -184,11 +186,14 @@ test("room summary normalizeConfig accepts vacuums and fans", () => {
   assert.equal(config.fans.length, 1);
 });
 
-test("room summary hub layout uses nodalia-style light rows", () => {
+test("room summary hub layout uses embedded nodalia cards and flat home header", () => {
   const source = read("nodalia-room-summary-card.js");
-  assert.match(source, /room-hub__light-row/);
-  assert.match(source, /_renderHubLightRow/);
-  assert.doesNotMatch(source, /room-hub__device-card/);
+  assert.match(source, /data-hub-embed="light"/);
+  assert.match(source, /data-hub-embed="vacuum"/);
+  assert.match(source, /data-hub-embed="fan"/);
+  assert.match(source, /_mountHubEmbeddedCards/);
+  assert.match(source, /room-hub__home-header/);
+  assert.doesNotMatch(source, /room-hub__hero/);
 });
 
 test("room summary editor emits valid config and preserves unknown fields", () => {

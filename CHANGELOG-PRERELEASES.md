@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.13] - 2026-07-08
+
+Thirteenth **`2.0.0`** **`alpha`**: Room Summary Hub parity with Nodalia cards. Release channel **`2.0.0-alpha.13`**.
+
+### Added
+
+- **Room Summary Hub:** fans appear in the navigation rail with a dedicated sub-panel.
+- **Room Summary Hub:** lights, vacuums, and fans sub-panels embed real `nodalia-light-card`, `nodalia-vacuum-card`, and `nodalia-fan-card` instances (controls, tinting, sliders, chips).
+
+### Changed
+
+- **Room Summary Hub home:** flat header layout — room icon top-left, name beside it, tinted temperature/humidity bubbles below; removed nested hero container.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.13`.
+
 ## [2.0.0-alpha.12] - 2026-07-07
 
 Twelfth **`2.0.0`** **`alpha`**: republish after fixing a stale `v2.0.0-alpha.11` tag that briefly pointed at **1.3.5**. Release channel **`2.0.0-alpha.12`**.
