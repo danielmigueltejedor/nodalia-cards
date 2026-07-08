@@ -10,6 +10,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.15] - 2026-07-08
+
+Fifteenth **`2.0.0`** **`alpha`**: remove Menu Card from the bundle and ship Room Summary Hub polish. Release channel **`2.0.0-alpha.15`** (GitHub **prerelease**).
+
+### Removed
+
+- **`menu`:** `custom:nodalia-menu-card` removed from the bundle, package files, examples, tests, and i18n catalog. Focus shifts to Room Summary, Camera, and Scenes for **2.0.0**.
+
+### Added
+
+- **Room Summary editor:** collapsible **Styles** section with card accent and background color pickers.
+- **Room Summary Hub:** temp, humidity, and presence chips open **more-info** for their entities.
+
+### Changed
+
+- **Room Summary Hub home:** temp/humidity/presence chips align to the right of the room name; contextual action row is actions-only (lights, covers, fans, climate, media).
+- **Room Summary Hub:** home strip and media sub-panel embed real **`nodalia-media-player`** cards.
+- **Room Summary Hub lights:** embedded light cards without brightness/color presets (slider + mode buttons only).
+- **Room Summary Hub embeds:** off-state cards blend with the summary tint instead of default light-card off colors.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.15`.
+
+## [2.0.0-alpha.14] - 2026-07-08
+
+Skipped public tag — changes folded into **`2.0.0-alpha.15`**.
+
 ## [2.0.0-alpha.13] - 2026-07-08
 
 Thirteenth **`2.0.0`** **`alpha`**: Room Summary Hub parity with Nodalia cards. Release channel **`2.0.0-alpha.13`**.

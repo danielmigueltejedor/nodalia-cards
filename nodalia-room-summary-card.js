@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.13";
+const CARD_VERSION = "2.0.0-alpha.15";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "media"]);
@@ -154,6 +154,57 @@ function escapeHtml(v) {
 }
 
 function finiteNumber(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
+function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+
+function formatEditorHexChannel(value) {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+}
+
+function formatEditorColorFromHex(hex, alpha = 1) {
+  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+    return String(hex ?? "");
+  }
+  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (safeAlpha >= 0.999) {
+    return `#${normalizedHex}`;
+  }
+  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+}
+
+function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+  const resolve = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+  const resolvedValue =
+    (resolve ? resolve(sourceValue) : "") || (resolve ? resolve(fallbackValue) : "") || "rgb(113, 192, 255)";
+  const channels = resolvedValue.match(/[\d.]+/g) || [];
+  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+  return {
+    alpha,
+    hex,
+    resolved: resolvedValue,
+    source: sourceValue,
+    value: formatEditorColorFromHex(hex, alpha),
+  };
+}
+
+function getEditorColorFallbackValue(field) {
+  const normalizedField = String(field ?? "");
+  if (normalizedField === "styles.accent" || normalizedField.endsWith(".accent")) {
+    return "var(--primary-color)";
+  }
+  if (normalizedField.endsWith("background")) {
+    return "var(--ha-card-background)";
+  }
+  return "var(--info-color, #71c0ff)";
+}
 function isUnavailable(state) { const k = normalizeTextKey(state?.state); return k === "unavailable" || k === "unknown"; }
 function stateIsOn(state) {
   const k = normalizeTextKey(state?.state);
@@ -552,29 +603,62 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         label: summary.cover_open ? this._t("closeCovers", "Close covers") : this._t("openCovers", "Open covers"),
       });
     }
-    if (summary.hot && config.fans?.length) {
-      const fanOff = config.fans.every(id => {
+    if (config.fans?.length) {
+      const anyFanOn = config.fans.some(id => {
         const state = getState(this._hass, id);
-        return !state || !stateIsOn(state);
+        return state && stateIsOn(state);
       });
-      if (fanOff) {
+      actions.push({
+        id: anyFanOn ? "fans_off" : "fans_on",
+        icon: anyFanOn ? "mdi:fan-off" : "mdi:fan",
+        label: anyFanOn ? this._t("turnOffFans", "Turn off fans") : this._t("turnOnFans", "Turn on fans"),
+      });
+    }
+    if (config.climate) {
+      actions.push({
+        id: "climate_up",
+        icon: "mdi:chevron-up",
+        label: this._t("raiseTemperature", "Raise temperature"),
+      });
+      actions.push({
+        id: "climate_down",
+        icon: "mdi:chevron-down",
+        label: this._t("lowerTemperature", "Lower temperature"),
+      });
+    }
+    if (config.media_player) {
+      const mediaState = getState(this._hass, config.media_player);
+      const mediaKey = normalizeTextKey(mediaState?.state);
+      if (mediaKey === "playing") {
         actions.push({
-          id: "fans_on",
-          icon: "mdi:fan",
-          label: this._t("turnOnFans", "Turn on fans"),
+          id: "media_play_pause",
+          icon: "mdi:pause",
+          label: this._t("mediaPause", "Pause"),
+        });
+      } else if (mediaKey === "paused") {
+        actions.push({
+          id: "media_play_pause",
+          icon: "mdi:play",
+          label: this._t("mediaPlay", "Play"),
         });
       }
-    }
-    if (config.show_presence && summary.occupied) {
-      actions.push({ id: "presence", icon: "mdi:account-check", label: this._t("occupied", "Occupied"), readonly: true });
-    } else if (config.show_presence && summary.empty) {
-      actions.push({ id: "presence", icon: "mdi:account-off-outline", label: this._t("vacant", "Vacant"), readonly: true });
+      if (mediaState && stateIsOn(mediaState)) {
+        actions.push({
+          id: "media_off",
+          icon: "mdi:power",
+          label: this._t("turnOffMedia", "Turn off media"),
+        });
+      } else if (mediaState && !isUnavailable(mediaState)) {
+        actions.push({
+          id: "media_on",
+          icon: "mdi:play-circle-outline",
+          label: this._t("turnOnMedia", "Turn on media"),
+        });
+      }
     }
     if (summary.security_issue) {
       actions.push({ id: "security", icon: "mdi:shield-alert", label: this._t("securityIssue", "Security issue"), warn: true });
     }
-    if (summary.hot) actions.push({ id: "comfort_hot", icon: "mdi:fire", label: this._t("hot", "Hot"), warn: true, readonly: true });
-    if (summary.humid) actions.push({ id: "comfort_humid", icon: "mdi:water-percent", label: this._t("humid", "Humid"), warn: true, readonly: true });
     return actions;
   }
 
@@ -719,6 +803,30 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
     if (action === "fans_on" && cfg.fans?.length) {
       void this._invoke("fan", "turn_on", { entity_id: cfg.fans });
+      return;
+    }
+    if (action === "fans_off" && cfg.fans?.length) {
+      void this._invoke("fan", "turn_off", { entity_id: cfg.fans });
+      return;
+    }
+    if (action === "climate_up" && cfg.climate) {
+      this._runClimateDelta(cfg.climate, 1);
+      return;
+    }
+    if (action === "climate_down" && cfg.climate) {
+      this._runClimateDelta(cfg.climate, -1);
+      return;
+    }
+    if (action === "media_play_pause" && cfg.media_player) {
+      this._runMediaControl("play_pause");
+      return;
+    }
+    if (action === "media_on" && cfg.media_player) {
+      void this._invoke("media_player", "turn_on", { entity_id: cfg.media_player });
+      return;
+    }
+    if (action === "media_off" && cfg.media_player) {
+      void this._invoke("media_player", "turn_off", { entity_id: cfg.media_player });
     }
   }
 
@@ -763,6 +871,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
     if (action?.startsWith("media:")) {
       this._runMediaControl(action.slice(6));
+      return;
+    }
+    if (action?.startsWith("more-info:")) {
+      const entityId = action.slice(10);
+      if (entityId) {
+        this._triggerHaptic();
+        fireEvent(this, "hass-more-info", { entityId });
+      }
       return;
     }
     if (action?.startsWith("quick:")) this._runQuickAction(action.slice(6));
@@ -872,26 +988,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </aside>`;
   }
 
-  _renderHubHomeMedia(config, summary) {
+  _renderHubHomeMedia(config) {
     if (!config.media_player || config.show_media === false) return "";
     const state = getState(this._hass, config.media_player);
     if (!state || isUnavailable(state)) return "";
-    const title = String(state.attributes?.media_title || state.attributes?.friendly_name || "").trim();
-    const artist = String(state.attributes?.media_artist || "").trim();
-    const playing = summary.media_playing;
-    return `<div class="room-hub__media-strip">
-      <div class="room-hub__media-copy">
-        <div class="room-hub__media-title">${escapeHtml(title || this._t("mediaPlayer", "Media player"))}</div>
-        ${artist ? `<div class="room-hub__media-artist">${escapeHtml(artist)}</div>` : ""}
-      </div>
-      <div class="room-hub__media-controls">
-        <button type="button" class="room-hub__mini-control" data-room-action="media:prev" aria-label="Previous"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
-        <button type="button" class="room-hub__mini-control room-hub__mini-control--primary" data-room-action="media:play_pause" aria-label="Play/Pause">
-          <ha-icon icon="${playing ? "mdi:pause" : "mdi:play"}"></ha-icon>
-        </button>
-        <button type="button" class="room-hub__mini-control" data-room-action="media:next" aria-label="Next"><ha-icon icon="mdi:skip-next"></ha-icon></button>
-      </div>
-    </div>`;
+    return `<div class="room-hub__embed-host room-hub__embed-host--media" data-hub-embed="media" data-entity="${escapeHtml(config.media_player)}"></div>`;
   }
 
   _hubEmbedStylePack(config) {
@@ -900,7 +1001,61 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       language: base.language,
       animations: deepClone(base.animations),
       haptics: deepClone(base.haptics),
-      styles: deepClone(base.styles),
+    };
+  }
+
+  _hubEmbeddedCardStyles(config) {
+    const parent = deepClone(normalizeConfig(config).styles);
+    const accent = parent.accent || "var(--primary-color)";
+    parent.card = {
+      ...parent.card,
+      background: "transparent",
+      border: "none",
+      box_shadow: "none",
+      padding: "0",
+      gap: "10px",
+    };
+    parent.icon = {
+      ...parent.icon,
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      color: "var(--primary-text-color)",
+    };
+    parent.control = {
+      ...parent.control,
+      accent_color: parent.control?.accent_color || "var(--primary-text-color)",
+      accent_background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+    };
+    return parent;
+  }
+
+  _hubMediaPlayerStylePack(config) {
+    const parent = deepClone(normalizeConfig(config).styles);
+    const accent = parent.accent || "var(--primary-color)";
+    return {
+      player: {
+        background: "transparent",
+        border: "none",
+        box_shadow: "none",
+        padding: "0",
+        min_height: "auto",
+        artwork_size: "52px",
+        tv_artwork_size: "58px",
+        control_size: "30px",
+        title_size: "12px",
+        subtitle_size: "10px",
+        slider_wrap_height: "44px",
+        slider_height: "12px",
+        slider_thumb_size: "22px",
+        progress_color: accent,
+        progress_background: `color-mix(in srgb, ${accent} 18%, transparent)`,
+        overlay_color: "rgba(0, 0, 0, 0.32)",
+        dot_size: "8px",
+        active_tint_color: accent,
+        accent_color: parent.control?.accent_color || "var(--primary-text-color)",
+        accent_background: parent.control?.accent_background || `color-mix(in srgb, ${accent} 18%, transparent)`,
+        border_radius: "0",
+      },
+      browser: deepClone(parent.browser || {}),
     };
   }
 
@@ -908,6 +1063,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (!this.shadowRoot) return;
     const config = normalizeConfig(this._config || {});
     const pack = this._hubEmbedStylePack(config);
+    const embeddedStyles = this._hubEmbeddedCardStyles(config);
+    const mediaStyles = this._hubMediaPlayerStylePack(config);
 
     const mount = (host, tagName, extra = {}) => {
       if (!(host instanceof HTMLElement)) return;
@@ -929,9 +1086,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         show_slider_mode_buttons: true,
         show_color_controls: true,
         show_temperature_controls: true,
-        show_quick_brightness: true,
+        show_quick_brightness: false,
+        show_quick_color_presets: false,
+        show_quick_temperature_presets: false,
         tap_action: "toggle",
         icon_tap_action: "toggle",
+        styles: embeddedStyles,
       });
     });
     this.shadowRoot.querySelectorAll('[data-hub-embed="vacuum"]').forEach(host => {
@@ -943,6 +1103,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         show_locate: true,
         show_state_chip: true,
         show_battery_chip: true,
+        styles: embeddedStyles,
       });
     });
     this.shadowRoot.querySelectorAll('[data-hub-embed="fan"]').forEach(host => {
@@ -952,6 +1113,19 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         show_oscillation: true,
         tap_action: "toggle",
         icon_tap_action: "toggle",
+        styles: embeddedStyles,
+      });
+    });
+    this.shadowRoot.querySelectorAll('[data-hub-embed="media"]').forEach(host => {
+      mount(host, "nodalia-media-player", {
+        show_state: false,
+        album_cover_background: true,
+        layout: {
+          fixed: false,
+          reserve_space: false,
+          reserve_height: "auto",
+        },
+        styles: mediaStyles,
       });
     });
   }
@@ -968,37 +1142,74 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </button>`;
   }
 
+  _renderHubStatusChips(config, summary) {
+    const chips = [];
+    const pushChip = (className, icon, label, entityId) => {
+      if (!entityId) return;
+      chips.push(`<button type="button" class="room-hub__metric-bubble ${className}" data-room-action="more-info:${escapeHtml(entityId)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
+        <ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(label)}</span>
+      </button>`);
+    };
+    if (config.show_temperature && config.temperature && summary.temperature !== "—") {
+      pushChip(
+        "room-hub__metric-bubble--temperature",
+        "mdi:thermometer",
+        summary.temperature,
+        config.temperature,
+      );
+    }
+    if (config.show_humidity && config.humidity && summary.humidity !== "—") {
+      pushChip(
+        "room-hub__metric-bubble--humidity",
+        "mdi:water-percent",
+        summary.humidity,
+        config.humidity,
+      );
+    }
+    if (config.show_presence && (config.presence || config.occupancy)) {
+      const presenceEntity = config.presence || config.occupancy;
+      if (summary.occupied) {
+        pushChip(
+          "room-hub__metric-bubble--presence room-hub__metric-bubble--presence-occupied",
+          "mdi:account-check",
+          this._t("occupied", "Occupied"),
+          presenceEntity,
+        );
+      } else if (summary.empty) {
+        pushChip(
+          "room-hub__metric-bubble--presence room-hub__metric-bubble--presence-vacant",
+          "mdi:account-off-outline",
+          this._t("vacant", "Vacant"),
+          presenceEntity,
+        );
+      }
+    }
+    return chips.join("");
+  }
+
   _renderHubHome(config, summary, styles, accentColor) {
     const title = config.name || this._t("defaultName", "Room");
     const image = window.NodaliaUtils?.sanitizeActionUrl?.(config.image, { allowRelative: true }) || "";
     const contextual = this._getContextualActions(summary, config);
-    const metricBubbles = [];
-    if (config.show_temperature && config.temperature && summary.temperature !== "—") {
-      metricBubbles.push(`<div class="room-hub__metric-bubble room-hub__metric-bubble--temperature" title="${escapeHtml(this._t("temperature", "Temperature"))}">
-        <ha-icon icon="mdi:thermometer"></ha-icon><span>${escapeHtml(summary.temperature)}</span>
-      </div>`);
-    }
-    if (config.show_humidity && config.humidity && summary.humidity !== "—") {
-      metricBubbles.push(`<div class="room-hub__metric-bubble room-hub__metric-bubble--humidity" title="${escapeHtml(this._t("humidity", "Humidity"))}">
-        <ha-icon icon="mdi:water-percent"></ha-icon><span>${escapeHtml(summary.humidity)}</span>
-      </div>`);
-    }
+    const statusChips = this._renderHubStatusChips(config, summary);
     const homeClass = image ? "room-hub__home room-hub__home--image" : "room-hub__home";
     const homeStyle = image ? ` style="--room-hub-bg-image:url('${escapeHtml(image)}')"` : "";
     return `<div class="${homeClass}"${homeStyle}>
       <header class="room-hub__home-header">
         ${this._renderHubRoomIcon(config.icon, title, styles)}
         <div class="room-hub__room-copy">
-          <div class="room-hub__room-title">${escapeHtml(title)}</div>
-          ${metricBubbles.length ? `<div class="room-hub__room-metrics">${metricBubbles.join("")}</div>` : ""}
+          <div class="room-hub__room-title-row">
+            <div class="room-hub__room-title">${escapeHtml(title)}</div>
+            ${statusChips ? `<div class="room-hub__status-chips">${statusChips}</div>` : ""}
+          </div>
         </div>
       </header>
       ${contextual.length ? `<div class="room-hub__context-actions">${contextual.map(action => `
-        <button type="button" class="room-hub__context-action ${action.warn ? "room-hub__context-action--warn" : ""} ${action.readonly ? "room-hub__context-action--readonly" : ""}"
-          data-room-action="${action.readonly ? "" : `quick:${escapeHtml(action.id)}`}" ${action.readonly ? "disabled" : ""}>
+        <button type="button" class="room-hub__context-action ${action.warn ? "room-hub__context-action--warn" : ""}"
+          data-room-action="quick:${escapeHtml(action.id)}">
           <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon><span>${escapeHtml(action.label)}</span>
         </button>`).join("")}</div>` : ""}
-      ${this._renderHubHomeMedia(config, summary)}
+      ${this._renderHubHomeMedia(config)}
     </div>`;
   }
 
@@ -1057,27 +1268,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.vacuums, "vacuum")}</div>`;
   }
 
-  _renderHubMediaPanel(config, summary) {
-    const entityId = config.media_player;
-    const state = getState(this._hass, entityId);
-    const title = String(state?.attributes?.media_title || this._entityLabel(entityId)).trim();
-    const artist = String(state?.attributes?.media_artist || "").trim();
-    const playing = summary.media_playing;
-    return `<div class="room-hub__panel room-hub__panel--media">
-      <div class="room-hub__media-panel">
-        <div class="room-hub__media-copy">
-          <div class="room-hub__media-title">${escapeHtml(title)}</div>
-          ${artist ? `<div class="room-hub__media-artist">${escapeHtml(artist)}</div>` : ""}
-        </div>
-        <div class="room-hub__media-controls room-hub__media-controls--large">
-          <button type="button" class="room-hub__mini-control" data-room-action="media:prev"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control room-hub__mini-control--primary" data-room-action="media:play_pause">
-            <ha-icon icon="${playing ? "mdi:pause" : "mdi:play"}"></ha-icon>
-          </button>
-          <button type="button" class="room-hub__mini-control" data-room-action="media:next"><ha-icon icon="mdi:skip-next"></ha-icon></button>
-        </div>
-      </div>
-    </div>`;
+  _renderHubMediaPanel(config) {
+    if (!config.media_player) return "";
+    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts([config.media_player], "media")}</div>`;
   }
 
   _renderHubPanelContent(panel, config, summary, styles, accentColor) {
@@ -1086,7 +1279,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (panel === "climate") return this._renderHubClimatePanel(config);
     if (panel === "vacuum") return this._renderHubVacuumPanel(config);
     if (panel === "fans") return this._renderHubFanPanel(config);
-    if (panel === "media") return this._renderHubMediaPanel(config, summary);
+    if (panel === "media") return this._renderHubMediaPanel(config);
     return this._renderHubHome(config, summary, styles, accentColor);
   }
 
@@ -1162,7 +1355,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           background:linear-gradient(135deg, color-mix(in srgb, var(--ha-card-background) 72%, transparent), color-mix(in srgb, var(--ha-card-background) 90%, transparent));
           border-radius:inherit; content:""; inset:0; pointer-events:none; position:absolute; z-index:0;
         }
-        .room-hub__home-header, .room-hub__context-actions, .room-hub__media-strip, .room-hub__device-list, .room-hub__media-panel, .room-hub__embed-list { position:relative; z-index:1; }
+        .room-hub__home-header, .room-hub__context-actions, .room-hub__device-list, .room-hub__embed-list { position:relative; z-index:1; }
         .room-hub__home-header { align-items:flex-start; display:grid; gap:12px; grid-template-columns:auto minmax(0,1fr); }
         .room-hub__room-icon {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 8%, transparent);
@@ -1171,13 +1364,16 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,0.12);
         }
         .room-hub__room-icon ha-icon { --mdc-icon-size:28px; }
-        .room-hub__room-copy { display:grid; gap:8px; min-width:0; padding-top:2px; }
-        .room-hub__room-title { font-size:${styles.title_size}; font-weight:700; line-height:1.2; overflow-wrap:anywhere; }
-        .room-hub__room-metrics { display:flex; flex-wrap:wrap; gap:8px; }
+        .room-hub__room-copy { display:grid; gap:8px; min-width:0; padding-top:2px; width:100%; }
+        .room-hub__room-title-row { align-items:center; display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; min-width:0; width:100%; }
+        .room-hub__room-title { flex:1 1 auto; font-size:${styles.title_size}; font-weight:700; line-height:1.2; min-width:0; overflow-wrap:anywhere; }
+        .room-hub__status-chips { align-items:center; display:flex; flex:0 1 auto; flex-wrap:wrap; gap:6px; justify-content:flex-end; margin-left:auto; }
         .room-hub__metric-bubble {
-          align-items:center; border:1px solid transparent; border-radius:999px; display:inline-flex;
-          font-size:12px; font-weight:700; gap:6px; min-height:32px; padding:0 12px;
+          align-items:center; appearance:none; border:1px solid transparent; border-radius:999px; cursor:pointer;
+          display:inline-flex; font:inherit; font-size:12px; font-weight:700; gap:6px; min-height:32px; padding:0 12px;
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
         }
+        .room-hub__metric-bubble:active { transform:scale(0.97); }
         .room-hub__metric-bubble--temperature {
           background:color-mix(in srgb, var(--warning-color, #f6b73c) 18%, var(--ha-card-background));
           border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 28%, transparent);
@@ -1188,6 +1384,16 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           border-color:color-mix(in srgb, #5aa7ff 28%, transparent);
           color:color-mix(in srgb, #5aa7ff 88%, var(--primary-text-color));
         }
+        .room-hub__metric-bubble--presence-occupied {
+          background:color-mix(in srgb, var(--success-color, #4caf50) 18%, var(--ha-card-background));
+          border-color:color-mix(in srgb, var(--success-color, #4caf50) 28%, transparent);
+          color:color-mix(in srgb, var(--success-color, #4caf50) 88%, var(--primary-text-color));
+        }
+        .room-hub__metric-bubble--presence-vacant {
+          background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
+          border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          color:var(--secondary-text-color);
+        }
         .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:6px; }
         .room-hub__context-action {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
@@ -1195,19 +1401,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           cursor:pointer; display:inline-flex; font:inherit; font-size:11px; font-weight:600; gap:6px; min-height:32px; padding:0 12px;
         }
         .room-hub__context-action--warn { border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 24%, transparent); color:var(--warning-color,#f59e0b); }
-        .room-hub__context-action--readonly { cursor:default; opacity:.92; }
-        .room-hub__media-strip { align-items:center; display:flex; gap:10px; justify-content:space-between; margin-top:8px; padding:4px 0 0; }
-        .room-hub__media-copy { min-width:0; }
-        .room-hub__media-title, .room-hub__device-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .room-hub__media-artist, .room-hub__device-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .room-hub__media-controls, .room-hub__device-controls { align-items:center; display:flex; flex-wrap:wrap; gap:6px; }
-        .room-hub__media-controls--large { justify-content:center; margin-top:0; }
-        .room-hub__mini-control {
-          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
-          cursor:pointer; display:inline-flex; height:34px; justify-content:center; width:34px;
-        }
-        .room-hub__mini-control--primary { background:color-mix(in srgb, ${accentColor} 18%, transparent); border-color:color-mix(in srgb, ${accentColor} 24%, transparent); color:${accentColor}; height:40px; width:40px; }
         .room-hub__device-list { display:grid; gap:10px; }
         .room-hub__device-row {
           align-items:center; background:var(--ha-card-background); border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
@@ -1226,13 +1419,38 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__device-body { display:grid; gap:8px; min-width:0; }
         .room-hub__embed-list { display:grid; gap:10px; }
         .room-hub__embed-host { display:block; min-width:0; width:100%; }
+        .room-hub__embed-host--media { margin-top:8px; }
         .room-hub__embed-host > nodalia-light-card,
         .room-hub__embed-host > nodalia-vacuum-card,
-        .room-hub__embed-host > nodalia-fan-card { display:block; width:100%; }
+        .room-hub__embed-host > nodalia-fan-card,
+        .room-hub__embed-host > nodalia-media-player { display:block; width:100%; }
+        .room-hub__embed-host > nodalia-light-card .light-card.is-off,
+        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off,
+        .room-hub__embed-host > nodalia-vacuum-card .vacuum-card,
+        .room-hub__embed-host > nodalia-media-player .media-player-card--idle {
+          background: transparent !important;
+          border-color: transparent !important;
+          box-shadow: none !important;
+        }
+        .room-hub__embed-host > nodalia-light-card .light-card.is-off::before,
+        .room-hub__embed-host > nodalia-light-card .light-card.is-off::after,
+        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off::before,
+        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off::after,
+        .room-hub__embed-host > nodalia-media-player .media-player-card--idle::before {
+          opacity: 0 !important;
+        }
+        .room-hub__device-name { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__device-state { color:var(--secondary-text-color); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .room-hub__device-controls { align-items:center; display:flex; flex-wrap:wrap; gap:6px; }
+        .room-hub__mini-control {
+          align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
+          cursor:pointer; display:inline-flex; height:34px; justify-content:center; width:34px;
+        }
+        .room-hub__mini-control--primary { background:color-mix(in srgb, ${accentColor} 18%, transparent); border-color:color-mix(in srgb, ${accentColor} 24%, transparent); color:${accentColor}; height:40px; width:40px; }
         .room-hub__climate-dial { display:grid; gap:10px; justify-items:center; padding:8px 0; text-align:center; }
         .room-hub__climate-value { font-size:28px; font-weight:700; line-height:1; }
         .room-hub__climate-target { color:var(--secondary-text-color); font-size:12px; }
-        .room-hub__media-panel { align-items:center; display:flex; flex-direction:column; gap:14px; justify-content:center; min-height:160px; padding:8px 0; text-align:center; }
         @keyframes room-hub-slide { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
         @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
         @media (prefers-reduced-motion:reduce) { .room-hub__stage--enter { animation:none; } }
@@ -1477,6 +1695,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._config = mergeConfig(DEFAULT_CONFIG, {});
     this._hass = null;
     this._entityOptionsSignature = "";
+    this._showStyleSection = false;
     this._editorShadowListenersAttached = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -1625,7 +1844,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     const input = e.composedPath().find(n => n instanceof HTMLInputElement || n instanceof HTMLSelectElement || n instanceof HTMLTextAreaElement);
     if (!input?.dataset?.field) return;
     e.stopPropagation();
-    setByPath(this._config, input.dataset.field, input.type === "checkbox" ? input.checked : input.value);
+    let value = input.type === "checkbox" ? input.checked : input.value;
+    if (input.dataset.valueType === "color" && input instanceof HTMLInputElement) {
+      value = formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+    }
+    setByPath(this._config, input.dataset.field, value);
     if (e.type === "change") this._emitConfig(false);
   }
 
@@ -1667,6 +1890,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (btn.dataset.act === "move-down" && list && Number.isInteger(idx)) {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       moveListItem(this._config[list], idx, idx + 1);
+      this._emitConfig(true);
+      return;
+    }
+    if (btn.dataset.act === "toggle-styles") {
+      this._showStyleSection = !this._showStyleSection;
       this._emitConfig(true);
     }
   }
@@ -1726,6 +1954,31 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         data-value="${escapeHtml(inputValue)}"
       ></div>
     </div>`;
+  }
+
+  _renderColorField(label, field, value, options = {}) {
+    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+    const currentValue = value === undefined || value === null || value === ""
+      ? fallbackValue
+      : String(value);
+    const colorModel = getEditorColorModel(currentValue, fallbackValue);
+    return `
+      <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <div class="editor-color-field">
+          <label class="editor-color-picker" title="${escapeHtml(this._editorLabel("ed.entity.custom_color"))}">
+            <input
+              type="color"
+              data-field="${escapeHtml(field)}"
+              data-value-type="color"
+              data-alpha="${escapeHtml(String(colorModel.alpha))}"
+              value="${escapeHtml(colorModel.hex)}"
+              aria-label="${escapeHtml(this._editorLabel(label))}"
+            />
+            <span class="editor-color-swatch" style="--editor-swatch: ${escapeHtml(currentValue)};"></span>
+          </label>
+        </div>
+      </div>`;
   }
 
   _listSection(title, hint, listKey, domains) {
@@ -1890,6 +2143,41 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       .item-card__header { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
       .item-card__title { font-size: 13px; font-weight: 700; }
       .empty { color: var(--secondary-text-color); font-size: 12px; line-height: 1.45; }
+      .editor-color-field {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        min-height: 40px;
+      }
+      .editor-color-picker {
+        align-items: center;
+        background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+        border-radius: 999px;
+        cursor: pointer;
+        display: inline-flex;
+        flex: 0 0 auto;
+        height: 40px;
+        justify-content: center;
+        position: relative;
+        width: 40px;
+      }
+      .editor-color-picker input {
+        cursor: pointer;
+        inset: 0;
+        opacity: 0;
+        position: absolute;
+        width: 100%;
+      }
+      .editor-color-swatch {
+        background: var(--editor-swatch, var(--primary-color));
+        border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+        border-radius: 999px;
+        display: block;
+        height: 28px;
+        width: 28px;
+      }
       @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
     </style><div class="editor">
       <section class="editor-section">
@@ -1967,6 +2255,21 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ])}
         ${this._field("ed.room_summary.navigation_path", "navigation_path", c.navigation_path, { full: true, ph: "ed.room_summary.navigation_path" })}
       </div></section>
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.styles_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.styles_section_hint"))}</div>
+          </div>
+          <button type="button" data-act="toggle-styles">
+            ${escapeHtml(this._showStyleSection ? this._editorLabel("ed.weather.hide_style_settings") : this._editorLabel("ed.weather.show_style_settings"))}
+          </button>
+        </div>
+        ${this._showStyleSection ? `<div class="editor-grid">
+          ${this._renderColorField("ed.entity.style_accent_color", "styles.accent", c.styles?.accent)}
+          ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", c.styles?.card?.background)}
+        </div>` : ""}
+      </section>
     </div>`;
     this._detachEditorShadowListeners();
     this._attachEditorShadowListeners();

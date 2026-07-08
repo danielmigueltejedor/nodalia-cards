@@ -269,8 +269,6 @@ Major internal improvements:
 - `custom:nodalia-news-card` — [`docs/cards/news-card.md`](./docs/cards/news-card.md)
 - `custom:nodalia-camera-card`
 - `custom:nodalia-room-summary-card`
-- `custom:nodalia-menu-card`
-
 ---
 
 # 🛠️ Visual editors

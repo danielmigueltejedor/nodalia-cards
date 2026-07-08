@@ -372,17 +372,18 @@
     "hubHome": "Inicio",
     "hubNavigation": "Navegación de habitación",
     "turnOnFans": "Encender ventiladores",
+    "turnOffFans": "Apagar ventiladores",
+    "raiseTemperature": "Subir temperatura",
+    "lowerTemperature": "Bajar temperatura",
+    "mediaPlay": "Reproducir",
+    "mediaPause": "Pausar",
+    "turnOnMedia": "Encender media",
+    "turnOffMedia": "Apagar media",
     "target": "Objetivo",
     "power": "Consumo",
     "airQuality": "Calidad del aire",
     "entityUnavailable": "No disponible",
     "noRoomData": "Sin datos de habitación"
-  },
-  "menuCard": {
-    "cardDescription": "Navegación horizontal estilo Nodalia con badges e ítem activo.",
-    "emptyTitle": "Nodalia Menu Card",
-    "emptyBody": "Añade ítems de menú en el editor de la tarjeta.",
-    "activeItem": "Ítem activo"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

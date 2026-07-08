@@ -372,12 +372,6 @@
     "entityUnavailable": "Unavailable",
     "noRoomData": "No room data"
   },
-  "menuCard": {
-    "cardDescription": "Nodalia-style horizontal dashboard navigation with badges and active item.",
-    "emptyTitle": "Nodalia Menu Card",
-    "emptyBody": "Add menu items in the card editor.",
-    "activeItem": "Active item"
-  },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
     "emptyBody": "Adaugă entități scenă în editorul cardului.",

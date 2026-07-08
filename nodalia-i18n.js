@@ -594,17 +594,18 @@
         hubHome: "Home",
         hubNavigation: "Room navigation",
         turnOnFans: "Turn on fans",
+        turnOffFans: "Turn off fans",
+        raiseTemperature: "Raise temperature",
+        lowerTemperature: "Lower temperature",
+        mediaPlay: "Play",
+        mediaPause: "Pause",
+        turnOnMedia: "Turn on media",
+        turnOffMedia: "Turn off media",
         target: "Target",
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
-      },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -1546,12 +1547,6 @@
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
       },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
-      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Füge Szenen-Entitäten im Karten-Editor hinzu.",
@@ -2491,12 +2486,6 @@
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
-      },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -3438,17 +3427,18 @@
         hubHome: "Inicio",
         hubNavigation: "Navegación de habitación",
         turnOnFans: "Encender ventiladores",
+        turnOffFans: "Apagar ventiladores",
+        raiseTemperature: "Subir temperatura",
+        lowerTemperature: "Bajar temperatura",
+        mediaPlay: "Reproducir",
+        mediaPause: "Pausar",
+        turnOnMedia: "Encender media",
+        turnOffMedia: "Apagar media",
         target: "Objetivo",
         power: "Consumo",
         airQuality: "Calidad del aire",
         entityUnavailable: "No disponible",
         noRoomData: "Sin datos de habitación"
-      },
-      menuCard: {
-        cardDescription: "Navegación horizontal estilo Nodalia con badges e ítem activo.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Añade ítems de menú en el editor de la tarjeta.",
-        activeItem: "Ítem activo"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -4390,12 +4380,6 @@
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
       },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
-      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Ajoutez des entités scène dans l’éditeur de carte.",
@@ -5335,12 +5319,6 @@
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
-      },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -6282,12 +6260,6 @@
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
       },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
-      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Voeg scène-entiteiten toe in de kaarteditor.",
@@ -7227,12 +7199,6 @@
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
-      },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -8174,12 +8140,6 @@
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
       },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
-      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Adicione entidades de cena no editor do cartão.",
@@ -9119,12 +9079,6 @@
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
-      },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -10066,12 +10020,6 @@
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
       },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
-      },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
         emptyBody: "Добавьте сцены в редакторе карточки.",
@@ -11011,12 +10959,6 @@
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
         noRoomData: "No room data"
-      },
-      menuCard: {
-        cardDescription: "Nodalia-style horizontal dashboard navigation with badges and active item.",
-        emptyTitle: "Nodalia Menu Card",
-        emptyBody: "Add menu items in the card editor.",
-        activeItem: "Active item"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",

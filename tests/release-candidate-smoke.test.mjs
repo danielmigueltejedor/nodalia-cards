@@ -25,6 +25,15 @@ test("bundle registers every card listed in build-bundle CARD_PARTS", () => {
   });
 });
 
+test("menu card is not shipped in the bundle", () => {
+  const build = read("scripts/build-bundle.mjs");
+  const bundle = read("nodalia-cards.js");
+  const suite = read(`nodalia-cards-suite-${JSON.parse(read("package.json")).version}.js`);
+  assert.doesNotMatch(build, /nodalia-menu-card\.js/);
+  assert.doesNotMatch(bundle, /nodalia-menu-card/);
+  assert.doesNotMatch(suite, /nodalia-menu-card/);
+});
+
 test("published package files and bundle manifest stay coherent", () => {
   const pkg = JSON.parse(read("package.json"));
   const hacs = JSON.parse(read("hacs.json"));
@@ -45,6 +54,7 @@ test("published package files and bundle manifest stay coherent", () => {
     "nodalia-cards-2.0.0-alpha.11.js",
     "nodalia-cards-2.0.0-alpha.12.js",
     "nodalia-cards-2.0.0-alpha.13.js",
+    "nodalia-cards-2.0.0-alpha.14.js",
   ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
