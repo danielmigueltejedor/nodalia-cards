@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.18] - 2026-07-08
+
+Eighteenth **`2.0.0`** **`alpha`**: presence chip icon-only in Room Summary Hub. Release channel **`2.0.0-alpha.18`**.
+
+### Changed
+
+- **Room Summary Hub:** occupied/vacant presence chip shows icon only (no text label); tooltip and `aria-label` remain for accessibility.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.18`.
+
 ## [2.0.0-alpha.17] - 2026-07-08
 
 Seventeenth **`2.0.0`** **`alpha`**: Room Summary Hub design polish, typography controls, and stable card tinting. Release channel **`2.0.0-alpha.17`**.

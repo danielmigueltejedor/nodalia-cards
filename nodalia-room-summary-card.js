@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.17";
+const CARD_VERSION = "2.0.0-alpha.18";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "media"]);
@@ -1176,6 +1176,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         <ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(label)}</span>
       </button>`);
     };
+    const pushIconChip = (className, icon, label, entityId) => {
+      if (!entityId) return;
+      chips.push(`<button type="button" class="room-hub__metric-bubble room-hub__metric-bubble--icon-only ${className}" data-room-action="more-info:${escapeHtml(entityId)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
+        <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+      </button>`);
+    };
     if (config.show_temperature && config.temperature && summary.temperature !== "—") {
       pushChip(
         "room-hub__metric-bubble--temperature",
@@ -1195,14 +1201,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (config.show_presence && (config.presence || config.occupancy)) {
       const presenceEntity = config.presence || config.occupancy;
       if (summary.occupied) {
-        pushChip(
+        pushIconChip(
           "room-hub__metric-bubble--presence room-hub__metric-bubble--presence-occupied",
           "mdi:account-check",
           this._t("occupied", "Occupied"),
           presenceEntity,
         );
       } else if (summary.empty) {
-        pushChip(
+        pushIconChip(
           "room-hub__metric-bubble--presence room-hub__metric-bubble--presence-vacant",
           "mdi:account-off-outline",
           this._t("vacant", "Vacant"),
@@ -1399,6 +1405,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
         }
         .room-hub__metric-bubble ha-icon { --mdc-icon-size:${hubMetricIcon}; flex:0 0 auto; }
+        .room-hub__metric-bubble--icon-only { justify-content:center; min-width:${hubMetricHeight}; padding:0; width:${hubMetricHeight}; }
         .room-hub__metric-bubble:active { transform:scale(0.97); }
         .room-hub__metric-bubble--temperature {
           background:color-mix(in srgb, var(--warning-color, #f6b73c) 18%, var(--ha-card-background));
