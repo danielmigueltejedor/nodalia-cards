@@ -1,9 +1,9 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.18";
+const CARD_VERSION = "2.0.0-alpha.19";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
-const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "media"]);
+const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const DENSITY_MODES = new Set(["comfortable", "compact"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
 
@@ -24,6 +24,8 @@ const DEFAULT_CONFIG = {
   media_players: [],
   vacuums: [],
   fans: [],
+  humidifiers: [],
+  others: [],
   power: "",
   air_quality: "",
   lights: [],
@@ -305,6 +307,8 @@ function normalizeConfig(rawConfig = {}) {
   }
   config.vacuums = entityList(config.vacuums, config.vacuum, config.vacuum_entities);
   config.fans = entityList(config.fans, config.fan_entities);
+  config.humidifiers = entityList(config.humidifiers, config.humidifier_entities);
+  config.others = entityList(config.others, config.other_entities, config.entities);
   config.power = entityScalar(config.power);
   config.air_quality = entityScalar(config.air_quality);
 
@@ -355,6 +359,7 @@ function hasRoomContent(config) {
     || (c.media_players || []).length
     || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
     || (c.vacuums || []).length || (c.fans || []).length
+    || (c.humidifiers || []).length || (c.others || []).length
     || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length,
   );
 }
@@ -557,6 +562,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         config.temperature, config.humidity, config.presence, config.climate,
         config.media_player, ...(config.lights || []), ...(config.covers || []),
         ...(config.vacuums || []), ...(config.fans || []),
+        ...(config.humidifiers || []), ...(config.others || []),
       ].filter(Boolean);
       const states = ids.map(id => {
         const state = hass?.states?.[id];
@@ -615,11 +621,29 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         label: this._t("fans", "Fans"),
       });
     }
+    if (config.humidifiers?.length) {
+      const anyHumidifierOn = config.humidifiers.some(id => {
+        const state = getState(this._hass, id);
+        return state && stateIsOn(state);
+      });
+      items.push({
+        id: "humidifiers",
+        icon: anyHumidifierOn ? "mdi:air-humidifier" : "mdi:air-humidifier-off",
+        label: this._t("humidifiers", "Humidifiers"),
+      });
+    }
     if (hubMediaPlayerIds(config).length) {
       items.push({
         id: "media",
         icon: summary?.media_playing ? "mdi:play-circle" : "mdi:play-circle-outline",
         label: this._t("mediaPlayer", "Media player"),
+      });
+    }
+    if (config.others?.length) {
+      items.push({
+        id: "others",
+        icon: "mdi:shape-outline",
+        label: this._t("others", "Others"),
       });
     }
     return items;
@@ -1128,6 +1152,23 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         styles: embeddedStyles,
       });
     });
+    this.shadowRoot.querySelectorAll('[data-hub-embed="humidifier"]').forEach(host => {
+      mount(host, "nodalia-humidifier-card", {
+        show_slider: true,
+        show_mode_button: true,
+        show_fan_mode_button: true,
+        compact_layout_mode: "never",
+        tap_action: "toggle",
+        icon_tap_action: "toggle",
+        styles: embeddedStyles,
+      });
+    });
+    this.shadowRoot.querySelectorAll('[data-hub-embed="entity"]').forEach(host => {
+      mount(host, "nodalia-entity-card", {
+        compact_layout_mode: "never",
+        styles: embeddedStyles,
+      });
+    });
     this.shadowRoot.querySelectorAll('[data-hub-embed="media"]').forEach(host => {
       mount(host, "nodalia-media-player", {
         show_state: false,
@@ -1243,6 +1284,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.fans, "fan")}</div>`;
   }
 
+  _renderHubHumidifierPanel(config) {
+    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.humidifiers, "humidifier")}</div>`;
+  }
+
+  _renderHubOthersPanel(config) {
+    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.others, "entity")}</div>`;
+  }
+
   _renderHubCoverPanel(config) {
     return `<div class="room-hub__panel room-hub__panel--covers">
       <div class="room-hub__device-list">${(config.covers || []).map(entityId => {
@@ -1302,7 +1351,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (panel === "climate") return this._renderHubClimatePanel(config);
     if (panel === "vacuum") return this._renderHubVacuumPanel(config);
     if (panel === "fans") return this._renderHubFanPanel(config);
+    if (panel === "humidifiers") return this._renderHubHumidifierPanel(config);
     if (panel === "media") return this._renderHubMediaPanel(config);
+    if (panel === "others") return this._renderHubOthersPanel(config);
     return this._renderHubHome(config, summary, styles, accentColor);
   }
 
@@ -1460,9 +1511,13 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__embed-host > nodalia-light-card,
         .room-hub__embed-host > nodalia-vacuum-card,
         .room-hub__embed-host > nodalia-fan-card,
+        .room-hub__embed-host > nodalia-humidifier-card,
+        .room-hub__embed-host > nodalia-entity-card,
         .room-hub__embed-host > nodalia-media-player { display:block; max-width:100%; overflow:visible; width:100%; }
         .room-hub__embed-host > nodalia-light-card .light-card.is-off,
-        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off {
+        .room-hub__embed-host > nodalia-fan-card .fan-card.is-off,
+        .room-hub__embed-host > nodalia-humidifier-card .humidifier-card.is-off,
+        .room-hub__embed-host > nodalia-entity-card .entity-card.is-off {
           background: ${embedOffTint};
           border-color: color-mix(in srgb, ${embedOffTint} 55%, var(--divider-color));
           box-shadow: none;
@@ -2241,7 +2296,9 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       ${this._listSection("ed.room_summary.covers_section_title", "ed.room_summary.covers_section_hint", "covers", ["cover"])}
       ${this._listSection("ed.room_summary.vacuums_section_title", "ed.room_summary.vacuums_section_hint", "vacuums", ["vacuum"])}
       ${this._listSection("ed.room_summary.fans_section_title", "ed.room_summary.fans_section_hint", "fans", ["fan"])}
+      ${this._listSection("ed.room_summary.humidifiers_section_title", "ed.room_summary.humidifiers_section_hint", "humidifiers", ["humidifier"])}
       ${this._listSection("ed.room_summary.media_players_section_title", "ed.room_summary.media_players_section_hint", "media_players", ["media_player"])}
+      ${this._listSection("ed.room_summary.others_section_title", "ed.room_summary.others_section_hint", "others", [])}
       ${this._listSection("ed.room_summary.doors_section_title", "ed.room_summary.doors_section_hint", "doors", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.windows_section_title", "ed.room_summary.windows_section_hint", "windows", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.locks_section_title", "ed.room_summary.locks_section_hint", "locks", ["lock"])}

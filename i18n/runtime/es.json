@@ -383,7 +383,9 @@
     "power": "Consumo",
     "airQuality": "Calidad del aire",
     "entityUnavailable": "No disponible",
-    "noRoomData": "Sin datos de habitación"
+    "noRoomData": "Sin datos de habitación",
+    "humidifiers": "Humidificadores",
+    "others": "Otros"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

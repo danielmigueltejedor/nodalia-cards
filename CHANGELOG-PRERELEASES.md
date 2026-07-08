@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.19] - 2026-07-08
+
+Nineteenth **`2.0.0`** **`alpha`**: Room Summary Hub humidifier and generic entity panels. Release channel **`2.0.0-alpha.19`**.
+
+### Added
+
+- **Room Summary Hub:** `humidifiers[]` list with a dedicated sub-panel embedding `nodalia-humidifier-card` instances.
+- **Room Summary Hub:** `others[]` list with an **Others** sub-panel embedding `nodalia-entity-card` for any entity domain.
+- **Room Summary editor:** humidifiers and others entity list sections in the visual editor.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.19`.
+
 ## [2.0.0-alpha.18] - 2026-07-08
 
 Eighteenth **`2.0.0`** **`alpha`**: presence chip icon-only in Room Summary Hub. Release channel **`2.0.0-alpha.18`**.

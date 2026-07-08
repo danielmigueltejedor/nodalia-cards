@@ -1328,5 +1328,9 @@
   "ed.room_summary.style_hub_embed_chip_height": "Alto chips embebidos",
   "ed.room_summary.style_hub_embed_chip_padding": "Relleno chips embebidos",
   "ed.room_summary.style_hub_device_name_size": "Tamaño nombre dispositivo (persianas)",
-  "ed.room_summary.style_hub_device_state_size": "Tamaño estado dispositivo (persianas)"
+  "ed.room_summary.style_hub_device_state_size": "Tamaño estado dispositivo (persianas)",
+  "ed.room_summary.humidifiers_section_title": "Humidificadores",
+  "ed.room_summary.humidifiers_section_hint": "Humidificadores de la habitación en el menú Hub con tarjetas embebidas.",
+  "ed.room_summary.others_section_title": "Otros",
+  "ed.room_summary.others_section_hint": "Cualquier entidad en el panel Otros del Hub mediante entity cards embebidas."
 }

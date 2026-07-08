@@ -605,7 +605,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -1545,7 +1547,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -2485,7 +2489,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -3438,7 +3444,9 @@
         power: "Consumo",
         airQuality: "Calidad del aire",
         entityUnavailable: "No disponible",
-        noRoomData: "Sin datos de habitación"
+        noRoomData: "Sin datos de habitación",
+        humidifiers: "Humidificadores",
+        others: "Otros"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -4378,7 +4386,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -5318,7 +5328,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -6258,7 +6270,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -7198,7 +7212,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -8138,7 +8154,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -9078,7 +9096,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -10018,7 +10038,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -10958,7 +10980,9 @@
         power: "Power",
         airQuality: "Air quality",
         entityUnavailable: "Unavailable",
-        noRoomData: "No room data"
+        noRoomData: "No room data",
+        humidifiers: "Humidifiers",
+        others: "Others"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",

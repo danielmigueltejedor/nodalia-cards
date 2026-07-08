@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.18"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.19"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -173,17 +173,26 @@ test("room summary hub layout exposes navigation rail and panels", () => {
   assert.match(source, /_renderHubLightPanel/);
   assert.match(source, /_renderHubVacuumPanel/);
   assert.match(source, /_renderHubFanPanel/);
-  assert.match(source, /"fans"/);
+  assert.match(source, /_renderHubHumidifierPanel/);
+  assert.match(source, /_renderHubOthersPanel/);
+  assert.match(source, /"humidifiers"/);
+  assert.match(source, /"others"/);
 });
 
-test("room summary normalizeConfig accepts vacuums and fans", () => {
+test("room summary normalizeConfig accepts vacuums, fans, humidifiers, and others", () => {
   const config = rs.normalizeConfig({
     vacuums: "vacuum.kitchen",
     fans: ["fan.bedroom", "fan.bedroom"],
+    humidifiers: "humidifier.bedroom",
+    others: ["switch.plug", "switch.plug", "sensor.test"],
   });
   assert.equal(config.vacuums.length, 1);
   assert.equal(config.vacuums[0], "vacuum.kitchen");
   assert.equal(config.fans.length, 1);
+  assert.equal(config.humidifiers.length, 1);
+  assert.equal(config.humidifiers[0], "humidifier.bedroom");
+  assert.equal(config.others.length, 2);
+  assert.equal(config.others[0], "switch.plug");
 });
 
 test("room summary hub media players combine primary and extras", () => {
@@ -201,6 +210,8 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="light"/);
   assert.match(source, /data-hub-embed="vacuum"/);
   assert.match(source, /data-hub-embed="fan"/);
+  assert.match(source, /data-hub-embed="humidifier"/);
+  assert.match(source, /data-hub-embed="entity"/);
   assert.match(source, /data-hub-embed="media"/);
   assert.match(source, /_mountHubEmbeddedCards/);
   assert.match(source, /room-hub__home-header/);
