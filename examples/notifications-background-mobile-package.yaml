@@ -91,6 +91,9 @@ automation:
         allowed_methods:
           - POST
         local_only: false
+    conditions:
+      - condition: template
+        value_template: "{{ (trigger.json.chunks | default([], true) | count) <= 40 }}"
     actions:
       - variables:
           chunks: "{{ trigger.json.chunks | default([], true) }}"

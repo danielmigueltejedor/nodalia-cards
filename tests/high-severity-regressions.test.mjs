@@ -61,3 +61,29 @@ test("climate schedule composer blocks oversized storage_state before webhook de
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
+
+test("notifications background mobile sync rejects configs beyond package chunk capacity", () => {
+  const source = read("nodalia-notifications-card.js");
+  const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
+  assert.match(source, /const BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS = 40;/);
+  assert.match(
+    source,
+    /if \(chunks\.length > BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS\) \{[\s\S]*?throw new Error\(/,
+    "payload builder must reject configs the package cannot persist",
+  );
+  assert.match(
+    source,
+    /try \{[\s\S]*?payload = this\._buildBackgroundMobileWebhookPayload\(\);[\s\S]*?\} catch \(error\) \{[\s\S]*?this\._pendingBackgroundMobileSync = true;[\s\S]*?return false;[\s\S]*?\}[\s\S]*?const signature = `\$\{webhookId\}:\$\{payload\.config_hash\}:\$\{payload\.chunk_count\}`;/,
+    "card sync should not post or mark signatures when the payload is oversized",
+  );
+  assert.match(
+    source,
+    /try \{[\s\S]*?payload = buildBackgroundMobileWebhookPayload\(normalized\);[\s\S]*?\} catch \(error\) \{[\s\S]*?return false;[\s\S]*?\}[\s\S]*?const signature = `\$\{webhookId\}:\$\{payload\.config_hash\}:\$\{payload\.chunk_count\}`;/,
+    "editor sync should not post or mark signatures when the payload is oversized",
+  );
+  assert.match(
+    backgroundPackage,
+    /conditions:[\s\S]*?value_template: "\{\{ \(trigger\.json\.chunks \| default\(\[\], true\) \| count\) <= 40 \}\}"[\s\S]*?actions:/,
+    "package webhook should reject direct posts that exceed the 40 stored helper chunks",
+  );
+});
