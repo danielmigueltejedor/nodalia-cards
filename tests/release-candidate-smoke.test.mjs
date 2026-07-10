@@ -734,6 +734,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /input_text\.nodalia_notifications_background_config_01/);
   assert.match(backgroundPackage, /nodalia_notifications_background_config_40: \{ max: 255 \}/);
   assert.match(backgroundPackage, /count: 40/);
+  assert.match(backgroundPackage, /\(chunks \| count\) <= 40/);
   assert.match(backgroundPackage, /states\('input_text\.nodalia_notifications_background_config_40'\)/);
   assert.match(backgroundPackage, /notify\.send_message/);
   assert.match(backgroundPackage, /notify_entities: "\{\{ notify_cfg\.get\('entities', \[\]\) \}\}"/);
