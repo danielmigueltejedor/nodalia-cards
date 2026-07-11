@@ -61,3 +61,23 @@ test("climate schedule composer blocks oversized storage_state before webhook de
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
+
+test("notifications background mobile sync rejects configs beyond package capacity", () => {
+  const source = read("nodalia-notifications-card.js");
+  const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
+
+  assert.match(source, /const BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS = 40/);
+  assert.match(
+    source,
+    /if \(chunks\.length > BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS\) \{[\s\S]*BackgroundMobileConfigTooLargeError/,
+  );
+  assert.match(
+    source,
+    /try \{\s*payload = this\._buildBackgroundMobileWebhookPayload\(\);[\s\S]*this\._pendingBackgroundMobileSync = true;[\s\S]*return false;/,
+  );
+  assert.match(
+    source,
+    /try \{\s*payload = buildBackgroundMobileWebhookPayload\(normalized\);[\s\S]*return false;/,
+  );
+  assert.match(backgroundPackage, /value_template: "\{\{ \(chunks \| count\) <= 40 \}\}"/);
+});

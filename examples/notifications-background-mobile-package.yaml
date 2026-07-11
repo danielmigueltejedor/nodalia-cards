@@ -95,6 +95,8 @@ automation:
       - variables:
           chunks: "{{ trigger.json.chunks | default([], true) }}"
           config_hash: "{{ trigger.json.config_hash | default('', true) }}"
+      - condition: template
+        value_template: "{{ (chunks | count) <= 40 }}"
       - repeat:
           count: 40
           sequence:
