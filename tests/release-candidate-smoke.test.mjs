@@ -727,7 +727,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /smart_cfg: "\{\{ cfg\.get\('smart', \{\}\) \}\}"/);
   assert.match(backgroundPackage, /smart_override: "\{\{ smart_cfg\.get\(match_kind, \{\}\) if match_kind != '' else \{\} \}\}"/);
   assert.match(backgroundPackage, /smart_mobile: "\{\{ smart_override\.get\('mobile', 'inherit'\) \}\}"/);
-  assert.match(backgroundPackage, /smart_mobile != 'off'/);
+  assert.match(backgroundPackage, /effective_mobile: "\{\{ override_mobile if override_mobile in \['on', 'off'\] else smart_mobile \}\}"/);
+  assert.match(backgroundPackage, /effective_mobile != 'off'/);
+  assert.match(backgroundPackage, /notify_cfg\.get\('enabled', false\) or effective_mobile == 'on'/);
   assert.match(backgroundPackage, /mode: parallel/);
   assert.match(backgroundPackage, /max: 50/);
   assert.match(backgroundPackage, /max_exceeded: silent/);
