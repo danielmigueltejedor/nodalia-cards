@@ -95,6 +95,8 @@ automation:
       - variables:
           chunks: "{{ trigger.json.chunks | default([], true) }}"
           config_hash: "{{ trigger.json.config_hash | default('', true) }}"
+      - condition: template
+        value_template: "{{ (chunks | count) <= 40 }}"
       - repeat:
           count: 40
           sequence:
@@ -289,6 +291,7 @@ automation:
             {% endif %}
           smart_override: "{{ smart_cfg.get(match_kind, {}) if match_kind != '' else {} }}"
           smart_mobile: "{{ smart_override.get('mobile', 'inherit') }}"
+          effective_mobile: "{{ override_mobile if override_mobile in ['on', 'off'] else smart_mobile }}"
           severity: >-
             {% if match_kind in ['vacuum'] %}critical
             {% elif match_kind in ['motion', 'cold'] %}info
@@ -336,7 +339,7 @@ automation:
           notify_services: "{{ notify_cfg.get('services', []) }}"
           tag: "nodalia-background-{{ match_kind }}-{{ entity_id }}"
       - condition: template
-        value_template: "{{ match_kind != '' and override_mobile != 'off' and smart_mobile != 'off' and (severity_score | int) >= (min_severity_score | int) }}"
+        value_template: "{{ match_kind != '' and effective_mobile != 'off' and (notify_cfg.get('enabled', false) or effective_mobile == 'on') and (severity_score | int) >= (min_severity_score | int) }}"
       - if:
           - condition: template
             value_template: "{{ notify_entities | count > 0 }}"
