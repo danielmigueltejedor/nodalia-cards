@@ -756,7 +756,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.doesNotMatch(backgroundPackage, /hot_temperature', 27\)[^\n]*or ov != nv/);
   assert.match(backgroundPackage, /\| replace\('\{fan\}', 'ventilador'\)/);
   assert.match(backgroundPackage, /\{% elif e in groups\.get\('ink', \[\]\) and nv != none and nv <= thresholds\.get\('ink_low', 15\)/);
-  assert.match(backgroundPackage, /override_mobile != 'off'/);
+  assert.match(backgroundPackage, /effective_mobile != 'off'/);
   assert.doesNotMatch(backgroundPackage, /new_state: "\{\{ trigger\.event\.data\.new_state \}\}"/);
   assert.match(backgroundPackage, /from_json\(default=\{\}\)/);
   assert.match(source, /item\.severity !== "info"/);
