@@ -2,6 +2,7 @@ const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
 const CARD_VERSION = "1.3.5";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
+const BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS = 40;
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -914,6 +915,28 @@ function notificationHash(value) {
   return (hash >>> 0).toString(36);
 }
 
+class BackgroundMobileConfigTooLargeError extends Error {
+  constructor(chunkCount, configHash, jsonLength, chunkSize) {
+    super(`background mobile config requires ${chunkCount} chunks, but the Home Assistant package stores at most ${BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS}`);
+    this.name = "BackgroundMobileConfigTooLargeError";
+    this.chunkCount = chunkCount;
+    this.maxChunks = BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS;
+    this.configHash = configHash;
+    this.jsonLength = jsonLength;
+    this.chunkSize = chunkSize;
+  }
+}
+
+function warnBackgroundMobileConfigTooLarge(scope, error) {
+  if (!(error instanceof BackgroundMobileConfigTooLargeError)) {
+    return false;
+  }
+  if (typeof console !== "undefined" && typeof console.warn === "function") {
+    console.warn(`Nodalia Notifications ${scope}: ${error.message}. Keeping the previous background mobile configuration.`);
+  }
+  return true;
+}
+
 function getBackgroundMobileConfigPayload(rawConfig) {
   const config = normalizeConfig(rawConfig || {});
   const overrides = {};
@@ -985,16 +1008,20 @@ function buildBackgroundMobileWebhookPayload(rawConfig) {
   const background = config.background_mobile || {};
   const chunkSize = Math.max(120, Math.min(240, Number(background.chunk_size) || 240));
   const json = JSON.stringify(getBackgroundMobileConfigPayload(config));
+  const configHash = notificationHash(json);
   const chunks = [];
   for (let index = 0; index < json.length; index += chunkSize) {
     chunks.push(json.slice(index, index + chunkSize));
+  }
+  if (chunks.length > BACKGROUND_MOBILE_MAX_CONFIG_CHUNKS) {
+    throw new BackgroundMobileConfigTooLargeError(chunks.length, configHash, json.length, chunkSize);
   }
   return {
     version: 1,
     card_version: CARD_VERSION,
     source: CARD_TAG,
     chunk_count: chunks.length,
-    config_hash: notificationHash(json),
+    config_hash: configHash,
     chunks,
   };
 }
@@ -1342,10 +1369,19 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       return false;
     }
-    const payload = this._buildBackgroundMobileWebhookPayload();
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     const force = this._forceNextBackgroundMobileSync === true;
     this._forceNextBackgroundMobileSync = false;
+    let payload;
+    try {
+      payload = this._buildBackgroundMobileWebhookPayload();
+    } catch (error) {
+      if (warnBackgroundMobileConfigTooLarge("Card", error)) {
+        this._pendingBackgroundMobileSync = false;
+        return false;
+      }
+      throw error;
+    }
+    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     if (!force && signature === this._lastBackgroundMobileSyncSignature) {
       return true;
     }
@@ -3886,7 +3922,15 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       }
       return false;
     }
-    const payload = buildBackgroundMobileWebhookPayload(normalized);
+    let payload;
+    try {
+      payload = buildBackgroundMobileWebhookPayload(normalized);
+    } catch (error) {
+      if (warnBackgroundMobileConfigTooLarge("Card editor", error)) {
+        return false;
+      }
+      throw error;
+    }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     if (signature === this._lastBackgroundMobileSyncSignature) {
       return true;
