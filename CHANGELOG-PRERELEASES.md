@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.20] - 2026-07-14
+
+Twentieth **`2.0.0`** **`alpha`**: HACS license validation and smoother Room Summary Hub panel changes. Release channel **`2.0.0-alpha.20`**.
+
+### Added
+
+- **Repository:** MIT license file recognized by GitHub and the HACS repository validator.
+
+### Fixed
+
+- **Room Summary Hub:** embedded cards are cached by type and entity and reused between panels, avoiding the slight remount flicker when changing tabs.
+- **Room Summary Hub:** panel changes suppress the content entry animation while preserving it for the initial render.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.20`.
+
 ## [2.0.0-alpha.19] - 2026-07-08
 
 Nineteenth **`2.0.0`** **`alpha`**: Room Summary Hub humidifier and generic entity panels. Release channel **`2.0.0-alpha.19`**.

@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.19"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.20"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -214,6 +214,9 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="entity"/);
   assert.match(source, /data-hub-embed="media"/);
   assert.match(source, /_mountHubEmbeddedCards/);
+  assert.match(source, /_hubEmbedCache = new Map/);
+  assert.match(source, /_panelTransition = true/);
+  assert.match(source, /card\.parentElement !== host/);
   assert.match(source, /room-hub__home-header/);
   assert.match(source, /room-hub__status-chips/);
   assert.match(source, /more-info:/);

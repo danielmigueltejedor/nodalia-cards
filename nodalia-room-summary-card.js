@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.19";
+const CARD_VERSION = "2.0.0-alpha.20";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
@@ -506,6 +506,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._activePanel = "home";
     this._panelTransition = false;
+    this._hubEmbedCache = new Map();
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
   }
@@ -521,12 +522,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("input", this._onShadowInput);
     this._lastRenderSignature = "";
+    this._hubEmbedCache?.clear();
   }
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._hubEmbedCache?.clear();
     if (this.isConnected) this._render();
   }
 
@@ -729,6 +732,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const next = HUB_PANELS.has(panel) ? panel : "home";
     if (next === this._activePanel) return;
     this._activePanel = next;
+    this._panelTransition = true;
     this._triggerHaptic();
     this._render();
   }
@@ -1099,14 +1103,30 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const pack = this._hubEmbedStylePack(config);
     const embeddedStyles = this._hubEmbeddedAccentPack(config);
     const mediaStyles = this._hubMediaPlayerStylePack(config);
+    const validKeys = new Set();
+    const addKeys = (embedType, entityIds) => (entityIds || []).forEach(entityId => {
+      const normalized = String(entityId || "").trim();
+      if (normalized) validKeys.add(`${embedType}:${normalized}`);
+    });
+    addKeys("light", config.lights);
+    addKeys("vacuum", config.vacuums);
+    addKeys("fan", config.fans);
+    addKeys("humidifier", config.humidifiers);
+    addKeys("entity", config.others);
+    addKeys("media", hubMediaPlayerIds(config));
 
     const mount = (host, tagName, extra = {}) => {
       if (!(host instanceof HTMLElement)) return;
       const entityId = String(host.dataset.entity || "").trim();
       if (!entityId) return;
-      let card = host.querySelector(tagName);
+      const embedType = String(host.dataset.hubEmbed || tagName).trim();
+      const cacheKey = `${embedType}:${entityId}`;
+      let card = this._hubEmbedCache?.get(cacheKey);
       if (!card) {
         card = document.createElement(tagName);
+        this._hubEmbedCache?.set(cacheKey, card);
+      }
+      if (card.parentElement !== host) {
         host.replaceChildren(card);
       }
       if (this._hass) card.hass = this._hass;
@@ -1181,6 +1201,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         styles: mediaStyles,
       });
     });
+    for (const [key, card] of this._hubEmbedCache || []) {
+      if (!validKeys.has(key)) {
+        card.remove();
+        this._hubEmbedCache.delete(key);
+      }
+    }
   }
 
   _renderHubEmbedHosts(entityIds, embedType) {
@@ -1373,7 +1399,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const hubDeviceState = escapeHtml(hubStyles.device_state_size || DEFAULT_CONFIG.styles.hub.device_state_size);
     const activePanel = HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
     const navItems = this._getHubNavItems(config, summary);
-    const animate = config.animations?.enabled !== false && this._animateContentOnNextRender;
+    const animate = config.animations?.enabled !== false && this._animateContentOnNextRender && !this._panelTransition;
     const cardBackground = styles.card.background;
     const cardBorder = styles.card.border;
     const cardShadow = styles.card.box_shadow;
@@ -1552,6 +1578,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         </div>
       </ha-card>`;
     this._animateContentOnNextRender = false;
+    this._panelTransition = false;
     this._mountHubEmbeddedCards();
   }
 
