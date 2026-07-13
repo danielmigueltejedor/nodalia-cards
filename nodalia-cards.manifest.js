@@ -5,7 +5,17 @@ export default {
   "loaderFile": "nodalia-cards.js",
   "hacsFile": "nodalia-cards.js",
   "compatLoaderFiles": [
-    "nodalia-cards-1.3.4.js"
+    "nodalia-cards-1.3.4.js",
+    "nodalia-cards-1.3.5-alpha.1.js",
+    "nodalia-cards-1.3.5-alpha.2.js",
+    "nodalia-cards-1.3.5-alpha.3.js",
+    "nodalia-cards-1.3.5-alpha.4.js",
+    "nodalia-cards-1.3.5-alpha.5.js",
+    "nodalia-cards-1.3.5-alpha.6.js",
+    "nodalia-cards-1.3.5-alpha.7.js",
+    "nodalia-cards-1.3.5-alpha.8.js",
+    "nodalia-cards-1.3.5-alpha.9.js",
+    "nodalia-cards-1.3.5-alpha.10.js"
   ],
   "splitCoreFile": "nodalia-cards-core-1.3.5.js",
   "splitCoreSha256_12": "ff3460d3dac8",

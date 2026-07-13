@@ -15,6 +15,7 @@ test("published package files and bundle manifest stay coherent", () => {
   const expectedVersionedFile = `nodalia-cards-${pkg.version}.js`;
   const expectedCompatFiles = [
     "nodalia-cards-1.3.4.js",
+    ...Array.from({ length: 10 }, (_, index) => `nodalia-cards-1.3.5-alpha.${index + 1}.js`),
   ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
