@@ -1351,11 +1351,11 @@
         browseFallback: "Eintrag"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Medien werden geladen...",
+        empty: "Hier sind keine Artikel verfügbar.",
+        playItem: "Spielen Sie {title}",
+        dialog: "Medienbrowser",
+        eyebrow: "Medienbrowser"
       },
       vacuumSimple: {
         quiet: "Leise",
@@ -1395,10 +1395,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Lege `entity` auf eine `fan.*`-Entität fest, um diese Karte anzuzeigen.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Geschwindigkeit",
+          oscillationOn: "Oszillation einschalten",
+          oscillationOff: "Oszillation ausschalten",
+          showModes: "Modi anzeigen"
         }
       },
       lightCard: {
@@ -1423,16 +1423,16 @@
       common: {
         aria: {
           togglePower: "Ein- oder ausschalten",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Zurück",
+          close: "Schließen",
+          previous: "Vorherige",
+          next: "Nächste",
+          playPause: "Spielen oder pausieren",
+          volumeDown: "Lautstärke verringern",
+          volumeUp: "Lautstärke erhöhen",
+          openMedia: "Offene Medien",
+          navigationBar: "Navigationsleiste",
+          mediaPlayers: "Mediaplayer"
         }
       },
       alarmPanel: {
@@ -1492,64 +1492,77 @@
         defaultName: "Person"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
+        cardDescription: "Kameravorschau im Nodalia-Stil mit Statuschips und erweiterter Ansicht.",
         live: "Live",
-        snapshot: "Snapshot",
+        snapshot: "Schnappschuss",
         offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        unknown: "Unbekannt",
+        unavailable: "Nicht verfügbar",
+        recording: "Aufnahme",
+        lastUpdated: "Zuletzt aktualisiert: {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Legen Sie `entity` fest, um diese Karte anzuzeigen.",
+        defaultName: "Kamera",
+        cameraUnavailable: "Kamera nicht verfügbar",
+        noCameraEntity: "Keine Kameraeinheit",
+        openCamera: "Kamera öffnen",
+        close: "Schließen",
+        expand: "Expandieren"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Raumübersicht mit Klima, Belegung, Beleuchtung, Rollläden, Sicherheit und Schnellaktionen.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        emptyBody: "Legen Sie einen Raumnamen fest und verbinden Sie Raumelemente.",
+        defaultName: "Zimmer",
+        temperature: "Temperatur",
+        humidity: "Luftfeuchtigkeit",
+        climateLabel: "Klima",
+        occupied: "Besetzt",
+        vacant: "Frei",
+        comfortable: "Komfortabel",
+        hot: "Heiß",
+        cold: "Kalt",
+        humid: "Feucht",
+        dry: "Trocken",
+        lights: "Lichter",
+        lightsOn: "{count} an",
+        lightsOff: "Alles aus",
+        covers: "Rollläden",
+        coversOpen: "{count} geöffnet",
+        coversClosed: "Alles geschlossen",
+        doorOpen: "Tür offen",
+        windowOpen: "Fenster geöffnet",
+        lockUnlocked: "Entsperrt",
+        alert: "Alarm",
+        securityIssue: "Sicherheitsproblem",
+        cameraOffline: "Kamera offline",
+        mediaPlaying: "Spielen",
+        turnOnLights: "Schalten Sie das Licht ein",
+        turnOffLights: "Schalten Sie das Licht aus",
+        openCovers: "Rollläden öffnen",
+        closeCovers: "Rollläden schließen",
+        openCamera: "Kamera öffnen",
+        climateDetails: "Klimadetails",
+        mediaPlayer: "Mediaplayer",
+        vacuum: "Staubsauger",
+        fans: "Ventilatoren",
+        hubHome: "Startseite",
+        hubNavigation: "Raumnavigation",
+        turnOnFans: "Ventilatoren einschalten",
+        turnOffFans: "Ventilatoren ausschalten",
+        raiseTemperature: "Temperatur erhöhen",
+        lowerTemperature: "Temperatur senken",
+        mediaPlay: "Wiedergabe",
+        mediaPause: "Pause",
+        turnOnMedia: "Medien einschalten",
+        turnOffMedia: "Medien ausschalten",
+        target: "Ziel",
+        power: "Leistung",
+        airQuality: "Luftqualität",
+        entityUnavailable: "Nicht verfügbar",
+        noRoomData: "Keine Raumdaten",
+        humidifiers: "Luftbefeuchter",
+        others: "Andere"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -1562,8 +1575,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Lege `entity` fest, um diese Karte anzuzeigen.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Option wählen",
+        selectPickerClose: "Schließen",
         binarySensor: {
           doorOpen: "Offen",
           doorClosed: "Geschlossen",
@@ -1721,9 +1734,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Lege `entity` auf eine `humidifier.*`-Entität fest, um diese Karte anzuzeigen.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Zielfeuchtigkeit",
+          showModes: "Modi anzeigen",
+          showSpeeds: "Geschwindigkeiten anzeigen"
         },
         modes: {
           auto: "Auto",
@@ -1817,7 +1830,7 @@
             entityMissing: "Wähle zuerst eine Climate-Entität.",
             webhookFailed: "Plan konnte nicht synchronisiert werden. Prüfe Webhook und Home-Assistant-Protokolle.",
             dualRangeUnsupported: "Wochenpläne sind nicht verfügbar, solange das Thermostat einen dualen Heiz-/Kühlbereich nutzt.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Dieser Zeitplan ist zu groß für den Input_text-Helper (255 Zeichen). Entfernen Sie Blöcke oder verwenden Sie Pfad-A-Automatisierungen auf der Festplatte."
           }
         }
       },
@@ -1828,23 +1841,23 @@
         defaultTitle: "Graph"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Nachricht",
+        emptyTitle: "Keine Neuigkeiten verfügbar",
+        emptyBody: "Fügen Sie eine Nachrichteneinheit hinzu oder überprüfen Sie Ihre Feed-Quelle.",
+        loading: "Neuigkeiten werden geladen…",
+        errorTitle: "Nachrichtenquelle nicht verfügbar",
+        errorBody: "Überprüfen Sie Ihre konfigurierten Entitäts- oder Quellattribute.",
+        readMore: "Mehr lesen",
+        sourceUnknown: "Unbekannte Quelle",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Soeben",
+        publishedMinutesAgo: "Vor {count} Minuten",
+        publishedHoursAgo: "Vor {count} Stunden",
+        publishedDaysAgo: "Vor {count} Tagen",
+        previousArticle: "Vorheriger Artikel",
+        nextArticle: "Nächster Artikel",
+        articlePosition: "Artikel {current} von {total}",
+        goToArticle: "Gehe zum Artikel {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -1862,18 +1875,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Lege `entity` oder `players` fest, um einen Player anzuzeigen.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
-          volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          turnOn: "Einschalten",
+          turnOff: "Ausschalten",
+          playPause: "Spielen oder pausieren",
+          showVolume: "Lautstärke anzeigen",
+          sources: "Quellen",
+          switchSource: "Quelle wechseln",
+          switchToSource: "Zu {source} wechseln",
+          volume: "Volumen",
+          selectPlayer: "Spieler auswählen {index}",
+          play: "Spielen",
+          hidePlayer: "Spieler ausblenden",
+          showPlayer: "Spieler anzeigen"
         }
       },
       notificationsCard: {
@@ -1948,16 +1961,16 @@
           showAll: "Alle Benachrichtigungen anzeigen"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push aktiviert",
+          cardOnly: "Nur auf der Karte sichtbar",
+          silencedQuietHours: "Zum Schweigen gebracht durch ruhige Stunden",
+          silencedCooldown: "Durch Abklingzeit zum Schweigen gebracht",
+          blockedSeverity: "Blockiert nach Schweregrad",
+          blockedContext: "Durch Kontext blockiert",
+          off: "Aus",
+          cameraEvent: "Kameraereignis",
+          securityEvent: "Sicherheitsereignis",
+          externalAlert: "Externer Alarm"
         }
       },
       favCard: {
@@ -2058,7 +2071,7 @@
           close: "Schließen"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia-Kalenderkarte: Webhook für Benutzer ohne Administratorrechte blockiert (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -2293,11 +2306,11 @@
         browseFallback: "Στοιχείο"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Φόρτωση πολυμέσων...",
+        empty: "Δεν υπάρχουν διαθέσιμα στοιχεία εδώ.",
+        playItem: "Παίξτε {title}",
+        dialog: "Πρόγραμμα περιήγησης πολυμέσων",
+        eyebrow: "Πρόγραμμα περιήγησης πολυμέσων"
       },
       vacuumSimple: {
         quiet: "Ήσυχο",
@@ -2337,10 +2350,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Ορίστε το `entity` σε οντότητα `fan.*` για να εμφανιστεί η κάρτα.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Ταχύτητα",
+          oscillationOn: "Ενεργοποιήστε την ταλάντωση",
+          oscillationOff: "Απενεργοποιήστε την ταλάντωση",
+          showModes: "Εμφάνιση τρόπων λειτουργίας"
         }
       },
       lightCard: {
@@ -2365,16 +2378,16 @@
       common: {
         aria: {
           togglePower: "Ενεργοποίηση ή απενεργοποίηση",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Πίσω",
+          close: "Κοντά",
+          previous: "Προηγούμενος",
+          next: "Επόμενος",
+          playPause: "Αναπαραγωγή ή παύση",
+          volumeDown: "Μείωση έντασης",
+          volumeUp: "Αύξηση έντασης",
+          openMedia: "Ανοίξτε τα μέσα",
+          navigationBar: "Γραμμή πλοήγησης",
+          mediaPlayers: "Media player"
         }
       },
       alarmPanel: {
@@ -2434,64 +2447,77 @@
         defaultName: "Άτομο"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Προεπισκόπηση κάμερας τύπου Nodalia με τσιπ κατάστασης και διευρυμένη προβολή.",
+        live: "Ζω",
+        snapshot: "Στιγμιότυπο",
+        offline: "Εκτός σύνδεσης",
+        unknown: "Αγνωστος",
+        unavailable: "Δυσεύρετος",
+        recording: "Εγγραφή",
+        lastUpdated: "Τελευταία ενημέρωση {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Ορίστε το `entity` για να εμφανίζεται αυτή η κάρτα.",
+        defaultName: "Κάμερα",
+        cameraUnavailable: "Η κάμερα δεν είναι διαθέσιμη",
+        noCameraEntity: "Δεν υπάρχει οντότητα κάμερας",
+        openCamera: "Ανοίξτε την κάμερα",
+        close: "Κοντά",
+        expand: "Διαστέλλω"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Επισκόπηση δωματίου με κλίμα, παρουσία, φώτα, ρολά, ασφάλεια και γρήγορες ενέργειες.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
+        emptyBody: "Ορίστε ένα όνομα δωματίου και συνδέστε οντότητες δωματίου.",
+        defaultName: "Δωμάτιο",
+        temperature: "Θερμοκρασία",
+        humidity: "Υγρασία",
+        climateLabel: "Κλίμα",
+        occupied: "Κατειλημμένος",
+        vacant: "Κενός",
+        comfortable: "Ανετος",
+        hot: "Καυτό",
+        cold: "Κρύο",
+        humid: "Υγρός",
+        dry: "Ξηρός",
+        lights: "Φώτα",
+        lightsOn: "{count} αναμμένα",
+        lightsOff: "Όλα εκτός",
+        covers: "Ρολά",
+        coversOpen: "{count} ανοιχτά",
+        coversClosed: "Όλα κλειστά",
+        doorOpen: "Πόρτα ανοιχτή",
+        windowOpen: "Παράθυρο ανοιχτό",
+        lockUnlocked: "Ακλείδωτος",
+        alert: "Συναγερμός",
+        securityIssue: "Θέμα ασφαλείας",
+        cameraOffline: "Κάμερα εκτός σύνδεσης",
+        mediaPlaying: "Παιχνίδι",
+        turnOnLights: "Ανάψτε τα φώτα",
+        turnOffLights: "Σβήσε τα φώτα",
+        openCovers: "Άνοιγμα ρολών",
+        closeCovers: "Κλείσιμο ρολών",
+        openCamera: "Ανοίξτε την κάμερα",
+        climateDetails: "Λεπτομέρειες για το κλίμα",
         mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        vacuum: "Ηλεκτρική σκούπα",
+        fans: "Ανεμιστήρες",
+        hubHome: "Αρχική",
+        hubNavigation: "Πλοήγηση δωματίου",
+        turnOnFans: "Ενεργοποίηση ανεμιστήρων",
+        turnOffFans: "Απενεργοποίηση ανεμιστήρων",
+        raiseTemperature: "Αύξηση θερμοκρασίας",
+        lowerTemperature: "Μείωση θερμοκρασίας",
+        mediaPlay: "Αναπαραγωγή",
+        mediaPause: "Παύση",
+        turnOnMedia: "Ενεργοποίηση πολυμέσων",
+        turnOffMedia: "Απενεργοποίηση πολυμέσων",
+        target: "Στόχος",
+        power: "Εξουσία",
+        airQuality: "Ποιότητα αέρα",
+        entityUnavailable: "Δυσεύρετος",
+        noRoomData: "Δεν υπάρχουν δεδομένα δωματίου",
+        humidifiers: "Υγραντήρες",
+        others: "Άλλοι"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -2504,8 +2530,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Ρυθμίστε το `entity` για να εμφανιστεί η κάρτα.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Επιλέξτε επιλογή",
+        selectPickerClose: "Κοντά",
         binarySensor: {
           doorOpen: "Ανοιχτή",
           doorClosed: "Κλειστή",
@@ -2663,9 +2689,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Ορίστε το `entity` σε οντότητα `humidifier.*` για να εμφανιστεί η κάρτα.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Στόχος υγρασίας",
+          showModes: "Εμφάνιση τρόπων λειτουργίας",
+          showSpeeds: "Εμφάνιση ταχυτήτων"
         },
         modes: {
           auto: "Αυτόματο",
@@ -2759,7 +2785,7 @@
             entityMissing: "Επιλέξτε πρώτα μια οντότητα climate.",
             webhookFailed: "Αποτυχία συγχρονισμού προγράμματος. Ελέγξτε webhook και αρχεία καταγραφής Home Assistant.",
             dualRangeUnsupported: "Το εβδομαδιαίο πρόγραμμα δεν είναι διαθέσιμο όσο το θερμοστάτιο χρησιμοποιεί διπλό εύρος θέρμανσης/ψύξης.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Αυτό το χρονοδιάγραμμα είναι πολύ μεγάλο για το βοηθητικό πρόγραμμα input_text (255 χαρακτήρες). Αφαιρέστε μπλοκ ή χρησιμοποιήστε αυτοματισμούς Διαδρομής Α στο δίσκο."
           }
         }
       },
@@ -2767,26 +2793,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Ορίστε `entities` σε μία ή περισσότερες αριθμητικές οντότητες για το γράφημα.",
         emptyHistory: "Δεν υπάρχει διαθέσιμο ιστορικό",
-        defaultTitle: "Graph"
+        defaultTitle: "Γραφική παράσταση"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Νέα",
+        emptyTitle: "Δεν υπάρχουν διαθέσιμα νέα",
+        emptyBody: "Προσθέστε μια οντότητα ειδήσεων ή ελέγξτε την πηγή ροής σας.",
+        loading: "Φόρτωση ειδήσεων…",
+        errorTitle: "Μη διαθέσιμη πηγή ειδήσεων",
+        errorBody: "Ελέγξτε τις διαμορφωμένες ιδιότητες οντότητας ή πηγής.",
+        readMore: "Διαβάστε περισσότερα",
+        sourceUnknown: "Άγνωστη πηγή",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Μόλις τώρα",
+        publishedMinutesAgo: "{count} λεπτά πριν",
+        publishedHoursAgo: "πριν από {count} ώρες",
+        publishedDaysAgo: "{count} d πριν",
+        previousArticle: "Προηγούμενο άρθρο",
+        nextArticle: "Επόμενο άρθρο",
+        articlePosition: "Άρθρο {current} από {total}",
+        goToArticle: "Μετάβαση στο άρθρο {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -2804,18 +2830,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Ορίστε `entity` ή `players` για να εμφανιστεί αναπαραγωγέας.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
-          volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          turnOn: "Ανάβω",
+          turnOff: "Κλείνω",
+          playPause: "Αναπαραγωγή ή παύση",
+          showVolume: "Εμφάνιση έντασης",
+          sources: "Πηγές",
+          switchSource: "Εναλλαγή πηγής",
+          switchToSource: "Εναλλαγή σε {source}",
+          volume: "Τόμος",
+          selectPlayer: "Επιλέξτε πρόγραμμα αναπαραγωγής {index}",
+          play: "Παιχνίδι",
+          hidePlayer: "Απόκρυψη προγράμματος αναπαραγωγής",
+          showPlayer: "Εμφάνιση παίκτη"
         }
       },
       notificationsCard: {
@@ -2890,16 +2916,16 @@
           showAll: "Εμφάνιση όλων των ειδοποιήσεων"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Το Push ενεργοποιήθηκε",
+          cardOnly: "Ορατό μόνο στην κάρτα",
+          silencedQuietHours: "Σιωπή από τις ώρες ησυχίας",
+          silencedCooldown: "Σιωπή από cooldown",
+          blockedSeverity: "Αποκλείστηκε από τη σοβαρότητα",
+          blockedContext: "Αποκλείστηκε από το περιβάλλον",
+          off: "Μακριά από",
+          cameraEvent: "Εκδήλωση κάμερας",
+          securityEvent: "Εκδήλωση ασφαλείας",
+          externalAlert: "Εξωτερική ειδοποίηση"
         }
       },
       favCard: {
@@ -3000,7 +3026,7 @@
           close: "Κλείσιμο"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Κάρτα ημερολογίου Nodalia: το webhook έχει αποκλειστεί για χρήστες που δεν είναι διαχειριστές (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -3955,7 +3981,7 @@
           close: "Cerrar"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Tarjeta Calendario Nodalia: webhook bloqueado para usuario no administrador (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -4190,11 +4216,11 @@
         browseFallback: "Élément"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Chargement du média...",
+        empty: "Aucun article disponible ici.",
+        playItem: "Lire {title}",
+        dialog: "Navigateur multimédia",
+        eyebrow: "Navigateur multimédia"
       },
       vacuumSimple: {
         quiet: "Silencieux",
@@ -4234,10 +4260,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Définissez `entity` sur une entité `fan.*` pour afficher cette carte.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Vitesse",
+          oscillationOn: "Activer l'oscillation",
+          oscillationOff: "Désactiver l'oscillation",
+          showModes: "Afficher les modes"
         }
       },
       lightCard: {
@@ -4262,16 +4288,16 @@
       common: {
         aria: {
           togglePower: "Allumer ou éteindre",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Dos",
+          close: "Fermer",
+          previous: "Précédent",
+          next: "Suivant",
+          playPause: "Lecture ou pause",
+          volumeDown: "Baisser le volume",
+          volumeUp: "Augmenter le volume",
+          openMedia: "Médias ouverts",
+          navigationBar: "Barre de navigation",
+          mediaPlayers: "Lecteurs multimédias"
         }
       },
       alarmPanel: {
@@ -4331,64 +4357,77 @@
         defaultName: "Personne"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Aperçu de la caméra de style Nodalia avec puces d'état et vue étendue.",
+        live: "En direct",
+        snapshot: "Instantané",
+        offline: "Hors ligne",
+        unknown: "Inconnu",
+        unavailable: "Indisponible",
+        recording: "Enregistrement",
+        lastUpdated: "Dernière mise à jour {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Définissez `entity` pour afficher cette carte.",
+        defaultName: "Caméra",
+        cameraUnavailable: "Caméra indisponible",
+        noCameraEntity: "Aucune entité de caméra",
+        openCamera: "Caméra ouverte",
+        close: "Fermer",
+        expand: "Développer"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Vue d’ensemble de la pièce avec climat, présence, éclairage, volets, sécurité et actions rapides.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
+        emptyBody: "Définissez un nom de pièce et connectez les entités de la pièce.",
+        defaultName: "Chambre",
+        temperature: "Température",
+        humidity: "Humidité",
+        climateLabel: "Climat",
+        occupied: "Occupée",
         vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        comfortable: "Confortable",
+        hot: "Chaud",
+        cold: "Froid",
+        humid: "Humide",
+        dry: "Sec",
+        lights: "Lumières",
+        lightsOn: "{count} allumées",
+        lightsOff: "Tout est éteint",
+        covers: "Volets",
+        coversOpen: "{count} ouverts",
+        coversClosed: "Tous fermés",
+        doorOpen: "Porte ouverte",
+        windowOpen: "Fenêtre ouverte",
+        lockUnlocked: "Débloqué",
+        alert: "Alerte",
+        securityIssue: "Problème de sécurité",
+        cameraOffline: "Caméra hors ligne",
+        mediaPlaying: "Jouant",
+        turnOnLights: "Allumer les lumières",
+        turnOffLights: "Éteignez les lumières",
+        openCovers: "Ouvrir les volets",
+        closeCovers: "Fermer les volets",
+        openCamera: "Caméra ouverte",
+        climateDetails: "Détails climatiques",
+        mediaPlayer: "Lecteur multimédia",
+        vacuum: "Aspirateur",
+        fans: "Ventilateurs",
+        hubHome: "Accueil",
+        hubNavigation: "Navigation de la pièce",
+        turnOnFans: "Activer les ventilateurs",
+        turnOffFans: "Désactiver les ventilateurs",
+        raiseTemperature: "Augmenter la température",
+        lowerTemperature: "Baisser la température",
+        mediaPlay: "Lire",
+        mediaPause: "Pause",
+        turnOnMedia: "Allumer le lecteur multimédia",
+        turnOffMedia: "Éteindre le lecteur multimédia",
+        target: "Cible",
+        power: "Pouvoir",
+        airQuality: "Qualité de l'air",
+        entityUnavailable: "Indisponible",
+        noRoomData: "Aucune donnée de chambre",
+        humidifiers: "Humidificateurs",
+        others: "Autres"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -4401,8 +4440,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Configurez `entity` pour afficher cette carte.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Choisir une option",
+        selectPickerClose: "Fermer",
         binarySensor: {
           doorOpen: "Ouverte",
           doorClosed: "Fermée",
@@ -4560,9 +4599,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Définissez `entity` sur une entité `humidifier.*` pour afficher cette carte.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Humidité cible",
+          showModes: "Afficher les modes",
+          showSpeeds: "Afficher les vitesses"
         },
         modes: {
           auto: "Auto",
@@ -4656,7 +4695,7 @@
             entityMissing: "Sélectionnez d’abord une entité climate.",
             webhookFailed: "Impossible de synchroniser le planning. Vérifiez le webhook et les journaux Home Assistant.",
             dualRangeUnsupported: "Le planning hebdomadaire n’est pas disponible tant que le thermostat utilise une plage dual chauffage/refroidissement.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Ce planning est trop volumineux pour l'assistant input_text (255 caractères). Supprimez des blocs ou utilisez les automatisations du chemin A sur le disque."
           }
         }
       },
@@ -4664,26 +4703,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Définissez `entities` sur une ou plusieurs entités numériques pour afficher le graphique.",
         emptyHistory: "Aucun historique disponible",
-        defaultTitle: "Graph"
+        defaultTitle: "Graphique"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Nouvelles",
+        emptyTitle: "Aucune actualité disponible",
+        emptyBody: "Ajoutez une entité d'actualité ou vérifiez la source de votre flux.",
+        loading: "Chargement des actualités…",
+        errorTitle: "Source d'information indisponible",
+        errorBody: "Vérifiez votre entité configurée ou vos attributs source.",
+        readMore: "En savoir plus",
+        sourceUnknown: "Source inconnue",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Tout à l' heure",
+        publishedMinutesAgo: "il y a {count} minutes",
+        publishedHoursAgo: "il y a {count} h",
+        publishedDaysAgo: "il y a {count} j",
+        previousArticle: "Article précédent",
+        nextArticle: "Article suivant",
+        articlePosition: "Article {current} sur {total}",
+        goToArticle: "Aller à l'article {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -4701,18 +4740,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Définissez `entity` ou `players` pour afficher un lecteur.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
+          turnOn: "Allumer",
+          turnOff: "Éteindre",
+          playPause: "Lecture ou pause",
+          showVolume: "Afficher le volume",
           sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
+          switchSource: "Changer de source",
+          switchToSource: "Passer à {source}",
           volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          selectPlayer: "Sélectionnez le lecteur {index}",
+          play: "Jouer",
+          hidePlayer: "Masquer le joueur",
+          showPlayer: "Afficher le joueur"
         }
       },
       notificationsCard: {
@@ -4787,16 +4826,16 @@
           showAll: "Afficher toutes les notifications"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push activé",
+          cardOnly: "Visible sur la carte uniquement",
+          silencedQuietHours: "Réduit au silence par des heures calmes",
+          silencedCooldown: "Réduit au silence par le temps de recharge",
+          blockedSeverity: "Bloqué par gravité",
+          blockedContext: "Bloqué par le contexte",
+          off: "Désactivé",
+          cameraEvent: "Événement de caméra",
+          securityEvent: "Événement de sécurité",
+          externalAlert: "Alerte externe"
         }
       },
       favCard: {
@@ -4897,7 +4936,7 @@
           close: "Fermer"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia Calendar Card : webhook bloqué pour les utilisateurs non-administrateurs (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -5132,11 +5171,11 @@
         browseFallback: "Elemento"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Caricamento supporto...",
+        empty: "Nessun articolo disponibile qui.",
+        playItem: "Riproduci {title}",
+        dialog: "Browser multimediale",
+        eyebrow: "Browser multimediale"
       },
       vacuumSimple: {
         quiet: "Silenzioso",
@@ -5176,10 +5215,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Imposta `entity` su un'entità `fan.*` per mostrare questa scheda.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Velocità",
+          oscillationOn: "Attiva l'oscillazione",
+          oscillationOff: "Disattiva l'oscillazione",
+          showModes: "Mostra modalità"
         }
       },
       lightCard: {
@@ -5204,16 +5243,16 @@
       common: {
         aria: {
           togglePower: "Accendi o spegni",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Indietro",
+          close: "Vicino",
+          previous: "Precedente",
+          next: "Prossimo",
+          playPause: "Riproduci o metti in pausa",
+          volumeDown: "Abbassa il volume",
+          volumeUp: "Alza il volume",
+          openMedia: "Supporti aperti",
+          navigationBar: "Barra di navigazione",
+          mediaPlayers: "Lettori multimediali"
         }
       },
       alarmPanel: {
@@ -5273,64 +5312,77 @@
         defaultName: "Persona"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Anteprima della fotocamera in stile Nodalia con chip di stato e visualizzazione espansa.",
+        live: "Vivere",
+        snapshot: "Istantanea",
+        offline: "Non in linea",
+        unknown: "Sconosciuto",
+        unavailable: "Non disponibile",
+        recording: "Registrazione",
+        lastUpdated: "Ultimo aggiornamento {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Imposta `entity` per mostrare questa scheda.",
+        defaultName: "Telecamera",
+        cameraUnavailable: "Fotocamera non disponibile",
+        noCameraEntity: "Nessuna entità fotocamera",
+        openCamera: "Apri la fotocamera",
+        close: "Vicino",
+        expand: "Espandere"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Panoramica della stanza con clima, presenza, luci, tapparelle, sicurezza e azioni rapide.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        emptyBody: "Imposta un nome per la stanza e collega le entità della stanza.",
+        defaultName: "Camera",
+        temperature: "Temperatura",
+        humidity: "Umidità",
+        climateLabel: "Clima",
+        occupied: "Occupato",
+        vacant: "Vacante",
+        comfortable: "Comodo",
+        hot: "Caldo",
+        cold: "Freddo",
+        humid: "Umido",
+        dry: "Asciutto",
+        lights: "Luci",
+        lightsOn: "{count} accese",
+        lightsOff: "Tutto spento",
+        covers: "Tapparelle",
+        coversOpen: "{count} aperte",
+        coversClosed: "Tutte chiuse",
+        doorOpen: "Porta aperta",
+        windowOpen: "Finestra aperta",
+        lockUnlocked: "Sbloccato",
+        alert: "Avviso",
+        securityIssue: "Problema di sicurezza",
+        cameraOffline: "Fotocamera offline",
+        mediaPlaying: "Giocando",
+        turnOnLights: "Accendi le luci",
+        turnOffLights: "Spegni le luci",
+        openCovers: "Apri le tapparelle",
+        closeCovers: "Chiudi le tapparelle",
+        openCamera: "Apri la fotocamera",
+        climateDetails: "Dettagli sul clima",
+        mediaPlayer: "Lettore multimediale",
+        vacuum: "Aspirapolvere",
+        fans: "Ventilatori",
+        hubHome: "Casa",
+        hubNavigation: "Navigazione stanza",
+        turnOnFans: "Accendi i ventilatori",
+        turnOffFans: "Spegni i ventilatori",
+        raiseTemperature: "Aumenta la temperatura",
+        lowerTemperature: "Abbassa la temperatura",
+        mediaPlay: "Riproduci",
+        mediaPause: "Pausa",
+        turnOnMedia: "Accendi i contenuti multimediali",
+        turnOffMedia: "Spegni i contenuti multimediali",
+        target: "Obiettivo",
+        power: "Energia",
+        airQuality: "Qualità dell'aria",
+        entityUnavailable: "Non disponibile",
+        noRoomData: "Nessun dato sulla camera",
+        humidifiers: "Umidificatori",
+        others: "Altri"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -5343,8 +5395,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Configura `entity` per mostrare la scheda.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Scegli l'opzione",
+        selectPickerClose: "Vicino",
         binarySensor: {
           doorOpen: "Aperta",
           doorClosed: "Chiusa",
@@ -5502,9 +5554,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Imposta `entity` su un'entità `humidifier.*` per mostrare questa scheda.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Umidità target",
+          showModes: "Mostra modalità",
+          showSpeeds: "Mostra velocità"
         },
         modes: {
           auto: "Auto",
@@ -5598,7 +5650,7 @@
             entityMissing: "Seleziona prima un’entità climate.",
             webhookFailed: "Impossibile sincronizzare il programma. Controlla webhook e log di Home Assistant.",
             dualRangeUnsupported: "Il programma settimanale non è disponibile mentre il termostato usa un intervallo dual heat/cool.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Questa pianificazione è troppo grande per l'helper input_text (255 caratteri). Rimuovi i blocchi o usa le automazioni del percorso A sul disco."
           }
         }
       },
@@ -5606,26 +5658,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Imposta `entities` su una o più entità numeriche per mostrare il grafico.",
         emptyHistory: "Nessuno storico disponibile",
-        defaultTitle: "Graph"
+        defaultTitle: "Grafico"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Notizia",
+        emptyTitle: "Nessuna notizia disponibile",
+        emptyBody: "Aggiungi un'entità di notizie o controlla la fonte del feed.",
+        loading: "Caricamento notizie...",
+        errorTitle: "Fonte di notizie non disponibile",
+        errorBody: "Controlla l'entità configurata o gli attributi di origine.",
+        readMore: "Per saperne di più",
+        sourceUnknown: "Fonte sconosciuta",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Proprio adesso",
+        publishedMinutesAgo: "{count} minuti fa",
+        publishedHoursAgo: "{count} ore fa",
+        publishedDaysAgo: "{count} giorni fa",
+        previousArticle: "Articolo precedente",
+        nextArticle: "Articolo successivo",
+        articlePosition: "Articolo {current} di {total}",
+        goToArticle: "Vai all'articolo {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -5643,18 +5695,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Imposta `entity` o `players` per mostrare un lettore.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
+          turnOn: "Accendi",
+          turnOff: "Spegnere",
+          playPause: "Riproduci o metti in pausa",
+          showVolume: "Mostra volume",
+          sources: "Fonti",
+          switchSource: "Cambia sorgente",
+          switchToSource: "Passa a {source}",
           volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          selectPlayer: "Seleziona lettore {index}",
+          play: "Giocare",
+          hidePlayer: "Nascondi giocatore",
+          showPlayer: "Mostra giocatore"
         }
       },
       notificationsCard: {
@@ -5729,16 +5781,16 @@
           showAll: "Mostra tutte le notifiche"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push abilitato",
+          cardOnly: "Visibile solo in tessera",
+          silencedQuietHours: "Silenziato da ore tranquille",
+          silencedCooldown: "Silenziato dal tempo di recupero",
+          blockedSeverity: "Bloccato per gravità",
+          blockedContext: "Bloccato dal contesto",
+          off: "Spento",
+          cameraEvent: "Evento della fotocamera",
+          securityEvent: "Evento di sicurezza",
+          externalAlert: "Avviso esterno"
         }
       },
       favCard: {
@@ -5839,7 +5891,7 @@
           close: "Chiudi"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Scheda calendario Nodalia: webhook bloccato per utenti non amministratori (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -6074,11 +6126,11 @@
         browseFallback: "Item"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Media laden...",
+        empty: "Er zijn hier geen artikelen beschikbaar.",
+        playItem: "Speel {title}",
+        dialog: "Mediabrowser",
+        eyebrow: "Mediabrowser"
       },
       vacuumSimple: {
         quiet: "Stil",
@@ -6118,10 +6170,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Stel `entity` in op een `fan.*`-entiteit om deze kaart te tonen.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Snelheid",
+          oscillationOn: "Schakel oscillatie in",
+          oscillationOff: "Schakel oscillatie uit",
+          showModes: "Toon modi"
         }
       },
       lightCard: {
@@ -6146,16 +6198,16 @@
       common: {
         aria: {
           togglePower: "In- of uitschakelen",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
+          back: "Rug",
+          close: "Dichtbij",
+          previous: "Vorig",
+          next: "Volgende",
+          playPause: "Afspelen of pauzeren",
+          volumeDown: "Volume lager",
+          volumeUp: "Volume omhoog",
           openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          navigationBar: "Navigatiebalk",
+          mediaPlayers: "Mediaspelers"
         }
       },
       alarmPanel: {
@@ -6215,64 +6267,77 @@
         defaultName: "Persoon"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
+        cardDescription: "Cameravoorbeeld in Nodalia-stijl met statuschips en uitgebreide weergave.",
         live: "Live",
-        snapshot: "Snapshot",
+        snapshot: "Momentopname",
         offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        unknown: "Onbekend",
+        unavailable: "Niet beschikbaar",
+        recording: "Opname",
+        lastUpdated: "Laatst bijgewerkt {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
+        emptyBody: "Stel `entity` in om deze kaart weer te geven.",
         defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        cameraUnavailable: "Camera niet beschikbaar",
+        noCameraEntity: "Geen camera-entiteit",
+        openCamera: "Camera openen",
+        close: "Dichtbij",
+        expand: "Uitbreiden"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Kameroverzicht met klimaat, aanwezigheid, verlichting, raambekleding, beveiliging en snelle acties.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
+        emptyBody: "Stel een kamernaam in en verbind kamerentiteiten.",
+        defaultName: "Kamer",
+        temperature: "Temperatuur",
+        humidity: "Vochtigheid",
+        climateLabel: "Klimaat",
+        occupied: "Bezet",
+        vacant: "Vrij",
+        comfortable: "Comfortabel",
+        hot: "Heet",
+        cold: "Koud",
+        humid: "Vochtig",
+        dry: "Droog",
+        lights: "Lichten",
+        lightsOn: "{count} aan",
+        lightsOff: "Alles uit",
+        covers: "Raambekleding",
+        coversOpen: "{count} geopend",
+        coversClosed: "Allemaal gesloten",
+        doorOpen: "Deur open",
+        windowOpen: "Raam open",
+        lockUnlocked: "Ontgrendeld",
+        alert: "Waarschuw",
+        securityIssue: "Beveiligingsprobleem",
         cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        mediaPlaying: "Spelen",
+        turnOnLights: "Doe de lichten aan",
+        turnOffLights: "Doe de lichten uit",
+        openCovers: "Raambekleding openen",
+        closeCovers: "Raambekleding sluiten",
+        openCamera: "Camera openen",
+        climateDetails: "Klimaatdetails",
+        mediaPlayer: "Mediaspeler",
+        vacuum: "Stofzuiger",
+        fans: "Ventilatoren",
+        hubHome: "Start",
+        hubNavigation: "Kamernavigatie",
+        turnOnFans: "Ventilatoren inschakelen",
+        turnOffFans: "Ventilatoren uitschakelen",
+        raiseTemperature: "Temperatuur verhogen",
+        lowerTemperature: "Temperatuur verlagen",
+        mediaPlay: "Afspelen",
+        mediaPause: "Pauzeren",
+        turnOnMedia: "Media inschakelen",
+        turnOffMedia: "Media uitschakelen",
+        target: "Doel",
+        power: "Stroom",
+        airQuality: "Luchtkwaliteit",
+        entityUnavailable: "Niet beschikbaar",
+        noRoomData: "Geen kamergegevens",
+        humidifiers: "Luchtbevochtigers",
+        others: "Anderen"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -6285,8 +6350,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Stel `entity` in om deze kaart te tonen.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Kies optie",
+        selectPickerClose: "Dichtbij",
         binarySensor: {
           doorOpen: "Open",
           doorClosed: "Gesloten",
@@ -6444,9 +6509,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Stel `entity` in op een `humidifier.*`-entiteit om deze kaart te tonen.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Doelvochtigheid",
+          showModes: "Toon modi",
+          showSpeeds: "Laat snelheden zien"
         },
         modes: {
           auto: "Auto",
@@ -6540,7 +6605,7 @@
             entityMissing: "Selecteer eerst een climate-entiteit.",
             webhookFailed: "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
             dualRangeUnsupported: "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Dit schema is te groot voor de input_text-helper (255 tekens). Verwijder blokken of gebruik pad A-automatiseringen op schijf."
           }
         }
       },
@@ -6548,26 +6613,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Stel `entities` in op een of meer numerieke entiteiten om de grafiek te tonen.",
         emptyHistory: "Geen geschiedenis beschikbaar",
-        defaultTitle: "Graph"
+        defaultTitle: "Grafiek"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Nieuws",
+        emptyTitle: "Geen nieuws beschikbaar",
+        emptyBody: "Voeg een nieuwsentiteit toe of controleer uw feedbron.",
+        loading: "Nieuws laden…",
+        errorTitle: "Nieuwsbron niet beschikbaar",
+        errorBody: "Controleer uw geconfigureerde entiteits- of bronkenmerken.",
+        readMore: "Lees meer",
+        sourceUnknown: "Onbekende bron",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Zojuist",
+        publishedMinutesAgo: "{count} min geleden",
+        publishedHoursAgo: "{count} uur geleden",
+        publishedDaysAgo: "{count} d geleden",
+        previousArticle: "Vorig artikel",
+        nextArticle: "Volgend artikel",
+        articlePosition: "Artikel {current} van {total}",
+        goToArticle: "Ga naar artikel {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -6585,18 +6650,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Stel `entity` of `players` in om een speler te tonen.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
+          turnOn: "Schakel in",
+          turnOff: "Schakel uit",
+          playPause: "Afspelen of pauzeren",
+          showVolume: "Toon volume",
+          sources: "Bronnen",
+          switchSource: "Van bron wisselen",
+          switchToSource: "Schakel over naar {source}",
           volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          selectPlayer: "Selecteer speler {index}",
+          play: "Toneelstuk",
+          hidePlayer: "Speler verbergen",
+          showPlayer: "Toon speler"
         }
       },
       notificationsCard: {
@@ -6671,16 +6736,16 @@
           showAll: "Alle meldingen tonen"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push ingeschakeld",
+          cardOnly: "Alleen zichtbaar op de kaart",
+          silencedQuietHours: "Tot zwijgen gebracht door stille uren",
+          silencedCooldown: "Stilgezet door cooldown",
+          blockedSeverity: "Geblokkeerd door ernst",
+          blockedContext: "Geblokkeerd door context",
+          off: "Uit",
+          cameraEvent: "Camera-evenement",
+          securityEvent: "Beveiligingsevenement",
+          externalAlert: "Externe waarschuwing"
         }
       },
       favCard: {
@@ -6781,7 +6846,7 @@
           close: "Sluiten"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia-agendakaart: webhook geblokkeerd voor niet-admin-gebruiker (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -7016,11 +7081,11 @@
         browseFallback: "Punkt"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Laster inn media...",
+        empty: "Ingen varer tilgjengelig her.",
+        playItem: "Spill av {title}",
+        dialog: "Medie nettleser",
+        eyebrow: "Medieleser"
       },
       vacuumSimple: {
         quiet: "Stil",
@@ -7060,10 +7125,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Sett `entity` til en `fan.*`-entitet for å vise kortet.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Fart",
+          oscillationOn: "Slå på oscillasjon",
+          oscillationOff: "Slå av oscillasjonen",
+          showModes: "Vis moduser"
         }
       },
       lightCard: {
@@ -7088,16 +7153,16 @@
       common: {
         aria: {
           togglePower: "In- of uitschakelen",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Tilbake",
+          close: "Lukke",
+          previous: "Tidligere",
+          next: "Neste",
+          playPause: "Spill av eller sett på pause",
+          volumeDown: "Volum ned",
+          volumeUp: "Volum opp",
+          openMedia: "Åpne medier",
+          navigationBar: "Navigasjonslinje",
+          mediaPlayers: "Mediespillere"
         }
       },
       alarmPanel: {
@@ -7157,64 +7222,77 @@
         defaultName: "Person"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Forhåndsvisning av kamera i Nodalia-stil med statusbrikker og utvidet visning.",
+        live: "Bo",
+        snapshot: "Øyeblikksbilde",
+        offline: "Frakoblet",
+        unknown: "Ukjent",
+        unavailable: "Utilgjengelig",
+        recording: "Innspilling",
+        lastUpdated: "Sist oppdatert {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Angi `entity` for å vise dette kortet.",
+        defaultName: "Kamera",
+        cameraUnavailable: "Kameraet er ikke tilgjengelig",
+        noCameraEntity: "Ingen kameraenhet",
+        openCamera: "Åpne kamera",
+        close: "Lukke",
+        expand: "Utvide"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Romoversikt med klima, tilstedeværelse, lys, skjerming, sikkerhet og hurtighandlinger.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        emptyBody: "Angi et romnavn og koble sammen romenheter.",
+        defaultName: "Rom",
+        temperature: "Temperatur",
+        humidity: "Fuktighet",
+        climateLabel: "Klima",
+        occupied: "Okkupert",
+        vacant: "Ledig",
+        comfortable: "Komfortabel",
+        hot: "Varm",
+        cold: "Kald",
+        humid: "Fuktig",
+        dry: "Tørke",
+        lights: "Lys",
+        lightsOn: "{count} på",
+        lightsOff: "Alt av",
+        covers: "Persienner",
+        coversOpen: "{count} åpne",
+        coversClosed: "Alle lukket",
+        doorOpen: "Dør åpen",
+        windowOpen: "Vindu åpent",
+        lockUnlocked: "Ulåst",
+        alert: "Varsle",
+        securityIssue: "Sikkerhetsproblem",
+        cameraOffline: "Kamera offline",
+        mediaPlaying: "Spiller",
+        turnOnLights: "Slå på lys",
+        turnOffLights: "Slå av lys",
+        openCovers: "Åpne persienner",
+        closeCovers: "Lukk persienner",
+        openCamera: "Åpne kamera",
+        climateDetails: "Klimadetaljer",
+        mediaPlayer: "Mediespiller",
+        vacuum: "Støvsuger",
+        fans: "Vifter",
+        hubHome: "Hjem",
+        hubNavigation: "Romnavigasjon",
+        turnOnFans: "Slå på vifter",
+        turnOffFans: "Slå av vifter",
+        raiseTemperature: "Øk temperaturen",
+        lowerTemperature: "Senk temperaturen",
+        mediaPlay: "Spill av",
+        mediaPause: "Pause",
+        turnOnMedia: "Slå på medier",
+        turnOffMedia: "Slå av medier",
+        target: "Mål",
+        power: "Makt",
+        airQuality: "Luftkvalitet",
+        entityUnavailable: "Utilgjengelig",
+        noRoomData: "Ingen romdata",
+        humidifiers: "Luftfuktere",
+        others: "Andre"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -7227,8 +7305,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Konfigurer `entity` for å vise kortet.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Velg alternativ",
+        selectPickerClose: "Lukke",
         binarySensor: {
           doorOpen: "Åpne",
           doorClosed: "Gesloten",
@@ -7386,9 +7464,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Sett `entity` til en `humidifier.*`-entitet for å vise kortet.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Mål fuktighet",
+          showModes: "Vis moduser",
+          showSpeeds: "Vis hastigheter"
         },
         modes: {
           auto: "Auto",
@@ -7482,7 +7560,7 @@
             entityMissing: "Velg en climate-entitet først.",
             webhookFailed: "Kunne ikke synkronisere planen. Sjekk webhook og Home Assistant-logger.",
             dualRangeUnsupported: "Ukeplaner støttes ikke mens termostaten bruker dual varme/kjøle-område.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Denne tidsplanen er for stor for input_text-hjelperen (255 tegn). Fjern blokker eller bruk Path A automatiseringer på disk."
           }
         }
       },
@@ -7490,26 +7568,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Sett `entities` til én eller flere numeriske entiteter for å vise grafen.",
         emptyHistory: "Ingen historikk tilgjengelig",
-        defaultTitle: "Graph"
+        defaultTitle: "Kurve"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Nyheter",
+        emptyTitle: "Ingen nyheter tilgjengelig",
+        emptyBody: "Legg til en nyhetsenhet eller sjekk feedkilden din.",
+        loading: "Laster inn nyheter …",
+        errorTitle: "Nyhetskilde utilgjengelig",
+        errorBody: "Sjekk den konfigurerte enheten eller kildeattributtene dine.",
+        readMore: "Les mer",
+        sourceUnknown: "Ukjent kilde",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Akkurat nå",
+        publishedMinutesAgo: "for {count} min siden",
+        publishedHoursAgo: "for {count} t siden",
+        publishedDaysAgo: "for {count} d siden",
+        previousArticle: "Forrige artikkel",
+        nextArticle: "Neste artikkel",
+        articlePosition: "Artikkel {current} av {total}",
+        goToArticle: "Gå til artikkelen {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -7527,18 +7605,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Sett `entity` eller `players` for å vise en spiller.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
-          volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          turnOn: "Slå på",
+          turnOff: "Slå av",
+          playPause: "Spill av eller sett på pause",
+          showVolume: "Vis volum",
+          sources: "Kilder",
+          switchSource: "Bytt kilde",
+          switchToSource: "Bytt til {source}",
+          volume: "Volum",
+          selectPlayer: "Velg spiller {index}",
+          play: "Spille",
+          hidePlayer: "Skjul spiller",
+          showPlayer: "Vis spiller"
         }
       },
       notificationsCard: {
@@ -7613,16 +7691,16 @@
           showAll: "Alle meldingen tonen"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push aktivert",
+          cardOnly: "Kun synlig på kortet",
+          silencedQuietHours: "Stillet av stille timer",
+          silencedCooldown: "Stilles av nedkjøling",
+          blockedSeverity: "Blokkert av alvorlighetsgrad",
+          blockedContext: "Blokkert av kontekst",
+          off: "Av",
+          cameraEvent: "Kamerahendelse",
+          securityEvent: "Sikkerhetshendelse",
+          externalAlert: "Ekstern varsling"
         }
       },
       favCard: {
@@ -7723,7 +7801,7 @@
           close: "Lukke"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia-kalenderkort: webhook blokkert for ikke-admin-brukere (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -7958,11 +8036,11 @@
         browseFallback: "Item"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Carregando mídia...",
+        empty: "Nenhum item disponível aqui.",
+        playItem: "Reproduzir {title}",
+        dialog: "Navegador de mídia",
+        eyebrow: "Navegador de mídia"
       },
       vacuumSimple: {
         quiet: "Silencioso",
@@ -8002,10 +8080,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Defina `entity` como uma entidade `fan.*` para mostrar este cartão.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Velocidade",
+          oscillationOn: "Ativar oscilação",
+          oscillationOff: "Desligue a oscilação",
+          showModes: "Mostrar modos"
         }
       },
       lightCard: {
@@ -8030,16 +8108,16 @@
       common: {
         aria: {
           togglePower: "Ligar ou desligar",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Voltar",
+          close: "Fechar",
+          previous: "Anterior",
+          next: "Próximo",
+          playPause: "Reproduzir ou pausar",
+          volumeDown: "Diminuir volume",
+          volumeUp: "Aumentar o volume",
+          openMedia: "Mídia aberta",
+          navigationBar: "Barra de navegação",
+          mediaPlayers: "Reprodutores de mídia"
         }
       },
       alarmPanel: {
@@ -8099,64 +8177,77 @@
         defaultName: "Pessoa"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Pré-visualização da câmera no estilo Nodalia com chips de status e visualização expandida.",
+        live: "Ao vivo",
+        snapshot: "Instantâneo",
+        offline: "Off-line",
+        unknown: "Desconhecido",
+        unavailable: "Indisponível",
+        recording: "Gravação",
+        lastUpdated: "Última atualização {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Defina `entity` para mostrar este cartão.",
+        defaultName: "Câmera",
+        cameraUnavailable: "Câmera indisponível",
+        noCameraEntity: "Nenhuma entidade de câmera",
+        openCamera: "Câmera aberta",
+        close: "Fechar",
+        expand: "Expandir"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Resumo da divisão com clima, presença, luzes, persianas, segurança e ações rápidas.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        emptyBody: "Defina um nome de sala e conecte entidades de sala.",
+        defaultName: "Sala",
+        temperature: "Temperatura",
+        humidity: "Umidade",
+        climateLabel: "Clima",
+        occupied: "Ocupado",
+        vacant: "Vago",
+        comfortable: "Confortável",
+        hot: "Quente",
+        cold: "Frio",
+        humid: "Úmido",
+        dry: "Seco",
+        lights: "Luzes",
+        lightsOn: "{count} ligadas",
+        lightsOff: "Tudo desligado",
+        covers: "Estores",
+        coversOpen: "{count} abertos",
+        coversClosed: "Todos fechados",
+        doorOpen: "Porta aberta",
+        windowOpen: "Janela aberta",
+        lockUnlocked: "Desbloqueado",
+        alert: "Alerta",
+        securityIssue: "Problema de segurança",
+        cameraOffline: "Câmera off-line",
+        mediaPlaying: "Jogando",
+        turnOnLights: "Acenda as luzes",
+        turnOffLights: "Apague as luzes",
+        openCovers: "Abrir estores",
+        closeCovers: "Fechar estores",
+        openCamera: "Câmera aberta",
+        climateDetails: "Detalhes climáticos",
+        mediaPlayer: "Reprodutor de mídia",
+        vacuum: "Aspirador",
+        fans: "Ventoinhas",
+        hubHome: "Início",
+        hubNavigation: "Navegação da divisão",
+        turnOnFans: "Ligar ventoinhas",
+        turnOffFans: "Desligar ventoinhas",
+        raiseTemperature: "Aumentar a temperatura",
+        lowerTemperature: "Diminuir a temperatura",
+        mediaPlay: "Reproduzir",
+        mediaPause: "Pausar",
+        turnOnMedia: "Ligar multimédia",
+        turnOffMedia: "Desligar multimédia",
+        target: "Alvo",
+        power: "Poder",
+        airQuality: "Qualidade do ar",
+        entityUnavailable: "Indisponível",
+        noRoomData: "Não há dados do quarto",
+        humidifiers: "Umidificadores",
+        others: "Outros"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -8169,8 +8260,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Configure `entity` para mostrar o cartão.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Escolha a opção",
+        selectPickerClose: "Fechar",
         binarySensor: {
           doorOpen: "Aberta",
           doorClosed: "Fechada",
@@ -8328,9 +8419,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Defina `entity` como uma entidade `humidifier.*` para mostrar este cartão.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Umidade alvo",
+          showModes: "Mostrar modos",
+          showSpeeds: "Mostrar velocidades"
         },
         modes: {
           auto: "Automático",
@@ -8424,7 +8515,7 @@
             entityMissing: "Selecione primeiro uma entidade climate.",
             webhookFailed: "Não foi possível sincronizar o horário. Verifique o webhook e os registos do Home Assistant.",
             dualRangeUnsupported: "Horários semanais não estão disponíveis enquanto o termostato usa um intervalo dual calor/frio.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Esta programação é muito grande para o auxiliar input_text (255 caracteres). Remova blocos ou use automações do Caminho A no disco."
           }
         }
       },
@@ -8432,26 +8523,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Defina `entities` com uma ou mais entidades numéricas para mostrar o gráfico.",
         emptyHistory: "Sem histórico disponível",
-        defaultTitle: "Graph"
+        defaultTitle: "Gráfico"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Notícias",
+        emptyTitle: "Nenhuma notícia disponível",
+        emptyBody: "Adicione uma entidade de notícias ou verifique a fonte do feed.",
+        loading: "Carregando notícias…",
+        errorTitle: "Fonte de notícias indisponível",
+        errorBody: "Verifique sua entidade configurada ou atributos de origem.",
+        readMore: "Leia mais",
+        sourceUnknown: "Fonte desconhecida",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Agora mesmo",
+        publishedMinutesAgo: "{count} minutos atrás",
+        publishedHoursAgo: "{count} horas atrás",
+        publishedDaysAgo: "{count} dias atrás",
+        previousArticle: "Artigo anterior",
+        nextArticle: "Próximo artigo",
+        articlePosition: "Artigo {current} de {total}",
+        goToArticle: "Vá para o artigo {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -8469,18 +8560,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Defina `entity` ou `players` para mostrar um leitor.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
+          turnOn: "Ligar",
+          turnOff: "Desligar",
+          playPause: "Reproduzir ou pausar",
+          showVolume: "Mostrar volume",
+          sources: "Fontes",
+          switchSource: "Alternar fonte",
+          switchToSource: "Mudar para {source}",
           volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          selectPlayer: "Selecione o reprodutor {index}",
+          play: "Jogar",
+          hidePlayer: "Ocultar jogador",
+          showPlayer: "Mostrar jogador"
         }
       },
       notificationsCard: {
@@ -8555,16 +8646,16 @@
           showAll: "Mostrar todas as notificações"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push ativado",
+          cardOnly: "Visível apenas no cartão",
+          silencedQuietHours: "Silenciado por horas tranquilas",
+          silencedCooldown: "Silenciado pelo tempo de espera",
+          blockedSeverity: "Bloqueado por gravidade",
+          blockedContext: "Bloqueado pelo contexto",
+          off: "Desligado",
+          cameraEvent: "Evento de câmera",
+          securityEvent: "Evento de segurança",
+          externalAlert: "Alerta externo"
         }
       },
       favCard: {
@@ -8665,7 +8756,7 @@
           close: "Fechar"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook bloqueado para usuário não administrador (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -8900,11 +8991,11 @@
         browseFallback: "Element"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Se încarcă media...",
+        empty: "Nu există articole disponibile aici.",
+        playItem: "Joacă {title}",
+        dialog: "Browser media",
+        eyebrow: "Browser media"
       },
       vacuumSimple: {
         quiet: "Silențios",
@@ -8944,10 +9035,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Setează `entity` la o entitate `fan.*` pentru a afișa cardul.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Viteză",
+          oscillationOn: "Porniți oscilația",
+          oscillationOff: "Opriți oscilația",
+          showModes: "Afișați moduri"
         }
       },
       lightCard: {
@@ -8972,16 +9063,16 @@
       common: {
         aria: {
           togglePower: "Pornește sau oprește",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Spate",
+          close: "Aproape",
+          previous: "Anterior",
+          next: "Următorul",
+          playPause: "Redați sau întrerupeți",
+          volumeDown: "Scăderea volumului",
+          volumeUp: "Crește volumul",
+          openMedia: "Deschide mass-media",
+          navigationBar: "Bara de navigare",
+          mediaPlayers: "Playere media"
         }
       },
       alarmPanel: {
@@ -9041,64 +9132,77 @@
         defaultName: "Persoană"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
+        cardDescription: "Previzualizarea camerei în stil Nodalia cu cipuri de stare și vizualizare extinsă.",
+        live: "Trăi",
+        snapshot: "Instantaneu",
         offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        unknown: "Necunoscut",
+        unavailable: "Indisponibil",
+        recording: "Înregistrare",
+        lastUpdated: "Ultima actualizare la {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Setați `entity` pentru a afișa acest card.",
+        defaultName: "Camera foto",
+        cameraUnavailable: "Camera foto nu este disponibilă",
+        noCameraEntity: "Nicio entitate cameră",
+        openCamera: "Deschideți camera",
+        close: "Aproape",
+        expand: "Extinde"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Prezentare generală a camerei cu climat, prezență, lumini, jaluzele, securitate și acțiuni rapide.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
+        emptyBody: "Setați un nume de cameră și conectați entitățile camerei.",
+        defaultName: "Cameră",
+        temperature: "Temperatură",
+        humidity: "Umiditate",
+        climateLabel: "Clima",
+        occupied: "Ocupată",
         vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
+        comfortable: "Confortabil",
+        hot: "Fierbinte",
+        cold: "Rece",
+        humid: "Umed",
+        dry: "Uscat",
+        lights: "Lumini",
+        lightsOn: "{count} aprinse",
+        lightsOff: "Toate oprite",
+        covers: "Jaluzele",
+        coversOpen: "{count} deschise",
+        coversClosed: "Toate închise",
+        doorOpen: "Usa deschisa",
+        windowOpen: "Fereastra deschisă",
+        lockUnlocked: "Deblocat",
+        alert: "Alerta",
+        securityIssue: "Problemă de securitate",
+        cameraOffline: "Aparat foto offline",
+        mediaPlaying: "Joc",
+        turnOnLights: "Aprinde luminile",
+        turnOffLights: "Stinge luminile",
+        openCovers: "Deschide jaluzelele",
+        closeCovers: "Închide jaluzelele",
+        openCamera: "Deschideți camera",
+        climateDetails: "Detalii climatice",
         mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        vacuum: "Aspirator",
+        fans: "Ventilatoare",
+        hubHome: "Acasă",
+        hubNavigation: "Navigare cameră",
+        turnOnFans: "Pornește ventilatoarele",
+        turnOffFans: "Oprește ventilatoarele",
+        raiseTemperature: "Crește temperatura",
+        lowerTemperature: "Scade temperatura",
+        mediaPlay: "Redare",
+        mediaPause: "Pauză",
+        turnOnMedia: "Pornește redarea media",
+        turnOffMedia: "Oprește redarea media",
+        target: "Țintă",
+        power: "Putere",
+        airQuality: "Calitatea aerului",
+        entityUnavailable: "Indisponibil",
+        noRoomData: "Nu există date despre cameră",
+        humidifiers: "Umidificatoare",
+        others: "Alţii"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -9111,8 +9215,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Configurează `entity` pentru a afișa cardul.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Alegeți opțiunea",
+        selectPickerClose: "Aproape",
         binarySensor: {
           doorOpen: "Deschisă",
           doorClosed: "Închisă",
@@ -9270,9 +9374,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Setează `entity` la o entitate `humidifier.*` pentru a afișa cardul.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Umiditatea țintă",
+          showModes: "Afișați moduri",
+          showSpeeds: "Arată viteze"
         },
         modes: {
           auto: "Automat",
@@ -9366,7 +9470,7 @@
             entityMissing: "Selectează mai întâi o entitate climate.",
             webhookFailed: "Programul nu a putut fi sincronizat. Verifică webhook-ul și jurnalele Home Assistant.",
             dualRangeUnsupported: "Programele săptămânale nu sunt disponibile cât timp termostatul folosește un interval dual încălzire/răcire.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Acest program este prea mare pentru asistentul input_text (255 de caractere). Eliminați blocurile sau utilizați automatizările Calea A pe disc."
           }
         }
       },
@@ -9374,26 +9478,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Setează `entities` la una sau mai multe entități numerice pentru a afișa graficul.",
         emptyHistory: "Nu există istoric disponibil",
-        defaultTitle: "Graph"
+        defaultTitle: "Grafic"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Ştiri",
+        emptyTitle: "Nu există știri disponibile",
+        emptyBody: "Adăugați o entitate de știri sau verificați sursa feedului.",
+        loading: "Se încarcă știrile…",
+        errorTitle: "Sursa de știri indisponibilă",
+        errorBody: "Verificați entitatea configurată sau atributele sursei.",
+        readMore: "Citeşte mai mult",
+        sourceUnknown: "Sursă necunoscută",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Chiar acum",
+        publishedMinutesAgo: "acum {count} minute",
+        publishedHoursAgo: "acum {count} h",
+        publishedDaysAgo: "acum {count} zile",
+        previousArticle: "Articolul anterior",
+        nextArticle: "Articolul următor",
+        articlePosition: "Articolul {current} din {total}",
+        goToArticle: "Accesați articolul {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -9411,18 +9515,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Setează `entity` sau `players` pentru a afișa un player.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
-          volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          turnOn: "Porniți",
+          turnOff: "Opriți",
+          playPause: "Redați sau întrerupeți",
+          showVolume: "Arată volumul",
+          sources: "Surse",
+          switchSource: "Schimbați sursa",
+          switchToSource: "Comutați la {source}",
+          volume: "Volum",
+          selectPlayer: "Selectează playerul {index}",
+          play: "Juca",
+          hidePlayer: "Ascunde playerul",
+          showPlayer: "Arată jucătorul"
         }
       },
       notificationsCard: {
@@ -9497,16 +9601,16 @@
           showAll: "Afișează toate notificările"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push activat",
+          cardOnly: "Vizibil numai pe card",
+          silencedQuietHours: "Tăcut de orele de liniște",
+          silencedCooldown: "Redus la tăcere prin răcire",
+          blockedSeverity: "Blocat de severitate",
+          blockedContext: "Blocat de context",
+          off: "Oprit",
+          cameraEvent: "Eveniment camera",
+          securityEvent: "Eveniment de securitate",
+          externalAlert: "Alertă externă"
         }
       },
       favCard: {
@@ -9607,7 +9711,7 @@
           close: "Închide"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocat pentru utilizatorul non-admin (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -9842,11 +9946,11 @@
         browseFallback: "Элемент"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "Загрузка медиа...",
+        empty: "Здесь нет доступных товаров.",
+        playItem: "Воспроизвести {title}",
+        dialog: "Медиа-браузер",
+        eyebrow: "Медиа-браузер"
       },
       vacuumSimple: {
         quiet: "Тихий",
@@ -9886,10 +9990,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "Укажите `entity` как сущность `fan.*`, чтобы показать карточку.",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "Скорость",
+          oscillationOn: "Включить осцилляцию",
+          oscillationOff: "Выключить колебание",
+          showModes: "Показать режимы"
         }
       },
       lightCard: {
@@ -9914,16 +10018,16 @@
       common: {
         aria: {
           togglePower: "Включить или выключить",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "Назад",
+          close: "Закрывать",
+          previous: "Предыдущий",
+          next: "Следующий",
+          playPause: "Воспроизвести или поставить на паузу",
+          volumeDown: "Уменьшить громкость",
+          volumeUp: "Увеличение громкости",
+          openMedia: "Открытые СМИ",
+          navigationBar: "Панель навигации",
+          mediaPlayers: "Медиаплееры"
         }
       },
       alarmPanel: {
@@ -9983,64 +10087,77 @@
         defaultName: "Человек"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Предварительный просмотр камеры в стиле Nodalia с индикаторами состояния и расширенным обзором.",
+        live: "Жить",
+        snapshot: "Снимок",
+        offline: "Оффлайн",
+        unknown: "Неизвестный",
+        unavailable: "Недоступно",
+        recording: "Запись",
+        lastUpdated: "Последнее обновление: {time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "Установите `entity`, чтобы показать эту карту.",
+        defaultName: "Камера",
+        cameraUnavailable: "Камера недоступна",
+        noCameraEntity: "Нет объекта камеры",
+        openCamera: "Открыть камеру",
+        close: "Закрывать",
+        expand: "Расширять"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "Обзор комнаты с климатом, присутствием, освещением, шторами, безопасностью и быстрыми действиями.",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        emptyBody: "Задайте имя комнаты и соедините объекты комнаты.",
+        defaultName: "Комната",
+        temperature: "Температура",
+        humidity: "Влажность",
+        climateLabel: "Климат",
+        occupied: "Занято",
+        vacant: "Вакантный",
+        comfortable: "Комфортный",
+        hot: "Горячий",
+        cold: "Холодный",
+        humid: "Влажный",
+        dry: "Сухой",
+        lights: "Свет",
+        lightsOn: "{count} включено",
+        lightsOff: "Все выключено",
+        covers: "Шторы",
+        coversOpen: "{count} открыто",
+        coversClosed: "Все закрыты",
+        doorOpen: "Дверь открыта",
+        windowOpen: "Окно открыто",
+        lockUnlocked: "Разблокировано",
+        alert: "Тревога",
+        securityIssue: "Проблема безопасности",
+        cameraOffline: "Камера оффлайн",
+        mediaPlaying: "Играя",
+        turnOnLights: "Включите свет",
+        turnOffLights: "Выключить свет",
+        openCovers: "Открыть шторы",
+        closeCovers: "Закрыть шторы",
+        openCamera: "Открыть камеру",
+        climateDetails: "Детали климата",
+        mediaPlayer: "Медиаплеер",
+        vacuum: "Пылесос",
+        fans: "Вентиляторы",
+        hubHome: "Главная",
+        hubNavigation: "Навигация по комнате",
+        turnOnFans: "Включить вентиляторы",
+        turnOffFans: "Выключить вентиляторы",
+        raiseTemperature: "Повысить температуру",
+        lowerTemperature: "Понизить температуру",
+        mediaPlay: "Воспроизвести",
+        mediaPause: "Пауза",
+        turnOnMedia: "Включить медиаплеер",
+        turnOffMedia: "Выключить медиаплеер",
+        target: "Цель",
+        power: "Власть",
+        airQuality: "Качество воздуха",
+        entityUnavailable: "Недоступно",
+        noRoomData: "Нет данных о комнате",
+        humidifiers: "Увлажнители",
+        others: "Другие"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -10053,8 +10170,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "Настройте `entity`, чтобы показать карточку.",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "Выберите вариант",
+        selectPickerClose: "Закрывать",
         binarySensor: {
           doorOpen: "Открыта",
           doorClosed: "Закрыта",
@@ -10212,9 +10329,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку.",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "Целевая влажность",
+          showModes: "Показать режимы",
+          showSpeeds: "Показать скорости"
         },
         modes: {
           auto: "Авто",
@@ -10308,7 +10425,7 @@
             entityMissing: "Сначала выберите сущность climate.",
             webhookFailed: "Не удалось синхронизировать расписание. Проверьте webhook и журналы Home Assistant.",
             dualRangeUnsupported: "Недельное расписание недоступно, пока термостат использует двойной диапазон нагрева/охлаждения.",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "Это расписание слишком велико для помощника input_text (255 символов). Удалите блоки или используйте автоматизацию пути A на диске."
           }
         }
       },
@@ -10316,26 +10433,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Укажите `entities` как одну или несколько числовых сущностей для графика.",
         emptyHistory: "История недоступна",
-        defaultTitle: "Graph"
+        defaultTitle: "График"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "Новости",
+        emptyTitle: "Нет доступных новостей",
+        emptyBody: "Добавьте новостной объект или проверьте источник канала.",
+        loading: "Загрузка новостей…",
+        errorTitle: "Источник новостей недоступен",
+        errorBody: "Проверьте настроенную сущность или атрибуты источника.",
+        readMore: "Читать далее",
+        sourceUnknown: "Неизвестный источник",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "Прямо сейчас",
+        publishedMinutesAgo: "{count} мин. назад",
+        publishedHoursAgo: "{count} ч. назад",
+        publishedDaysAgo: "{count} дней назад",
+        previousArticle: "Предыдущая статья",
+        nextArticle: "Следующая статья",
+        articlePosition: "Статья {current} из {total}",
+        goToArticle: "Перейти к статье {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -10353,18 +10470,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "Укажите `entity` или `players`, чтобы показать плеер.",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
-          volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          turnOn: "Включать",
+          turnOff: "Выключать",
+          playPause: "Воспроизвести или поставить на паузу",
+          showVolume: "Показать громкость",
+          sources: "Источники",
+          switchSource: "Переключить источник",
+          switchToSource: "Переключиться на {source}",
+          volume: "Объем",
+          selectPlayer: "Выберите проигрыватель {index}",
+          play: "Играть",
+          hidePlayer: "Скрыть игрока",
+          showPlayer: "Показать плеер"
         }
       },
       notificationsCard: {
@@ -10439,16 +10556,16 @@
           showAll: "Показать все уведомления"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "Push включен",
+          cardOnly: "Видно только на карточке",
+          silencedQuietHours: "Тишина тихих часов",
+          silencedCooldown: "Безмолвие по времени восстановления",
+          blockedSeverity: "Заблокировано по серьезности",
+          blockedContext: "Заблокировано по контексту",
+          off: "Выключенный",
+          cameraEvent: "Событие камеры",
+          securityEvent: "Событие безопасности",
+          externalAlert: "Внешнее оповещение"
         }
       },
       favCard: {
@@ -10549,7 +10666,7 @@
           close: "Закрыть"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Календарь Nodalia: веб-перехватчик заблокирован для пользователя без прав администратора (security.allow_webhooks_for_non_admin=false)."
         }
       },
       vacuumErrorLabels: {
@@ -10784,11 +10901,11 @@
         browseFallback: "项目"
       },
       mediaBrowser: {
-        loading: "Loading media...",
-        empty: "No items available here.",
-        playItem: "Play {title}",
-        dialog: "Media browser",
-        eyebrow: "Media Browser"
+        loading: "正在加载媒体...",
+        empty: "这里没有可用的物品。",
+        playItem: "播放 {title}",
+        dialog: "媒体浏览器",
+        eyebrow: "媒体浏览器"
       },
       vacuumSimple: {
         quiet: "安静",
@@ -10828,10 +10945,10 @@
         emptyTitle: "Nodalia Fan Card",
         emptyBody: "将 `entity` 设置为 `fan.*` 实体以显示此卡片。",
         aria: {
-          speedSlider: "Speed",
-          oscillationOn: "Turn oscillation on",
-          oscillationOff: "Turn oscillation off",
-          showModes: "Show modes"
+          speedSlider: "速度",
+          oscillationOn: "打开振荡",
+          oscillationOff: "关闭振荡",
+          showModes: "显示模式"
         }
       },
       lightCard: {
@@ -10856,16 +10973,16 @@
       common: {
         aria: {
           togglePower: "开或关",
-          back: "Back",
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
-          playPause: "Play or pause",
-          volumeDown: "Volume down",
-          volumeUp: "Volume up",
-          openMedia: "Open media",
-          navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          back: "后退",
+          close: "关闭",
+          previous: "以前的",
+          next: "下一个",
+          playPause: "播放或暂停",
+          volumeDown: "降低音量",
+          volumeUp: "调高音量",
+          openMedia: "开放媒体",
+          navigationBar: "导航栏",
+          mediaPlayers: "媒体播放器"
         }
       },
       alarmPanel: {
@@ -10925,64 +11042,77 @@
         defaultName: "人员"
       },
       cameraCard: {
-        cardDescription: "Nodalia-style camera preview with status chips and expanded view.",
-        live: "Live",
-        snapshot: "Snapshot",
-        offline: "Offline",
-        unknown: "Unknown",
-        unavailable: "Unavailable",
-        recording: "Recording",
-        lastUpdated: "Last updated {time}",
+        cardDescription: "Nodalia 风格的相机预览，带有状态芯片和扩展视图。",
+        live: "居住",
+        snapshot: "快照",
+        offline: "离线",
+        unknown: "未知",
+        unavailable: "不可用",
+        recording: "记录",
+        lastUpdated: "最后更新时间：{time}",
         emptyTitle: "Nodalia Camera Card",
-        emptyBody: "Set `entity` to show this card.",
-        defaultName: "Camera",
-        cameraUnavailable: "Camera unavailable",
-        noCameraEntity: "No camera entity",
-        openCamera: "Open camera",
-        close: "Close",
-        expand: "Expand"
+        emptyBody: "设置 `entity` 以显示此卡。",
+        defaultName: "相机",
+        cameraUnavailable: "相机不可用",
+        noCameraEntity: "无相机实体",
+        openCamera: "打开相机",
+        close: "关闭",
+        expand: "扩张"
       },
       roomSummaryCard: {
-        cardDescription: "Room overview with climate, occupancy, lights, and covers.",
+        cardDescription: "房间概览，包含气候、占用情况、灯光、窗帘、安全和快捷操作。",
         emptyTitle: "Nodalia Room Summary Card",
-        emptyBody: "Set a room name and connect room entities.",
-        defaultName: "Room",
-        temperature: "Temperature",
-        humidity: "Humidity",
-        climateLabel: "Climate",
-        occupied: "Occupied",
-        vacant: "Vacant",
-        comfortable: "Comfortable",
-        hot: "Hot",
-        cold: "Cold",
-        humid: "Humid",
-        dry: "Dry",
-        lights: "Lights",
-        lightsOn: "{count} on",
-        lightsOff: "All off",
-        covers: "Covers",
-        coversOpen: "{count} open",
-        coversClosed: "All closed",
-        doorOpen: "Door open",
-        windowOpen: "Window open",
-        lockUnlocked: "Unlocked",
-        alert: "Alert",
-        securityIssue: "Security issue",
-        cameraOffline: "Camera offline",
-        mediaPlaying: "Playing",
-        turnOnLights: "Turn on lights",
-        turnOffLights: "Turn off lights",
-        openCovers: "Open covers",
-        closeCovers: "Close covers",
-        openCamera: "Open camera",
-        climateDetails: "Climate details",
-        mediaPlayer: "Media player",
-        power: "Power",
-        airQuality: "Air quality",
-        entityUnavailable: "Unavailable",
-        noRoomData: "No room data",
-        humidifiers: "Humidifiers",
-        others: "Others"
+        emptyBody: "设置房间名称并连接房间实体。",
+        defaultName: "房间",
+        temperature: "温度",
+        humidity: "湿度",
+        climateLabel: "气候",
+        occupied: "有人",
+        vacant: "空缺",
+        comfortable: "舒服的",
+        hot: "热的",
+        cold: "寒冷的",
+        humid: "湿",
+        dry: "干燥",
+        lights: "灯",
+        lightsOn: "{count} 个已打开",
+        lightsOff: "全部关闭",
+        covers: "窗帘",
+        coversOpen: "打开了 {count} 个",
+        coversClosed: "全部关闭",
+        doorOpen: "门打开",
+        windowOpen: "窗户打开",
+        lockUnlocked: "解锁",
+        alert: "警报",
+        securityIssue: "安全问题",
+        cameraOffline: "相机离线",
+        mediaPlaying: "演奏",
+        turnOnLights: "打开灯",
+        turnOffLights: "关灯",
+        openCovers: "打开窗帘",
+        closeCovers: "关闭窗帘",
+        openCamera: "打开相机",
+        climateDetails: "气候详情",
+        mediaPlayer: "媒体播放器",
+        vacuum: "吸尘器",
+        fans: "风扇",
+        hubHome: "首页",
+        hubNavigation: "房间导航",
+        turnOnFans: "打开风扇",
+        turnOffFans: "关闭风扇",
+        raiseTemperature: "调高温度",
+        lowerTemperature: "调低温度",
+        mediaPlay: "播放",
+        mediaPause: "暂停",
+        turnOnMedia: "打开媒体",
+        turnOffMedia: "关闭媒体",
+        target: "目标",
+        power: "力量",
+        airQuality: "空气质量",
+        entityUnavailable: "不可用",
+        noRoomData: "无房间数据",
+        humidifiers: "加湿器",
+        others: "其他的"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -10995,8 +11125,8 @@
       entityCard: {
         emptyTitle: "Nodalia Entity Card",
         emptyBody: "配置 `entity` 以显示卡片。",
-        selectPickerTitle: "Choose option",
-        selectPickerClose: "Close",
+        selectPickerTitle: "选择选项",
+        selectPickerClose: "关闭",
         binarySensor: {
           doorOpen: "开启",
           doorClosed: "关闭",
@@ -11154,9 +11284,9 @@
         emptyTitle: "Nodalia Humidifier Card",
         emptyBody: "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。",
         aria: {
-          targetHumidity: "Target humidity",
-          showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          targetHumidity: "目标湿度",
+          showModes: "显示模式",
+          showSpeeds: "显示速度"
         },
         modes: {
           auto: "自动",
@@ -11250,7 +11380,7 @@
             entityMissing: "请先选择 climate 实体。",
             webhookFailed: "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
             dualRangeUnsupported: "恒温器使用双模式冷暖范围时，不支持每周计划。",
-            storageTooLarge: "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+            storageTooLarge: "此计划对于 input_text 帮助程序来说太大（255 个字符）。删除块或使用磁盘上的路径 A 自动化。"
           }
         }
       },
@@ -11258,26 +11388,26 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "将 `entities` 设置为一个或多个数值实体以显示图表。",
         emptyHistory: "暂无历史数据",
-        defaultTitle: "Graph"
+        defaultTitle: "图形"
       },
       newsCard: {
-        title: "News",
-        emptyTitle: "No news available",
-        emptyBody: "Add a news entity or check your feed source.",
-        loading: "Loading news…",
-        errorTitle: "News source unavailable",
-        errorBody: "Check your configured entity or source attributes.",
-        readMore: "Read more",
-        sourceUnknown: "Unknown source",
+        title: "消息",
+        emptyTitle: "无可用消息",
+        emptyBody: "添加新闻实体或检查您的 Feed 源。",
+        loading: "正在加载新闻...",
+        errorTitle: "新闻来源不可用",
+        errorBody: "检查您配置的实体或源属性。",
+        readMore: "阅读更多",
+        sourceUnknown: "来源不明",
         categoryGeneral: "General",
-        publishedNow: "Just now",
-        publishedMinutesAgo: "{count} min ago",
-        publishedHoursAgo: "{count} h ago",
-        publishedDaysAgo: "{count} d ago",
-        previousArticle: "Previous article",
-        nextArticle: "Next article",
-        articlePosition: "Article {current} of {total}",
-        goToArticle: "Go to article {index}"
+        publishedNow: "现在",
+        publishedMinutesAgo: "{count} 分钟前",
+        publishedHoursAgo: "{count} 小时前",
+        publishedDaysAgo: "{count}天前",
+        previousArticle: "上一篇文章",
+        nextArticle: "下一篇",
+        articlePosition: "第 {current} 条，共 {total} 条",
+        goToArticle: "转到文章 {index}"
       },
       circularGaugeCard: {
         emptyTitle: "Nodalia Circular Gauge Card",
@@ -11295,18 +11425,18 @@
         emptyTitle: "Nodalia Media Player",
         emptyBody: "设置 `entity` 或 `players` 以显示播放器。",
         aria: {
-          turnOn: "Turn on",
-          turnOff: "Turn off",
-          playPause: "Play or pause",
-          showVolume: "Show volume",
-          sources: "Sources",
-          switchSource: "Switch source",
-          switchToSource: "Switch to {source}",
-          volume: "Volume",
-          selectPlayer: "Select player {index}",
-          play: "Play",
-          hidePlayer: "Hide player",
-          showPlayer: "Show player"
+          turnOn: "打开",
+          turnOff: "关",
+          playPause: "播放或暂停",
+          showVolume: "显示音量",
+          sources: "来源",
+          switchSource: "切换信号源",
+          switchToSource: "切换到 {source}",
+          volume: "体积",
+          selectPlayer: "选择播放器 {index}",
+          play: "玩",
+          hidePlayer: "隐藏玩家",
+          showPlayer: "显示播放器"
         }
       },
       notificationsCard: {
@@ -11381,16 +11511,16 @@
           showAll: "显示所有通知"
         },
         mobile: {
-          pushEnabled: "Push enabled",
-          cardOnly: "Visible in card only",
-          silencedQuietHours: "Silenced by quiet hours",
-          silencedCooldown: "Silenced by cooldown",
-          blockedSeverity: "Blocked by severity",
-          blockedContext: "Blocked by context",
-          off: "Off",
-          cameraEvent: "Camera event",
-          securityEvent: "Security event",
-          externalAlert: "External alert"
+          pushEnabled: "推送已启用",
+          cardOnly: "仅在卡中可见",
+          silencedQuietHours: "寂静的时光让寂静无声",
+          silencedCooldown: "因冷却时间而沉默",
+          blockedSeverity: "按严重程度阻止",
+          blockedContext: "被上下文阻止",
+          off: "离开",
+          cameraEvent: "相机事件",
+          securityEvent: "安全事件",
+          externalAlert: "外部警报"
         }
       },
       favCard: {
@@ -11491,7 +11621,7 @@
           close: "关闭"
         },
         warnings: {
-          webhookBlockedNonAdmin: "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+          webhookBlockedNonAdmin: "Nodalia 日历卡：非管理员用户阻止 Webhook (security.allow_webhooks_for_non_admin=false)。"
         }
       },
       vacuumErrorLabels: {

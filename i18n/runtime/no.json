@@ -174,11 +174,11 @@
     "browseFallback": "Punkt"
   },
   "mediaBrowser": {
-    "loading": "Loading media...",
-    "empty": "No items available here.",
-    "playItem": "Play {title}",
-    "dialog": "Media browser",
-    "eyebrow": "Media Browser"
+    "loading": "Laster inn media...",
+    "empty": "Ingen varer tilgjengelig her.",
+    "playItem": "Spill av {title}",
+    "dialog": "Medie nettleser",
+    "eyebrow": "Medieleser"
   },
   "vacuumSimple": {
     "quiet": "Stil",
@@ -218,10 +218,10 @@
     "emptyTitle": "Nodalia Fan Card",
     "emptyBody": "Sett `entity` til en `fan.*`-entitet for å vise kortet.",
     "aria": {
-      "speedSlider": "Speed",
-      "oscillationOn": "Turn oscillation on",
-      "oscillationOff": "Turn oscillation off",
-      "showModes": "Show modes"
+      "speedSlider": "Fart",
+      "oscillationOn": "Slå på oscillasjon",
+      "oscillationOff": "Slå av oscillasjonen",
+      "showModes": "Vis moduser"
     }
   },
   "lightCard": {
@@ -246,16 +246,16 @@
   "common": {
     "aria": {
       "togglePower": "In- of uitschakelen",
-      "back": "Back",
-      "close": "Close",
-      "previous": "Previous",
-      "next": "Next",
-      "playPause": "Play or pause",
-      "volumeDown": "Volume down",
-      "volumeUp": "Volume up",
-      "openMedia": "Open media",
-      "navigationBar": "Navigation bar",
-      "mediaPlayers": "Media players"
+      "back": "Tilbake",
+      "close": "Lukke",
+      "previous": "Tidligere",
+      "next": "Neste",
+      "playPause": "Spill av eller sett på pause",
+      "volumeDown": "Volum ned",
+      "volumeUp": "Volum opp",
+      "openMedia": "Åpne medier",
+      "navigationBar": "Navigasjonslinje",
+      "mediaPlayers": "Mediespillere"
     }
   },
   "alarmPanel": {
@@ -315,64 +315,77 @@
     "defaultName": "Person"
   },
   "cameraCard": {
-    "cardDescription": "Nodalia-style camera preview with status chips and expanded view.",
-    "live": "Live",
-    "snapshot": "Snapshot",
-    "offline": "Offline",
-    "unknown": "Unknown",
-    "unavailable": "Unavailable",
-    "recording": "Recording",
-    "lastUpdated": "Last updated {time}",
+    "cardDescription": "Forhåndsvisning av kamera i Nodalia-stil med statusbrikker og utvidet visning.",
+    "live": "Bo",
+    "snapshot": "Øyeblikksbilde",
+    "offline": "Frakoblet",
+    "unknown": "Ukjent",
+    "unavailable": "Utilgjengelig",
+    "recording": "Innspilling",
+    "lastUpdated": "Sist oppdatert {time}",
     "emptyTitle": "Nodalia Camera Card",
-    "emptyBody": "Set `entity` to show this card.",
-    "defaultName": "Camera",
-    "cameraUnavailable": "Camera unavailable",
-    "noCameraEntity": "No camera entity",
-    "openCamera": "Open camera",
-    "close": "Close",
-    "expand": "Expand"
+    "emptyBody": "Angi `entity` for å vise dette kortet.",
+    "defaultName": "Kamera",
+    "cameraUnavailable": "Kameraet er ikke tilgjengelig",
+    "noCameraEntity": "Ingen kameraenhet",
+    "openCamera": "Åpne kamera",
+    "close": "Lukke",
+    "expand": "Utvide"
   },
   "roomSummaryCard": {
-    "cardDescription": "Room overview with climate, occupancy, lights, and covers.",
+    "cardDescription": "Romoversikt med klima, tilstedeværelse, lys, skjerming, sikkerhet og hurtighandlinger.",
     "emptyTitle": "Nodalia Room Summary Card",
-    "emptyBody": "Set a room name and connect room entities.",
-    "defaultName": "Room",
-    "temperature": "Temperature",
-    "humidity": "Humidity",
-    "climateLabel": "Climate",
-    "occupied": "Occupied",
-    "vacant": "Vacant",
-    "comfortable": "Comfortable",
-    "hot": "Hot",
-    "cold": "Cold",
-    "humid": "Humid",
-    "dry": "Dry",
-    "lights": "Lights",
-    "lightsOn": "{count} on",
-    "lightsOff": "All off",
-    "covers": "Covers",
-    "coversOpen": "{count} open",
-    "coversClosed": "All closed",
-    "doorOpen": "Door open",
-    "windowOpen": "Window open",
-    "lockUnlocked": "Unlocked",
-    "alert": "Alert",
-    "securityIssue": "Security issue",
-    "cameraOffline": "Camera offline",
-    "mediaPlaying": "Playing",
-    "turnOnLights": "Turn on lights",
-    "turnOffLights": "Turn off lights",
-    "openCovers": "Open covers",
-    "closeCovers": "Close covers",
-    "openCamera": "Open camera",
-    "climateDetails": "Climate details",
-    "mediaPlayer": "Media player",
-    "power": "Power",
-    "airQuality": "Air quality",
-    "entityUnavailable": "Unavailable",
-    "noRoomData": "No room data",
-    "humidifiers": "Humidifiers",
-    "others": "Others"
+    "emptyBody": "Angi et romnavn og koble sammen romenheter.",
+    "defaultName": "Rom",
+    "temperature": "Temperatur",
+    "humidity": "Fuktighet",
+    "climateLabel": "Klima",
+    "occupied": "Okkupert",
+    "vacant": "Ledig",
+    "comfortable": "Komfortabel",
+    "hot": "Varm",
+    "cold": "Kald",
+    "humid": "Fuktig",
+    "dry": "Tørke",
+    "lights": "Lys",
+    "lightsOn": "{count} på",
+    "lightsOff": "Alt av",
+    "covers": "Persienner",
+    "coversOpen": "{count} åpne",
+    "coversClosed": "Alle lukket",
+    "doorOpen": "Dør åpen",
+    "windowOpen": "Vindu åpent",
+    "lockUnlocked": "Ulåst",
+    "alert": "Varsle",
+    "securityIssue": "Sikkerhetsproblem",
+    "cameraOffline": "Kamera offline",
+    "mediaPlaying": "Spiller",
+    "turnOnLights": "Slå på lys",
+    "turnOffLights": "Slå av lys",
+    "openCovers": "Åpne persienner",
+    "closeCovers": "Lukk persienner",
+    "openCamera": "Åpne kamera",
+    "climateDetails": "Klimadetaljer",
+    "mediaPlayer": "Mediespiller",
+    "vacuum": "Støvsuger",
+    "fans": "Vifter",
+    "hubHome": "Hjem",
+    "hubNavigation": "Romnavigasjon",
+    "turnOnFans": "Slå på vifter",
+    "turnOffFans": "Slå av vifter",
+    "raiseTemperature": "Øk temperaturen",
+    "lowerTemperature": "Senk temperaturen",
+    "mediaPlay": "Spill av",
+    "mediaPause": "Pause",
+    "turnOnMedia": "Slå på medier",
+    "turnOffMedia": "Slå av medier",
+    "target": "Mål",
+    "power": "Makt",
+    "airQuality": "Luftkvalitet",
+    "entityUnavailable": "Utilgjengelig",
+    "noRoomData": "Ingen romdata",
+    "humidifiers": "Luftfuktere",
+    "others": "Andre"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
@@ -385,8 +398,8 @@
   "entityCard": {
     "emptyTitle": "Nodalia Entity Card",
     "emptyBody": "Konfigurer `entity` for å vise kortet.",
-    "selectPickerTitle": "Choose option",
-    "selectPickerClose": "Close",
+    "selectPickerTitle": "Velg alternativ",
+    "selectPickerClose": "Lukke",
     "binarySensor": {
       "doorOpen": "Åpne",
       "doorClosed": "Gesloten",
@@ -544,9 +557,9 @@
     "emptyTitle": "Nodalia Humidifier Card",
     "emptyBody": "Sett `entity` til en `humidifier.*`-entitet for å vise kortet.",
     "aria": {
-      "targetHumidity": "Target humidity",
-      "showModes": "Show modes",
-      "showSpeeds": "Show speeds"
+      "targetHumidity": "Mål fuktighet",
+      "showModes": "Vis moduser",
+      "showSpeeds": "Vis hastigheter"
     },
     "modes": {
       "auto": "Auto",
@@ -640,7 +653,7 @@
         "entityMissing": "Velg en climate-entitet først.",
         "webhookFailed": "Kunne ikke synkronisere planen. Sjekk webhook og Home Assistant-logger.",
         "dualRangeUnsupported": "Ukeplaner støttes ikke mens termostaten bruker dual varme/kjøle-område.",
-        "storageTooLarge": "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+        "storageTooLarge": "Denne tidsplanen er for stor for input_text-hjelperen (255 tegn). Fjern blokker eller bruk Path A automatiseringer på disk."
       }
     }
   },
@@ -648,26 +661,26 @@
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "Sett `entities` til én eller flere numeriske entiteter for å vise grafen.",
     "emptyHistory": "Ingen historikk tilgjengelig",
-    "defaultTitle": "Graph"
+    "defaultTitle": "Kurve"
   },
   "newsCard": {
-    "title": "News",
-    "emptyTitle": "No news available",
-    "emptyBody": "Add a news entity or check your feed source.",
-    "loading": "Loading news…",
-    "errorTitle": "News source unavailable",
-    "errorBody": "Check your configured entity or source attributes.",
-    "readMore": "Read more",
-    "sourceUnknown": "Unknown source",
+    "title": "Nyheter",
+    "emptyTitle": "Ingen nyheter tilgjengelig",
+    "emptyBody": "Legg til en nyhetsenhet eller sjekk feedkilden din.",
+    "loading": "Laster inn nyheter …",
+    "errorTitle": "Nyhetskilde utilgjengelig",
+    "errorBody": "Sjekk den konfigurerte enheten eller kildeattributtene dine.",
+    "readMore": "Les mer",
+    "sourceUnknown": "Ukjent kilde",
     "categoryGeneral": "General",
-    "publishedNow": "Just now",
-    "publishedMinutesAgo": "{count} min ago",
-    "publishedHoursAgo": "{count} h ago",
-    "publishedDaysAgo": "{count} d ago",
-    "previousArticle": "Previous article",
-    "nextArticle": "Next article",
-    "articlePosition": "Article {current} of {total}",
-    "goToArticle": "Go to article {index}"
+    "publishedNow": "Akkurat nå",
+    "publishedMinutesAgo": "for {count} min siden",
+    "publishedHoursAgo": "for {count} t siden",
+    "publishedDaysAgo": "for {count} d siden",
+    "previousArticle": "Forrige artikkel",
+    "nextArticle": "Neste artikkel",
+    "articlePosition": "Artikkel {current} av {total}",
+    "goToArticle": "Gå til artikkelen {index}"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",
@@ -685,18 +698,18 @@
     "emptyTitle": "Nodalia Media Player",
     "emptyBody": "Sett `entity` eller `players` for å vise en spiller.",
     "aria": {
-      "turnOn": "Turn on",
-      "turnOff": "Turn off",
-      "playPause": "Play or pause",
-      "showVolume": "Show volume",
-      "sources": "Sources",
-      "switchSource": "Switch source",
-      "switchToSource": "Switch to {source}",
-      "volume": "Volume",
-      "selectPlayer": "Select player {index}",
-      "play": "Play",
-      "hidePlayer": "Hide player",
-      "showPlayer": "Show player"
+      "turnOn": "Slå på",
+      "turnOff": "Slå av",
+      "playPause": "Spill av eller sett på pause",
+      "showVolume": "Vis volum",
+      "sources": "Kilder",
+      "switchSource": "Bytt kilde",
+      "switchToSource": "Bytt til {source}",
+      "volume": "Volum",
+      "selectPlayer": "Velg spiller {index}",
+      "play": "Spille",
+      "hidePlayer": "Skjul spiller",
+      "showPlayer": "Vis spiller"
     }
   },
   "notificationsCard": {
@@ -771,16 +784,16 @@
       "showAll": "Alle meldingen tonen"
     },
     "mobile": {
-      "pushEnabled": "Push enabled",
-      "cardOnly": "Visible in card only",
-      "silencedQuietHours": "Silenced by quiet hours",
-      "silencedCooldown": "Silenced by cooldown",
-      "blockedSeverity": "Blocked by severity",
-      "blockedContext": "Blocked by context",
-      "off": "Off",
-      "cameraEvent": "Camera event",
-      "securityEvent": "Security event",
-      "externalAlert": "External alert"
+      "pushEnabled": "Push aktivert",
+      "cardOnly": "Kun synlig på kortet",
+      "silencedQuietHours": "Stillet av stille timer",
+      "silencedCooldown": "Stilles av nedkjøling",
+      "blockedSeverity": "Blokkert av alvorlighetsgrad",
+      "blockedContext": "Blokkert av kontekst",
+      "off": "Av",
+      "cameraEvent": "Kamerahendelse",
+      "securityEvent": "Sikkerhetshendelse",
+      "externalAlert": "Ekstern varsling"
     }
   },
   "favCard": {
@@ -881,7 +894,7 @@
       "close": "Lukke"
     },
     "warnings": {
-      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+      "webhookBlockedNonAdmin": "Nodalia-kalenderkort: webhook blokkert for ikke-admin-brukere (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {

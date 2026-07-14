@@ -894,7 +894,7 @@
       "close": "Cerrar"
     },
     "warnings": {
-      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+      "webhookBlockedNonAdmin": "Tarjeta Calendario Nodalia: webhook bloqueado para usuario no administrador (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {

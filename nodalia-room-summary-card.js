@@ -860,18 +860,55 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return Promise.resolve(this._hass?.callService?.(domain, service, data, target || undefined));
   }
 
+  _parseActionObject(value) {
+    if (isObject(value)) return deepClone(value);
+    const source = String(value || "").trim();
+    if (!source) return {};
+    try {
+      const parsed = JSON.parse(source);
+      return isObject(parsed) ? parsed : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  _runConfiguredService(prefix) {
+    const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
+    const separator = serviceValue.indexOf(".");
+    if (separator <= 0 || separator >= serviceValue.length - 1) return;
+    const domain = serviceValue.slice(0, separator);
+    const service = serviceValue.slice(separator + 1);
+    const data = this._parseActionObject(this._config?.[`${prefix}_service_data`]);
+    const target = this._parseActionObject(this._config?.[`${prefix}_service_target`]);
+    void this._invoke(domain, service, data, Object.keys(target).length ? target : null);
+  }
+
+  _primaryActionEntity() {
+    const cfg = this._config || {};
+    return cfg.climate || cfg.temperature || cfg.camera || cfg.media_player || cfg.lights?.[0] || "";
+  }
+
   _performCardAction(prefix) {
     const cfg = this._config || {};
     const action = String(cfg[`${prefix}_action`] || "none");
     if (action === "none") return;
     this._triggerHaptic();
     if (action === "more-info") {
-      const entity = cfg.climate || cfg.temperature || cfg.camera || cfg.media_player || cfg.lights?.[0];
+      const entity = this._primaryActionEntity();
       if (entity) fireEvent(this, "hass-more-info", { entityId: entity });
       return;
     }
+    if (action === "toggle") {
+      this._toggleEntity(this._primaryActionEntity());
+      return;
+    }
+    if (action === "service") {
+      this._runConfiguredService(prefix);
+      return;
+    }
     if (action === "navigate") {
-      const path = window.NodaliaUtils?.sanitizeActionUrl?.(cfg.navigation_path || cfg[`${prefix}_navigation_path`], { allowRelative: true });
+      const pathValue = prefix === "tap" ? cfg.navigation_path : cfg[`${prefix}_navigation_path`];
+      const path = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true });
       if (path) fireEvent(this, "hass-navigate", { path });
       return;
     }

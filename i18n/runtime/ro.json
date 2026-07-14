@@ -174,11 +174,11 @@
     "browseFallback": "Element"
   },
   "mediaBrowser": {
-    "loading": "Loading media...",
-    "empty": "No items available here.",
-    "playItem": "Play {title}",
-    "dialog": "Media browser",
-    "eyebrow": "Media Browser"
+    "loading": "Se încarcă media...",
+    "empty": "Nu există articole disponibile aici.",
+    "playItem": "Joacă {title}",
+    "dialog": "Browser media",
+    "eyebrow": "Browser media"
   },
   "vacuumSimple": {
     "quiet": "Silențios",
@@ -218,10 +218,10 @@
     "emptyTitle": "Nodalia Fan Card",
     "emptyBody": "Setează `entity` la o entitate `fan.*` pentru a afișa cardul.",
     "aria": {
-      "speedSlider": "Speed",
-      "oscillationOn": "Turn oscillation on",
-      "oscillationOff": "Turn oscillation off",
-      "showModes": "Show modes"
+      "speedSlider": "Viteză",
+      "oscillationOn": "Porniți oscilația",
+      "oscillationOff": "Opriți oscilația",
+      "showModes": "Afișați moduri"
     }
   },
   "lightCard": {
@@ -246,16 +246,16 @@
   "common": {
     "aria": {
       "togglePower": "Pornește sau oprește",
-      "back": "Back",
-      "close": "Close",
-      "previous": "Previous",
-      "next": "Next",
-      "playPause": "Play or pause",
-      "volumeDown": "Volume down",
-      "volumeUp": "Volume up",
-      "openMedia": "Open media",
-      "navigationBar": "Navigation bar",
-      "mediaPlayers": "Media players"
+      "back": "Spate",
+      "close": "Aproape",
+      "previous": "Anterior",
+      "next": "Următorul",
+      "playPause": "Redați sau întrerupeți",
+      "volumeDown": "Scăderea volumului",
+      "volumeUp": "Crește volumul",
+      "openMedia": "Deschide mass-media",
+      "navigationBar": "Bara de navigare",
+      "mediaPlayers": "Playere media"
     }
   },
   "alarmPanel": {
@@ -315,64 +315,77 @@
     "defaultName": "Persoană"
   },
   "cameraCard": {
-    "cardDescription": "Nodalia-style camera preview with status chips and expanded view.",
-    "live": "Live",
-    "snapshot": "Snapshot",
+    "cardDescription": "Previzualizarea camerei în stil Nodalia cu cipuri de stare și vizualizare extinsă.",
+    "live": "Trăi",
+    "snapshot": "Instantaneu",
     "offline": "Offline",
-    "unknown": "Unknown",
-    "unavailable": "Unavailable",
-    "recording": "Recording",
-    "lastUpdated": "Last updated {time}",
+    "unknown": "Necunoscut",
+    "unavailable": "Indisponibil",
+    "recording": "Înregistrare",
+    "lastUpdated": "Ultima actualizare la {time}",
     "emptyTitle": "Nodalia Camera Card",
-    "emptyBody": "Set `entity` to show this card.",
-    "defaultName": "Camera",
-    "cameraUnavailable": "Camera unavailable",
-    "noCameraEntity": "No camera entity",
-    "openCamera": "Open camera",
-    "close": "Close",
-    "expand": "Expand"
+    "emptyBody": "Setați `entity` pentru a afișa acest card.",
+    "defaultName": "Camera foto",
+    "cameraUnavailable": "Camera foto nu este disponibilă",
+    "noCameraEntity": "Nicio entitate cameră",
+    "openCamera": "Deschideți camera",
+    "close": "Aproape",
+    "expand": "Extinde"
   },
   "roomSummaryCard": {
-    "cardDescription": "Room overview with climate, occupancy, lights, and covers.",
+    "cardDescription": "Prezentare generală a camerei cu climat, prezență, lumini, jaluzele, securitate și acțiuni rapide.",
     "emptyTitle": "Nodalia Room Summary Card",
-    "emptyBody": "Set a room name and connect room entities.",
-    "defaultName": "Room",
-    "temperature": "Temperature",
-    "humidity": "Humidity",
-    "climateLabel": "Climate",
-    "occupied": "Occupied",
+    "emptyBody": "Setați un nume de cameră și conectați entitățile camerei.",
+    "defaultName": "Cameră",
+    "temperature": "Temperatură",
+    "humidity": "Umiditate",
+    "climateLabel": "Clima",
+    "occupied": "Ocupată",
     "vacant": "Vacant",
-    "comfortable": "Comfortable",
-    "hot": "Hot",
-    "cold": "Cold",
-    "humid": "Humid",
-    "dry": "Dry",
-    "lights": "Lights",
-    "lightsOn": "{count} on",
-    "lightsOff": "All off",
-    "covers": "Covers",
-    "coversOpen": "{count} open",
-    "coversClosed": "All closed",
-    "doorOpen": "Door open",
-    "windowOpen": "Window open",
-    "lockUnlocked": "Unlocked",
-    "alert": "Alert",
-    "securityIssue": "Security issue",
-    "cameraOffline": "Camera offline",
-    "mediaPlaying": "Playing",
-    "turnOnLights": "Turn on lights",
-    "turnOffLights": "Turn off lights",
-    "openCovers": "Open covers",
-    "closeCovers": "Close covers",
-    "openCamera": "Open camera",
-    "climateDetails": "Climate details",
+    "comfortable": "Confortabil",
+    "hot": "Fierbinte",
+    "cold": "Rece",
+    "humid": "Umed",
+    "dry": "Uscat",
+    "lights": "Lumini",
+    "lightsOn": "{count} aprinse",
+    "lightsOff": "Toate oprite",
+    "covers": "Jaluzele",
+    "coversOpen": "{count} deschise",
+    "coversClosed": "Toate închise",
+    "doorOpen": "Usa deschisa",
+    "windowOpen": "Fereastra deschisă",
+    "lockUnlocked": "Deblocat",
+    "alert": "Alerta",
+    "securityIssue": "Problemă de securitate",
+    "cameraOffline": "Aparat foto offline",
+    "mediaPlaying": "Joc",
+    "turnOnLights": "Aprinde luminile",
+    "turnOffLights": "Stinge luminile",
+    "openCovers": "Deschide jaluzelele",
+    "closeCovers": "Închide jaluzelele",
+    "openCamera": "Deschideți camera",
+    "climateDetails": "Detalii climatice",
     "mediaPlayer": "Media player",
-    "power": "Power",
-    "airQuality": "Air quality",
-    "entityUnavailable": "Unavailable",
-    "noRoomData": "No room data",
-    "humidifiers": "Humidifiers",
-    "others": "Others"
+    "vacuum": "Aspirator",
+    "fans": "Ventilatoare",
+    "hubHome": "Acasă",
+    "hubNavigation": "Navigare cameră",
+    "turnOnFans": "Pornește ventilatoarele",
+    "turnOffFans": "Oprește ventilatoarele",
+    "raiseTemperature": "Crește temperatura",
+    "lowerTemperature": "Scade temperatura",
+    "mediaPlay": "Redare",
+    "mediaPause": "Pauză",
+    "turnOnMedia": "Pornește redarea media",
+    "turnOffMedia": "Oprește redarea media",
+    "target": "Țintă",
+    "power": "Putere",
+    "airQuality": "Calitatea aerului",
+    "entityUnavailable": "Indisponibil",
+    "noRoomData": "Nu există date despre cameră",
+    "humidifiers": "Umidificatoare",
+    "others": "Alţii"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
@@ -385,8 +398,8 @@
   "entityCard": {
     "emptyTitle": "Nodalia Entity Card",
     "emptyBody": "Configurează `entity` pentru a afișa cardul.",
-    "selectPickerTitle": "Choose option",
-    "selectPickerClose": "Close",
+    "selectPickerTitle": "Alegeți opțiunea",
+    "selectPickerClose": "Aproape",
     "binarySensor": {
       "doorOpen": "Deschisă",
       "doorClosed": "Închisă",
@@ -544,9 +557,9 @@
     "emptyTitle": "Nodalia Humidifier Card",
     "emptyBody": "Setează `entity` la o entitate `humidifier.*` pentru a afișa cardul.",
     "aria": {
-      "targetHumidity": "Target humidity",
-      "showModes": "Show modes",
-      "showSpeeds": "Show speeds"
+      "targetHumidity": "Umiditatea țintă",
+      "showModes": "Afișați moduri",
+      "showSpeeds": "Arată viteze"
     },
     "modes": {
       "auto": "Automat",
@@ -640,7 +653,7 @@
         "entityMissing": "Selectează mai întâi o entitate climate.",
         "webhookFailed": "Programul nu a putut fi sincronizat. Verifică webhook-ul și jurnalele Home Assistant.",
         "dualRangeUnsupported": "Programele săptămânale nu sunt disponibile cât timp termostatul folosește un interval dual încălzire/răcire.",
-        "storageTooLarge": "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+        "storageTooLarge": "Acest program este prea mare pentru asistentul input_text (255 de caractere). Eliminați blocurile sau utilizați automatizările Calea A pe disc."
       }
     }
   },
@@ -648,26 +661,26 @@
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "Setează `entities` la una sau mai multe entități numerice pentru a afișa graficul.",
     "emptyHistory": "Nu există istoric disponibil",
-    "defaultTitle": "Graph"
+    "defaultTitle": "Grafic"
   },
   "newsCard": {
-    "title": "News",
-    "emptyTitle": "No news available",
-    "emptyBody": "Add a news entity or check your feed source.",
-    "loading": "Loading news…",
-    "errorTitle": "News source unavailable",
-    "errorBody": "Check your configured entity or source attributes.",
-    "readMore": "Read more",
-    "sourceUnknown": "Unknown source",
+    "title": "Ştiri",
+    "emptyTitle": "Nu există știri disponibile",
+    "emptyBody": "Adăugați o entitate de știri sau verificați sursa feedului.",
+    "loading": "Se încarcă știrile…",
+    "errorTitle": "Sursa de știri indisponibilă",
+    "errorBody": "Verificați entitatea configurată sau atributele sursei.",
+    "readMore": "Citeşte mai mult",
+    "sourceUnknown": "Sursă necunoscută",
     "categoryGeneral": "General",
-    "publishedNow": "Just now",
-    "publishedMinutesAgo": "{count} min ago",
-    "publishedHoursAgo": "{count} h ago",
-    "publishedDaysAgo": "{count} d ago",
-    "previousArticle": "Previous article",
-    "nextArticle": "Next article",
-    "articlePosition": "Article {current} of {total}",
-    "goToArticle": "Go to article {index}"
+    "publishedNow": "Chiar acum",
+    "publishedMinutesAgo": "acum {count} minute",
+    "publishedHoursAgo": "acum {count} h",
+    "publishedDaysAgo": "acum {count} zile",
+    "previousArticle": "Articolul anterior",
+    "nextArticle": "Articolul următor",
+    "articlePosition": "Articolul {current} din {total}",
+    "goToArticle": "Accesați articolul {index}"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",
@@ -685,18 +698,18 @@
     "emptyTitle": "Nodalia Media Player",
     "emptyBody": "Setează `entity` sau `players` pentru a afișa un player.",
     "aria": {
-      "turnOn": "Turn on",
-      "turnOff": "Turn off",
-      "playPause": "Play or pause",
-      "showVolume": "Show volume",
-      "sources": "Sources",
-      "switchSource": "Switch source",
-      "switchToSource": "Switch to {source}",
-      "volume": "Volume",
-      "selectPlayer": "Select player {index}",
-      "play": "Play",
-      "hidePlayer": "Hide player",
-      "showPlayer": "Show player"
+      "turnOn": "Porniți",
+      "turnOff": "Opriți",
+      "playPause": "Redați sau întrerupeți",
+      "showVolume": "Arată volumul",
+      "sources": "Surse",
+      "switchSource": "Schimbați sursa",
+      "switchToSource": "Comutați la {source}",
+      "volume": "Volum",
+      "selectPlayer": "Selectează playerul {index}",
+      "play": "Juca",
+      "hidePlayer": "Ascunde playerul",
+      "showPlayer": "Arată jucătorul"
     }
   },
   "notificationsCard": {
@@ -771,16 +784,16 @@
       "showAll": "Afișează toate notificările"
     },
     "mobile": {
-      "pushEnabled": "Push enabled",
-      "cardOnly": "Visible in card only",
-      "silencedQuietHours": "Silenced by quiet hours",
-      "silencedCooldown": "Silenced by cooldown",
-      "blockedSeverity": "Blocked by severity",
-      "blockedContext": "Blocked by context",
-      "off": "Off",
-      "cameraEvent": "Camera event",
-      "securityEvent": "Security event",
-      "externalAlert": "External alert"
+      "pushEnabled": "Push activat",
+      "cardOnly": "Vizibil numai pe card",
+      "silencedQuietHours": "Tăcut de orele de liniște",
+      "silencedCooldown": "Redus la tăcere prin răcire",
+      "blockedSeverity": "Blocat de severitate",
+      "blockedContext": "Blocat de context",
+      "off": "Oprit",
+      "cameraEvent": "Eveniment camera",
+      "securityEvent": "Eveniment de securitate",
+      "externalAlert": "Alertă externă"
     }
   },
   "favCard": {
@@ -881,7 +894,7 @@
       "close": "Închide"
     },
     "warnings": {
-      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocat pentru utilizatorul non-admin (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {

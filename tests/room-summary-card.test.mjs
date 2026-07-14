@@ -136,6 +136,14 @@ test("room summary quick action calls light service", () => {
   assert.match(source, /action === "lights_on".*light", "turn_on"/s);
 });
 
+test("room summary executes normalized Lovelace actions without mixing tap and hold navigation", () => {
+  const source = read("nodalia-room-summary-card.js");
+  assert.match(source, /action === "service"[\s\S]*?_runConfiguredService\(prefix\)/);
+  assert.match(source, /action === "toggle"[\s\S]*?_toggleEntity\(this\._primaryActionEntity\(\)\)/);
+  assert.match(source, /_parseActionObject\(this\._config\?\.\[\x60\$\{prefix\}_service_target\x60\]\)/);
+  assert.match(source, /prefix === "tap" \? cfg\.navigation_path : cfg\[\x60\$\{prefix\}_navigation_path\x60\]/);
+});
+
 test("room summary compact layout renders without overflow basics", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /room-summary-card--\$\{escapeHtml\(layout\)\}/);

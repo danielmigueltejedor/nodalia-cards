@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Room Summary actions:** normalized Lovelace `toggle`, `call-service`, and `perform-action` tap/hold actions now execute, preserve explicit service targets, and keep hold navigation independent from the tap path.
+- **Translations:** completed recent Camera, News, Notifications, and Room Summary editor/runtime strings across all 12 supported languages, corrected Home Assistant cover/media terminology, and repaired translated placeholders.
+- **Translation validation:** runtime locales now require full key parity with English; editor and runtime checks reject altered placeholders and backticked config keys.
+
 ## [2.0.0-alpha.21] - 2026-07-14
 
 Twenty-first **`2.0.0`** **`alpha`**: flicker-free Room Summary Hub navigation. Release channel **`2.0.0-alpha.21`**.

@@ -174,11 +174,11 @@
     "browseFallback": "项目"
   },
   "mediaBrowser": {
-    "loading": "Loading media...",
-    "empty": "No items available here.",
-    "playItem": "Play {title}",
-    "dialog": "Media browser",
-    "eyebrow": "Media Browser"
+    "loading": "正在加载媒体...",
+    "empty": "这里没有可用的物品。",
+    "playItem": "播放 {title}",
+    "dialog": "媒体浏览器",
+    "eyebrow": "媒体浏览器"
   },
   "vacuumSimple": {
     "quiet": "安静",
@@ -218,10 +218,10 @@
     "emptyTitle": "Nodalia Fan Card",
     "emptyBody": "将 `entity` 设置为 `fan.*` 实体以显示此卡片。",
     "aria": {
-      "speedSlider": "Speed",
-      "oscillationOn": "Turn oscillation on",
-      "oscillationOff": "Turn oscillation off",
-      "showModes": "Show modes"
+      "speedSlider": "速度",
+      "oscillationOn": "打开振荡",
+      "oscillationOff": "关闭振荡",
+      "showModes": "显示模式"
     }
   },
   "lightCard": {
@@ -246,16 +246,16 @@
   "common": {
     "aria": {
       "togglePower": "开或关",
-      "back": "Back",
-      "close": "Close",
-      "previous": "Previous",
-      "next": "Next",
-      "playPause": "Play or pause",
-      "volumeDown": "Volume down",
-      "volumeUp": "Volume up",
-      "openMedia": "Open media",
-      "navigationBar": "Navigation bar",
-      "mediaPlayers": "Media players"
+      "back": "后退",
+      "close": "关闭",
+      "previous": "以前的",
+      "next": "下一个",
+      "playPause": "播放或暂停",
+      "volumeDown": "降低音量",
+      "volumeUp": "调高音量",
+      "openMedia": "开放媒体",
+      "navigationBar": "导航栏",
+      "mediaPlayers": "媒体播放器"
     }
   },
   "alarmPanel": {
@@ -315,64 +315,77 @@
     "defaultName": "人员"
   },
   "cameraCard": {
-    "cardDescription": "Nodalia-style camera preview with status chips and expanded view.",
-    "live": "Live",
-    "snapshot": "Snapshot",
-    "offline": "Offline",
-    "unknown": "Unknown",
-    "unavailable": "Unavailable",
-    "recording": "Recording",
-    "lastUpdated": "Last updated {time}",
+    "cardDescription": "Nodalia 风格的相机预览，带有状态芯片和扩展视图。",
+    "live": "居住",
+    "snapshot": "快照",
+    "offline": "离线",
+    "unknown": "未知",
+    "unavailable": "不可用",
+    "recording": "记录",
+    "lastUpdated": "最后更新时间：{time}",
     "emptyTitle": "Nodalia Camera Card",
-    "emptyBody": "Set `entity` to show this card.",
-    "defaultName": "Camera",
-    "cameraUnavailable": "Camera unavailable",
-    "noCameraEntity": "No camera entity",
-    "openCamera": "Open camera",
-    "close": "Close",
-    "expand": "Expand"
+    "emptyBody": "设置 `entity` 以显示此卡。",
+    "defaultName": "相机",
+    "cameraUnavailable": "相机不可用",
+    "noCameraEntity": "无相机实体",
+    "openCamera": "打开相机",
+    "close": "关闭",
+    "expand": "扩张"
   },
   "roomSummaryCard": {
-    "cardDescription": "Room overview with climate, occupancy, lights, and covers.",
+    "cardDescription": "房间概览，包含气候、占用情况、灯光、窗帘、安全和快捷操作。",
     "emptyTitle": "Nodalia Room Summary Card",
-    "emptyBody": "Set a room name and connect room entities.",
-    "defaultName": "Room",
-    "temperature": "Temperature",
-    "humidity": "Humidity",
-    "climateLabel": "Climate",
-    "occupied": "Occupied",
-    "vacant": "Vacant",
-    "comfortable": "Comfortable",
-    "hot": "Hot",
-    "cold": "Cold",
-    "humid": "Humid",
-    "dry": "Dry",
-    "lights": "Lights",
-    "lightsOn": "{count} on",
-    "lightsOff": "All off",
-    "covers": "Covers",
-    "coversOpen": "{count} open",
-    "coversClosed": "All closed",
-    "doorOpen": "Door open",
-    "windowOpen": "Window open",
-    "lockUnlocked": "Unlocked",
-    "alert": "Alert",
-    "securityIssue": "Security issue",
-    "cameraOffline": "Camera offline",
-    "mediaPlaying": "Playing",
-    "turnOnLights": "Turn on lights",
-    "turnOffLights": "Turn off lights",
-    "openCovers": "Open covers",
-    "closeCovers": "Close covers",
-    "openCamera": "Open camera",
-    "climateDetails": "Climate details",
-    "mediaPlayer": "Media player",
-    "power": "Power",
-    "airQuality": "Air quality",
-    "entityUnavailable": "Unavailable",
-    "noRoomData": "No room data",
-    "humidifiers": "Humidifiers",
-    "others": "Others"
+    "emptyBody": "设置房间名称并连接房间实体。",
+    "defaultName": "房间",
+    "temperature": "温度",
+    "humidity": "湿度",
+    "climateLabel": "气候",
+    "occupied": "有人",
+    "vacant": "空缺",
+    "comfortable": "舒服的",
+    "hot": "热的",
+    "cold": "寒冷的",
+    "humid": "湿",
+    "dry": "干燥",
+    "lights": "灯",
+    "lightsOn": "{count} 个已打开",
+    "lightsOff": "全部关闭",
+    "covers": "窗帘",
+    "coversOpen": "打开了 {count} 个",
+    "coversClosed": "全部关闭",
+    "doorOpen": "门打开",
+    "windowOpen": "窗户打开",
+    "lockUnlocked": "解锁",
+    "alert": "警报",
+    "securityIssue": "安全问题",
+    "cameraOffline": "相机离线",
+    "mediaPlaying": "演奏",
+    "turnOnLights": "打开灯",
+    "turnOffLights": "关灯",
+    "openCovers": "打开窗帘",
+    "closeCovers": "关闭窗帘",
+    "openCamera": "打开相机",
+    "climateDetails": "气候详情",
+    "mediaPlayer": "媒体播放器",
+    "vacuum": "吸尘器",
+    "fans": "风扇",
+    "hubHome": "首页",
+    "hubNavigation": "房间导航",
+    "turnOnFans": "打开风扇",
+    "turnOffFans": "关闭风扇",
+    "raiseTemperature": "调高温度",
+    "lowerTemperature": "调低温度",
+    "mediaPlay": "播放",
+    "mediaPause": "暂停",
+    "turnOnMedia": "打开媒体",
+    "turnOffMedia": "关闭媒体",
+    "target": "目标",
+    "power": "力量",
+    "airQuality": "空气质量",
+    "entityUnavailable": "不可用",
+    "noRoomData": "无房间数据",
+    "humidifiers": "加湿器",
+    "others": "其他的"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
@@ -385,8 +398,8 @@
   "entityCard": {
     "emptyTitle": "Nodalia Entity Card",
     "emptyBody": "配置 `entity` 以显示卡片。",
-    "selectPickerTitle": "Choose option",
-    "selectPickerClose": "Close",
+    "selectPickerTitle": "选择选项",
+    "selectPickerClose": "关闭",
     "binarySensor": {
       "doorOpen": "开启",
       "doorClosed": "关闭",
@@ -544,9 +557,9 @@
     "emptyTitle": "Nodalia Humidifier Card",
     "emptyBody": "将 `entity` 设置为 `humidifier.*` 实体以显示此卡片。",
     "aria": {
-      "targetHumidity": "Target humidity",
-      "showModes": "Show modes",
-      "showSpeeds": "Show speeds"
+      "targetHumidity": "目标湿度",
+      "showModes": "显示模式",
+      "showSpeeds": "显示速度"
     },
     "modes": {
       "auto": "自动",
@@ -640,7 +653,7 @@
         "entityMissing": "请先选择 climate 实体。",
         "webhookFailed": "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
         "dualRangeUnsupported": "恒温器使用双模式冷暖范围时，不支持每周计划。",
-        "storageTooLarge": "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk."
+        "storageTooLarge": "此计划对于 input_text 帮助程序来说太大（255 个字符）。删除块或使用磁盘上的路径 A 自动化。"
       }
     }
   },
@@ -648,26 +661,26 @@
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "将 `entities` 设置为一个或多个数值实体以显示图表。",
     "emptyHistory": "暂无历史数据",
-    "defaultTitle": "Graph"
+    "defaultTitle": "图形"
   },
   "newsCard": {
-    "title": "News",
-    "emptyTitle": "No news available",
-    "emptyBody": "Add a news entity or check your feed source.",
-    "loading": "Loading news…",
-    "errorTitle": "News source unavailable",
-    "errorBody": "Check your configured entity or source attributes.",
-    "readMore": "Read more",
-    "sourceUnknown": "Unknown source",
+    "title": "消息",
+    "emptyTitle": "无可用消息",
+    "emptyBody": "添加新闻实体或检查您的 Feed 源。",
+    "loading": "正在加载新闻...",
+    "errorTitle": "新闻来源不可用",
+    "errorBody": "检查您配置的实体或源属性。",
+    "readMore": "阅读更多",
+    "sourceUnknown": "来源不明",
     "categoryGeneral": "General",
-    "publishedNow": "Just now",
-    "publishedMinutesAgo": "{count} min ago",
-    "publishedHoursAgo": "{count} h ago",
-    "publishedDaysAgo": "{count} d ago",
-    "previousArticle": "Previous article",
-    "nextArticle": "Next article",
-    "articlePosition": "Article {current} of {total}",
-    "goToArticle": "Go to article {index}"
+    "publishedNow": "现在",
+    "publishedMinutesAgo": "{count} 分钟前",
+    "publishedHoursAgo": "{count} 小时前",
+    "publishedDaysAgo": "{count}天前",
+    "previousArticle": "上一篇文章",
+    "nextArticle": "下一篇",
+    "articlePosition": "第 {current} 条，共 {total} 条",
+    "goToArticle": "转到文章 {index}"
   },
   "circularGaugeCard": {
     "emptyTitle": "Nodalia Circular Gauge Card",
@@ -685,18 +698,18 @@
     "emptyTitle": "Nodalia Media Player",
     "emptyBody": "设置 `entity` 或 `players` 以显示播放器。",
     "aria": {
-      "turnOn": "Turn on",
-      "turnOff": "Turn off",
-      "playPause": "Play or pause",
-      "showVolume": "Show volume",
-      "sources": "Sources",
-      "switchSource": "Switch source",
-      "switchToSource": "Switch to {source}",
-      "volume": "Volume",
-      "selectPlayer": "Select player {index}",
-      "play": "Play",
-      "hidePlayer": "Hide player",
-      "showPlayer": "Show player"
+      "turnOn": "打开",
+      "turnOff": "关",
+      "playPause": "播放或暂停",
+      "showVolume": "显示音量",
+      "sources": "来源",
+      "switchSource": "切换信号源",
+      "switchToSource": "切换到 {source}",
+      "volume": "体积",
+      "selectPlayer": "选择播放器 {index}",
+      "play": "玩",
+      "hidePlayer": "隐藏玩家",
+      "showPlayer": "显示播放器"
     }
   },
   "notificationsCard": {
@@ -771,16 +784,16 @@
       "showAll": "显示所有通知"
     },
     "mobile": {
-      "pushEnabled": "Push enabled",
-      "cardOnly": "Visible in card only",
-      "silencedQuietHours": "Silenced by quiet hours",
-      "silencedCooldown": "Silenced by cooldown",
-      "blockedSeverity": "Blocked by severity",
-      "blockedContext": "Blocked by context",
-      "off": "Off",
-      "cameraEvent": "Camera event",
-      "securityEvent": "Security event",
-      "externalAlert": "External alert"
+      "pushEnabled": "推送已启用",
+      "cardOnly": "仅在卡中可见",
+      "silencedQuietHours": "寂静的时光让寂静无声",
+      "silencedCooldown": "因冷却时间而沉默",
+      "blockedSeverity": "按严重程度阻止",
+      "blockedContext": "被上下文阻止",
+      "off": "离开",
+      "cameraEvent": "相机事件",
+      "securityEvent": "安全事件",
+      "externalAlert": "外部警报"
     }
   },
   "favCard": {
@@ -881,7 +894,7 @@
       "close": "关闭"
     },
     "warnings": {
-      "webhookBlockedNonAdmin": "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+      "webhookBlockedNonAdmin": "Nodalia 日历卡：非管理员用户阻止 Webhook (security.allow_webhooks_for_non_admin=false)。"
     }
   },
   "vacuumErrorLabels": {
