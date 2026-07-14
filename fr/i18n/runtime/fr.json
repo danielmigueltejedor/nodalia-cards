@@ -367,16 +367,25 @@
     "openCamera": "Open camera",
     "climateDetails": "Climate details",
     "mediaPlayer": "Media player",
+    "vacuum": "Vacuum",
+    "fans": "Fans",
+    "hubHome": "Home",
+    "hubNavigation": "Room navigation",
+    "turnOnFans": "Turn on fans",
+    "turnOffFans": "Turn off fans",
+    "raiseTemperature": "Raise temperature",
+    "lowerTemperature": "Lower temperature",
+    "mediaPlay": "Play",
+    "mediaPause": "Pause",
+    "turnOnMedia": "Turn on media",
+    "turnOffMedia": "Turn off media",
+    "target": "Target",
     "power": "Power",
     "airQuality": "Air quality",
     "entityUnavailable": "Unavailable",
-    "noRoomData": "No room data"
-  },
-  "menuCard": {
-    "cardDescription": "Nodalia-style horizontal dashboard navigation with badges and active item.",
-    "emptyTitle": "Nodalia Menu Card",
-    "emptyBody": "Add menu items in the card editor.",
-    "activeItem": "Active item"
+    "noRoomData": "No room data",
+    "humidifiers": "Humidifiers",
+    "others": "Others"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
