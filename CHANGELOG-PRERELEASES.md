@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.23] - 2026-07-14
+
+Twenty-third **`2.0.0`** **`alpha`**: complete Room Summary visual-editor scrolling. Release channel **`2.0.0-alpha.23`**.
+
+### Fixed
+
+- **Room Summary editor:** nested native card editors no longer run the Lovelace dialog scroll clamp, so the full Summary form remains reachable below the embedded Media Player options.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.23`; `2.0.0-alpha.22` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.22] - 2026-07-14
 
 Twenty-second **`2.0.0`** **`alpha`**: action hardening and complete translation coverage. Release channel **`2.0.0-alpha.22`**.

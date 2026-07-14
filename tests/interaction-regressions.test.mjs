@@ -1248,6 +1248,10 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /element-editor/);
   assert.match(utils, /function getComposedParentElement\(/);
   assert.match(utils, /root instanceof ShadowRoot \? root\.host : null/);
+  assert.match(utils, /function findParentNodaliaEditorHost\(/);
+  assert.match(utils, /tagName\.startsWith\("nodalia-"\) && tagName\.endsWith\("-editor"\)/);
+  assert.match(utils, /if \(findParentNodaliaEditorHost\(editorHost\)\) \{\s*releaseEditorDialogLayoutFix\(editorHost\);\s*return;/);
+  assert.match(utils, /\|\| findParentNodaliaEditorHost\(editorHost\)/);
   assert.match(utils, /function getEditorDialogScrollAncestors\(/);
   assert.match(utils, /function getEditorDialogPreviewPanes\(/);
   assert.match(utils, /marker\.includes\("preview"\)/);

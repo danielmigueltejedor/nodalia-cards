@@ -1322,6 +1322,18 @@
     return host instanceof HTMLElement ? host : null;
   }
 
+  function findParentNodaliaEditorHost(editorHost) {
+    let node = getComposedParentElement(editorHost);
+    while (node && !node.classList?.contains("element-editor")) {
+      const tagName = String(node.localName || "").toLowerCase();
+      if (tagName.startsWith("nodalia-") && tagName.endsWith("-editor")) {
+        return node;
+      }
+      node = getComposedParentElement(node);
+    }
+    return null;
+  }
+
   function getEditorDialogScrollAncestors(editorHost) {
     const nodes = [];
     let node = findLovelaceElementEditorPane(editorHost) || editorHost;
@@ -1378,6 +1390,10 @@
 
   function bindEditorDialogLayoutFix(editorHost) {
     if (!(editorHost instanceof HTMLElement)) {
+      return;
+    }
+    if (findParentNodaliaEditorHost(editorHost)) {
+      releaseEditorDialogLayoutFix(editorHost);
       return;
     }
     const pane = findLovelaceElementEditorPane(editorHost);
@@ -1482,7 +1498,11 @@
   }
 
   function runEditorDialogScrollClamp(editorHost) {
-    if (!(editorHost instanceof HTMLElement) || !editorHost.isConnected) {
+    if (
+      !(editorHost instanceof HTMLElement)
+      || !editorHost.isConnected
+      || findParentNodaliaEditorHost(editorHost)
+    ) {
       return;
     }
     const editorContent = editorHost.shadowRoot?.querySelector(".editor") || editorHost;
