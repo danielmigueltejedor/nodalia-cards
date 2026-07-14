@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.20"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.21"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -205,6 +205,36 @@ test("room summary hub media players combine primary and extras", () => {
   assert.equal(config.media_players[0], "media_player.kitchen");
 });
 
+test("room summary preserves native media config and embedded card icon overrides", () => {
+  const config = rs.normalizeConfig({
+    media_config: {
+      players: [{
+        entity: "media_player.projector",
+        label: "Projector",
+        icon: "mdi:projector",
+        tv_mode: true,
+        power_action_off: {
+          action: "call-service",
+          service: "input_boolean.turn_off",
+          service_data: '{"entity_id":"input_boolean.media_power"}',
+        },
+      }],
+      show_unavailable_badge: false,
+      styles: { player: { artwork_size: "52px", active_tint_color: "#006d8f" } },
+    },
+    lights: ["light.bedroom"],
+    embed_options: {
+      lights: [{ entity: "light.bedroom", name: "Bed light", icon: "mdi:ceiling-light" }],
+    },
+  });
+  assert.equal(rs.hubMediaPlayerIds(config).join("|"), "media_player.projector");
+  assert.equal(config.media_config.players[0].power_action_off.service, "input_boolean.turn_off");
+  assert.equal(config.media_config.show_unavailable_badge, false);
+  assert.equal(config.media_config.styles.player.artwork_size, "52px");
+  assert.equal(config.embed_options.lights[0].name, "Bed light");
+  assert.equal(config.embed_options.lights[0].icon, "mdi:ceiling-light");
+});
+
 test("room summary hub layout uses embedded nodalia cards and flat home header", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /data-hub-embed="light"/);
@@ -215,7 +245,15 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="media"/);
   assert.match(source, /_mountHubEmbeddedCards/);
   assert.match(source, /_hubEmbedCache = new Map/);
-  assert.match(source, /_panelTransition = true/);
+  assert.match(source, /_activateHubPanel\(next\)/);
+  assert.match(source, /data-hub-panel=/);
+  assert.match(source, /view\.hidden = !active/);
+  assert.match(source, /data-hub-slot="home"/);
+  assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
+  assert.match(source, /panel_duration: 0/);
+  assert.match(source, /nodalia-media-player-editor/);
+  assert.match(source, /media_config/);
+  assert.match(source, /embed_options/);
   assert.match(source, /card\.parentElement !== host/);
   assert.match(source, /room-hub__home-header/);
   assert.match(source, /room-hub__status-chips/);

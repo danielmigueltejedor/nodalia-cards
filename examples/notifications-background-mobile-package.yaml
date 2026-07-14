@@ -311,7 +311,13 @@ automation:
             {% endif %}
           min_severity_score: "{{ {'info': 1, 'success': 2, 'warning': 3, 'critical': 4}.get(notify_cfg.get('min_severity', 'warning'), 3) }}"
           severity_score: "{{ {'info': 1, 'success': 2, 'warning': 3, 'critical': 4}.get(severity, 1) }}"
-          raw_mobile_policy: "{{ override.get('mobile', smart_override.get('mobile', default_policy)) | string | lower }}"
+          override_mobile_policy: "{{ override.get('mobile', 'inherit') | string | lower }}"
+          raw_mobile_policy: >-
+            {% if override_mobile_policy in ['inherit', 'auto', ''] %}
+              {{ smart_mobile }}
+            {% else %}
+              {{ override_mobile_policy }}
+            {% endif %}
           effective_policy: >-
             {% set raw = raw_mobile_policy %}
             {% if raw in ['off', 'false', '0'] %}off

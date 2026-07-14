@@ -283,6 +283,8 @@ test("background package rejects oversized payloads and uses local_only", () => 
   assert.match(backgroundPackage, /local_only: true/);
   assert.match(backgroundPackage, /chunk_count > 40/);
   assert.match(backgroundPackage, /Rejected background mobile payload/);
+  assert.match(backgroundPackage, /override_mobile_policy in \['inherit', 'auto', ''\]/);
+  assert.match(backgroundPackage, /\{\{ smart_mobile \}\}/);
 });
 
 test("threshold crossing remains in background package templates", () => {

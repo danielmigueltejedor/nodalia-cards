@@ -10,6 +10,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.21] - 2026-07-14
+
+Twenty-first **`2.0.0`** **`alpha`**: flicker-free Room Summary Hub navigation. Release channel **`2.0.0-alpha.21`**.
+
+### Added
+
+- **Room Summary editor:** native `nodalia-media-player` visual editor embedded directly in the media section, including multiple players, TV mode, labels, icons, visibility, power/tap actions, unavailable badge, layout, security, animations, and player/browser styles.
+- **Room Summary editor:** per-entity custom name and icon controls for embedded light, vacuum, fan, humidifier, and generic entity cards.
+- **Room Summary config:** `media_config` stores the complete native media-player configuration, while `embed_options` stores per-entity card presentation overrides; legacy entity string lists remain supported.
+
+### Fixed
+
+- **Room Summary Hub:** panel navigation keeps every panel and embedded Nodalia card mounted, switching visibility in place instead of replacing the card shadow DOM.
+- **Room Summary Hub embeds:** embedded card entry duration is forced to zero while preserving their other interaction animations.
+- **Room Summary Hub media:** home and media-panel instances use separate cache slots so neither card moves between containers.
+- **Room Summary Hub media:** native media-player entry animation uses zero `panel_duration` inside hidden Hub panels, while browser and interaction animations remain available.
+- **Notifications background package:** direct or older webhook payloads now resolve per-entity `inherit`/`auto` through the smart-kind mobile policy before falling back to the global default.
+- **Compatibility loaders:** restored generated and published aliases for `1.3.5-alpha.1` through `1.3.5-alpha.10`, preventing dashboards pinned to those resource URLs from returning 404 after an upgrade.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.21`.
+
 ## [2.0.0-alpha.20] - 2026-07-14
 
 Twentieth **`2.0.0`** **`alpha`**: HACS license validation and smoother Room Summary Hub panel changes. Release channel **`2.0.0-alpha.20`**.

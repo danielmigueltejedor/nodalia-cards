@@ -1,11 +1,12 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.20";
+const CARD_VERSION = "2.0.0-alpha.21";
 
 const LAYOUT_MODES = new Set(["hub", "compact", "standard", "detailed", "security", "climate"]);
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const DENSITY_MODES = new Set(["comfortable", "compact"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
+const CUSTOMIZABLE_EMBED_LISTS = new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
 
 const DEFAULT_CONFIG = {
   name: "",
@@ -22,10 +23,18 @@ const DEFAULT_CONFIG = {
   camera: "",
   media_player: "",
   media_players: [],
+  media_config: {},
   vacuums: [],
   fans: [],
   humidifiers: [],
   others: [],
+  embed_options: {
+    lights: [],
+    vacuums: [],
+    fans: [],
+    humidifiers: [],
+    others: [],
+  },
   power: "",
   air_quality: "",
   lights: [],
@@ -178,6 +187,7 @@ function hubMediaPlayerIds(config) {
   };
   push(c.media_player);
   (c.media_players || []).forEach(push);
+  (c.media_config?.players || []).forEach(player => push(player?.entity));
   return ids;
 }
 
@@ -300,7 +310,12 @@ function normalizeConfig(rawConfig = {}) {
   config.occupancy = entityScalar(config.occupancy, config.presence);
   config.climate = entityScalar(config.climate, config.climate_entity);
   config.camera = entityScalar(config.camera);
-  config.media_player = entityScalar(config.media_player);
+  config.media_config = isObject(config.media_config) ? deepClone(config.media_config) : {};
+  config.media_config.players = Array.isArray(config.media_config.players)
+    ? config.media_config.players.filter(isObject).map(player => deepClone(player))
+    : [];
+  const nativeMediaIds = config.media_config.players.map(player => String(player.entity || "").trim()).filter(Boolean);
+  config.media_player = entityScalar(config.media_player, nativeMediaIds[0]);
   config.media_players = entityList(config.media_players, config.media_player_entities);
   if (config.media_player) {
     config.media_players = config.media_players.filter(id => id !== config.media_player);
@@ -318,6 +333,21 @@ function normalizeConfig(rawConfig = {}) {
   config.doors = entityList(config.doors);
   config.windows = entityList(config.windows);
   config.alerts = entityList(config.alerts, config.motion_entities);
+  const rawEmbedOptions = isObject(config.embed_options) ? config.embed_options : {};
+  config.embed_options = {};
+  CUSTOMIZABLE_EMBED_LISTS.forEach(listKey => {
+    const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter(isObject) : [];
+    config.embed_options[listKey] = config[listKey].map((entity, index) => {
+      const byEntity = options.find(option => String(option.entity || "").trim() === entity);
+      const source = byEntity || options[index] || {};
+      return {
+        ...deepClone(source),
+        entity,
+        name: String(source.name || "").trim(),
+        icon: String(source.icon || "").trim(),
+      };
+    });
+  });
 
   config.navigation_path = String(config.navigation_path ?? "").trim();
   config.show_temperature = config.show_temperature !== false;
@@ -357,6 +387,7 @@ function hasRoomContent(config) {
     || c.temperature || c.humidity || c.presence || c.occupancy || c.climate
     || c.camera || c.media_player || c.power || c.air_quality
     || (c.media_players || []).length
+    || (c.media_config?.players || []).length
     || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
     || (c.vacuums || []).length || (c.fans || []).length
     || (c.humidifiers || []).length || (c.others || []).length
@@ -371,7 +402,7 @@ function buildRoomSummary(hass, config) {
   const presenceState = getState(hass, c.presence) || getState(hass, c.occupancy);
   const climateState = getState(hass, c.climate);
   const cameraState = getState(hass, c.camera);
-  const mediaState = getState(hass, c.media_player);
+  const mediaState = getState(hass, hubMediaPlayerIds(c)[0]);
 
   const tempNum = tempState ? finiteNumber(tempState.state) : null;
   const humidityNum = humidityState ? finiteNumber(humidityState.state) : null;
@@ -505,7 +536,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._activePanel = "home";
-    this._panelTransition = false;
     this._hubEmbedCache = new Map();
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
@@ -563,7 +593,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (config.layout === "hub") {
       const ids = [
         config.temperature, config.humidity, config.presence, config.climate,
-        config.media_player, ...(config.lights || []), ...(config.covers || []),
+        ...hubMediaPlayerIds(config), ...(config.lights || []), ...(config.covers || []),
         ...(config.vacuums || []), ...(config.fans || []),
         ...(config.humidifiers || []), ...(config.others || []),
       ].filter(Boolean);
@@ -732,9 +762,27 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const next = HUB_PANELS.has(panel) ? panel : "home";
     if (next === this._activePanel) return;
     this._activePanel = next;
-    this._panelTransition = true;
     this._triggerHaptic();
-    this._render();
+    if (!this._activateHubPanel(next)) this._render();
+  }
+
+  _activateHubPanel(panel) {
+    if (!this.shadowRoot) return false;
+    const views = Array.from(this.shadowRoot.querySelectorAll("[data-hub-panel]"));
+    const target = views.find(view => view.dataset.hubPanel === panel);
+    if (!target) return false;
+    views.forEach(view => {
+      const active = view === target;
+      view.hidden = !active;
+      view.setAttribute("aria-hidden", String(!active));
+    });
+    const config = normalizeConfig(this._config || {});
+    const summary = buildRoomSummary(this._hass, config);
+    const navItems = this._getHubNavItems(config, summary);
+    const rail = this.shadowRoot.querySelector(".room-hub__rail");
+    if (rail) rail.outerHTML = this._renderHubRail(navItems, panel);
+    this._lastRenderSignature = this._getRenderSignature(this._hass);
+    return true;
   }
 
   _toggleEntity(entityId) {
@@ -1056,14 +1104,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (!config.media_player || config.show_media === false) return "";
     const state = getState(this._hass, config.media_player);
     if (!state || isUnavailable(state)) return "";
-    return `<div class="room-hub__embed-host room-hub__embed-host--media" data-hub-embed="media" data-entity="${escapeHtml(config.media_player)}"></div>`;
+    return `<div class="room-hub__embed-host room-hub__embed-host--media" data-hub-embed="media" data-hub-slot="home" data-entity="${escapeHtml(config.media_player)}"></div>`;
   }
 
   _hubEmbedStylePack(config) {
     const base = normalizeConfig(config);
     return {
       language: base.language,
-      animations: deepClone(base.animations),
+      animations: { ...deepClone(base.animations), content_duration: 0 },
       haptics: deepClone(base.haptics),
     };
   }
@@ -1097,30 +1145,74 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
   }
 
+  _hubEmbedCustomization(config, host) {
+    const listKeyByType = {
+      light: "lights",
+      vacuum: "vacuums",
+      fan: "fans",
+      humidifier: "humidifiers",
+      entity: "others",
+    };
+    const listKey = listKeyByType[String(host?.dataset?.hubEmbed || "")];
+    if (!listKey) return {};
+    const entityId = String(host?.dataset?.entity || "").trim();
+    const index = Number(host?.dataset?.hubIndex);
+    const options = config.embed_options?.[listKey] || [];
+    const option = options.find(item => String(item?.entity || "").trim() === entityId)
+      || (Number.isInteger(index) ? options[index] : null)
+      || {};
+    return {
+      ...(option.name ? { name: option.name } : {}),
+      ...(option.icon ? { icon: option.icon } : {}),
+    };
+  }
+
+  _hubMediaEmbedConfig(config, host) {
+    const native = isObject(config.media_config) ? deepClone(config.media_config) : {};
+    const entityId = String(host?.dataset?.entity || "").trim();
+    const scope = String(host?.dataset?.hubMedia || "single");
+    const nativePlayers = Array.isArray(native.players) ? native.players.filter(player => player?.entity) : [];
+    const matchingPlayer = nativePlayers.find(player => String(player.entity || "").trim() === entityId);
+    const players = scope === "group"
+      ? nativePlayers
+      : [matchingPlayer || { entity: entityId }];
+    const nativeAnimations = isObject(native.animations) ? native.animations : config.animations;
+    return {
+      ...native,
+      show_state: native.show_state ?? false,
+      show_device_chip: native.show_device_chip ?? false,
+      album_cover_background: native.album_cover_background ?? true,
+      players,
+      animations: { ...deepClone(nativeAnimations), content_duration: 0, panel_duration: 0 },
+      layout: {
+        ...(isObject(native.layout) ? native.layout : {}),
+        fixed: false,
+        reserve_space: false,
+      },
+      styles: mergeConfig(this._hubMediaPlayerStylePack(config), native.styles || {}),
+    };
+  }
+
   _mountHubEmbeddedCards() {
     if (!this.shadowRoot) return;
     const config = normalizeConfig(this._config || {});
     const pack = this._hubEmbedStylePack(config);
     const embeddedStyles = this._hubEmbeddedAccentPack(config);
-    const mediaStyles = this._hubMediaPlayerStylePack(config);
-    const validKeys = new Set();
-    const addKeys = (embedType, entityIds) => (entityIds || []).forEach(entityId => {
-      const normalized = String(entityId || "").trim();
-      if (normalized) validKeys.add(`${embedType}:${normalized}`);
-    });
-    addKeys("light", config.lights);
-    addKeys("vacuum", config.vacuums);
-    addKeys("fan", config.fans);
-    addKeys("humidifier", config.humidifiers);
-    addKeys("entity", config.others);
-    addKeys("media", hubMediaPlayerIds(config));
+    const cacheKeyForHost = host => {
+      const entityId = String(host?.dataset?.entity || "").trim();
+      const embedType = String(host?.dataset?.hubEmbed || "").trim();
+      const slot = String(host?.dataset?.hubSlot || "panel").trim();
+      return entityId && embedType ? `${embedType}:${entityId}:${slot}` : "";
+    };
+    const validKeys = new Set(Array.from(this.shadowRoot.querySelectorAll("[data-hub-embed]"))
+      .map(cacheKeyForHost)
+      .filter(Boolean));
 
     const mount = (host, tagName, extra = {}) => {
       if (!(host instanceof HTMLElement)) return;
       const entityId = String(host.dataset.entity || "").trim();
       if (!entityId) return;
-      const embedType = String(host.dataset.hubEmbed || tagName).trim();
-      const cacheKey = `${embedType}:${entityId}`;
+      const cacheKey = cacheKeyForHost(host);
       let card = this._hubEmbedCache?.get(cacheKey);
       if (!card) {
         card = document.createElement(tagName);
@@ -1130,7 +1222,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         host.replaceChildren(card);
       }
       if (this._hass) card.hass = this._hass;
-      card.setConfig({ entity: entityId, ...pack, ...extra });
+      card.setConfig({ entity: entityId, ...pack, ...extra, ...this._hubEmbedCustomization(config, host) });
     };
 
     this.shadowRoot.querySelectorAll('[data-hub-embed="light"]').forEach(host => {
@@ -1190,16 +1282,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       });
     });
     this.shadowRoot.querySelectorAll('[data-hub-embed="media"]').forEach(host => {
-      mount(host, "nodalia-media-player", {
-        show_state: false,
-        show_device_chip: false,
-        album_cover_background: true,
-        layout: {
-          fixed: false,
-          reserve_space: false,
-        },
-        styles: mediaStyles,
-      });
+      mount(host, "nodalia-media-player", this._hubMediaEmbedConfig(config, host));
     });
     for (const [key, card] of this._hubEmbedCache || []) {
       if (!validKeys.has(key)) {
@@ -1209,9 +1292,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _renderHubEmbedHosts(entityIds, embedType) {
-    return `<div class="room-hub__embed-list">${(entityIds || []).map(entityId => `
-      <div class="room-hub__embed-host" data-hub-embed="${escapeHtml(embedType)}" data-entity="${escapeHtml(entityId)}"></div>
+  _renderHubEmbedHosts(entityIds, embedType, slot = "panel") {
+    return `<div class="room-hub__embed-list">${(entityIds || []).map((entityId, index) => `
+      <div class="room-hub__embed-host" data-hub-embed="${escapeHtml(embedType)}" data-hub-slot="${escapeHtml(slot)}" data-hub-index="${index}" data-entity="${escapeHtml(entityId)}"></div>
     `).join("")}</div>`;
   }
 
@@ -1368,6 +1451,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   _renderHubMediaPanel(config) {
     const ids = hubMediaPlayerIds(config);
     if (!ids.length) return "";
+    if (config.media_config?.players?.length) {
+      return `<div class="room-hub__panel room-hub__panel--embed"><div class="room-hub__embed-list">
+        <div class="room-hub__embed-host" data-hub-embed="media" data-hub-slot="group" data-hub-media="group" data-entity="${escapeHtml(ids[0])}"></div>
+      </div></div>`;
+    }
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(ids, "media")}</div>`;
   }
 
@@ -1399,7 +1487,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const hubDeviceState = escapeHtml(hubStyles.device_state_size || DEFAULT_CONFIG.styles.hub.device_state_size);
     const activePanel = HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
     const navItems = this._getHubNavItems(config, summary);
-    const animate = config.animations?.enabled !== false && this._animateContentOnNextRender && !this._panelTransition;
+    const animate = config.animations?.enabled !== false && this._animateContentOnNextRender;
     const cardBackground = styles.card.background;
     const cardBorder = styles.card.border;
     const cardShadow = styles.card.box_shadow;
@@ -1437,6 +1525,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__stage { display:grid; gap:12px; min-width:0; overflow:visible; }
         .room-hub__body { min-width:0; overflow:visible; }
         .room-hub__body--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1) both; }
+        .room-hub__view { display:block; min-width:0; overflow:visible; }
+        .room-hub__view[hidden] { display:none !important; }
         .room-hub__rail { align-items:center; display:flex; flex-direction:column; gap:8px; justify-content:flex-start; }
         .room-hub__bubble {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -1569,16 +1659,18 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           <div class="room-hub__stage">
             ${this._renderHubHeader(config, summary, styles)}
             <div class="room-hub__body ${animate ? "room-hub__body--enter" : ""}">
-              ${activePanel === "home"
+              ${["home", ...navItems.map(item => item.id)].map(panel => `
+                <section class="room-hub__view" data-hub-panel="${escapeHtml(panel)}" aria-hidden="${panel !== activePanel}"${panel === activePanel ? "" : " hidden"}>
+                  ${panel === "home"
     ? this._renderHubHome(config, summary, styles, accentColor)
-    : this._renderHubPanelContent(activePanel, config, summary, styles, accentColor)}
+    : this._renderHubPanelContent(panel, config, summary, styles, accentColor)}
+                </section>`).join("")}
             </div>
           </div>
           ${navItems.length ? this._renderHubRail(navItems, activePanel) : ""}
         </div>
       </ha-card>`;
     this._animateContentOnNextRender = false;
-    this._panelTransition = false;
     this._mountHubEmbeddedCards();
   }
 
@@ -1805,6 +1897,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+    this._onMediaConfigChanged = this._onMediaConfigChanged.bind(this);
   }
 
   connectedCallback() {
@@ -1841,7 +1934,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
 
   setConfig(config) {
     const focusState = this._captureFocusState();
-    this._config = mergeConfig(DEFAULT_CONFIG, config || {});
+    this._config = normalizeConfig(config || {});
     this._render();
     this._restoreFocusState(focusState);
   }
@@ -1853,6 +1946,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._entityOptionsSignature = nextSignature;
     if (!shouldRender) {
       this.shadowRoot?.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+      this.shadowRoot?.querySelectorAll("nodalia-media-player-editor").forEach(editor => { editor.hass = hass; });
       return;
     }
     const focusState = this._captureFocusState();
@@ -1930,6 +2024,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-entity-picker");
     this._watchEditorControlTag("ha-selector");
     this._watchEditorControlTag("ha-icon-picker");
+    this._watchEditorControlTag("nodalia-media-player-editor");
   }
 
   _editorLabel(key) {
@@ -1976,24 +2071,37 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (btn.dataset.act === "add" && list) {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       this._config[list].push("");
+      if (CUSTOMIZABLE_EMBED_LISTS.has(list)) {
+        if (!Array.isArray(this._config.embed_options?.[list])) this._config.embed_options[list] = [];
+        this._config.embed_options[list].push({ entity: "", name: "", icon: "" });
+      }
       this._emitConfig(true);
       return;
     }
     if (btn.dataset.act === "remove" && list && Number.isInteger(idx)) {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       this._config[list].splice(idx, 1);
+      if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
+        this._config.embed_options[list].splice(idx, 1);
+      }
       this._emitConfig(true);
       return;
     }
     if (btn.dataset.act === "move-up" && list && Number.isInteger(idx)) {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       moveListItem(this._config[list], idx, idx - 1);
+      if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
+        moveListItem(this._config.embed_options[list], idx, idx - 1);
+      }
       this._emitConfig(true);
       return;
     }
     if (btn.dataset.act === "move-down" && list && Number.isInteger(idx)) {
       if (!Array.isArray(this._config[list])) this._config[list] = [];
       moveListItem(this._config[list], idx, idx + 1);
+      if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
+        moveListItem(this._config.embed_options[list], idx, idx + 1);
+      }
       this._emitConfig(true);
       return;
     }
@@ -2005,6 +2113,24 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
 
   _editorList(listKey) {
     return Array.isArray(this._config[listKey]) ? this._config[listKey] : [];
+  }
+
+  _mediaEditorConfig() {
+    const native = isObject(this._config?.media_config) ? deepClone(this._config.media_config) : {};
+    if (!Array.isArray(native.players) || !native.players.length) {
+      native.players = hubMediaPlayerIds(this._config).map(entity => ({ entity }));
+    }
+    return native;
+  }
+
+  _onMediaConfigChanged(event) {
+    event.stopPropagation();
+    const mediaConfig = isObject(event.detail?.config) ? deepClone(event.detail.config) : {};
+    const ids = (mediaConfig.players || []).map(player => String(player?.entity || "").trim()).filter(Boolean);
+    this._config.media_config = mediaConfig;
+    this._config.media_player = ids[0] || "";
+    this._config.media_players = ids.slice(1);
+    this._emitConfig(false);
   }
 
   _entityLabel(entityId) {
@@ -2085,7 +2211,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       </div>`;
   }
 
-  _listSection(title, hint, listKey, domains) {
+  _listSection(title, hint, listKey, domains, customizable = false) {
     const rows = this._editorList(listKey);
     const total = rows.length;
     const moveUp = this._editorLabel("ed.notifications.move_up");
@@ -2094,14 +2220,31 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       <div><div class="editor-section__title">${escapeHtml(this._editorLabel(title))}</div>
       <div class="editor-section__hint">${escapeHtml(this._editorLabel(hint))}</div></div>
       <button type="button" data-act="add" data-list="${escapeHtml(listKey)}">${escapeHtml(this._editorLabel("ed.room_summary.add_entity"))}</button></div>
-      ${rows.length ? rows.map((id, i) => `<div class="item-card"><div class="item-card__header">
+      ${rows.length ? rows.map((id, i) => {
+    const option = this._config.embed_options?.[listKey]?.[i] || {};
+    return `<div class="item-card"><div class="item-card__header">
         <span class="item-card__title">${escapeHtml(this._entityLabel(id))}</span>
         <div class="item-card__actions">
           <button type="button" data-act="move-up" data-list="${escapeHtml(listKey)}" data-index="${i}" ${i === 0 ? "disabled" : ""} title="${escapeHtml(moveUp)}">↑</button>
           <button type="button" data-act="move-down" data-list="${escapeHtml(listKey)}" data-index="${i}" ${i >= total - 1 ? "disabled" : ""} title="${escapeHtml(moveDown)}">↓</button>
           <button type="button" class="danger" data-act="remove" data-list="${escapeHtml(listKey)}" data-index="${i}">${escapeHtml(this._editorLabel("ed.room_summary.remove_entity"))}</button>
         </div></div>
-        ${this._entity("ed.room_summary.entity", `${listKey}.${i}`, id, domains)}</div>`).join("") : `<div class="empty">${escapeHtml(this._editorLabel("ed.room_summary.list_empty"))}</div>`}
+        ${this._entity("ed.room_summary.entity", `${listKey}.${i}`, id, domains)}
+        ${customizable ? `<div class="editor-grid item-card__customization">
+          ${this._field("ed.entity.name", `embed_options.${listKey}.${i}.name`, option.name, { full: true })}
+          ${this._iconField("ed.entity.icon", `embed_options.${listKey}.${i}.icon`, option.icon)}
+        </div>` : ""}</div>`;
+  }).join("") : `<div class="empty">${escapeHtml(this._editorLabel("ed.room_summary.list_empty"))}</div>`}
+    </section>`;
+  }
+
+  _mediaConfigSection() {
+    return `<section class="editor-section editor-section--nested">
+      <div class="editor-section__header"><div>
+        <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.room_summary.media_players_section_title"))}</div>
+        <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.room_summary.media_players_section_hint"))}</div>
+      </div></div>
+      <div class="native-editor-host" data-mounted-control="media-config-editor"></div>
     </section>`;
   }
 
@@ -2130,6 +2273,19 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       onShadowValueChanged: this._onShadowValueChanged,
       copyDatasetFromHost: true,
     });
+  }
+
+  _mountMediaConfigEditor(host) {
+    if (!(host instanceof HTMLElement)) return;
+    if (!customElements.get("nodalia-media-player-editor")) {
+      this._watchEditorControlTag("nodalia-media-player-editor");
+      return;
+    }
+    const editor = document.createElement("nodalia-media-player-editor");
+    editor.addEventListener("config-changed", this._onMediaConfigChanged);
+    editor.hass = this._hass;
+    editor.setConfig(this._mediaEditorConfig());
+    host.replaceChildren(editor);
   }
 
   _render() {
@@ -2175,6 +2331,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         width: 100%;
       }
       .editor-control-host, .editor-control-host > * { display: block; width: 100%; }
+      .native-editor-host, .native-editor-host > * { display: block; min-width: 0; width: 100%; }
       .editor-toggle {
         align-items: center;
         column-gap: 10px;
@@ -2315,17 +2472,16 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ${this._entity("ed.room_summary.presence_entity", "presence", c.presence, ["binary_sensor", "device_tracker", "person"])}
         ${this._entity("ed.room_summary.climate_entity", "climate", c.climate, ["climate"])}
         ${this._entity("ed.room_summary.camera_entity", "camera", c.camera, ["camera"])}
-        ${this._entity("ed.room_summary.media_player_entity", "media_player", c.media_player, ["media_player"])}
         ${this._entity("ed.room_summary.power_entity", "power", c.power, ["sensor"])}
         ${this._entity("ed.room_summary.air_quality_entity", "air_quality", c.air_quality, ["sensor"])}
       </div>
-      ${this._listSection("ed.room_summary.lights_section_title", "ed.room_summary.lights_section_hint", "lights", ["light"])}
+      ${this._mediaConfigSection()}
+      ${this._listSection("ed.room_summary.lights_section_title", "ed.room_summary.lights_section_hint", "lights", ["light"], true)}
       ${this._listSection("ed.room_summary.covers_section_title", "ed.room_summary.covers_section_hint", "covers", ["cover"])}
-      ${this._listSection("ed.room_summary.vacuums_section_title", "ed.room_summary.vacuums_section_hint", "vacuums", ["vacuum"])}
-      ${this._listSection("ed.room_summary.fans_section_title", "ed.room_summary.fans_section_hint", "fans", ["fan"])}
-      ${this._listSection("ed.room_summary.humidifiers_section_title", "ed.room_summary.humidifiers_section_hint", "humidifiers", ["humidifier"])}
-      ${this._listSection("ed.room_summary.media_players_section_title", "ed.room_summary.media_players_section_hint", "media_players", ["media_player"])}
-      ${this._listSection("ed.room_summary.others_section_title", "ed.room_summary.others_section_hint", "others", [])}
+      ${this._listSection("ed.room_summary.vacuums_section_title", "ed.room_summary.vacuums_section_hint", "vacuums", ["vacuum"], true)}
+      ${this._listSection("ed.room_summary.fans_section_title", "ed.room_summary.fans_section_hint", "fans", ["fan"], true)}
+      ${this._listSection("ed.room_summary.humidifiers_section_title", "ed.room_summary.humidifiers_section_hint", "humidifiers", ["humidifier"], true)}
+      ${this._listSection("ed.room_summary.others_section_title", "ed.room_summary.others_section_hint", "others", [], true)}
       ${this._listSection("ed.room_summary.doors_section_title", "ed.room_summary.doors_section_hint", "doors", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.windows_section_title", "ed.room_summary.windows_section_hint", "windows", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.locks_section_title", "ed.room_summary.locks_section_hint", "locks", ["lock"])}
@@ -2402,6 +2558,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._attachEditorShadowListeners();
     this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
     this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="media-config-editor"]').forEach(host => this._mountMediaConfigEditor(host));
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
