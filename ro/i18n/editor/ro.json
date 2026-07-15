@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Nu ai adăugat încă niciun jucător.",
   "ed.media_player.players_section_hint": "Adăugați, reordonați și personalizați fiecare jucător afișat pe card.",
   "ed.media_player.players_section_title": "Jucători",
+  "ed.media_player.invalid_json_object": "Enter a valid JSON object.",
   "ed.media_player.position_bottom": "Fund",
   "ed.media_player.position_top": "Top",
   "ed.media_player.power_action_active": "Buton de pornire când este pornit",
