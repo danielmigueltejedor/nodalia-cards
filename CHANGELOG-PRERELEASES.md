@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.24] - 2026-07-15
+
+Twenty-fourth **`2.0.0`** **`alpha`**: clearer Room Summary state and hierarchy. Release channel **`2.0.0-alpha.24`**.
+
+### Fixed
+
+- **Room Summary Hub controls:** smart navigation and quick-action buttons keep stable icons and use the configured accent tint to communicate active device state.
+- **Room Summary Hub header:** room names receive a full-width row, with temperature, humidity, and occupancy chips grouped beneath so long names remain completely visible.
+- **Room Summary Hub panels:** sparse device lists and home controls align to the top when only one item is configured or no media player is present.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.24`; `2.0.0-alpha.23` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.23] - 2026-07-14
 
 Twenty-third **`2.0.0`** **`alpha`**: complete Room Summary visual-editor scrolling. Release channel **`2.0.0-alpha.23`**.

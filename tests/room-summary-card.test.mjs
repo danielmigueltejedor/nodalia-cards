@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.23"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.24"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -273,6 +273,35 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /nodalia-media-player/);
   assert.match(source, /styles\.accent/);
   assert.doesNotMatch(source, /room-hub__hero/);
+});
+
+test("room summary hub uses stable control icons and active tint classes", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const navBlock = source.slice(source.indexOf("_getHubNavItems"), source.indexOf("_getContextualActions"));
+  const contextualBlock = source.slice(source.indexOf("_getContextualActions"), source.indexOf("_setHubPanel"));
+  const quickBlock = source.slice(source.indexOf("_quickActions"), source.indexOf("_renderHubBubble"));
+
+  assert.doesNotMatch(navBlock, /mdi:(lightbulb-outline|fan-off|air-humidifier-off|play-circle-outline)/);
+  assert.doesNotMatch(contextualBlock, /mdi:(lightbulb-off|lightbulb-on|fan-off|window-shutter-open)/);
+  assert.doesNotMatch(quickBlock, /mdi:(lightbulb-off|lightbulb-on|window-shutter-open)/);
+  assert.match(source, /item\.active === true/);
+  assert.match(source, /room-hub__context-action--active/);
+  assert.match(source, /room-summary-card__action--active/);
+});
+
+test("room summary hub protects the full room name and top-aligns sparse panels", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const headerStart = source.indexOf("_renderHubHeader");
+  const headerBlock = source.slice(headerStart, source.indexOf("\n  _renderHubStatusChips(", headerStart));
+
+  assert.match(headerBlock, /room-hub__room-title[\s\S]*room-hub__status-chips/);
+  assert.doesNotMatch(headerBlock, /room-hub__room-title-row/);
+  assert.match(source, /\.room-hub \{ align-items:start;/);
+  assert.match(source, /\.room-hub__stage \{ align-content:start;/);
+  assert.match(source, /\.room-hub__view \{ align-content:start; display:grid;/);
+  assert.match(source, /\.room-hub__embed-list \{ align-content:start;/);
+  assert.match(source, /\.room-hub__panel \{ align-content:start; display:grid;/);
+  assert.match(source, /\.room-hub__status-chips \{[\s\S]*justify-content:flex-start;[\s\S]*width:100%;/);
 });
 
 test("room summary editor emits valid config and preserves unknown fields", () => {
