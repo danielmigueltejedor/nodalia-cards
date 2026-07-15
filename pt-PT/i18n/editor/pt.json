@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Você ainda não adicionou nenhum jogador.",
   "ed.media_player.players_section_hint": "Adicione, reordene e personalize cada jogador mostrado no cartão.",
   "ed.media_player.players_section_title": "Jogadores",
+  "ed.media_player.invalid_json_object": "Enter a valid JSON object.",
   "ed.media_player.position_bottom": "Fundo",
   "ed.media_player.position_top": "Principal",
   "ed.media_player.power_action_active": "Botão liga / desliga quando ligado",
