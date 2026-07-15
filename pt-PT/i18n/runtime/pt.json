@@ -385,7 +385,9 @@
     "entityUnavailable": "Unavailable",
     "noRoomData": "No room data",
     "humidifiers": "Humidifiers",
-    "others": "Others"
+    "others": "Others",
+    "expandDetails": "Expand room details",
+    "collapseDetails": "Collapse room details"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",
