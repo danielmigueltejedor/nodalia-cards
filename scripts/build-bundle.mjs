@@ -102,11 +102,21 @@ async function buildParts(parts, label) {
   }
 }
 
-const [fullBody, coreBody, suiteBody] = await Promise.all([
-  buildParts(ALL_PARTS, "full"),
-  buildParts(CORE_PARTS, "core"),
-  buildParts(CARD_PARTS, "suite"),
-]);
+const fullBody = await buildParts(ALL_PARTS, "full");
+const coreBody = await buildParts(CORE_PARTS, "core");
+const suiteBody = await buildParts(CARD_PARTS, "suite");
+
+function assertCardRegistrations(source, label) {
+  const missing = CARD_PARTS
+    .map(name => name.replace(/\.js$/, ""))
+    .filter(tag => !source.includes(`"${tag}"`));
+  if (missing.length) {
+    throw new Error(`${label} bundle is missing card registrations: ${missing.join(", ")}`);
+  }
+}
+
+assertCardRegistrations(fullBody, "Full");
+assertCardRegistrations(suiteBody, "Suite");
 
 const fullHash = crypto.createHash("sha256").update(fullBody).digest("hex").slice(0, 12);
 const coreHash = crypto.createHash("sha256").update(coreBody).digest("hex").slice(0, 12);
@@ -149,6 +159,7 @@ const compatLoaderFiles = [
   "nodalia-cards-2.0.0-alpha.23.js",
   "nodalia-cards-2.0.0-alpha.24.js",
   "nodalia-cards-2.0.0-alpha.25.js",
+  "nodalia-cards-2.0.0-alpha.26.js",
 ];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;

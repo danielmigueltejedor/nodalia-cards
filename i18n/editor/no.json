@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Du har ikke lagt til noen spillere ennå.",
   "ed.media_player.players_section_hint": "Legg til, omorganiser og tilpass hver spiller som vises på kortet.",
   "ed.media_player.players_section_title": "Spillere",
+  "ed.media_player.invalid_json_object": "Skriv inn et gyldig JSON-objekt.",
   "ed.media_player.position_bottom": "Bunn",
   "ed.media_player.position_top": "Topp",
   "ed.media_player.power_action_active": "Strømknapp når den er på",

@@ -25,6 +25,13 @@ test("bundle registers every card listed in build-bundle CARD_PARTS", () => {
   });
 });
 
+test("bundle build validates card registrations before writing artifacts", () => {
+  const build = read("scripts/build-bundle.mjs");
+  assert.match(build, /assertCardRegistrations\(fullBody, "Full"\)/);
+  assert.match(build, /assertCardRegistrations\(suiteBody, "Suite"\)/);
+  assert.doesNotMatch(build, /Promise\.all\(\[\s*buildParts\(ALL_PARTS/);
+});
+
 test("menu card is not shipped in the bundle", () => {
   const build = read("scripts/build-bundle.mjs");
   const bundle = read("nodalia-cards.js");
@@ -71,6 +78,7 @@ test("published package files and bundle manifest stay coherent", () => {
     "nodalia-cards-2.0.0-alpha.23.js",
     "nodalia-cards-2.0.0-alpha.24.js",
     "nodalia-cards-2.0.0-alpha.25.js",
+    "nodalia-cards-2.0.0-alpha.26.js",
   ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));

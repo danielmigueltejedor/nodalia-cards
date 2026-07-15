@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.27] - 2026-07-15
+
+Twenty-seventh **`2.0.0`** **`alpha`**: reliable JSON service actions in the Room Summary media editor. Release channel **`2.0.0-alpha.27`**.
+
+### Fixed
+
+- **Room Summary embedded Media Player editor:** `service_data` objects loaded from YAML are shown as editable formatted JSON instead of `[object Object]`, and valid edits are emitted as structured objects.
+- **Room Summary embedded Media Player editor:** incomplete or non-object JSON is highlighted and no longer replaces the last valid action configuration; legacy `data` action payloads remain editable.
+- **Editor translations:** added the invalid-JSON validation message across all 12 supported editor languages.
+- **Bundle generation:** card bundles are built sequentially and validated for every registered card before publication, preventing incomplete parallel-build artifacts.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.27`; `2.0.0-alpha.26` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.26] - 2026-07-15
 
 Twenty-sixth **`2.0.0`** **`alpha`**: a single, cleaner Room Summary Hub experience. Release channel **`2.0.0-alpha.26`**.

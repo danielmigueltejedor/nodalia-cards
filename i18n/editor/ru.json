@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Вы еще не добавили ни одного игрока.",
   "ed.media_player.players_section_hint": "Добавляйте, меняйте порядок и настраивайте каждого игрока, изображенного на карте.",
   "ed.media_player.players_section_title": "Игроки",
+  "ed.media_player.invalid_json_object": "Введите допустимый объект JSON.",
   "ed.media_player.position_bottom": "Нижний",
   "ed.media_player.position_top": "Вершина",
   "ed.media_player.power_action_active": "Кнопка питания при включении",

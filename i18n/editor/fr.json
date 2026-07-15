@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Vous n’avez pas encore ajouté de lecteur.",
   "ed.media_player.players_section_hint": "Ajoutez, réorganisez et personnalisez chaque lecteur affiché sur la carte.",
   "ed.media_player.players_section_title": "Joueurs",
+  "ed.media_player.invalid_json_object": "Saisissez un objet JSON valide.",
   "ed.media_player.position_bottom": "Bas",
   "ed.media_player.position_top": "Haut",
   "ed.media_player.power_action_active": "Bouton d'alimentation lorsqu'il est allumé",

@@ -289,6 +289,46 @@ test("media player editor preserves nested service data drafts until change comm
   assert.doesNotMatch(source, /_setEditorConfig\(\)/);
 });
 
+test("media player editor round-trips service data as a JSON object", () => {
+  const sandbox = {
+    URL,
+    window: { NodaliaUtils: { registerCustomCard() {} } },
+    customElements: { define() {}, get() { return null; } },
+    HTMLElement: class {},
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-media-player.js"), sandbox);
+
+  const helpers = sandbox.__NODALIA_MEDIA_PLAYER__;
+  assert.equal(
+    helpers.formatEditorJsonValue({ entity_id: "input_boolean.media_power" }),
+    '{\n  "entity_id": "input_boolean.media_power"\n}',
+  );
+  assert.equal(
+    helpers.formatEditorJsonValue('{"entity_id":"switch.projector"}'),
+    '{\n  "entity_id": "switch.projector"\n}',
+  );
+
+  const parsed = helpers.parseEditorJsonObject('{"entity_id":"switch.projector"}');
+  assert.equal(parsed.valid, true);
+  assert.equal(JSON.stringify(parsed.value), '{"entity_id":"switch.projector"}');
+  assert.equal(helpers.parseEditorJsonObject('{"entity_id":').valid, false);
+  assert.equal(helpers.parseEditorJsonObject('["switch.projector"]').valid, false);
+});
+
+test("media player editor rejects invalid service data without emitting it", () => {
+  const source = read("nodalia-media-player.js");
+  const inputStart = source.lastIndexOf("  _onShadowInput(event)");
+  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowValueChanged(event)", inputStart));
+
+  assert.match(source, /valueType: "json"/);
+  assert.match(source, /action\?\.service_data \?\? action\?\.data/);
+  assert.match(source, /textarea\[aria-invalid="true"\]/);
+  assert.match(inputBlock, /if \(nextValue === INVALID_EDITOR_VALUE\) \{\s*return;/);
+});
+
 test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /const mediaToggleBackgroundBase = sanitizeCssRuntimeValue\(config\.styles\.media_player\.background\)[\s\S]*"var\(--ha-card-background, var\(--card-background-color\)\)"/);

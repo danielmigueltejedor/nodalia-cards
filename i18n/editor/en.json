@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "You have not added any players yet.",
   "ed.media_player.players_section_hint": "Add, reorder and customize each player shown on the card.",
   "ed.media_player.players_section_title": "Players",
+  "ed.media_player.invalid_json_object": "Enter a valid JSON object.",
   "ed.media_player.position_bottom": "Bottom",
   "ed.media_player.position_top": "Top",
   "ed.media_player.power_action_active": "Power button when on",

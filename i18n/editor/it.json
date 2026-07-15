@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Non hai ancora aggiunto lettori.",
   "ed.media_player.players_section_hint": "Aggiungi, riordina e personalizza ogni lettore sulla scheda.",
   "ed.media_player.players_section_title": "Giocatori",
+  "ed.media_player.invalid_json_object": "Inserisci un oggetto JSON valido.",
   "ed.media_player.position_bottom": "Metter il fondo a",
   "ed.media_player.position_top": "Superiore",
   "ed.media_player.power_action_active": "Pulsante di accensione quando acceso",

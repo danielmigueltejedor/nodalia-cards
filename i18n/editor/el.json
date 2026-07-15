@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Δεν έχετε προσθέσει ακόμη παίκτες.",
   "ed.media_player.players_section_hint": "Προσθέστε, αναδιατάξτε και προσαρμόστε κάθε παίκτη που εμφανίζεται στην κάρτα.",
   "ed.media_player.players_section_title": "Παίκτες",
+  "ed.media_player.invalid_json_object": "Εισαγάγετε ένα έγκυρο αντικείμενο JSON.",
   "ed.media_player.position_bottom": "Κάτω μέρος",
   "ed.media_player.position_top": "Κορυφή",
   "ed.media_player.power_action_active": "Κουμπί λειτουργίας όταν είναι ενεργοποιημένο",

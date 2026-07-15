@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Je hebt nog geen spelers toegevoegd.",
   "ed.media_player.players_section_hint": "Elke speler op de kaart toevoegen, sorteren en aanpassen.",
   "ed.media_player.players_section_title": "Spelers",
+  "ed.media_player.invalid_json_object": "Voer een geldig JSON-object in.",
   "ed.media_player.position_bottom": "Onderkant",
   "ed.media_player.position_top": "Bovenkant",
   "ed.media_player.power_action_active": "Aan/uit-knop wanneer ingeschakeld",
