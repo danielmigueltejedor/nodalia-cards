@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Todavía no has añadido ningún reproductor.",
   "ed.media_player.players_section_hint": "Añade, reordena y personaliza cada reproductor visible en la tarjeta.",
   "ed.media_player.players_section_title": "Reproductores",
+  "ed.media_player.invalid_json_object": "Enter a valid JSON object.",
   "ed.media_player.position_bottom": "Abajo",
   "ed.media_player.position_top": "Arriba",
   "ed.media_player.power_action_active": "Botón de encendido cuando está activo",
