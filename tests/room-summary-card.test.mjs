@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.25"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.26"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -144,19 +144,19 @@ test("room summary executes normalized Lovelace actions without mixing tap and h
   assert.match(source, /prefix === "tap" \? cfg\.navigation_path : cfg\[\x60\$\{prefix\}_navigation_path\x60\]/);
 });
 
-test("room summary compact layout renders without overflow basics", () => {
+test("room summary always migrates legacy layouts to Hub", () => {
   const source = read("nodalia-room-summary-card.js");
-  assert.match(source, /room-summary-card--\$\{escapeHtml\(layout\)\}/);
-  assert.match(source, /layout === "compact"/);
-  assert.match(source, /overflow:\s*hidden|text-overflow:\s*ellipsis|min-width:\s*0/);
-});
+  const editorStart = source.indexOf("class NodaliaRoomSummaryCardEditor");
+  const editorBlock = source.slice(editorStart);
 
-test("room summary security layout prioritizes security indicators", () => {
-  const source = read("nodalia-room-summary-card.js");
-  const renderBlock = source.slice(source.indexOf("_render()"), source.indexOf("class NodaliaRoomSummaryCardEditor"));
-  assert.match(renderBlock, /layout === "security"/);
-  assert.match(source, /show_security/);
-  assert.match(source, /security_issue/);
+  for (const layout of ["compact", "standard", "detailed", "security", "climate"]) {
+    const config = rs.normalizeConfig({ layout, density: "compact" });
+    assert.equal(config.layout, "hub");
+    assert.equal(config.density, undefined);
+  }
+  assert.match(source, /config\.layout = "hub"/);
+  assert.doesNotMatch(editorBlock, /ed\.room_summary\.layout/);
+  assert.doesNotMatch(editorBlock, /"layout", c\.layout/);
 });
 
 test("room summary normalizeConfig accepts scalar and list entity fields", () => {
@@ -279,14 +279,11 @@ test("room summary hub uses stable control icons and active tint classes", () =>
   const source = read("nodalia-room-summary-card.js");
   const navBlock = source.slice(source.indexOf("_getHubNavItems"), source.indexOf("_getContextualActions"));
   const contextualBlock = source.slice(source.indexOf("_getContextualActions"), source.indexOf("_setHubPanel"));
-  const quickBlock = source.slice(source.indexOf("_quickActions"), source.indexOf("_renderHubBubble"));
 
   assert.doesNotMatch(navBlock, /mdi:(lightbulb-outline|fan-off|air-humidifier-off|play-circle-outline)/);
   assert.doesNotMatch(contextualBlock, /mdi:(lightbulb-off|lightbulb-on|fan-off|window-shutter-open)/);
-  assert.doesNotMatch(quickBlock, /mdi:(lightbulb-off|lightbulb-on|window-shutter-open)/);
   assert.match(source, /item\.active === true/);
   assert.match(source, /room-hub__context-action--active/);
-  assert.match(source, /room-summary-card__action--active/);
 });
 
 test("room summary hub protects the full room name and top-aligns sparse panels", () => {
@@ -318,6 +315,8 @@ test("room summary hub supports a collapsible compact mode", () => {
   assert.match(source, /collapsed \? "mdi:chevron-down" : "mdi:chevron-up"/);
   assert.match(source, /aria-expanded="\$\{collapsed \? "false" : "true"\}"/);
   assert.match(source, /_renderHubHome\(config, summary, styles, accentColor, collapsed\)/);
+  assert.match(source, /\$\{this\._renderHubRoomIcon\(config\.icon, title, styles\)\}/);
+  assert.match(source, /\.room-hub__header--collapsed \.room-hub__room-icon \{ height:42px; width:42px; \}/);
   assert.match(source, /ed\.room_summary\.collapsible/);
 });
 

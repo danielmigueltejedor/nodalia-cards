@@ -70,6 +70,7 @@ test("published package files and bundle manifest stay coherent", () => {
     "nodalia-cards-2.0.0-alpha.22.js",
     "nodalia-cards-2.0.0-alpha.23.js",
     "nodalia-cards-2.0.0-alpha.24.js",
+    "nodalia-cards-2.0.0-alpha.25.js",
   ];
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));

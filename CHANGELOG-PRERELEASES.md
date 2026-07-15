@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.26] - 2026-07-15
+
+Twenty-sixth **`2.0.0`** **`alpha`**: a single, cleaner Room Summary Hub experience. Release channel **`2.0.0-alpha.26`**.
+
+### Changed
+
+- **Room Summary:** Hub is now the only supported layout; legacy layout values are migrated to Hub automatically, and the visual editor no longer exposes obsolete layout, density, or non-Hub typography controls.
+- **Room Summary compact Hub:** the room icon bubble remains visible beside the room name, status chips, quick controls, and expand button.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.26`; `2.0.0-alpha.25` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.25] - 2026-07-15
 
 Twenty-fifth **`2.0.0`** **`alpha`**: collapsible Room Summary Hub and reliable embedded media actions. Release channel **`2.0.0-alpha.25`**.
