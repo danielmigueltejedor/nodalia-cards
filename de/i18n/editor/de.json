@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "Noch keine Player hinzugefügt.",
   "ed.media_player.players_section_hint": "Jeden Player auf der Karte hinzufügen, sortieren und anpassen.",
   "ed.media_player.players_section_title": "Spieler",
+  "ed.media_player.invalid_json_object": "Enter a valid JSON object.",
   "ed.media_player.position_bottom": "Unten",
   "ed.media_player.position_top": "Spitze",
   "ed.media_player.power_action_active": "Ein-/Aus-Taste im eingeschalteten Zustand",
