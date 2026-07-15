@@ -385,7 +385,9 @@
     "entityUnavailable": "Indisponibil",
     "noRoomData": "Nu există date despre cameră",
     "humidifiers": "Umidificatoare",
-    "others": "Alţii"
+    "others": "Alţii",
+    "expandDetails": "Extinde detaliile camerei",
+    "collapseDetails": "Restrânge detaliile camerei"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

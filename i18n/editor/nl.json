@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Hoezen",
   "ed.room_summary.display_section_hint": "Kies welke samenvattingen op de kaart verschijnen.",
   "ed.room_summary.display_section_title": "Weergave",
+  "ed.room_summary.collapsible": "Inklapbare compacte Hub inschakelen",
   "ed.room_summary.doors_section_hint": "Deursensoren voor beveiligingslay-out.",
   "ed.room_summary.doors_section_title": "Deuren",
   "ed.room_summary.editor_title": "Kameroverzichtskaart",

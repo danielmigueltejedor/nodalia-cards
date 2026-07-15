@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Обложки",
   "ed.room_summary.display_section_hint": "Выберите, какие сводки будут отображаться на карточке.",
   "ed.room_summary.display_section_title": "Отображать",
+  "ed.room_summary.collapsible": "Включить сворачиваемый компактный Hub",
   "ed.room_summary.doors_section_hint": "Дверные датчики для охранной планировки.",
   "ed.room_summary.doors_section_title": "Двери",
   "ed.room_summary.editor_title": "Сводная карточка комнаты",

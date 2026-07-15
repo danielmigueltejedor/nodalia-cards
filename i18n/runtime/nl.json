@@ -385,7 +385,9 @@
     "entityUnavailable": "Niet beschikbaar",
     "noRoomData": "Geen kamergegevens",
     "humidifiers": "Luchtbevochtigers",
-    "others": "Anderen"
+    "others": "Anderen",
+    "expandDetails": "Kamerdetails uitklappen",
+    "collapseDetails": "Kamerdetails inklappen"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

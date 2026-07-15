@@ -607,7 +607,9 @@
         entityUnavailable: "Unavailable",
         noRoomData: "No room data",
         humidifiers: "Humidifiers",
-        others: "Others"
+        others: "Others",
+        expandDetails: "Expand room details",
+        collapseDetails: "Collapse room details"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -1562,7 +1564,9 @@
         entityUnavailable: "Nicht verfügbar",
         noRoomData: "Keine Raumdaten",
         humidifiers: "Luftbefeuchter",
-        others: "Andere"
+        others: "Andere",
+        expandDetails: "Raumdetails erweitern",
+        collapseDetails: "Raumdetails einklappen"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -2517,7 +2521,9 @@
         entityUnavailable: "Δυσεύρετος",
         noRoomData: "Δεν υπάρχουν δεδομένα δωματίου",
         humidifiers: "Υγραντήρες",
-        others: "Άλλοι"
+        others: "Άλλοι",
+        expandDetails: "Ανάπτυξη λεπτομερειών δωματίου",
+        collapseDetails: "Σύμπτυξη λεπτομερειών δωματίου"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -3472,7 +3478,9 @@
         entityUnavailable: "No disponible",
         noRoomData: "Sin datos de habitación",
         humidifiers: "Humidificadores",
-        others: "Otros"
+        others: "Otros",
+        expandDetails: "Ampliar detalles de la habitación",
+        collapseDetails: "Contraer detalles de la habitación"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -4427,7 +4435,9 @@
         entityUnavailable: "Indisponible",
         noRoomData: "Aucune donnée de chambre",
         humidifiers: "Humidificateurs",
-        others: "Autres"
+        others: "Autres",
+        expandDetails: "Développer les détails de la pièce",
+        collapseDetails: "Replier les détails de la pièce"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -5382,7 +5392,9 @@
         entityUnavailable: "Non disponibile",
         noRoomData: "Nessun dato sulla camera",
         humidifiers: "Umidificatori",
-        others: "Altri"
+        others: "Altri",
+        expandDetails: "Espandi dettagli stanza",
+        collapseDetails: "Comprimi dettagli stanza"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -6337,7 +6349,9 @@
         entityUnavailable: "Niet beschikbaar",
         noRoomData: "Geen kamergegevens",
         humidifiers: "Luchtbevochtigers",
-        others: "Anderen"
+        others: "Anderen",
+        expandDetails: "Kamerdetails uitklappen",
+        collapseDetails: "Kamerdetails inklappen"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -7292,7 +7306,9 @@
         entityUnavailable: "Utilgjengelig",
         noRoomData: "Ingen romdata",
         humidifiers: "Luftfuktere",
-        others: "Andre"
+        others: "Andre",
+        expandDetails: "Utvid romdetaljer",
+        collapseDetails: "Skjul romdetaljer"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -8247,7 +8263,9 @@
         entityUnavailable: "Indisponível",
         noRoomData: "Não há dados do quarto",
         humidifiers: "Umidificadores",
-        others: "Outros"
+        others: "Outros",
+        expandDetails: "Expandir detalhes da divisão",
+        collapseDetails: "Recolher detalhes da divisão"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -9202,7 +9220,9 @@
         entityUnavailable: "Indisponibil",
         noRoomData: "Nu există date despre cameră",
         humidifiers: "Umidificatoare",
-        others: "Alţii"
+        others: "Alţii",
+        expandDetails: "Extinde detaliile camerei",
+        collapseDetails: "Restrânge detaliile camerei"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -10157,7 +10177,9 @@
         entityUnavailable: "Недоступно",
         noRoomData: "Нет данных о комнате",
         humidifiers: "Увлажнители",
-        others: "Другие"
+        others: "Другие",
+        expandDetails: "Развернуть сведения о комнате",
+        collapseDetails: "Свернуть сведения о комнате"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",
@@ -11112,7 +11134,9 @@
         entityUnavailable: "不可用",
         noRoomData: "无房间数据",
         humidifiers: "加湿器",
-        others: "其他的"
+        others: "其他的",
+        expandDetails: "展开房间详情",
+        collapseDetails: "收起房间详情"
       },
       scenes: {
         emptyTitle: "Nodalia Scenes Card",

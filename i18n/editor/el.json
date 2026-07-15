@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Εξώφυλλα",
   "ed.room_summary.display_section_hint": "Επιλέξτε ποιες περιλήψεις εμφανίζονται στην κάρτα.",
   "ed.room_summary.display_section_title": "Επίδειξη",
+  "ed.room_summary.collapsible": "Ενεργοποίηση πτυσσόμενου συμπαγούς Hub",
   "ed.room_summary.doors_section_hint": "Αισθητήρες πόρτας για διάταξη ασφαλείας.",
   "ed.room_summary.doors_section_title": "Πόρτες",
   "ed.room_summary.editor_title": "Συνοπτική κάρτα δωματίου",

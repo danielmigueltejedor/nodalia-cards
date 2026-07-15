@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "封面",
   "ed.room_summary.display_section_hint": "选择卡片上显示的摘要。",
   "ed.room_summary.display_section_title": "展示",
+  "ed.room_summary.collapsible": "启用可折叠紧凑 Hub",
   "ed.room_summary.doors_section_hint": "用于安全布局的门传感器。",
   "ed.room_summary.doors_section_title": "门",
   "ed.room_summary.editor_title": "房间总结卡",

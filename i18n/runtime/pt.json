@@ -385,7 +385,9 @@
     "entityUnavailable": "Indisponível",
     "noRoomData": "Não há dados do quarto",
     "humidifiers": "Umidificadores",
-    "others": "Outros"
+    "others": "Outros",
+    "expandDetails": "Expandir detalhes da divisão",
+    "collapseDetails": "Recolher detalhes da divisão"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

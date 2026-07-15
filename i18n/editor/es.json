@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Persianas",
   "ed.room_summary.display_section_hint": "Elige qué resúmenes aparecen en la tarjeta.",
   "ed.room_summary.display_section_title": "Visualización",
+  "ed.room_summary.collapsible": "Activar Hub compacto desplegable",
   "ed.room_summary.doors_section_hint": "Sensores de puerta para layout de seguridad.",
   "ed.room_summary.doors_section_title": "Puertas",
   "ed.room_summary.editor_title": "Tarjeta de resumen de habitación",

@@ -5538,10 +5538,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     });
   }
 
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
   _setFieldValue(path, value) {
     const normalizedPath = String(path || "").trim();
     const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
@@ -5608,7 +5604,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     const nextValue = this._readFieldValue(input);
     this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
 
     if (event.type === "change") {
       this._emitConfig();
@@ -5639,7 +5634,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     if (field === "entity") {
       window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
     }
-    this._setEditorConfig();
     this._emitConfig();
   }
 

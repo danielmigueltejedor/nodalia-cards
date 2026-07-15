@@ -385,7 +385,9 @@
     "entityUnavailable": "Δυσεύρετος",
     "noRoomData": "Δεν υπάρχουν δεδομένα δωματίου",
     "humidifiers": "Υγραντήρες",
-    "others": "Άλλοι"
+    "others": "Άλλοι",
+    "expandDetails": "Ανάπτυξη λεπτομερειών δωματίου",
+    "collapseDetails": "Σύμπτυξη λεπτομερειών δωματίου"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

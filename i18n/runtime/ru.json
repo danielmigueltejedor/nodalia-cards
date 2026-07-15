@@ -385,7 +385,9 @@
     "entityUnavailable": "Недоступно",
     "noRoomData": "Нет данных о комнате",
     "humidifiers": "Увлажнители",
-    "others": "Другие"
+    "others": "Другие",
+    "expandDetails": "Развернуть сведения о комнате",
+    "collapseDetails": "Свернуть сведения о комнате"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

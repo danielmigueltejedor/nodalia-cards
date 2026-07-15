@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Copertine",
   "ed.room_summary.display_section_hint": "Scegli quali riepiloghi visualizzare sulla carta.",
   "ed.room_summary.display_section_title": "Display",
+  "ed.room_summary.collapsible": "Abilita Hub compatto comprimibile",
   "ed.room_summary.doors_section_hint": "Sensori per porte per layout di sicurezza.",
   "ed.room_summary.doors_section_title": "Porte",
   "ed.room_summary.editor_title": "Scheda riepilogativa della camera",

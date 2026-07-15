@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Acoperiri",
   "ed.room_summary.display_section_hint": "Alegeți ce rezumate apar pe card.",
   "ed.room_summary.display_section_title": "Afişa",
+  "ed.room_summary.collapsible": "Activează Hub-ul compact pliabil",
   "ed.room_summary.doors_section_hint": "Senzori de ușă pentru aspectul de securitate.",
   "ed.room_summary.doors_section_title": "Ușile",
   "ed.room_summary.editor_title": "Cardul de rezumat al camerei",

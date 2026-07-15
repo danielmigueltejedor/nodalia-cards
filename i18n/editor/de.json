@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Abdeckungen",
   "ed.room_summary.display_section_hint": "Wählen Sie aus, welche Zusammenfassungen auf der Karte angezeigt werden sollen.",
   "ed.room_summary.display_section_title": "Anzeige",
+  "ed.room_summary.collapsible": "Einklappbaren kompakten Hub aktivieren",
   "ed.room_summary.doors_section_hint": "Türsensoren für Sicherheitslayout.",
   "ed.room_summary.doors_section_title": "Türen",
   "ed.room_summary.editor_title": "Raumübersichtskarte",

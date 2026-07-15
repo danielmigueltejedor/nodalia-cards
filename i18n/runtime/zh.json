@@ -385,7 +385,9 @@
     "entityUnavailable": "不可用",
     "noRoomData": "无房间数据",
     "humidifiers": "加湿器",
-    "others": "其他的"
+    "others": "其他的",
+    "expandDetails": "展开房间详情",
+    "collapseDetails": "收起房间详情"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

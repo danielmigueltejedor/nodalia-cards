@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Couvertures",
   "ed.room_summary.display_section_hint": "Choisissez les résumés qui apparaissent sur la carte.",
   "ed.room_summary.display_section_title": "Afficher",
+  "ed.room_summary.collapsible": "Activer le Hub compact repliable",
   "ed.room_summary.doors_section_hint": "Capteurs de porte pour aménagement de sécurité.",
   "ed.room_summary.doors_section_title": "Portes",
   "ed.room_summary.editor_title": "Carte récapitulative de la pièce",

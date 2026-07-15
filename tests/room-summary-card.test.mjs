@@ -44,7 +44,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
-  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.24"/)?.length, 1);
+  assert.equal(source.match(/CARD_VERSION = "2\.0\.0-alpha\.25"/)?.length, 1);
 });
 
 test("room summary renders empty state without entities", () => {
@@ -302,6 +302,23 @@ test("room summary hub protects the full room name and top-aligns sparse panels"
   assert.match(source, /\.room-hub__embed-list \{ align-content:start;/);
   assert.match(source, /\.room-hub__panel \{ align-content:start; display:grid;/);
   assert.match(source, /\.room-hub__status-chips \{[\s\S]*justify-content:flex-start;[\s\S]*width:100%;/);
+});
+
+test("room summary hub supports a collapsible compact mode", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const normalized = rs.normalizeConfig({ layout: "hub", collapsible: true });
+
+  assert.equal(normalized.collapsible, true);
+  assert.match(source, /collapsible: false/);
+  assert.match(source, /this\._hubExpanded = false/);
+  assert.match(source, /collapsible === true && this\._hubExpanded !== true \? 2 : 4/);
+  assert.match(source, /action === "toggle-hub-expand"/);
+  assert.match(source, /const renderedPanels = collapsed \? \["home"\]/);
+  assert.match(source, /!collapsed && navItems\.length/);
+  assert.match(source, /collapsed \? "mdi:chevron-down" : "mdi:chevron-up"/);
+  assert.match(source, /aria-expanded="\$\{collapsed \? "false" : "true"\}"/);
+  assert.match(source, /_renderHubHome\(config, summary, styles, accentColor, collapsed\)/);
+  assert.match(source, /ed\.room_summary\.collapsible/);
 });
 
 test("room summary editor emits valid config and preserves unknown fields", () => {

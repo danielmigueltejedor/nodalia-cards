@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.25] - 2026-07-15
+
+Twenty-fifth **`2.0.0`** **`alpha`**: collapsible Room Summary Hub and reliable embedded media actions. Release channel **`2.0.0-alpha.25`**.
+
+### Added
+
+- **Room Summary Hub:** optional collapsible compact mode keeps the room name, temperature, humidity, occupancy, and contextual quick controls visible while hiding the navigation rail, embedded media player, and detail panels until expanded.
+- **Room Summary editor:** visual toggle for the collapsible compact Hub mode.
+
+### Fixed
+
+- **Embedded Media Player editor:** service-data JSON drafts are preserved until the field change is committed, so leaving the field no longer clears valid action data.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.25`; `2.0.0-alpha.24` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.24] - 2026-07-15
 
 Twenty-fourth **`2.0.0`** **`alpha`**: clearer Room Summary state and hierarchy. Release channel **`2.0.0-alpha.24`**.

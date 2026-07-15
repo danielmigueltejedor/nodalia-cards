@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Dekker",
   "ed.room_summary.display_section_hint": "Velg hvilke sammendrag som skal vises på kortet.",
   "ed.room_summary.display_section_title": "Utstilling",
+  "ed.room_summary.collapsible": "Aktiver sammenleggbar kompakt Hub",
   "ed.room_summary.doors_section_hint": "Dørsensorer for sikkerhetsoppsett.",
   "ed.room_summary.doors_section_title": "Dører",
   "ed.room_summary.editor_title": "Romsammendragskort",

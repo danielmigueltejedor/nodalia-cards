@@ -275,6 +275,20 @@ test("media player editor keeps player row when entity is cleared", () => {
   assert.match(source, /return this\._getConfiguredPlayers\(\)\.filter\(player => \{[\s\S]*!player\?\.entity/);
 });
 
+test("media player editor preserves nested service data drafts until change commit", () => {
+  const source = read("nodalia-media-player.js");
+  const inputStart = source.lastIndexOf("  _onShadowInput(event)");
+  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowValueChanged(event)", inputStart));
+  const valueStart = source.indexOf("  _onShadowValueChanged(event)", inputStart);
+  const valueBlock = source.slice(valueStart, source.indexOf("\n  _onShadowClick(event)", valueStart));
+
+  assert.match(inputBlock, /this\._setFieldValue\(input\.dataset\.field, nextValue\)/);
+  assert.match(inputBlock, /if \(event\.type === "change"\) \{[\s\S]*this\._emitConfig\(\)/);
+  assert.doesNotMatch(inputBlock, /normalizeConfig|_setEditorConfig/);
+  assert.doesNotMatch(valueBlock, /normalizeConfig|_setEditorConfig/);
+  assert.doesNotMatch(source, /_setEditorConfig\(\)/);
+});
+
 test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /const mediaToggleBackgroundBase = sanitizeCssRuntimeValue\(config\.styles\.media_player\.background\)[\s\S]*"var\(--ha-card-background, var\(--card-background-color\)\)"/);

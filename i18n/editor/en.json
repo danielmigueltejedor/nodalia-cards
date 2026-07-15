@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Covers",
   "ed.room_summary.display_section_hint": "Choose which summaries appear on the card.",
   "ed.room_summary.display_section_title": "Display",
+  "ed.room_summary.collapsible": "Enable collapsible compact Hub",
   "ed.room_summary.doors_section_hint": "Door sensors for security layout.",
   "ed.room_summary.doors_section_title": "Doors",
   "ed.room_summary.editor_title": "Room Summary Card",

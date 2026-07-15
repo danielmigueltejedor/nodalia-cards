@@ -385,7 +385,9 @@
     "entityUnavailable": "Utilgjengelig",
     "noRoomData": "Ingen romdata",
     "humidifiers": "Luftfuktere",
-    "others": "Andre"
+    "others": "Andre",
+    "expandDetails": "Utvid romdetaljer",
+    "collapseDetails": "Skjul romdetaljer"
   },
   "scenes": {
     "emptyTitle": "Nodalia Scenes Card",

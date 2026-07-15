@@ -1044,6 +1044,7 @@
   "ed.room_summary.covers_section_title": "Capas",
   "ed.room_summary.display_section_hint": "Escolha quais resumos aparecem no cartão.",
   "ed.room_summary.display_section_title": "Mostrar",
+  "ed.room_summary.collapsible": "Ativar Hub compacto recolhível",
   "ed.room_summary.doors_section_hint": "Sensores de porta para layout de segurança.",
   "ed.room_summary.doors_section_title": "Portas",
   "ed.room_summary.editor_title": "Cartão de resumo da divisão",
