@@ -493,6 +493,7 @@
   "ed.media_player.players_empty": "尚未添加任何播放器。",
   "ed.media_player.players_section_hint": "添加、排序并自定义卡片上显示的每个播放器。",
   "ed.media_player.players_section_title": "播放器",
+  "ed.media_player.invalid_json_object": "Enter a valid JSON object.",
   "ed.media_player.position_bottom": "底部",
   "ed.media_player.position_top": "顶部",
   "ed.media_player.power_action_active": "开启时的电源按钮",
