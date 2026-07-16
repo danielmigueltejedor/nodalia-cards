@@ -1814,5 +1814,6 @@ test("notifications card drains pending foreground mobile queue in batches", () 
   assert.match(source, /_enqueueMobileNotifications/);
   assert.match(source, /_scheduleMobileNotifyDrain/);
   assert.match(source, /this\._mobileNotifyQueue\.splice\(0, 4\)/);
+  assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._flushMobileNotifications\(batch\)\)[\s\S]*\.catch\(error =>/);
   assert.match(source, /if \(this\._mobileNotifyQueue\.length\) \{[\s\S]*_scheduleMobileNotifyDrain/);
 });

@@ -15,6 +15,7 @@ function loadCameraHelpers() {
       normalizeConfig,
       normalizeCameras,
       normalizeExpandedActions,
+      parseServiceData,
       DEFAULT_CONFIG,
       LAYOUT_MODES,
       MAX_CAMERAS,
@@ -106,6 +107,16 @@ test("camera normalizeExpandedActions keeps action entities", () => {
   assert.equal(config.expanded_actions[1].tap_service, "lock.open");
 });
 
+test("camera service data accepts YAML objects and JSON strings", () => {
+  const yamlObject = { entity_id: "switch.proyector_2" };
+  assert.equal(helpers.parseServiceData(yamlObject), yamlObject);
+  assert.equal(
+    helpers.parseServiceData('{"entity_id":"input_boolean.media_power"}').entity_id,
+    "input_boolean.media_power",
+  );
+  assert.deepEqual(Object.keys(helpers.parseServiceData("{invalid")), []);
+});
+
 test("camera card renders mosaic markup for multiple cameras", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /camera-card__mosaic--three/);
@@ -127,6 +138,8 @@ test("camera card handles unavailable state and snapshot fallback", () => {
   assert.match(source, /camera_proxy/);
   assert.match(source, /entity_picture/);
   assert.match(source, /_failedImageUrls/);
+  assert.match(source, /const src = node\.getAttribute\("src"\)/);
+  assert.doesNotMatch(source, /_failedImageUrls\.add\(node\.src\)/);
   assert.match(source, /camera-card__placeholder/);
 });
 

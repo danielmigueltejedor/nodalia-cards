@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { restoreProtectedTranslationValues } from "./translation-token-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -163,11 +164,7 @@ async function gtxTranslate(text, lang) {
         }
       }
       if (!out) return text;
-      for (const { token, value } of protectedValues) {
-        if (!out.includes(token)) return text;
-        out = out.replaceAll(token, value);
-      }
-      return out;
+      return restoreProtectedTranslationValues(out, protectedValues) ?? text;
     } catch (e) {
       lastErr = e;
       await new Promise(r => setTimeout(r, 400 * attempt));

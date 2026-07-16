@@ -100,12 +100,12 @@ automation:
       - choose:
           - conditions:
               - condition: template
-                value_template: "{{ chunk_count > 40 }}"
+                value_template: "{{ chunk_count | int > 40 }}"
             sequence:
               - stop: "Rejected background mobile payload: chunk_count {{ chunk_count }} exceeds 40"
           - conditions:
               - condition: template
-                value_template: "{{ chunk_count < 1 }}"
+                value_template: "{{ chunk_count | int < 1 }}"
             sequence:
               - stop: "Rejected background mobile payload: empty chunk list"
         default:
@@ -116,7 +116,7 @@ automation:
                   target:
                     entity_id: "input_text.nodalia_notifications_background_config_{{ '%02d' | format(repeat.index) }}"
                   data:
-                    value: "{{ chunks[repeat.index - 1] if chunk_count >= repeat.index else '' }}"
+                    value: "{{ chunks[repeat.index - 1] if chunk_count | int >= repeat.index else '' }}"
           - action: input_text.set_value
             target:
               entity_id: input_text.nodalia_notifications_background_last_hash

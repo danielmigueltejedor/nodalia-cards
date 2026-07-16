@@ -185,6 +185,9 @@ function parseServiceData(rawValue) {
   if (!rawValue) {
     return {};
   }
+  if (isObject(rawValue)) {
+    return rawValue;
+  }
   try {
     const parsed = JSON.parse(rawValue);
     return isObject(parsed) ? parsed : {};
@@ -1477,8 +1480,9 @@ class NodaliaCameraCard extends HTMLElement {
         return;
       }
       node.addEventListener("error", () => {
-        if (node.src) {
-          this._failedImageUrls.add(node.src);
+        const src = node.getAttribute("src");
+        if (src) {
+          this._failedImageUrls.add(src);
           this._lastRenderSignature = "";
           this._render();
         }

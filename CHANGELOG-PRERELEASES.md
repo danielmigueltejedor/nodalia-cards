@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.28] - 2026-07-16
+
+Twenty-eighth **`2.0.0`** **`alpha`**: published editor JSON fixes and review hardening. Release channel **`2.0.0-alpha.28`**.
+
+### Fixed
+
+- **Room Summary embedded Media Player editor:** publishes the structured `service_data` JSON editing and validation work prepared in alpha.27, which was not released as a GitHub prerelease.
+- **Notifications background package:** casts templated `chunk_count` values to integers before numeric comparisons, preventing Home Assistant template type errors.
+- **Camera actions:** accepts service data already supplied as YAML objects instead of discarding it during JSON parsing.
+- **Camera image fallback:** records the original image `src` attribute after load failures, preventing relative and absolute URL mismatches from triggering repeated render attempts.
+- **Notifications mobile queue:** synchronous batch-delivery failures are converted to handled promise rejections so pending notifications continue draining.
+- **Translation tooling:** protected placeholders survive case changes and whitespace inserted by Google Translate instead of silently falling back to English.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.28`; `2.0.0-alpha.27` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.27] - 2026-07-15
 
 Twenty-seventh **`2.0.0`** **`alpha`**: reliable JSON service actions in the Room Summary media editor. Release channel **`2.0.0-alpha.27`**.

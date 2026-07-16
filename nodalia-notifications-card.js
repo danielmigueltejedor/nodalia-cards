@@ -3027,11 +3027,16 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (!batch.length) {
         return;
       }
-      Promise.resolve(this._flushMobileNotifications(batch)).finally(() => {
-        if (this._mobileNotifyQueue.length) {
-          this._scheduleMobileNotifyDrain();
-        }
-      });
+      Promise.resolve()
+        .then(() => this._flushMobileNotifications(batch))
+        .catch(error => {
+          console.warn("Nodalia Notifications Card: mobile notification batch failed.", error);
+        })
+        .finally(() => {
+          if (this._mobileNotifyQueue.length) {
+            this._scheduleMobileNotifyDrain();
+          }
+        });
     }, 450);
   }
 
