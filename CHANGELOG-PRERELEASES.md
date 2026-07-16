@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.29] - 2026-07-16
+
+Twenty-ninth **`2.0.0`** **`alpha`**: stable embedded controls and unified Hub bubbles. Release channel **`2.0.0-alpha.29`**.
+
+### Fixed
+
+- **Room Summary Hub embeds:** Home Assistant state updates patch the Hub in place instead of replacing its complete shadow DOM, so embedded light, fan, humidifier, vacuum, entity, and media cards remain mounted while their state changes.
+- **Room Summary Hub embeds:** embedded card configuration is applied only when it actually changes and before the new `hass` state, avoiding redundant double renders when toggling a device.
+- **Room Summary Hub updates:** attribute-only changes use `last_updated`, keeping sliders, percentages, and other embedded state current without rebuilding the surrounding Hub.
+
+### Changed
+
+- **Room Summary Hub controls:** temperature, humidity, occupancy, and smart quick actions now use the same raised circular bubble treatment as the right navigation rail; quick actions default to the matching 42px size.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.29`; `2.0.0-alpha.28` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.28] - 2026-07-16
 
 Twenty-eighth **`2.0.0`** **`alpha`**: published editor JSON fixes and review hardening. Release channel **`2.0.0-alpha.28`**.

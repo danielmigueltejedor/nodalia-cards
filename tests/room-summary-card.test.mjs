@@ -254,6 +254,7 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="media"/);
   assert.match(source, /_mountHubEmbeddedCards/);
   assert.match(source, /_hubEmbedCache = new Map/);
+  assert.match(source, /_hubEmbedConfigSignatures = new WeakMap/);
   assert.match(source, /_activateHubPanel\(next\)/);
   assert.match(source, /data-hub-panel=/);
   assert.match(source, /view\.hidden = !active/);
@@ -276,6 +277,29 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.doesNotMatch(source, /room-hub__hero/);
 });
 
+test("room summary patches Hub state without remounting embedded cards", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const patchStart = source.indexOf("\n  _patchHubState() {");
+  const patchEnd = source.indexOf("\n  _toggleEntity(", patchStart);
+  const patchBlock = source.slice(patchStart, patchEnd);
+  const mountStart = source.indexOf("\n  _mountHubEmbeddedCards() {");
+  const mountEnd = source.indexOf("\n  _renderHubEmbedHosts(", mountStart);
+  const mountBlock = source.slice(mountStart, mountEnd);
+
+  assert.match(source, /if \(prev && this\._patchHubState\(\)\) return;/);
+  assert.match(patchBlock, /header\.outerHTML = this\._renderHubHeader/);
+  assert.match(patchBlock, /contextActions\.innerHTML = this\._renderHubContextActions/);
+  assert.match(patchBlock, /this\._mountHubEmbeddedCards\(\)/);
+  assert.doesNotMatch(patchBlock, /shadowRoot\.innerHTML\s*=/);
+  assert.match(mountBlock, /const configSignature = JSON\.stringify\(cardConfig\)/);
+  assert.match(mountBlock, /_hubEmbedConfigSignatures\.get\(card\) !== configSignature/);
+  assert.ok(
+    mountBlock.indexOf("card.setConfig(cardConfig)") < mountBlock.indexOf("card.hass = this._hass"),
+    "embedded card config should settle before hass triggers its render",
+  );
+  assert.match(source, /state\.last_updated \|\| state\.last_changed/);
+});
+
 test("room summary hub uses stable control icons and active tint classes", () => {
   const source = read("nodalia-room-summary-card.js");
   const navBlock = source.slice(source.indexOf("_getHubNavItems"), source.indexOf("_getContextualActions"));
@@ -285,6 +309,17 @@ test("room summary hub uses stable control icons and active tint classes", () =>
   assert.doesNotMatch(contextualBlock, /mdi:(lightbulb-off|lightbulb-on|fan-off|window-shutter-open)/);
   assert.match(source, /item\.active === true/);
   assert.match(source, /room-hub__context-action--active/);
+});
+
+test("room summary status chips and smart actions use raised bubble styling", () => {
+  const source = read("nodalia-room-summary-card.js");
+
+  assert.match(source, /context_action_size: "42px"/);
+  assert.match(source, /context_action_icon_size: "20px"/);
+  assert.match(source, /\.room-hub__metric-bubble \{[\s\S]*box-shadow:inset 0 1px 0[\s\S]*0 8px 18px/);
+  assert.match(source, /\.room-hub__context-action \{[\s\S]*box-shadow:inset 0 1px 0[\s\S]*0 10px 24px/);
+  assert.match(source, /data-hub-context-actions/);
+  assert.match(source, /\.room-hub__context-actions\[hidden\] \{ display:none; \}/);
 });
 
 test("room summary hub protects the full room name and top-aligns sparse panels", () => {

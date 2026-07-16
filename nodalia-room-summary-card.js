@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.28";
+const CARD_VERSION = "2.0.0-alpha.29";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -100,8 +100,8 @@ const DEFAULT_CONFIG = {
       metric_chip_height: "24px",
       metric_chip_padding: "0 8px",
       metric_chip_icon_size: "13px",
-      context_action_size: "34px",
-      context_action_icon_size: "18px",
+      context_action_size: "42px",
+      context_action_icon_size: "20px",
       embed_title_size: "11px",
       embed_chip_font_size: "10px",
       embed_chip_height: "22px",
@@ -536,6 +536,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._activePanel = "home";
     this._hubExpanded = false;
     this._hubEmbedCache = new Map();
+    this._hubEmbedConfigSignatures = new WeakMap();
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
   }
@@ -552,6 +553,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this.shadowRoot?.removeEventListener("input", this._onShadowInput);
     this._lastRenderSignature = "";
     this._hubEmbedCache?.clear();
+    this._hubEmbedConfigSignatures = new WeakMap();
   }
 
   setConfig(config) {
@@ -560,6 +562,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._hubEmbedCache?.clear();
+    this._hubEmbedConfigSignatures = new WeakMap();
     if (this.isConnected) this._render();
   }
 
@@ -570,6 +573,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const sig = this._getRenderSignature(hass);
     if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) return;
     this._lastRenderSignature = sig;
+    if (prev && this._patchHubState()) return;
     this._render();
   }
 
@@ -596,7 +600,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     ].filter(Boolean);
     const states = ids.map(id => {
       const state = hass?.states?.[id];
-      return state ? `${id}:${state.state}:${state.last_changed}` : `${id}:missing`;
+      return state ? `${id}:${state.state}:${state.last_updated || state.last_changed}` : `${id}:missing`;
     }).join("|");
     return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${JSON.stringify(config)}`;
   }
@@ -803,6 +807,46 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const rail = this.shadowRoot.querySelector(".room-hub__rail");
     if (rail) rail.outerHTML = this._renderHubRail(navItems, panel);
     this._lastRenderSignature = this._getRenderSignature(this._hass);
+    return true;
+  }
+
+  _patchHubState() {
+    if (!this.shadowRoot?.querySelector("ha-card.room-summary-card--hub")) return false;
+    const config = normalizeConfig(this._config || {});
+    const summary = buildRoomSummary(this._hass, config);
+    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const collapsible = config.collapsible === true;
+    const collapsed = collapsible && this._hubExpanded !== true;
+    const activePanel = collapsed ? "home" : HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
+    const navItems = this._getHubNavItems(config, summary);
+    const header = this.shadowRoot.querySelector(".room-hub__header");
+    const contextActions = this.shadowRoot.querySelector("[data-hub-context-actions]");
+    if (!header || !contextActions) return false;
+
+    header.outerHTML = this._renderHubHeader(config, summary, styles, collapsed);
+    const contextual = this._getContextualActions(summary, config);
+    contextActions.innerHTML = this._renderHubContextActions(contextual);
+    contextActions.hidden = contextual.length === 0;
+
+    const rail = this.shadowRoot.querySelector(".room-hub__rail");
+    if (!collapsed && navItems.length) {
+      if (!rail) return false;
+      rail.outerHTML = this._renderHubRail(navItems, activePanel);
+    } else {
+      rail?.remove();
+    }
+
+    const patchPanel = (panel, markup) => {
+      const view = this.shadowRoot.querySelector(`[data-hub-panel="${panel}"]`);
+      if (view) view.innerHTML = markup;
+    };
+    if (config.covers?.length) {
+      patchPanel("covers", this._renderHubCoverPanel(config));
+    }
+    if (config.climate) {
+      patchPanel("climate", this._renderHubClimatePanel(config));
+    }
+    this._mountHubEmbeddedCards();
     return true;
   }
 
@@ -1096,8 +1140,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
 
   _renderHubHomeMedia(config) {
     if (!config.media_player || config.show_media === false) return "";
-    const state = getState(this._hass, config.media_player);
-    if (!state || isUnavailable(state)) return "";
     return `<div class="room-hub__embed-host room-hub__embed-host--media" data-hub-embed="media" data-hub-slot="home" data-entity="${escapeHtml(config.media_player)}"></div>`;
   }
 
@@ -1215,8 +1257,13 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       if (card.parentElement !== host) {
         host.replaceChildren(card);
       }
+      const cardConfig = { entity: entityId, ...pack, ...extra, ...this._hubEmbedCustomization(config, host) };
+      const configSignature = JSON.stringify(cardConfig);
+      if (this._hubEmbedConfigSignatures.get(card) !== configSignature) {
+        card.setConfig(cardConfig);
+        this._hubEmbedConfigSignatures.set(card, configSignature);
+      }
       if (this._hass) card.hass = this._hass;
-      card.setConfig({ entity: entityId, ...pack, ...extra, ...this._hubEmbedCustomization(config, host) });
     };
 
     this.shadowRoot.querySelectorAll('[data-hub-embed="light"]').forEach(host => {
@@ -1380,14 +1427,20 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const homeClass = image ? "room-hub__home room-hub__home--image" : "room-hub__home";
     const homeStyle = image ? ` style="--room-hub-bg-image:url('${escapeHtml(image)}')"` : "";
     return `<div class="${homeClass}"${homeStyle}>
-      ${contextual.length ? `<div class="room-hub__context-actions">${contextual.map(action => `
-        <button type="button" class="room-hub__context-action ${action.active ? "room-hub__context-action--active" : ""} ${action.warn ? "room-hub__context-action--warn" : ""}"
-          data-room-action="quick:${escapeHtml(action.id)}"
-          aria-label="${escapeHtml(action.label)}" title="${escapeHtml(action.label)}">
-          <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
-        </button>`).join("")}</div>` : ""}
+      <div class="room-hub__context-actions" data-hub-context-actions${contextual.length ? "" : " hidden"}>
+        ${this._renderHubContextActions(contextual)}
+      </div>
       ${collapsed ? "" : this._renderHubHomeMedia(config)}
     </div>`;
+  }
+
+  _renderHubContextActions(contextual) {
+    return contextual.map(action => `
+      <button type="button" class="room-hub__context-action ${action.active ? "room-hub__context-action--active" : ""} ${action.warn ? "room-hub__context-action--warn" : ""}"
+        data-room-action="quick:${escapeHtml(action.id)}"
+        aria-label="${escapeHtml(action.label)}" title="${escapeHtml(action.label)}">
+        <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
+      </button>`).join("");
   }
 
   _renderHubLightPanel(config) {
@@ -1586,9 +1639,10 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__room-title { font-size:${styles.title_size}; font-weight:700; line-height:1.2; min-width:0; overflow-wrap:anywhere; width:100%; }
         .room-hub__status-chips { align-items:center; display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-start; min-width:0; width:100%; }
         .room-hub__metric-bubble {
-          align-items:center; appearance:none; border:1px solid transparent; border-radius:999px; cursor:pointer;
+          align-items:center; appearance:none; border:1px solid transparent; border-radius:999px;
+          box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent), 0 8px 18px rgba(0,0,0,0.13); cursor:pointer;
           display:inline-flex; font:inherit; font-size:${hubMetricFont}; font-weight:700; gap:4px; line-height:1; min-height:${hubMetricHeight}; padding:${hubMetricPadding};
-          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         .room-hub__metric-bubble ha-icon { --mdc-icon-size:${hubMetricIcon}; flex:0 0 auto; }
         .room-hub__metric-bubble--icon-only { justify-content:center; min-width:${hubMetricHeight}; padding:0; width:${hubMetricHeight}; }
@@ -1613,12 +1667,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           color:var(--secondary-text-color);
         }
-        .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:6px; }
+        .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:8px; }
+        .room-hub__context-actions[hidden] { display:none; }
         .room-hub__context-action {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
+          box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,0.14);
           cursor:pointer; display:inline-flex; font:inherit; height:${hubActionSize}; justify-content:center; padding:0; width:${hubActionSize};
-          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease;
+          transition:transform 150ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
         .room-hub__context-action ha-icon { --mdc-icon-size:${hubActionIcon}; }
         .room-hub__context-action:active { transform:scale(0.96); }
