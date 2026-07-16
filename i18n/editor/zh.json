@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "消除",
   "ed.camera.select_entity": "相机实体",
   "ed.camera.show_last_changed": "显示最后更改",
+  "ed.camera.show_preview_age": "显示预览图像时长",
   "ed.camera.show_name": "显示名称",
   "ed.camera.show_state": "显示状态",
   "ed.camera.show_status_chips": "显示状态芯片",

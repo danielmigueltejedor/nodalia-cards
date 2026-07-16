@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.30] - 2026-07-16
+
+Thirtieth **`2.0.0`** **`alpha`**: native camera preview age bubbles. Release channel **`2.0.0-alpha.30`**.
+
+### Added
+
+- **Camera preview:** a semitransparent Nodalia bubble in the lower-left corner shows the relative age of the native preview image using the same `last_updated` timestamp that refreshes its URL.
+- **Camera mosaic:** every camera preview receives its own localized age bubble.
+- **Camera editor:** `show_preview_age` controls the bubble from the visual editor and is translated across all 12 supported editor languages.
+
+### Changed
+
+- **Camera preview age:** the relative label refreshes every 15 seconds by updating only its text, without re-rendering or reloading the camera image.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.30`; `2.0.0-alpha.29` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.29] - 2026-07-16
 
 Twenty-ninth **`2.0.0`** **`alpha`**: stable embedded controls and unified Hub bubbles. Release channel **`2.0.0-alpha.29`**.

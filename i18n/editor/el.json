@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "Αφαιρώ",
   "ed.camera.select_entity": "Οντότητα κάμερας",
   "ed.camera.show_last_changed": "Εμφάνιση τελευταίας αλλαγής",
+  "ed.camera.show_preview_age": "Εμφάνιση ηλικίας προεπισκόπησης",
   "ed.camera.show_name": "Εμφάνιση ονόματος",
   "ed.camera.show_state": "Εμφάνιση κατάστασης",
   "ed.camera.show_status_chips": "Εμφάνιση τσιπ κατάστασης",

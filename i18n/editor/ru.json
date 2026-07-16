@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "Удалять",
   "ed.camera.select_entity": "Объект камеры",
   "ed.camera.show_last_changed": "Показать последнее изменение",
+  "ed.camera.show_preview_age": "Показывать возраст предпросмотра",
   "ed.camera.show_name": "Показать имя",
   "ed.camera.show_state": "Показать состояние",
   "ed.camera.show_status_chips": "Показать чипы статуса",

@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "Retirer",
   "ed.camera.select_entity": "Entité caméra",
   "ed.camera.show_last_changed": "Afficher la dernière modification",
+  "ed.camera.show_preview_age": "Afficher l’âge de l’aperçu",
   "ed.camera.show_name": "Afficher le nom",
   "ed.camera.show_state": "Afficher l'état",
   "ed.camera.show_status_chips": "Afficher les puces d'état",

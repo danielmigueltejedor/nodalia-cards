@@ -16,6 +16,7 @@ function loadCameraHelpers() {
       normalizeCameras,
       normalizeExpandedActions,
       parseServiceData,
+      formatRelativeAge,
       DEFAULT_CONFIG,
       LAYOUT_MODES,
       MAX_CAMERAS,
@@ -117,12 +118,27 @@ test("camera service data accepts YAML objects and JSON strings", () => {
   assert.deepEqual(Object.keys(helpers.parseServiceData("{invalid")), []);
 });
 
+test("camera preview age formats the native image timestamp relatively", () => {
+  const now = Date.UTC(2026, 6, 16, 12, 0, 0);
+  const twoMinutesAgo = new Date(now - 120000).toISOString();
+  const label = helpers.formatRelativeAge(twoMinutesAgo, "en", now);
+
+  assert.match(label, /2/);
+  assert.match(label, /min/i);
+  assert.ok(helpers.formatRelativeAge(new Date(now).toISOString(), "es", now));
+  assert.equal(helpers.formatRelativeAge("invalid", "en", now), "");
+  assert.equal(helpers.normalizeConfig({ entity: "camera.entrada" }).show_preview_age, true);
+  assert.equal(helpers.normalizeConfig({ entity: "camera.entrada", show_preview_age: false }).show_preview_age, false);
+});
+
 test("camera card renders mosaic markup for multiple cameras", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /camera-card__mosaic--three/);
   assert.match(source, /camera-card__mosaic--four/);
   assert.match(source, /camera-card__expanded-actions/);
   assert.match(source, /presentation/);
+  assert.match(source, /data-camera-preview-age/);
+  assert.match(source, /data-camera-entity="\$\{escapeHtml\(entityId\)\}"/);
 });
 
 test("camera card renders empty state without throwing when entity is missing", () => {
@@ -169,6 +185,22 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /bindEditorDialogLayoutFix/);
   assert.match(source, /ed\.camera\.layout_live/);
+  assert.match(source, /ed\.camera\.show_preview_age/);
+});
+
+test("camera preview age bubble updates without re-rendering the image", () => {
+  const source = read("nodalia-camera-card.js");
+  const updateStart = source.indexOf("\n  _updatePreviewAgeBubbles() {");
+  const updateEnd = source.indexOf("\n  _schedulePreviewAgeRefresh() {", updateStart);
+  const updateBlock = source.slice(updateStart, updateEnd);
+
+  assert.match(source, /\.camera-card__preview-age \{[\s\S]*background: rgba\(0, 0, 0, 0\.34\)/);
+  assert.match(source, /\.camera-card__preview-age \{[\s\S]*bottom: 12px;[\s\S]*left: 12px;/);
+  assert.match(source, /this\._previewAgeTimer = window\.setTimeout/);
+  assert.match(source, /}, 15000\)/);
+  assert.match(updateBlock, /node\.textContent = label/);
+  assert.doesNotMatch(updateBlock, /this\._render\(\)/);
+  assert.match(source, /disconnectedCallback\(\) \{[\s\S]*this\._clearPreviewAgeTimer\(\)/);
 });
 
 test("camera card uses runtime i18n pack for states and expanded controls", () => {

@@ -1,6 +1,6 @@
 export default {
-  "pkgVersion": "2.0.0-alpha.29",
-  "contentSha256_12": "f65512ec6139",
+  "pkgVersion": "2.0.0-alpha.30",
+  "contentSha256_12": "26299307a7b3",
   "file": "nodalia-cards.bundle.js",
   "loaderFile": "nodalia-cards.js",
   "hacsFile": "nodalia-cards.js",
@@ -37,15 +37,16 @@ export default {
     "nodalia-cards-2.0.0-alpha.25.js",
     "nodalia-cards-2.0.0-alpha.26.js",
     "nodalia-cards-2.0.0-alpha.27.js",
-    "nodalia-cards-2.0.0-alpha.28.js"
+    "nodalia-cards-2.0.0-alpha.28.js",
+    "nodalia-cards-2.0.0-alpha.29.js"
   ],
-  "splitCoreFile": "nodalia-cards-core-2.0.0-alpha.29.js",
-  "splitCoreSha256_12": "aab4782b40fc",
-  "splitSuiteFile": "nodalia-cards-suite-2.0.0-alpha.29.js",
-  "splitSuiteSha256_12": "b0d20004f92d"
+  "splitCoreFile": "nodalia-cards-core-2.0.0-alpha.30.js",
+  "splitCoreSha256_12": "1f7032c4e6c9",
+  "splitSuiteFile": "nodalia-cards-suite-2.0.0-alpha.30.js",
+  "splitSuiteSha256_12": "2f7f71ce30fb"
 };
-export const pkgVersion = "2.0.0-alpha.29";
-export const contentSha256_12 = "f65512ec6139";
+export const pkgVersion = "2.0.0-alpha.30";
+export const contentSha256_12 = "26299307a7b3";
 export const file = "nodalia-cards.bundle.js";
-export const splitCoreFile = "nodalia-cards-core-2.0.0-alpha.29.js";
-export const splitSuiteFile = "nodalia-cards-suite-2.0.0-alpha.29.js";
+export const splitCoreFile = "nodalia-cards-core-2.0.0-alpha.30.js";
+export const splitSuiteFile = "nodalia-cards-suite-2.0.0-alpha.30.js";

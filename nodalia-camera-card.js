@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.4";
+const CARD_VERSION = "2.0.0-alpha.30";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
@@ -18,6 +18,7 @@ const DEFAULT_CONFIG = {
   show_state: false,
   show_status_chips: false,
   show_last_changed: false,
+  show_preview_age: true,
   expanded_actions: [],
   tap_action: "toggle",
   tap_service: "",
@@ -179,6 +180,38 @@ function appendQueryParam(url, key, value) {
   }
   const separator = safeUrl.includes("?") ? "&" : "?";
   return `${safeUrl}${separator}${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+}
+
+function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
+  const value = new Date(timestamp || "").getTime();
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+  const elapsedSeconds = Math.max(0, Math.floor((Number(now) - value) / 1000));
+  let amount = 0;
+  let unit = "second";
+  if (elapsedSeconds >= 86400) {
+    amount = Math.max(1, Math.floor(elapsedSeconds / 86400));
+    unit = "day";
+  } else if (elapsedSeconds >= 3600) {
+    amount = Math.max(1, Math.floor(elapsedSeconds / 3600));
+    unit = "hour";
+  } else if (elapsedSeconds >= 60) {
+    amount = Math.max(1, Math.floor(elapsedSeconds / 60));
+    unit = "minute";
+  } else if (elapsedSeconds >= 45) {
+    amount = elapsedSeconds;
+  }
+  try {
+    return new Intl.RelativeTimeFormat(locale || "en", {
+      numeric: "auto",
+      style: "short",
+    }).format(-amount, unit);
+  } catch (_error) {
+    if (amount === 0) return "now";
+    const suffix = amount === 1 ? unit : `${unit}s`;
+    return `${amount} ${suffix} ago`;
+  }
 }
 
 function parseServiceData(rawValue) {
@@ -367,6 +400,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedOpen = false;
     this._expandedEntityId = "";
     this._failedImageUrls = new Set();
+    this._previewAgeTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onWindowKeyDown = this._onWindowKeyDown.bind(this);
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -387,6 +421,7 @@ class NodaliaCameraCard extends HTMLElement {
     window.removeEventListener("keydown", this._onWindowKeyDown);
     this._expandedOpen = false;
     this._expandedEntityId = "";
+    this._clearPreviewAgeTimer();
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
@@ -479,6 +514,7 @@ class NodaliaCameraCard extends HTMLElement {
       String(this._config?.show_state),
       String(this._config?.show_status_chips),
       String(this._config?.show_last_changed),
+      String(this._config?.show_preview_age),
       JSON.stringify(this._config?.expanded_actions || []),
       this._config?.tap_action || "",
       this._config?.hold_action || "",
@@ -585,6 +621,54 @@ class NodaliaCameraCard extends HTMLElement {
     } catch (_error) {
       return "";
     }
+  }
+
+  _formatPreviewAge(state) {
+    return formatRelativeAge(
+      state?.last_updated || state?.last_changed,
+      this._resolveLanguage(),
+    );
+  }
+
+  _clearPreviewAgeTimer() {
+    if (!this._previewAgeTimer) {
+      return;
+    }
+    window.clearTimeout(this._previewAgeTimer);
+    this._previewAgeTimer = 0;
+  }
+
+  _updatePreviewAgeBubbles() {
+    if (!this.shadowRoot || this._config?.show_preview_age === false) {
+      return;
+    }
+    this.shadowRoot.querySelectorAll("[data-camera-preview-age]").forEach(node => {
+      const entityId = String(node.dataset?.cameraEntity || "").trim();
+      const label = this._formatPreviewAge(this._getState(entityId));
+      if (!label) {
+        node.hidden = true;
+        return;
+      }
+      node.hidden = false;
+      node.textContent = label;
+      node.setAttribute("aria-label", this._cameraUi("lastUpdated", "Last updated {time}", { time: label }));
+    });
+  }
+
+  _schedulePreviewAgeRefresh() {
+    this._clearPreviewAgeTimer();
+    if (
+      !this.isConnected
+      || this._config?.show_preview_age === false
+      || !this.shadowRoot?.querySelector("[data-camera-preview-age]")
+    ) {
+      return;
+    }
+    this._previewAgeTimer = window.setTimeout(() => {
+      this._previewAgeTimer = 0;
+      this._updatePreviewAgeBubbles();
+      this._schedulePreviewAgeRefresh();
+    }, 15000);
   }
 
   _getStatusChips(state) {
@@ -894,6 +978,7 @@ class NodaliaCameraCard extends HTMLElement {
       ? this._cameraUi("cameraUnavailable", "Camera unavailable")
       : this._cameraUi("openCamera", "Open camera");
     const title = this._getTitle(state, entityId);
+    const previewAge = this._config?.show_preview_age === false ? "" : this._formatPreviewAge(state);
 
     return `
       <div class="camera-card__preview ${layout === "compact" ? "camera-card__preview--compact" : ""} ${layout === "security" ? "camera-card__preview--security" : ""}">
@@ -904,6 +989,12 @@ class NodaliaCameraCard extends HTMLElement {
               <span>${escapeHtml(placeholderLabel)}</span>
             </div>`}
         <div class="camera-card__overlay"></div>
+        ${showImage && previewAge ? `<span
+          class="camera-card__preview-age"
+          data-camera-preview-age
+          data-camera-entity="${escapeHtml(entityId)}"
+          aria-label="${escapeHtml(this._cameraUi("lastUpdated", "Last updated {time}", { time: previewAge }))}"
+        >${escapeHtml(previewAge)}</span>` : ""}
         <button
           type="button"
           class="camera-card__expand"
@@ -1006,6 +1097,7 @@ class NodaliaCameraCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+    this._clearPreviewAgeTimer();
 
     const config = this._config || {};
     const cameraIds = this._getCameraIds();
@@ -1231,6 +1323,29 @@ class NodaliaCameraCard extends HTMLElement {
         .camera-card__overlay {
           background: linear-gradient(180deg, rgba(0, 0, 0, ${overlayStrength * 0.35}) 0%, rgba(0, 0, 0, ${overlayStrength}) 100%);
           pointer-events: none;
+        }
+
+        .camera-card__preview-age {
+          backdrop-filter: blur(10px) saturate(1.08);
+          -webkit-backdrop-filter: blur(10px) saturate(1.08);
+          background: rgba(0, 0, 0, 0.34);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          bottom: 12px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.2);
+          color: #fff;
+          font-size: 12px;
+          font-weight: 600;
+          left: 12px;
+          line-height: 1;
+          max-width: calc(100% - 68px);
+          overflow: hidden;
+          padding: 5px 9px;
+          pointer-events: none;
+          position: absolute;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          z-index: 2;
         }
 
         .camera-card__expand {
@@ -1493,6 +1608,7 @@ class NodaliaCameraCard extends HTMLElement {
       this._animateContentOnNextRender = false;
       window.NodaliaUtils?.scheduleDeferTimer?.(this, () => {}, animations.contentDuration + 80);
     }
+    this._schedulePreviewAgeRefresh();
   }
 }
 
@@ -2026,6 +2142,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.camera.show_state", "show_state", config.show_state !== false)}
             ${this._renderCheckboxField("ed.camera.show_status_chips", "show_status_chips", config.show_status_chips !== false)}
             ${this._renderCheckboxField("ed.camera.show_last_changed", "show_last_changed", config.show_last_changed !== false)}
+            ${this._renderCheckboxField("ed.camera.show_preview_age", "show_preview_age", config.show_preview_age !== false)}
           </div>
         </section>
         ${this._renderCameraListSection(config)}
@@ -2108,6 +2225,7 @@ if (typeof globalThis !== "undefined") {
     normalizeConfig,
     normalizeCameras,
     normalizeExpandedActions,
+    formatRelativeAge,
     DEFAULT_CONFIG,
     LAYOUT_MODES,
     MAX_CAMERAS,

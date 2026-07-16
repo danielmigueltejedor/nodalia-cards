@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "Fjerne",
   "ed.camera.select_entity": "Kameraenhet",
   "ed.camera.show_last_changed": "Vis sist endret",
+  "ed.camera.show_preview_age": "Vis alder på forhåndsvisning",
   "ed.camera.show_name": "Vis navn",
   "ed.camera.show_state": "Vis tilstand",
   "ed.camera.show_status_chips": "Vis statusbrikker",

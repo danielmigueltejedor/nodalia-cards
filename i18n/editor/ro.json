@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "Elimina",
   "ed.camera.select_entity": "Entitate camera",
   "ed.camera.show_last_changed": "Afișează ultima modificare",
+  "ed.camera.show_preview_age": "Afișează vechimea previzualizării",
   "ed.camera.show_name": "Arată numele",
   "ed.camera.show_state": "Arată starea",
   "ed.camera.show_status_chips": "Afișează jetoane de stare",

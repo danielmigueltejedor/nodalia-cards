@@ -132,6 +132,7 @@
   "ed.camera.remove_expanded_action": "Verwijderen",
   "ed.camera.select_entity": "Camera-entiteit",
   "ed.camera.show_last_changed": "Toon laatst gewijzigd",
+  "ed.camera.show_preview_age": "Toon leeftijd van voorbeeld",
   "ed.camera.show_name": "Toon naam",
   "ed.camera.show_state": "Toon staat",
   "ed.camera.show_status_chips": "Statuschips weergeven",
