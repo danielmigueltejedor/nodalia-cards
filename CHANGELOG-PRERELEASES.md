@@ -10,6 +10,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.31] - 2026-07-17
+
+Thirty-first **`2.0.0`** **`alpha`**: per-camera Nodalia controls and direct camera opening. Release channel **`2.0.0-alpha.31`**.
+
+### Added
+
+- **Camera expanded view:** `camera_actions` assigns independent controls to each camera; light, fan, humidifier, vacuum, cover, and climate entities render with their native Nodalia cards, while other domains use `nodalia-entity-card`.
+- **Camera editor:** each configured camera has its own visual list of entities, labels, icons, icon colors, toggle/more-info/service actions, and JSON service data.
+- **Camera examples:** the three-camera mosaic example now demonstrates camera-specific light and lock controls with native YAML service-data objects.
+
+### Fixed
+
+- **Camera editor drafts:** adding a camera or camera action keeps the incomplete row mounted until an entity is selected instead of immediately discarding it during normalization.
+- **Camera actions:** YAML objects in `tap_service_data` and `tap_service_target` remain structured during normalization and are serialized correctly for embedded Nodalia cards.
+- **Camera mosaic:** render signatures now track every configured camera, keeping all previews current in automatic mosaics of up to four cameras.
+
+### Changed
+
+- **Camera interaction:** removed the visible lower-right expand button; tapping a preview opens that camera directly, while the card's default tap opens the primary camera.
+- **Camera preview age:** previews younger than one minute show seconds and refresh every second; older labels retain the lower-frequency text-only refresh without reloading the image.
+- **Camera compatibility:** legacy `expanded_actions` remain supported on the primary camera when no camera-specific controls are configured.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.31`; `2.0.0-alpha.30` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.30] - 2026-07-16
 
 Thirtieth **`2.0.0`** **`alpha`**: native camera preview age bubbles. Release channel **`2.0.0-alpha.30`**.

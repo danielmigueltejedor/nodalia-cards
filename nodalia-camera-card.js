@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.30";
+const CARD_VERSION = "2.0.0-alpha.31";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
@@ -19,6 +19,7 @@ const DEFAULT_CONFIG = {
   show_status_chips: false,
   show_last_changed: false,
   show_preview_age: true,
+  camera_actions: [],
   expanded_actions: [],
   tap_action: "toggle",
   tap_service: "",
@@ -188,7 +189,7 @@ function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
     return "";
   }
   const elapsedSeconds = Math.max(0, Math.floor((Number(now) - value) / 1000));
-  let amount = 0;
+  let amount = elapsedSeconds;
   let unit = "second";
   if (elapsedSeconds >= 86400) {
     amount = Math.max(1, Math.floor(elapsedSeconds / 86400));
@@ -199,12 +200,10 @@ function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
   } else if (elapsedSeconds >= 60) {
     amount = Math.max(1, Math.floor(elapsedSeconds / 60));
     unit = "minute";
-  } else if (elapsedSeconds >= 45) {
-    amount = elapsedSeconds;
   }
   try {
     return new Intl.RelativeTimeFormat(locale || "en", {
-      numeric: "auto",
+      numeric: unit === "second" ? "always" : "auto",
       style: "short",
     }).format(-amount, unit);
   } catch (_error) {
@@ -303,17 +302,39 @@ function normalizeExpandedActions(rawActions = []) {
     return {
       entity,
       name: String(item.name ?? "").trim(),
-      icon: String(item.icon ?? "").trim() || "mdi:gesture-tap",
+      icon: String(item.icon ?? "").trim(),
       icon_color: String(item.icon_color ?? item.iconColor ?? "").trim(),
       tap_action: TAP_ACTIONS.has(action) ? action : "toggle",
       tap_service: String(item.tap_service ?? "").trim(),
-      tap_service_data: String(item.tap_service_data ?? "").trim(),
-      tap_service_target: String(item.tap_service_target ?? "").trim(),
+      tap_service_data: isObject(item.tap_service_data)
+        ? deepClone(item.tap_service_data)
+        : String(item.tap_service_data ?? "").trim(),
+      tap_service_target: isObject(item.tap_service_target)
+        ? deepClone(item.tap_service_target)
+        : String(item.tap_service_target ?? "").trim(),
       tap_url: String(item.tap_url ?? "").trim(),
       navigation_path: String(item.navigation_path ?? "").trim(),
       tap_new_tab: item.tap_new_tab === true,
     };
   }).filter(Boolean).slice(0, 8);
+}
+
+function normalizeCameraActions(rawActions = [], cameraIds = []) {
+  if (!Array.isArray(rawActions)) {
+    return [];
+  }
+  const validCameras = new Set(cameraIds);
+  return rawActions.map(item => {
+    if (!isObject(item)) {
+      return null;
+    }
+    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+    const action = normalizeExpandedActions([item])[0];
+    if (!camera || !action || (validCameras.size && !validCameras.has(camera))) {
+      return null;
+    }
+    return { camera, ...action };
+  }).filter(Boolean).slice(0, MAX_CAMERAS * 8);
 }
 
 function normalizeConfig(rawConfig) {
@@ -329,6 +350,7 @@ function normalizeConfig(rawConfig) {
   }
   const presentation = normalizeTextKey(config.presentation);
   config.presentation = PRESENTATION_MODES.has(presentation) ? presentation : DEFAULT_CONFIG.presentation;
+  config.camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
   config.expanded_actions = normalizeExpandedActions(config.expanded_actions);
   config.language = String(config.language ?? "auto").trim() || "auto";
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
@@ -401,6 +423,8 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedEntityId = "";
     this._failedImageUrls = new Set();
     this._previewAgeTimer = 0;
+    this._expandedCardCache = new Map();
+    this._expandedCardConfigSignatures = new WeakMap();
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onWindowKeyDown = this._onWindowKeyDown.bind(this);
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -421,6 +445,7 @@ class NodaliaCameraCard extends HTMLElement {
     window.removeEventListener("keydown", this._onWindowKeyDown);
     this._expandedOpen = false;
     this._expandedEntityId = "";
+    this._expandedCardCache.clear();
     this._clearPreviewAgeTimer();
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
@@ -446,6 +471,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+      this._updateExpandedCardsHass();
       return;
     }
     this._lastRenderSignature = nextSignature;
@@ -503,7 +529,17 @@ class NodaliaCameraCard extends HTMLElement {
 
   _getRenderSignature(hass = this._hass) {
     const cameraIds = this._getCameraIds();
-    const primaryState = cameraIds.length ? hass?.states?.[cameraIds[0]] : null;
+    const cameraStates = cameraIds.map(entityId => {
+      const state = hass?.states?.[entityId];
+      return [
+        entityId,
+        state?.state || "",
+        state?.last_updated || "",
+        state?.attributes?.entity_picture || "",
+        state?.attributes?.access_token || "",
+        state?.attributes?.frontend_stream_type || "",
+      ].join(":");
+    });
     const joinParts = window.NodaliaRenderSignature?.joinParts;
     const values = [
       cameraIds.join(","),
@@ -515,16 +551,13 @@ class NodaliaCameraCard extends HTMLElement {
       String(this._config?.show_status_chips),
       String(this._config?.show_last_changed),
       String(this._config?.show_preview_age),
+      JSON.stringify(this._config?.camera_actions || []),
       JSON.stringify(this._config?.expanded_actions || []),
       this._config?.tap_action || "",
       this._config?.hold_action || "",
       String(this._expandedOpen),
       this._expandedEntityId || "",
-      primaryState?.state || "",
-      primaryState?.last_updated || "",
-      primaryState?.attributes?.entity_picture || "",
-      primaryState?.attributes?.access_token || "",
-      primaryState?.attributes?.frontend_stream_type || "",
+      ...cameraStates,
       this._resolveLanguage(),
     ];
     if (typeof joinParts === "function") {
@@ -655,6 +688,17 @@ class NodaliaCameraCard extends HTMLElement {
     });
   }
 
+  _previewAgeRefreshDelay() {
+    const now = Date.now();
+    const hasSubMinutePreview = Array.from(this.shadowRoot?.querySelectorAll("[data-camera-preview-age]") || [])
+      .some(node => {
+        const state = this._getState(String(node.dataset?.cameraEntity || "").trim());
+        const updatedAt = new Date(state?.last_updated || state?.last_changed || "").getTime();
+        return Number.isFinite(updatedAt) && Math.max(0, now - updatedAt) < 60000;
+      });
+    return hasSubMinutePreview ? 1000 : 15000;
+  }
+
   _schedulePreviewAgeRefresh() {
     this._clearPreviewAgeTimer();
     if (
@@ -668,7 +712,7 @@ class NodaliaCameraCard extends HTMLElement {
       this._previewAgeTimer = 0;
       this._updatePreviewAgeBubbles();
       this._schedulePreviewAgeRefresh();
-    }, 15000);
+    }, this._previewAgeRefreshDelay());
   }
 
   _getStatusChips(state) {
@@ -942,17 +986,6 @@ class NodaliaCameraCard extends HTMLElement {
       this._closeExpanded();
       return;
     }
-    if (action === "expanded-action") {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      const index = Number(button.dataset.actionIndex);
-      const actions = Array.isArray(this._config?.expanded_actions) ? this._config.expanded_actions : [];
-      if (Number.isInteger(index) && index >= 0 && index < actions.length) {
-        this._performExpandedAction(actions[index]);
-      }
-      return;
-    }
     if (action === "body") {
       event.preventDefault();
       event.stopPropagation();
@@ -997,14 +1030,11 @@ class NodaliaCameraCard extends HTMLElement {
         >${escapeHtml(previewAge)}</span>` : ""}
         <button
           type="button"
-          class="camera-card__expand"
+          class="camera-card__preview-open"
           data-camera-action="expand"
           data-camera-entity="${escapeHtml(entityId)}"
-          aria-label="${escapeHtml(this._cameraUi("expand", "Expand"))}"
-          title="${escapeHtml(this._cameraUi("expand", "Expand"))}"
-        >
-          <ha-icon icon="mdi:arrow-expand"></ha-icon>
-        </button>
+          aria-label="${escapeHtml(this._cameraUi("openCamera", "Open camera"))}"
+        ></button>
       </div>
     `;
   }
@@ -1031,30 +1061,171 @@ class NodaliaCameraCard extends HTMLElement {
     return `<div class="camera-card__mosaic ${mosaicClass}">${cells}</div>`;
   }
 
-  _renderExpandedActionsMarkup() {
-    const actions = Array.isArray(this._config?.expanded_actions) ? this._config.expanded_actions : [];
+  _getExpandedActionsForCamera(entityId = this._expandedEntityId || this._config?.entity) {
+    const cameraActions = Array.isArray(this._config?.camera_actions) ? this._config.camera_actions : [];
+    const actions = cameraActions.filter(action => action.camera === entityId);
+    if (actions.length || entityId !== this._getCameraIds()[0]) {
+      return actions;
+    }
+    return Array.isArray(this._config?.expanded_actions) ? this._config.expanded_actions : [];
+  }
+
+  _expandedCardTag(entityId) {
+    const domain = String(entityId || "").split(".")[0];
+    return {
+      light: "nodalia-light-card",
+      fan: "nodalia-fan-card",
+      humidifier: "nodalia-humidifier-card",
+      vacuum: "nodalia-vacuum-card",
+      cover: "nodalia-cover-card",
+      climate: "nodalia-climate-card",
+    }[domain] || "nodalia-entity-card";
+  }
+
+  _expandedCardConfig(action) {
+    const domain = String(action.entity || "").split(".")[0];
+    const security = deepClone(this._config?.security || DEFAULT_CONFIG.security);
+    if (action.tap_action === "service" && action.tap_service) {
+      security.allowed_services = Array.from(new Set([
+        ...(Array.isArray(security.allowed_services) ? security.allowed_services : []),
+        action.tap_service,
+      ]));
+    }
+    const config = {
+      entity: action.entity,
+      tap_action: action.tap_action || "toggle",
+      tap_new_tab: action.tap_new_tab === true,
+      security,
+      haptics: deepClone(this._config?.haptics || DEFAULT_CONFIG.haptics),
+      animations: {
+        ...deepClone(this._config?.animations || DEFAULT_CONFIG.animations),
+        content_duration: 0,
+        panel_duration: 0,
+      },
+      compact_layout_mode: "never",
+    };
+    ["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"].forEach(key => {
+      if (action[key]) {
+        config[key] = (key === "tap_service_data" || key === "tap_service_target") && isObject(action[key])
+          ? JSON.stringify(action[key])
+          : deepClone(action[key]);
+      }
+    });
+    if (action.icon_color) {
+      config.styles = {
+        icon: {
+          color: action.icon_color,
+          on_color: action.icon_color,
+          off_color: action.icon_color,
+        },
+      };
+    }
+    if (domain === "light") {
+      Object.assign(config, {
+        auto_expand: true,
+        show_brightness: true,
+        show_slider_mode_buttons: true,
+        show_color_controls: true,
+        show_temperature_controls: true,
+        show_quick_brightness: false,
+        show_quick_color_presets: false,
+        show_quick_temperature_presets: false,
+        icon_tap_action: action.tap_action || "toggle",
+      });
+    } else if (domain === "fan") {
+      Object.assign(config, {
+        show_slider: true,
+        show_preset_modes: true,
+        show_oscillation: true,
+        icon_tap_action: action.tap_action || "toggle",
+      });
+    } else if (domain === "humidifier") {
+      Object.assign(config, {
+        show_slider: true,
+        show_mode_button: true,
+        show_fan_mode_button: true,
+        icon_tap_action: action.tap_action || "toggle",
+      });
+    } else if (domain === "vacuum") {
+      Object.assign(config, {
+        show_mode_controls: true,
+        show_fan_presets: true,
+        show_return_to_base: true,
+        show_stop: true,
+        show_locate: true,
+      });
+    }
+    return config;
+  }
+
+  _updateExpandedCardsHass() {
+    for (const card of this._expandedCardCache.values()) {
+      if (this._hass) {
+        card.hass = this._hass;
+      }
+    }
+  }
+
+  _mountExpandedCards() {
+    if (!this.shadowRoot || !this._expandedOpen) {
+      return;
+    }
+    const entityId = this._expandedEntityId || this._config?.entity;
+    const actions = this._getExpandedActionsForCamera(entityId);
+    const validKeys = new Set();
+    this.shadowRoot.querySelectorAll("[data-camera-expanded-card]").forEach(host => {
+      if (!(host instanceof HTMLElement)) {
+        return;
+      }
+      const index = Number(host.dataset.actionIndex);
+      const action = actions[index];
+      if (!action?.entity) {
+        return;
+      }
+      const tagName = this._expandedCardTag(action.entity);
+      const cacheKey = `${entityId}:${index}:${tagName}:${action.entity}`;
+      validKeys.add(cacheKey);
+      let card = this._expandedCardCache.get(cacheKey);
+      if (!card) {
+        card = document.createElement(tagName);
+        this._expandedCardCache.set(cacheKey, card);
+      }
+      if (card.parentElement !== host) {
+        host.replaceChildren(card);
+      }
+      const cardConfig = this._expandedCardConfig(action);
+      const signature = JSON.stringify(cardConfig);
+      if (this._expandedCardConfigSignatures.get(card) !== signature) {
+        card.setConfig(cardConfig);
+        this._expandedCardConfigSignatures.set(card, signature);
+      }
+      if (this._hass) {
+        card.hass = this._hass;
+      }
+    });
+    for (const [key, card] of this._expandedCardCache) {
+      if (!validKeys.has(key)) {
+        card.remove();
+        this._expandedCardCache.delete(key);
+      }
+    }
+  }
+
+  _renderExpandedActionsMarkup(entityId) {
+    const actions = this._getExpandedActionsForCamera(entityId);
     if (!actions.length) {
       return "";
     }
     return `
       <div class="camera-card__expanded-actions">
-        ${actions.map((action, index) => {
-    const state = this._hass?.states?.[action.entity];
-    const label = action.name || state?.attributes?.friendly_name || action.entity;
-    const colorStyle = action.icon_color ? ` style="color:${escapeHtml(action.icon_color)};"` : "";
-    return `
-          <button
-            type="button"
-            class="camera-card__expanded-action"
-            data-camera-action="expanded-action"
+        ${actions.map((action, index) => `
+          <div
+            class="camera-card__expanded-card-host"
+            data-camera-expanded-card
             data-action-index="${index}"
-            aria-label="${escapeHtml(label)}"
-          >
-            <span class="camera-card__expanded-action-icon"${colorStyle}><ha-icon icon="${escapeHtml(action.icon)}"></ha-icon></span>
-            <span class="camera-card__expanded-action-label">${escapeHtml(label)}</span>
-          </button>
-        `;
-  }).join("")}
+            data-entity="${escapeHtml(action.entity)}"
+          ></div>
+        `).join("")}
       </div>
     `;
   }
@@ -1087,7 +1258,7 @@ class NodaliaCameraCard extends HTMLElement {
                   <span>${escapeHtml(this._cameraUi("cameraUnavailable", "Camera unavailable"))}</span>
                 </div>`}
           </div>
-          ${this._renderExpandedActionsMarkup()}
+          ${this._renderExpandedActionsMarkup(entityId)}
         </div>
       </div>
     `;
@@ -1292,7 +1463,7 @@ class NodaliaCameraCard extends HTMLElement {
         .camera-card__image,
         .camera-card__placeholder,
         .camera-card__overlay,
-        .camera-card__expand {
+        .camera-card__preview-open {
           inset: 0;
           position: absolute;
         }
@@ -1338,7 +1509,7 @@ class NodaliaCameraCard extends HTMLElement {
           font-weight: 600;
           left: 12px;
           line-height: 1;
-          max-width: calc(100% - 68px);
+          max-width: calc(100% - 24px);
           overflow: hidden;
           padding: 5px 9px;
           pointer-events: none;
@@ -1348,30 +1519,20 @@ class NodaliaCameraCard extends HTMLElement {
           z-index: 2;
         }
 
-        .camera-card__expand {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, rgba(0, 0, 0, 0.32));
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 999px;
-          bottom: 12px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
-          color: var(--primary-text-color);
+        .camera-card__preview-open {
+          appearance: none;
+          background: transparent;
+          border: 0;
           cursor: pointer;
-          display: inline-flex;
-          height: 38px;
-          justify-content: center;
-          left: auto;
           margin: 0;
           padding: 0;
-          position: absolute;
-          right: 12px;
-          top: auto;
-          transition: transform 150ms ease, box-shadow 180ms ease;
-          width: 38px;
+          width: 100%;
+          z-index: 1;
         }
 
-        .camera-card__expand:active {
-          transform: scale(0.96);
+        .camera-card__preview-open:focus-visible {
+          box-shadow: inset 0 0 0 3px var(--primary-color);
+          outline: 0;
         }
 
         .camera-card__header {
@@ -1473,7 +1634,7 @@ class NodaliaCameraCard extends HTMLElement {
           left: 50%;
           max-height: min(88vh, 920px);
           max-width: min(96vw, 1080px);
-          overflow: hidden;
+          overflow: auto;
           padding: 14px;
           position: absolute;
           top: 50%;
@@ -1524,33 +1685,14 @@ class NodaliaCameraCard extends HTMLElement {
         .camera-card__expanded-actions {
           display: grid;
           gap: 10px;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
         }
 
-        .camera-card__expanded-action {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 16px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: grid;
-          gap: 8px;
-          justify-items: center;
-          min-height: 84px;
-          padding: 12px;
-        }
-
-        .camera-card__expanded-action-icon ha-icon {
-          --mdc-icon-size: 28px;
-        }
-
-        .camera-card__expanded-action-label {
-          font-size: 12px;
-          font-weight: 700;
-          line-height: 1.2;
-          text-align: center;
+        .camera-card__expanded-card-host,
+        .camera-card__expanded-card-host > * {
+          display: block;
+          min-width: 0;
+          width: 100%;
         }
 
         @keyframes camera-card-fade-up {
@@ -1603,6 +1745,8 @@ class NodaliaCameraCard extends HTMLElement {
         }
       }, { once: true });
     });
+
+    this._mountExpandedCards();
 
     if (shouldAnimateEntrance) {
       this._animateContentOnNextRender = false;
@@ -1695,7 +1839,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
     return window.NodaliaUtils.editorFilteredStatesSignature(
       hass,
       this._config?.language,
-      id => id.startsWith("camera."),
+      id => /^(camera|light|fan|humidifier|vacuum|cover|climate|lock|switch|input_boolean)\./.test(id),
     );
   }
 
@@ -1753,16 +1897,29 @@ class NodaliaCameraCardEditor extends HTMLElement {
       return;
     }
     const field = target.dataset.field;
+    const cameraField = field.match(/^cameras\.(\d+)$/);
+    const previousCamera = cameraField
+      ? String(getByPath(this._config, field) || "").trim()
+      : field === "entity" ? String(this._config.entity || "").trim() : "";
     const value = target instanceof HTMLInputElement && target.type === "checkbox"
       ? target.checked
       : target.value;
     setByPath(this._config, field, value);
+    if ((cameraField || field === "entity") && previousCamera && previousCamera !== value && Array.isArray(this._config.camera_actions)) {
+      this._config.camera_actions.forEach(action => {
+        if (action?.camera === previousCamera) {
+          action.camera = String(value || "").trim();
+        }
+      });
+    }
     if (field === "entity" && value) {
       if (!Array.isArray(this._config.cameras) || !this._config.cameras.length) {
         this._config.cameras = [value];
       } else {
         this._config.cameras[0] = value;
       }
+    } else if (cameraField?.[1] === "0") {
+      this._config.entity = String(value || "").trim();
     }
     this._emitConfig(field === "tap_action" || field === "hold_action" || field.includes("tap_action"));
   }
@@ -1774,13 +1931,28 @@ class NodaliaCameraCardEditor extends HTMLElement {
     }
     event.stopPropagation();
     const detailValue = event.detail?.value ?? "";
-    setByPath(this._config, host.dataset.field, String(detailValue || "").trim());
-    if (host.dataset.field === "entity" && detailValue) {
+    const field = host.dataset.field;
+    const cameraField = field.match(/^cameras\.(\d+)$/);
+    const previousCamera = cameraField
+      ? String(getByPath(this._config, field) || "").trim()
+      : field === "entity" ? String(this._config.entity || "").trim() : "";
+    const nextValue = String(detailValue || "").trim();
+    setByPath(this._config, field, nextValue);
+    if ((cameraField || field === "entity") && previousCamera && previousCamera !== nextValue && Array.isArray(this._config.camera_actions)) {
+      this._config.camera_actions.forEach(action => {
+        if (action?.camera === previousCamera) {
+          action.camera = nextValue;
+        }
+      });
+    }
+    if (field === "entity" && detailValue) {
       if (!Array.isArray(this._config.cameras) || !this._config.cameras.length) {
         this._config.cameras = [detailValue];
       } else {
         this._config.cameras[0] = detailValue;
       }
+    } else if (cameraField?.[1] === "0") {
+      this._config.entity = nextValue;
     }
     this._emitConfig(false);
   }
@@ -1798,7 +1970,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
         }
         if (this._config.cameras.length < MAX_CAMERAS) {
           this._config.cameras.push("");
-          this._emitConfig(true);
+          this._render();
         }
         return;
       }
@@ -1806,8 +1978,40 @@ class NodaliaCameraCardEditor extends HTMLElement {
         if (!Array.isArray(this._config.cameras)) {
           this._config.cameras = this._editorCameras();
         }
+        const removedCamera = String(this._config.cameras[index] || "").trim();
         this._config.cameras.splice(index, 1);
+        if (removedCamera && Array.isArray(this._config.camera_actions)) {
+          this._config.camera_actions = this._config.camera_actions.filter(item => item?.camera !== removedCamera);
+        }
         this._config.entity = this._config.cameras[0] || "";
+        this._emitConfig(true);
+        return;
+      }
+      if (action === "add-camera-action") {
+        const cameraId = String(button.dataset.camera || "").trim();
+        if (!cameraId) {
+          return;
+        }
+        if (!Array.isArray(this._config.camera_actions)) {
+          this._config.camera_actions = [];
+        }
+        if (this._config.camera_actions.filter(item => item?.camera === cameraId).length < 8) {
+          this._config.camera_actions.push({
+            camera: cameraId,
+            entity: "",
+            name: "",
+            icon: "",
+            tap_action: "toggle",
+          });
+          this._render();
+        }
+        return;
+      }
+      if (action === "remove-camera-action" && Number.isInteger(index)) {
+        if (!Array.isArray(this._config.camera_actions)) {
+          this._config.camera_actions = [];
+        }
+        this._config.camera_actions.splice(index, 1);
         this._emitConfig(true);
         return;
       }
@@ -1818,10 +2022,10 @@ class NodaliaCameraCardEditor extends HTMLElement {
         this._config.expanded_actions.push({
           entity: "",
           name: "",
-          icon: "mdi:gesture-tap",
+          icon: "",
           tap_action: "toggle",
         });
-        this._emitConfig(true);
+        this._render();
         return;
       }
       if (action === "remove-expanded-action" && Number.isInteger(index)) {
@@ -1847,10 +2051,11 @@ class NodaliaCameraCardEditor extends HTMLElement {
   }
 
   _renderTextareaField(label, field, value, options = {}) {
+    const textValue = isObject(value) ? JSON.stringify(value, null, 2) : value ?? "";
     return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(this._editorLabel(label))}</span>
-        <textarea data-field="${escapeHtml(field)}">${escapeHtml(value ?? "")}</textarea>
+        <textarea data-field="${escapeHtml(field)}">${escapeHtml(textValue)}</textarea>
       </label>
     `;
   }
@@ -1951,7 +2156,9 @@ class NodaliaCameraCardEditor extends HTMLElement {
   }
 
   _renderExpandedActionsSection(config) {
-    const actions = Array.isArray(config.expanded_actions) ? config.expanded_actions : [];
+    const cameras = this._editorCameras().filter(Boolean);
+    const cameraActions = Array.isArray(config.camera_actions) ? config.camera_actions : [];
+    const legacyActions = Array.isArray(config.expanded_actions) ? config.expanded_actions : [];
     return `
       <section class="editor-section">
         <div class="editor-section__header">
@@ -1959,35 +2166,57 @@ class NodaliaCameraCardEditor extends HTMLElement {
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.camera.expanded_actions_section_title"))}</div>
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.camera.expanded_actions_section_hint"))}</div>
           </div>
-          <button type="button" data-editor-action="add-expanded-action">
-            ${escapeHtml(this._editorLabel("ed.camera.add_expanded_action"))}
-          </button>
         </div>
         <div class="editor-list">
-          ${actions.length ? actions.map((action, index) => `
-            <div class="editor-card">
+          ${cameras.length ? cameras.map((cameraId, cameraIndex) => {
+    const actions = cameraActions
+      .map((action, sourceIndex) => ({ action, sourceIndex }))
+      .filter(item => item.action?.camera === cameraId);
+    const legacy = cameraIndex === 0 && !actions.length
+      ? legacyActions.map((action, sourceIndex) => ({ action, sourceIndex, legacy: true }))
+      : [];
+    const rows = actions.length ? actions : legacy;
+    const cameraName = this._hass?.states?.[cameraId]?.attributes?.friendly_name || cameraId;
+    return `
+            <div class="editor-camera-group">
               <div class="editor-card__header">
-                <span>${escapeHtml(this._editorLabel("ed.camera.expanded_action_item"))} ${index + 1}</span>
-                <button type="button" class="danger" data-editor-action="remove-expanded-action" data-index="${index}">
-                  ${escapeHtml(this._editorLabel("ed.camera.remove_expanded_action"))}
+                <strong>${escapeHtml(cameraName)}</strong>
+                <button type="button" data-editor-action="add-camera-action" data-camera="${escapeHtml(cameraId)}" ${actions.length >= 8 ? "disabled" : ""}>
+                  ${escapeHtml(this._editorLabel("ed.camera.add_expanded_action"))}
                 </button>
               </div>
-              <div class="editor-grid editor-grid--stacked">
-                ${this._renderCameraEntityField("ed.camera.expanded_action_entity", `expanded_actions.${index}.entity`, action.entity, "light,cover,lock,switch,input_boolean")}
-                ${this._renderTextField("ed.camera.expanded_action_name", `expanded_actions.${index}.name`, action.name, { fullWidth: true })}
-                ${this._renderTextField("ed.camera.expanded_action_icon", `expanded_actions.${index}.icon`, action.icon, { placeholder: "mdi:lightbulb" })}
-                ${this._renderSelectField("ed.camera.expanded_action_tap", `expanded_actions.${index}.tap_action`, action.tap_action || "toggle", [
+              ${rows.length ? rows.map(({ action, sourceIndex, legacy }) => {
+    const prefix = legacy ? `expanded_actions.${sourceIndex}` : `camera_actions.${sourceIndex}`;
+    const removeAction = legacy ? "remove-expanded-action" : "remove-camera-action";
+    return `
+              <div class="editor-card">
+                <div class="editor-card__header">
+                  <span>${escapeHtml(this._editorLabel("ed.camera.expanded_action_item"))} ${sourceIndex + 1}</span>
+                  <button type="button" class="danger" data-editor-action="${removeAction}" data-index="${sourceIndex}">
+                    ${escapeHtml(this._editorLabel("ed.camera.remove_expanded_action"))}
+                  </button>
+                </div>
+                <div class="editor-grid editor-grid--stacked">
+                  ${this._renderCameraEntityField("ed.camera.expanded_action_entity", `${prefix}.entity`, action.entity, "light,fan,humidifier,vacuum,cover,climate,lock,switch,input_boolean")}
+                  ${this._renderTextField("ed.camera.expanded_action_name", `${prefix}.name`, action.name, { fullWidth: true })}
+                  ${this._renderTextField("ed.camera.expanded_action_icon", `${prefix}.icon`, action.icon, { placeholder: "mdi:lightbulb" })}
+                  ${this._renderTextField("ed.notifications.icon_color", `${prefix}.icon_color`, action.icon_color, { placeholder: "var(--primary-color)" })}
+                  ${this._renderSelectField("ed.camera.expanded_action_tap", `${prefix}.tap_action`, action.tap_action || "toggle", [
     { value: "toggle", label: "ed.entity.tap_toggle" },
     { value: "more-info", label: "ed.entity.tap_more_info" },
     { value: "service", label: "ed.entity.tap_service" },
   ])}
-                ${String(action.tap_action) === "service"
-    ? this._renderTextField("ed.entity.tap_service_field", `expanded_actions.${index}.tap_service`, action.tap_service, { placeholder: "lock.open", fullWidth: true })
-      + this._renderTextareaField("ed.entity.tap_service_data_json", `expanded_actions.${index}.tap_service_data`, action.tap_service_data, { placeholder: "{}" })
+                  ${String(action.tap_action) === "service"
+    ? this._renderTextField("ed.entity.tap_service_field", `${prefix}.tap_service`, action.tap_service, { placeholder: "lock.open", fullWidth: true })
+      + this._renderTextareaField("ed.entity.tap_service_data_json", `${prefix}.tap_service_data`, action.tap_service_data, { placeholder: "{}" })
     : ""}
+                </div>
               </div>
+              `;
+  }).join("") : `<div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.camera.expanded_actions_empty"))}</div>`}
             </div>
-          `).join("") : `<div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.camera.expanded_actions_empty"))}</div>`}
+          `;
+  }).join("") : `<div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.camera.expanded_actions_empty"))}</div>`}
         </div>
       </section>
     `;
@@ -2100,6 +2329,8 @@ class NodaliaCameraCardEditor extends HTMLElement {
         .editor-card__header button.danger { color: var(--error-color); }
         .editor-section__header button:disabled { cursor: default; opacity: 0.45; }
         .editor-list { display: grid; gap: 12px; }
+        .editor-camera-group { display: grid; gap: 10px; padding-block: 4px 12px; }
+        .editor-camera-group + .editor-camera-group { border-top: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); padding-top: 16px; }
         .editor-card {
           background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
@@ -2225,6 +2456,7 @@ if (typeof globalThis !== "undefined") {
     normalizeConfig,
     normalizeCameras,
     normalizeExpandedActions,
+    normalizeCameraActions,
     formatRelativeAge,
     DEFAULT_CONFIG,
     LAYOUT_MODES,

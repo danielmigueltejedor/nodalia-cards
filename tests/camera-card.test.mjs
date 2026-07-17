@@ -15,6 +15,7 @@ function loadCameraHelpers() {
       normalizeConfig,
       normalizeCameras,
       normalizeExpandedActions,
+      normalizeCameraActions,
       parseServiceData,
       formatRelativeAge,
       DEFAULT_CONFIG,
@@ -82,6 +83,11 @@ test("camera normalizeCameras supports up to four entities and mosaic layout", (
   assert.equal(config.cameras[2], "camera.aqara_g100");
   assert.equal(config.layout, "mosaic");
   assert.equal(config.presentation, "feed");
+
+  const capped = helpers.normalizeConfig({
+    cameras: ["camera.one", "camera.two", "camera.three", "camera.four", "camera.five"],
+  });
+  assert.deepEqual(Array.from(capped.cameras), ["camera.one", "camera.two", "camera.three", "camera.four"]);
 });
 
 test("camera normalizeExpandedActions keeps action entities", () => {
@@ -108,6 +114,37 @@ test("camera normalizeExpandedActions keeps action entities", () => {
   assert.equal(config.expanded_actions[1].tap_service, "lock.open");
 });
 
+test("camera actions stay scoped to their camera and preserve YAML service data", () => {
+  const config = helpers.normalizeConfig({
+    cameras: ["camera.entrada", "camera.jardin"],
+    camera_actions: [
+      {
+        camera: "camera.jardin",
+        entity: "light.foco_jardin",
+        name: "Jardín",
+        tap_action: "toggle",
+      },
+      {
+        camera: "camera.entrada",
+        entity: "lock.puerta",
+        name: "Abrir",
+        tap_action: "service",
+        tap_service: "lock.open",
+        tap_service_data: { entity_id: "lock.puerta" },
+      },
+      {
+        camera: "camera.inexistente",
+        entity: "switch.ignorado",
+      },
+    ],
+  });
+
+  assert.equal(config.camera_actions.length, 2);
+  assert.equal(config.camera_actions[0].camera, "camera.jardin");
+  assert.equal(config.camera_actions[0].entity, "light.foco_jardin");
+  assert.equal(config.camera_actions[1].tap_service_data.entity_id, "lock.puerta");
+});
+
 test("camera service data accepts YAML objects and JSON strings", () => {
   const yamlObject = { entity_id: "switch.proyector_2" };
   assert.equal(helpers.parseServiceData(yamlObject), yamlObject);
@@ -125,6 +162,9 @@ test("camera preview age formats the native image timestamp relatively", () => {
 
   assert.match(label, /2/);
   assert.match(label, /min/i);
+  const secondsLabel = helpers.formatRelativeAge(new Date(now - 37000).toISOString(), "en", now);
+  assert.match(secondsLabel, /37/);
+  assert.match(secondsLabel, /sec/i);
   assert.ok(helpers.formatRelativeAge(new Date(now).toISOString(), "es", now));
   assert.equal(helpers.formatRelativeAge("invalid", "en", now), "");
   assert.equal(helpers.normalizeConfig({ entity: "camera.entrada" }).show_preview_age, true);
@@ -136,6 +176,7 @@ test("camera card renders mosaic markup for multiple cameras", () => {
   assert.match(source, /camera-card__mosaic--three/);
   assert.match(source, /camera-card__mosaic--four/);
   assert.match(source, /camera-card__expanded-actions/);
+  assert.match(source, /grid-template-columns: 2fr 1fr/);
   assert.match(source, /presentation/);
   assert.match(source, /data-camera-preview-age/);
   assert.match(source, /data-camera-entity="\$\{escapeHtml\(entityId\)\}"/);
@@ -168,6 +209,21 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /disconnectedCallback\(\) \{[\s\S]*removeEventListener\("keydown", this\._onWindowKeyDown\)/);
   assert.match(source, /disconnectedCallback\(\) \{[\s\S]*_expandedOpen = false/);
   assert.match(source, /camera-card__expanded/);
+  assert.match(source, /nodalia-light-card/);
+  assert.match(source, /nodalia-fan-card/);
+  assert.match(source, /nodalia-humidifier-card/);
+  assert.match(source, /nodalia-entity-card/);
+  assert.match(source, /_getExpandedActionsForCamera/);
+});
+
+test("camera preview opens directly without a visible expand control", () => {
+  const source = read("nodalia-camera-card.js");
+  assert.match(source, /class="camera-card__preview-open"/);
+  assert.match(source, /\.camera-card__preview-open \{[\s\S]*background: transparent/);
+  assert.match(source, /tap_action: "toggle"/);
+  assert.match(source, /case "toggle":[\s\S]*this\._openExpanded\(\)/);
+  assert.doesNotMatch(source, /class="camera-card__expand"/);
+  assert.doesNotMatch(source, /mdi:arrow-expand/);
 });
 
 test("camera configured services respect strict security and explicit targets", () => {
@@ -186,6 +242,8 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /bindEditorDialogLayoutFix/);
   assert.match(source, /ed\.camera\.layout_live/);
   assert.match(source, /ed\.camera\.show_preview_age/);
+  assert.match(source, /data-editor-action="add-camera-action"/);
+  assert.match(source, /camera_actions\.\$\{sourceIndex\}/);
 });
 
 test("camera preview age bubble updates without re-rendering the image", () => {
@@ -197,7 +255,8 @@ test("camera preview age bubble updates without re-rendering the image", () => {
   assert.match(source, /\.camera-card__preview-age \{[\s\S]*background: rgba\(0, 0, 0, 0\.34\)/);
   assert.match(source, /\.camera-card__preview-age \{[\s\S]*bottom: 12px;[\s\S]*left: 12px;/);
   assert.match(source, /this\._previewAgeTimer = window\.setTimeout/);
-  assert.match(source, /}, 15000\)/);
+  assert.match(source, /return hasSubMinutePreview \? 1000 : 15000/);
+  assert.match(source, /}, this\._previewAgeRefreshDelay\(\)\)/);
   assert.match(updateBlock, /node\.textContent = label/);
   assert.doesNotMatch(updateBlock, /this\._render\(\)/);
   assert.match(source, /disconnectedCallback\(\) \{[\s\S]*this\._clearPreviewAgeTimer\(\)/);
