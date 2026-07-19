@@ -1,10 +1,10 @@
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.32";
+const CARD_VERSION = "2.0.0-alpha.33";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
-const STREAM_PROVIDERS = new Set(["home_assistant", "go2rtc", "iframe"]);
+const STREAM_PROVIDERS = new Set(["home_assistant", "advanced_camera_card", "go2rtc", "iframe"]);
 const STREAM_MODES = new Set(["auto", "webrtc", "mse", "hls", "mjpeg"]);
 const TAP_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
 const HOLD_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
@@ -377,6 +377,13 @@ function normalizeCameraStreams(rawStreams = [], cameraIds = []) {
 
 function compactCameraStreams(rawStreams = []) {
   return rawStreams.map(item => {
+    if (item.provider === "advanced_camera_card") {
+      return {
+        camera: item.camera,
+        provider: "advanced_camera_card",
+        stream: item.stream,
+      };
+    }
     if (item.provider === "go2rtc") {
       return {
         camera: item.camera,
@@ -434,6 +441,57 @@ function buildGo2rtcViewerUrl(baseUrl, streamName, mode = "auto") {
 function sanitizeIframeUrl(rawValue) {
   const value = String(rawValue || "").trim();
   return /^(?:https?:\/\/|\/(?!\/))/i.test(value) ? value : "";
+}
+
+function isMixedContentUrl(rawValue) {
+  if (window.location?.protocol !== "https:") {
+    return false;
+  }
+  try {
+    return new URL(String(rawValue || ""), window.location.href).protocol === "http:";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function buildAdvancedCameraCardConfig(entityId, streamName) {
+  return {
+    type: "custom:advanced-camera-card",
+    cameras: [
+      {
+        camera_entity: entityId,
+        live_provider: "go2rtc",
+        go2rtc: {
+          stream: streamName || cameraStreamName(entityId),
+        },
+        triggers: {
+          occupancy: false,
+        },
+      },
+    ],
+    dimensions: {
+      aspect_ratio_mode: "static",
+      aspect_ratio: "16:9",
+    },
+    view: {
+      default: "live",
+    },
+    menu: {
+      style: "none",
+    },
+    status_bar: {
+      style: "none",
+    },
+    live: {
+      preload: true,
+      auto_unmute: ["selected"],
+      controls: {
+        builtin: true,
+        timeline: { mode: "none" },
+        thumbnails: { mode: "none" },
+      },
+    },
+  };
 }
 
 function normalizeConfig(rawConfig) {
@@ -1218,10 +1276,37 @@ class NodaliaCameraCard extends HTMLElement {
     }
     const entityId = this._expandedEntityId || this._config?.entity;
     const streamConfig = this._getCameraStreamConfig(entityId);
-    if (streamConfig.provider !== "home_assistant") {
+    if (streamConfig.provider !== "home_assistant" && streamConfig.provider !== "advanced_camera_card") {
       return;
     }
     const mountId = ++this._expandedStreamMountId;
+    if (streamConfig.provider === "advanced_camera_card") {
+      try {
+        const helpers = await window.loadCardHelpers?.();
+        if (
+          mountId !== this._expandedStreamMountId
+          || !this._expandedOpen
+          || !host.isConnected
+          || typeof helpers?.createCardElement !== "function"
+        ) {
+          return;
+        }
+        const card = await helpers.createCardElement(buildAdvancedCameraCardConfig(
+          entityId,
+          streamConfig.stream || cameraStreamName(entityId),
+        ));
+        if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+          return;
+        }
+        card.hass = this._hass;
+        card.classList.add("camera-card__expanded-advanced-camera");
+        host.replaceChildren(card);
+        this._expandedStreamNode = card;
+      } catch (_error) {
+        // Keep the preview poster visible if the optional card is unavailable.
+      }
+      return;
+    }
     const mountNativeStream = () => {
       if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
         return false;
@@ -1448,6 +1533,7 @@ class NodaliaCameraCard extends HTMLElement {
       : "";
     const iframeUrl = streamConfig.provider === "iframe" ? sanitizeIframeUrl(streamConfig.url) : "";
     const directStreamUrl = go2rtcUrl || iframeUrl;
+    const embeddableStreamUrl = isMixedContentUrl(directStreamUrl) ? "" : directStreamUrl;
 
     return `
       <div class="camera-card__expanded is-open" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
@@ -1466,10 +1552,10 @@ class NodaliaCameraCard extends HTMLElement {
                   <ha-icon icon="mdi:cctv"></ha-icon>
                   <span>${escapeHtml(this._cameraUi("cameraUnavailable", "Camera unavailable"))}</span>
                 </div>`}
-            ${streamConfig.provider === "home_assistant"
+            ${streamConfig.provider === "home_assistant" || streamConfig.provider === "advanced_camera_card"
               ? `<div class="camera-card__expanded-stream" data-camera-expanded-stream></div>`
-              : directStreamUrl
-                ? `<iframe class="camera-card__expanded-stream-frame" src="${escapeHtml(directStreamUrl)}" title="${escapeHtml(title)}" allow="autoplay; fullscreen" loading="eager" referrerpolicy="no-referrer"></iframe>`
+              : embeddableStreamUrl
+                ? `<iframe class="camera-card__expanded-stream-frame" src="${escapeHtml(embeddableStreamUrl)}" title="${escapeHtml(title)}" allow="autoplay; fullscreen" loading="eager" referrerpolicy="no-referrer"></iframe>`
                 : ""}
           </div>
           ${this._renderExpandedActionsMarkup(entityId)}
@@ -2536,6 +2622,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
               <div class="editor-grid editor-grid--stacked">
                 ${this._renderSelectField("ed.camera.live_provider", `${prefix}.provider`, provider, [
     { value: "home_assistant", label: "ed.camera.live_provider_home_assistant" },
+    { value: "advanced_camera_card", label: "ed.camera.live_provider_advanced_camera_card" },
     { value: "go2rtc", label: "ed.camera.live_provider_go2rtc" },
     { value: "iframe", label: "ed.camera.live_provider_iframe" },
   ])}
@@ -2543,6 +2630,9 @@ class NodaliaCameraCardEditor extends HTMLElement {
                   ${this._renderCheckboxField("ed.camera.live_muted", `${prefix}.muted`, stream.muted !== false)}
                   ${this._renderCheckboxField("ed.camera.live_controls", `${prefix}.controls`, stream.controls === true)}
                 ` : ""}
+                ${provider === "advanced_camera_card"
+    ? this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })
+    : ""}
                 ${provider === "go2rtc" ? `
                   ${this._renderTextField("ed.camera.live_base_url", `${prefix}.base_url`, stream.base_url, { placeholder: "http://frigate.local:1984", fullWidth: true })}
                   ${this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })}
@@ -2806,6 +2896,8 @@ if (typeof globalThis !== "undefined") {
     normalizeCameraStreams,
     compactCameraStreams,
     buildGo2rtcViewerUrl,
+    buildAdvancedCameraCardConfig,
+    isMixedContentUrl,
     formatRelativeAge,
     DEFAULT_CONFIG,
     LAYOUT_MODES,

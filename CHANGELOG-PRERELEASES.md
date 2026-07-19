@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.33] - 2026-07-19
+
+Thirty-third **`2.0.0`** **`alpha`**: secure go2rtc playback inside HTTPS Home Assistant dashboards. Release channel **`2.0.0-alpha.33`**.
+
+### Added
+
+- **Camera live providers:** optional `advanced_camera_card` provider mounts Advanced Camera Card in the expanded view with `live_provider: go2rtc`, camera entity, and per-camera stream name, reusing its Home Assistant/Frigate transport without exposing a direct HTTP iframe.
+- **Camera editor:** go2rtc through Advanced Camera Card is selectable independently for every camera across all 12 editor languages.
+
+### Fixed
+
+- **Camera HTTPS playback:** direct HTTP go2rtc and iframe URLs are detected as mixed content under HTTPS and no longer replace the preview with a browser-blocked white frame.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.33`; `2.0.0-alpha.32` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.32] - 2026-07-19
 
 Thirty-second **`2.0.0`** **`alpha`**: seamless camera mosaics and configurable live streams. Release channel **`2.0.0-alpha.32`**.

@@ -19,6 +19,8 @@ function loadCameraHelpers() {
       normalizeCameraStreams,
       compactCameraStreams,
       buildGo2rtcViewerUrl,
+      buildAdvancedCameraCardConfig,
+      isMixedContentUrl,
       parseServiceData,
       formatRelativeAge,
       DEFAULT_CONFIG,
@@ -28,6 +30,7 @@ function loadCameraHelpers() {
   `;
   const sandbox = {
     URL,
+    location: { protocol: "https:", href: "https://home-assistant.example/lovelace/cameras" },
     window: null,
     customElements: { define() {}, get() {} },
     HTMLElement: class {},
@@ -180,6 +183,33 @@ test("camera live providers stay scoped and build go2rtc viewer URLs", () => {
   assert.match(viewerUrl, /src=entrada_main/);
   assert.match(viewerUrl, /mode=webrtc%2Cwebrtc%2Ftcp/);
   assert.equal(helpers.buildGo2rtcViewerUrl("javascript:alert(1)", "entrada", "auto"), "");
+  assert.equal(helpers.isMixedContentUrl(viewerUrl), true);
+  assert.equal(helpers.isMixedContentUrl("https://frigate.example/stream.html?src=entrada"), false);
+});
+
+test("camera advanced provider builds a go2rtc Advanced Camera Card", () => {
+  const config = helpers.normalizeConfig({
+    cameras: ["camera.entrada"],
+    camera_streams: [
+      {
+        camera: "camera.entrada",
+        provider: "advanced_camera_card",
+        stream: "entrada_main",
+      },
+    ],
+  });
+  const compact = helpers.compactCameraStreams(config.camera_streams);
+  const card = helpers.buildAdvancedCameraCardConfig("camera.entrada", "entrada_main");
+
+  assert.deepEqual(JSON.parse(JSON.stringify(compact)), [
+    { camera: "camera.entrada", provider: "advanced_camera_card", stream: "entrada_main" },
+  ]);
+  assert.equal(card.type, "custom:advanced-camera-card");
+  assert.equal(card.cameras[0].camera_entity, "camera.entrada");
+  assert.equal(card.cameras[0].live_provider, "go2rtc");
+  assert.equal(card.cameras[0].go2rtc.stream, "entrada_main");
+  assert.equal(card.menu.style, "none");
+  assert.equal(card.view.default, "live");
 });
 
 test("camera stream serialization omits native defaults", () => {
@@ -270,6 +300,9 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /ha-camera-stream/);
   assert.match(source, /camera_view: "live"/);
   assert.match(source, /buildGo2rtcViewerUrl/);
+  assert.match(source, /buildAdvancedCameraCardConfig/);
+  assert.match(source, /custom:advanced-camera-card/);
+  assert.match(source, /isMixedContentUrl/);
   assert.match(source, /data-camera-expanded-stream/);
   assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.innerHTML[\s\S]*_updateExpandedStreamState\(\)/);
 });
@@ -304,6 +337,7 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /camera_actions\.\$\{sourceIndex\}/);
   assert.match(source, /camera_streams\.\$\{index\}/);
   assert.match(source, /ed\.camera\.live_provider_go2rtc/);
+  assert.match(source, /ed\.camera\.live_provider_advanced_camera_card/);
 });
 
 test("camera preview age bubble updates without re-rendering the image", () => {
