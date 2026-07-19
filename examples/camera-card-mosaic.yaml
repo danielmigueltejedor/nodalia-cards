@@ -10,6 +10,12 @@ cameras:
   - camera.aqara_g410
   - camera.aqara_g5_pro
   - camera.aqara_g100
+camera_streams:
+  - camera: camera.aqara_g410
+    provider: go2rtc
+    base_url: http://frigate.local:1984
+    stream: aqara_g410
+    mode: auto
 camera_actions:
   - camera: camera.aqara_g5_pro
     entity: light.foco_jardin

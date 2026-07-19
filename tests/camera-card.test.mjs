@@ -16,6 +16,9 @@ function loadCameraHelpers() {
       normalizeCameras,
       normalizeExpandedActions,
       normalizeCameraActions,
+      normalizeCameraStreams,
+      compactCameraStreams,
+      buildGo2rtcViewerUrl,
       parseServiceData,
       formatRelativeAge,
       DEFAULT_CONFIG,
@@ -145,6 +148,56 @@ test("camera actions stay scoped to their camera and preserve YAML service data"
   assert.equal(config.camera_actions[1].tap_service_data.entity_id, "lock.puerta");
 });
 
+test("camera live providers stay scoped and build go2rtc viewer URLs", () => {
+  const config = helpers.normalizeConfig({
+    cameras: ["camera.entrada", "camera.jardin"],
+    camera_streams: [
+      {
+        camera: "camera.entrada",
+        provider: "go2rtc",
+        base_url: "http://frigate.local:1984",
+        stream: "entrada_main",
+        mode: "webrtc",
+      },
+      {
+        camera: "camera.jardin",
+        provider: "iframe",
+        url: "https://cameras.example/player/jardin",
+      },
+      { camera: "camera.ignored", provider: "home_assistant" },
+    ],
+  });
+
+  assert.equal(config.camera_streams.length, 2);
+  assert.equal(config.camera_streams[0].provider, "go2rtc");
+  assert.equal(config.camera_streams[1].url, "https://cameras.example/player/jardin");
+  const viewerUrl = helpers.buildGo2rtcViewerUrl(
+    config.camera_streams[0].base_url,
+    config.camera_streams[0].stream,
+    config.camera_streams[0].mode,
+  );
+  assert.match(viewerUrl, /^http:\/\/frigate\.local:1984\/stream\.html\?/);
+  assert.match(viewerUrl, /src=entrada_main/);
+  assert.match(viewerUrl, /mode=webrtc%2Cwebrtc%2Ftcp/);
+  assert.equal(helpers.buildGo2rtcViewerUrl("javascript:alert(1)", "entrada", "auto"), "");
+});
+
+test("camera stream serialization omits native defaults", () => {
+  const normalized = helpers.normalizeConfig({
+    cameras: ["camera.entrada", "camera.jardin"],
+    camera_streams: [
+      { camera: "camera.entrada", provider: "home_assistant" },
+      { camera: "camera.jardin", provider: "home_assistant", controls: true, muted: false },
+    ],
+  });
+  const compact = helpers.compactCameraStreams(normalized.camera_streams);
+  assert.equal(compact.length, 1);
+  assert.equal(compact[0].camera, "camera.jardin");
+  assert.equal(compact[0].controls, true);
+  assert.equal(compact[0].muted, false);
+  assert.equal(helpers.DEFAULT_CONFIG.styles.preview.mosaic_gap, "0px");
+});
+
 test("camera service data accepts YAML objects and JSON strings", () => {
   const yamlObject = { entity_id: "switch.proyector_2" };
   assert.equal(helpers.parseServiceData(yamlObject), yamlObject);
@@ -214,6 +267,11 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /nodalia-humidifier-card/);
   assert.match(source, /nodalia-entity-card/);
   assert.match(source, /_getExpandedActionsForCamera/);
+  assert.match(source, /ha-camera-stream/);
+  assert.match(source, /camera_view: "live"/);
+  assert.match(source, /buildGo2rtcViewerUrl/);
+  assert.match(source, /data-camera-expanded-stream/);
+  assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.innerHTML[\s\S]*_updateExpandedStreamState\(\)/);
 });
 
 test("camera preview opens directly without a visible expand control", () => {
@@ -244,6 +302,8 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /ed\.camera\.show_preview_age/);
   assert.match(source, /data-editor-action="add-camera-action"/);
   assert.match(source, /camera_actions\.\$\{sourceIndex\}/);
+  assert.match(source, /camera_streams\.\$\{index\}/);
+  assert.match(source, /ed\.camera\.live_provider_go2rtc/);
 });
 
 test("camera preview age bubble updates without re-rendering the image", () => {

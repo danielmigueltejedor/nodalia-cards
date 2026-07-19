@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.32] - 2026-07-19
+
+Thirty-second **`2.0.0`** **`alpha`**: seamless camera mosaics and configurable live streams. Release channel **`2.0.0-alpha.32`**.
+
+### Added
+
+- **Camera live view:** expanded cameras now use Home Assistant's native live player, preserving its WebRTC, HLS, and MJPEG negotiation with a native picture-card fallback.
+- **Camera live providers:** `camera_streams` assigns a provider to each camera; the visual editor supports Home Assistant, go2rtc/Frigate with server URL, stream name, and playback mode, plus an external player URL.
+- **Camera editor:** native live streams expose mute and player-control options, while go2rtc streams support automatic, WebRTC, MSE, HLS, and MJPEG modes across all 12 editor languages.
+
+### Fixed
+
+- **Camera mosaic:** camera cells now touch edge to edge by default; `styles.preview.mosaic_gap` remains available for custom spacing.
+- **Camera live continuity:** Home Assistant state updates patch the mounted live player and expanded Nodalia controls without rebuilding the overlay or interrupting playback.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.32`; `2.0.0-alpha.31` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.31] - 2026-07-17
 
 Thirty-first **`2.0.0`** **`alpha`**: per-camera Nodalia controls and direct camera opening. Release channel **`2.0.0-alpha.31`**.
