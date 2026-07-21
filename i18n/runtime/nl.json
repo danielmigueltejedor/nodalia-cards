@@ -329,6 +329,7 @@
     "cameraUnavailable": "Camera niet beschikbaar",
     "connectingLive": "Verbinden met livestream",
     "liveUnavailable": "Livestream niet beschikbaar",
+    "enableAudio": "Audio inschakelen",
     "noCameraEntity": "Geen camera-entiteit",
     "openCamera": "Camera openen",
     "close": "Dichtbij",

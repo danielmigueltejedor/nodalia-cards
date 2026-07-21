@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.35";
+const CARD_VERSION = "2.0.0-alpha.36";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
@@ -778,7 +778,8 @@ class NodaliaCameraCard extends HTMLElement {
 
   _getTitle(state, entityId = this._config?.entity) {
     const configuredName = String(this._config?.name ?? "").trim();
-    return configuredName
+    const primaryEntity = this._getCameraIds()[0] || this._config?.entity;
+    return (entityId === primaryEntity ? configuredName : "")
       || state?.attributes?.friendly_name
       || entityId
       || this._config?.entity
@@ -1198,6 +1199,12 @@ class NodaliaCameraCard extends HTMLElement {
       this._closeExpanded();
       return;
     }
+    if (action === "enable-audio") {
+      event.preventDefault();
+      event.stopPropagation();
+      this._expandedStreamNode?.enableAudio?.();
+      return;
+    }
     if (action === "body") {
       event.preventDefault();
       event.stopPropagation();
@@ -1396,6 +1403,21 @@ class NodaliaCameraCard extends HTMLElement {
           }
           this._setExpandedStreamStatus("error", event.detail?.message || "go2rtc error");
         });
+        player.addEventListener("nodalia-go2rtc-audio-blocked", () => {
+          if (mountId !== this._expandedStreamMountId) {
+            return;
+          }
+          const audioButton = this.shadowRoot?.querySelector("[data-camera-audio-unlock]");
+          if (audioButton instanceof HTMLElement) {
+            audioButton.hidden = false;
+          }
+        });
+        player.addEventListener("nodalia-go2rtc-audio-enabled", () => {
+          const audioButton = this.shadowRoot?.querySelector("[data-camera-audio-unlock]");
+          if (audioButton instanceof HTMLElement) {
+            audioButton.hidden = true;
+          }
+        });
         player.configure({
           source,
           mode: streamConfig.mode,
@@ -1493,7 +1515,7 @@ class NodaliaCameraCard extends HTMLElement {
         content_duration: 0,
         panel_duration: 0,
       },
-      compact_layout_mode: "never",
+      compact_layout_mode: domain === "lock" || domain === "switch" || domain === "input_boolean" ? "always" : "never",
     };
     ["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"].forEach(key => {
       if (action[key]) {
@@ -1545,6 +1567,11 @@ class NodaliaCameraCard extends HTMLElement {
         show_stop: true,
         show_locate: true,
       });
+    } else if (domain === "lock" || domain === "switch" || domain === "input_boolean") {
+      config.grid_options = {
+        columns: 3,
+        rows: 1,
+      };
     }
     return config;
   }
@@ -1662,6 +1689,18 @@ class NodaliaCameraCard extends HTMLElement {
                 <ha-icon icon="mdi:loading"></ha-icon>
                 <span>${escapeHtml(this._cameraUi("connectingLive", "Connecting live stream"))}</span>
               </div>
+              ${streamConfig.muted === false ? `
+                <button
+                  type="button"
+                  class="camera-card__audio-unlock"
+                  data-camera-action="enable-audio"
+                  data-camera-audio-unlock
+                  hidden
+                >
+                  <ha-icon icon="mdi:volume-high"></ha-icon>
+                  <span>${escapeHtml(this._cameraUi("enableAudio", "Enable audio"))}</span>
+                </button>
+              ` : ""}
             ` : ""}
           </div>
           ${this._renderExpandedActionsMarkup(entityId)}
@@ -2151,6 +2190,35 @@ class NodaliaCameraCard extends HTMLElement {
           white-space: nowrap;
         }
 
+        .camera-card__audio-unlock {
+          align-items: center;
+          backdrop-filter: blur(12px);
+          background: color-mix(in srgb, #111 76%, transparent);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 999px;
+          bottom: 14px;
+          color: #fff;
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 650;
+          gap: 7px;
+          padding: 7px 10px;
+          position: absolute;
+          right: 14px;
+          z-index: 3;
+        }
+
+        .camera-card__audio-unlock[hidden] {
+          display: none;
+        }
+
+        .camera-card__audio-unlock ha-icon {
+          height: 17px;
+          width: 17px;
+        }
+
         .camera-card__expanded-actions {
           display: grid;
           gap: 10px;
@@ -2635,6 +2703,20 @@ class NodaliaCameraCardEditor extends HTMLElement {
     `;
   }
 
+  _renderIconField(label, field, value) {
+    return `
+      <label class="editor-field">
+        <span>${escapeHtml(this._editorLabel(label))}</span>
+        <div
+          class="editor-control-host"
+          data-mounted-control="camera-icon"
+          data-field="${escapeHtml(field)}"
+          data-value="${escapeHtml(value || "")}"
+        ></div>
+      </label>
+    `;
+  }
+
   _mountCameraEntityPicker(host) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -2651,6 +2733,17 @@ class NodaliaCameraCardEditor extends HTMLElement {
     picker.value = value;
     picker.includeDomains = domains.length ? domains : ["camera"];
     picker.allowCustomEntity = true;
+    host.replaceChildren(picker);
+  }
+
+  _mountIconPicker(host) {
+    if (!(host instanceof HTMLElement) || host.querySelector("ha-icon-picker")) {
+      return;
+    }
+    const picker = document.createElement("ha-icon-picker");
+    picker.dataset.field = host.dataset.field || "icon";
+    picker.hass = this._hass;
+    picker.value = host.dataset.value || "";
     host.replaceChildren(picker);
   }
 
@@ -2729,7 +2822,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
                 <div class="editor-grid editor-grid--stacked">
                   ${this._renderCameraEntityField("ed.camera.expanded_action_entity", `${prefix}.entity`, action.entity, "light,fan,humidifier,vacuum,cover,climate,lock,switch,input_boolean")}
                   ${this._renderTextField("ed.camera.expanded_action_name", `${prefix}.name`, action.name, { fullWidth: true })}
-                  ${this._renderTextField("ed.camera.expanded_action_icon", `${prefix}.icon`, action.icon, { placeholder: "mdi:lightbulb" })}
+                  ${this._renderIconField("ed.camera.expanded_action_icon", `${prefix}.icon`, action.icon)}
                   ${this._renderTextField("ed.notifications.icon_color", `${prefix}.icon_color`, action.icon_color, { placeholder: "var(--primary-color)" })}
                   ${this._renderSelectField("ed.camera.expanded_action_tap", `${prefix}.tap_action`, action.tap_action || "toggle", [
     { value: "toggle", label: "ed.entity.tap_toggle" },
@@ -3028,6 +3121,9 @@ class NodaliaCameraCardEditor extends HTMLElement {
 
     this.shadowRoot.querySelectorAll('[data-mounted-control="camera-entity"]').forEach(node => {
       this._mountCameraEntityPicker(node);
+    });
+    this.shadowRoot.querySelectorAll('[data-mounted-control="camera-icon"]').forEach(node => {
+      this._mountIconPicker(node);
     });
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }

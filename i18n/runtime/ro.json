@@ -329,6 +329,7 @@
     "cameraUnavailable": "Camera foto nu este disponibilă",
     "connectingLive": "Se conectează transmisia live",
     "liveUnavailable": "Transmisie live indisponibilă",
+    "enableAudio": "Activează sunetul",
     "noCameraEntity": "Nicio entitate cameră",
     "openCamera": "Deschideți camera",
     "close": "Aproape",

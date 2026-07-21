@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.36] - 2026-07-21
+
+Thirty-sixth **`2.0.0`** **`alpha`**: polished multi-camera live popups and audio recovery. Release channel **`2.0.0-alpha.36`**.
+
+### Fixed
+
+- **Camera translations:** connecting, unavailable, and audio-unlock labels are generated into the runtime catalog for all 12 supported languages instead of falling back to English.
+- **Camera popup titles:** secondary mosaic cameras use their own Home Assistant friendly name while the configured card name remains scoped to the primary camera.
+- **Camera go2rtc audio:** `muted: false` is preserved when autoplay with sound is allowed; browser-blocked audio exposes a translated Nodalia unlock control without requiring native video controls.
+- **Camera embedded actions:** lock, switch, and input-boolean Entity Cards use a compact single-row layout that cannot cover the live stage.
+- **Camera editor:** action icons use Home Assistant's native `ha-icon-picker` instead of a plain text input.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.36`; `2.0.0-alpha.35` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.35] - 2026-07-21
 
 Thirty-fifth **`2.0.0`** **`alpha`**: working native Frigate go2rtc popup playback. Release channel **`2.0.0-alpha.35`**.

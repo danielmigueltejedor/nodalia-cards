@@ -329,6 +329,7 @@
     "cameraUnavailable": "Камера недоступна",
     "connectingLive": "Подключение к трансляции",
     "liveUnavailable": "Трансляция недоступна",
+    "enableAudio": "Включить звук",
     "noCameraEntity": "Нет объекта камеры",
     "openCamera": "Открыть камеру",
     "close": "Закрывать",

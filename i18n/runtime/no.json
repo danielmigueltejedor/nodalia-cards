@@ -329,6 +329,7 @@
     "cameraUnavailable": "Kameraet er ikke tilgjengelig",
     "connectingLive": "Kobler til direktestrøm",
     "liveUnavailable": "Direktestrøm utilgjengelig",
+    "enableAudio": "Slå på lyd",
     "noCameraEntity": "Ingen kameraenhet",
     "openCamera": "Åpne kamera",
     "close": "Lukke",

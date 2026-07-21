@@ -329,6 +329,7 @@
     "cameraUnavailable": "Kamera nicht verfügbar",
     "connectingLive": "Livestream wird verbunden",
     "liveUnavailable": "Livestream nicht verfügbar",
+    "enableAudio": "Audio aktivieren",
     "noCameraEntity": "Keine Kameraeinheit",
     "openCamera": "Kamera öffnen",
     "close": "Schließen",

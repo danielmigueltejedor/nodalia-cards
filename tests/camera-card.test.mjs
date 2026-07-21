@@ -361,6 +361,9 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /auth\/sign_path/);
   assert.match(source, /isMixedContentUrl/);
   assert.match(source, /data-camera-expanded-stream/);
+  assert.match(source, /entityId === primaryEntity \? configuredName : ""/);
+  assert.match(source, /compact_layout_mode: domain === "lock"/);
+  assert.match(source, /rows: 1/);
   assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.innerHTML[\s\S]*_updateExpandedStreamState\(\)/);
 });
 
@@ -396,6 +399,8 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /ed\.camera\.live_provider_go2rtc/);
   assert.match(source, /ed\.camera\.live_provider_frigate_go2rtc/);
   assert.match(source, /ed\.camera\.live_frigate_client_id/);
+  assert.match(source, /document\.createElement\("ha-icon-picker"\)/);
+  assert.match(source, /data-mounted-control="camera-icon"/);
 });
 
 test("camera bundles the native go2rtc player protocol", () => {
@@ -407,6 +412,8 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /webrtc\/offer/);
   assert.match(source, /ManagedMediaSource/);
   assert.match(source, /nodalia-go2rtc-loaded/);
+  assert.match(source, /nodalia-go2rtc-audio-blocked/);
+  assert.match(source, /async enableAudio\(\)/);
   assert.match(source, /Adapted from go2rtc VideoRTC/);
   assert.match(source, /customElements\.define\(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer\)/);
   assert.match(read("nodalia-camera-card.js"), /document\.createElement\("nodalia-go2rtc-player"\)/);
@@ -439,4 +446,6 @@ test("camera card uses runtime i18n pack for states and expanded controls", () =
   assert.match(source, /cameraCard/);
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?live:\s*"Live"/);
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?expand:\s*"Expandir"/);
+  assert.match(i18n, /cameraCard:\s*\{[\s\S]*?connectingLive:\s*"Conectando al directo"/);
+  assert.match(i18n, /cameraCard:\s*\{[\s\S]*?enableAudio:\s*"Activar audio"/);
 });

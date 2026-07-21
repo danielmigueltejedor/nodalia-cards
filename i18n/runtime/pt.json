@@ -329,6 +329,7 @@
     "cameraUnavailable": "Câmera indisponível",
     "connectingLive": "A ligar à transmissão em direto",
     "liveUnavailable": "Transmissão em direto indisponível",
+    "enableAudio": "Ativar áudio",
     "noCameraEntity": "Nenhuma entidade de câmera",
     "openCamera": "Câmera aberta",
     "close": "Fechar",

@@ -42,6 +42,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._modeQueue = [];
     this._activeMode = "";
     this._intentionalClose = false;
+    this._autoplayMuted = false;
+    this._audioBlockedReported = false;
   }
 
   get video() {
@@ -55,6 +57,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._mode = String(mode || "auto").toLowerCase();
     this._muted = muted !== false;
     this._controls = controls === true;
+    this._autoplayMuted = false;
+    this._audioBlockedReported = false;
     this._applyVideoOptions();
     if (changed && this.isConnected) {
       this.disconnect();
@@ -77,6 +81,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._reconnectTimer = 0;
     this._modeTimer = 0;
     this._intentionalClose = true;
+    this._autoplayMuted = false;
+    this._audioBlockedReported = false;
     if (this._socket) {
       this._socket.close();
       this._socket = null;
@@ -297,18 +303,68 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
   }
 
   async _play() {
+    if (!this._video) {
+      return false;
+    }
+    this._video.muted = this._muted;
     try {
-      await this._video?.play();
+      await this._video.play();
+      this._autoplayMuted = false;
+      if (!this._muted) {
+        this._emitAudioEnabled();
+      }
+      return true;
     } catch (_error) {
-      if (this._video && !this._video.muted) {
+      if (!this._muted) {
         this._video.muted = true;
         try {
           await this._video.play();
+          this._autoplayMuted = true;
+          this._emitAudioBlocked();
         } catch (_secondError) {
           // The native controls remain available for a user-initiated play.
         }
       }
+      return false;
     }
+  }
+
+  async enableAudio() {
+    if (!this._video) {
+      return false;
+    }
+    this._muted = false;
+    this._video.muted = false;
+    try {
+      await this._video.play();
+      this._autoplayMuted = false;
+      this._audioBlockedReported = false;
+      this._emitAudioEnabled();
+      return true;
+    } catch (_error) {
+      this._video.muted = true;
+      this._autoplayMuted = true;
+      this._emitAudioBlocked();
+      return false;
+    }
+  }
+
+  _emitAudioBlocked() {
+    if (this._audioBlockedReported) {
+      return;
+    }
+    this._audioBlockedReported = true;
+    this.dispatchEvent(new CustomEvent("nodalia-go2rtc-audio-blocked", {
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _emitAudioEnabled() {
+    this.dispatchEvent(new CustomEvent("nodalia-go2rtc-audio-enabled", {
+      bubbles: true,
+      composed: true,
+    }));
   }
 
   _markLoaded() {
