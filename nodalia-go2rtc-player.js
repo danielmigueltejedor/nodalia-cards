@@ -6,6 +6,9 @@
  */
 
 const GO2RTC_RECONNECT_DELAY = 2000;
+const GO2RTC_STARTUP_ERROR_DELAY = 30000;
+const GO2RTC_WEBRTC_PROGRESS_TIMEOUT = 10000;
+const GO2RTC_MAX_MSE_QUEUE_BYTES = 8 * 1024 * 1024;
 const GO2RTC_MODE_TIMEOUTS = {
   webrtc: 4500,
   mse: 6500,
@@ -40,6 +43,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._mediaSource = null;
     this._sourceBuffer = null;
     this._bufferQueue = [];
+    this._bufferQueueBytes = 0;
     this._messageHandlers = new Map();
     this._binaryHandler = null;
     this._reconnectTimer = 0;
@@ -48,10 +52,15 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._activeMode = "";
     this._intentionalClose = false;
     this._autoplayMuted = false;
+    this._startupStartedAt = 0;
     this._playbackStream = null;
-    this._audioPrimeContext = null;
+    this._audioContext = null;
+    this._audioOutputGain = null;
+    this._audioTrackSource = null;
+    this._audioTrackStream = null;
     this._audioPrimeOscillator = null;
-    this._audioPrimeTrack = null;
+    this._audioPrimeGain = null;
+    this._posterObjectUrl = "";
   }
 
   get video() {
@@ -104,6 +113,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._binaryHandler = null;
     this._sourceBuffer = null;
     this._bufferQueue = [];
+    this._bufferQueueBytes = 0;
     if (this._mediaSource?.readyState === "open") {
       try {
         this._mediaSource.endOfStream();
@@ -122,8 +132,10 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         URL.revokeObjectURL(objectUrl);
       }
     }
-    this._releaseAudioPrime();
+    this._releaseAudioOutput();
+    this._revokePosterObjectUrl();
     this._playbackStream = null;
+    this._startupStartedAt = 0;
   }
 
   _ensureVideo() {
@@ -139,9 +151,6 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     video.style.height = "100%";
     video.style.objectFit = "contain";
     video.addEventListener("loadeddata", () => {
-      if (this._audioPrimeTrack) {
-        return;
-      }
       const mediaStream = video.srcObject;
       if (
         this._activeMode === "webrtc"
@@ -152,7 +161,12 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
       this._markLoaded();
     });
-    video.addEventListener("error", () => this._fallback(new Error("go2rtc video decode failed")));
+    video.addEventListener("error", () => {
+      if (!this._intentionalClose && (video.currentSrc || video.srcObject)) {
+        this._fallback(new Error("go2rtc video decode failed"));
+      }
+    });
+    video.addEventListener("volumechange", () => this._syncAudioOutputVolume());
     this._video = video;
     this._applyVideoOptions();
     this.replaceChildren(video);
@@ -164,6 +178,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._video.muted = this._muted;
     this._video.controls = this._controls;
+    this._syncAudioOutputVolume();
   }
 
   primeAudioFromUserGesture() {
@@ -174,39 +189,44 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._video.muted = false;
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass || typeof AudioContextClass !== "function") {
-      this._video.play().catch(() => {});
-      return true;
+      return false;
     }
     try {
-      const context = new AudioContextClass();
-      const destination = context.createMediaStreamDestination();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      gain.gain.value = 0;
-      oscillator.connect(gain);
-      gain.connect(destination);
-      oscillator.start();
-      this._audioPrimeContext = context;
-      this._audioPrimeOscillator = oscillator;
-      this._audioPrimeTrack = destination.stream.getAudioTracks()[0] || null;
-      this._playbackStream = destination.stream;
-      this._video.srcObject = this._playbackStream;
+      const context = this._audioContext || new AudioContextClass();
+      const outputGain = this._audioOutputGain || context.createGain();
+      if (!this._audioOutputGain) {
+        outputGain.connect(context.destination);
+      }
+      this._audioContext = context;
+      this._audioOutputGain = outputGain;
+      this._syncAudioOutputVolume();
+      if (!this._audioPrimeOscillator) {
+        const oscillator = context.createOscillator();
+        const primeGain = context.createGain();
+        primeGain.gain.value = 0;
+        oscillator.connect(primeGain);
+        primeGain.connect(context.destination);
+        oscillator.start();
+        this._audioPrimeOscillator = oscillator;
+        this._audioPrimeGain = primeGain;
+      }
       context.resume?.().catch?.(() => {});
-      this._video.play().catch(() => {});
       return true;
     } catch (_error) {
-      this._releaseAudioPrime();
-      this._video.play().catch(() => {});
-      return true;
+      this._releaseAudioOutput();
+      return false;
     }
   }
 
-  _releaseAudioPrime() {
-    if (this._audioPrimeTrack) {
-      this._playbackStream?.removeTrack?.(this._audioPrimeTrack);
-      this._audioPrimeTrack.stop?.();
-      this._audioPrimeTrack = null;
+  _syncAudioOutputVolume() {
+    if (!this._audioOutputGain) {
+      return;
     }
+    const volume = Number.isFinite(this._video?.volume) ? this._video.volume : 1;
+    this._audioOutputGain.gain.value = this._muted || this._video?.muted ? 0 : volume;
+  }
+
+  _stopAudioPrimeOscillator() {
     if (this._audioPrimeOscillator) {
       try {
         this._audioPrimeOscillator.stop();
@@ -215,8 +235,55 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
       this._audioPrimeOscillator = null;
     }
-    this._audioPrimeContext?.close?.().catch?.(() => {});
-    this._audioPrimeContext = null;
+    this._audioPrimeGain?.disconnect?.();
+    this._audioPrimeGain = null;
+  }
+
+  _detachAudioTrack() {
+    this._audioTrackSource?.disconnect?.();
+    this._audioTrackSource = null;
+    this._audioTrackStream = null;
+  }
+
+  _routeAudioTrack(track) {
+    if (this._muted || !track || !this._audioContext || !this._audioOutputGain) {
+      return false;
+    }
+    try {
+      this._detachAudioTrack();
+      const stream = new MediaStream([track]);
+      const source = this._audioContext.createMediaStreamSource(stream);
+      source.connect(this._audioOutputGain);
+      this._audioTrackStream = stream;
+      this._audioTrackSource = source;
+      this._stopAudioPrimeOscillator();
+      this._audioContext.resume?.().catch?.(() => {});
+      this._syncAudioOutputVolume();
+      return true;
+    } catch (_error) {
+      this._detachAudioTrack();
+      return false;
+    }
+  }
+
+  _releaseAudioOutput() {
+    this._detachAudioTrack();
+    this._stopAudioPrimeOscillator();
+    this._audioOutputGain?.disconnect?.();
+    this._audioOutputGain = null;
+    this._audioContext?.close?.().catch?.(() => {});
+    this._audioContext = null;
+  }
+
+  _revokePosterObjectUrl() {
+    if (!this._posterObjectUrl) {
+      return;
+    }
+    if (this._video?.getAttribute?.("poster") === this._posterObjectUrl) {
+      this._video.removeAttribute("poster");
+    }
+    URL.revokeObjectURL(this._posterObjectUrl);
+    this._posterObjectUrl = "";
   }
 
   _availableModes() {
@@ -243,6 +310,10 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._ensureVideo();
     this._intentionalClose = false;
+    if (!this._startupStartedAt) {
+      this._startupStartedAt = Date.now();
+    }
+    this._emitState("connecting");
     this._modeQueue = this._availableModes();
     this._activeMode = "";
     if (!this._modeQueue.length) {
@@ -274,19 +345,23 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
     });
     socket.addEventListener("close", () => {
-      if (socket === this._socket) {
-        this._socket = null;
+      if (socket !== this._socket) {
+        return;
       }
+      this._socket = null;
       if (this._intentionalClose || !this.isConnected) {
         return;
       }
       if (this._peer?.connectionState === "connected") {
         return;
       }
-      this._resetModeTransport();
-      this._scheduleReconnect();
+      this._retryOrReport(new Error("go2rtc websocket closed"));
     });
-    socket.addEventListener("error", () => this._reportError(new Error("go2rtc websocket failed")));
+    socket.addEventListener("error", () => {
+      if (socket === this._socket) {
+        this._emitState("retrying", "go2rtc websocket failed");
+      }
+    });
     this._socket = socket;
   }
 
@@ -313,11 +388,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       return;
     }
     this._activeMode = mode;
-    window.clearTimeout(this._modeTimer);
-    this._modeTimer = window.setTimeout(() => {
-      this._modeTimer = 0;
-      this._fallback(new Error(`go2rtc ${mode} timed out`));
-    }, GO2RTC_MODE_TIMEOUTS[mode] || 6500);
+    this._armModeTimeout(mode);
     this._messageHandlers.clear();
     this._binaryHandler = null;
     if (mode === "webrtc") {
@@ -331,6 +402,14 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
   }
 
+  _armModeTimeout(mode = this._activeMode, delay = GO2RTC_MODE_TIMEOUTS[mode] || 6500) {
+    window.clearTimeout(this._modeTimer);
+    this._modeTimer = window.setTimeout(() => {
+      this._modeTimer = 0;
+      this._fallback(new Error(`go2rtc ${mode} timed out`));
+    }, delay);
+  }
+
   _fallback(error) {
     window.clearTimeout(this._modeTimer);
     this._modeTimer = 0;
@@ -339,7 +418,29 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._startNextMode();
       return;
     }
-    this._reportError(error);
+    const socket = this._socket;
+    this._socket = null;
+    socket?.close();
+    this._retryOrReport(error);
+  }
+
+  _retryOrReport(error) {
+    this._resetModeTransport();
+    const elapsed = Date.now() - (this._startupStartedAt || Date.now());
+    if (elapsed >= GO2RTC_STARTUP_ERROR_DELAY) {
+      this._reportError(error);
+      return;
+    }
+    this._emitState("retrying", error?.message || String(error || "go2rtc retrying"));
+    this._scheduleReconnect();
+  }
+
+  _emitState(state, message = "") {
+    this.dispatchEvent(new CustomEvent("nodalia-go2rtc-state", {
+      bubbles: true,
+      composed: true,
+      detail: { state, message },
+    }));
   }
 
   _reportError(error) {
@@ -359,6 +460,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._sourceBuffer = null;
     this._bufferQueue = [];
+    this._bufferQueueBytes = 0;
     if (this._mediaSource?.readyState === "open") {
       try {
         this._mediaSource.endOfStream();
@@ -377,7 +479,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         URL.revokeObjectURL(objectUrl);
       }
     }
-    this._releaseAudioPrime();
+    this._detachAudioTrack();
+    this._revokePosterObjectUrl();
     this._playbackStream = null;
   }
 
@@ -407,6 +510,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
   _markLoaded() {
     window.clearTimeout(this._modeTimer);
     this._modeTimer = 0;
+    this._startupStartedAt = 0;
+    this._emitState("loaded");
     this.dispatchEvent(new CustomEvent("nodalia-go2rtc-loaded", { bubbles: true, composed: true }));
   }
 
@@ -421,11 +526,12 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     const mediaStream = this._playbackStream || new MediaStream();
     this._playbackStream = mediaStream;
     peer.addEventListener("track", event => {
-      if (!mediaStream.getTracks().some(track => track.id === event.track.id)) {
-        mediaStream.addTrack(event.track);
+      if (peer !== this._peer) {
+        return;
       }
-      if (event.track.kind === "audio") {
-        this._releaseAudioPrime();
+      const audioRouted = event.track.kind === "audio" && this._routeAudioTrack(event.track);
+      if (!audioRouted && !mediaStream.getTracks().some(track => track.id === event.track.id)) {
+        mediaStream.addTrack(event.track);
       }
       if (this._video) {
         this._video.srcObject = mediaStream;
@@ -437,8 +543,13 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._send({ type: "webrtc/candidate", value: candidate });
     });
     peer.addEventListener("connectionstatechange", () => {
+      if (peer !== this._peer) {
+        return;
+      }
       if (peer.connectionState === "connected") {
-        this._markLoaded();
+        this._armModeTimeout("webrtc", GO2RTC_WEBRTC_PROGRESS_TIMEOUT);
+      } else if (peer.connectionState === "connecting") {
+        this._armModeTimeout("webrtc", GO2RTC_WEBRTC_PROGRESS_TIMEOUT);
       } else if (peer.connectionState === "failed" || peer.connectionState === "disconnected") {
         this._fallback(new Error(`go2rtc WebRTC ${peer.connectionState}`));
       }
@@ -447,7 +558,12 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       if (message.type === "webrtc/candidate" && message.value) {
         peer.addIceCandidate({ candidate: message.value, sdpMid: "0" }).catch(() => {});
       } else if (message.type === "webrtc/answer") {
-        peer.setRemoteDescription({ type: "answer", sdp: message.value }).catch(error => this._fallback(error));
+        this._armModeTimeout("webrtc", GO2RTC_WEBRTC_PROGRESS_TIMEOUT);
+        peer.setRemoteDescription({ type: "answer", sdp: message.value }).catch(error => {
+          if (peer === this._peer) {
+            this._fallback(error);
+          }
+        });
       } else if (message.type === "error" && String(message.value || "").includes("webrtc/offer")) {
         this._fallback(new Error(String(message.value)));
       }
@@ -457,8 +573,16 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     peer.addTransceiver("audio", { direction: "recvonly" });
     peer.createOffer()
       .then(offer => peer.setLocalDescription(offer).then(() => offer))
-      .then(offer => this._send({ type: "webrtc/offer", value: offer.sdp }))
-      .catch(error => this._fallback(error));
+      .then(offer => {
+        if (peer === this._peer) {
+          this._send({ type: "webrtc/offer", value: offer.sdp });
+        }
+      })
+      .catch(error => {
+        if (peer === this._peer) {
+          this._fallback(error);
+        }
+      });
   }
 
   _supportedCodecs(isSupported) {
@@ -479,21 +603,26 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     const mediaSource = new MediaSourceClass();
     this._mediaSource = mediaSource;
     mediaSource.addEventListener("sourceopen", () => {
-      this._send({ type: "mse", value: this._supportedCodecs(MediaSourceClass.isTypeSupported) });
+      if (mediaSource === this._mediaSource) {
+        this._send({ type: "mse", value: this._supportedCodecs(MediaSourceClass.isTypeSupported) });
+      }
     }, { once: true });
     if (window.ManagedMediaSource) {
-      this._releaseAudioPrime();
+      this._stopAudioPrimeOscillator();
       this._playbackStream = null;
       this._video.disableRemotePlayback = true;
       this._video.srcObject = mediaSource;
     } else {
-      this._releaseAudioPrime();
+      this._stopAudioPrimeOscillator();
       this._playbackStream = null;
       this._video.srcObject = null;
       this._video.src = URL.createObjectURL(mediaSource);
     }
     this._play();
     this._messageHandlers.set("mse", message => {
+      if (mediaSource !== this._mediaSource) {
+        return;
+      }
       if (message.type === "error" && String(message.value || "").startsWith("mse")) {
         this._fallback(new Error(String(message.value)));
         return;
@@ -507,7 +636,16 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         sourceBuffer.addEventListener("updateend", () => this._flushMseQueue());
         this._sourceBuffer = sourceBuffer;
         this._binaryHandler = data => {
+          if (mediaSource !== this._mediaSource) {
+            return;
+          }
+          const byteLength = Number(data?.byteLength) || 0;
+          if (this._bufferQueueBytes + byteLength > GO2RTC_MAX_MSE_QUEUE_BYTES) {
+            this._fallback(new Error("go2rtc MSE buffer queue exceeded its safety limit"));
+            return;
+          }
           this._bufferQueue.push(data);
+          this._bufferQueueBytes += byteLength;
           this._flushMseQueue();
         };
       } catch (error) {
@@ -534,7 +672,9 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         }
       }
       if (this._bufferQueue.length) {
-        sourceBuffer.appendBuffer(this._bufferQueue.shift());
+        const data = this._bufferQueue.shift();
+        this._bufferQueueBytes = Math.max(0, this._bufferQueueBytes - (Number(data?.byteLength) || 0));
+        sourceBuffer.appendBuffer(data);
       }
     } catch (error) {
       this._fallback(error);
@@ -555,7 +695,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       sourceUrl.pathname = `${sourceUrl.pathname.replace(/\/ws$/, "")}/hls/`;
       sourceUrl.search = "";
       const playlist = String(message.value || "").replaceAll("hls/", sourceUrl.toString());
-      this._releaseAudioPrime();
+      this._stopAudioPrimeOscillator();
       this._playbackStream = null;
       this._video.srcObject = null;
       this._video.src = `data:application/vnd.apple.mpegurl;base64,${window.btoa(playlist)}`;
@@ -568,15 +708,12 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     let loaded = false;
     this._video.controls = false;
     this._binaryHandler = data => {
-      const bytes = new Uint8Array(data);
-      let binary = "";
-      for (let index = 0; index < bytes.byteLength; index += 1) {
-        binary += String.fromCharCode(bytes[index]);
-      }
-      this._video.poster = `data:image/jpeg;base64,${window.btoa(binary)}`;
+      this._revokePosterObjectUrl();
+      this._posterObjectUrl = URL.createObjectURL(new Blob([data], { type: "image/jpeg" }));
+      this._video.poster = this._posterObjectUrl;
       if (!loaded) {
         loaded = true;
-        this._releaseAudioPrime();
+        this._stopAudioPrimeOscillator();
         this._playbackStream = null;
         this._markLoaded();
       }

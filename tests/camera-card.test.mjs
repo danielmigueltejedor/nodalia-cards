@@ -45,6 +45,64 @@ function loadCameraHelpers() {
   return sandbox.__cameraHelpers;
 }
 
+function loadGo2rtcPlayer() {
+  const source = read("nodalia-go2rtc-player.js")
+    .replace("export class NodaliaGo2RTCPlayer", "class NodaliaGo2RTCPlayer")
+    + "\nglobalThis.__NodaliaGo2RTCPlayer = NodaliaGo2RTCPlayer;\n";
+  class FakeHTMLElement {
+    constructor() {
+      this.events = [];
+      this.isConnected = true;
+    }
+
+    dispatchEvent(event) {
+      this.events.push(event);
+      return true;
+    }
+
+    replaceChildren() {}
+  }
+  class FakeCustomEvent {
+    constructor(type, options = {}) {
+      this.type = type;
+      this.detail = options.detail;
+    }
+  }
+  class FakeMediaStream {
+    constructor(tracks = []) {
+      this.tracks = [...tracks];
+    }
+
+    getTracks() {
+      return this.tracks;
+    }
+
+    getVideoTracks() {
+      return this.tracks.filter(track => track.kind === "video");
+    }
+
+    addTrack(track) {
+      this.tracks.push(track);
+    }
+  }
+  const sandbox = {
+    URL,
+    Blob,
+    CustomEvent: FakeCustomEvent,
+    HTMLElement: FakeHTMLElement,
+    MediaStream: FakeMediaStream,
+    customElements: { define() {}, get() {} },
+    location: { href: "https://home-assistant.example/lovelace/cameras" },
+    setTimeout,
+    clearTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  return sandbox.__NodaliaGo2RTCPlayer;
+}
+
 const helpers = loadCameraHelpers();
 
 test("camera card registers custom element and bundle entry", () => {
@@ -423,7 +481,10 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /ManagedMediaSource/);
   assert.match(source, /nodalia-go2rtc-loaded/);
   assert.match(source, /primeAudioFromUserGesture\(\)/);
-  assert.match(source, /createMediaStreamDestination\(\)/);
+  assert.match(source, /createMediaStreamSource\(stream\)/);
+  assert.match(source, /GO2RTC_STARTUP_ERROR_DELAY/);
+  assert.match(source, /GO2RTC_MAX_MSE_QUEUE_BYTES/);
+  assert.match(source, /nodalia-go2rtc-state/);
   assert.match(source, /GO2RTC_MODE_TIMEOUTS/);
   assert.doesNotMatch(source, /nodalia-go2rtc-audio-blocked/);
   assert.match(source, /Adapted from go2rtc VideoRTC/);
@@ -433,6 +494,53 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(build, /legalComments: "inline"/);
   assert.ok(pkg.files.includes("nodalia-go2rtc-player.js"));
   assert.ok(pkg.files.includes("THIRD_PARTY_NOTICES.md"));
+});
+
+test("go2rtc routes delayed WebRTC audio through the click-authorized audio context", () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  const track = { id: "audio-1", kind: "audio" };
+  const sourceNode = { connectedTo: null, connect(node) { this.connectedTo = node; }, disconnect() {} };
+  const outputGain = { gain: { value: 0 } };
+  let oscillatorStopped = false;
+  player._muted = false;
+  player._video = { muted: false, volume: 0.35 };
+  player._audioContext = {
+    createMediaStreamSource: () => sourceNode,
+    resume: () => Promise.resolve(),
+  };
+  player._audioOutputGain = outputGain;
+  player._audioPrimeOscillator = { stop() { oscillatorStopped = true; } };
+  player._audioPrimeGain = { disconnect() {} };
+
+  assert.equal(player._routeAudioTrack(track), true);
+  assert.equal(sourceNode.connectedTo, outputGain);
+  assert.equal(outputGain.gain.value, 0.35);
+  assert.equal(player._audioTrackStream.getTracks()[0], track);
+  assert.equal(oscillatorStopped, true);
+});
+
+test("go2rtc keeps retrying during startup and reports only after the grace period", () => {
+  const Player = loadGo2rtcPlayer();
+  const retrying = new Player();
+  let reconnects = 0;
+  retrying._startupStartedAt = Date.now();
+  retrying._resetModeTransport = () => {};
+  retrying._scheduleReconnect = () => { reconnects += 1; };
+  retrying._retryOrReport(new Error("temporary"));
+
+  assert.equal(reconnects, 1);
+  assert.equal(retrying.events.at(-1).type, "nodalia-go2rtc-state");
+  assert.equal(retrying.events.at(-1).detail.state, "retrying");
+
+  const terminal = new Player();
+  terminal._startupStartedAt = Date.now() - 31000;
+  terminal._resetModeTransport = () => {};
+  terminal._scheduleReconnect = () => { reconnects += 1; };
+  terminal._retryOrReport(new Error("terminal"));
+
+  assert.equal(reconnects, 1);
+  assert.equal(terminal.events.at(-1).type, "nodalia-go2rtc-error");
 });
 
 test("camera preview age bubble updates without re-rendering the image", () => {

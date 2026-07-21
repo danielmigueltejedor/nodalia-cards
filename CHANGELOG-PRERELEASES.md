@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.39] - 2026-07-22
+
+Thirty-ninth **`2.0.0`** **`alpha`**: reliable camera audio, patient recovery, and runtime audit. Release channel **`2.0.0-alpha.39`**.
+
+### Fixed
+
+- **Camera live audio:** `muted: false` unlocks a Web Audio output during the popup-opening click and routes the delayed WebRTC audio track through it, while native volume and mute changes continue to control the output.
+- **Camera loading state:** recoverable WebSocket, transport, and decoder failures stay in the connecting state; the unavailable message appears only after the 30-second startup recovery window is exhausted.
+- **Camera connection races:** close events and async WebRTC callbacks from stale transports can no longer tear down a newer stream attempt.
+- **Camera signed paths:** empty or transient signing responses are evicted from cache and retried once instead of being cached for 24 hours as unusable endpoints.
+- **Camera preview cache:** failed timestamped image URLs are bounded and successful reloads are removed from the failure set.
+
+### Changed
+
+- **Camera WebRTC startup:** signaling and ICE progress extend only the active WebRTC timeout, avoiding premature fallback without delaying transports that never answer.
+- **Camera stream memory:** the MSE pending queue is capped at 8 MB and MJPEG frames use revocable object URLs instead of byte-by-byte Base64 conversion.
+- **Compatibility loaders:** historical resource aliases now import the current versioned bundle instead of embedding dozens of duplicate 4.4 MB payloads.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.39`; `2.0.0-alpha.38` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.38] - 2026-07-22
 
 Thirty-eighth **`2.0.0`** **`alpha`**: faster camera startup with direct click-authorized audio. Release channel **`2.0.0-alpha.38`**.

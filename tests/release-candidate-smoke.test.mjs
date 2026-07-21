@@ -14,6 +14,13 @@ function cardPartsFromBuildScript() {
   return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
 }
 
+function compatibilityLoadersFromBuildScript() {
+  const source = read("scripts/build-bundle.mjs");
+  const match = source.match(/const compatLoaderFiles = \[([\s\S]*?)\];/);
+  assert.ok(match, "build-bundle.mjs should declare compatLoaderFiles");
+  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+}
+
 test("bundle registers every card listed in build-bundle CARD_PARTS", () => {
   const bundle = read("nodalia-cards.js");
   const suite = read(`nodalia-cards-suite-${JSON.parse(read("package.json")).version}.js`);
@@ -30,6 +37,18 @@ test("bundle build validates card registrations before writing artifacts", () =>
   assert.match(build, /assertCardRegistrations\(fullBody, "Full"\)/);
   assert.match(build, /assertCardRegistrations\(suiteBody, "Suite"\)/);
   assert.doesNotMatch(build, /Promise\.all\(\[\s*buildParts\(ALL_PARTS/);
+});
+
+test("compatibility aliases are unique lightweight loaders for the current version", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const loaders = compatibilityLoadersFromBuildScript();
+  const target = `nodalia-cards-${pkg.version}.js`;
+  assert.equal(new Set(loaders).size, loaders.length);
+  loaders.forEach(file => {
+    const source = read(file);
+    assert.ok(Buffer.byteLength(source) < 2048, `${file} should remain a lightweight loader`);
+    assert.match(source, new RegExp(`import "\\./${target.replaceAll(".", "\\.")}"`));
+  });
 });
 
 test("menu card is not shipped in the bundle", () => {

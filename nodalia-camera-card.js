@@ -2,10 +2,11 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.38";
+const CARD_VERSION = "2.0.0-alpha.39";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
+const MAX_FAILED_IMAGE_URLS = 32;
 const STREAM_PROVIDERS = new Set(["home_assistant", "frigate_go2rtc", "go2rtc", "iframe"]);
 const STREAM_MODES = new Set(["auto", "webrtc", "mse", "hls", "mjpeg"]);
 const TAP_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
@@ -510,7 +511,7 @@ async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) {
   })).then(response => {
     const signedPath = String(response?.path || "").trim();
     if (!signedPath) {
-      return "";
+      throw new Error("Home Assistant returned an empty signed go2rtc path");
     }
     return typeof hass?.hassUrl === "function"
       ? hass.hassUrl(signedPath)
@@ -660,6 +661,8 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedCardConfigSignatures = new WeakMap();
     this._expandedStreamMountId = 0;
     this._expandedStreamNode = null;
+    this._go2rtcPrefetchOwner = null;
+    this._go2rtcPrefetchSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onWindowKeyDown = this._onWindowKeyDown.bind(this);
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -694,6 +697,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
+    this._go2rtcPrefetchSignature = "";
     this._animateContentOnNextRender = true;
     this._prefetchGo2rtcSources();
     if (!this.isConnected) {
@@ -705,6 +709,11 @@ class NodaliaCameraCard extends HTMLElement {
   set hass(hass) {
     const previousHass = this._hass;
     this._hass = hass;
+    const prefetchOwner = hass?.connection || hass?.auth || hass || null;
+    if (prefetchOwner !== this._go2rtcPrefetchOwner) {
+      this._go2rtcPrefetchOwner = prefetchOwner;
+      this._go2rtcPrefetchSignature = "";
+    }
     this._prefetchGo2rtcSources();
     if (!this.isConnected) {
       return;
@@ -873,6 +882,18 @@ class NodaliaCameraCard extends HTMLElement {
     }
 
     return "";
+  }
+
+  _rememberFailedImageUrl(url) {
+    const value = String(url || "").trim();
+    if (!value) {
+      return;
+    }
+    this._failedImageUrls.delete(value);
+    this._failedImageUrls.add(value);
+    while (this._failedImageUrls.size > MAX_FAILED_IMAGE_URLS) {
+      this._failedImageUrls.delete(this._failedImageUrls.values().next().value);
+    }
   }
 
   _getStreamProviderHint(state = this._getState()) {
@@ -1339,11 +1360,26 @@ class NodaliaCameraCard extends HTMLElement {
     if (!this._hass || !this._config) {
       return;
     }
-    (this._config.camera_streams || [])
-      .filter(streamConfig => streamConfig?.provider === "frigate_go2rtc")
-      .forEach(streamConfig => {
-        void resolveGo2rtcPlayerSource(this._hass, streamConfig).catch(() => {});
-      });
+    const streamConfigs = (this._config.camera_streams || [])
+      .filter(streamConfig => streamConfig?.provider === "frigate_go2rtc");
+    const signature = JSON.stringify(streamConfigs.map(streamConfig => [
+      streamConfig.client_id,
+      streamConfig.stream,
+    ]));
+    if (!streamConfigs.length || signature === this._go2rtcPrefetchSignature) {
+      return;
+    }
+    this._go2rtcPrefetchSignature = signature;
+    void Promise.allSettled(streamConfigs.map(streamConfig => (
+      resolveGo2rtcPlayerSource(this._hass, streamConfig)
+    ))).then(results => {
+      if (
+        this._go2rtcPrefetchSignature === signature
+        && results.some(result => result.status === "rejected" || !result.value)
+      ) {
+        this._go2rtcPrefetchSignature = "";
+      }
+    });
   }
 
   _updateExpandedStreamState() {
@@ -1426,10 +1462,21 @@ class NodaliaCameraCard extends HTMLElement {
         if (streamConfig.muted === false) {
           player.primeAudioFromUserGesture?.();
         }
-        const source = await resolveGo2rtcPlayerSource(this._hass, {
+        const sourceConfig = {
           ...streamConfig,
           stream: streamConfig.stream || cameraStreamName(entityId),
-        });
+        };
+        let source;
+        try {
+          source = await resolveGo2rtcPlayerSource(this._hass, sourceConfig);
+        } catch (_firstError) {
+          await new Promise(resolve => window.setTimeout(resolve, 350));
+          if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+            player.disconnect?.();
+            return;
+          }
+          source = await resolveGo2rtcPlayerSource(this._hass, sourceConfig);
+        }
         if (
           mountId !== this._expandedStreamMountId
           || !this._expandedOpen
@@ -1451,6 +1498,14 @@ class NodaliaCameraCard extends HTMLElement {
             poster.hidden = true;
           }
         }, { once: true });
+        player.addEventListener("nodalia-go2rtc-state", event => {
+          if (
+            mountId === this._expandedStreamMountId
+            && (event.detail?.state === "connecting" || event.detail?.state === "retrying")
+          ) {
+            this._setExpandedStreamStatus("loading", event.detail?.message || "");
+          }
+        });
         player.addEventListener("nodalia-go2rtc-error", event => {
           if (mountId !== this._expandedStreamMountId) {
             return;
@@ -2301,9 +2356,15 @@ class NodaliaCameraCard extends HTMLElement {
       node.addEventListener("error", () => {
         const src = node.getAttribute("src");
         if (src) {
-          this._failedImageUrls.add(src);
+          this._rememberFailedImageUrl(src);
           this._lastRenderSignature = "";
           this._render();
+        }
+      }, { once: true });
+      node.addEventListener("load", () => {
+        const src = node.getAttribute("src");
+        if (src) {
+          this._failedImageUrls.delete(src);
         }
       }, { once: true });
     });

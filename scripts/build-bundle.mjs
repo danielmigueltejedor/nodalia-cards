@@ -171,6 +171,7 @@ const compatLoaderFiles = [
   "nodalia-cards-2.0.0-alpha.35.js",
   "nodalia-cards-2.0.0-alpha.36.js",
   "nodalia-cards-2.0.0-alpha.37.js",
+  "nodalia-cards-2.0.0-alpha.38.js",
 ];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
@@ -210,6 +211,17 @@ const inlineLoaderFooter = file => `;if(typeof window!=="undefined"){window.__NO
   splitSuiteFile: suiteFile,
 })};}`;
 
+const compatibilityLoaderSource = file => `import "./${versionedLoaderFile}";
+if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
+  mode: "compat",
+  pkgVersion: pkg.version,
+  contentSha256_12: fullHash,
+  file,
+  targetFile: versionedLoaderFile,
+  fallbackFile: loaderFile,
+})};}
+`;
+
 const manifest = {
   pkgVersion: pkg.version,
   contentSha256_12: fullHash,
@@ -236,7 +248,7 @@ fs.writeFileSync(path.join(root, manifestFile), manifestSource);
 fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
 fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
 compatLoaderFiles.forEach(file => {
-  fs.writeFileSync(path.join(root, file), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(file)}\n`);
+  fs.writeFileSync(path.join(root, file), compatibilityLoaderSource(file));
 });
 fs.writeFileSync(path.join(root, coreFile), `${coreBody}\n${coreFooter}\n`);
 fs.writeFileSync(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n`);
