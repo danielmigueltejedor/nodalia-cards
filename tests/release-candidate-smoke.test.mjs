@@ -44,11 +44,27 @@ test("compatibility aliases are unique lightweight loaders for the current versi
   const loaders = compatibilityLoadersFromBuildScript();
   const target = `nodalia-cards-${pkg.version}.js`;
   assert.equal(new Set(loaders).size, loaders.length);
+  assert.ok(loaders.length <= 2, "only the two immediately previous compatibility loaders should remain");
   loaders.forEach(file => {
     const source = read(file);
     assert.ok(Buffer.byteLength(source) < 2048, `${file} should remain a lightweight loader`);
     assert.match(source, new RegExp(`import "\\./${target.replaceAll(".", "\\.")}"`));
   });
+});
+
+test("repository retains only current versioned artifacts and compatibility loaders", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const compatibilityLoaders = compatibilityLoadersFromBuildScript();
+  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+  const expected = [
+    `nodalia-cards-${pkg.version}.js`,
+    `nodalia-cards-core-${pkg.version}.js`,
+    `nodalia-cards-suite-${pkg.version}.js`,
+    ...compatibilityLoaders,
+  ].sort();
+  const actual = fs.readdirSync(root).filter(file => versionedBundlePattern.test(file)).sort();
+
+  assert.deepEqual(actual, expected);
 });
 
 test("menu card is not shipped in the bundle", () => {
@@ -66,46 +82,7 @@ test("published package files and bundle manifest stay coherent", () => {
   const manifest = read("nodalia-cards.manifest.js");
   const expectedHacsFile = "nodalia-cards.js";
   const expectedVersionedFile = `nodalia-cards-${pkg.version}.js`;
-  const expectedCompatFiles = [
-    "nodalia-cards-1.3.4.js",
-    "nodalia-cards-1.3.5.js",
-    "nodalia-cards-1.3.5-alpha.1.js",
-    "nodalia-cards-1.3.5-alpha.2.js",
-    "nodalia-cards-1.3.5-alpha.3.js",
-    "nodalia-cards-1.3.5-alpha.4.js",
-    "nodalia-cards-1.3.5-alpha.5.js",
-    "nodalia-cards-1.3.5-alpha.6.js",
-    "nodalia-cards-1.3.5-alpha.7.js",
-    "nodalia-cards-1.3.5-alpha.8.js",
-    "nodalia-cards-1.3.5-alpha.9.js",
-    "nodalia-cards-1.3.5-alpha.10.js",
-    "nodalia-cards-2.0.0-alpha.3.js",
-    "nodalia-cards-2.0.0-alpha.4.js",
-    "nodalia-cards-2.0.0-alpha.5.js",
-    "nodalia-cards-2.0.0-alpha.6.js",
-    "nodalia-cards-2.0.0-alpha.7.js",
-    "nodalia-cards-2.0.0-alpha.8.js",
-    "nodalia-cards-2.0.0-alpha.9.js",
-    "nodalia-cards-2.0.0-alpha.10.js",
-    "nodalia-cards-2.0.0-alpha.11.js",
-    "nodalia-cards-2.0.0-alpha.12.js",
-    "nodalia-cards-2.0.0-alpha.13.js",
-    "nodalia-cards-2.0.0-alpha.14.js",
-    "nodalia-cards-2.0.0-alpha.15.js",
-    "nodalia-cards-2.0.0-alpha.21.js",
-    "nodalia-cards-2.0.0-alpha.22.js",
-    "nodalia-cards-2.0.0-alpha.23.js",
-    "nodalia-cards-2.0.0-alpha.24.js",
-    "nodalia-cards-2.0.0-alpha.25.js",
-    "nodalia-cards-2.0.0-alpha.26.js",
-    "nodalia-cards-2.0.0-alpha.27.js",
-    "nodalia-cards-2.0.0-alpha.28.js",
-    "nodalia-cards-2.0.0-alpha.29.js",
-    "nodalia-cards-2.0.0-alpha.30.js",
-    "nodalia-cards-2.0.0-alpha.31.js",
-    "nodalia-cards-2.0.0-alpha.32.js",
-    "nodalia-cards-2.0.0-alpha.33.js",
-  ];
+  const expectedCompatFiles = compatibilityLoadersFromBuildScript();
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
   assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));

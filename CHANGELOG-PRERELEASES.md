@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.40] - 2026-07-22
+
+Fortieth **`2.0.0`** **`alpha`**: lean release history and bounded compatibility. Release channel **`2.0.0-alpha.40`**.
+
+### Changed
+
+- **Repository releases:** historical GitHub releases and tags remain available for rollback and traceability, while the active branch keeps only the current bundle and the two immediately previous compatibility loaders.
+- **Compatibility policy:** `2.0.0-alpha.38` and `2.0.0-alpha.39` remain as lightweight aliases; older generated aliases and split artifacts are removed from the active package and repository tree.
+- **Release validation:** automated tests enforce unique lightweight compatibility loaders and a maximum retention count of two.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.40`.
+
 ## [2.0.0-alpha.39] - 2026-07-22
 
 Thirty-ninth **`2.0.0`** **`alpha`**: reliable camera audio, patient recovery, and runtime audit. Release channel **`2.0.0-alpha.39`**.

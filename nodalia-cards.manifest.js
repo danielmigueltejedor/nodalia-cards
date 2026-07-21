@@ -1,61 +1,20 @@
 export default {
-  "pkgVersion": "2.0.0-alpha.39",
+  "pkgVersion": "2.0.0-alpha.40",
   "contentSha256_12": "535e6ffb082e",
   "file": "nodalia-cards.bundle.js",
   "loaderFile": "nodalia-cards.js",
   "hacsFile": "nodalia-cards.js",
   "compatLoaderFiles": [
-    "nodalia-cards-1.3.4.js",
-    "nodalia-cards-1.3.5.js",
-    "nodalia-cards-1.3.5-alpha.1.js",
-    "nodalia-cards-1.3.5-alpha.2.js",
-    "nodalia-cards-1.3.5-alpha.3.js",
-    "nodalia-cards-1.3.5-alpha.4.js",
-    "nodalia-cards-1.3.5-alpha.5.js",
-    "nodalia-cards-1.3.5-alpha.6.js",
-    "nodalia-cards-1.3.5-alpha.7.js",
-    "nodalia-cards-1.3.5-alpha.8.js",
-    "nodalia-cards-1.3.5-alpha.9.js",
-    "nodalia-cards-1.3.5-alpha.10.js",
-    "nodalia-cards-2.0.0-alpha.3.js",
-    "nodalia-cards-2.0.0-alpha.4.js",
-    "nodalia-cards-2.0.0-alpha.5.js",
-    "nodalia-cards-2.0.0-alpha.6.js",
-    "nodalia-cards-2.0.0-alpha.7.js",
-    "nodalia-cards-2.0.0-alpha.8.js",
-    "nodalia-cards-2.0.0-alpha.9.js",
-    "nodalia-cards-2.0.0-alpha.10.js",
-    "nodalia-cards-2.0.0-alpha.11.js",
-    "nodalia-cards-2.0.0-alpha.12.js",
-    "nodalia-cards-2.0.0-alpha.13.js",
-    "nodalia-cards-2.0.0-alpha.14.js",
-    "nodalia-cards-2.0.0-alpha.15.js",
-    "nodalia-cards-2.0.0-alpha.21.js",
-    "nodalia-cards-2.0.0-alpha.22.js",
-    "nodalia-cards-2.0.0-alpha.23.js",
-    "nodalia-cards-2.0.0-alpha.24.js",
-    "nodalia-cards-2.0.0-alpha.25.js",
-    "nodalia-cards-2.0.0-alpha.26.js",
-    "nodalia-cards-2.0.0-alpha.27.js",
-    "nodalia-cards-2.0.0-alpha.28.js",
-    "nodalia-cards-2.0.0-alpha.29.js",
-    "nodalia-cards-2.0.0-alpha.30.js",
-    "nodalia-cards-2.0.0-alpha.31.js",
-    "nodalia-cards-2.0.0-alpha.32.js",
-    "nodalia-cards-2.0.0-alpha.33.js",
-    "nodalia-cards-2.0.0-alpha.34.js",
-    "nodalia-cards-2.0.0-alpha.35.js",
-    "nodalia-cards-2.0.0-alpha.36.js",
-    "nodalia-cards-2.0.0-alpha.37.js",
-    "nodalia-cards-2.0.0-alpha.38.js"
+    "nodalia-cards-2.0.0-alpha.38.js",
+    "nodalia-cards-2.0.0-alpha.39.js"
   ],
-  "splitCoreFile": "nodalia-cards-core-2.0.0-alpha.39.js",
+  "splitCoreFile": "nodalia-cards-core-2.0.0-alpha.40.js",
   "splitCoreSha256_12": "081598bb80fd",
-  "splitSuiteFile": "nodalia-cards-suite-2.0.0-alpha.39.js",
+  "splitSuiteFile": "nodalia-cards-suite-2.0.0-alpha.40.js",
   "splitSuiteSha256_12": "e4560f35c6b5"
 };
-export const pkgVersion = "2.0.0-alpha.39";
+export const pkgVersion = "2.0.0-alpha.40";
 export const contentSha256_12 = "535e6ffb082e";
 export const file = "nodalia-cards.bundle.js";
-export const splitCoreFile = "nodalia-cards-core-2.0.0-alpha.39.js";
-export const splitSuiteFile = "nodalia-cards-suite-2.0.0-alpha.39.js";
+export const splitCoreFile = "nodalia-cards-core-2.0.0-alpha.40.js";
+export const splitSuiteFile = "nodalia-cards-suite-2.0.0-alpha.40.js";
