@@ -327,6 +327,8 @@
     "emptyBody": "Set `entity` to show this card.",
     "defaultName": "Camera",
     "cameraUnavailable": "Camera unavailable",
+    "connectingLive": "Connecting live stream",
+    "liveUnavailable": "Live stream unavailable",
     "noCameraEntity": "No camera entity",
     "openCamera": "Open camera",
     "close": "Close",
