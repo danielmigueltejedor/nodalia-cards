@@ -319,6 +319,23 @@ mobile_notifications:
 background_mobile:
   enabled: true
   webhook: nodalia_notifications_background_sync
+custom_notifications:
+  - title: Now playing
+    message: "{source} is currently playing {media_title} by {media_artist}."
+    entity: media_player.nest_audio
+    condition: equals
+    value: playing
+    action_label: Open media control
+    action_type: more-info
+  - title: EV charging
+    message: "The energy price is currently {value}. Time to charge your Hyundai Kona!"
+    entity: sensor.energy_price
+    condition: below
+    value: "0.20"
+    action_label: Open EV dashboard
+    tap_action:
+      action: navigate
+      navigation_path: /lovelace/ev
 ```
 
 The card mirrors these alerts visually and can send mobile notifications while
@@ -327,6 +344,12 @@ configured alert entities, thresholds, and `mobile_notifications.entities` to
 Home Assistant by webhook so the package can send push notifications in the
 background without duplicating notify targets in the automation YAML. Start from
 [`examples/notifications-background-mobile-package.yaml`](./examples/notifications-background-mobile-package.yaml).
+
+Custom notification titles, messages, action labels, and URLs accept `{source}`,
+`{value}`, `{threshold}`, `{fan}`, `{time}`, `{entity}`, and `{state}`. Attributes
+of the configured entity are available by name, such as `{media_title}`. Other
+entities can be referenced as `{sensor.energy_price}` or explicitly as
+`{sensor.energy_price.state}` and `{sensor.energy_price.unit_of_measurement}`.
 
 Keep the example webhook on `local_only: true` unless you deliberately expose
 the sync endpoint remotely. The package stores the synced JSON across 40

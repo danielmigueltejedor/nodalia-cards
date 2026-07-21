@@ -731,6 +731,12 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /smart_notifications/);
   assert.match(source, /smart_notifications\.\$\{key\}\.tap_action/);
   assert.match(source, /custom_notifications\.\$\{index\}\.tap_action/);
+  assert.match(source, /_customNotificationTemplateValues\(item\)/);
+  assert.match(source, /title: this\._formatTemplate\(item\.title, templateValues\)/);
+  assert.match(source, /message: this\._formatTemplate\(item\.message, templateValues\)/);
+  assert.match(source, /action_label: this\._formatTemplate\(item\.action_label, templateValues\)/);
+  assert.match(source, /url: this\._formatTemplate\(item\.url, templateValues\)/);
+  assert.match(source, /referencedNotificationTemplateEntities/);
   assert.match(source, /normalizeNotificationTapAction/);
   assert.match(source, /hasNotificationTapAction/);
   assert.match(source, /_buildNativeNotificationAction/);

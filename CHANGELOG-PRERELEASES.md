@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.37] - 2026-07-21
+
+Thirty-seventh **`2.0.0`** **`alpha`**: dynamic custom notification templates. Release channel **`2.0.0-alpha.37`**.
+
+### Added
+
+- **Notifications custom templates:** custom titles and messages can use `{source}`, `{value}`, `{threshold}`, `{fan}`, `{time}`, `{entity}`, `{state}`, and attributes from the configured Home Assistant entity such as `{media_title}` and `{media_artist}`.
+- **Notifications entity references:** custom templates can read other entities with `{sensor.energy_price}`, `{sensor.energy_price.state}`, or `{sensor.energy_price.unit_of_measurement}`; media-player references resolve their friendly name and calendar references resolve their current message.
+- **Notifications actions:** custom action labels and URLs use the same template context as notification content.
+
+### Fixed
+
+- **Notifications live updates:** entities referenced only inside custom templates are tracked and rerender the card when their state or attributes change.
+- **Notifications numeric values:** custom template measurements preserve Home Assistant's source precision instead of rounding energy prices and other decimal values to one decimal place.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.37`; `2.0.0-alpha.36` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.36] - 2026-07-21
 
 Thirty-sixth **`2.0.0`** **`alpha`**: polished multi-camera live popups and audio recovery. Release channel **`2.0.0-alpha.36`**.

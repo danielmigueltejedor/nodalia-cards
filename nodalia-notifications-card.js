@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.37";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1072,6 +1072,107 @@ function stateValue(stateObj, attribute = "") {
     return stateObj.attributes?.[attribute];
   }
   return stateObj.state;
+}
+
+const NOTIFICATION_TEMPLATE_TOKEN_PATTERN = /\{([^{}]+)\}/g;
+const NOTIFICATION_TEMPLATE_ENTITY_PATTERN = /^([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/;
+
+function stringifyNotificationTemplateValue(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (Array.isArray(value)) {
+    return value.map(item => stringifyNotificationTemplateValue(item)).filter(Boolean).join(", ");
+  }
+  if (isObject(value)) {
+    try {
+      return JSON.stringify(value);
+    } catch (_error) {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function notificationTemplateMeasurement(value, unit = "") {
+  const text = stringifyNotificationTemplateValue(value);
+  return text ? `${text}${unit || ""}` : "";
+}
+
+function referencedNotificationTemplateEntities(template) {
+  const entities = new Set();
+  for (const match of String(template || "").matchAll(NOTIFICATION_TEMPLATE_TOKEN_PATTERN)) {
+    const entityMatch = String(match[1] || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
+    if (entityMatch) {
+      entities.add(entityMatch[1]);
+    }
+  }
+  return [...entities];
+}
+
+function entityNotificationTemplateValue(hass, token) {
+  const match = String(token || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
+  if (!match) {
+    return undefined;
+  }
+  const [, entityId, attribute] = match;
+  const stateObj = hass?.states?.[entityId];
+  if (!stateObj) {
+    return "";
+  }
+  if (attribute === "state") {
+    return stateObj.state;
+  }
+  if (attribute) {
+    return stateObj.attributes?.[attribute];
+  }
+  const domain = entityId.split(".")[0];
+  if (domain === "media_player") {
+    return stateObj.attributes?.friendly_name || entityId;
+  }
+  if (domain === "calendar") {
+    return stateObj.attributes?.message
+      || stateObj.attributes?.summary
+      || stateObj.attributes?.friendly_name
+      || stateObj.state;
+  }
+  const rawValue = stateObj.state;
+  const unit = stateObj.attributes?.unit_of_measurement || "";
+  return Number.isFinite(Number(rawValue)) ? notificationTemplateMeasurement(rawValue, unit) : rawValue;
+}
+
+function formatNotificationTemplate(template, hass, values = {}) {
+  return String(template || "").replace(NOTIFICATION_TEMPLATE_TOKEN_PATTERN, (_match, rawKey) => {
+    const key = String(rawKey || "").trim();
+    if (Object.prototype.hasOwnProperty.call(values, key)) {
+      return stringifyNotificationTemplateValue(values[key]);
+    }
+    return stringifyNotificationTemplateValue(entityNotificationTemplateValue(hass, key));
+  });
+}
+
+function customNotificationTemplateValues(hass, item = {}, fanEntityId = "") {
+  const entityId = String(item?.entity || "").trim();
+  const stateObj = hass?.states?.[entityId];
+  const rawValue = stateValue(stateObj, item?.attribute);
+  const unit = stateObj?.attributes?.unit_of_measurement || "";
+  const value = Number.isFinite(Number(rawValue))
+    ? notificationTemplateMeasurement(rawValue, unit)
+    : stringifyNotificationTemplateValue(rawValue);
+  const threshold = Number.isFinite(Number(item?.value))
+    ? notificationTemplateMeasurement(item.value, unit)
+    : String(item?.value || "");
+  const changedAt = new Date(stateObj?.last_changed || stateObj?.last_updated || "");
+  return {
+    ...(stateObj?.attributes || {}),
+    source: entityId ? friendlyName(hass, entityId) : "",
+    entity: entityId,
+    state: stateObj?.state || "",
+    value,
+    threshold,
+    fan: fanEntityId ? friendlyName(hass, fanEntityId) : "",
+    time: formatTime(changedAt),
+  };
 }
 
 function numericState(stateObj, attribute = "") {
@@ -2619,10 +2720,7 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _formatTemplate(template, values = {}) {
-    return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
-      const value = values?.[key];
-      return value === undefined || value === null ? "" : String(value);
-    });
+    return formatNotificationTemplate(template, this._hass, values);
   }
 
   _smartEntityOverride(entityId) {
@@ -2905,19 +3003,35 @@ class NodaliaNotificationsCard extends HTMLElement {
         return;
       }
       const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
+      const templateValues = this._customNotificationTemplateValues(item);
+      const resolvedItem = {
+        ...item,
+        title: this._formatTemplate(item.title, templateValues),
+        message: this._formatTemplate(item.message, templateValues),
+        action_label: this._formatTemplate(item.action_label, templateValues),
+        url: this._formatTemplate(item.url, templateValues),
+      };
       add({
         id: `custom:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}|${JSON.stringify(item.tap_action || {})}`)}`,
-        title: item.title || entityName || this._text("titles.customFallback", "Notification"),
-        message: item.message || entityName,
+        title: resolvedItem.title || entityName || this._text("titles.customFallback", "Notification"),
+        message: resolvedItem.message || entityName,
         icon: item.icon || "mdi:bell-outline",
         tintColor: item.tint_color || "",
         severity: item.severity || "info",
         source: entityName,
         mobilePolicy: item.mobile || "auto",
         createdAt: item.entity ? Date.parse(this._hass?.states?.[item.entity]?.last_changed || "") || Date.now() : Date.now(),
-        action: this._buildCustomAction(item),
+        action: this._buildCustomAction(resolvedItem),
       });
     });
+  }
+
+  _customNotificationTemplateValues(item) {
+    const entityId = String(item?.entity || "").trim();
+    const fanEntity = entityId
+      ? this._getFanTargetForSource(entityId) || this._config.fan_entities[0]
+      : this._config.fan_entities[0];
+    return customNotificationTemplateValues(this._hass, item, fanEntity);
   }
 
   _customNotificationMatches(item) {
@@ -3140,7 +3254,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._trackedEntityIdsCache) {
       return this._trackedEntityIdsCache;
     }
-    this._trackedEntityIdsCache = [
+    const configuredEntities = [
       ...this._config.vacuum_entities,
       ...this._config.vacuum_error_entities,
       ...this._config.fan_entities,
@@ -3161,6 +3275,13 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.ink_entities,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
     ];
+    const templateEntities = this._config.custom_notifications.flatMap(item => [
+      item.title,
+      item.message,
+      item.action_label,
+      item.url,
+    ].flatMap(referencedNotificationTemplateEntities));
+    this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities])];
     return this._trackedEntityIdsCache;
   }
 
@@ -4257,6 +4378,11 @@ if (!customElements.get(CARD_TAG)) {
 }
 
 if (typeof globalThis !== "undefined") {
+  globalThis.__NODALIA_NOTIFICATIONS_TEMPLATES__ = {
+    customNotificationTemplateValues,
+    formatNotificationTemplate,
+    referencedNotificationTemplateEntities,
+  };
   globalThis.__NODALIA_NOTIFICATIONS_MOBILE__ = {
     MOBILE_DELIVERY_STATES,
     normalizeMobilePolicy,

@@ -295,6 +295,6 @@ test("threshold crossing remains in background package templates", () => {
   assert.match(backgroundPackage, /old_state\.state != trigger\.event\.data\.new_state\.state/);
 });
 
-test("notifications card version is 2.0.0-alpha.3", () => {
-  assert.match(read("nodalia-notifications-card.js"), /CARD_VERSION = "2\.0\.0-alpha\.3"/);
+test("notifications card version is 2.0.0-alpha.37", () => {
+  assert.match(read("nodalia-notifications-card.js"), /CARD_VERSION = "2\.0\.0-alpha\.37"/);
 });
