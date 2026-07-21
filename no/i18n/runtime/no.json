@@ -329,6 +329,7 @@
     "cameraUnavailable": "Camera unavailable",
     "connectingLive": "Connecting live stream",
     "liveUnavailable": "Live stream unavailable",
+    "enableAudio": "Enable audio",
     "noCameraEntity": "No camera entity",
     "openCamera": "Open camera",
     "close": "Close",
