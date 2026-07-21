@@ -231,6 +231,11 @@ test("camera signs native Frigate go2rtc through Home Assistant", async () => {
     client_id: "frigate",
     stream: "entrada_main",
   });
+  const cachedSource = await helpers.resolveGo2rtcPlayerSource(hass, {
+    provider: "frigate_go2rtc",
+    client_id: "frigate",
+    stream: "entrada_main",
+  });
 
   assert.equal(
     source,
@@ -241,6 +246,8 @@ test("camera signs native Frigate go2rtc through Home Assistant", async () => {
     path: "/api/frigate/frigate/mse/api/ws?src=entrada_main",
     expires: 86400,
   });
+  assert.equal(cachedSource, source);
+  assert.equal(requests.length, 1);
 });
 
 test("camera proxies insecure direct go2rtc when hass-web-proxy is available", async () => {
@@ -364,6 +371,9 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /entityId === primaryEntity \? configuredName : ""/);
   assert.match(source, /compact_layout_mode: domain === "lock"/);
   assert.match(source, /rows: 1/);
+  assert.match(source, /camera-card__stream-spinner/);
+  assert.match(source, /conic-gradient/);
+  assert.doesNotMatch(source, /data-camera-audio-unlock/);
   assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.innerHTML[\s\S]*_updateExpandedStreamState\(\)/);
 });
 
@@ -412,8 +422,10 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /webrtc\/offer/);
   assert.match(source, /ManagedMediaSource/);
   assert.match(source, /nodalia-go2rtc-loaded/);
-  assert.match(source, /nodalia-go2rtc-audio-blocked/);
-  assert.match(source, /async enableAudio\(\)/);
+  assert.match(source, /primeAudioFromUserGesture\(\)/);
+  assert.match(source, /createMediaStreamDestination\(\)/);
+  assert.match(source, /GO2RTC_MODE_TIMEOUTS/);
+  assert.doesNotMatch(source, /nodalia-go2rtc-audio-blocked/);
   assert.match(source, /Adapted from go2rtc VideoRTC/);
   assert.match(source, /customElements\.define\(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer\)/);
   assert.match(read("nodalia-camera-card.js"), /document\.createElement\("nodalia-go2rtc-player"\)/);
@@ -447,5 +459,4 @@ test("camera card uses runtime i18n pack for states and expanded controls", () =
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?live:\s*"Live"/);
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?expand:\s*"Expandir"/);
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?connectingLive:\s*"Conectando al directo"/);
-  assert.match(i18n, /cameraCard:\s*\{[\s\S]*?enableAudio:\s*"Activar audio"/);
 });

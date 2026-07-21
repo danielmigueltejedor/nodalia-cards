@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.38] - 2026-07-22
+
+Thirty-eighth **`2.0.0`** **`alpha`**: faster camera startup with direct click-authorized audio. Release channel **`2.0.0-alpha.38`**.
+
+### Fixed
+
+- **Camera loading indicator:** the connecting arc is a dimensionally stable CSS ring with a centered circular trajectory instead of a rotating icon glyph.
+- **Camera live audio:** streams configured with `muted: false` arm the video element during the click that opens the popup, allowing the incoming WebRTC audio track to start without a separate Nodalia unmute button.
+- **Camera loading state:** the silent audio preparation stream cannot be mistaken for a loaded camera frame or hide the preview early.
+
+### Changed
+
+- **Camera Frigate startup:** signed go2rtc paths are prefetched and cached until shortly before their 24-hour expiry, removing repeated `auth/sign_path` waits when opening a camera.
+- **Camera go2rtc recovery:** WebRTC falls back after 4.5 seconds instead of 12 seconds, other transports use bounded per-mode timeouts, and reconnect delay is reduced from 5 to 2 seconds.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.38`; `2.0.0-alpha.37` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.37] - 2026-07-21
 
 Thirty-seventh **`2.0.0`** **`alpha`**: dynamic custom notification templates. Release channel **`2.0.0-alpha.37`**.

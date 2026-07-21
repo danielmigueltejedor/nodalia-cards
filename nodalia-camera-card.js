@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.36";
+const CARD_VERSION = "2.0.0-alpha.38";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
@@ -478,22 +478,56 @@ function buildFrigateGo2rtcPath(clientId, streamName) {
   return `/api/frigate/${encodeURIComponent(instance)}/mse/api/ws?src=${encodeURIComponent(stream)}`;
 }
 
+const SIGNED_PATH_CACHE = new WeakMap();
+
+function signedPathCacheForHass(hass) {
+  const owner = hass?.connection || hass?.auth || hass;
+  if (!owner || (typeof owner !== "object" && typeof owner !== "function")) {
+    return null;
+  }
+  let cache = SIGNED_PATH_CACHE.get(owner);
+  if (!cache) {
+    cache = new Map();
+    SIGNED_PATH_CACHE.set(owner, cache);
+  }
+  return cache;
+}
+
 async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) {
   if (!path || typeof hass?.callWS !== "function") {
     return "";
   }
-  const response = await hass.callWS({
+  const cache = signedPathCacheForHass(hass);
+  const cacheKey = `${path}|${expires}`;
+  const cached = cache?.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.promise;
+  }
+  const promise = Promise.resolve(hass.callWS({
     type: "auth/sign_path",
     path,
     expires,
+  })).then(response => {
+    const signedPath = String(response?.path || "").trim();
+    if (!signedPath) {
+      return "";
+    }
+    return typeof hass?.hassUrl === "function"
+      ? hass.hassUrl(signedPath)
+      : new URL(signedPath, window.location.origin).toString();
   });
-  const signedPath = String(response?.path || "").trim();
-  if (!signedPath) {
-    return "";
+  cache?.set(cacheKey, {
+    expiresAt: Date.now() + Math.max(60, expires - 300) * 1000,
+    promise,
+  });
+  try {
+    return await promise;
+  } catch (error) {
+    if (cache?.get(cacheKey)?.promise === promise) {
+      cache.delete(cacheKey);
+    }
+    throw error;
   }
-  return typeof hass?.hassUrl === "function"
-    ? hass.hassUrl(signedPath)
-    : new URL(signedPath, window.location.origin).toString();
 }
 
 async function resolveGo2rtcPlayerSource(hass, streamConfig) {
@@ -635,6 +669,7 @@ class NodaliaCameraCard extends HTMLElement {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     window.addEventListener("keydown", this._onWindowKeyDown);
     this._animateContentOnNextRender = true;
+    this._prefetchGo2rtcSources();
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
       this._render();
@@ -660,6 +695,7 @@ class NodaliaCameraCard extends HTMLElement {
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
+    this._prefetchGo2rtcSources();
     if (!this.isConnected) {
       return;
     }
@@ -669,6 +705,7 @@ class NodaliaCameraCard extends HTMLElement {
   set hass(hass) {
     const previousHass = this._hass;
     this._hass = hass;
+    this._prefetchGo2rtcSources();
     if (!this.isConnected) {
       return;
     }
@@ -1199,12 +1236,6 @@ class NodaliaCameraCard extends HTMLElement {
       this._closeExpanded();
       return;
     }
-    if (action === "enable-audio") {
-      event.preventDefault();
-      event.stopPropagation();
-      this._expandedStreamNode?.enableAudio?.();
-      return;
-    }
     if (action === "body") {
       event.preventDefault();
       event.stopPropagation();
@@ -1304,6 +1335,17 @@ class NodaliaCameraCard extends HTMLElement {
     };
   }
 
+  _prefetchGo2rtcSources() {
+    if (!this._hass || !this._config) {
+      return;
+    }
+    (this._config.camera_streams || [])
+      .filter(streamConfig => streamConfig?.provider === "frigate_go2rtc")
+      .forEach(streamConfig => {
+        void resolveGo2rtcPlayerSource(this._hass, streamConfig).catch(() => {});
+      });
+  }
+
   _updateExpandedStreamState() {
     const node = this._expandedStreamNode;
     if (!node || !this._hass) {
@@ -1333,14 +1375,14 @@ class NodaliaCameraCard extends HTMLElement {
     if (!(status instanceof HTMLElement) || !(host instanceof HTMLElement)) {
       return;
     }
-    const icon = status.querySelector("ha-icon");
-    const label = status.querySelector("span");
+    const errorIcon = status.querySelector("[data-camera-stream-error-icon]");
+    const label = status.querySelector("[data-camera-stream-status-label]");
     const loaded = state === "loaded";
     status.hidden = loaded;
     host.classList.toggle("is-loaded", loaded);
     status.classList.toggle("is-error", state === "error");
-    if (icon) {
-      icon.setAttribute("icon", state === "error" ? "mdi:alert-circle-outline" : "mdi:loading");
+    if (errorIcon instanceof HTMLElement) {
+      errorIcon.hidden = state !== "error";
     }
     if (label) {
       label.textContent = state === "error"
@@ -1367,7 +1409,23 @@ class NodaliaCameraCard extends HTMLElement {
     const mountId = ++this._expandedStreamMountId;
     if (nativeGo2rtc) {
       this._setExpandedStreamStatus("loading");
+      const player = document.createElement("nodalia-go2rtc-player");
       try {
+        if (typeof player.configure !== "function") {
+          throw new Error("The native go2rtc player is not registered");
+        }
+        player.classList.add("camera-card__expanded-go2rtc");
+        player.configure({
+          source: "",
+          mode: streamConfig.mode,
+          muted: streamConfig.muted,
+          controls: streamConfig.controls,
+        });
+        host.replaceChildren(player);
+        this._expandedStreamNode = player;
+        if (streamConfig.muted === false) {
+          player.primeAudioFromUserGesture?.();
+        }
         const source = await resolveGo2rtcPlayerSource(this._hass, {
           ...streamConfig,
           stream: streamConfig.stream || cameraStreamName(entityId),
@@ -1377,16 +1435,12 @@ class NodaliaCameraCard extends HTMLElement {
           || !this._expandedOpen
           || !host.isConnected
         ) {
+          player.disconnect?.();
           return;
         }
         if (!source) {
           throw new Error("No usable go2rtc WebSocket endpoint was resolved");
         }
-        const player = document.createElement("nodalia-go2rtc-player");
-        if (typeof player.configure !== "function") {
-          throw new Error("The native go2rtc player is not registered");
-        }
-        player.classList.add("camera-card__expanded-go2rtc");
         player.addEventListener("nodalia-go2rtc-loaded", () => {
           if (mountId !== this._expandedStreamMountId) {
             return;
@@ -1403,30 +1457,14 @@ class NodaliaCameraCard extends HTMLElement {
           }
           this._setExpandedStreamStatus("error", event.detail?.message || "go2rtc error");
         });
-        player.addEventListener("nodalia-go2rtc-audio-blocked", () => {
-          if (mountId !== this._expandedStreamMountId) {
-            return;
-          }
-          const audioButton = this.shadowRoot?.querySelector("[data-camera-audio-unlock]");
-          if (audioButton instanceof HTMLElement) {
-            audioButton.hidden = false;
-          }
-        });
-        player.addEventListener("nodalia-go2rtc-audio-enabled", () => {
-          const audioButton = this.shadowRoot?.querySelector("[data-camera-audio-unlock]");
-          if (audioButton instanceof HTMLElement) {
-            audioButton.hidden = true;
-          }
-        });
         player.configure({
           source,
           mode: streamConfig.mode,
           muted: streamConfig.muted,
           controls: streamConfig.controls,
         });
-        host.replaceChildren(player);
-        this._expandedStreamNode = player;
       } catch (error) {
+        player.disconnect?.();
         this._setExpandedStreamStatus("error", error?.message || String(error));
         console.warn("[nodalia-camera-card] Unable to start the go2rtc stream", error);
       }
@@ -1686,21 +1724,12 @@ class NodaliaCameraCard extends HTMLElement {
                 : ""}
             ${nativeGo2rtc ? `
               <div class="camera-card__stream-status" data-camera-stream-status>
-                <ha-icon icon="mdi:loading"></ha-icon>
-                <span>${escapeHtml(this._cameraUi("connectingLive", "Connecting live stream"))}</span>
+                <span class="camera-card__stream-indicator" aria-hidden="true">
+                  <span class="camera-card__stream-spinner"></span>
+                  <ha-icon icon="mdi:alert-circle-outline" data-camera-stream-error-icon hidden></ha-icon>
+                </span>
+                <span data-camera-stream-status-label>${escapeHtml(this._cameraUi("connectingLive", "Connecting live stream"))}</span>
               </div>
-              ${streamConfig.muted === false ? `
-                <button
-                  type="button"
-                  class="camera-card__audio-unlock"
-                  data-camera-action="enable-audio"
-                  data-camera-audio-unlock
-                  hidden
-                >
-                  <ha-icon icon="mdi:volume-high"></ha-icon>
-                  <span>${escapeHtml(this._cameraUi("enableAudio", "Enable audio"))}</span>
-                </button>
-              ` : ""}
             ` : ""}
           </div>
           ${this._renderExpandedActionsMarkup(entityId)}
@@ -2171,52 +2200,44 @@ class NodaliaCameraCard extends HTMLElement {
           display: none;
         }
 
-        .camera-card__stream-status ha-icon {
-          animation: camera-card-stream-spin 900ms linear infinite;
+        .camera-card__stream-indicator {
+          display: grid;
           flex: 0 0 auto;
+          height: 17px;
+          place-items: center;
+          width: 17px;
+        }
+
+        .camera-card__stream-spinner {
+          animation: camera-card-stream-spin 760ms linear infinite;
+          background: conic-gradient(from 0deg, transparent 0 62%, currentColor 84% 100%);
+          border-radius: 50%;
+          height: 16px;
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+          transform-origin: 50% 50%;
+          width: 16px;
+        }
+
+        .camera-card__stream-indicator ha-icon {
           height: 17px;
           width: 17px;
         }
 
-        .camera-card__stream-status.is-error ha-icon {
-          animation: none;
+        .camera-card__stream-indicator ha-icon[hidden],
+        .camera-card__stream-status.is-error .camera-card__stream-spinner {
+          display: none;
+        }
+
+        .camera-card__stream-status.is-error .camera-card__stream-indicator ha-icon {
           color: var(--error-color, #db4437);
         }
 
-        .camera-card__stream-status span {
+        .camera-card__stream-status [data-camera-stream-status-label] {
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        }
-
-        .camera-card__audio-unlock {
-          align-items: center;
-          backdrop-filter: blur(12px);
-          background: color-mix(in srgb, #111 76%, transparent);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          border-radius: 999px;
-          bottom: 14px;
-          color: #fff;
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 650;
-          gap: 7px;
-          padding: 7px 10px;
-          position: absolute;
-          right: 14px;
-          z-index: 3;
-        }
-
-        .camera-card__audio-unlock[hidden] {
-          display: none;
-        }
-
-        .camera-card__audio-unlock ha-icon {
-          height: 17px;
-          width: 17px;
         }
 
         .camera-card__expanded-actions {

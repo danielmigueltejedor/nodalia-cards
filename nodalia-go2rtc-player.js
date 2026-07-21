@@ -5,8 +5,13 @@
  * License: MIT
  */
 
-const GO2RTC_RECONNECT_DELAY = 5000;
-const GO2RTC_MODE_TIMEOUT = 12000;
+const GO2RTC_RECONNECT_DELAY = 2000;
+const GO2RTC_MODE_TIMEOUTS = {
+  webrtc: 4500,
+  mse: 6500,
+  hls: 6500,
+  mjpeg: 4500,
+};
 
 function toWebSocketUrl(rawValue) {
   try {
@@ -43,7 +48,10 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._activeMode = "";
     this._intentionalClose = false;
     this._autoplayMuted = false;
-    this._audioBlockedReported = false;
+    this._playbackStream = null;
+    this._audioPrimeContext = null;
+    this._audioPrimeOscillator = null;
+    this._audioPrimeTrack = null;
   }
 
   get video() {
@@ -53,15 +61,17 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
   configure({ source, mode = "auto", muted = true, controls = false } = {}) {
     const nextSource = toWebSocketUrl(source);
     const changed = nextSource !== this._source || mode !== this._mode;
+    const hasTransport = Boolean(this._socket || this._peer || this._mediaSource);
     this._source = nextSource;
     this._mode = String(mode || "auto").toLowerCase();
     this._muted = muted !== false;
     this._controls = controls === true;
     this._autoplayMuted = false;
-    this._audioBlockedReported = false;
     this._applyVideoOptions();
     if (changed && this.isConnected) {
-      this.disconnect();
+      if (hasTransport) {
+        this.disconnect();
+      }
       this._connect();
     }
   }
@@ -82,7 +92,6 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._modeTimer = 0;
     this._intentionalClose = true;
     this._autoplayMuted = false;
-    this._audioBlockedReported = false;
     if (this._socket) {
       this._socket.close();
       this._socket = null;
@@ -113,6 +122,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         URL.revokeObjectURL(objectUrl);
       }
     }
+    this._releaseAudioPrime();
+    this._playbackStream = null;
   }
 
   _ensureVideo() {
@@ -127,7 +138,20 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     video.style.width = "100%";
     video.style.height = "100%";
     video.style.objectFit = "contain";
-    video.addEventListener("loadeddata", () => this._markLoaded());
+    video.addEventListener("loadeddata", () => {
+      if (this._audioPrimeTrack) {
+        return;
+      }
+      const mediaStream = video.srcObject;
+      if (
+        this._activeMode === "webrtc"
+        && typeof mediaStream?.getVideoTracks === "function"
+        && !mediaStream.getVideoTracks().length
+      ) {
+        return;
+      }
+      this._markLoaded();
+    });
     video.addEventListener("error", () => this._fallback(new Error("go2rtc video decode failed")));
     this._video = video;
     this._applyVideoOptions();
@@ -140,6 +164,59 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._video.muted = this._muted;
     this._video.controls = this._controls;
+  }
+
+  primeAudioFromUserGesture() {
+    if (this._muted) {
+      return false;
+    }
+    this._ensureVideo();
+    this._video.muted = false;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass || typeof AudioContextClass !== "function") {
+      this._video.play().catch(() => {});
+      return true;
+    }
+    try {
+      const context = new AudioContextClass();
+      const destination = context.createMediaStreamDestination();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      gain.gain.value = 0;
+      oscillator.connect(gain);
+      gain.connect(destination);
+      oscillator.start();
+      this._audioPrimeContext = context;
+      this._audioPrimeOscillator = oscillator;
+      this._audioPrimeTrack = destination.stream.getAudioTracks()[0] || null;
+      this._playbackStream = destination.stream;
+      this._video.srcObject = this._playbackStream;
+      context.resume?.().catch?.(() => {});
+      this._video.play().catch(() => {});
+      return true;
+    } catch (_error) {
+      this._releaseAudioPrime();
+      this._video.play().catch(() => {});
+      return true;
+    }
+  }
+
+  _releaseAudioPrime() {
+    if (this._audioPrimeTrack) {
+      this._playbackStream?.removeTrack?.(this._audioPrimeTrack);
+      this._audioPrimeTrack.stop?.();
+      this._audioPrimeTrack = null;
+    }
+    if (this._audioPrimeOscillator) {
+      try {
+        this._audioPrimeOscillator.stop();
+      } catch (_error) {
+        // The oscillator may already have stopped with the media element.
+      }
+      this._audioPrimeOscillator = null;
+    }
+    this._audioPrimeContext?.close?.().catch?.(() => {});
+    this._audioPrimeContext = null;
   }
 
   _availableModes() {
@@ -240,7 +317,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._modeTimer = window.setTimeout(() => {
       this._modeTimer = 0;
       this._fallback(new Error(`go2rtc ${mode} timed out`));
-    }, GO2RTC_MODE_TIMEOUT);
+    }, GO2RTC_MODE_TIMEOUTS[mode] || 6500);
     this._messageHandlers.clear();
     this._binaryHandler = null;
     if (mode === "webrtc") {
@@ -300,6 +377,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         URL.revokeObjectURL(objectUrl);
       }
     }
+    this._releaseAudioPrime();
+    this._playbackStream = null;
   }
 
   async _play() {
@@ -310,9 +389,6 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     try {
       await this._video.play();
       this._autoplayMuted = false;
-      if (!this._muted) {
-        this._emitAudioEnabled();
-      }
       return true;
     } catch (_error) {
       if (!this._muted) {
@@ -320,51 +396,12 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         try {
           await this._video.play();
           this._autoplayMuted = true;
-          this._emitAudioBlocked();
         } catch (_secondError) {
           // The native controls remain available for a user-initiated play.
         }
       }
       return false;
     }
-  }
-
-  async enableAudio() {
-    if (!this._video) {
-      return false;
-    }
-    this._muted = false;
-    this._video.muted = false;
-    try {
-      await this._video.play();
-      this._autoplayMuted = false;
-      this._audioBlockedReported = false;
-      this._emitAudioEnabled();
-      return true;
-    } catch (_error) {
-      this._video.muted = true;
-      this._autoplayMuted = true;
-      this._emitAudioBlocked();
-      return false;
-    }
-  }
-
-  _emitAudioBlocked() {
-    if (this._audioBlockedReported) {
-      return;
-    }
-    this._audioBlockedReported = true;
-    this.dispatchEvent(new CustomEvent("nodalia-go2rtc-audio-blocked", {
-      bubbles: true,
-      composed: true,
-    }));
-  }
-
-  _emitAudioEnabled() {
-    this.dispatchEvent(new CustomEvent("nodalia-go2rtc-audio-enabled", {
-      bubbles: true,
-      composed: true,
-    }));
   }
 
   _markLoaded() {
@@ -381,10 +418,14 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       ],
       sdpSemantics: "unified-plan",
     });
-    const mediaStream = new MediaStream();
+    const mediaStream = this._playbackStream || new MediaStream();
+    this._playbackStream = mediaStream;
     peer.addEventListener("track", event => {
       if (!mediaStream.getTracks().some(track => track.id === event.track.id)) {
         mediaStream.addTrack(event.track);
+      }
+      if (event.track.kind === "audio") {
+        this._releaseAudioPrime();
       }
       if (this._video) {
         this._video.srcObject = mediaStream;
@@ -441,9 +482,13 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._send({ type: "mse", value: this._supportedCodecs(MediaSourceClass.isTypeSupported) });
     }, { once: true });
     if (window.ManagedMediaSource) {
+      this._releaseAudioPrime();
+      this._playbackStream = null;
       this._video.disableRemotePlayback = true;
       this._video.srcObject = mediaSource;
     } else {
+      this._releaseAudioPrime();
+      this._playbackStream = null;
       this._video.srcObject = null;
       this._video.src = URL.createObjectURL(mediaSource);
     }
@@ -510,6 +555,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       sourceUrl.pathname = `${sourceUrl.pathname.replace(/\/ws$/, "")}/hls/`;
       sourceUrl.search = "";
       const playlist = String(message.value || "").replaceAll("hls/", sourceUrl.toString());
+      this._releaseAudioPrime();
+      this._playbackStream = null;
       this._video.srcObject = null;
       this._video.src = `data:application/vnd.apple.mpegurl;base64,${window.btoa(playlist)}`;
       this._play();
@@ -529,6 +576,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._video.poster = `data:image/jpeg;base64,${window.btoa(binary)}`;
       if (!loaded) {
         loaded = true;
+        this._releaseAudioPrime();
+        this._playbackStream = null;
         this._markLoaded();
       }
     };
