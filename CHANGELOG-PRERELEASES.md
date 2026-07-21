@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.34] - 2026-07-21
+
+Thirty-fourth **`2.0.0`** **`alpha`**: native Frigate go2rtc playback without external camera cards. Release channel **`2.0.0-alpha.34`**.
+
+### Added
+
+- **Camera native go2rtc player:** built-in WebSocket/WebRTC playback based on the official go2rtc VideoRTC protocol, with MSE, HLS, and MJPEG fallback modes, native mute/controls options, reconnect handling, and immediate connection cleanup when the expanded view closes.
+- **Camera Frigate transport:** `frigate_go2rtc` signs Home Assistant's same-origin `/api/frigate/<client_id>/mse/api/ws` endpoint, avoiding mixed-content requests and direct browser access to the Frigate server.
+- **Camera editor:** each camera exposes the native Frigate provider, stream name, Frigate instance ID, playback mode, mute state, and player controls across all 12 editor languages.
+
+### Fixed
+
+- **Camera dependencies:** Frigate go2rtc playback no longer requires `custom:advanced-camera-card`; configurations created with the former `advanced_camera_card` provider migrate automatically to `frigate_go2rtc`.
+- **Camera direct go2rtc:** secure direct endpoints use the same native player, while HTTP endpoints can use `hass_web_proxy` when that integration is available.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.34`; `2.0.0-alpha.33` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.33] - 2026-07-19
 
 Thirty-third **`2.0.0`** **`alpha`**: secure go2rtc playback inside HTTPS Home Assistant dashboards. Release channel **`2.0.0-alpha.33`**.

@@ -9,7 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 function loadCameraHelpers() {
-  const source = read("nodalia-camera-card.js");
+  const source = read("nodalia-camera-card.js").replace(/^import[^\n]+\n+/, "");
   const helperSource = `${source.split("class NodaliaCameraCard")[0]}
     globalThis.__cameraHelpers = {
       normalizeConfig,
@@ -19,7 +19,10 @@ function loadCameraHelpers() {
       normalizeCameraStreams,
       compactCameraStreams,
       buildGo2rtcViewerUrl,
-      buildAdvancedCameraCardConfig,
+      buildGo2rtcWebSocketEndpoint,
+      buildFrigateGo2rtcPath,
+      signHomeAssistantPath,
+      resolveGo2rtcPlayerSource,
       isMixedContentUrl,
       parseServiceData,
       formatRelativeAge,
@@ -187,7 +190,7 @@ test("camera live providers stay scoped and build go2rtc viewer URLs", () => {
   assert.equal(helpers.isMixedContentUrl("https://frigate.example/stream.html?src=entrada"), false);
 });
 
-test("camera advanced provider builds a go2rtc Advanced Camera Card", () => {
+test("camera migrates the former Advanced Camera Card provider to native Frigate go2rtc", () => {
   const config = helpers.normalizeConfig({
     cameras: ["camera.entrada"],
     camera_streams: [
@@ -199,17 +202,70 @@ test("camera advanced provider builds a go2rtc Advanced Camera Card", () => {
     ],
   });
   const compact = helpers.compactCameraStreams(config.camera_streams);
-  const card = helpers.buildAdvancedCameraCardConfig("camera.entrada", "entrada_main");
 
   assert.deepEqual(JSON.parse(JSON.stringify(compact)), [
-    { camera: "camera.entrada", provider: "advanced_camera_card", stream: "entrada_main" },
+    { camera: "camera.entrada", provider: "frigate_go2rtc", stream: "entrada_main" },
   ]);
-  assert.equal(card.type, "custom:advanced-camera-card");
-  assert.equal(card.cameras[0].camera_entity, "camera.entrada");
-  assert.equal(card.cameras[0].live_provider, "go2rtc");
-  assert.equal(card.cameras[0].go2rtc.stream, "entrada_main");
-  assert.equal(card.menu.style, "none");
-  assert.equal(card.view.default, "live");
+  assert.equal(config.camera_streams[0].client_id, "frigate");
+  assert.equal(
+    helpers.buildFrigateGo2rtcPath("frigate", "entrada_main"),
+    "/api/frigate/frigate/mse/api/ws?src=entrada_main",
+  );
+  assert.equal(
+    helpers.buildGo2rtcWebSocketEndpoint("https://go2rtc.example", "entrada_main"),
+    "https://go2rtc.example/api/ws?src=entrada_main",
+  );
+});
+
+test("camera signs native Frigate go2rtc through Home Assistant", async () => {
+  const requests = [];
+  const hass = {
+    callWS: async request => {
+      requests.push(request);
+      return { path: `${request.path}&authSig=signed` };
+    },
+    hassUrl: pathValue => `https://home-assistant.example${pathValue}`,
+  };
+  const source = await helpers.resolveGo2rtcPlayerSource(hass, {
+    provider: "frigate_go2rtc",
+    client_id: "frigate",
+    stream: "entrada_main",
+  });
+
+  assert.equal(
+    source,
+    "https://home-assistant.example/api/frigate/frigate/mse/api/ws?src=entrada_main&authSig=signed",
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[0])), {
+    type: "auth/sign_path",
+    path: "/api/frigate/frigate/mse/api/ws?src=entrada_main",
+    expires: 86400,
+  });
+});
+
+test("camera proxies insecure direct go2rtc when hass-web-proxy is available", async () => {
+  const services = [];
+  const hass = {
+    config: { components: ["hass_web_proxy"] },
+    callService: async (...args) => services.push(args),
+    callWS: async request => ({ path: `${request.path}&authSig=signed` }),
+    hassUrl: pathValue => `https://home-assistant.example${pathValue}`,
+  };
+  const streamConfig = {
+    provider: "go2rtc",
+    base_url: "http://frigate.local:1984",
+    stream: "entrada_main",
+  };
+  const source = await helpers.resolveGo2rtcPlayerSource(hass, streamConfig);
+
+  assert.match(source, /^https:\/\/home-assistant\.example\/api\/hass_web_proxy\/v0\/ws\?/);
+  assert.equal(services[0][0], "hass_web_proxy");
+  assert.equal(services[0][1], "create_proxied_url");
+  assert.equal(services[0][2].url_pattern, "http://frigate.local:1984/api/ws?src=entrada_main");
+  assert.equal(
+    await helpers.resolveGo2rtcPlayerSource({ config: { components: [] } }, streamConfig),
+    "",
+  );
 });
 
 test("camera stream serialization omits native defaults", () => {
@@ -300,8 +356,9 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /ha-camera-stream/);
   assert.match(source, /camera_view: "live"/);
   assert.match(source, /buildGo2rtcViewerUrl/);
-  assert.match(source, /buildAdvancedCameraCardConfig/);
-  assert.match(source, /custom:advanced-camera-card/);
+  assert.match(source, /NodaliaGo2RTCPlayer/);
+  assert.match(source, /resolveGo2rtcPlayerSource/);
+  assert.match(source, /auth\/sign_path/);
   assert.match(source, /isMixedContentUrl/);
   assert.match(source, /data-camera-expanded-stream/);
   assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.innerHTML[\s\S]*_updateExpandedStreamState\(\)/);
@@ -337,7 +394,23 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /camera_actions\.\$\{sourceIndex\}/);
   assert.match(source, /camera_streams\.\$\{index\}/);
   assert.match(source, /ed\.camera\.live_provider_go2rtc/);
-  assert.match(source, /ed\.camera\.live_provider_advanced_camera_card/);
+  assert.match(source, /ed\.camera\.live_provider_frigate_go2rtc/);
+  assert.match(source, /ed\.camera\.live_frigate_client_id/);
+});
+
+test("camera bundles the native go2rtc player protocol", () => {
+  const source = read("nodalia-go2rtc-player.js");
+  const build = read("scripts/build-bundle.mjs");
+  const pkg = JSON.parse(read("package.json"));
+  assert.match(source, /class NodaliaGo2RTCPlayer/);
+  assert.match(source, /new RTCPeerConnection/);
+  assert.match(source, /webrtc\/offer/);
+  assert.match(source, /ManagedMediaSource/);
+  assert.match(source, /nodalia-go2rtc-loaded/);
+  assert.match(source, /Adapted from go2rtc VideoRTC/);
+  assert.match(build, /legalComments: "inline"/);
+  assert.ok(pkg.files.includes("nodalia-go2rtc-player.js"));
+  assert.ok(pkg.files.includes("THIRD_PARTY_NOTICES.md"));
 });
 
 test("camera preview age bubble updates without re-rendering the image", () => {

@@ -77,7 +77,7 @@ async function buildParts(parts, label) {
       platform: "browser",
       target: ["es2020"],
       charset: "utf8",
-      legalComments: "none",
+      legalComments: "inline",
       minify: true,
       plugins: [
         {
@@ -166,6 +166,7 @@ const compatLoaderFiles = [
   "nodalia-cards-2.0.0-alpha.30.js",
   "nodalia-cards-2.0.0-alpha.31.js",
   "nodalia-cards-2.0.0-alpha.32.js",
+  "nodalia-cards-2.0.0-alpha.33.js",
 ];
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;

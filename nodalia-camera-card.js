@@ -1,10 +1,12 @@
+import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
+
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.33";
+const CARD_VERSION = "2.0.0-alpha.34";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
-const STREAM_PROVIDERS = new Set(["home_assistant", "advanced_camera_card", "go2rtc", "iframe"]);
+const STREAM_PROVIDERS = new Set(["home_assistant", "frigate_go2rtc", "go2rtc", "iframe"]);
 const STREAM_MODES = new Set(["auto", "webrtc", "mse", "hls", "mjpeg"]);
 const TAP_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
 const HOLD_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
@@ -359,12 +361,14 @@ function normalizeCameraStreams(rawStreams = [], cameraIds = []) {
       return null;
     }
     seen.add(camera);
-    const rawProvider = normalizeTextKey(item.provider || "home_assistant").replaceAll("-", "_");
+    const configuredProvider = normalizeTextKey(item.provider || "home_assistant").replaceAll("-", "_");
+    const rawProvider = configuredProvider === "advanced_camera_card" ? "frigate_go2rtc" : configuredProvider;
     const provider = STREAM_PROVIDERS.has(rawProvider) ? rawProvider : "home_assistant";
     const rawMode = normalizeTextKey(item.mode || "auto");
     return {
       camera,
       provider,
+      client_id: String(item.client_id ?? item.frigate_client_id ?? "frigate").trim() || "frigate",
       base_url: String(item.base_url ?? item.baseUrl ?? "").trim(),
       stream: String(item.stream ?? item.stream_name ?? "").trim(),
       mode: STREAM_MODES.has(rawMode) ? rawMode : "auto",
@@ -377,11 +381,15 @@ function normalizeCameraStreams(rawStreams = [], cameraIds = []) {
 
 function compactCameraStreams(rawStreams = []) {
   return rawStreams.map(item => {
-    if (item.provider === "advanced_camera_card") {
+    if (item.provider === "frigate_go2rtc") {
       return {
         camera: item.camera,
-        provider: "advanced_camera_card",
+        provider: "frigate_go2rtc",
         stream: item.stream,
+        ...(item.client_id && item.client_id !== "frigate" ? { client_id: item.client_id } : {}),
+        ...(item.mode && item.mode !== "auto" ? { mode: item.mode } : {}),
+        ...(item.muted === false ? { muted: false } : {}),
+        ...(item.controls === true ? { controls: true } : {}),
       };
     }
     if (item.provider === "go2rtc") {
@@ -443,6 +451,79 @@ function sanitizeIframeUrl(rawValue) {
   return /^(?:https?:\/\/|\/(?!\/))/i.test(value) ? value : "";
 }
 
+function buildGo2rtcWebSocketEndpoint(baseUrl, streamName) {
+  const base = String(baseUrl || "").trim();
+  const stream = String(streamName || "").trim();
+  if (!base || !stream || !/^https?:\/\//i.test(base)) {
+    return "";
+  }
+  try {
+    const url = new URL(base);
+    if (!/\/api\/ws\/?$/i.test(url.pathname)) {
+      url.pathname = `${url.pathname.replace(/\/$/, "")}/api/ws`;
+    }
+    url.searchParams.set("src", stream);
+    return url.toString();
+  } catch (_error) {
+    return "";
+  }
+}
+
+function buildFrigateGo2rtcPath(clientId, streamName) {
+  const instance = String(clientId || "frigate").trim() || "frigate";
+  const stream = String(streamName || "").trim();
+  if (!stream) {
+    return "";
+  }
+  return `/api/frigate/${encodeURIComponent(instance)}/mse/api/ws?src=${encodeURIComponent(stream)}`;
+}
+
+async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) {
+  if (!path || typeof hass?.callWS !== "function") {
+    return "";
+  }
+  const response = await hass.callWS({
+    type: "auth/sign_path",
+    path,
+    expires,
+  });
+  const signedPath = String(response?.path || "").trim();
+  if (!signedPath) {
+    return "";
+  }
+  return typeof hass?.hassUrl === "function"
+    ? hass.hassUrl(signedPath)
+    : new URL(signedPath, window.location.origin).toString();
+}
+
+async function resolveGo2rtcPlayerSource(hass, streamConfig) {
+  const stream = String(streamConfig?.stream || "").trim();
+  if (streamConfig?.provider === "frigate_go2rtc") {
+    return signHomeAssistantPath(
+      hass,
+      buildFrigateGo2rtcPath(streamConfig.client_id, stream),
+    );
+  }
+  if (streamConfig?.provider !== "go2rtc") {
+    return "";
+  }
+  const endpoint = buildGo2rtcWebSocketEndpoint(streamConfig.base_url, stream);
+  if (!endpoint || !isMixedContentUrl(endpoint)) {
+    return endpoint;
+  }
+  const components = Array.isArray(hass?.config?.components) ? hass.config.components : [];
+  if (!components.includes("hass_web_proxy") || typeof hass?.callService !== "function") {
+    return "";
+  }
+  await hass.callService("hass_web_proxy", "create_proxied_url", {
+    url_pattern: endpoint,
+    open_limit: 0,
+    ttl: 24 * 60 * 60,
+  });
+  const proxyPath = `/api/hass_web_proxy/v0/ws?url=${encodeURIComponent(endpoint)}`;
+  return signHomeAssistantPath(hass, proxyPath);
+}
+
 function isMixedContentUrl(rawValue) {
   if (window.location?.protocol !== "https:") {
     return false;
@@ -452,46 +533,6 @@ function isMixedContentUrl(rawValue) {
   } catch (_error) {
     return false;
   }
-}
-
-function buildAdvancedCameraCardConfig(entityId, streamName) {
-  return {
-    type: "custom:advanced-camera-card",
-    cameras: [
-      {
-        camera_entity: entityId,
-        live_provider: "go2rtc",
-        go2rtc: {
-          stream: streamName || cameraStreamName(entityId),
-        },
-        triggers: {
-          occupancy: false,
-        },
-      },
-    ],
-    dimensions: {
-      aspect_ratio_mode: "static",
-      aspect_ratio: "16:9",
-    },
-    view: {
-      default: "live",
-    },
-    menu: {
-      style: "none",
-    },
-    status_bar: {
-      style: "none",
-    },
-    live: {
-      preload: true,
-      auto_unmute: ["selected"],
-      controls: {
-        builtin: true,
-        timeline: { mode: "none" },
-        thumbnails: { mode: "none" },
-      },
-    },
-  };
 }
 
 function normalizeConfig(rawConfig) {
@@ -606,7 +647,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedOpen = false;
     this._expandedEntityId = "";
     this._expandedStreamMountId += 1;
-    this._expandedStreamNode = null;
+    this._disposeExpandedStream();
     this._expandedCardCache.clear();
     this._clearPreviewAgeTimer();
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -1083,7 +1124,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedOpen = false;
     this._expandedEntityId = "";
     this._expandedStreamMountId += 1;
-    this._expandedStreamNode = null;
+    this._disposeExpandedStream();
     this._lastRenderSignature = "";
     this._render();
   }
@@ -1246,6 +1287,7 @@ class NodaliaCameraCard extends HTMLElement {
     return configured || {
       camera: entityId,
       provider: "home_assistant",
+      client_id: "frigate",
       base_url: "",
       stream: cameraStreamName(entityId),
       mode: "auto",
@@ -1260,10 +1302,19 @@ class NodaliaCameraCard extends HTMLElement {
     if (!node || !this._hass) {
       return;
     }
-    node.hass = this._hass;
     if (node.localName === "ha-camera-stream") {
+      node.hass = this._hass;
       node.stateObj = this._getState(this._expandedEntityId);
+    } else if (!(node instanceof NodaliaGo2RTCPlayer)) {
+      node.hass = this._hass;
     }
+  }
+
+  _disposeExpandedStream() {
+    if (this._expandedStreamNode instanceof NodaliaGo2RTCPlayer) {
+      this._expandedStreamNode.disconnect();
+    }
+    this._expandedStreamNode = null;
   }
 
   async _mountExpandedStream() {
@@ -1276,34 +1327,37 @@ class NodaliaCameraCard extends HTMLElement {
     }
     const entityId = this._expandedEntityId || this._config?.entity;
     const streamConfig = this._getCameraStreamConfig(entityId);
-    if (streamConfig.provider !== "home_assistant" && streamConfig.provider !== "advanced_camera_card") {
+    const nativeGo2rtc = streamConfig.provider === "frigate_go2rtc" || streamConfig.provider === "go2rtc";
+    if (streamConfig.provider !== "home_assistant" && !nativeGo2rtc) {
       return;
     }
     const mountId = ++this._expandedStreamMountId;
-    if (streamConfig.provider === "advanced_camera_card") {
+    if (nativeGo2rtc) {
       try {
-        const helpers = await window.loadCardHelpers?.();
+        const source = await resolveGo2rtcPlayerSource(this._hass, {
+          ...streamConfig,
+          stream: streamConfig.stream || cameraStreamName(entityId),
+        });
         if (
           mountId !== this._expandedStreamMountId
           || !this._expandedOpen
           || !host.isConnected
-          || typeof helpers?.createCardElement !== "function"
+          || !source
         ) {
           return;
         }
-        const card = await helpers.createCardElement(buildAdvancedCameraCardConfig(
-          entityId,
-          streamConfig.stream || cameraStreamName(entityId),
-        ));
-        if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
-          return;
-        }
-        card.hass = this._hass;
-        card.classList.add("camera-card__expanded-advanced-camera");
-        host.replaceChildren(card);
-        this._expandedStreamNode = card;
+        const player = new NodaliaGo2RTCPlayer();
+        player.classList.add("camera-card__expanded-go2rtc");
+        player.configure({
+          source,
+          mode: streamConfig.mode,
+          muted: streamConfig.muted,
+          controls: streamConfig.controls,
+        });
+        host.replaceChildren(player);
+        this._expandedStreamNode = player;
       } catch (_error) {
-        // Keep the preview poster visible if the optional card is unavailable.
+        // Keep the preview poster visible when Frigate or go2rtc cannot be reached.
       }
       return;
     }
@@ -1528,12 +1582,8 @@ class NodaliaCameraCard extends HTMLElement {
     const showImage = Boolean(imageUrl) && !unavailable && !imageFailed;
     const title = this._getTitle(state, entityId);
     const streamConfig = this._getCameraStreamConfig(entityId);
-    const go2rtcUrl = streamConfig.provider === "go2rtc"
-      ? buildGo2rtcViewerUrl(streamConfig.base_url, streamConfig.stream || cameraStreamName(entityId), streamConfig.mode)
-      : "";
     const iframeUrl = streamConfig.provider === "iframe" ? sanitizeIframeUrl(streamConfig.url) : "";
-    const directStreamUrl = go2rtcUrl || iframeUrl;
-    const embeddableStreamUrl = isMixedContentUrl(directStreamUrl) ? "" : directStreamUrl;
+    const embeddableStreamUrl = isMixedContentUrl(iframeUrl) ? "" : iframeUrl;
 
     return `
       <div class="camera-card__expanded is-open" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
@@ -1552,7 +1602,7 @@ class NodaliaCameraCard extends HTMLElement {
                   <ha-icon icon="mdi:cctv"></ha-icon>
                   <span>${escapeHtml(this._cameraUi("cameraUnavailable", "Camera unavailable"))}</span>
                 </div>`}
-            ${streamConfig.provider === "home_assistant" || streamConfig.provider === "advanced_camera_card"
+            ${streamConfig.provider === "home_assistant" || streamConfig.provider === "frigate_go2rtc" || streamConfig.provider === "go2rtc"
               ? `<div class="camera-card__expanded-stream" data-camera-expanded-stream></div>`
               : embeddableStreamUrl
                 ? `<iframe class="camera-card__expanded-stream-frame" src="${escapeHtml(embeddableStreamUrl)}" title="${escapeHtml(title)}" allow="autoplay; fullscreen" loading="eager" referrerpolicy="no-referrer"></iframe>`
@@ -2228,6 +2278,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
       const configured = existing.find(item => item?.camera === camera);
       return {
         provider: "home_assistant",
+        client_id: "frigate",
         base_url: "",
         stream: cameraStreamName(camera),
         mode: "auto",
@@ -2622,7 +2673,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
               <div class="editor-grid editor-grid--stacked">
                 ${this._renderSelectField("ed.camera.live_provider", `${prefix}.provider`, provider, [
     { value: "home_assistant", label: "ed.camera.live_provider_home_assistant" },
-    { value: "advanced_camera_card", label: "ed.camera.live_provider_advanced_camera_card" },
+    { value: "frigate_go2rtc", label: "ed.camera.live_provider_frigate_go2rtc" },
     { value: "go2rtc", label: "ed.camera.live_provider_go2rtc" },
     { value: "iframe", label: "ed.camera.live_provider_iframe" },
   ])}
@@ -2630,9 +2681,19 @@ class NodaliaCameraCardEditor extends HTMLElement {
                   ${this._renderCheckboxField("ed.camera.live_muted", `${prefix}.muted`, stream.muted !== false)}
                   ${this._renderCheckboxField("ed.camera.live_controls", `${prefix}.controls`, stream.controls === true)}
                 ` : ""}
-                ${provider === "advanced_camera_card"
-    ? this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })
-    : ""}
+                ${provider === "frigate_go2rtc" ? `
+                  ${this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })}
+                  ${this._renderTextField("ed.camera.live_frigate_client_id", `${prefix}.client_id`, stream.client_id || "frigate", { placeholder: "frigate", fullWidth: true })}
+                  ${this._renderSelectField("ed.camera.live_mode", `${prefix}.mode`, stream.mode || "auto", [
+    { value: "auto", label: "ed.camera.live_mode_auto" },
+    { value: "webrtc", label: "ed.camera.live_mode_webrtc" },
+    { value: "mse", label: "ed.camera.live_mode_mse" },
+    { value: "hls", label: "ed.camera.live_mode_hls" },
+    { value: "mjpeg", label: "ed.camera.live_mode_mjpeg" },
+  ])}
+                  ${this._renderCheckboxField("ed.camera.live_muted", `${prefix}.muted`, stream.muted !== false)}
+                  ${this._renderCheckboxField("ed.camera.live_controls", `${prefix}.controls`, stream.controls === true)}
+                ` : ""}
                 ${provider === "go2rtc" ? `
                   ${this._renderTextField("ed.camera.live_base_url", `${prefix}.base_url`, stream.base_url, { placeholder: "http://frigate.local:1984", fullWidth: true })}
                   ${this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })}
@@ -2643,6 +2704,8 @@ class NodaliaCameraCardEditor extends HTMLElement {
     { value: "hls", label: "ed.camera.live_mode_hls" },
     { value: "mjpeg", label: "ed.camera.live_mode_mjpeg" },
   ])}
+                  ${this._renderCheckboxField("ed.camera.live_muted", `${prefix}.muted`, stream.muted !== false)}
+                  ${this._renderCheckboxField("ed.camera.live_controls", `${prefix}.controls`, stream.controls === true)}
                 ` : ""}
                 ${provider === "iframe"
     ? this._renderTextField("ed.camera.live_url", `${prefix}.url`, stream.url, { placeholder: "https://camera.example/player", fullWidth: true })
@@ -2896,7 +2959,10 @@ if (typeof globalThis !== "undefined") {
     normalizeCameraStreams,
     compactCameraStreams,
     buildGo2rtcViewerUrl,
-    buildAdvancedCameraCardConfig,
+    buildGo2rtcWebSocketEndpoint,
+    buildFrigateGo2rtcPath,
+    signHomeAssistantPath,
+    resolveGo2rtcPlayerSource,
     isMixedContentUrl,
     formatRelativeAge,
     DEFAULT_CONFIG,

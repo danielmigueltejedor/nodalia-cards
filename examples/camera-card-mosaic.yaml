@@ -12,7 +12,7 @@ cameras:
   - camera.aqara_g100
 camera_streams:
   - camera: camera.aqara_g410
-    provider: advanced_camera_card
+    provider: frigate_go2rtc
     stream: aqara_g410_main
 camera_actions:
   - camera: camera.aqara_g5_pro
