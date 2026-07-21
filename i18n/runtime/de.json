@@ -327,6 +327,8 @@
     "emptyBody": "Legen Sie `entity` fest, um diese Karte anzuzeigen.",
     "defaultName": "Kamera",
     "cameraUnavailable": "Kamera nicht verfügbar",
+    "connectingLive": "Livestream wird verbunden",
+    "liveUnavailable": "Livestream nicht verfügbar",
     "noCameraEntity": "Keine Kameraeinheit",
     "openCamera": "Kamera öffnen",
     "close": "Schließen",

@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.35] - 2026-07-21
+
+Thirty-fifth **`2.0.0`** **`alpha`**: working native Frigate go2rtc popup playback. Release channel **`2.0.0-alpha.35`**.
+
+### Fixed
+
+- **Camera native go2rtc player:** registered `nodalia-go2rtc-player` as a browser custom element before creating it, preventing the silent `Illegal constructor` failure that left the expanded view on its preview image.
+- **Camera live feedback:** Frigate/go2rtc popups now show a native connecting bubble, retain the preview until real media arrives, hide it after playback starts, and display a visible unavailable state when endpoint resolution or negotiation fails.
+- **Camera lifecycle:** player mounting now uses the Custom Elements lifecycle and cleanup accepts previously registered compatible player instances during dashboard resource reloads.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.35`; `2.0.0-alpha.34` remains available as a compatibility loader.
+
 ## [2.0.0-alpha.34] - 2026-07-21
 
 Thirty-fourth **`2.0.0`** **`alpha`**: native Frigate go2rtc playback without external camera cards. Release channel **`2.0.0-alpha.34`**.

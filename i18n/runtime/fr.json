@@ -327,6 +327,8 @@
     "emptyBody": "Définissez `entity` pour afficher cette carte.",
     "defaultName": "Caméra",
     "cameraUnavailable": "Caméra indisponible",
+    "connectingLive": "Connexion au direct",
+    "liveUnavailable": "Direct indisponible",
     "noCameraEntity": "Aucune entité de caméra",
     "openCamera": "Caméra ouverte",
     "close": "Fermer",

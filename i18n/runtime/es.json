@@ -327,6 +327,8 @@
     "emptyBody": "Configura `entity` para mostrar la tarjeta.",
     "defaultName": "Cámara",
     "cameraUnavailable": "Cámara no disponible",
+    "connectingLive": "Conectando al directo",
+    "liveUnavailable": "Directo no disponible",
     "noCameraEntity": "Sin entidad de cámara",
     "openCamera": "Abrir cámara",
     "close": "Cerrar",

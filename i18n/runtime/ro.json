@@ -327,6 +327,8 @@
     "emptyBody": "Setați `entity` pentru a afișa acest card.",
     "defaultName": "Camera foto",
     "cameraUnavailable": "Camera foto nu este disponibilă",
+    "connectingLive": "Se conectează transmisia live",
+    "liveUnavailable": "Transmisie live indisponibilă",
     "noCameraEntity": "Nicio entitate cameră",
     "openCamera": "Deschideți camera",
     "close": "Aproape",

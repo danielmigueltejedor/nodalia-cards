@@ -408,6 +408,9 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /ManagedMediaSource/);
   assert.match(source, /nodalia-go2rtc-loaded/);
   assert.match(source, /Adapted from go2rtc VideoRTC/);
+  assert.match(source, /customElements\.define\(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer\)/);
+  assert.match(read("nodalia-camera-card.js"), /document\.createElement\("nodalia-go2rtc-player"\)/);
+  assert.match(read("nodalia-camera-card.js"), /data-camera-stream-status/);
   assert.match(build, /legalComments: "inline"/);
   assert.ok(pkg.files.includes("nodalia-go2rtc-player.js"));
   assert.ok(pkg.files.includes("THIRD_PARTY_NOTICES.md"));

@@ -479,3 +479,9 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._send({ type: "mjpeg" });
   }
 }
+
+const GO2RTC_PLAYER_TAG = "nodalia-go2rtc-player";
+
+if (!customElements.get(GO2RTC_PLAYER_TAG)) {
+  customElements.define(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer);
+}

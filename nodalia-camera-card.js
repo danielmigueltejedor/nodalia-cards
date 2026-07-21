@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.34";
+const CARD_VERSION = "2.0.0-alpha.35";
 const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
 const PRESENTATION_MODES = new Set(["feed", "card"]);
 const MAX_CAMERAS = 4;
@@ -1305,16 +1305,42 @@ class NodaliaCameraCard extends HTMLElement {
     if (node.localName === "ha-camera-stream") {
       node.hass = this._hass;
       node.stateObj = this._getState(this._expandedEntityId);
-    } else if (!(node instanceof NodaliaGo2RTCPlayer)) {
+    } else if (node.localName !== "nodalia-go2rtc-player") {
       node.hass = this._hass;
     }
   }
 
   _disposeExpandedStream() {
-    if (this._expandedStreamNode instanceof NodaliaGo2RTCPlayer) {
+    if (typeof this._expandedStreamNode?.disconnect === "function") {
       this._expandedStreamNode.disconnect();
     }
     this._expandedStreamNode = null;
+  }
+
+  _setExpandedStreamStatus(state, detail = "") {
+    if (!this.shadowRoot) {
+      return;
+    }
+    const status = this.shadowRoot.querySelector("[data-camera-stream-status]");
+    const host = this.shadowRoot.querySelector("[data-camera-expanded-stream]");
+    if (!(status instanceof HTMLElement) || !(host instanceof HTMLElement)) {
+      return;
+    }
+    const icon = status.querySelector("ha-icon");
+    const label = status.querySelector("span");
+    const loaded = state === "loaded";
+    status.hidden = loaded;
+    host.classList.toggle("is-loaded", loaded);
+    status.classList.toggle("is-error", state === "error");
+    if (icon) {
+      icon.setAttribute("icon", state === "error" ? "mdi:alert-circle-outline" : "mdi:loading");
+    }
+    if (label) {
+      label.textContent = state === "error"
+        ? this._cameraUi("liveUnavailable", "Live stream unavailable")
+        : this._cameraUi("connectingLive", "Connecting live stream");
+    }
+    status.title = detail;
   }
 
   async _mountExpandedStream() {
@@ -1333,6 +1359,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
     const mountId = ++this._expandedStreamMountId;
     if (nativeGo2rtc) {
+      this._setExpandedStreamStatus("loading");
       try {
         const source = await resolveGo2rtcPlayerSource(this._hass, {
           ...streamConfig,
@@ -1342,12 +1369,33 @@ class NodaliaCameraCard extends HTMLElement {
           mountId !== this._expandedStreamMountId
           || !this._expandedOpen
           || !host.isConnected
-          || !source
         ) {
           return;
         }
-        const player = new NodaliaGo2RTCPlayer();
+        if (!source) {
+          throw new Error("No usable go2rtc WebSocket endpoint was resolved");
+        }
+        const player = document.createElement("nodalia-go2rtc-player");
+        if (typeof player.configure !== "function") {
+          throw new Error("The native go2rtc player is not registered");
+        }
         player.classList.add("camera-card__expanded-go2rtc");
+        player.addEventListener("nodalia-go2rtc-loaded", () => {
+          if (mountId !== this._expandedStreamMountId) {
+            return;
+          }
+          this._setExpandedStreamStatus("loaded");
+          const poster = this.shadowRoot?.querySelector('[data-camera-poster="true"]');
+          if (poster instanceof HTMLElement) {
+            poster.hidden = true;
+          }
+        }, { once: true });
+        player.addEventListener("nodalia-go2rtc-error", event => {
+          if (mountId !== this._expandedStreamMountId) {
+            return;
+          }
+          this._setExpandedStreamStatus("error", event.detail?.message || "go2rtc error");
+        });
         player.configure({
           source,
           mode: streamConfig.mode,
@@ -1356,8 +1404,9 @@ class NodaliaCameraCard extends HTMLElement {
         });
         host.replaceChildren(player);
         this._expandedStreamNode = player;
-      } catch (_error) {
-        // Keep the preview poster visible when Frigate or go2rtc cannot be reached.
+      } catch (error) {
+        this._setExpandedStreamStatus("error", error?.message || String(error));
+        console.warn("[nodalia-camera-card] Unable to start the go2rtc stream", error);
       }
       return;
     }
@@ -1582,6 +1631,7 @@ class NodaliaCameraCard extends HTMLElement {
     const showImage = Boolean(imageUrl) && !unavailable && !imageFailed;
     const title = this._getTitle(state, entityId);
     const streamConfig = this._getCameraStreamConfig(entityId);
+    const nativeGo2rtc = streamConfig.provider === "frigate_go2rtc" || streamConfig.provider === "go2rtc";
     const iframeUrl = streamConfig.provider === "iframe" ? sanitizeIframeUrl(streamConfig.url) : "";
     const embeddableStreamUrl = isMixedContentUrl(iframeUrl) ? "" : iframeUrl;
 
@@ -1607,6 +1657,12 @@ class NodaliaCameraCard extends HTMLElement {
               : embeddableStreamUrl
                 ? `<iframe class="camera-card__expanded-stream-frame" src="${escapeHtml(embeddableStreamUrl)}" title="${escapeHtml(title)}" allow="autoplay; fullscreen" loading="eager" referrerpolicy="no-referrer"></iframe>`
                 : ""}
+            ${nativeGo2rtc ? `
+              <div class="camera-card__stream-status" data-camera-stream-status>
+                <ha-icon icon="mdi:loading"></ha-icon>
+                <span>${escapeHtml(this._cameraUi("connectingLive", "Connecting live stream"))}</span>
+              </div>
+            ` : ""}
           </div>
           ${this._renderExpandedActionsMarkup(entityId)}
         </div>
@@ -2053,6 +2109,48 @@ class NodaliaCameraCard extends HTMLElement {
           object-fit: contain;
         }
 
+        .camera-card__stream-status {
+          align-items: center;
+          backdrop-filter: blur(12px);
+          background: color-mix(in srgb, #111 76%, transparent);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 999px;
+          bottom: 14px;
+          color: #fff;
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 650;
+          gap: 7px;
+          left: 14px;
+          max-width: calc(100% - 28px);
+          padding: 7px 10px;
+          position: absolute;
+          z-index: 2;
+        }
+
+        .camera-card__stream-status[hidden] {
+          display: none;
+        }
+
+        .camera-card__stream-status ha-icon {
+          animation: camera-card-stream-spin 900ms linear infinite;
+          flex: 0 0 auto;
+          height: 17px;
+          width: 17px;
+        }
+
+        .camera-card__stream-status.is-error ha-icon {
+          animation: none;
+          color: var(--error-color, #db4437);
+        }
+
+        .camera-card__stream-status span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
         .camera-card__expanded-actions {
           display: grid;
           gap: 10px;
@@ -2069,6 +2167,10 @@ class NodaliaCameraCard extends HTMLElement {
         @keyframes camera-card-fade-up {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes camera-card-stream-spin {
+          to { transform: rotate(360deg); }
         }
 
         @media (max-width: 720px) {

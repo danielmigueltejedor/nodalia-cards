@@ -327,6 +327,8 @@
     "emptyBody": "Stel `entity` in om deze kaart weer te geven.",
     "defaultName": "Camera",
     "cameraUnavailable": "Camera niet beschikbaar",
+    "connectingLive": "Verbinden met livestream",
+    "liveUnavailable": "Livestream niet beschikbaar",
     "noCameraEntity": "Geen camera-entiteit",
     "openCamera": "Camera openen",
     "close": "Dichtbij",

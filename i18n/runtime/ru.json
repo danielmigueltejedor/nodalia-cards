@@ -327,6 +327,8 @@
     "emptyBody": "Установите `entity`, чтобы показать эту карту.",
     "defaultName": "Камера",
     "cameraUnavailable": "Камера недоступна",
+    "connectingLive": "Подключение к трансляции",
+    "liveUnavailable": "Трансляция недоступна",
     "noCameraEntity": "Нет объекта камеры",
     "openCamera": "Открыть камеру",
     "close": "Закрывать",

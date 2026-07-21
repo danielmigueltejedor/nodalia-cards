@@ -327,6 +327,8 @@
     "emptyBody": "设置 `entity` 以显示此卡。",
     "defaultName": "相机",
     "cameraUnavailable": "相机不可用",
+    "connectingLive": "正在连接直播",
+    "liveUnavailable": "直播不可用",
     "noCameraEntity": "无相机实体",
     "openCamera": "打开相机",
     "close": "关闭",
