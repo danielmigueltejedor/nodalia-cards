@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.41] - 2026-07-22
+
+Forty-first **`2.0.0`** **`alpha`**: audible native go2rtc playback. Release channel **`2.0.0-alpha.41`**.
+
+### Fixed
+
+- **Camera go2rtc audio:** WebRTC audio and video now stay in the same media stream, so native player controls operate on the real audio track instead of a separate silent Web Audio path.
+- **Camera audio startup:** opening an unmuted stream primes playback during the user gesture with a temporary silent track, then replaces it with the incoming go2rtc audio track without requiring an extra button.
+- **Camera player controls:** manually muting or unmuting the native player now updates the effective playback state and is preserved by subsequent play attempts.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.41`; `2.0.0-alpha.39` and `2.0.0-alpha.40` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.40] - 2026-07-22
 
 Fortieth **`2.0.0`** **`alpha`**: lean release history and bounded compatibility. Release channel **`2.0.0-alpha.40`**.

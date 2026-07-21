@@ -1,2 +1,0 @@
-import "./nodalia-cards-2.0.0-alpha.40.js";
-if(typeof window!=="undefined"){window.__NODALIA_LOADER__={"mode":"compat","pkgVersion":"2.0.0-alpha.40","contentSha256_12":"535e6ffb082e","file":"nodalia-cards-2.0.0-alpha.38.js","targetFile":"nodalia-cards-2.0.0-alpha.40.js","fallbackFile":"nodalia-cards.js"};}
