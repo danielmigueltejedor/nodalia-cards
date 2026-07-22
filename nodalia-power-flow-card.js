@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "1.3.5";
+const CARD_VERSION = "2.0.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -828,6 +828,8 @@ function normalizeConfig(rawConfig) {
   merged.consumption_chips.day_label = String(merged.consumption_chips.day_label ?? "").trim();
   merged.consumption_chips.month_label = String(merged.consumption_chips.month_label ?? "").trim();
   merged.show_home_device_popup = merged.show_home_device_popup !== false;
+  merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return merged;
 }
 

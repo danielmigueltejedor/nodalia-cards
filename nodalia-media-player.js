@@ -1,6 +1,7 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "1.3.5";
+const CARD_VERSION = "2.0.0-alpha.3";
+const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -159,6 +160,7 @@ const DEFAULT_CONFIG = {
   players: [],
   show: true,
   show_state: false,
+  show_device_chip: true,
   album_cover_background: true,
   show_unavailable_badge: true,
   haptics: {
@@ -316,6 +318,47 @@ function compactConfig(value) {
   }
 
   return value;
+}
+
+function formatEditorJsonValue(value) {
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2);
+    } catch (_error) {
+      return value;
+    }
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (_error) {
+    return String(value);
+  }
+}
+
+function parseEditorJsonObject(value) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) {
+    return { valid: true, value: undefined };
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return isObject(parsed)
+      ? { valid: true, value: parsed }
+      : { valid: false, value: undefined };
+  } catch (_error) {
+    return { valid: false, value: undefined };
+  }
 }
 
 
@@ -3334,7 +3377,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           normalizeTextKey(title) !== normalizeTextKey(playerLabel) ||
           !hasActiveMediaContent
         );
-    const showTopChip = !!playerLabel && (
+    const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (
       isTvPlayer
         ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
         : !hasActiveMediaContent || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
@@ -5537,10 +5580,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     });
   }
 
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
   _setFieldValue(path, value) {
     const normalizedPath = String(path || "").trim();
     const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
@@ -5579,6 +5618,18 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       }
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "json": {
+        const parsed = parseEditorJsonObject(input.value);
+        if (!parsed.valid) {
+          input.setCustomValidity(this._editorLabel("ed.media_player.invalid_json_object"));
+          input.setAttribute("aria-invalid", "true");
+          return INVALID_EDITOR_VALUE;
+        }
+
+        input.setCustomValidity("");
+        input.removeAttribute("aria-invalid");
+        return parsed.value;
+      }
       case "tristate":
         if (input.value === "true") {
           return true;
@@ -5606,8 +5657,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     event.stopPropagation();
 
     const nextValue = this._readFieldValue(input);
+    if (nextValue === INVALID_EDITOR_VALUE) {
+      return;
+    }
     this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
 
     if (event.type === "change") {
       this._emitConfig();
@@ -5638,7 +5691,6 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     if (field === "entity") {
       window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
     }
-    this._setEditorConfig();
     this._emitConfig();
   }
 
@@ -5742,7 +5794,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
+    const inputValue = valueType === "json"
+      ? formatEditorJsonValue(value)
+      : (value === undefined || value === null ? "" : String(value));
 
     if (tag === "textarea") {
       return `
@@ -5877,8 +5931,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           ${this._renderTextField("ed.entity.tap_service_field", `${path}.service`, action?.service, {
             placeholder: "input_boolean.turn_off",
           })}
-          ${this._renderTextareaField("ed.entity.tap_service_data_json", `${path}.service_data`, action?.service_data, {
+          ${this._renderTextareaField("ed.entity.tap_service_data_json", `${path}.service_data`, action?.service_data ?? action?.data, {
             placeholder: '{"entity_id":"input_boolean.media_power"}',
+            rows: 4,
+            valueType: "json",
           })}
         </div>
       </div>
@@ -6250,6 +6306,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           min-height: 40px;
           padding: 10px 12px;
           width: 100%;
+        }
+
+        .editor-field textarea[aria-invalid="true"] {
+          border-color: var(--error-color, #db4437);
+          box-shadow: 0 0 0 1px var(--error-color, #db4437);
         }
 
         .editor-control-host input,
@@ -6726,3 +6787,10 @@ window.NodaliaUtils.registerCustomCard({
   description: "Fixed media player with the Nodalia look and visual editor.",
   preview: true,
 });
+
+if (typeof globalThis !== "undefined") {
+  globalThis.__NODALIA_MEDIA_PLAYER__ = {
+    formatEditorJsonValue,
+    parseEditorJsonObject,
+  };
+}

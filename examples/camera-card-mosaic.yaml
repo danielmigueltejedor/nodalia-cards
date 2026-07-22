@@ -1,0 +1,51 @@
+# Nodalia Camera Card — 3-camera mosaic + per-camera controls
+type: custom:nodalia-camera-card
+show_name: false
+show_state: false
+show_status_chips: false
+show_preview_age: true
+cameras:
+  - camera.aqara_g410
+  - camera.aqara_g5_pro
+  - camera.aqara_g100
+camera_streams:
+  - camera: camera.aqara_g410
+    provider: frigate_go2rtc
+    stream: aqara_g410_main
+camera_actions:
+  - camera: camera.aqara_g5_pro
+    entity: light.foco_jardin
+    name: Jardín delantero
+    icon: mdi:outdoor-lamp
+    tap_action: toggle
+  - camera: camera.aqara_g410
+    entity: lock.aqara_smart_lock_u200
+    name: Abrir
+    icon: mdi:door-open
+    icon_color: green
+    tap_action: service
+    tap_service: lock.open
+    tap_service_data:
+      entity_id: lock.aqara_smart_lock_u200
+  - camera: camera.aqara_g410
+    entity: lock.aqara_smart_lock_u200
+    name: Cerrar
+    icon: mdi:lock
+    icon_color: red
+    tap_action: service
+    tap_service: lock.lock
+    tap_service_data:
+      entity_id: lock.aqara_smart_lock_u200
+styles:
+  card:
+    background: var(--ha-card-background)
+    border: none
+    border_radius: 22px
+    box_shadow: var(--ha-card-box-shadow)
+    padding: "0"
+    gap: "0"
+  preview:
+    aspect_ratio: "16 / 9"
+    border_radius: "0"
+    min_height: 220px
+    mosaic_gap: 0px

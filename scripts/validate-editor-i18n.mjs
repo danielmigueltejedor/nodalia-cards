@@ -20,6 +20,14 @@ const en = JSON.parse(fs.readFileSync(enPath, "utf8"));
 const enKeys = new Set(Object.keys(en));
 let failed = false;
 
+function placeholders(value) {
+  return [...String(value ?? "").matchAll(/\{([^{}]+)\}/g)].map(match => match[1]).sort();
+}
+
+function codeSpans(value) {
+  return [...String(value ?? "").matchAll(/`([^`]+)`/g)].map(match => match[1]).sort();
+}
+
 for (const name of fs.readdirSync(dir)) {
   if (!name.endsWith(".json") || name === "en.json") {
     continue;
@@ -36,6 +44,21 @@ for (const name of fs.readdirSync(dir)) {
   for (const k of keys) {
     if (!enKeys.has(k)) {
       console.error(`Unknown key in ${name} (not in en.json): ${k}`);
+      failed = true;
+    }
+  }
+  for (const k of enKeys) {
+    if (!keys.has(k)) continue;
+    const expected = placeholders(en[k]);
+    const actual = placeholders(data[k]);
+    if (expected.join("\u0000") !== actual.join("\u0000")) {
+      console.error(`Placeholder mismatch in ${name} at ${k}: expected {${expected.join("}, {")}}, got {${actual.join("}, {")}}`);
+      failed = true;
+    }
+    const expectedCode = codeSpans(en[k]);
+    const actualCode = codeSpans(data[k]);
+    if (expectedCode.join("\u0000") !== actualCode.join("\u0000")) {
+      console.error(`Code span mismatch in ${name} at ${k}: expected ${expectedCode.join(", ")}, got ${actualCode.join(", ")}`);
       failed = true;
     }
   }

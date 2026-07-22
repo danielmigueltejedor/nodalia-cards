@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { restoreProtectedTranslationValues } from "./translation-token-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -49,6 +50,8 @@ const GLOBAL_IDENTICAL = new Set([
   "Nodalia Insignia Card",
   "Nodalia Fav Card",
   "Nodalia Media Player",
+  "Nodalia Camera Card",
+  "Nodalia Room Summary Card",
   "OK",
   "Info",
   "JSON",
@@ -129,13 +132,19 @@ function cacheKey(text, lang) {
 }
 
 async function gtxTranslate(text, lang) {
+  const protectedValues = [];
+  const protectedText = String(text).replace(/`[^`]*`|\{[^{}]+\}/g, value => {
+    const token = `__NODALIA_TOKEN_${protectedValues.length}__`;
+    protectedValues.push({ token, value });
+    return token;
+  });
   const tl = GTX_TL[lang] || lang;
   const u = new URL("https://translate.googleapis.com/translate_a/single");
   u.searchParams.set("client", "gtx");
   u.searchParams.set("sl", "en");
   u.searchParams.set("tl", tl);
   u.searchParams.set("dt", "t");
-  u.searchParams.set("q", text);
+  u.searchParams.set("q", protectedText);
   let lastErr = null;
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
@@ -154,7 +163,8 @@ async function gtxTranslate(text, lang) {
           out += part[0];
         }
       }
-      return out || text;
+      if (!out) return text;
+      return restoreProtectedTranslationValues(out, protectedValues) ?? text;
     } catch (e) {
       lastErr = e;
       await new Promise(r => setTimeout(r, 400 * attempt));
@@ -209,17 +219,15 @@ function setDeep(obj, dotted, value) {
 function collectGaps(enFlat, locFlat, lang) {
   const gaps = [];
   for (const [key, enVal] of Object.entries(enFlat)) {
-    if (!(key in locFlat)) {
-      continue;
-    }
+    const missing = !(key in locFlat);
     const locVal = locFlat[key];
-    if (locVal !== enVal) {
+    if (!missing && locVal !== enVal) {
       continue;
     }
     if (!shouldTranslate(enVal)) {
       continue;
     }
-    gaps.push({ key, en: enVal, lang });
+    gaps.push({ key, en: enVal, lang, missing });
   }
   return gaps;
 }

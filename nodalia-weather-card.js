@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "1.3.5";
+const CARD_VERSION = "2.0.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -758,6 +758,8 @@ function normalizeConfig(rawConfig) {
   config.tap_action = norm(config.tap_action, "more-info");
   config.hold_action = norm(config.hold_action, "more-info");
   config.double_tap_action = norm(config.double_tap_action, "none");
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 

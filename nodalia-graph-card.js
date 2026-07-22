@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "1.3.5";
+const CARD_VERSION = "2.0.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -23,6 +23,7 @@ const TOUCH_CHART_HOLD_MS = 500;
 const TOUCH_MOVE_CANCEL_DISTANCE = 14;
 const CHART_TAP_MAX_MOVE = 14;
 const TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
+const HISTORY_REFRESH_INTERVAL = 180000;
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -513,6 +514,8 @@ function resolveEntityEntries(config) {
 function normalizeConfig(rawConfig) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   merged.entities = resolveEntityEntries(merged);
+  merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return merged;
 }
 
@@ -627,6 +630,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyKey = "";
     this._historyLoadedAt = 0;
     this._historyAbortController = null;
+    this._historyRefreshTimer = 0;
     this._activeSeriesEntityId = null;
     this._hoverIndex = null;
     this._hoverChart = null;
@@ -684,6 +688,8 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.clearTimeout(this._historyRefreshTimer);
+    this._historyRefreshTimer = 0;
     this._historyAbortController?.abort();
     this._historyAbortController = null;
     this._detachViewVisibilityObserver();
@@ -720,10 +726,18 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this.addEventListener("pointerleave", this._onShadowPointerLeave);
+    this.addEventListener("mouseleave", this._onShadowPointerLeave);
+    this.addEventListener("pointerout", this._onHostPointerOut);
+    this.addEventListener("mouseout", this._onHostPointerOut);
+    if (this._hoverMediaQuery && typeof this._hoverMediaQuery.addEventListener === "function") {
+      this._hoverMediaQuery.addEventListener("change", this._onHoverMediaChange);
+    }
     this._animateContentOnNextRender = true;
     this._animateChartOnNextRender = true;
     this._lastRenderSignature = "";
     this._attachViewVisibilityObserver();
+    this._scheduleHistoryRefresh();
     if (this._hass && this._config) {
       this._render();
     }
@@ -750,6 +764,7 @@ class NodaliaGraphCard extends HTMLElement {
         this._animateChartOnNextRender = true;
         this._lastRenderSignature = "";
         if (this._hass && this._config) {
+          this._requestHistory();
           this._render();
         }
       },
@@ -766,6 +781,24 @@ class NodaliaGraphCard extends HTMLElement {
     this._viewVisibilityObserver = null;
   }
 
+  _scheduleHistoryRefresh() {
+    window.clearTimeout(this._historyRefreshTimer);
+    this._historyRefreshTimer = 0;
+    if (!this.isConnected) {
+      return;
+    }
+    this._historyRefreshTimer = window.setTimeout(() => {
+      this._historyRefreshTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      if (!this._viewVisibilityObserver || this._wasInViewport) {
+        this._requestHistory();
+      }
+      this._scheduleHistoryRefresh();
+    }, HISTORY_REFRESH_INTERVAL);
+  }
+
   setConfig(config) {
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -773,6 +806,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._historyKey = "";
     this._historyLoadedAt = 0;
     this._historyRequestKeyStamp = "";
+    this._scheduleHistoryRefresh();
     this._hoverIndex = null;
     this._animateContentOnNextRender = true;
     this._animateChartOnNextRender = true;
@@ -1782,7 +1816,7 @@ class NodaliaGraphCard extends HTMLElement {
     if (
       requestKey === this._historyKey &&
       this._historySeries.length &&
-      Date.now() - this._historyLoadedAt < 180000
+      Date.now() - this._historyLoadedAt < HISTORY_REFRESH_INTERVAL
     ) {
       return;
     }

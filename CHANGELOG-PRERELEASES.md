@@ -1,6 +1,6 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable), and completed **`1.3.5-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.5]`** shipped as stable).
+This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable), and completed **`1.3.5-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.5]`** shipped as stable), and **`2.0.0-alpha.*`** prereleases.
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
@@ -9,6 +9,694 @@ For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [2.0.0-alpha.44] - 2026-07-22
+
+Forty-fourth **`2.0.0`** **`alpha`**: interaction polish, leaner startup, and runtime hardening. Release channel **`2.0.0-alpha.44`**.
+
+### Fixed
+
+- **Entity Card selectors:** `select` and `input_select` taps now play the same content and icon bubble bounce as other entity domains before opening their option picker.
+- **Native Lovelace actions:** Light, Fan, Humidifier, Entity, Favourite, Cover, and Camera cards preserve YAML object service data and explicit targets; Light, Fan, and Humidifier also normalize `call-service`, `perform-action`, and navigation action objects.
+- **Runtime styles:** configurable style trees and empty-state CSS values are sanitized before interpolation, preventing malformed or injected declarations from escaping their intended value.
+- **Camera go2rtc lifecycle:** stalled WebSocket connections time out and retry, while full disconnects release Web Audio and recreate the media element cleanly before reconnecting.
+- **Graph history:** visible cards refresh stale history periodically and restore hover/media listeners after reconnecting to the DOM.
+- **Async recovery:** synchronous service-call failures can no longer strand Notifications queues, shared dismissals, Room Summary actions, or Advanced Vacuum cleaning flows.
+- **Advanced Vacuum calibration:** direct calibration point changes now invalidate the cached map transform even when the number of points stays unchanged.
+- **Room Summary editor:** edited configurations are renormalized before emission while runtime rendering reuses normalized configuration and a cached signature.
+
+### Changed
+
+- **Camera presentation:** Camera Card now uses the edge-to-edge mosaic presentation exclusively, with up to four cameras placed automatically; obsolete presentation and layout selectors were removed from the visual editor.
+- **Editor startup:** shared translation rows and editor catalogs use compact positional storage and lazy reconstruction, reducing `nodalia-editor-ui.js` by about 39% and the complete bundle by about 11%.
+- **Repository security:** GitHub Actions dependencies are pinned to immutable commits, CI uses read-only repository permissions, and generated translation and bundle artifacts must be current before validation passes.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.44`; `2.0.0-alpha.42` and `2.0.0-alpha.43` remain available as lightweight compatibility loaders.
+
+## [2.0.0-alpha.43] - 2026-07-22
+
+Forty-third **`2.0.0`** **`alpha`**: audible Safari camera streams. Release channel **`2.0.0-alpha.43`**.
+
+### Fixed
+
+- **Camera Safari audio output:** the popup-opening gesture now unlocks a persistent Web Audio output sourced from the native video element, allowing AAC audio from MSE to remain audible after asynchronous stream attachment.
+- **Camera WebRTC audio:** incoming Opus is routed through the already-unlocked output while video remains on an autoplay-safe stream, without duplicating the audio track.
+- **Camera mute state:** internal autoplay recovery no longer overwrites an explicit `muted: false`; native mute, unmute, and volume changes resume and control the effective output.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.43`; `2.0.0-alpha.41` and `2.0.0-alpha.42` remain available as lightweight compatibility loaders.
+
+## [2.0.0-alpha.42] - 2026-07-22
+
+Forty-second **`2.0.0`** **`alpha`**: Safari-safe go2rtc audio negotiation. Release channel **`2.0.0-alpha.42`**.
+
+### Fixed
+
+- **Camera WebRTC audio:** the native player now waits for the peer connection and installs one complete receiver stream containing both video and audio, matching the go2rtc and Advanced Camera Card Safari-compatible flow.
+- **Camera Safari fallback:** MSE negotiation no longer advertises Opus on Safari, which reports container support but cannot reliably play that audio path.
+- **Camera audio diagnostics:** the player reports whether a compatible audio track is available, still waiting for packets, or absent from the negotiated stream, and cleans up track listeners on fallback and disconnect.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.42`; `2.0.0-alpha.40` and `2.0.0-alpha.41` remain available as lightweight compatibility loaders.
+
+## [2.0.0-alpha.41] - 2026-07-22
+
+Forty-first **`2.0.0`** **`alpha`**: audible native go2rtc playback. Release channel **`2.0.0-alpha.41`**.
+
+### Fixed
+
+- **Camera go2rtc audio:** WebRTC audio and video now stay in the same media stream, so native player controls operate on the real audio track instead of a separate silent Web Audio path.
+- **Camera audio startup:** opening an unmuted stream primes playback during the user gesture with a temporary silent track, then replaces it with the incoming go2rtc audio track without requiring an extra button.
+- **Camera player controls:** manually muting or unmuting the native player now updates the effective playback state and is preserved by subsequent play attempts.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.41`; `2.0.0-alpha.39` and `2.0.0-alpha.40` remain available as lightweight compatibility loaders.
+
+## [2.0.0-alpha.40] - 2026-07-22
+
+Fortieth **`2.0.0`** **`alpha`**: lean release history and bounded compatibility. Release channel **`2.0.0-alpha.40`**.
+
+### Changed
+
+- **Repository releases:** historical GitHub releases and tags remain available for rollback and traceability, while the active branch keeps only the current bundle and the two immediately previous compatibility loaders.
+- **Compatibility policy:** `2.0.0-alpha.38` and `2.0.0-alpha.39` remain as lightweight aliases; older generated aliases and split artifacts are removed from the active package and repository tree.
+- **Release validation:** automated tests enforce unique lightweight compatibility loaders and a maximum retention count of two.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.40`.
+
+## [2.0.0-alpha.39] - 2026-07-22
+
+Thirty-ninth **`2.0.0`** **`alpha`**: reliable camera audio, patient recovery, and runtime audit. Release channel **`2.0.0-alpha.39`**.
+
+### Fixed
+
+- **Camera live audio:** `muted: false` unlocks a Web Audio output during the popup-opening click and routes the delayed WebRTC audio track through it, while native volume and mute changes continue to control the output.
+- **Camera loading state:** recoverable WebSocket, transport, and decoder failures stay in the connecting state; the unavailable message appears only after the 30-second startup recovery window is exhausted.
+- **Camera connection races:** close events and async WebRTC callbacks from stale transports can no longer tear down a newer stream attempt.
+- **Camera signed paths:** empty or transient signing responses are evicted from cache and retried once instead of being cached for 24 hours as unusable endpoints.
+- **Camera preview cache:** failed timestamped image URLs are bounded and successful reloads are removed from the failure set.
+
+### Changed
+
+- **Camera WebRTC startup:** signaling and ICE progress extend only the active WebRTC timeout, avoiding premature fallback without delaying transports that never answer.
+- **Camera stream memory:** the MSE pending queue is capped at 8 MB and MJPEG frames use revocable object URLs instead of byte-by-byte Base64 conversion.
+- **Compatibility loaders:** historical resource aliases now import the current versioned bundle instead of embedding dozens of duplicate 4.4 MB payloads.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.39`; `2.0.0-alpha.38` remains available as a compatibility loader.
+
+## [2.0.0-alpha.38] - 2026-07-22
+
+Thirty-eighth **`2.0.0`** **`alpha`**: faster camera startup with direct click-authorized audio. Release channel **`2.0.0-alpha.38`**.
+
+### Fixed
+
+- **Camera loading indicator:** the connecting arc is a dimensionally stable CSS ring with a centered circular trajectory instead of a rotating icon glyph.
+- **Camera live audio:** streams configured with `muted: false` arm the video element during the click that opens the popup, allowing the incoming WebRTC audio track to start without a separate Nodalia unmute button.
+- **Camera loading state:** the silent audio preparation stream cannot be mistaken for a loaded camera frame or hide the preview early.
+
+### Changed
+
+- **Camera Frigate startup:** signed go2rtc paths are prefetched and cached until shortly before their 24-hour expiry, removing repeated `auth/sign_path` waits when opening a camera.
+- **Camera go2rtc recovery:** WebRTC falls back after 4.5 seconds instead of 12 seconds, other transports use bounded per-mode timeouts, and reconnect delay is reduced from 5 to 2 seconds.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.38`; `2.0.0-alpha.37` remains available as a compatibility loader.
+
+## [2.0.0-alpha.37] - 2026-07-21
+
+Thirty-seventh **`2.0.0`** **`alpha`**: dynamic custom notification templates. Release channel **`2.0.0-alpha.37`**.
+
+### Added
+
+- **Notifications custom templates:** custom titles and messages can use `{source}`, `{value}`, `{threshold}`, `{fan}`, `{time}`, `{entity}`, `{state}`, and attributes from the configured Home Assistant entity such as `{media_title}` and `{media_artist}`.
+- **Notifications entity references:** custom templates can read other entities with `{sensor.energy_price}`, `{sensor.energy_price.state}`, or `{sensor.energy_price.unit_of_measurement}`; media-player references resolve their friendly name and calendar references resolve their current message.
+- **Notifications actions:** custom action labels and URLs use the same template context as notification content.
+
+### Fixed
+
+- **Notifications live updates:** entities referenced only inside custom templates are tracked and rerender the card when their state or attributes change.
+- **Notifications numeric values:** custom template measurements preserve Home Assistant's source precision instead of rounding energy prices and other decimal values to one decimal place.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.37`; `2.0.0-alpha.36` remains available as a compatibility loader.
+
+## [2.0.0-alpha.36] - 2026-07-21
+
+Thirty-sixth **`2.0.0`** **`alpha`**: polished multi-camera live popups and audio recovery. Release channel **`2.0.0-alpha.36`**.
+
+### Fixed
+
+- **Camera translations:** connecting, unavailable, and audio-unlock labels are generated into the runtime catalog for all 12 supported languages instead of falling back to English.
+- **Camera popup titles:** secondary mosaic cameras use their own Home Assistant friendly name while the configured card name remains scoped to the primary camera.
+- **Camera go2rtc audio:** `muted: false` is preserved when autoplay with sound is allowed; browser-blocked audio exposes a translated Nodalia unlock control without requiring native video controls.
+- **Camera embedded actions:** lock, switch, and input-boolean Entity Cards use a compact single-row layout that cannot cover the live stage.
+- **Camera editor:** action icons use Home Assistant's native `ha-icon-picker` instead of a plain text input.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.36`; `2.0.0-alpha.35` remains available as a compatibility loader.
+
+## [2.0.0-alpha.35] - 2026-07-21
+
+Thirty-fifth **`2.0.0`** **`alpha`**: working native Frigate go2rtc popup playback. Release channel **`2.0.0-alpha.35`**.
+
+### Fixed
+
+- **Camera native go2rtc player:** registered `nodalia-go2rtc-player` as a browser custom element before creating it, preventing the silent `Illegal constructor` failure that left the expanded view on its preview image.
+- **Camera live feedback:** Frigate/go2rtc popups now show a native connecting bubble, retain the preview until real media arrives, hide it after playback starts, and display a visible unavailable state when endpoint resolution or negotiation fails.
+- **Camera lifecycle:** player mounting now uses the Custom Elements lifecycle and cleanup accepts previously registered compatible player instances during dashboard resource reloads.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.35`; `2.0.0-alpha.34` remains available as a compatibility loader.
+
+## [2.0.0-alpha.34] - 2026-07-21
+
+Thirty-fourth **`2.0.0`** **`alpha`**: native Frigate go2rtc playback without external camera cards. Release channel **`2.0.0-alpha.34`**.
+
+### Added
+
+- **Camera native go2rtc player:** built-in WebSocket/WebRTC playback based on the official go2rtc VideoRTC protocol, with MSE, HLS, and MJPEG fallback modes, native mute/controls options, reconnect handling, and immediate connection cleanup when the expanded view closes.
+- **Camera Frigate transport:** `frigate_go2rtc` signs Home Assistant's same-origin `/api/frigate/<client_id>/mse/api/ws` endpoint, avoiding mixed-content requests and direct browser access to the Frigate server.
+- **Camera editor:** each camera exposes the native Frigate provider, stream name, Frigate instance ID, playback mode, mute state, and player controls across all 12 editor languages.
+
+### Fixed
+
+- **Camera dependencies:** Frigate go2rtc playback no longer requires `custom:advanced-camera-card`; configurations created with the former `advanced_camera_card` provider migrate automatically to `frigate_go2rtc`.
+- **Camera direct go2rtc:** secure direct endpoints use the same native player, while HTTP endpoints can use `hass_web_proxy` when that integration is available.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.34`; `2.0.0-alpha.33` remains available as a compatibility loader.
+
+## [2.0.0-alpha.33] - 2026-07-19
+
+Thirty-third **`2.0.0`** **`alpha`**: secure go2rtc playback inside HTTPS Home Assistant dashboards. Release channel **`2.0.0-alpha.33`**.
+
+### Added
+
+- **Camera live providers:** optional `advanced_camera_card` provider mounts Advanced Camera Card in the expanded view with `live_provider: go2rtc`, camera entity, and per-camera stream name, reusing its Home Assistant/Frigate transport without exposing a direct HTTP iframe.
+- **Camera editor:** go2rtc through Advanced Camera Card is selectable independently for every camera across all 12 editor languages.
+
+### Fixed
+
+- **Camera HTTPS playback:** direct HTTP go2rtc and iframe URLs are detected as mixed content under HTTPS and no longer replace the preview with a browser-blocked white frame.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.33`; `2.0.0-alpha.32` remains available as a compatibility loader.
+
+## [2.0.0-alpha.32] - 2026-07-19
+
+Thirty-second **`2.0.0`** **`alpha`**: seamless camera mosaics and configurable live streams. Release channel **`2.0.0-alpha.32`**.
+
+### Added
+
+- **Camera live view:** expanded cameras now use Home Assistant's native live player, preserving its WebRTC, HLS, and MJPEG negotiation with a native picture-card fallback.
+- **Camera live providers:** `camera_streams` assigns a provider to each camera; the visual editor supports Home Assistant, go2rtc/Frigate with server URL, stream name, and playback mode, plus an external player URL.
+- **Camera editor:** native live streams expose mute and player-control options, while go2rtc streams support automatic, WebRTC, MSE, HLS, and MJPEG modes across all 12 editor languages.
+
+### Fixed
+
+- **Camera mosaic:** camera cells now touch edge to edge by default; `styles.preview.mosaic_gap` remains available for custom spacing.
+- **Camera live continuity:** Home Assistant state updates patch the mounted live player and expanded Nodalia controls without rebuilding the overlay or interrupting playback.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.32`; `2.0.0-alpha.31` remains available as a compatibility loader.
+
+## [2.0.0-alpha.31] - 2026-07-17
+
+Thirty-first **`2.0.0`** **`alpha`**: per-camera Nodalia controls and direct camera opening. Release channel **`2.0.0-alpha.31`**.
+
+### Added
+
+- **Camera expanded view:** `camera_actions` assigns independent controls to each camera; light, fan, humidifier, vacuum, cover, and climate entities render with their native Nodalia cards, while other domains use `nodalia-entity-card`.
+- **Camera editor:** each configured camera has its own visual list of entities, labels, icons, icon colors, toggle/more-info/service actions, and JSON service data.
+- **Camera examples:** the three-camera mosaic example now demonstrates camera-specific light and lock controls with native YAML service-data objects.
+
+### Fixed
+
+- **Camera editor drafts:** adding a camera or camera action keeps the incomplete row mounted until an entity is selected instead of immediately discarding it during normalization.
+- **Camera actions:** YAML objects in `tap_service_data` and `tap_service_target` remain structured during normalization and are serialized correctly for embedded Nodalia cards.
+- **Camera mosaic:** render signatures now track every configured camera, keeping all previews current in automatic mosaics of up to four cameras.
+
+### Changed
+
+- **Camera interaction:** removed the visible lower-right expand button; tapping a preview opens that camera directly, while the card's default tap opens the primary camera.
+- **Camera preview age:** previews younger than one minute show seconds and refresh every second; older labels retain the lower-frequency text-only refresh without reloading the image.
+- **Camera compatibility:** legacy `expanded_actions` remain supported on the primary camera when no camera-specific controls are configured.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.31`; `2.0.0-alpha.30` remains available as a compatibility loader.
+
+## [2.0.0-alpha.30] - 2026-07-16
+
+Thirtieth **`2.0.0`** **`alpha`**: native camera preview age bubbles. Release channel **`2.0.0-alpha.30`**.
+
+### Added
+
+- **Camera preview:** a semitransparent Nodalia bubble in the lower-left corner shows the relative age of the native preview image using the same `last_updated` timestamp that refreshes its URL.
+- **Camera mosaic:** every camera preview receives its own localized age bubble.
+- **Camera editor:** `show_preview_age` controls the bubble from the visual editor and is translated across all 12 supported editor languages.
+
+### Changed
+
+- **Camera preview age:** the relative label refreshes every 15 seconds by updating only its text, without re-rendering or reloading the camera image.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.30`; `2.0.0-alpha.29` remains available as a compatibility loader.
+
+## [2.0.0-alpha.29] - 2026-07-16
+
+Twenty-ninth **`2.0.0`** **`alpha`**: stable embedded controls and unified Hub bubbles. Release channel **`2.0.0-alpha.29`**.
+
+### Fixed
+
+- **Room Summary Hub embeds:** Home Assistant state updates patch the Hub in place instead of replacing its complete shadow DOM, so embedded light, fan, humidifier, vacuum, entity, and media cards remain mounted while their state changes.
+- **Room Summary Hub embeds:** embedded card configuration is applied only when it actually changes and before the new `hass` state, avoiding redundant double renders when toggling a device.
+- **Room Summary Hub updates:** attribute-only changes use `last_updated`, keeping sliders, percentages, and other embedded state current without rebuilding the surrounding Hub.
+
+### Changed
+
+- **Room Summary Hub controls:** temperature, humidity, occupancy, and smart quick actions now use the same raised circular bubble treatment as the right navigation rail; quick actions default to the matching 42px size.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.29`; `2.0.0-alpha.28` remains available as a compatibility loader.
+
+## [2.0.0-alpha.28] - 2026-07-16
+
+Twenty-eighth **`2.0.0`** **`alpha`**: published editor JSON fixes and review hardening. Release channel **`2.0.0-alpha.28`**.
+
+### Fixed
+
+- **Room Summary embedded Media Player editor:** publishes the structured `service_data` JSON editing and validation work prepared in alpha.27, which was not released as a GitHub prerelease.
+- **Notifications background package:** casts templated `chunk_count` values to integers before numeric comparisons, preventing Home Assistant template type errors.
+- **Camera actions:** accepts service data already supplied as YAML objects instead of discarding it during JSON parsing.
+- **Camera image fallback:** records the original image `src` attribute after load failures, preventing relative and absolute URL mismatches from triggering repeated render attempts.
+- **Notifications mobile queue:** synchronous batch-delivery failures are converted to handled promise rejections so pending notifications continue draining.
+- **Translation tooling:** protected placeholders survive case changes and whitespace inserted by Google Translate instead of silently falling back to English.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.28`; `2.0.0-alpha.27` remains available as a compatibility loader.
+
+## [2.0.0-alpha.27] - 2026-07-15
+
+Twenty-seventh **`2.0.0`** **`alpha`**: reliable JSON service actions in the Room Summary media editor. Release channel **`2.0.0-alpha.27`**.
+
+### Fixed
+
+- **Room Summary embedded Media Player editor:** `service_data` objects loaded from YAML are shown as editable formatted JSON instead of `[object Object]`, and valid edits are emitted as structured objects.
+- **Room Summary embedded Media Player editor:** incomplete or non-object JSON is highlighted and no longer replaces the last valid action configuration; legacy `data` action payloads remain editable.
+- **Editor translations:** added the invalid-JSON validation message across all 12 supported editor languages.
+- **Bundle generation:** card bundles are built sequentially and validated for every registered card before publication, preventing incomplete parallel-build artifacts.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.27`; `2.0.0-alpha.26` remains available as a compatibility loader.
+
+## [2.0.0-alpha.26] - 2026-07-15
+
+Twenty-sixth **`2.0.0`** **`alpha`**: a single, cleaner Room Summary Hub experience. Release channel **`2.0.0-alpha.26`**.
+
+### Changed
+
+- **Room Summary:** Hub is now the only supported layout; legacy layout values are migrated to Hub automatically, and the visual editor no longer exposes obsolete layout, density, or non-Hub typography controls.
+- **Room Summary compact Hub:** the room icon bubble remains visible beside the room name, status chips, quick controls, and expand button.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.26`; `2.0.0-alpha.25` remains available as a compatibility loader.
+
+## [2.0.0-alpha.25] - 2026-07-15
+
+Twenty-fifth **`2.0.0`** **`alpha`**: collapsible Room Summary Hub and reliable embedded media actions. Release channel **`2.0.0-alpha.25`**.
+
+### Added
+
+- **Room Summary Hub:** optional collapsible compact mode keeps the room name, temperature, humidity, occupancy, and contextual quick controls visible while hiding the navigation rail, embedded media player, and detail panels until expanded.
+- **Room Summary editor:** visual toggle for the collapsible compact Hub mode.
+
+### Fixed
+
+- **Embedded Media Player editor:** service-data JSON drafts are preserved until the field change is committed, so leaving the field no longer clears valid action data.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.25`; `2.0.0-alpha.24` remains available as a compatibility loader.
+
+## [2.0.0-alpha.24] - 2026-07-15
+
+Twenty-fourth **`2.0.0`** **`alpha`**: clearer Room Summary state and hierarchy. Release channel **`2.0.0-alpha.24`**.
+
+### Fixed
+
+- **Room Summary Hub controls:** smart navigation and quick-action buttons keep stable icons and use the configured accent tint to communicate active device state.
+- **Room Summary Hub header:** room names receive a full-width row, with temperature, humidity, and occupancy chips grouped beneath so long names remain completely visible.
+- **Room Summary Hub panels:** sparse device lists and home controls align to the top when only one item is configured or no media player is present.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.24`; `2.0.0-alpha.23` remains available as a compatibility loader.
+
+## [2.0.0-alpha.23] - 2026-07-14
+
+Twenty-third **`2.0.0`** **`alpha`**: complete Room Summary visual-editor scrolling. Release channel **`2.0.0-alpha.23`**.
+
+### Fixed
+
+- **Room Summary editor:** nested native card editors no longer run the Lovelace dialog scroll clamp, so the full Summary form remains reachable below the embedded Media Player options.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.23`; `2.0.0-alpha.22` remains available as a compatibility loader.
+
+## [2.0.0-alpha.22] - 2026-07-14
+
+Twenty-second **`2.0.0`** **`alpha`**: action hardening and complete translation coverage. Release channel **`2.0.0-alpha.22`**.
+
+### Fixed
+
+- **Room Summary actions:** normalized Lovelace `toggle`, `call-service`, and `perform-action` tap/hold actions now execute, preserve explicit service targets, and keep hold navigation independent from the tap path.
+- **Translations:** completed recent Camera, News, Notifications, and Room Summary editor/runtime strings across all 12 supported languages, corrected Home Assistant cover/media terminology, and repaired translated placeholders.
+- **Translation validation:** runtime locales now require full key parity with English; editor and runtime checks reject altered placeholders and backticked config keys.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.22`; `2.0.0-alpha.21` remains available as a compatibility loader.
+
+## [2.0.0-alpha.21] - 2026-07-14
+
+Twenty-first **`2.0.0`** **`alpha`**: flicker-free Room Summary Hub navigation. Release channel **`2.0.0-alpha.21`**.
+
+### Added
+
+- **Room Summary editor:** native `nodalia-media-player` visual editor embedded directly in the media section, including multiple players, TV mode, labels, icons, visibility, power/tap actions, unavailable badge, layout, security, animations, and player/browser styles.
+- **Room Summary editor:** per-entity custom name and icon controls for embedded light, vacuum, fan, humidifier, and generic entity cards.
+- **Room Summary config:** `media_config` stores the complete native media-player configuration, while `embed_options` stores per-entity card presentation overrides; legacy entity string lists remain supported.
+
+### Fixed
+
+- **Room Summary Hub:** panel navigation keeps every panel and embedded Nodalia card mounted, switching visibility in place instead of replacing the card shadow DOM.
+- **Room Summary Hub embeds:** embedded card entry duration is forced to zero while preserving their other interaction animations.
+- **Room Summary Hub media:** home and media-panel instances use separate cache slots so neither card moves between containers.
+- **Room Summary Hub media:** native media-player entry animation uses zero `panel_duration` inside hidden Hub panels, while browser and interaction animations remain available.
+- **Notifications background package:** direct or older webhook payloads now resolve per-entity `inherit`/`auto` through the smart-kind mobile policy before falling back to the global default.
+- **Compatibility loaders:** restored generated and published aliases for `1.3.5-alpha.1` through `1.3.5-alpha.10`, preventing dashboards pinned to those resource URLs from returning 404 after an upgrade.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.21`.
+
+## [2.0.0-alpha.20] - 2026-07-14
+
+Twentieth **`2.0.0`** **`alpha`**: HACS license validation and smoother Room Summary Hub panel changes. Release channel **`2.0.0-alpha.20`**.
+
+### Added
+
+- **Repository:** MIT license file recognized by GitHub and the HACS repository validator.
+
+### Fixed
+
+- **Room Summary Hub:** embedded cards are cached by type and entity and reused between panels, avoiding the slight remount flicker when changing tabs.
+- **Room Summary Hub:** panel changes suppress the content entry animation while preserving it for the initial render.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.20`.
+
+## [2.0.0-alpha.19] - 2026-07-08
+
+Nineteenth **`2.0.0`** **`alpha`**: Room Summary Hub humidifier and generic entity panels. Release channel **`2.0.0-alpha.19`**.
+
+### Added
+
+- **Room Summary Hub:** `humidifiers[]` list with a dedicated sub-panel embedding `nodalia-humidifier-card` instances.
+- **Room Summary Hub:** `others[]` list with an **Others** sub-panel embedding `nodalia-entity-card` for any entity domain.
+- **Room Summary editor:** humidifiers and others entity list sections in the visual editor.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.19`.
+
+## [2.0.0-alpha.18] - 2026-07-08
+
+Eighteenth **`2.0.0`** **`alpha`**: presence chip icon-only in Room Summary Hub. Release channel **`2.0.0-alpha.18`**.
+
+### Changed
+
+- **Room Summary Hub:** occupied/vacant presence chip shows icon only (no text label); tooltip and `aria-label` remain for accessibility.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.18`.
+
+## [2.0.0-alpha.17] - 2026-07-08
+
+Seventeenth **`2.0.0`** **`alpha`**: Room Summary Hub design polish, typography controls, and stable card tinting. Release channel **`2.0.0-alpha.17`**.
+
+### Added
+
+- **Room Summary Hub:** persistent header (room icon, name, status chips) on all sub-panels.
+- **Room Summary Hub:** icon-only contextual quick actions with accessible labels.
+- **Room Summary editor:** `styles.embed_off_tint` color picker for embedded off-state cards.
+- **Room Summary editor:** typography controls for general chips/metrics and hub-specific sizes (status chips, quick actions, embedded device titles/chips, cover rows).
+- **Media player:** `show_device_chip` config flag (hub embeds hide the device name chip).
+
+### Changed
+
+- **Room Summary Hub:** smaller default status chips and compact icon-only quick actions.
+- **Room Summary Hub:** smaller embedded light/fan/vacuum titles and chips via `styles.hub.*` defaults.
+- **Room Summary Hub:** panel switches no longer replay the entry animation (reduces flicker).
+- **Room Summary card:** background, border, and overlays stay at the configured default tint — no accent highlight when lights, media, or presence are active.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.17`.
+
+## [2.0.0-alpha.16] - 2026-07-08
+
+Sixteenth **`2.0.0`** **`alpha`**: fix Hub embedded card clipping and restore real media player styling. Release channel **`2.0.0-alpha.16`**.
+
+### Added
+
+- **Room Summary Hub:** `media_players[]` list for additional players in the media sub-panel (primary `media_player` stays on the home screen).
+
+### Fixed
+
+- **Room Summary Hub embeds:** remove aggressive transparent/zero-padding overrides that clipped lights, vacuums, and fans.
+- **Room Summary Hub:** `overflow: visible` on hub card and embed hosts so expanded controls are not cut off.
+- **Room Summary Hub media:** embed uses native `nodalia-media-player` card chrome (rounded player, album art) with only accent tint overrides.
+- **Room Summary Hub lights/fans:** force `compact_layout_mode: never` inside embeds for full-width controls.
+
+## [2.0.0-alpha.15] - 2026-07-08
+
+Fifteenth **`2.0.0`** **`alpha`**: remove Menu Card from the bundle and ship Room Summary Hub polish. Release channel **`2.0.0-alpha.15`** (GitHub **prerelease**).
+
+### Removed
+
+- **`menu`:** `custom:nodalia-menu-card` removed from the bundle, package files, examples, tests, and i18n catalog. Focus shifts to Room Summary, Camera, and Scenes for **2.0.0**.
+
+### Added
+
+- **Room Summary editor:** collapsible **Styles** section with card accent and background color pickers.
+- **Room Summary Hub:** temp, humidity, and presence chips open **more-info** for their entities.
+
+### Changed
+
+- **Room Summary Hub home:** temp/humidity/presence chips align to the right of the room name; contextual action row is actions-only (lights, covers, fans, climate, media).
+- **Room Summary Hub:** home strip and media sub-panel embed real **`nodalia-media-player`** cards.
+- **Room Summary Hub lights:** embedded light cards without brightness/color presets (slider + mode buttons only).
+- **Room Summary Hub embeds:** off-state cards blend with the summary tint instead of default light-card off colors.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.15`.
+
+## [2.0.0-alpha.14] - 2026-07-08
+
+Skipped public tag — changes folded into **`2.0.0-alpha.15`**.
+
+## [2.0.0-alpha.13] - 2026-07-08
+
+Thirteenth **`2.0.0`** **`alpha`**: Room Summary Hub parity with Nodalia cards. Release channel **`2.0.0-alpha.13`**.
+
+### Added
+
+- **Room Summary Hub:** fans appear in the navigation rail with a dedicated sub-panel.
+- **Room Summary Hub:** lights, vacuums, and fans sub-panels embed real `nodalia-light-card`, `nodalia-vacuum-card`, and `nodalia-fan-card` instances (controls, tinting, sliders, chips).
+
+### Changed
+
+- **Room Summary Hub home:** flat header layout — room icon top-left, name beside it, tinted temperature/humidity bubbles below; removed nested hero container.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.13`.
+
+## [2.0.0-alpha.12] - 2026-07-07
+
+Twelfth **`2.0.0`** **`alpha`**: republish after fixing a stale `v2.0.0-alpha.11` tag that briefly pointed at **1.3.5**. Release channel **`2.0.0-alpha.12`**.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.12` so HACS fetches a fresh resource URL.
+
+## [2.0.0-alpha.11] - 2026-07-07
+
+Eleventh **`2.0.0`** **`alpha`**: Room Summary Hub editor fix and visual polish. Release channel **`2.0.0-alpha.11`**.
+
+### Fixed
+
+- **Room Summary editor:** use `editorStatesSignature` instead of calling `editorFilteredStatesSignature` without a predicate (Safari error `S is not a function` / configuration error).
+- **Room Summary Hub:** remove nested gray containers; lights/vacuum/covers/media panels use Nodalia-style pill rows with icon bubbles, active gradients, and brightness sliders.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.11`.
+
+## [2.0.0-alpha.10] - 2026-07-07
+
+Tenth **`2.0.0`** **`alpha`**: Room Summary Hub layout for per-room device control. Release channel **`2.0.0-alpha.10`**.
+
+### Added
+
+- **`room_summary`:** new default **`hub`** layout with a home view (room hero bubble, temperature/humidity metrics, contextual quick actions, main media strip) and a right-side icon-only navigation rail.
+- **`room_summary`:** hub sub-panels for lights (toggle + brightness), covers, climate, vacuums, and media player controls.
+- **`room_summary`:** `vacuums` and `fans` entity lists for hub navigation and hot-room fan quick actions.
+- **`i18n` / `editor`:** hub layout plus vacuum/fan section labels.
+
+### Changed
+
+- **`room_summary`:** default layout is now **`hub`** instead of **`standard`**.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.10`.
+
+## [2.0.0-alpha.9] - 2026-07-07
+
+Ninth **`2.0.0`** **`alpha`**: Camera, Room Summary, and Menu Card visual parity with core Nodalia cards. Release channel **`2.0.0-alpha.9`**.
+
+### Changed
+
+- **`room_summary`:** active card shell (gradient, accent border, glow), circular icon bubble with depth, softer metric tiles, neutral quick-action pills, larger title typography.
+- **`menu`:** removed segmented double-frame chrome, pill items aligned to core chip styling, accent active state, card glow when a tab is active.
+- **`camera`:** 28px card radius with divider border, core chip tokens, card-mode preview inset radius, feed layout keeps flush media with padded header/chips, expand bubble matches entity controls.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.9`.
+
+## [2.0.0-alpha.8] - 2026-07-07
+
+Eighth **`2.0.0`** **`alpha`**: fix broken GitHub release tags that pointed at the stable **`1.3.5`** commit instead of the 2.0 bundle. Release channel **`2.0.0-alpha.8`**.
+
+### Fixed
+
+- **`release`:** GitHub tags **`v2.0.0-alpha.6`** and **`v2.0.0-alpha.7`** were accidentally attached to the stable **`1.3.5`** commit, so HACS installs of those alphas never shipped Camera, Room Summary, or Menu Card even though the cards exist in the repo.
+- **`bundle`:** compatibility aliases now include **`nodalia-cards-2.0.0-alpha.7.js`**.
+
+### Added
+
+- **`tests`:** release smoke test now asserts every module listed in **`CARD_PARTS`** is present in both the full bundle and the suite split.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.8`.
+
+## [2.0.0-alpha.7] - 2026-07-07
+
+Seventh **`2.0.0`** **`alpha`**: restore compatibility aliases for versioned bundle URLs. Release channel **`2.0.0-alpha.7`**.
+
+### Fixed
+
+- **`bundle`:** compatibility aliases now include **`nodalia-cards-2.0.0-alpha.3.js`** through **`nodalia-cards-2.0.0-alpha.6.js`**, so dashboards that still point at a pinned alpha resource keep loading the current bundle (Camera, Room Summary, and Menu Card included).
+- **`room_summary` / `menu`:** card picker registration now uses the same non-optional `registerCustomCard` path as the rest of the suite.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.7`.
+
+## [2.0.0-alpha.6] - 2026-07-07
+
+Sixth **`2.0.0`** **`alpha`**: security hardening parity and Room Summary / Menu visual alignment. Release channel **`2.0.0-alpha.6`**.
+
+### Fixed
+
+- **`fav`:** alarm actions now require a manually entered PIN whenever the visible code input is shown; stored/helper codes are no longer used as fallback in that state.
+- **`fav`:** Lovelace `perform-action` tap targets are preserved through normalization and service invocation (`tap_service_target`).
+- **`entity`:** built-in lock, cover, and select service invocations now respect `security.strict_service_actions` allowlists.
+- **`notifications`:** smart entity overrides with `mobile: inherit` resolve through the kind-level mobile policy instead of erasing per-kind `off` rules.
+- **`notifications`:** background mobile sync rejects payloads larger than the 40 helper chunks supported by the HA package.
+- **`notifications`:** foreground mobile delivery keeps a pending queue and drains alerts in batches instead of dropping them while a send timer is active.
+
+### Changed
+
+- **`room_summary` / `menu`:** runtime styling aligned with Entity/Light Card surfaces; editors use shared entity/icon pickers, list reorder, and expanded display sections.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.6`.
+
+## [2.0.0-alpha.5] - 2026-07-06
+
+Fifth **`2.0.0`** **`alpha`**: Room Summary editor fixes and Camera Card feed/mosaic/actions. Release channel **`2.0.0-alpha.5`**.
+
+### Added
+
+- **`camera`:** multi-camera mosaic layout (up to 4 cameras) with automatic 2-up, 3-up, and 2×2 grids.
+- **`camera`:** `presentation: feed` edge-to-edge camera preview (no card padding by default).
+- **`camera`:** `expanded_actions` buttons in the expanded camera overlay (lights, locks, services, toggle).
+- **`camera_editor`:** cameras list, presentation mode, and expanded actions sections in the visual editor.
+- **`examples`:** `camera-card-mosaic.yaml` based on real multi-camera dashboard usage.
+
+### Fixed
+
+- **`room_summary_editor`:** entity pickers no longer collapse on click; add-entity now creates editable rows instead of being stripped by normalization.
+
+### Changed
+
+- **`camera`:** default presentation is feed-style with hidden name/state/chips unless enabled.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.5`.
+
+## [2.0.0-alpha.4] - 2026-07-06
+
+Fourth **`2.0.0`** **`alpha`**: visual parity pass for Camera, Room Summary, and Menu. Release channel **`2.0.0-alpha.4`**.
+
+### Changed
+
+- **`menu`:** runtime visual style aligned with Nodalia card surfaces (neutral active state, unified card container, and consistent empty state).
+- **`menu_editor`:** visual editor moved to the shared Nodalia editor style with localized labels and translated option values.
+- **`camera_editor`:** visual editor sections, labels, fields, and toggles now follow the shared Nodalia editor surface styling.
+- **`room_summary_editor`:** visual editor rewritten to use shared Nodalia editor layout, i18n label resolution, and dialog layout fix lifecycle hooks.
+- **`i18n`:** added `ed.menu.item_badge_color` in editor locales and regenerated editor catalog bundle.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.4`.
+
+## [2.0.0-alpha.3] - 2026-07-06
+
+Third **`2.0.0`** **`alpha`**: Room Summary Card and Nodalia Menu Card. Release channel **`2.0.0-alpha.3`**.
+
+### Added
+
+- **`room_summary`:** new `custom:nodalia-room-summary-card` for room-level dashboards, with temperature, humidity, presence, lights, covers, climate, camera, media, security indicators, quick actions, multiple layouts, empty states, and initial visual editor.
+- **`menu`:** new `custom:nodalia-menu-card` for Nodalia-style horizontal dashboard navigation, with navigate/helper/action modes, active item detection, badges, mobile scrolling, variants, and initial visual editor.
+- **`i18n`:** English and Spanish runtime labels for Room Summary and Menu Card configuration, states, layouts, actions, and editor fields.
+- **`tests`:** regression coverage for Room Summary rendering, entity fallbacks, quick actions, Menu Card navigation/helper/action modes, active state, badges, and editor output.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.3`.
+
+### Fixed
+
+- **`notifications`:** background mobile sync now rejects configs larger than the 40-chunk package limit instead of marking truncated payloads as successful; foreground push is suppressed only after a successful background sync.
+- **`notifications`:** smart entity overrides with default `inherit` mobile no longer mask kind-level `off`/`push` policies when only title, message, or color are customized.
+- **`examples`:** background mobile package defaults to `local_only: true` and rejects oversized webhook payloads before writing helper chunks.
+- **`alarm_panel`:** visual editor releases the shared Lovelace dialog layout fix on disconnect, preventing leaked scroll listeners after closing the editor.
+
+## [2.0.0-alpha.2] - 2026-07-03
+
+Second **`2.0.0`** **`alpha`**: Notifications 2.0 mobile policy and context delivery. Release channel **`2.0.0-alpha.2`**.
+
+### Added
+
+- **`notifications`:** normalized mobile push policies for `auto`, `push`, `card_only`, and `off` across smart entity overrides, smart alerts, custom notifications, and external alerts.
+- **`notifications`:** default mobile policy, quiet hours, away/home context gating, cooldown, similar-alert grouping, and external alert preparation for future Camera/Security events.
+- **`notifications`:** visual editor sections for mobile delivery, context controls, and per-alert policy.
+- **`examples`:** background mobile package support for policy-aware delivery, quiet hours, cooldown, presence context, and future external alerts.
+- **`i18n`:** English and Spanish labels for Notifications 2.0 mobile policy, context, delivery state, and external alert controls.
+- **`tests`:** regression coverage for mobile policy normalization, context gating, cooldown, threshold crossing, external alerts, editor output, and background payload delivery.
+
+### Changed
+
+- **`notifications`:** background mobile sync now carries normalized delivery metadata while preserving 1.3.x configuration compatibility.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.2`.
+
+## [2.0.0-alpha.1] - 2026-07-03
+
+First **`2.0.0`** **`alpha`**: introduces the new Nodalia Camera Card. Release channel **`2.0.0-alpha.1`**.
+
+### Added
+
+- **`camera`:** new `custom:nodalia-camera-card` with Nodalia-style camera preview, status chips, empty/unavailable states, basic expanded view, and initial visual editor.
+- **`camera`:** initial layouts for `live`, `snapshot`, `compact`, and `security`, with architecture prepared for future Frigate/event timeline integrations.
+- **`i18n`:** English and Spanish runtime labels for Camera Card states, editor fields, and expanded view controls.
+- **`tests`:** initial Camera Card registration, render, editor, and expanded-view regression coverage.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.1`.
 
 ## [1.3.5-alpha.10] - 2026-07-03
 

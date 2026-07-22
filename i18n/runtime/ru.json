@@ -145,34 +145,6 @@
       "gotoFallback": "Точка"
     }
   },
-  "vacuumSimple": {
-    "quiet": "Тихий",
-    "silent": "Тихий",
-    "balanced": "Сбалансированный",
-    "standard": "Стандарт",
-    "normal": "Обычный",
-    "turbo": "Турбо",
-    "max": "Макс",
-    "maxplus": "Макс+",
-    "max_plus": "Макс+",
-    "gentle": "Мягкий",
-    "strong": "Сильный",
-    "smart": "Умный",
-    "smartmode": "Умный",
-    "smart_mode": "Умный",
-    "intelligent": "Умный",
-    "custom": "Свой",
-    "custommode": "Свой",
-    "custom_mode": "Свой",
-    "custom_water_flow": "Свой расход воды",
-    "custom_watter_flow": "Свой расход воды",
-    "off": "Без мытья",
-    "low": "Низкий",
-    "medium": "Средний",
-    "high": "Высокий",
-    "intense": "Интенсивный",
-    "deep": "Глубокий"
-  },
   "navigationMusicAssist": {
     "artist": "Артисты",
     "artists": "Артисты",
@@ -201,7 +173,314 @@
     "recently played tracks": "Недавно воспроизведённые треки",
     "browseFallback": "Элемент"
   },
+  "mediaBrowser": {
+    "loading": "Загрузка медиа...",
+    "empty": "Здесь нет доступных товаров.",
+    "playItem": "Воспроизвести {title}",
+    "dialog": "Медиа-браузер",
+    "eyebrow": "Медиа-браузер"
+  },
+  "vacuumSimple": {
+    "quiet": "Тихий",
+    "silent": "Тихий",
+    "balanced": "Сбалансированный",
+    "standard": "Стандарт",
+    "normal": "Обычный",
+    "turbo": "Турбо",
+    "max": "Макс",
+    "maxplus": "Макс+",
+    "max_plus": "Макс+",
+    "gentle": "Мягкий",
+    "strong": "Сильный",
+    "smart": "Умный",
+    "smartmode": "Умный",
+    "smart_mode": "Умный",
+    "intelligent": "Умный",
+    "custom": "Свой",
+    "custommode": "Свой",
+    "custom_mode": "Свой",
+    "custom_water_flow": "Свой расход воды",
+    "custom_watter_flow": "Свой расход воды",
+    "off": "Без мытья",
+    "low": "Низкий",
+    "medium": "Средний",
+    "high": "Высокий",
+    "intense": "Интенсивный",
+    "deep": "Глубокий"
+  },
+  "fan": {
+    "off": "Выкл.",
+    "on": "Вкл.",
+    "unavailable": "Недоступно",
+    "unknown": "Неизвестно",
+    "noState": "Нет состояния",
+    "fallbackName": "Вентилятор",
+    "emptyTitle": "Nodalia Fan Card",
+    "emptyBody": "Укажите `entity` как сущность `fan.*`, чтобы показать карточку.",
+    "aria": {
+      "speedSlider": "Скорость",
+      "oscillationOn": "Включить осцилляцию",
+      "oscillationOff": "Выключить колебание",
+      "showModes": "Показать режимы"
+    }
+  },
+  "lightCard": {
+    "emptyTitle": "Nodalia Light Card",
+    "emptyBody": "Укажите `entity` как сущность `light.*`, чтобы показать карточку.",
+    "controlModes": {
+      "brightness": "Показать яркость",
+      "temperature": "Показать температуру",
+      "color": "Показать цвет"
+    },
+    "sections": {
+      "temperature": "Температура",
+      "color": "Цвет",
+      "presets": "Пресеты"
+    },
+    "temperaturePresets": {
+      "warm": "Тёплый",
+      "neutral": "Нейтральный",
+      "cool": "Холодный"
+    }
+  },
+  "common": {
+    "aria": {
+      "togglePower": "Включить или выключить",
+      "back": "Назад",
+      "close": "Закрывать",
+      "previous": "Предыдущий",
+      "next": "Следующий",
+      "playPause": "Воспроизвести или поставить на паузу",
+      "volumeDown": "Уменьшить громкость",
+      "volumeUp": "Увеличение громкости",
+      "openMedia": "Открытые СМИ",
+      "navigationBar": "Панель навигации",
+      "mediaPlayers": "Медиаплееры"
+    }
+  },
+  "alarmPanel": {
+    "defaultTitle": "Сигнализация",
+    "noState": "Нет состояния",
+    "wrongCode": "Неверный код",
+    "emptyTitle": "Nodalia Alarm Panel Card",
+    "emptyBody": "Укажите `entity`, чтобы показать эту карточку.",
+    "codePlaceholder": "Код",
+    "actions": {
+      "disarm": "Снять",
+      "arm_home": "Дома",
+      "arm_away": "Нет дома",
+      "arm_night": "Ночь",
+      "arm_vacation": "Отпуск",
+      "arm_custom_bypass": "Свой режим"
+    },
+    "states": {
+      "disarmed": "Снята",
+      "armed_home": "Дома",
+      "armed_away": "Нет дома",
+      "armed_night": "Ночь",
+      "armed_vacation": "Отпуск",
+      "armed_custom_bypass": "Свой режим",
+      "armed": "Включена",
+      "arming": "Включение",
+      "disarming": "Выключение",
+      "pending": "Ожидание",
+      "triggered": "Сработала",
+      "unavailable": "Недоступно",
+      "unknown": "Неизвестно"
+    }
+  },
+  "coverCard": {
+    "emptyTitle": "Nodalia Cover Card",
+    "emptyBody": "Задайте `entity` как сущность `cover.*`, чтобы показать карточку.",
+    "cardDescription": "Элементы управления в стиле карточки вентилятора для штор Home Assistant.",
+    "open": "Открыть",
+    "close": "Закрыть",
+    "stop": "Стоп",
+    "positionSlider": "Положение",
+    "tiltSlider": "Наклон",
+    "tiltChip": "Наклон {value}%",
+    "toggleShowButtons": "Показать открыть, стоп и закрыть",
+    "toggleShowSliders": "Показать ползунки"
+  },
+  "person": {
+    "home": "Дома",
+    "notHome": "Не дома",
+    "work": "Работа",
+    "school": "Школа",
+    "unavailable": "Недоступно",
+    "unknown": "Неизвестно",
+    "locationUnknown": "Местоположение неизвестно",
+    "emptyTitle": "Nodalia Person Card",
+    "emptyBody": "Укажите `entity`, чтобы показать эту карточку.",
+    "defaultName": "Человек"
+  },
+  "cameraCard": {
+    "cardDescription": "Предварительный просмотр камеры в стиле Nodalia с индикаторами состояния и расширенным обзором.",
+    "live": "Жить",
+    "snapshot": "Снимок",
+    "offline": "Оффлайн",
+    "unknown": "Неизвестный",
+    "unavailable": "Недоступно",
+    "recording": "Запись",
+    "lastUpdated": "Последнее обновление: {time}",
+    "emptyTitle": "Nodalia Camera Card",
+    "emptyBody": "Установите `entity`, чтобы показать эту карту.",
+    "defaultName": "Камера",
+    "cameraUnavailable": "Камера недоступна",
+    "connectingLive": "Подключение к трансляции",
+    "liveUnavailable": "Трансляция недоступна",
+    "enableAudio": "Включить звук",
+    "noCameraEntity": "Нет объекта камеры",
+    "openCamera": "Открыть камеру",
+    "close": "Закрывать",
+    "expand": "Расширять"
+  },
+  "roomSummaryCard": {
+    "cardDescription": "Обзор комнаты с климатом, присутствием, освещением, шторами, безопасностью и быстрыми действиями.",
+    "emptyTitle": "Nodalia Room Summary Card",
+    "emptyBody": "Задайте имя комнаты и соедините объекты комнаты.",
+    "defaultName": "Комната",
+    "temperature": "Температура",
+    "humidity": "Влажность",
+    "climateLabel": "Климат",
+    "occupied": "Занято",
+    "vacant": "Вакантный",
+    "comfortable": "Комфортный",
+    "hot": "Горячий",
+    "cold": "Холодный",
+    "humid": "Влажный",
+    "dry": "Сухой",
+    "lights": "Свет",
+    "lightsOn": "{count} включено",
+    "lightsOff": "Все выключено",
+    "covers": "Шторы",
+    "coversOpen": "{count} открыто",
+    "coversClosed": "Все закрыты",
+    "doorOpen": "Дверь открыта",
+    "windowOpen": "Окно открыто",
+    "lockUnlocked": "Разблокировано",
+    "alert": "Тревога",
+    "securityIssue": "Проблема безопасности",
+    "cameraOffline": "Камера оффлайн",
+    "mediaPlaying": "Играя",
+    "turnOnLights": "Включите свет",
+    "turnOffLights": "Выключить свет",
+    "openCovers": "Открыть шторы",
+    "closeCovers": "Закрыть шторы",
+    "openCamera": "Открыть камеру",
+    "climateDetails": "Детали климата",
+    "mediaPlayer": "Медиаплеер",
+    "vacuum": "Пылесос",
+    "fans": "Вентиляторы",
+    "hubHome": "Главная",
+    "hubNavigation": "Навигация по комнате",
+    "turnOnFans": "Включить вентиляторы",
+    "turnOffFans": "Выключить вентиляторы",
+    "raiseTemperature": "Повысить температуру",
+    "lowerTemperature": "Понизить температуру",
+    "mediaPlay": "Воспроизвести",
+    "mediaPause": "Пауза",
+    "turnOnMedia": "Включить медиаплеер",
+    "turnOffMedia": "Выключить медиаплеер",
+    "target": "Цель",
+    "power": "Власть",
+    "airQuality": "Качество воздуха",
+    "entityUnavailable": "Недоступно",
+    "noRoomData": "Нет данных о комнате",
+    "humidifiers": "Увлажнители",
+    "others": "Другие",
+    "expandDetails": "Развернуть сведения о комнате",
+    "collapseDetails": "Свернуть сведения о комнате"
+  },
+  "scenes": {
+    "emptyTitle": "Nodalia Scenes Card",
+    "emptyBody": "Добавьте сцены в редакторе карточки.",
+    "defaultName": "Сцены",
+    "unavailable": "Недоступно",
+    "subtitle": "Нажмите на сцену для запуска",
+    "moods": "сцены"
+  },
+  "entityCard": {
+    "emptyTitle": "Nodalia Entity Card",
+    "emptyBody": "Настройте `entity`, чтобы показать карточку.",
+    "selectPickerTitle": "Выберите вариант",
+    "selectPickerClose": "Закрывать",
+    "binarySensor": {
+      "doorOpen": "Открыта",
+      "doorClosed": "Закрыта",
+      "motionOn": "Обнаружено",
+      "motionOff": "Нет движения"
+    },
+    "boolean": {
+      "yes": "Да",
+      "no": "Нет"
+    },
+    "states": {
+      "on": "Вкл.",
+      "off": "Выкл.",
+      "open": "Открыто",
+      "opening": "Открывается",
+      "closed": "Закрыто",
+      "closing": "Закрывается",
+      "playing": "Воспроизведение",
+      "paused": "Пауза",
+      "buffering": "Буферизация",
+      "idle": "Ожидание",
+      "standby": "Ожидание",
+      "home": "Дома",
+      "not_home": "Не дома",
+      "detected": "Обнаружено",
+      "clear": "Норма",
+      "unavailable": "Недоступно",
+      "unknown": "Неизвестно",
+      "locked": "Заперто",
+      "unlocked": "Открыто",
+      "locking": "Запирание",
+      "unlocking": "Отпирание",
+      "locking_failed": "Ошибка запирания",
+      "unlocking_failed": "Ошибка отпирания",
+      "jammed": "Заклинило",
+      "pending": "Ожидание",
+      "stopped": "Остановлено",
+      "armed_away": "Включена (нет дома)",
+      "armed_home": "Включена (дома)",
+      "disarmed": "Снята",
+      "triggered": "Сработала",
+      "comfortable": "Комфортно",
+      "very_comfortable": "Очень комфортно",
+      "slightly_uncomfortable": "Немного некомфортно",
+      "somewhat_uncomfortable": "Некомфортно",
+      "quite_uncomfortable": "Довольно некомфортно",
+      "extremely_uncomfortable": "Очень некомфортно",
+      "ok_but_humid": "Нормально, но влажно",
+      "little_or_no_discomfort": "Нет дискомфорта",
+      "some_discomfort": "Есть дискомфорт",
+      "great_discomfort_avoid_exertion": "Сильный дискомфорт",
+      "dangerous_discomfort": "Опасный дискомфорт",
+      "heat_stroke_imminent": "Угроза теплового удара",
+      "dry": "Сухо",
+      "very_dry": "Очень сухо",
+      "too_dry": "Слишком сухо",
+      "humid": "Влажно",
+      "very_humid": "Очень влажно",
+      "too_humid": "Слишком влажно",
+      "wet": "Мокро",
+      "low": "Низкий",
+      "medium": "Средний",
+      "moderate": "Умеренный",
+      "high": "Высокий",
+      "very_high": "Очень высокий",
+      "severely_high": "Критически высокий",
+      "critical": "Критично",
+      "excellent": "Отлично",
+      "good": "Хорошо",
+      "fair": "Удовлетворительно",
+      "poor": "Плохо"
+    }
+  },
   "weatherCard": {
+    "emptyTitle": "Nodalia Weather Card",
+    "emptyBody": "Настройте `entity`, чтобы показать погоду.",
     "conditions": {
       "clear_night": "Ясная ночь",
       "cloudy": "Облачно",
@@ -277,11 +556,16 @@
         "met": "Метеорологический",
         "monitor": "Мониторинг"
       }
-    },
-    "emptyTitle": "Nodalia Weather Card",
-    "emptyBody": "Настройте `entity`, чтобы показать погоду."
+    }
   },
   "humidifierCard": {
+    "emptyTitle": "Nodalia Humidifier Card",
+    "emptyBody": "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку.",
+    "aria": {
+      "targetHumidity": "Целевая влажность",
+      "showModes": "Показать режимы",
+      "showSpeeds": "Показать скорости"
+    },
     "modes": {
       "auto": "Авто",
       "automatic": "Авто",
@@ -315,16 +599,11 @@
       "idle": "Ожидание",
       "unavailable": "Недоступно",
       "unknown": "Неизвестно"
-    },
-    "emptyTitle": "Nodalia Humidifier Card",
-    "emptyBody": "Укажите `entity` как сущность `humidifier.*`, чтобы показать карточку.",
-    "aria": {
-      "targetHumidity": "Target humidity",
-      "showModes": "Show modes",
-      "showSpeeds": "Show speeds"
     }
   },
   "climateCard": {
+    "emptyTitle": "Nodalia Climate Card",
+    "emptyBody": "Укажите `entity` как сущность `climate.*`, чтобы показать карточку.",
     "modes": {
       "off": "Выкл.",
       "heat": "Обогрев",
@@ -378,178 +657,65 @@
         "webhookMissing": "Настройте webhook расписания в редакторе карточки.",
         "entityMissing": "Сначала выберите сущность climate.",
         "webhookFailed": "Не удалось синхронизировать расписание. Проверьте webhook и журналы Home Assistant.",
-        "dualRangeUnsupported": "Недельное расписание недоступно, пока термостат использует двойной диапазон нагрева/охлаждения."
+        "dualRangeUnsupported": "Недельное расписание недоступно, пока термостат использует двойной диапазон нагрева/охлаждения.",
+        "storageTooLarge": "Это расписание слишком велико для помощника input_text (255 символов). Удалите блоки или используйте автоматизацию пути A на диске."
       }
-    },
-    "emptyTitle": "Nodalia Climate Card",
-    "emptyBody": "Укажите `entity` как сущность `climate.*`, чтобы показать карточку."
+    }
   },
   "graphCard": {
-    "emptyHistory": "История недоступна",
     "emptyTitle": "Nodalia Graph Card",
-    "emptyBody": "Укажите `entities` как одну или несколько числовых сущностей для графика."
+    "emptyBody": "Укажите `entities` как одну или несколько числовых сущностей для графика.",
+    "emptyHistory": "История недоступна",
+    "defaultTitle": "График"
   },
-  "fan": {
-    "off": "Выкл.",
-    "on": "Вкл.",
-    "unavailable": "Недоступно",
-    "unknown": "Неизвестно",
-    "noState": "Нет состояния",
-    "fallbackName": "Вентилятор",
-    "emptyTitle": "Nodalia Fan Card",
-    "emptyBody": "Укажите `entity` как сущность `fan.*`, чтобы показать карточку.",
+  "newsCard": {
+    "title": "Новости",
+    "emptyTitle": "Нет доступных новостей",
+    "emptyBody": "Добавьте новостной объект или проверьте источник канала.",
+    "loading": "Загрузка новостей…",
+    "errorTitle": "Источник новостей недоступен",
+    "errorBody": "Проверьте настроенную сущность или атрибуты источника.",
+    "readMore": "Читать далее",
+    "sourceUnknown": "Неизвестный источник",
+    "categoryGeneral": "General",
+    "publishedNow": "Прямо сейчас",
+    "publishedMinutesAgo": "{count} мин. назад",
+    "publishedHoursAgo": "{count} ч. назад",
+    "publishedDaysAgo": "{count} дней назад",
+    "previousArticle": "Предыдущая статья",
+    "nextArticle": "Следующая статья",
+    "articlePosition": "Статья {current} из {total}",
+    "goToArticle": "Перейти к статье {index}"
+  },
+  "circularGaugeCard": {
+    "emptyTitle": "Nodalia Circular Gauge Card",
+    "emptyBody": "Укажите `entity` как числовую сущность для отображения шкалы."
+  },
+  "vacuumCard": {
+    "emptyTitle": "Nodalia Vacuum Card",
+    "emptyBody": "Укажите `entity` как сущность `vacuum.*`, чтобы показать карточку."
+  },
+  "insigniaCard": {
+    "emptyTitle": "Nodalia Insignia Card",
+    "emptyBody": "Настройте `entity` или базовое содержимое для отображения значка."
+  },
+  "mediaPlayerCard": {
+    "emptyTitle": "Nodalia Media Player",
+    "emptyBody": "Укажите `entity` или `players`, чтобы показать плеер.",
     "aria": {
-      "speedSlider": "Speed",
-      "oscillationOn": "Turn oscillation on",
-      "oscillationOff": "Turn oscillation off",
-      "showModes": "Show modes"
+      "turnOn": "Включать",
+      "turnOff": "Выключать",
+      "playPause": "Воспроизвести или поставить на паузу",
+      "showVolume": "Показать громкость",
+      "sources": "Источники",
+      "switchSource": "Переключить источник",
+      "switchToSource": "Переключиться на {source}",
+      "volume": "Объем",
+      "selectPlayer": "Выберите проигрыватель {index}",
+      "play": "Играть",
+      "hidePlayer": "Скрыть игрока",
+      "showPlayer": "Показать плеер"
     }
-  },
-  "alarmPanel": {
-    "defaultTitle": "Сигнализация",
-    "noState": "Нет состояния",
-    "wrongCode": "Неверный код",
-    "emptyTitle": "Nodalia Alarm Panel Card",
-    "emptyBody": "Укажите `entity`, чтобы показать эту карточку.",
-    "codePlaceholder": "Код",
-    "actions": {
-      "disarm": "Снять",
-      "arm_home": "Дома",
-      "arm_away": "Нет дома",
-      "arm_night": "Ночь",
-      "arm_vacation": "Отпуск",
-      "arm_custom_bypass": "Свой режим"
-    },
-    "states": {
-      "disarmed": "Снята",
-      "armed_home": "Дома",
-      "armed_away": "Нет дома",
-      "armed_night": "Ночь",
-      "armed_vacation": "Отпуск",
-      "armed_custom_bypass": "Свой режим",
-      "armed": "Включена",
-      "arming": "Включение",
-      "disarming": "Выключение",
-      "pending": "Ожидание",
-      "triggered": "Сработала",
-      "unavailable": "Недоступно",
-      "unknown": "Неизвестно"
-    }
-  },
-  "coverCard": {
-    "emptyTitle": "Nodalia Cover Card",
-    "emptyBody": "Задайте `entity` как сущность `cover.*`, чтобы показать карточку.",
-    "cardDescription": "Элементы управления в стиле карточки вентилятора для штор Home Assistant.",
-    "open": "Открыть",
-    "close": "Закрыть",
-    "stop": "Стоп",
-    "positionSlider": "Положение",
-    "tiltSlider": "Наклон",
-    "tiltChip": "Наклон {value}%",
-    "toggleShowButtons": "Показать открыть, стоп и закрыть",
-    "toggleShowSliders": "Показать ползунки"
-  },
-  "person": {
-    "home": "Дома",
-    "notHome": "Не дома",
-    "work": "Работа",
-    "school": "Школа",
-    "unavailable": "Недоступно",
-    "unknown": "Неизвестно",
-    "locationUnknown": "Местоположение неизвестно",
-    "emptyTitle": "Nodalia Person Card",
-    "emptyBody": "Укажите `entity`, чтобы показать эту карточку.",
-    "defaultName": "Человек"
-  },
-  "entityCard": {
-    "binarySensor": {
-      "doorOpen": "Открыта",
-      "doorClosed": "Закрыта",
-      "motionOn": "Обнаружено",
-      "motionOff": "Нет движения"
-    },
-    "boolean": {
-      "yes": "Да",
-      "no": "Нет"
-    },
-    "states": {
-      "on": "Вкл.",
-      "off": "Выкл.",
-      "open": "Открыто",
-      "opening": "Открывается",
-      "closed": "Закрыто",
-      "closing": "Закрывается",
-      "playing": "Воспроизведение",
-      "paused": "Пауза",
-      "buffering": "Буферизация",
-      "idle": "Ожидание",
-      "standby": "Ожидание",
-      "home": "Дома",
-      "not_home": "Не дома",
-      "detected": "Обнаружено",
-      "clear": "Норма",
-      "unavailable": "Недоступно",
-      "unknown": "Неизвестно",
-      "locked": "Заперто",
-      "unlocked": "Открыто",
-      "locking": "Запирание",
-      "unlocking": "Отпирание",
-      "locking_failed": "Ошибка запирания",
-      "unlocking_failed": "Ошибка отпирания",
-      "jammed": "Заклинило",
-      "pending": "Ожидание",
-      "stopped": "Остановлено",
-      "armed_away": "Включена (нет дома)",
-      "armed_home": "Включена (дома)",
-      "disarmed": "Снята",
-      "triggered": "Сработала",
-      "comfortable": "Комфортно",
-      "very_comfortable": "Очень комфортно",
-      "slightly_uncomfortable": "Немного некомфортно",
-      "somewhat_uncomfortable": "Некомфортно",
-      "quite_uncomfortable": "Довольно некомфортно",
-      "extremely_uncomfortable": "Очень некомфортно",
-      "ok_but_humid": "Нормально, но влажно",
-      "little_or_no_discomfort": "Нет дискомфорта",
-      "some_discomfort": "Есть дискомфорт",
-      "great_discomfort_avoid_exertion": "Сильный дискомфорт",
-      "dangerous_discomfort": "Опасный дискомфорт",
-      "heat_stroke_imminent": "Угроза теплового удара",
-      "dry": "Сухо",
-      "very_dry": "Очень сухо",
-      "too_dry": "Слишком сухо",
-      "humid": "Влажно",
-      "very_humid": "Очень влажно",
-      "too_humid": "Слишком влажно",
-      "wet": "Мокро",
-      "low": "Низкий",
-      "medium": "Средний",
-      "moderate": "Умеренный",
-      "high": "Высокий",
-      "very_high": "Очень высокий",
-      "severely_high": "Критически высокий",
-      "critical": "Критично",
-      "excellent": "Отлично",
-      "good": "Хорошо",
-      "fair": "Удовлетворительно",
-      "poor": "Плохо"
-    },
-    "emptyTitle": "Nodalia Entity Card",
-    "emptyBody": "Настройте `entity`, чтобы показать карточку."
-  },
-  "favCard": {
-    "disarmedF": "Снята",
-    "armed_home": "Дома",
-    "armed_away": "Нет дома",
-    "armed_night": "Ночь",
-    "armed_vacation": "Отпуск",
-    "armed_custom_bypass": "Свой режим",
-    "arming": "Включение",
-    "disarming": "Выключение",
-    "pending": "Ожидание",
-    "triggered": "Сработала",
-    "emptyTitle": "Nodalia Fav Card",
-    "emptyBody": "Настройте `entity`, чтобы показать избранное."
   },
   "notificationsCard": {
     "fallbackEvent": "Событие",
@@ -562,7 +728,6 @@
       "vacuumPaused": "Робот на паузе",
       "cleaningStarted": "Уборка начата",
       "returningDock": "Робот возвращается на базу",
-      "mediaLeftOn": "Мультимедиа включено без присутствия",
       "motionDetected": "Обнаружено движение",
       "doorOpen": "Дверь открыта",
       "windowOpen": "Окно открыто",
@@ -571,23 +736,24 @@
       "rainSoon": "Скоро дождь",
       "batteryLow": "Низкий заряд батареи",
       "humidifierFillLow": "Низкий уровень бака",
+      "humidifierFillFull": "Бак полон",
       "inkLow": "Мало чернил",
       "humidityHigh": "Высокая влажность",
       "humidityLow": "Низкая влажность",
       "customFallback": "Уведомление",
-      "humidifierFillFull": "Бак полон"
+      "mediaLeftOn": "Мультимедиа включено без присутствия"
     },
     "messages": {
       "vacuumAttention": "{name} в состоянии {state}.",
       "vacuumPaused": "{name} на паузе или ожидает.",
       "vacuumState": "{name}: {state}.",
       "hot": "{source} показывает {value}. Можно включить {fan}.",
-      "hotClimate": "{source} показывает {value}. Можно включить охлаждение на {climate}.",
-      "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие.",
       "rainSoon": "{source} ожидает дождь около {time}. Если бельё снаружи, стоит проверить.",
       "lowLevel": "{source}: {value}.",
+      "highLevel": "{source}: {value}.",
       "sensorValue": "{source} показывает {value}.",
-      "highLevel": "{source}: {value}."
+      "hotClimate": "{source} показывает {value}. Можно включить охлаждение на {climate}.",
+      "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие."
     },
     "actions": {
       "openCalendar": "Открыть календарь",
@@ -595,17 +761,17 @@
       "continue": "Продолжить",
       "viewSensor": "Показать датчик",
       "turnOnFan": "Включить вентилятор",
-      "turnOnCooling": "Включить охлаждение",
-      "turnOnHeat": "Включить обогрев",
-      "turnOnDehumidifier": "Включить осушитель",
-      "turnOff": "Выключить",
       "viewWeather": "Показать погоду",
       "buyBattery": "Купить батарейку",
       "buyInk": "Купить чернила",
       "run": "Выполнить",
       "toggle": "Переключить",
       "open": "Открыть",
-      "less": "Меньше"
+      "less": "Меньше",
+      "turnOnCooling": "Включить охлаждение",
+      "turnOnHeat": "Включить обогрев",
+      "turnOnDehumidifier": "Включить осушитель",
+      "turnOff": "Выключить"
     },
     "severity": {
       "critical": "Критично",
@@ -613,15 +779,41 @@
       "success": "OK",
       "info": "Инфо"
     },
+    "empty": {
+      "title": "Всё спокойно",
+      "message": "У вас нет активных оповещений"
+    },
     "aria": {
       "dismiss": "Удалить уведомление",
       "showLess": "Показать меньше",
       "showAll": "Показать все уведомления"
     },
-    "empty": {
-      "title": "Всё спокойно",
-      "message": "У вас нет активных оповещений"
+    "mobile": {
+      "pushEnabled": "Push включен",
+      "cardOnly": "Видно только на карточке",
+      "silencedQuietHours": "Тишина тихих часов",
+      "silencedCooldown": "Безмолвие по времени восстановления",
+      "blockedSeverity": "Заблокировано по серьезности",
+      "blockedContext": "Заблокировано по контексту",
+      "off": "Выключенный",
+      "cameraEvent": "Событие камеры",
+      "securityEvent": "Событие безопасности",
+      "externalAlert": "Внешнее оповещение"
     }
+  },
+  "favCard": {
+    "emptyTitle": "Nodalia Fav Card",
+    "emptyBody": "Настройте `entity`, чтобы показать избранное.",
+    "disarmedF": "Снята",
+    "armed_home": "Дома",
+    "armed_away": "Нет дома",
+    "armed_night": "Ночь",
+    "armed_vacation": "Отпуск",
+    "armed_custom_bypass": "Свой режим",
+    "arming": "Включение",
+    "disarming": "Выключение",
+    "pending": "Ожидание",
+    "triggered": "Сработала"
   },
   "calendarCard": {
     "allDay": "Весь день",
@@ -691,13 +883,6 @@
       "createEvent": "Не удалось создать событие.",
       "createEventWithMessage": "Не удалось создать событие: {message}"
     },
-    "aria": {
-      "newEventDialog": "Новое событие календаря",
-      "deleteEvent": "Удалить событие",
-      "createHaEvent": "Создать событие HA",
-      "close": "Закрыть",
-      "deleteRecurringDialog": "Выберите, как удалить повторяющееся событие"
-    },
     "deleteRecurrence": {
       "title": "Удалить повторяющееся событие",
       "message": "Это событие входит в серию. Что удалить?",
@@ -705,6 +890,16 @@
       "thisAndFuture": "Это и все последующие",
       "deleteFailed": "Не удалось удалить событие. Попробуйте снова.",
       "deleteFailedWithMessage": "Не удалось удалить событие: {message}"
+    },
+    "aria": {
+      "newEventDialog": "Новое событие календаря",
+      "deleteEvent": "Удалить событие",
+      "deleteRecurringDialog": "Выберите, как удалить повторяющееся событие",
+      "createHaEvent": "Создать событие HA",
+      "close": "Закрыть"
+    },
+    "warnings": {
+      "webhookBlockedNonAdmin": "Календарь Nodalia: веб-перехватчик заблокирован для пользователя без прав администратора (security.allow_webhooks_for_non_admin=false)."
     }
   },
   "vacuumErrorLabels": {
@@ -761,84 +956,5 @@
     "check_clean_carouse": "Проверьте карусель очистки",
     "audio_error": "Ошибка звука",
     "water_empty": "Бак для воды пуст"
-  },
-  "lightCard": {
-    "controlModes": {
-      "brightness": "Показать яркость",
-      "temperature": "Показать температуру",
-      "color": "Показать цвет"
-    },
-    "sections": {
-      "temperature": "Температура",
-      "color": "Цвет",
-      "presets": "Пресеты"
-    },
-    "temperaturePresets": {
-      "warm": "Тёплый",
-      "neutral": "Нейтральный",
-      "cool": "Холодный"
-    },
-    "emptyTitle": "Nodalia Light Card",
-    "emptyBody": "Укажите `entity` как сущность `light.*`, чтобы показать карточку."
-  },
-  "common": {
-    "aria": {
-      "togglePower": "Включить или выключить",
-      "back": "Back",
-      "close": "Close",
-      "previous": "Previous",
-      "next": "Next",
-      "playPause": "Play or pause",
-      "volumeDown": "Volume down",
-      "volumeUp": "Volume up",
-      "openMedia": "Open media",
-      "navigationBar": "Navigation bar",
-      "mediaPlayers": "Media players"
-    }
-  },
-  "scenes": {
-    "emptyTitle": "Nodalia Scenes Card",
-    "emptyBody": "Добавьте сцены в редакторе карточки.",
-    "defaultName": "Сцены",
-    "unavailable": "Недоступно",
-    "subtitle": "Нажмите на сцену для запуска",
-    "moods": "сцены"
-  },
-  "circularGaugeCard": {
-    "emptyTitle": "Nodalia Circular Gauge Card",
-    "emptyBody": "Укажите `entity` как числовую сущность для отображения шкалы."
-  },
-  "vacuumCard": {
-    "emptyTitle": "Nodalia Vacuum Card",
-    "emptyBody": "Укажите `entity` как сущность `vacuum.*`, чтобы показать карточку."
-  },
-  "insigniaCard": {
-    "emptyTitle": "Nodalia Insignia Card",
-    "emptyBody": "Настройте `entity` или базовое содержимое для отображения значка."
-  },
-  "mediaPlayerCard": {
-    "emptyTitle": "Nodalia Media Player",
-    "emptyBody": "Укажите `entity` или `players`, чтобы показать плеер.",
-    "aria": {
-      "turnOn": "Turn on",
-      "turnOff": "Turn off",
-      "playPause": "Play or pause",
-      "showVolume": "Show volume",
-      "sources": "Sources",
-      "switchSource": "Switch source",
-      "switchToSource": "Switch to {source}",
-      "volume": "Volume",
-      "selectPlayer": "Select player {index}",
-      "play": "Play",
-      "hidePlayer": "Hide player",
-      "showPlayer": "Show player"
-    }
-  },
-  "mediaBrowser": {
-    "loading": "Loading media...",
-    "empty": "No items available here.",
-    "playItem": "Play {title}",
-    "dialog": "Media browser",
-    "eyebrow": "Media Browser"
   }
 }

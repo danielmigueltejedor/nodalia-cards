@@ -7,15 +7,98 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
+function cardPartsFromBuildScript() {
+  const source = read("scripts/build-bundle.mjs");
+  const match = source.match(/const CARD_PARTS = \[([\s\S]*?)\];/);
+  assert.ok(match, "build-bundle.mjs should declare CARD_PARTS");
+  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+}
+
+function compatibilityLoadersFromBuildScript() {
+  const source = read("scripts/build-bundle.mjs");
+  const match = source.match(/const compatLoaderFiles = \[([\s\S]*?)\];/);
+  assert.ok(match, "build-bundle.mjs should declare compatLoaderFiles");
+  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+}
+
+function editorRowsFromGeneratedSource(source = read("nodalia-editor-ui.js")) {
+  const languagesMatch = source.match(/const ROW_LANGS = (\[[^;]+\]);/);
+  const rowsMatch = source.match(/const ROWS_JSON = ("(?:\\.|[^"\\])*");/);
+  assert.ok(languagesMatch, "generated editor UI should declare ROW_LANGS");
+  assert.ok(rowsMatch, "generated editor UI should declare ROWS_JSON");
+  const languages = JSON.parse(languagesMatch[1]);
+  const rows = JSON.parse(JSON.parse(rowsMatch[1]));
+  return { languages, rows };
+}
+
+function editorRowBySpanish(rows, spanish) {
+  const row = rows.find(values => values[0] === spanish);
+  assert.ok(row, `generated editor UI should contain the Spanish row: ${spanish}`);
+  return row;
+}
+
+test("bundle registers every card listed in build-bundle CARD_PARTS", () => {
+  const bundle = read("nodalia-cards.js");
+  const suite = read(`nodalia-cards-suite-${JSON.parse(read("package.json")).version}.js`);
+  cardPartsFromBuildScript().forEach(file => {
+    const cardTag = file.replace(/\.js$/, "");
+    const escaped = cardTag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(bundle, new RegExp(`"${escaped}"`), `${cardTag} should ship in nodalia-cards.js`);
+    assert.match(suite, new RegExp(`"${escaped}"`), `${cardTag} should ship in split suite bundle`);
+  });
+});
+
+test("bundle build validates card registrations before writing artifacts", () => {
+  const build = read("scripts/build-bundle.mjs");
+  assert.match(build, /assertCardRegistrations\(fullBody, "Full"\)/);
+  assert.match(build, /assertCardRegistrations\(suiteBody, "Suite"\)/);
+  assert.doesNotMatch(build, /Promise\.all\(\[\s*buildParts\(ALL_PARTS/);
+});
+
+test("compatibility aliases are unique lightweight loaders for the current version", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const loaders = compatibilityLoadersFromBuildScript();
+  const target = `nodalia-cards-${pkg.version}.js`;
+  assert.equal(new Set(loaders).size, loaders.length);
+  assert.ok(loaders.length <= 2, "only the two immediately previous compatibility loaders should remain");
+  loaders.forEach(file => {
+    const source = read(file);
+    assert.ok(Buffer.byteLength(source) < 2048, `${file} should remain a lightweight loader`);
+    assert.match(source, new RegExp(`import "\\./${target.replaceAll(".", "\\.")}"`));
+  });
+});
+
+test("repository retains only current versioned artifacts and compatibility loaders", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const compatibilityLoaders = compatibilityLoadersFromBuildScript();
+  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+  const expected = [
+    `nodalia-cards-${pkg.version}.js`,
+    `nodalia-cards-core-${pkg.version}.js`,
+    `nodalia-cards-suite-${pkg.version}.js`,
+    ...compatibilityLoaders,
+  ].sort();
+  const actual = fs.readdirSync(root).filter(file => versionedBundlePattern.test(file)).sort();
+
+  assert.deepEqual(actual, expected);
+});
+
+test("menu card is not shipped in the bundle", () => {
+  const build = read("scripts/build-bundle.mjs");
+  const bundle = read("nodalia-cards.js");
+  const suite = read(`nodalia-cards-suite-${JSON.parse(read("package.json")).version}.js`);
+  assert.doesNotMatch(build, /nodalia-menu-card\.js/);
+  assert.doesNotMatch(bundle, /nodalia-menu-card/);
+  assert.doesNotMatch(suite, /nodalia-menu-card/);
+});
+
 test("published package files and bundle manifest stay coherent", () => {
   const pkg = JSON.parse(read("package.json"));
   const hacs = JSON.parse(read("hacs.json"));
   const manifest = read("nodalia-cards.manifest.js");
   const expectedHacsFile = "nodalia-cards.js";
   const expectedVersionedFile = `nodalia-cards-${pkg.version}.js`;
-  const expectedCompatFiles = [
-    "nodalia-cards-1.3.4.js",
-  ];
+  const expectedCompatFiles = compatibilityLoadersFromBuildScript();
 
   assert.ok(manifest.includes(`"pkgVersion": "${pkg.version}"`));
   assert.ok(manifest.includes(`export const pkgVersion = "${pkg.version}";`));
@@ -67,6 +150,7 @@ test("card sources use nodalia-utils.js instead of inlined duplicate helpers", (
     "nodalia-notifications-card.js",
     "nodalia-vacuum-card.js",
     "nodalia-news-card.js",
+    "nodalia-camera-card.js",
   ];
   const utils = read("nodalia-utils.js");
   assert.match(utils, /function escapeLovelaceWarningText\(/);
@@ -81,11 +165,11 @@ test("card sources use nodalia-utils.js instead of inlined duplicate helpers", (
   assert.match(build, /nodalia-utils\.js/);
 });
 
-test("README keeps support link in the badge area without duplicate donations", () => {
+test("README keeps a single support badge without legacy donation sections", () => {
   const readme = read("README.md");
   const coffeeMatches = readme.match(/buymeacoffee\.com\/danielmigueltejedor/g) || [];
   assert.equal(coffeeMatches.length, 1);
-  assert.match(readme, /img\.shields\.io\/badge\/Buy%20Me%20a%20Coffee-support/);
+  assert.match(readme, /img\.shields\.io\/badge\/Support%20the%20project-Buy%20Me%20a%20Coffee-/);
   assert.doesNotMatch(readme, /paypal/i);
   assert.doesNotMatch(readme, /## 💰 Donations/);
 });
@@ -396,11 +480,12 @@ test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
   assert.match(source, /no: "nb-NO"/);
-  assert.match(source, /\n    no: \{\s*\n\s*vacuumErrorLabels:/);
+  assert.match(source, /no:\s*\{[\s\S]*vacuumErrorLabels:/);
 });
 
 test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
+  const { languages, rows } = editorRowsFromGeneratedSource(source);
   assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"\]/);
   assert.match(source, /const ROWS_JSON = /);
   assert.match(source, /function getEditorUiMaps\(\)/);
@@ -408,14 +493,14 @@ test("shared visual editor ROWS map covers all supported editor languages", () =
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
   assert.match(source, /window\.NodaliaI18n\.editorUiMaps = map/);
   assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
-  ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
-    assert.match(source, new RegExp(`\\\\"${lang}\\\\":`), `${lang} column should appear in ROWS`);
-  });
-  assert.match(source, /\\"en\\":\\"Enable animations\\"[\s\S]*\\"de\\":\\"Animationen aktivieren\\"/);
-  assert.match(source, /\\"en\\":\\"Chip height\\"[\s\S]*\\"de\\":\\"Chip-Höhe\\"/);
-  assert.match(source, /\\"es\\":\\"Mostrar ausente\\"[\s\S]*\\"de\\":\\"„Abwesend“ anzeigen\\"/);
-  assert.match(source, /\\"es\\":\\"Fijar a pantalla\\"[\s\S]*\\"de\\":\\"Am Bildschirm fixieren\\"/);
-  assert.match(source, /\\"es\\":\\"Entidad principal\\"[\s\S]*\\"zh\\":\\"主实体\\"/);
+  assert.deepEqual(languages, ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"]);
+  assert.ok(rows.length > 0);
+  rows.forEach(row => assert.equal(row.length, languages.length));
+  assert.equal(editorRowBySpanish(rows, "Activar animaciones")[2], "Animationen aktivieren");
+  assert.equal(editorRowBySpanish(rows, "Alto chip")[2], "Chip-Höhe");
+  assert.equal(editorRowBySpanish(rows, "Mostrar ausente")[2], "„Abwesend“ anzeigen");
+  assert.equal(editorRowBySpanish(rows, "Fijar a pantalla")[2], "Am Bildschirm fixieren");
+  assert.equal(editorRowBySpanish(rows, "Entidad principal")[10], "主实体");
 });
 
 test("editor field helpers route visible labels through shared i18n", () => {
@@ -543,6 +628,22 @@ test("news card is registered and shipped in the HACS bundle", () => {
   assert.match(bundle, /nodalia-news-card/);
 });
 
+test("camera card is registered and shipped in the HACS bundle", () => {
+  const source = read("nodalia-camera-card.js");
+  const build = read("scripts/build-bundle.mjs");
+  const pkg = JSON.parse(read("package.json"));
+  const readme = read("README.md");
+  const bundle = read(`nodalia-cards-${pkg.version}.js`);
+  assert.match(source, /const CARD_TAG = "nodalia-camera-card"/);
+  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
+  assert.match(source, /camera_proxy/);
+  assert.match(source, /camera-card__expanded/);
+  assert.match(build, /nodalia-camera-card\.js/);
+  assert.ok(pkg.files.includes("nodalia-camera-card.js"), "nodalia-camera-card.js should be published");
+  assert.match(readme, /custom:nodalia-camera-card/);
+  assert.match(bundle, /nodalia-camera-card/);
+});
+
 test("cover card is registered and shipped in the HACS bundle", () => {
   const source = read("nodalia-cover-card.js");
   const build = read("scripts/build-bundle.mjs");
@@ -589,14 +690,14 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /smart_entity_overrides\.\$\{index\}\.mobile/);
   assert.match(source, /smart_notifications\.\$\{key\}\.mobile/);
   assert.match(source, /custom_notifications\.\$\{index\}\.mobile/);
-  assert.match(source, /mobilePolicy: item\.mobile \|\| "inherit"/);
+  assert.match(source, /mobilePolicy: item\.mobile \|\| "auto"/);
   assert.match(source, /_smartMobilePolicyForKind\(group\.kind, entityId\)/);
   assert.match(source, /smart: Object\.fromEntries/);
   assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
-  assert.match(source, /mobilePolicy/);
-  assert.match(source, /policy === "off"/);
-  assert.match(source, /policy !== "on"/);
+  assert.match(source, /mobileDeliveryState/);
+  assert.match(source, /deliveryState !== "allowed"/);
+  assert.match(source, /effectivePolicy === "off"/);
   assert.match(source, /_entranceAnimationTimer/);
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
   assert.match(source, /_scheduleEntranceAnimationReset\(animations\.contentDuration \+ 120\)/);
@@ -643,6 +744,12 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /smart_notifications/);
   assert.match(source, /smart_notifications\.\$\{key\}\.tap_action/);
   assert.match(source, /custom_notifications\.\$\{index\}\.tap_action/);
+  assert.match(source, /_customNotificationTemplateValues\(item\)/);
+  assert.match(source, /title: this\._formatTemplate\(item\.title, templateValues\)/);
+  assert.match(source, /message: this\._formatTemplate\(item\.message, templateValues\)/);
+  assert.match(source, /action_label: this\._formatTemplate\(item\.action_label, templateValues\)/);
+  assert.match(source, /url: this\._formatTemplate\(item\.url, templateValues\)/);
+  assert.match(source, /referencedNotificationTemplateEntities/);
   assert.match(source, /normalizeNotificationTapAction/);
   assert.match(source, /hasNotificationTapAction/);
   assert.match(source, /_buildNativeNotificationAction/);
@@ -661,7 +768,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /background_mobile\.webhook/);
   assert.match(source, /ed\.notifications\.background_mobile_webhook/);
   assert.match(source, /entities: config\.mobile_notifications\?\.entities \|\| \[\]/);
-  assert.match(source, /mobile: String\(item\?\.mobile \|\| "inherit"\)/);
+  assert.match(source, /mobile: normalizeMobilePolicy\(item\?\.mobile\)/);
   assert.match(source, /nodalia_notifications_background_sync/);
   assert.match(source, /_scheduleBackgroundMobileSync/);
   assert.match(source, /_pendingBackgroundMobileSync/);
@@ -714,7 +821,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /!text\.includes\(":"\)/);
   assert.match(source, /!this\._canPruneDismissedToken\(id\)/);
   assert.match(source, /_queueMobileNotifications/);
-  assert.match(source, /this\._config\.background_mobile\?\.enabled === true/);
+  assert.match(source, /_backgroundMobileSuppressesForeground\(\)/);
+  assert.match(source, /_lastBackgroundMobileSyncSignature/);
   assert.match(source, /this\._mobileSent\.has\(hash\) \|\| this\._isDismissed\(item\)/);
   assert.match(source, /notify\./);
   const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
@@ -726,8 +834,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(backgroundPackage, /event_type: nodalia_notifications_background_watched_state_changed/);
   assert.match(backgroundPackage, /smart_cfg: "\{\{ cfg\.get\('smart', \{\}\) \}\}"/);
   assert.match(backgroundPackage, /smart_override: "\{\{ smart_cfg\.get\(match_kind, \{\}\) if match_kind != '' else \{\} \}\}"/);
-  assert.match(backgroundPackage, /smart_mobile: "\{\{ smart_override\.get\('mobile', 'inherit'\) \}\}"/);
-  assert.match(backgroundPackage, /smart_mobile != 'off'/);
+  assert.match(backgroundPackage, /smart_mobile: "\{\{ smart_override\.get\('mobile', default_policy\) \}\}"/);
+  assert.match(backgroundPackage, /effective_policy/);
+  assert.match(backgroundPackage, /context_cfg/);
+  assert.match(backgroundPackage, /effective_policy not in \['off', 'card_only'\]/);
   assert.match(backgroundPackage, /mode: parallel/);
   assert.match(backgroundPackage, /max: 50/);
   assert.match(backgroundPackage, /max_exceeded: silent/);
@@ -754,7 +864,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.doesNotMatch(backgroundPackage, /hot_temperature', 27\)[^\n]*or ov != nv/);
   assert.match(backgroundPackage, /\| replace\('\{fan\}', 'ventilador'\)/);
   assert.match(backgroundPackage, /\{% elif e in groups\.get\('ink', \[\]\) and nv != none and nv <= thresholds\.get\('ink_low', 15\)/);
-  assert.match(backgroundPackage, /override_mobile != 'off'/);
+  assert.match(backgroundPackage, /presence_ok/);
   assert.doesNotMatch(backgroundPackage, /new_state: "\{\{ trigger\.event\.data\.new_state \}\}"/);
   assert.match(backgroundPackage, /from_json\(default=\{\}\)/);
   assert.match(source, /item\.severity !== "info"/);
@@ -831,9 +941,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);
   const editorUi = read("nodalia-editor-ui.js");
-  assert.match(editorUi, /\\"es\\":\\"Borde tarjeta\\"[\s\S]*\\"de\\":\\"Kartenrand\\"/);
-  assert.match(editorUi, /\\"es\\":\\"Etiqueta\\"[\s\S]*\\"de\\":\\"Beschriftung\\"/);
-  assert.match(editorUi, /\\"es\\":\\"Mostrar tambien en escritorio\\"[\s\S]*\\"de\\":\\"Auch auf dem Desktop anzeigen\\"/);
+  const { rows: editorRows } = editorRowsFromGeneratedSource(editorUi);
+  assert.equal(editorRowBySpanish(editorRows, "Borde tarjeta")[2], "Kartenrand");
+  assert.equal(editorRowBySpanish(editorRows, "Etiqueta")[2], "Beschriftung");
+  assert.equal(editorRowBySpanish(editorRows, "Mostrar tambien en escritorio")[2], "Auch auf dem Desktop anzeigen");
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

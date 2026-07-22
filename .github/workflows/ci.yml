@@ -4,17 +4,20 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -22,8 +25,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run regression tests
-        run: pnpm test
+      - name: Regenerate tracked artifacts
+        run: |
+          pnpm run i18n:gen-editor
+          pnpm run i18n:gen-runtime
+          pnpm run bundle
 
-      - name: Build bundle
-        run: pnpm run bundle
+      - name: Verify generated artifacts are current
+        run: git diff --exit-code
+
+      - name: Run full validation
+        run: pnpm run validate

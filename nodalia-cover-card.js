@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "1.3.5";
+const CARD_VERSION = "2.0.0-alpha.3";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -250,6 +250,8 @@ function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 
@@ -446,6 +448,9 @@ function getRangeValueFromGeometry(geometry, currentValue, clientX) {
 }
 
 function parseServiceData(value) {
+  if (isObject(value)) {
+    return deepClone(value);
+  }
   const raw = String(value || "").trim();
   if (!raw) {
     return {};

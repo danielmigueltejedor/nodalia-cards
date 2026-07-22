@@ -42,6 +42,8 @@ const CARD_PARTS = [
   "nodalia-notifications-card.js",
   "nodalia-vacuum-card.js",
   "nodalia-news-card.js",
+  "nodalia-camera-card.js",
+  "nodalia-room-summary-card.js",
 ];
 
 const ALL_PARTS = [...CORE_PARTS, ...CARD_PARTS];
@@ -75,7 +77,7 @@ async function buildParts(parts, label) {
       platform: "browser",
       target: ["es2020"],
       charset: "utf8",
-      legalComments: "none",
+      legalComments: "inline",
       minify: true,
       plugins: [
         {
@@ -100,11 +102,21 @@ async function buildParts(parts, label) {
   }
 }
 
-const [fullBody, coreBody, suiteBody] = await Promise.all([
-  buildParts(ALL_PARTS, "full"),
-  buildParts(CORE_PARTS, "core"),
-  buildParts(CARD_PARTS, "suite"),
-]);
+const fullBody = await buildParts(ALL_PARTS, "full");
+const coreBody = await buildParts(CORE_PARTS, "core");
+const suiteBody = await buildParts(CARD_PARTS, "suite");
+
+function assertCardRegistrations(source, label) {
+  const missing = CARD_PARTS
+    .map(name => name.replace(/\.js$/, ""))
+    .filter(tag => !source.includes(`"${tag}"`));
+  if (missing.length) {
+    throw new Error(`${label} bundle is missing card registrations: ${missing.join(", ")}`);
+  }
+}
+
+assertCardRegistrations(fullBody, "Full");
+assertCardRegistrations(suiteBody, "Suite");
 
 const fullHash = crypto.createHash("sha256").update(fullBody).digest("hex").slice(0, 12);
 const coreHash = crypto.createHash("sha256").update(coreBody).digest("hex").slice(0, 12);
@@ -117,10 +129,11 @@ const versionedLoaderFile = `nodalia-cards-${pkg.version}.js`;
 const coreFile = `nodalia-cards-core-${pkg.version}.js`;
 const suiteFile = `nodalia-cards-suite-${pkg.version}.js`;
 const compatLoaderFiles = [
-  "nodalia-cards-1.3.4.js",
+  "nodalia-cards-2.0.0-alpha.42.js",
+  "nodalia-cards-2.0.0-alpha.43.js",
 ];
 
-const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
 const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile, ...compatLoaderFiles]);
 for (const name of fs.readdirSync(root)) {
   if (!VERSIONED_BUNDLE_PATTERN.test(name) || keepVersionedBundles.has(name)) {
@@ -157,6 +170,17 @@ const inlineLoaderFooter = file => `;if(typeof window!=="undefined"){window.__NO
   splitSuiteFile: suiteFile,
 })};}`;
 
+const compatibilityLoaderSource = file => `import "./${versionedLoaderFile}";
+if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
+  mode: "compat",
+  pkgVersion: pkg.version,
+  contentSha256_12: fullHash,
+  file,
+  targetFile: versionedLoaderFile,
+  fallbackFile: loaderFile,
+})};}
+`;
+
 const manifest = {
   pkgVersion: pkg.version,
   contentSha256_12: fullHash,
@@ -183,7 +207,7 @@ fs.writeFileSync(path.join(root, manifestFile), manifestSource);
 fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
 fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
 compatLoaderFiles.forEach(file => {
-  fs.writeFileSync(path.join(root, file), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(file)}\n`);
+  fs.writeFileSync(path.join(root, file), compatibilityLoaderSource(file));
 });
 fs.writeFileSync(path.join(root, coreFile), `${coreBody}\n${coreFooter}\n`);
 fs.writeFileSync(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n`);
