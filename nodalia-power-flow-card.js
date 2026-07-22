@@ -828,6 +828,8 @@ function normalizeConfig(rawConfig) {
   merged.consumption_chips.day_label = String(merged.consumption_chips.day_label ?? "").trim();
   merged.consumption_chips.month_label = String(merged.consumption_chips.month_label ?? "").trim();
   merged.show_home_device_popup = merged.show_home_device_popup !== false;
+  merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return merged;
 }
 

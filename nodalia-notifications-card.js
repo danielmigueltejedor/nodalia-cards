@@ -2047,7 +2047,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       return;
     }
     this._lastDismissedHelperState = value;
-    Promise.resolve(this._hass.callService("input_text", "set_value", {
+    Promise.resolve().then(() => this._hass.callService("input_text", "set_value", {
       entity_id: entityId,
       value,
     })).catch(() => {
@@ -3216,10 +3216,14 @@ class NodaliaNotificationsCard extends HTMLElement {
       };
       await Promise.all([
         notifyEntities.length
-          ? Promise.resolve(this._hass.callService("notify", "send_message", entityPayload)).then(() => true, () => false)
+          ? Promise.resolve().then(() => (
+            this._hass.callService("notify", "send_message", entityPayload)
+          )).then(() => true, () => false)
           : Promise.resolve(false),
         ...legacyServices.map(service => (
-          Promise.resolve(this._callNamedService(service, legacyPayload)).then(() => true, () => false)
+          Promise.resolve().then(() => (
+            this._callNamedService(service, legacyPayload)
+          )).then(() => true, () => false)
         )),
       ]).then(results => {
         const delivered = results.some(Boolean);

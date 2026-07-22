@@ -41,6 +41,25 @@ function loadNodaliaUtils(sandbox) {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
 }
 
+function loadCardNormalizeConfig(file, className) {
+  const source = read(file);
+  const classStart = source.indexOf(`class ${className}`);
+  assert.ok(classStart > 0, `${file} should define ${className}`);
+  const sandbox = {
+    URL,
+    window: null,
+    customElements: { define() {}, get() { return null; } },
+    HTMLElement: class {},
+    globalThis: null,
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
+  return sandbox.__normalizeConfig;
+}
+
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
@@ -412,6 +431,71 @@ test("NodaliaUtils coerces Lovelace tap_action objects to card action strings", 
   assert.equal(config.tap_service, "lock.unlock");
   assert.equal(config.tap_service_data, JSON.stringify({ code: "1234" }));
   assert.equal(config.tap_service_target, JSON.stringify({ entity_id: "lock.front_door" }));
+});
+
+test("NodaliaUtils rejects CSS and markup injection in style values", () => {
+  const sandbox = { window: null };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  const { sanitizeCssValue, sanitizeStyleTree, renderCardEmptyStateDocument } = sandbox.window.NodaliaUtils;
+
+  assert.equal(sanitizeCssValue("28px", "12px"), "28px");
+  assert.equal(sanitizeCssValue("red;} </style><img src=x>", "var(--primary-color)"), "var(--primary-color)");
+  const safe = sanitizeStyleTree({ card: { padding: "12px; color:red", opacity: "not-a-number" } }, {
+    card: { padding: "16px", opacity: 0.5 },
+  });
+  assert.equal(safe.card.padding, "16px");
+  assert.equal(safe.card.opacity, 0.5);
+
+  const document = renderCardEmptyStateDocument("<div class=\"test--empty\">Empty</div>", {
+    card: { background: "red;} </style><script>alert(1)</script>" },
+  });
+  assert.doesNotMatch(document, /<script>/);
+  assert.match(document, /background: var\(--ha-card-background\)/);
+});
+
+test("light, fan, and humidifier normalize native Lovelace service action objects", () => {
+  const cards = [
+    ["nodalia-light-card.js", "NodaliaLightCard"],
+    ["nodalia-fan-card.js", "NodaliaFanCard"],
+    ["nodalia-humidifier-card.js", "NodaliaHumidifierCard"],
+  ];
+  cards.forEach(([file, className]) => {
+    const normalizeConfig = loadCardNormalizeConfig(file, className);
+    const config = normalizeConfig({
+      entity: "switch.example",
+      tap_action: {
+        action: "perform-action",
+        perform_action: "switch.turn_on",
+        data: { transition: 2 },
+        target: { entity_id: "switch.target" },
+      },
+    });
+    assert.equal(config.tap_action, "service", file);
+    assert.equal(config.tap_service, "switch.turn_on", file);
+    assert.equal(config.tap_service_data, JSON.stringify({ transition: 2 }), file);
+    assert.equal(config.tap_service_target, JSON.stringify({ entity_id: "switch.target" }), file);
+  });
+});
+
+test("graph card refreshes history and restores host listeners after reconnect", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /const HISTORY_REFRESH_INTERVAL = 180000/);
+  assert.match(source, /_scheduleHistoryRefresh\(\)/);
+  assert.match(source, /this\._requestHistory\(\);[\s\S]*this\._scheduleHistoryRefresh\(\)/);
+  const connectedStart = source.indexOf("  connectedCallback() {");
+  const connectedEnd = source.indexOf("\n  _attachViewVisibilityObserver()", connectedStart);
+  const connected = source.slice(connectedStart, connectedEnd);
+  assert.match(connected, /this\.addEventListener\("pointerleave"/);
+  assert.match(connected, /this\._hoverMediaQuery\.addEventListener\("change"/);
+});
+
+test("advanced vacuum calibration signature includes direct point values", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /fingerprint: JSON\.stringify\(directPoints\)/);
+  assert.match(source, /this\._calibrationSignatureStamp = "";[\s\S]*this\._syncCalibrationIfNeeded\(\)/);
+  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => this\._callInternalService/);
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -1429,7 +1513,12 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /animationToken !== this\._selectPickerAnimationToken/);
   assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
   assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
-  assert.match(source, /_shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)[\s\S]*return;/);
+  const feedbackStart = source.indexOf("_triggerEntityPressFeedback(action, actionTarget)");
+  const feedbackEnd = source.indexOf("_onShadowPointerDown(event)", feedbackStart);
+  const feedbackSource = source.slice(feedbackStart, feedbackEnd);
+  assert.match(feedbackSource, /querySelector\("\.entity-card__content"\)/);
+  assert.match(feedbackSource, /querySelector\("\.entity-card__icon"\)/);
+  assert.doesNotMatch(feedbackSource, /_shouldOpenSelectPickerOnTap/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
   assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
   assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);

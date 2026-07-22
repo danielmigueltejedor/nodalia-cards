@@ -1,10 +1,11 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.43";
+const CARD_VERSION = "2.0.0-alpha.44";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
 const CUSTOMIZABLE_EMBED_LISTS = new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
+const NORMALIZED_ROOM_CONFIG = Symbol("nodalia-room-summary-normalized");
 
 const DEFAULT_CONFIG = {
   name: "",
@@ -292,6 +293,9 @@ function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
 }
 
 function normalizeConfig(rawConfig = {}) {
+  if (rawConfig?.[NORMALIZED_ROOM_CONFIG] === true) {
+    return rawConfig;
+  }
   const raw = isObject(rawConfig) ? rawConfig : {};
   const config = mergeConfig(DEFAULT_CONFIG, raw);
 
@@ -374,7 +378,13 @@ function normalizeConfig(rawConfig = {}) {
 
   config.haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
   config.animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
-  config.styles = mergeConfig(DEFAULT_CONFIG.styles, config.styles || {});
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
+  Object.defineProperty(config, NORMALIZED_ROOM_CONFIG, {
+    configurable: false,
+    enumerable: false,
+    value: true,
+  });
   return config;
 }
 
@@ -530,6 +540,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
+    this._configSignature = JSON.stringify(this._config);
     this._hass = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -558,6 +569,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._configSignature = JSON.stringify(this._config);
     if (this._config.collapsible !== true) this._hubExpanded = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -602,7 +614,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       const state = hass?.states?.[id];
       return state ? `${id}:${state.state}:${state.last_updated || state.last_changed}` : `${id}:missing`;
     }).join("|");
-    return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${JSON.stringify(config)}`;
+    return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${this._configSignature}`;
   }
 
   _entityLabel(entityId) {
@@ -922,7 +934,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   _invoke(domain, service, data = {}, target = null) {
     const fn = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
     if (typeof fn === "function") return fn(this, this._hass, domain, service, data, target);
-    return Promise.resolve(this._hass?.callService?.(domain, service, data, target || undefined));
+    return Promise.resolve().then(() => (
+      this._hass?.callService?.(domain, service, data, target || undefined)
+    ));
   }
 
   _parseActionObject(value) {
@@ -1924,7 +1938,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _emitConfig(reRender = false) {
-    const outgoing = stripEqualToDefaults(normalizeConfig(this._config), DEFAULT_CONFIG);
+    const outgoing = stripEqualToDefaults(normalizeConfig(deepClone(this._config)), DEFAULT_CONFIG);
     fireEvent(this, "config-changed", { config: outgoing || {} });
     if (reRender) {
       this._render();

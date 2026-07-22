@@ -2,9 +2,9 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.43";
-const LAYOUT_MODES = new Set(["live", "snapshot", "compact", "security", "mosaic"]);
-const PRESENTATION_MODES = new Set(["feed", "card"]);
+const CARD_VERSION = "2.0.0-alpha.44";
+const CAMERA_LAYOUT = "mosaic";
+const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
 const MAX_FAILED_IMAGE_URLS = 32;
 const STREAM_PROVIDERS = new Set(["home_assistant", "frigate_go2rtc", "go2rtc", "iframe"]);
@@ -16,8 +16,8 @@ const DEFAULT_CONFIG = {
   entity: "",
   cameras: [],
   name: "",
-  layout: "live",
-  presentation: "feed",
+  layout: CAMERA_LAYOUT,
+  presentation: CAMERA_PRESENTATION,
   language: "auto",
   show_name: false,
   show_state: false,
@@ -224,7 +224,7 @@ function parseServiceData(rawValue) {
     return {};
   }
   if (isObject(rawValue)) {
-    return rawValue;
+    return deepClone(rawValue);
   }
   try {
     const parsed = JSON.parse(rawValue);
@@ -572,17 +572,11 @@ function isMixedContentUrl(rawValue) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const layout = normalizeTextKey(config.layout);
   const cameraIds = normalizeCameras(config);
   config.cameras = cameraIds;
   config.entity = cameraIds[0] || String(config.entity ?? "").trim();
-  if (cameraIds.length > 1 && layout !== "security" && layout !== "compact") {
-    config.layout = layout === "mosaic" || layout === "live" || layout === "snapshot" ? "mosaic" : layout;
-  } else {
-    config.layout = LAYOUT_MODES.has(layout) ? layout : DEFAULT_CONFIG.layout;
-  }
-  const presentation = normalizeTextKey(config.presentation);
-  config.presentation = PRESENTATION_MODES.has(presentation) ? presentation : DEFAULT_CONFIG.presentation;
+  config.layout = CAMERA_LAYOUT;
+  config.presentation = CAMERA_PRESENTATION;
   config.camera_streams = normalizeCameraStreams(config.camera_streams, cameraIds);
   config.camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
   config.expanded_actions = normalizeExpandedActions(config.expanded_actions);
@@ -618,14 +612,17 @@ function normalizeConfig(rawConfig) {
   config.hold_action = HOLD_ACTIONS.has(normalizeTextKey(config.hold_action))
     ? normalizeTextKey(config.hold_action)
     : DEFAULT_CONFIG.hold_action;
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
   config.tap_service = String(config.tap_service ?? "").trim();
-  config.tap_service_data = String(config.tap_service_data ?? "").trim();
-  config.tap_service_target = String(config.tap_service_target ?? "").trim();
+  config.tap_service_data = serializeActionObject(config.tap_service_data);
+  config.tap_service_target = serializeActionObject(config.tap_service_target);
   config.tap_url = String(config.tap_url ?? "").trim();
   config.navigation_path = String(config.navigation_path ?? "").trim();
   config.hold_service = String(config.hold_service ?? "").trim();
-  config.hold_service_data = String(config.hold_service_data ?? "").trim();
-  config.hold_service_target = String(config.hold_service_target ?? "").trim();
+  config.hold_service_data = serializeActionObject(config.hold_service_data);
+  config.hold_service_target = serializeActionObject(config.hold_service_target);
   config.hold_url = String(config.hold_url ?? "").trim();
   config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
@@ -634,6 +631,8 @@ function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 
@@ -734,14 +733,14 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._config?.layout === "compact" ? 2 : 3;
+    return 3;
   }
 
   getGridOptions() {
     return {
       rows: "auto",
       columns: "full",
-      min_rows: this._config?.layout === "compact" ? 2 : 3,
+      min_rows: 3,
       min_columns: 3,
     };
   }
@@ -756,12 +755,11 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _isFeedPresentation() {
-    return normalizeTextKey(this._config?.presentation) === "feed";
+    return true;
   }
 
   _isMosaicLayout() {
-    const layout = normalizeTextKey(this._config?.layout);
-    return layout === "mosaic" || this._getCameraIds().length > 1;
+    return true;
   }
 
   _resolveLanguage() {
@@ -1775,7 +1773,7 @@ class NodaliaCameraCard extends HTMLElement {
             ${streamConfig.provider === "home_assistant" || streamConfig.provider === "frigate_go2rtc" || streamConfig.provider === "go2rtc"
               ? `<div class="camera-card__expanded-stream" data-camera-expanded-stream></div>`
               : embeddableStreamUrl
-                ? `<iframe class="camera-card__expanded-stream-frame" src="${escapeHtml(embeddableStreamUrl)}" title="${escapeHtml(title)}" allow="autoplay; fullscreen" loading="eager" referrerpolicy="no-referrer"></iframe>`
+                ? `<iframe class="camera-card__expanded-stream-frame" src="${escapeHtml(embeddableStreamUrl)}" title="${escapeHtml(title)}" allow="autoplay; fullscreen" sandbox="allow-scripts allow-forms allow-presentation allow-popups" loading="eager" referrerpolicy="no-referrer"></iframe>`
                 : ""}
             ${nativeGo2rtc ? `
               <div class="camera-card__stream-status" data-camera-stream-status>
@@ -3132,18 +3130,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderCameraEntityField("ed.camera.select_entity", "entity", config.entity)}
-            ${this._renderSelectField("ed.camera.presentation", "presentation", config.presentation || "feed", [
-              { value: "feed", label: "ed.camera.presentation_feed" },
-              { value: "card", label: "ed.camera.presentation_card" },
-            ])}
             ${this._renderTextField("ed.camera.name_placeholder", "name", config.name, { placeholder: "Entrada", fullWidth: true })}
-            ${this._renderSelectField("ed.camera.layout", "layout", config.layout, [
-              { value: "live", label: "ed.camera.layout_live" },
-              { value: "snapshot", label: "ed.camera.layout_snapshot" },
-              { value: "compact", label: "ed.camera.layout_compact" },
-              { value: "security", label: "ed.camera.layout_security" },
-              { value: "mosaic", label: "ed.camera.layout_mosaic" },
-            ])}
             ${this._renderCheckboxField("ed.camera.show_name", "show_name", config.show_name !== false)}
             ${this._renderCheckboxField("ed.camera.show_state", "show_state", config.show_state !== false)}
             ${this._renderCheckboxField("ed.camera.show_status_chips", "show_status_chips", config.show_status_chips !== false)}
@@ -3246,7 +3233,8 @@ if (typeof globalThis !== "undefined") {
     isMixedContentUrl,
     formatRelativeAge,
     DEFAULT_CONFIG,
-    LAYOUT_MODES,
+    CAMERA_LAYOUT,
+    CAMERA_PRESENTATION,
     MAX_CAMERAS,
   };
 }

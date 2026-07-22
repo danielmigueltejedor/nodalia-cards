@@ -21,6 +21,22 @@ function compatibilityLoadersFromBuildScript() {
   return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
 }
 
+function editorRowsFromGeneratedSource(source = read("nodalia-editor-ui.js")) {
+  const languagesMatch = source.match(/const ROW_LANGS = (\[[^;]+\]);/);
+  const rowsMatch = source.match(/const ROWS_JSON = ("(?:\\.|[^"\\])*");/);
+  assert.ok(languagesMatch, "generated editor UI should declare ROW_LANGS");
+  assert.ok(rowsMatch, "generated editor UI should declare ROWS_JSON");
+  const languages = JSON.parse(languagesMatch[1]);
+  const rows = JSON.parse(JSON.parse(rowsMatch[1]));
+  return { languages, rows };
+}
+
+function editorRowBySpanish(rows, spanish) {
+  const row = rows.find(values => values[0] === spanish);
+  assert.ok(row, `generated editor UI should contain the Spanish row: ${spanish}`);
+  return row;
+}
+
 test("bundle registers every card listed in build-bundle CARD_PARTS", () => {
   const bundle = read("nodalia-cards.js");
   const suite = read(`nodalia-cards-suite-${JSON.parse(read("package.json")).version}.js`);
@@ -469,6 +485,7 @@ test("Norwegian language aliases resolve to official no locale", () => {
 
 test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
+  const { languages, rows } = editorRowsFromGeneratedSource(source);
   assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"\]/);
   assert.match(source, /const ROWS_JSON = /);
   assert.match(source, /function getEditorUiMaps\(\)/);
@@ -476,14 +493,14 @@ test("shared visual editor ROWS map covers all supported editor languages", () =
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
   assert.match(source, /window\.NodaliaI18n\.editorUiMaps = map/);
   assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
-  ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"].forEach(lang => {
-    assert.match(source, new RegExp(`\\\\"${lang}\\\\":`), `${lang} column should appear in ROWS`);
-  });
-  assert.match(source, /\\"en\\":\\"Enable animations\\"[\s\S]*\\"de\\":\\"Animationen aktivieren\\"/);
-  assert.match(source, /\\"en\\":\\"Chip height\\"[\s\S]*\\"de\\":\\"Chip-Höhe\\"/);
-  assert.match(source, /\\"es\\":\\"Mostrar ausente\\"[\s\S]*\\"de\\":\\"„Abwesend“ anzeigen\\"/);
-  assert.match(source, /\\"es\\":\\"Fijar a pantalla\\"[\s\S]*\\"de\\":\\"Am Bildschirm fixieren\\"/);
-  assert.match(source, /\\"es\\":\\"Entidad principal\\"[\s\S]*\\"zh\\":\\"主实体\\"/);
+  assert.deepEqual(languages, ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"]);
+  assert.ok(rows.length > 0);
+  rows.forEach(row => assert.equal(row.length, languages.length));
+  assert.equal(editorRowBySpanish(rows, "Activar animaciones")[2], "Animationen aktivieren");
+  assert.equal(editorRowBySpanish(rows, "Alto chip")[2], "Chip-Höhe");
+  assert.equal(editorRowBySpanish(rows, "Mostrar ausente")[2], "„Abwesend“ anzeigen");
+  assert.equal(editorRowBySpanish(rows, "Fijar a pantalla")[2], "Am Bildschirm fixieren");
+  assert.equal(editorRowBySpanish(rows, "Entidad principal")[10], "主实体");
 });
 
 test("editor field helpers route visible labels through shared i18n", () => {
@@ -924,9 +941,10 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);
   const editorUi = read("nodalia-editor-ui.js");
-  assert.match(editorUi, /\\"es\\":\\"Borde tarjeta\\"[\s\S]*\\"de\\":\\"Kartenrand\\"/);
-  assert.match(editorUi, /\\"es\\":\\"Etiqueta\\"[\s\S]*\\"de\\":\\"Beschriftung\\"/);
-  assert.match(editorUi, /\\"es\\":\\"Mostrar tambien en escritorio\\"[\s\S]*\\"de\\":\\"Auch auf dem Desktop anzeigen\\"/);
+  const { rows: editorRows } = editorRowsFromGeneratedSource(editorUi);
+  assert.equal(editorRowBySpanish(editorRows, "Borde tarjeta")[2], "Kartenrand");
+  assert.equal(editorRowBySpanish(editorRows, "Etiqueta")[2], "Beschriftung");
+  assert.equal(editorRowBySpanish(editorRows, "Mostrar tambien en escritorio")[2], "Auch auf dem Desktop anzeigen");
   assert.match(i18n, /function translateNotificationsUi/);
   assert.match(build, /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);

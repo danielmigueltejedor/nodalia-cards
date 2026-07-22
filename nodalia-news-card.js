@@ -514,6 +514,8 @@ function normalizeConfig(rawConfig) {
       category: String(entry?.category ?? "").trim(),
     })).filter(entry => entry.entity)
     : [];
+  merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return merged;
 }
 

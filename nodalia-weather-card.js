@@ -758,6 +758,8 @@ function normalizeConfig(rawConfig) {
   config.tap_action = norm(config.tap_action, "more-info");
   config.hold_action = norm(config.hold_action, "more-info");
   config.double_tap_action = norm(config.double_tap_action, "none");
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 

@@ -610,12 +610,17 @@ function normalizeConfig(rawConfig) {
       newTabKey: "tap_new_tab",
     }, rawConfig?.tap_action ?? config.tap_action, "auto");
   }
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
   config.tap_action = String(config.tap_action ?? "auto").trim() || "auto";
   config.tap_service = String(config.tap_service ?? "").trim();
-  config.tap_service_data = String(config.tap_service_data ?? "").trim();
-  config.tap_service_target = String(config.tap_service_target ?? "").trim();
+  config.tap_service_data = serializeActionObject(config.tap_service_data);
+  config.tap_service_target = serializeActionObject(config.tap_service_target);
   config.tap_url = String(config.tap_url ?? "").trim();
   config.tap_new_tab = config.tap_new_tab === true;
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 
@@ -1462,6 +1467,9 @@ class NodaliaFavCard extends HTMLElement {
   _parseServiceData(rawValue) {
     if (!rawValue) {
       return {};
+    }
+    if (isObject(rawValue)) {
+      return deepClone(rawValue);
     }
 
     try {

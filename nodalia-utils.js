@@ -12,6 +12,8 @@
     "editorFilteredStatesSignature",
     "editorSortLocale",
     "sanitizeActionUrl",
+    "sanitizeCssValue",
+    "sanitizeStyleTree",
     "mountEntityPickerHost",
     "mountIconPickerHost",
     "postHomeAssistantWebhook",
@@ -47,6 +49,47 @@
 
   function isObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function sanitizeCssValue(value, fallback = "") {
+    const raw = String(value ?? "").trim();
+    const safeFallback = String(fallback ?? "").trim();
+    if (!raw) {
+      return safeFallback;
+    }
+    if (
+      /[\u0000-\u001f\u007f<>;"'{}]/.test(raw)
+      || raw.includes("/*")
+      || raw.includes("*/")
+    ) {
+      return safeFallback;
+    }
+    return raw;
+  }
+
+  function sanitizeStyleTree(candidate, fallback) {
+    if (isObject(fallback)) {
+      const source = isObject(candidate) ? candidate : {};
+      const result = {};
+      Object.keys(fallback).forEach(key => {
+        result[key] = sanitizeStyleTree(source[key], fallback[key]);
+      });
+      return result;
+    }
+    if (Array.isArray(fallback)) {
+      return deepClone(Array.isArray(candidate) ? candidate : fallback);
+    }
+    if (typeof fallback === "string") {
+      return sanitizeCssValue(candidate, fallback);
+    }
+    if (typeof fallback === "number") {
+      const numeric = Number(candidate);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    }
+    if (typeof fallback === "boolean") {
+      return typeof candidate === "boolean" ? candidate : fallback;
+    }
+    return deepClone(fallback);
   }
 
   function isUnsafeConfigPathKey(key) {
@@ -896,11 +939,14 @@
       return markup;
     }
     const card = isObject(options.card) ? options.card : {};
-    const background = String(card.background ?? "var(--ha-card-background)");
-    const border = String(card.border ?? "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)");
-    const borderRadius = String(card.border_radius ?? "var(--ha-card-border-radius, 12px)");
-    const boxShadow = String(card.box_shadow ?? "var(--ha-card-box-shadow, none)");
-    const padding = String(card.padding ?? "16px");
+    const background = sanitizeCssValue(card.background, "var(--ha-card-background)");
+    const border = sanitizeCssValue(
+      card.border,
+      "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+    );
+    const borderRadius = sanitizeCssValue(card.border_radius, "var(--ha-card-border-radius, 12px)");
+    const boxShadow = sanitizeCssValue(card.box_shadow, "var(--ha-card-box-shadow, none)");
+    const padding = sanitizeCssValue(card.padding, "16px");
     return `
       <style>
         :host {
@@ -1593,6 +1639,8 @@
     editorFilteredStatesSignature,
     editorSortLocale,
     sanitizeActionUrl,
+    sanitizeCssValue,
+    sanitizeStyleTree,
     mountEntityPickerHost,
     mountIconPickerHost,
     postHomeAssistantWebhook,

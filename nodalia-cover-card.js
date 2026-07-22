@@ -250,6 +250,8 @@ function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 
@@ -446,6 +448,9 @@ function getRangeValueFromGeometry(geometry, currentValue, clientX) {
 }
 
 function parseServiceData(value) {
+  if (isObject(value)) {
+    return deepClone(value);
+  }
   const raw = String(value || "").trim();
   if (!raw) {
     return {};

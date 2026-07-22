@@ -8,6 +8,7 @@
 const GO2RTC_RECONNECT_DELAY = 2000;
 const GO2RTC_STARTUP_ERROR_DELAY = 30000;
 const GO2RTC_WEBRTC_PROGRESS_TIMEOUT = 10000;
+const GO2RTC_SOCKET_OPEN_TIMEOUT = 6500;
 const GO2RTC_MAX_MSE_QUEUE_BYTES = 8 * 1024 * 1024;
 const GO2RTC_MODE_TIMEOUTS = {
   webrtc: 4500,
@@ -48,6 +49,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._binaryHandler = null;
     this._reconnectTimer = 0;
     this._modeTimer = 0;
+    this._socketOpenTimer = 0;
     this._modeQueue = [];
     this._activeMode = "";
     this._intentionalClose = false;
@@ -102,8 +104,10 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
   disconnect() {
     window.clearTimeout(this._reconnectTimer);
     window.clearTimeout(this._modeTimer);
+    window.clearTimeout(this._socketOpenTimer);
     this._reconnectTimer = 0;
     this._modeTimer = 0;
+    this._socketOpenTimer = 0;
     this._intentionalClose = true;
     this._autoplayMuted = false;
     if (this._socket) {
@@ -128,18 +132,23 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
     }
     this._mediaSource = null;
-    if (this._video) {
-      const objectUrl = this._video.src;
-      this._video.pause();
-      this._video.removeAttribute("src");
-      this._video.srcObject = null;
-      this._video.load();
+    const video = this._video;
+    if (video) {
+      const objectUrl = video.src;
+      video.pause();
+      video.removeAttribute("src");
+      video.srcObject = null;
+      video.load();
       if (objectUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(objectUrl);
       }
     }
     this._releaseAudioOutput();
     this._revokePosterObjectUrl();
+    video?.remove?.();
+    if (this._video === video) {
+      this._video = null;
+    }
     this._playbackStream = null;
     this._startupStartedAt = 0;
   }
@@ -432,12 +441,20 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._reportError(new Error("No supported go2rtc playback mode"));
       return;
     }
-    const socket = new WebSocket(this._source);
+    let socket;
+    try {
+      socket = new WebSocket(this._source);
+    } catch (error) {
+      this._retryOrReport(error);
+      return;
+    }
     socket.binaryType = "arraybuffer";
     socket.addEventListener("open", () => {
       if (socket !== this._socket) {
         return;
       }
+      window.clearTimeout(this._socketOpenTimer);
+      this._socketOpenTimer = 0;
       this._startNextMode();
     });
     socket.addEventListener("message", event => {
@@ -460,6 +477,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       if (socket !== this._socket) {
         return;
       }
+      window.clearTimeout(this._socketOpenTimer);
+      this._socketOpenTimer = 0;
       this._socket = null;
       if (this._intentionalClose || !this.isConnected) {
         return;
@@ -475,6 +494,15 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
     });
     this._socket = socket;
+    this._socketOpenTimer = window.setTimeout(() => {
+      this._socketOpenTimer = 0;
+      if (socket !== this._socket || socket.readyState === WebSocket.OPEN) {
+        return;
+      }
+      this._socket = null;
+      socket.close();
+      this._retryOrReport(new Error("go2rtc websocket open timed out"));
+    }, GO2RTC_SOCKET_OPEN_TIMEOUT);
   }
 
   _scheduleReconnect() {
@@ -524,7 +552,9 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
 
   _fallback(error) {
     window.clearTimeout(this._modeTimer);
+    window.clearTimeout(this._socketOpenTimer);
     this._modeTimer = 0;
+    this._socketOpenTimer = 0;
     this._resetModeTransport();
     if (this._modeQueue.length && this._socket?.readyState === WebSocket.OPEN) {
       this._startNextMode();
@@ -557,7 +587,9 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
 
   _reportError(error) {
     window.clearTimeout(this._modeTimer);
+    window.clearTimeout(this._socketOpenTimer);
     this._modeTimer = 0;
+    this._socketOpenTimer = 0;
     this.dispatchEvent(new CustomEvent("nodalia-go2rtc-error", {
       bubbles: true,
       composed: true,

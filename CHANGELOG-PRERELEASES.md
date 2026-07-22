@@ -10,6 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.44] - 2026-07-22
+
+Forty-fourth **`2.0.0`** **`alpha`**: interaction polish, leaner startup, and runtime hardening. Release channel **`2.0.0-alpha.44`**.
+
+### Fixed
+
+- **Entity Card selectors:** `select` and `input_select` taps now play the same content and icon bubble bounce as other entity domains before opening their option picker.
+- **Native Lovelace actions:** Light, Fan, Humidifier, Entity, Favourite, Cover, and Camera cards preserve YAML object service data and explicit targets; Light, Fan, and Humidifier also normalize `call-service`, `perform-action`, and navigation action objects.
+- **Runtime styles:** configurable style trees and empty-state CSS values are sanitized before interpolation, preventing malformed or injected declarations from escaping their intended value.
+- **Camera go2rtc lifecycle:** stalled WebSocket connections time out and retry, while full disconnects release Web Audio and recreate the media element cleanly before reconnecting.
+- **Graph history:** visible cards refresh stale history periodically and restore hover/media listeners after reconnecting to the DOM.
+- **Async recovery:** synchronous service-call failures can no longer strand Notifications queues, shared dismissals, Room Summary actions, or Advanced Vacuum cleaning flows.
+- **Advanced Vacuum calibration:** direct calibration point changes now invalidate the cached map transform even when the number of points stays unchanged.
+- **Room Summary editor:** edited configurations are renormalized before emission while runtime rendering reuses normalized configuration and a cached signature.
+
+### Changed
+
+- **Camera presentation:** Camera Card now uses the edge-to-edge mosaic presentation exclusively, with up to four cameras placed automatically; obsolete presentation and layout selectors were removed from the visual editor.
+- **Editor startup:** shared translation rows and editor catalogs use compact positional storage and lazy reconstruction, reducing `nodalia-editor-ui.js` by about 39% and the complete bundle by about 11%.
+- **Repository security:** GitHub Actions dependencies are pinned to immutable commits, CI uses read-only repository permissions, and generated translation and bundle artifacts must be current before validation passes.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.44`; `2.0.0-alpha.42` and `2.0.0-alpha.43` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.43] - 2026-07-22
 
 Forty-third **`2.0.0`** **`alpha`**: audible Safari camera streams. Release channel **`2.0.0-alpha.43`**.

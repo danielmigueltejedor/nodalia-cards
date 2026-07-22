@@ -777,27 +777,30 @@ function normalizeConfig(rawConfig) {
   if (String(config.icon_double_tap_action || "").trim() === "") {
     config.icon_double_tap_action = "";
   }
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
   config.tap_service = String(config.tap_service ?? "").trim();
-  config.tap_service_data = String(config.tap_service_data ?? "").trim();
-  config.tap_service_target = String(config.tap_service_target ?? "").trim();
+  config.tap_service_data = serializeActionObject(config.tap_service_data);
+  config.tap_service_target = serializeActionObject(config.tap_service_target);
   config.tap_url = String(config.tap_url ?? "").trim();
   config.navigation_path = String(config.navigation_path ?? "").trim();
   config.tap_new_tab = config.tap_new_tab === true;
   config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
-  config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
-  config.icon_tap_service_target = String(config.icon_tap_service_target ?? "").trim();
+  config.icon_tap_service_data = serializeActionObject(config.icon_tap_service_data);
+  config.icon_tap_service_target = serializeActionObject(config.icon_tap_service_target);
   config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
   config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
   config.icon_tap_new_tab = config.icon_tap_new_tab === true;
   config.hold_service = String(config.hold_service ?? "").trim();
-  config.hold_service_data = String(config.hold_service_data ?? "").trim();
-  config.hold_service_target = String(config.hold_service_target ?? "").trim();
+  config.hold_service_data = serializeActionObject(config.hold_service_data);
+  config.hold_service_target = serializeActionObject(config.hold_service_target);
   config.hold_url = String(config.hold_url ?? "").trim();
   config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.hold_new_tab = config.hold_new_tab === true;
   config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
-  config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
-  config.icon_hold_service_target = String(config.icon_hold_service_target ?? "").trim();
+  config.icon_hold_service_data = serializeActionObject(config.icon_hold_service_data);
+  config.icon_hold_service_target = serializeActionObject(config.icon_hold_service_target);
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
@@ -809,14 +812,14 @@ function normalizeConfig(rawConfig) {
   }
   config.language = String(config.language ?? "auto").trim() || "auto";
   config.double_tap_service = String(config.double_tap_service ?? "").trim();
-  config.double_tap_service_data = String(config.double_tap_service_data ?? "").trim();
-  config.double_tap_service_target = String(config.double_tap_service_target ?? "").trim();
+  config.double_tap_service_data = serializeActionObject(config.double_tap_service_data);
+  config.double_tap_service_target = serializeActionObject(config.double_tap_service_target);
   config.double_tap_url = String(config.double_tap_url ?? "").trim();
   config.double_tap_navigation_path = String(config.double_tap_navigation_path ?? "").trim();
   config.double_tap_new_tab = config.double_tap_new_tab === true;
   config.icon_double_tap_service = String(config.icon_double_tap_service ?? "").trim();
-  config.icon_double_tap_service_data = String(config.icon_double_tap_service_data ?? "").trim();
-  config.icon_double_tap_service_target = String(config.icon_double_tap_service_target ?? "").trim();
+  config.icon_double_tap_service_data = serializeActionObject(config.icon_double_tap_service_data);
+  config.icon_double_tap_service_target = serializeActionObject(config.icon_double_tap_service_target);
   config.icon_double_tap_url = String(config.icon_double_tap_url ?? "").trim();
   config.icon_double_tap_navigation_path = String(config.icon_double_tap_navigation_path ?? "").trim();
   config.icon_double_tap_new_tab = config.icon_double_tap_new_tab === true;
@@ -827,6 +830,8 @@ function normalizeConfig(rawConfig) {
   config.show_entity_picture = config.show_entity_picture === true;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
 
   return config;
 }
@@ -1995,6 +2000,9 @@ class NodaliaEntityCard extends HTMLElement {
     if (!rawValue) {
       return {};
     }
+    if (isObject(rawValue)) {
+      return deepClone(rawValue);
+    }
 
     try {
       const parsed = JSON.parse(rawValue);
@@ -2315,9 +2323,6 @@ class NodaliaEntityCard extends HTMLElement {
     this._triggerHaptic(hapticStyle);
 
     if (action === "body" || action === "icon") {
-      if (this._shouldOpenSelectPickerOnTap(this._getState(), action)) {
-        return;
-      }
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
       return;

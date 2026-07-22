@@ -1547,6 +1547,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._suppressedRoomSelectionClick = null;
     this._lastSubmittedSharedCleaningSessionValue = null;
     this._lastSharedCleaningSessionOverflowFingerprint = null;
+    this._calibrationSignatureStamp = "";
     this._selectionUpdatedAt = 0;
     this._wasCleaningSessionActive = false;
     this._lastRenderSignature = "";
@@ -2889,7 +2890,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._markCleaningSessionPendingStart();
     this._persistCurrentCleaningSessionState("rooms");
 
-    Promise.resolve(this._callInternalService("vacuum.send_command", {
+    Promise.resolve().then(() => this._callInternalService("vacuum.send_command", {
       entity_id: this._config.entity,
       command: "app_segment_clean",
       params: [{
@@ -3098,7 +3099,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const config = this._config;
     const directPoints = arrayFromMaybe(config?.calibration_source?.calibration_points);
     if (directPoints.length) {
-      return { kind: "direct", len: directPoints.length };
+      return {
+        kind: "direct",
+        len: directPoints.length,
+        fingerprint: JSON.stringify(directPoints),
+      };
     }
     const calibrationEntityId = config?.calibration_source?.entity;
     if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
@@ -3130,7 +3135,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _getCalibrationSignatureStamp(hass = this._hass) {
     const fragment = this._getCalibrationSignatureFragment(hass);
     const joinParts = window.NodaliaRenderSignature?.joinParts;
-    const values = [fragment.kind, fragment.id || "", fragment.len, fragment.lu || ""];
+    const values = [
+      fragment.kind,
+      fragment.id || "",
+      fragment.len,
+      fragment.lu || "",
+      fragment.fingerprint || "",
+    ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "cal:", values }]);
     }

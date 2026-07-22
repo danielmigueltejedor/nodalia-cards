@@ -173,6 +173,16 @@ test("room summary normalizeConfig accepts scalar and list entity fields", () =>
   assert.equal(config.covers[0], "cover.a");
 });
 
+test("room summary reuses normalized config and caches its render signature", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const config = rs.normalizeConfig({ name: "Office", lights: ["light.office"] });
+  assert.equal(rs.normalizeConfig(config), config);
+  assert.match(source, /const NORMALIZED_ROOM_CONFIG = Symbol/);
+  assert.match(source, /this\._configSignature = JSON\.stringify\(this\._config\)/);
+  assert.match(source, /\|\$\{this\._configSignature\}`/);
+  assert.match(source, /normalizeConfig\(deepClone\(this\._config\)\)/);
+});
+
 test("room summary hub layout exposes navigation rail and panels", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /layout: "hub"/);

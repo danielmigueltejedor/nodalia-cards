@@ -26,8 +26,10 @@ function loadCameraHelpers() {
       isMixedContentUrl,
       parseServiceData,
       formatRelativeAge,
+      stripEqualToDefaults,
       DEFAULT_CONFIG,
-      LAYOUT_MODES,
+      CAMERA_LAYOUT,
+      CAMERA_PRESENTATION,
       MAX_CAMERAS,
     };
   `;
@@ -126,10 +128,11 @@ test("camera card registers custom element and bundle entry", () => {
   assert.ok(pkg.files.includes("nodalia-camera-card.js"));
 });
 
-test("camera normalizeConfig accepts layout and tap action objects", () => {
+test("camera normalizeConfig forces mosaic feed and accepts tap action objects", () => {
   const config = helpers.normalizeConfig({
     entity: "camera.entrada",
     layout: "security",
+    presentation: "card",
     tap_action: {
       action: "perform-action",
       perform_action: "camera.turn_on",
@@ -139,9 +142,30 @@ test("camera normalizeConfig accepts layout and tap action objects", () => {
   });
 
   assert.equal(config.entity, "camera.entrada");
-  assert.equal(config.layout, "security");
+  assert.equal(config.layout, "mosaic");
+  assert.equal(config.presentation, "feed");
   assert.equal(config.tap_action, "service");
   assert.equal(config.tap_service, "camera.turn_on");
+  const outgoing = helpers.stripEqualToDefaults(config);
+  assert.equal(outgoing.layout, undefined);
+  assert.equal(outgoing.presentation, undefined);
+});
+
+test("camera normalizeConfig preserves native YAML service data and targets", () => {
+  const config = helpers.normalizeConfig({
+    entity: "camera.entrada",
+    tap_action: "service",
+    tap_service: "light.turn_on",
+    tap_service_data: { brightness_pct: 40 },
+    tap_service_target: { entity_id: "light.entrada" },
+  });
+
+  assert.equal(config.tap_service_data, JSON.stringify({ brightness_pct: 40 }));
+  assert.equal(config.tap_service_target, JSON.stringify({ entity_id: "light.entrada" }));
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(helpers.parseServiceData(config.tap_service_target))),
+    { entity_id: "light.entrada" },
+  );
 });
 
 test("camera normalizeCameras supports up to four entities and mosaic layout", () => {
@@ -360,7 +384,9 @@ test("camera stream serialization omits native defaults", () => {
 
 test("camera service data accepts YAML objects and JSON strings", () => {
   const yamlObject = { entity_id: "switch.proyector_2" };
-  assert.equal(helpers.parseServiceData(yamlObject), yamlObject);
+  const parsedObject = helpers.parseServiceData(yamlObject);
+  assert.notEqual(parsedObject, yamlObject);
+  assert.deepEqual(JSON.parse(JSON.stringify(parsedObject)), yamlObject);
   assert.equal(
     helpers.parseServiceData('{"entity_id":"input_boolean.media_power"}').entity_id,
     "input_boolean.media_power",
@@ -390,7 +416,10 @@ test("camera card renders mosaic markup for multiple cameras", () => {
   assert.match(source, /camera-card__mosaic--four/);
   assert.match(source, /camera-card__expanded-actions/);
   assert.match(source, /grid-template-columns: 2fr 1fr/);
-  assert.match(source, /presentation/);
+  assert.match(source, /const CAMERA_LAYOUT = "mosaic"/);
+  assert.match(source, /const CAMERA_PRESENTATION = "feed"/);
+  assert.doesNotMatch(source, /\bLAYOUT_MODES\b/);
+  assert.doesNotMatch(source, /\bPRESENTATION_MODES\b/);
   assert.match(source, /data-camera-preview-age/);
   assert.match(source, /data-camera-entity="\$\{escapeHtml\(entityId\)\}"/);
 });
@@ -468,7 +497,8 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /picker\.includeDomains = domains\.length \? domains : \["camera"\]/);
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /bindEditorDialogLayoutFix/);
-  assert.match(source, /ed\.camera\.layout_live/);
+  assert.doesNotMatch(source, /_renderSelectField\("ed\.camera\.presentation"/);
+  assert.doesNotMatch(source, /_renderSelectField\("ed\.camera\.layout"/);
   assert.match(source, /ed\.camera\.show_preview_age/);
   assert.match(source, /data-editor-action="add-camera-action"/);
   assert.match(source, /camera_actions\.\$\{sourceIndex\}/);
@@ -496,6 +526,8 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /GO2RTC_MAX_MSE_QUEUE_BYTES/);
   assert.match(source, /nodalia-go2rtc-state/);
   assert.match(source, /GO2RTC_MODE_TIMEOUTS/);
+  assert.match(source, /GO2RTC_SOCKET_OPEN_TIMEOUT/);
+  assert.match(source, /go2rtc websocket open timed out/);
   assert.doesNotMatch(source, /nodalia-go2rtc-audio-blocked/);
   assert.match(source, /Adapted from go2rtc VideoRTC/);
   assert.match(source, /customElements\.define\(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer\)/);
@@ -504,6 +536,40 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(build, /legalComments: "inline"/);
   assert.ok(pkg.files.includes("nodalia-go2rtc-player.js"));
   assert.ok(pkg.files.includes("THIRD_PARTY_NOTICES.md"));
+});
+
+test("camera iframe provider is sandboxed", () => {
+  const source = read("nodalia-camera-card.js");
+  assert.match(source, /sandbox="allow-scripts allow-forms allow-presentation allow-popups"/);
+  assert.match(source, /referrerpolicy="no-referrer"/);
+});
+
+test("go2rtc full disconnect releases audio and recreates its video element", async () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  let removed = false;
+  let contextClosed = false;
+  player._video = {
+    src: "",
+    srcObject: null,
+    pause() {},
+    removeAttribute() {},
+    load() {},
+    remove() { removed = true; },
+  };
+  player._audioContext = {
+    close() {
+      contextClosed = true;
+      return Promise.resolve();
+    },
+  };
+
+  player.disconnect();
+  await Promise.resolve();
+
+  assert.equal(player.video, null);
+  assert.equal(removed, true);
+  assert.equal(contextClosed, true);
 });
 
 test("go2rtc attaches one complete WebRTC stream after the peer connects", () => {

@@ -391,6 +391,8 @@ function normalizeConfig(rawConfig) {
   config.wrong_code_feedback_ms = Number.isFinite(wcfb)
     ? clamp(Math.round(wcfb), 2000, 30000)
     : DEFAULT_CONFIG.wrong_code_feedback_ms;
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
 }
 

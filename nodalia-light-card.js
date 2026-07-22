@@ -51,22 +51,30 @@ const DEFAULT_CONFIG = {
   tap_action: "toggle",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "toggle",
   icon_tap_service: "",
   icon_tap_service_data: "",
+  icon_tap_service_target: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
+  hold_service_target: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
+  icon_hold_service_target: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   security: {
     strict_service_actions: true,
@@ -584,18 +592,49 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
-  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyTap === "function") {
+    applyTap(config, {
+      actionKey: "tap_action", serviceKey: "tap_service", serviceDataKey: "tap_service_data",
+      serviceTargetKey: "tap_service_target", urlKey: "tap_url", navigationKey: "navigation_path",
+      newTabKey: "tap_new_tab",
+    }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+    applyTap(config, {
+      actionKey: "icon_tap_action", serviceKey: "icon_tap_service", serviceDataKey: "icon_tap_service_data",
+      serviceTargetKey: "icon_tap_service_target", urlKey: "icon_tap_url", navigationKey: "icon_navigation_path",
+      newTabKey: "icon_tap_new_tab",
+    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "toggle");
+    applyTap(config, {
+      actionKey: "hold_action", serviceKey: "hold_service", serviceDataKey: "hold_service_data",
+      serviceTargetKey: "hold_service_target", urlKey: "hold_url", navigationKey: "hold_navigation_path",
+      newTabKey: "hold_new_tab",
+    }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+    applyTap(config, {
+      actionKey: "icon_hold_action", serviceKey: "icon_hold_service", serviceDataKey: "icon_hold_service_data",
+      serviceTargetKey: "icon_hold_service_target", urlKey: "icon_hold_url", navigationKey: "icon_hold_navigation_path",
+      newTabKey: "icon_hold_new_tab",
+    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+  }
+
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
+  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
   const normTap = String(config.tap_action ?? "toggle").trim().toLowerCase();
   config.tap_action = TAP_ACTIONS.has(normTap) ? normTap : "toggle";
   const normIconTap = String(config.icon_tap_action ?? "toggle").trim().toLowerCase();
   config.icon_tap_action = TAP_ACTIONS.has(normIconTap) ? normIconTap : "toggle";
   config.tap_service = String(config.tap_service ?? "").trim();
-  config.tap_service_data = String(config.tap_service_data ?? "").trim();
+  config.tap_service_data = serializeActionObject(config.tap_service_data);
+  config.tap_service_target = serializeActionObject(config.tap_service_target);
   config.tap_url = String(config.tap_url ?? "").trim();
+  config.navigation_path = String(config.navigation_path ?? "").trim();
   config.tap_new_tab = config.tap_new_tab === true;
   config.icon_tap_service = String(config.icon_tap_service ?? "").trim();
-  config.icon_tap_service_data = String(config.icon_tap_service_data ?? "").trim();
+  config.icon_tap_service_data = serializeActionObject(config.icon_tap_service_data);
+  config.icon_tap_service_target = serializeActionObject(config.icon_tap_service_target);
   config.icon_tap_url = String(config.icon_tap_url ?? "").trim();
+  config.icon_navigation_path = String(config.icon_navigation_path ?? "").trim();
   config.icon_tap_new_tab = config.icon_tap_new_tab === true;
 
   const normHold = String(config.hold_action ?? "none").trim().toLowerCase();
@@ -609,17 +648,29 @@ function normalizeConfig(rawConfig) {
     config.icon_hold_action = TAP_ACTIONS.has(normIconHold) ? normIconHold : "";
   }
   config.hold_service = String(config.hold_service ?? "").trim();
-  config.hold_service_data = String(config.hold_service_data ?? "").trim();
+  config.hold_service_data = serializeActionObject(config.hold_service_data);
+  config.hold_service_target = serializeActionObject(config.hold_service_target);
   config.hold_url = String(config.hold_url ?? "").trim();
+  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
   config.hold_new_tab = config.hold_new_tab === true;
   config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
-  config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
+  config.icon_hold_service_data = serializeActionObject(config.icon_hold_service_data);
+  config.icon_hold_service_target = serializeActionObject(config.icon_hold_service_target);
   config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
+  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.icon_hold_new_tab = config.icon_hold_new_tab === true;
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  if (config.tap_action === "navigate" && !config.navigation_path && config.tap_url) {
+    config.navigation_path = config.tap_url;
+  }
+  if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
+    config.hold_navigation_path = config.hold_url;
+  }
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+    ?? deepClone(DEFAULT_CONFIG.styles);
 
   return config;
 }
@@ -2074,7 +2125,7 @@ class NodaliaLightCard extends HTMLElement {
         ? this._config?.icon_tap_action || "toggle"
         : this._config?.tap_action || "toggle";
     let effect = String(raw || "toggle").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     if (!allowed.has(effect)) {
       effect = "toggle";
     }
@@ -2098,6 +2149,9 @@ class NodaliaLightCard extends HTMLElement {
   _parseServiceData(rawValue) {
     if (!rawValue) {
       return {};
+    }
+    if (isObject(rawValue)) {
+      return deepClone(rawValue);
     }
     try {
       const parsed = JSON.parse(rawValue);
@@ -2129,7 +2183,7 @@ class NodaliaLightCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
+  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -2142,10 +2196,12 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
     const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
+    const target = this._parseServiceData(rawTarget);
+    const hasTarget = Object.keys(target).length > 0;
+    if (!hasTarget && entityId && payload.entity_id === undefined) {
       payload.entity_id = entityId;
     }
-    this._hass.callService(domain, service, payload);
+    this._hass.callService(domain, service, payload, hasTarget ? target : undefined);
   }
 
   _openConfiguredUrl(urlValue, newTab = false) {
@@ -2160,6 +2216,14 @@ class NodaliaLightCard extends HTMLElement {
     window.location.href = url;
   }
 
+  _openConfiguredNavigation(pathValue) {
+    const path = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
+    if (!path || path.includes("://")) {
+      return;
+    }
+    fireEvent(this, "hass-navigate", { path });
+  }
+
   _executeTapEffect(zone, effect) {
     const isIcon = zone === "icon";
     switch (effect) {
@@ -2172,9 +2236,15 @@ class NodaliaLightCard extends HTMLElement {
       case "service": {
         const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
         const data = isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
-        this._callConfiguredService(service, this._config?.entity, data);
+        const target = isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
+        this._callConfiguredService(service, this._config?.entity, data, target);
         break;
       }
+      case "navigate":
+        this._openConfiguredNavigation(
+          isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path,
+        );
+        break;
       case "url":
         this._openConfiguredUrl(isIcon ? this._config?.icon_tap_url : this._config?.tap_url, isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true);
         break;
@@ -2190,7 +2260,7 @@ class NodaliaLightCard extends HTMLElement {
       ? String(this._config?.hold_action ?? "none").trim()
       : String((zone === "icon" ? this._config?.icon_hold_action : this._config?.hold_action) ?? "none").trim();
     let effect = raw.toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     if (!allowed.has(effect)) {
       effect = "none";
     }
@@ -2213,11 +2283,21 @@ class NodaliaLightCard extends HTMLElement {
       case "service": {
         let service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
         let data = isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
+        let target = isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target;
         if (isIcon && !String(service || "").trim()) {
           service = this._config?.hold_service;
           data = this._config?.hold_service_data;
+          target = this._config?.hold_service_target;
         }
-        this._callConfiguredService(service, this._config?.entity, data);
+        this._callConfiguredService(service, this._config?.entity, data, target);
+        break;
+      }
+      case "navigate": {
+        let path = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
+        if (isIcon && !String(path || "").trim()) {
+          path = this._config?.hold_navigation_path;
+        }
+        this._openConfiguredNavigation(path);
         break;
       }
       case "url": {

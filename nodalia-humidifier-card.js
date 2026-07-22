@@ -36,22 +36,30 @@ const DEFAULT_CONFIG = {
   tap_action: "toggle",
   tap_service: "",
   tap_service_data: "",
+  tap_service_target: "",
   tap_url: "",
+  navigation_path: "",
   tap_new_tab: false,
   icon_tap_action: "",
   icon_tap_service: "",
   icon_tap_service_data: "",
+  icon_tap_service_target: "",
   icon_tap_url: "",
+  icon_navigation_path: "",
   icon_tap_new_tab: false,
   hold_action: "more-info",
   hold_service: "",
   hold_service_data: "",
+  hold_service_target: "",
   hold_url: "",
+  hold_navigation_path: "",
   hold_new_tab: false,
   icon_hold_action: "",
   icon_hold_service: "",
   icon_hold_service_data: "",
+  icon_hold_service_target: "",
   icon_hold_url: "",
+  icon_hold_navigation_path: "",
   icon_hold_new_tab: false,
   security: {
     strict_service_actions: true,
@@ -542,30 +550,48 @@ function normalizeConfig(rawConfig) {
 
   migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
-  const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
-  const normHold = String(config.hold_action ?? "none").trim().toLowerCase();
-  config.hold_action = TAP_ACTIONS.has(normHold) ? normHold : "none";
-  const iconHoldStr = config.icon_hold_action === undefined || config.icon_hold_action === null
-    ? ""
-    : String(config.icon_hold_action).trim();
-  if (!iconHoldStr) {
-    config.icon_hold_action = "";
-  } else {
-    const n = iconHoldStr.toLowerCase();
-    config.icon_hold_action = TAP_ACTIONS.has(n) ? n : "";
-  }
-  config.hold_service = String(config.hold_service ?? "").trim();
-  config.hold_service_data = String(config.hold_service_data ?? "").trim();
-  config.hold_url = String(config.hold_url ?? "").trim();
-  config.hold_new_tab = config.hold_new_tab === true;
-  config.icon_hold_service = String(config.icon_hold_service ?? "").trim();
-  config.icon_hold_service_data = String(config.icon_hold_service_data ?? "").trim();
-  config.icon_hold_url = String(config.icon_hold_url ?? "").trim();
-  config.icon_hold_new_tab = config.icon_hold_new_tab === true;
+  const actionFields = [
+    { action: "tap_action", service: "tap_service", data: "tap_service_data", target: "tap_service_target", url: "tap_url", navigation: "navigation_path", newTab: "tap_new_tab", fallback: "toggle" },
+    { action: "icon_tap_action", service: "icon_tap_service", data: "icon_tap_service_data", target: "icon_tap_service_target", url: "icon_tap_url", navigation: "icon_navigation_path", newTab: "icon_tap_new_tab", fallback: "" },
+    { action: "hold_action", service: "hold_service", data: "hold_service_data", target: "hold_service_target", url: "hold_url", navigation: "hold_navigation_path", newTab: "hold_new_tab", fallback: "more-info" },
+    { action: "icon_hold_action", service: "icon_hold_service", data: "icon_hold_service_data", target: "icon_hold_service_target", url: "icon_hold_url", navigation: "icon_hold_navigation_path", newTab: "icon_hold_new_tab", fallback: "" },
+  ];
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  const allowedActions = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
+  actionFields.forEach(fields => {
+    if (typeof applyTap === "function") {
+      applyTap(config, {
+        actionKey: fields.action,
+        serviceKey: fields.service,
+        serviceDataKey: fields.data,
+        serviceTargetKey: fields.target,
+        urlKey: fields.url,
+        navigationKey: fields.navigation,
+        newTabKey: fields.newTab,
+      }, rawConfig?.[fields.action] ?? config[fields.action], fields.fallback);
+    }
+    const rawAction = String(config[fields.action] ?? "").trim().toLowerCase();
+    config[fields.action] = rawAction
+      ? (allowedActions.has(rawAction) ? rawAction : fields.fallback)
+      : fields.fallback;
+    config[fields.service] = String(config[fields.service] ?? "").trim();
+    config[fields.data] = serializeActionObject(config[fields.data]);
+    config[fields.target] = serializeActionObject(config[fields.target]);
+    config[fields.url] = String(config[fields.url] ?? "").trim();
+    config[fields.navigation] = String(config[fields.navigation] ?? "").trim();
+    config[fields.newTab] = config[fields.newTab] === true;
+    if (config[fields.action] === "navigate" && !config[fields.navigation] && config[fields.url]) {
+      config[fields.navigation] = config[fields.url];
+    }
+  });
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
+  config.styles = getSafeStyles(config.styles);
 
   return config;
 }
@@ -1646,7 +1672,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         ? (iconRaw === undefined || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw)
         : bodyRaw;
     let effect = String(raw || "toggle").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     if (!allowed.has(effect)) {
       effect = "toggle";
     }
@@ -1670,6 +1696,9 @@ class NodaliaHumidifierCard extends HTMLElement {
   _parseServiceData(rawValue) {
     if (!rawValue) {
       return {};
+    }
+    if (isObject(rawValue)) {
+      return deepClone(rawValue);
     }
     try {
       const parsed = JSON.parse(rawValue);
@@ -1701,7 +1730,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     return services.includes(normalizedService) || domains.includes(domain);
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "") {
+  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -1714,10 +1743,12 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
     const payload = this._parseServiceData(rawData);
-    if (entityId && payload.entity_id === undefined) {
+    const target = this._parseServiceData(rawTarget);
+    const hasTarget = Object.keys(target).length > 0;
+    if (!hasTarget && entityId && payload.entity_id === undefined) {
       payload.entity_id = entityId;
     }
-    this._hass.callService(domain, service, payload);
+    this._hass.callService(domain, service, payload, hasTarget ? target : undefined);
   }
 
   _openConfiguredUrl(urlValue, newTab = false) {
@@ -1732,6 +1763,14 @@ class NodaliaHumidifierCard extends HTMLElement {
     window.location.href = url;
   }
 
+  _openConfiguredNavigation(pathValue) {
+    const path = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
+    if (!path || path.includes("://")) {
+      return;
+    }
+    fireEvent(this, "hass-navigate", { path });
+  }
+
   _executeHumidifierTapEffect(zone, effect) {
     const isIcon = zone === "icon";
     switch (effect) {
@@ -1744,9 +1783,15 @@ class NodaliaHumidifierCard extends HTMLElement {
       case "service": {
         const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
         const data = isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
-        this._callConfiguredService(service, this._config?.entity, data);
+        const target = isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
+        this._callConfiguredService(service, this._config?.entity, data, target);
         break;
       }
+      case "navigate":
+        this._openConfiguredNavigation(
+          isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path,
+        );
+        break;
       case "url":
         this._openConfiguredUrl(
           isIcon ? this._config?.icon_tap_url : this._config?.tap_url,
@@ -1767,7 +1812,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         ? (iconRaw === undefined || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw)
         : bodyRaw;
     let effect = String(raw || "none").trim().toLowerCase();
-    const allowed = new Set(["auto", "toggle", "more-info", "service", "url", "none"]);
+    const allowed = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     if (!allowed.has(effect)) {
       effect = "none";
     }
@@ -1790,11 +1835,21 @@ class NodaliaHumidifierCard extends HTMLElement {
       case "service": {
         let service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
         let data = isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
+        let target = isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target;
         if (isIcon && !String(service || "").trim()) {
           service = this._config?.hold_service;
           data = this._config?.hold_service_data;
+          target = this._config?.hold_service_target;
         }
-        this._callConfiguredService(service, this._config?.entity, data);
+        this._callConfiguredService(service, this._config?.entity, data, target);
+        break;
+      }
+      case "navigate": {
+        let path = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
+        if (isIcon && !String(path || "").trim()) {
+          path = this._config?.hold_navigation_path;
+        }
+        this._openConfiguredNavigation(path);
         break;
       }
       case "url": {
