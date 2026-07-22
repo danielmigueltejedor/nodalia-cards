@@ -165,11 +165,11 @@ test("card sources use nodalia-utils.js instead of inlined duplicate helpers", (
   assert.match(build, /nodalia-utils\.js/);
 });
 
-test("README keeps support link in the badge area without duplicate donations", () => {
+test("README keeps a single support badge without legacy donation sections", () => {
   const readme = read("README.md");
   const coffeeMatches = readme.match(/buymeacoffee\.com\/danielmigueltejedor/g) || [];
   assert.equal(coffeeMatches.length, 1);
-  assert.match(readme, /img\.shields\.io\/badge\/Buy%20Me%20a%20Coffee-support/);
+  assert.match(readme, /img\.shields\.io\/badge\/Support%20the%20project-Buy%20Me%20a%20Coffee-/);
   assert.doesNotMatch(readme, /paypal/i);
   assert.doesNotMatch(readme, /## 💰 Donations/);
 });
