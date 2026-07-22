@@ -490,7 +490,8 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /ManagedMediaSource/);
   assert.match(source, /nodalia-go2rtc-loaded/);
   assert.match(source, /primeAudioFromUserGesture\(\)/);
-  assert.match(source, /createMediaStreamDestination\(\)/);
+  assert.match(source, /createMediaElementSource\(this\._video\)/);
+  assert.match(source, /createMediaStreamSource\(stream\)/);
   assert.match(source, /GO2RTC_STARTUP_ERROR_DELAY/);
   assert.match(source, /GO2RTC_MAX_MSE_QUEUE_BYTES/);
   assert.match(source, /nodalia-go2rtc-state/);
@@ -508,7 +509,6 @@ test("camera bundles the native go2rtc player protocol", () => {
 test("go2rtc attaches one complete WebRTC stream after the peer connects", () => {
   const Player = loadGo2rtcPlayer();
   const player = new Player();
-  const primeTrack = { id: "prime-audio", kind: "audio", stopped: false, stop() { this.stopped = true; } };
   const audioTrack = {
     id: "audio-1",
     kind: "audio",
@@ -518,20 +518,10 @@ test("go2rtc attaches one complete WebRTC stream after the peer connects", () =>
     removeEventListener() {},
   };
   const videoTrack = { id: "video-1", kind: "video", muted: false, readyState: "live" };
-  const stream = {
-    tracks: [primeTrack],
-    getTracks() { return this.tracks; },
-    addTrack(nextTrack) { this.tracks.push(nextTrack); },
-    removeTrack(removedTrack) { this.tracks = this.tracks.filter(item => item !== removedTrack); },
-  };
   let oscillatorStopped = false;
-  let contextClosed = false;
-  player._playbackStream = stream;
-  player._audioPrimeTrack = primeTrack;
   player._audioPrimeOscillator = { stop() { oscillatorStopped = true; } };
   player._audioPrimeGain = { disconnect() {} };
-  player._audioPrimeContext = { close() { contextClosed = true; return Promise.resolve(); } };
-  player._video = { muted: false, srcObject: stream, play: () => Promise.resolve() };
+  player._video = { muted: false, srcObject: null, play: () => Promise.resolve() };
   const peer = {
     getTransceivers: () => [
       { currentDirection: "recvonly", receiver: { track: videoTrack } },
@@ -543,12 +533,48 @@ test("go2rtc attaches one complete WebRTC stream after the peer connects", () =>
   assert.equal(player._attachConnectedWebRtcStream(peer), true);
   assert.deepEqual(player._video.srcObject.getTracks(), [videoTrack, audioTrack]);
   assert.equal(player._video.srcObject.getAudioTracks()[0], audioTrack);
-  assert.equal(primeTrack.stopped, true);
   assert.equal(oscillatorStopped, true);
-  assert.equal(contextClosed, true);
-  assert.equal(player._audioPrimeTrack, null);
   assert.equal(player.events.at(-1).type, "nodalia-go2rtc-audio-state");
   assert.equal(player.events.at(-1).detail.state, "available");
+});
+
+test("go2rtc routes WebRTC audio through an unlocked output without duplicating it", () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  const audioTrack = {
+    id: "audio-1",
+    kind: "audio",
+    muted: false,
+    readyState: "live",
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const videoTrack = { id: "video-1", kind: "video", muted: false, readyState: "live" };
+  let routedStream = null;
+  const trackSource = { connect() {}, disconnect() {} };
+  player._muted = false;
+  player._audioContext = {
+    state: "running",
+    createMediaStreamSource(stream) {
+      routedStream = stream;
+      return trackSource;
+    },
+  };
+  player._audioOutputGain = { gain: { value: 0 } };
+  player._audioElementSource = { connect() {}, disconnect() {} };
+  player._video = { muted: false, volume: 0.65, srcObject: null, play: () => Promise.resolve() };
+  const peer = {
+    getTransceivers: () => [
+      { currentDirection: "recvonly", receiver: { track: videoTrack } },
+      { currentDirection: "recvonly", receiver: { track: audioTrack } },
+    ],
+  };
+  player._peer = peer;
+
+  assert.equal(player._attachConnectedWebRtcStream(peer), true);
+  assert.deepEqual(player._video.srcObject.getTracks(), [videoTrack]);
+  assert.equal(routedStream.getAudioTracks()[0], audioTrack);
+  assert.equal(player._audioOutputGain.gain.value, 0.65);
 });
 
 test("go2rtc excludes falsely supported Opus from Safari MSE negotiation", () => {
@@ -567,7 +593,7 @@ test("go2rtc keeps native manual unmute as the effective player state", () => {
   const Player = loadGo2rtcPlayer();
   const player = new Player();
   player._muted = true;
-  player._video = { muted: false };
+  player._video = { muted: false, play: () => Promise.resolve() };
 
   player._handleVideoVolumeChange();
 
@@ -578,9 +604,42 @@ test("go2rtc attempts unmuted playback inside the opening gesture", () => {
   const Player = loadGo2rtcPlayer();
   const player = new Player();
   let playCalls = 0;
+  let mediaElementSourceCreated = false;
+  let contextResumed = false;
+  class FakeAudioContext {
+    constructor() {
+      this.state = "suspended";
+      this.destination = {};
+    }
+
+    createMediaElementSource() {
+      mediaElementSourceCreated = true;
+      return { connect() {}, disconnect() {} };
+    }
+
+    createGain() {
+      return { gain: { value: 1 }, connect() {}, disconnect() {} };
+    }
+
+    createOscillator() {
+      return { connect() {}, start() {}, stop() {} };
+    }
+
+    resume() {
+      contextResumed = true;
+      this.state = "running";
+      return Promise.resolve();
+    }
+
+    close() {
+      return Promise.resolve();
+    }
+  }
+  Player.__testWindow.AudioContext = FakeAudioContext;
   player._muted = false;
   player._video = {
     muted: true,
+    volume: 1,
     play() {
       playCalls += 1;
       return Promise.resolve();
@@ -590,6 +649,31 @@ test("go2rtc attempts unmuted playback inside the opening gesture", () => {
   assert.equal(player.primeAudioFromUserGesture(), true);
   assert.equal(player._video.muted, false);
   assert.equal(playCalls, 1);
+  assert.equal(mediaElementSourceCreated, true);
+  assert.equal(contextResumed, true);
+});
+
+test("go2rtc preserves requested audio while recovering from autoplay rejection", async () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  let playCalls = 0;
+  player._muted = false;
+  player._audioContext = { state: "running" };
+  player._audioOutputGain = { gain: { value: 0 } };
+  player._video = {
+    muted: false,
+    volume: 1,
+    play() {
+      playCalls += 1;
+      return playCalls === 1 ? Promise.reject(new Error("blocked")) : Promise.resolve();
+    },
+  };
+
+  assert.equal(await player._play(), true);
+  assert.equal(player._muted, false);
+  assert.equal(player._video.muted, false);
+  assert.equal(player._autoplayMuted, false);
+  assert.equal(playCalls, 3);
 });
 
 test("go2rtc keeps retrying during startup and reports only after the grace period", () => {

@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.43] - 2026-07-22
+
+Forty-third **`2.0.0`** **`alpha`**: audible Safari camera streams. Release channel **`2.0.0-alpha.43`**.
+
+### Fixed
+
+- **Camera Safari audio output:** the popup-opening gesture now unlocks a persistent Web Audio output sourced from the native video element, allowing AAC audio from MSE to remain audible after asynchronous stream attachment.
+- **Camera WebRTC audio:** incoming Opus is routed through the already-unlocked output while video remains on an autoplay-safe stream, without duplicating the audio track.
+- **Camera mute state:** internal autoplay recovery no longer overwrites an explicit `muted: false`; native mute, unmute, and volume changes resume and control the effective output.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.43`; `2.0.0-alpha.41` and `2.0.0-alpha.42` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.42] - 2026-07-22
 
 Forty-second **`2.0.0`** **`alpha`**: Safari-safe go2rtc audio negotiation. Release channel **`2.0.0-alpha.42`**.

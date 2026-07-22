@@ -54,11 +54,14 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._autoplayMuted = false;
     this._startupStartedAt = 0;
     this._playbackStream = null;
-    this._audioPrimeContext = null;
-    this._audioPrimeDestination = null;
-    this._audioPrimeTrack = null;
+    this._audioContext = null;
+    this._audioElementSource = null;
+    this._audioOutputGain = null;
+    this._audioTrackSource = null;
+    this._audioTrackStream = null;
     this._audioPrimeOscillator = null;
     this._audioPrimeGain = null;
+    this._programmaticMuted = null;
     this._audioTrackListeners = [];
     this._lastAudioState = "";
     this._mseCodecs = "";
@@ -135,7 +138,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         URL.revokeObjectURL(objectUrl);
       }
     }
-    this._releaseAudioPrime();
+    this._releaseAudioOutput();
     this._revokePosterObjectUrl();
     this._playbackStream = null;
     this._startupStartedAt = 0;
@@ -179,14 +182,35 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     if (!this._video) {
       return;
     }
-    this._video.muted = this._muted;
+    this._setVideoMuted(this._muted);
     this._video.controls = this._controls;
+    this._syncAudioOutput();
   }
 
   _handleVideoVolumeChange() {
-    if (this._video) {
-      this._muted = this._video.muted;
+    if (!this._video) {
+      return;
     }
+    const programmatic = this._programmaticMuted === this._video.muted;
+    this._programmaticMuted = null;
+    if (!programmatic) {
+      this._muted = this._video.muted;
+      this._autoplayMuted = false;
+      if (!this._muted) {
+        this._ensureAudioOutput();
+        this._resumeAudioOutput();
+        this._video.play().catch(() => {});
+      }
+    }
+    this._syncAudioOutput();
+  }
+
+  _setVideoMuted(muted) {
+    if (!this._video || this._video.muted === muted) {
+      return;
+    }
+    this._programmaticMuted = muted;
+    this._video.muted = muted;
   }
 
   primeAudioFromUserGesture() {
@@ -194,45 +218,107 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       return false;
     }
     this._ensureVideo();
-    this._video.muted = false;
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass || typeof AudioContextClass !== "function") {
-      this._video.play().catch(() => {});
+    this._setVideoMuted(false);
+    this._ensureAudioOutput();
+    this._resumeAudioOutput();
+    this._syncAudioOutput();
+    this._video.play().catch(() => {});
+    return true;
+  }
+
+  _ensureAudioOutput() {
+    if (this._audioContext && this._audioElementSource && this._audioOutputGain) {
       return true;
     }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass || typeof AudioContextClass !== "function") {
+      return false;
+    }
     try {
-      this._releaseAudioPrime();
       const context = new AudioContextClass();
-      const destination = context.createMediaStreamDestination();
+      const source = context.createMediaElementSource(this._video);
+      const outputGain = context.createGain();
+      source.connect(outputGain);
+      outputGain.connect(context.destination);
       const oscillator = context.createOscillator();
       const primeGain = context.createGain();
       primeGain.gain.value = 0;
       oscillator.connect(primeGain);
-      primeGain.connect(destination);
+      primeGain.connect(context.destination);
       oscillator.start();
-      this._audioPrimeContext = context;
-      this._audioPrimeDestination = destination;
+      this._audioContext = context;
+      this._audioElementSource = source;
+      this._audioOutputGain = outputGain;
       this._audioPrimeOscillator = oscillator;
       this._audioPrimeGain = primeGain;
-      this._audioPrimeTrack = destination.stream.getAudioTracks()[0] || null;
-      this._playbackStream = destination.stream;
-      this._video.srcObject = this._playbackStream;
-      context.resume?.().catch?.(() => {});
-      this._video.play().catch(() => {});
+      this._syncAudioOutput();
       return true;
     } catch (_error) {
-      this._releaseAudioPrime();
-      this._video.play().catch(() => {});
-      return true;
+      this._releaseAudioOutput();
+      return false;
     }
   }
 
-  _releaseAudioPrime() {
-    if (this._audioPrimeTrack) {
-      this._playbackStream?.removeTrack?.(this._audioPrimeTrack);
-      this._audioPrimeTrack.stop?.();
-      this._audioPrimeTrack = null;
+  _resumeAudioOutput() {
+    if (!this._audioContext || this._audioContext.state === "running") {
+      return;
     }
+    this._audioContext.resume?.().catch?.(() => {});
+  }
+
+  _syncAudioOutput() {
+    if (!this._audioOutputGain) {
+      return;
+    }
+    const volume = this._audioTrackSource && Number.isFinite(this._video?.volume)
+      ? this._video.volume
+      : 1;
+    this._audioOutputGain.gain.value = this._muted ? 0 : volume;
+  }
+
+  _disconnectAudioTrackOutput() {
+    this._audioTrackSource?.disconnect?.();
+    this._audioTrackSource = null;
+    this._audioTrackStream = null;
+  }
+
+  _connectElementAudioOutput() {
+    this._disconnectAudioTrackOutput();
+    if (!this._audioElementSource || !this._audioOutputGain) {
+      return false;
+    }
+    try {
+      this._audioElementSource.disconnect();
+      this._audioElementSource.connect(this._audioOutputGain);
+      this._syncAudioOutput();
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  _routeWebRtcAudioTrack(track) {
+    if (!track || !this._audioContext || !this._audioOutputGain) {
+      return false;
+    }
+    try {
+      this._disconnectAudioTrackOutput();
+      this._audioElementSource?.disconnect?.();
+      const stream = new MediaStream([track]);
+      const source = this._audioContext.createMediaStreamSource(stream);
+      source.connect(this._audioOutputGain);
+      this._audioTrackStream = stream;
+      this._audioTrackSource = source;
+      this._resumeAudioOutput();
+      this._syncAudioOutput();
+      return true;
+    } catch (_error) {
+      this._connectElementAudioOutput();
+      return false;
+    }
+  }
+
+  _stopAudioPrime() {
     if (this._audioPrimeOscillator) {
       try {
         this._audioPrimeOscillator.stop();
@@ -243,10 +329,17 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._audioPrimeGain?.disconnect?.();
     this._audioPrimeGain = null;
-    this._audioPrimeDestination?.disconnect?.();
-    this._audioPrimeDestination = null;
-    this._audioPrimeContext?.close?.().catch?.(() => {});
-    this._audioPrimeContext = null;
+  }
+
+  _releaseAudioOutput() {
+    this._stopAudioPrime();
+    this._disconnectAudioTrackOutput();
+    this._audioElementSource?.disconnect?.();
+    this._audioElementSource = null;
+    this._audioOutputGain?.disconnect?.();
+    this._audioOutputGain = null;
+    this._audioContext?.close?.().catch?.(() => {});
+    this._audioContext = null;
   }
 
   _clearAudioTrackListeners() {
@@ -499,7 +592,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         URL.revokeObjectURL(objectUrl);
       }
     }
-    this._releaseAudioPrime();
+    this._connectElementAudioOutput();
+    this._stopAudioPrime();
     this._revokePosterObjectUrl();
     this._playbackStream = null;
   }
@@ -508,17 +602,32 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     if (!this._video) {
       return false;
     }
-    this._video.muted = this._muted;
+    this._setVideoMuted(this._muted);
+    this._resumeAudioOutput();
+    this._syncAudioOutput();
     try {
       await this._video.play();
       this._autoplayMuted = false;
       return true;
     } catch (_error) {
       if (!this._muted) {
-        this._video.muted = true;
+        this._setVideoMuted(true);
         try {
           await this._video.play();
           this._autoplayMuted = true;
+          if (this._audioContext) {
+            this._resumeAudioOutput();
+            this._setVideoMuted(false);
+            this._syncAudioOutput();
+            try {
+              await this._video.play();
+              this._autoplayMuted = this._video.muted;
+            } catch (_audioError) {
+              this._setVideoMuted(true);
+              this._autoplayMuted = true;
+            }
+          }
+          return true;
         } catch (_secondError) {
           // The native controls remain available for a user-initiated play.
         }
@@ -553,8 +662,12 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     if (!tracks.some(track => track.kind === "video")) {
       return false;
     }
-    this._releaseAudioPrime();
-    const mediaStream = new MediaStream(tracks);
+    this._stopAudioPrime();
+    const audioTrack = tracks.find(track => track.kind === "audio");
+    const audioRouted = this._routeWebRtcAudioTrack(audioTrack);
+    const mediaStream = new MediaStream(audioRouted
+      ? tracks.filter(track => track.kind !== "audio")
+      : tracks);
     this._playbackStream = mediaStream;
     this._video.srcObject = mediaStream;
     this._watchAudioTracks(tracks);
@@ -648,18 +761,19 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     const mediaSource = new MediaSourceClass();
     this._mediaSource = mediaSource;
     this._mseCodecs = "";
+    this._connectElementAudioOutput();
     mediaSource.addEventListener("sourceopen", () => {
       if (mediaSource === this._mediaSource) {
         this._send({ type: "mse", value: this._supportedCodecs(MediaSourceClass.isTypeSupported) });
       }
     }, { once: true });
     if (window.ManagedMediaSource) {
-      this._releaseAudioPrime();
+      this._stopAudioPrime();
       this._playbackStream = null;
       this._video.disableRemotePlayback = true;
       this._video.srcObject = mediaSource;
     } else {
-      this._releaseAudioPrime();
+      this._stopAudioPrime();
       this._playbackStream = null;
       this._video.srcObject = null;
       this._video.src = URL.createObjectURL(mediaSource);
@@ -744,7 +858,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       sourceUrl.pathname = `${sourceUrl.pathname.replace(/\/ws$/, "")}/hls/`;
       sourceUrl.search = "";
       const playlist = String(message.value || "").replaceAll("hls/", sourceUrl.toString());
-      this._releaseAudioPrime();
+      this._stopAudioPrime();
+      this._connectElementAudioOutput();
       this._playbackStream = null;
       this._video.srcObject = null;
       this._video.src = `data:application/vnd.apple.mpegurl;base64,${window.btoa(playlist)}`;
@@ -762,7 +877,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._video.poster = this._posterObjectUrl;
       if (!loaded) {
         loaded = true;
-        this._releaseAudioPrime();
+        this._stopAudioPrime();
         this._playbackStream = null;
         this._markLoaded();
       }
