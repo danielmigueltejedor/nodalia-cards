@@ -1387,6 +1387,20 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           z-index: 0;
         }
 
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${isActive ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 0;
+        }
+
         .alarm-card__content {
           display: grid;
           gap: ${styles.card.gap};
@@ -1774,6 +1788,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
             font-size: 12px;
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="alarm-card ${isActive ? "is-on" : "is-off"}">
         <div class="alarm-card__content ${shouldAnimateEntrance ? "alarm-card__content--entering" : ""}">

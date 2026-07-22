@@ -58,8 +58,8 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      border_radius: "26px",
+      border: "1px solid var(--divider-color)",
+      border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "10px 12px",
       gap: "10px",
@@ -1881,6 +1881,20 @@ class NodaliaFavCard extends HTMLElement {
           z-index: 0;
         }
 
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${isActive ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 0;
+        }
+
         .fav-card {
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           min-width: 0;
@@ -2169,6 +2183,7 @@ class NodaliaFavCard extends HTMLElement {
           gap: 8px;
           padding: 14px;
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
         class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"

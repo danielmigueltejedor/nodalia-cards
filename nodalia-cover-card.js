@@ -96,7 +96,7 @@ const DEFAULT_CONFIG = {
       size: "38px",
       background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
-      on_color: "#fec700",
+      on_color: "var(--warning-color, #fec700)",
       off_color: "var(--primary-text-color)",
     },
     control: {
@@ -105,14 +105,14 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(113, 192, 255, 0.2)",
     },
     chip_height: "24px",
-    chip_font_size: "9px",
+    chip_font_size: "11px",
     chip_padding: "0 9px",
     chip_border_radius: "999px",
     title_size: "12px",
     slider_wrap_height: "44px",
     slider_height: "22px",
     slider_thumb_size: "22px",
-    slider_color: "#fec700",
+    slider_color: "var(--warning-color, #fec700)",
   },
 };
 
@@ -1493,6 +1493,19 @@ class NodaliaCoverCard extends HTMLElement {
           position: absolute;
           z-index: 0;
         }
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${isActive ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 0;
+        }
         .fan-card { display: grid; min-width: 0; position: relative; z-index: 1; }
         .fan-card__content { display: grid; gap: 0; }
         .fan-card__hero {
@@ -1830,6 +1843,7 @@ class NodaliaCoverCard extends HTMLElement {
           50% { transform: translateY(-2px); opacity: 1; }
         }
         ${animations.enabled ? "" : `.fan-card, .fan-card * { animation: none !important; transition: none !important; }`}
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
         class="fan-card ${isActive ? "is-on" : "is-off"} ${this._isCompactLayout() ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""}${coverUiClass ? ` ${coverUiClass}` : ""}${coverToggleLaneClass}"

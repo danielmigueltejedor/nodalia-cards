@@ -101,7 +101,7 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "9px",
+    chip_font_size: "11px",
     chip_padding: "0 9px",
     chip_border_radius: "999px",
     title_size: "12px",

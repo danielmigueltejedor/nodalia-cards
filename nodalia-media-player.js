@@ -5308,6 +5308,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             grid-template-columns: ${playerStyles.artwork_size} minmax(0, 1fr);
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">

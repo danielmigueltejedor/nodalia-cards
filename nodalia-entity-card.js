@@ -109,7 +109,7 @@ const DEFAULT_CONFIG = {
       off_color: "var(--primary-text-color)",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
@@ -2323,7 +2323,10 @@ class NodaliaEntityCard extends HTMLElement {
     this._triggerHaptic(hapticStyle);
 
     if (action === "body" || action === "icon") {
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      const opensSelectPicker = this._shouldOpenSelectPickerOnTap(this._getState(), action);
+      if (!opensSelectPicker) {
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      }
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
       return;
     }
@@ -3195,6 +3198,7 @@ class NodaliaEntityCard extends HTMLElement {
           transition: none !important;
         }
         `}
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
         class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${isSelectEntity ? "entity-card--select" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"

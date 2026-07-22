@@ -6840,6 +6840,7 @@ class NodaliaClimateCard extends HTMLElement {
             justify-content: flex-start;
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="climate-card__content" data-climate-card="root">

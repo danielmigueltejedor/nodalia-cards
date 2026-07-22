@@ -4014,6 +4014,7 @@ class NodaliaCalendarCard extends HTMLElement {
             margin-top: 0;
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card>
         <div class="calendar-card">

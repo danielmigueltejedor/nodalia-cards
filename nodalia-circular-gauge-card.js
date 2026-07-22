@@ -1867,6 +1867,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
             justify-content: flex-start;
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="gauge-card">
         <div class="gauge-card__content" ${this._canRunTapAction() ? 'data-gauge-action="primary"' : ""}>

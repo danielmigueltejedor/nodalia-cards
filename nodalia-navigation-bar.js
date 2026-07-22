@@ -243,8 +243,8 @@ const DEFAULT_CONFIG = {
       min_height: "104px",
       artwork_size: "64px",
       control_size: "40px",
-      title_size: "14px",
-      subtitle_size: "12px",
+      title_size: "12px",
+      subtitle_size: "10px",
       progress_color: "var(--primary-color)",
       progress_background: "rgba(var(--rgb-primary-color), 0.14)",
       overlay_color: "rgba(0, 0, 0, 0.32)",
@@ -4380,6 +4380,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             grid-template-columns: ${config.styles.media_player.artwork_size} minmax(0, 1fr);
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">

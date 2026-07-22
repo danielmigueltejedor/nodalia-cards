@@ -3056,6 +3056,7 @@ class NodaliaGraphCard extends HTMLElement {
               0 0 0 1px color-mix(in srgb, var(--legend-color) 10%, transparent);
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="graph-card">
         <div class="graph-card__content ${shouldAnimateEntrance ? "graph-card__content--entering" : ""}">

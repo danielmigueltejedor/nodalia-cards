@@ -4280,6 +4280,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           transition: none !important;
         }
         `}
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
         ${

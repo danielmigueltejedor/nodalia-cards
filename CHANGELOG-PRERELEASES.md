@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.45] - 2026-07-23
+
+Forty-fifth **`2.0.0`** **`alpha`**: flicker-free selectors and a more cohesive visual family. Release channel **`2.0.0-alpha.45`**.
+
+### Fixed
+
+- **Entity Card selectors:** opening `select` and `input_select` pickers keeps the icon bubble bounce but no longer scales the complete card content while the panel changes height and overflow, removing the visible card flash.
+
+### Changed
+
+- **Device-family metrics:** Entity quick controls now match the shared `36px` control size, while Entity, Light, Fan, Humidifier, Cover, and Vacuum use the same `11px` chip type scale.
+- **Active surfaces:** Cover, Vacuum, Alarm, Person, and Favourite cards now share the same semantic accent gradient, top glaze, radial ambient halo, and theme-aware shadow language.
+- **Theme colors:** Cover uses Home Assistant's `--warning-color` for its active icon and slider instead of a fixed yellow.
+- **Favourite, Media Player, and News:** Favourite returns to the standard `28px` shell and divider border; embedded and standalone Media Players share title/subtitle scale; News uses the standard divider border while retaining its editorial typography.
+- **Reduced motion:** animated card surfaces use a shared Shadow DOM rule that collapses animation and transition timing when the operating system requests reduced motion.
+- **Visual documentation:** the styling reference defines the `28px` device/content, `30px` information/dial, and `32px` complex-surface archetypes.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.45`; `2.0.0-alpha.43` and `2.0.0-alpha.44` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.44] - 2026-07-22
 
 Forty-fourth **`2.0.0`** **`alpha`**: interaction polish, leaner startup, and runtime hardening. Release channel **`2.0.0-alpha.44`**.

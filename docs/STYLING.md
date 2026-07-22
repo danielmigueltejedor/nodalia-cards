@@ -26,11 +26,17 @@ Most “chrome” (card surface, border, shadow, main text) uses HA’s standard
 
 ## 2. Layout and shape (the “Nodalia” silhouette)
 
-These are the **default** radii and chip shapes used across many cards (you can override each card’s `styles` block in YAML).
+These are the **default** radii and chip shapes used across many cards (you can override each card’s `styles` block in YAML). The bundle follows three visual archetypes so cards stay related without forcing every layout into the same silhouette.
+
+| Archetype | Default radius | Cards |
+|-----------|----------------|-------|
+| Device and content | **`28px`** | Entity, Light, Fan, Humidifier, Cover, Vacuum, Fav, Weather, Calendar, Camera, Alarm, Person, Scenes, News, Notifications, Media Player |
+| Information and dial | **`30px`** | Climate, Circular Gauge, Graph |
+| Complex surface | **`32px`** | Power Flow, Advance Vacuum |
 
 | Token / idea | Typical default | Notes |
 |--------------|-----------------|--------|
-| Card corner radius | **`28px`–`32px`** | Entity / light / fan / vacuum / cover / humidifier / climate often **28–30px**; power flow **32px**; graph **30px** |
+| Card corner radius | **`28px`**, **`30px`** or **`32px`** | Choose the archetype above instead of introducing intermediate radii |
 | Pill chips | **`border-radius: 999px`** | State chips, badges, compact labels |
 | Card padding | Often **`12px`–`18px`** | Power flow uses slightly tighter padding; graph a bit roomier |
 | Vertical rhythm | **`gap: 12px`–`20px`** between major rows | Matches HA card density without crowding |
@@ -54,7 +60,7 @@ Shared defaults on several cards:
 | Property | Typical value |
 |----------|----------------|
 | Height | `24px` (some cards `21px` on denser UIs) |
-| Font size | `9px`–`11px` |
+| Font size | `11px` in the device family; `10px`–`11px` on dense specialist surfaces |
 | Horizontal padding | `0 9px` or `0 10px` |
 | Radius | `999px` |
 
@@ -65,8 +71,11 @@ Shared defaults on several cards:
 Common pattern:
 
 - **Control diameter:** `36px`–`42px`
+- **Device-family quick controls:** `36px`
 - **Accent ring / fill:** `rgba(var(--rgb-primary-color), 0.18)` or a soft blue like `rgba(113, 192, 255, 0.2)` on cover-style layouts
 - **Icon stroke:** inherits `var(--primary-text-color)` for the default idle state
+
+Active device cards share the same surface stack: semantic accent gradient, top glaze, radial ambient halo and theme-aware shadow. Domain colors should use Home Assistant semantic variables such as `--warning-color`, `--info-color`, `--success-color` and `--error-color` before falling back to a fixed hue.
 
 ---
 

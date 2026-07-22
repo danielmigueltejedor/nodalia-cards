@@ -1518,7 +1518,8 @@ test("entity card opens inline select picker for select and input_select entitie
   const feedbackSource = source.slice(feedbackStart, feedbackEnd);
   assert.match(feedbackSource, /querySelector\("\.entity-card__content"\)/);
   assert.match(feedbackSource, /querySelector\("\.entity-card__icon"\)/);
-  assert.doesNotMatch(feedbackSource, /_shouldOpenSelectPickerOnTap/);
+  assert.match(feedbackSource, /const opensSelectPicker = this\._shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)/);
+  assert.match(feedbackSource, /if \(!opensSelectPicker\) \{[\s\S]*querySelector\("\.entity-card__content"\)/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
   assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
   assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
@@ -1905,4 +1906,65 @@ test("notifications card drains pending foreground mobile queue in batches", () 
   assert.match(source, /this\._mobileNotifyQueue\.splice\(0, 4\)/);
   assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._flushMobileNotifications\(batch\)\)[\s\S]*\.catch\(error =>/);
   assert.match(source, /if \(this\._mobileNotifyQueue\.length\) \{[\s\S]*_scheduleMobileNotifyDrain/);
+});
+
+test("visual family tokens stay aligned without changing notifications", () => {
+  for (const file of [
+    "nodalia-entity-card.js",
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+  ]) {
+    assert.match(read(file), /chip_font_size: "11px"/, `${file} should use the device chip type scale`);
+  }
+
+  assert.match(read("nodalia-entity-card.js"), /control:\s*\{[\s\S]*?size: "36px"/);
+  assert.match(
+    read("nodalia-cover-card.js"),
+    /on_color: "var\(--warning-color, #fec700\)"[\s\S]*slider_color: "var\(--warning-color, #fec700\)"/,
+  );
+  assert.match(
+    read("nodalia-fav-card.js"),
+    /card:\s*\{[\s\S]*?border: "1px solid var\(--divider-color\)"[\s\S]*?border_radius: "28px"/,
+  );
+  assert.match(
+    read("nodalia-navigation-bar.js"),
+    /media_player:\s*\{[\s\S]*?title_size: "12px"[\s\S]*?subtitle_size: "10px"/,
+  );
+  assert.match(read("nodalia-news-card.js"), /border: "1px solid var\(--divider-color\)"/);
+
+  for (const file of [
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-person-card.js",
+    "nodalia-fav-card.js",
+  ]) {
+    assert.match(read(file), /ha-card::after \{[\s\S]*radial-gradient\(circle at 18% 20%/);
+  }
+
+  const reducedMotionCards = [
+    "nodalia-entity-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-climate-card.js",
+    "nodalia-circular-gauge-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-calendar-card.js",
+    "nodalia-camera-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-graph-card.js",
+    "nodalia-insignia-card.js",
+    "nodalia-media-player.js",
+    "nodalia-navigation-bar.js",
+    "nodalia-person-card.js",
+    "nodalia-power-flow-card.js",
+    "nodalia-scenes-card.js",
+  ];
+  reducedMotionCards.forEach(file => {
+    assert.match(read(file), /renderReducedMotionStyles/);
+  });
+  assert.match(read("nodalia-utils.js"), /function renderReducedMotionStyles\(\)[\s\S]*prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(read("nodalia-notifications-card.js"), /renderReducedMotionStyles/);
 });

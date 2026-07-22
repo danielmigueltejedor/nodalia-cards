@@ -45,7 +45,7 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      border: "1px solid var(--divider-color)",
       border_radius: "28px",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "16px",

@@ -38,6 +38,7 @@
     "bindEditorDialogLayoutFix",
     "releaseEditorDialogLayoutFix",
     "clampEditorDialogScroll",
+    "renderReducedMotionStyles",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -1627,6 +1628,23 @@
     return timer;
   }
 
+  function renderReducedMotionStyles() {
+    return `
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-delay: 0ms !important;
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-delay: 0ms !important;
+          transition-duration: 1ms !important;
+        }
+      }
+    `;
+  }
+
   const api = {
     isObject,
     isUnsafeConfigPathKey,
@@ -1665,6 +1683,7 @@
     bindEditorDialogLayoutFix,
     releaseEditorDialogLayoutFix,
     clampEditorDialogScroll,
+    renderReducedMotionStyles,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,

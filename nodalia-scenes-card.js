@@ -1511,6 +1511,7 @@ class NodaliaScenesCard extends HTMLElement {
           30% { transform: scale(1.045); }
           100% { transform: scale(1); }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="scenes-card">
         ${
