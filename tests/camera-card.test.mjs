@@ -108,6 +108,7 @@ function loadGo2rtcPlayer() {
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox);
+  sandbox.__NodaliaGo2RTCPlayer.__testWindow = sandbox;
   return sandbox.__NodaliaGo2RTCPlayer;
 }
 
@@ -504,11 +505,19 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.ok(pkg.files.includes("THIRD_PARTY_NOTICES.md"));
 });
 
-test("go2rtc replaces its priming track with WebRTC audio on the video stream", () => {
+test("go2rtc attaches one complete WebRTC stream after the peer connects", () => {
   const Player = loadGo2rtcPlayer();
   const player = new Player();
   const primeTrack = { id: "prime-audio", kind: "audio", stopped: false, stop() { this.stopped = true; } };
-  const track = { id: "audio-1", kind: "audio" };
+  const audioTrack = {
+    id: "audio-1",
+    kind: "audio",
+    muted: false,
+    readyState: "live",
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const videoTrack = { id: "video-1", kind: "video", muted: false, readyState: "live" };
   const stream = {
     tracks: [primeTrack],
     getTracks() { return this.tracks; },
@@ -522,13 +531,36 @@ test("go2rtc replaces its priming track with WebRTC audio on the video stream", 
   player._audioPrimeOscillator = { stop() { oscillatorStopped = true; } };
   player._audioPrimeGain = { disconnect() {} };
   player._audioPrimeContext = { close() { contextClosed = true; return Promise.resolve(); } };
+  player._video = { muted: false, srcObject: stream, play: () => Promise.resolve() };
+  const peer = {
+    getTransceivers: () => [
+      { currentDirection: "recvonly", receiver: { track: videoTrack } },
+      { currentDirection: "recvonly", receiver: { track: audioTrack } },
+    ],
+  };
+  player._peer = peer;
 
-  assert.equal(player._attachWebRtcTrack(stream, track), true);
-  assert.deepEqual(stream.getTracks(), [track]);
+  assert.equal(player._attachConnectedWebRtcStream(peer), true);
+  assert.deepEqual(player._video.srcObject.getTracks(), [videoTrack, audioTrack]);
+  assert.equal(player._video.srcObject.getAudioTracks()[0], audioTrack);
   assert.equal(primeTrack.stopped, true);
   assert.equal(oscillatorStopped, true);
   assert.equal(contextClosed, true);
   assert.equal(player._audioPrimeTrack, null);
+  assert.equal(player.events.at(-1).type, "nodalia-go2rtc-audio-state");
+  assert.equal(player.events.at(-1).detail.state, "available");
+});
+
+test("go2rtc excludes falsely supported Opus from Safari MSE negotiation", () => {
+  const Player = loadGo2rtcPlayer();
+  Player.__testWindow.navigator = {
+    userAgent: "Mozilla/5.0 Version/18.5 Safari/605.1.15",
+  };
+  const player = new Player();
+  const codecs = player._supportedCodecs(() => true);
+
+  assert.match(codecs, /mp4a\.40\.2/);
+  assert.doesNotMatch(codecs, /opus/);
 });
 
 test("go2rtc keeps native manual unmute as the effective player state", () => {

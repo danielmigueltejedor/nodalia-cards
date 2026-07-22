@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.42] - 2026-07-22
+
+Forty-second **`2.0.0`** **`alpha`**: Safari-safe go2rtc audio negotiation. Release channel **`2.0.0-alpha.42`**.
+
+### Fixed
+
+- **Camera WebRTC audio:** the native player now waits for the peer connection and installs one complete receiver stream containing both video and audio, matching the go2rtc and Advanced Camera Card Safari-compatible flow.
+- **Camera Safari fallback:** MSE negotiation no longer advertises Opus on Safari, which reports container support but cannot reliably play that audio path.
+- **Camera audio diagnostics:** the player reports whether a compatible audio track is available, still waiting for packets, or absent from the negotiated stream, and cleans up track listeners on fallback and disconnect.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.42`; `2.0.0-alpha.40` and `2.0.0-alpha.41` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.41] - 2026-07-22
 
 Forty-first **`2.0.0`** **`alpha`**: audible native go2rtc playback. Release channel **`2.0.0-alpha.41`**.
