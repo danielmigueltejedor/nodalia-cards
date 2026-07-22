@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🎨 Nodalia Cards</h1>
+  <img src="./docs/images/nodalia-cards-header.png" alt="Nodalia Cards" width="900">
   <p><strong>A cohesive, app-like card system for modern Home Assistant dashboards.</strong></p>
 
   <p>
