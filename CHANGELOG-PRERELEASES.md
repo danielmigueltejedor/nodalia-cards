@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.46] - 2026-07-23
+
+Forty-sixth **`2.0.0`** **`alpha`**: stable Entity Card selector bounce. Release channel **`2.0.0-alpha.46`**.
+
+### Fixed
+
+- **Entity Card selector feedback:** `select` and `input_select` entities keep the icon bubble bounce without animating the complete card content.
+- **Animation cleanup:** completed entrance classes are removed before press feedback and after their lifecycle, preventing the stale icon entrance animation from restarting when `is-pressing` is removed and eliminating the final bubble flash.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.46`; `2.0.0-alpha.44` and `2.0.0-alpha.45` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.45] - 2026-07-23
 
 Forty-fifth **`2.0.0`** **`alpha`**: flicker-free selectors and a more cohesive visual family. Release channel **`2.0.0-alpha.45`**.

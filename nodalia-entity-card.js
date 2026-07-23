@@ -2279,6 +2279,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
+    this._clearEntranceAnimationClasses(element);
     element.classList.remove(className);
     element.getBoundingClientRect();
     element.classList.add(className);
@@ -2295,6 +2296,25 @@ class NodaliaEntityCard extends HTMLElement {
     } else {
       window.setTimeout(done, animations.buttonBounceDuration + 40);
     }
+  }
+
+  _clearEntranceAnimationClasses(element = null) {
+    const entranceClasses = [
+      "entity-card__content--entering",
+      "entity-card__hero--entering",
+      "entity-card__icon--entering",
+      "entity-card__actions--entering",
+    ];
+
+    if (element instanceof HTMLElement) {
+      element.classList.remove(...entranceClasses);
+      return;
+    }
+
+    const selector = entranceClasses.map(className => `.${className}`).join(", ");
+    this.shadowRoot?.querySelectorAll(selector).forEach(node => {
+      node.classList.remove(...entranceClasses);
+    });
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -2315,6 +2335,7 @@ class NodaliaEntityCard extends HTMLElement {
         return;
       }
       this._animateContentOnNextRender = false;
+      this._clearEntranceAnimationClasses();
     }, safeDelay);
   }
 
