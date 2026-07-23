@@ -20,6 +20,12 @@ const CORE_PARTS = [
 
 const EDITOR_PARTS = ["nodalia-editor-ui.js"];
 
+const CARD_SUPPORT_PARTS = [
+  "nodalia-notifications-mobile-policy.js",
+  "nodalia-room-summary-model.js",
+  "nodalia-camera-stream-model.js",
+];
+
 const CARD_PARTS = [
   "nodalia-navigation-bar.js",
   "nodalia-media-player.js",
@@ -47,7 +53,7 @@ const CARD_PARTS = [
   "nodalia-room-summary-card.js",
 ];
 
-const ALL_PARTS = [...CORE_PARTS, ...CARD_PARTS];
+const ALL_PARTS = [...CORE_PARTS, ...CARD_SUPPORT_PARTS, ...CARD_PARTS];
 
 /** Strip inlined nodalia-utils copy used for standalone card scripts (see scripts/sync-standalone-embed.mjs). */
 function stripStandaloneUtilsEmbed(source) {
@@ -105,7 +111,7 @@ async function buildParts(parts, label) {
 
 const fullBody = await buildParts(ALL_PARTS, "full");
 const coreBody = await buildParts(CORE_PARTS, "core");
-const suiteBody = await buildParts(CARD_PARTS, "suite");
+const suiteBody = await buildParts([...CARD_SUPPORT_PARTS, ...CARD_PARTS], "suite");
 const editorBody = await buildParts(EDITOR_PARTS, "editor");
 
 function assertCardRegistrations(source, label) {

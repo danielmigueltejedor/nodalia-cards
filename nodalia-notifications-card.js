@@ -132,19 +132,15 @@ const DEFAULT_CONFIG = {
   },
 };
 
-function deepClone(value) {
-  if (window.NodaliaUtils?.deepClone) {
-    return window.NodaliaUtils.deepClone(value);
-  }
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  deepClone,
+  isObject,
+  clamp,
+  isUnsafeConfigPathKey,
+} = window.NodaliaUtils;
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+
 
 function mergeDeep(base, override) {
   const out = deepClone(base);
@@ -317,133 +313,36 @@ function normalizeSmartNotificationOptions(value) {
   };
 }
 
-const MOBILE_POLICY_VALUES = new Set(["auto", "push", "card_only", "off"]);
-const BACKGROUND_MOBILE_MAX_CHUNKS = 40;
-const MOBILE_DELIVERY_STATES = new Set([
-  "allowed",
-  "card_only",
-  "off",
-  "blocked_by_severity",
-  "blocked_by_context",
-  "blocked_by_quiet_hours",
-  "blocked_by_cooldown",
-]);
-const MOBILE_COOLDOWN_STORAGE_KEY = "nodalia_notifications_mobile_cooldown_v1";
+const {
+  BACKGROUND_MOBILE_MAX_CHUNKS,
+  MOBILE_COOLDOWN_STORAGE_KEY,
+  MOBILE_DELIVERY_STATES,
+  normalizeMobilePolicy,
+  resolveSmartEntityMobilePolicy,
+  backgroundMobilePayloadOverLimit,
+  normalizeSmartEntityMobile,
+  normalizeSmartEntityOverrideMobile,
+  isExplicitSmartEntityMobile,
+  isWithinQuietHours,
+  normalizeQuietHours,
+  normalizeMobileContext,
+  resolvePresenceOccupancy,
+  passesPresenceContext,
+  buildMobileAlertIdentity,
+  buildMobileGroupIdentity,
+  resolveMobileDeliveryState,
+  legacyMobilePolicyLabel,
+} = window.NodaliaNotificationsMobilePolicy;
 
-function normalizeMobilePolicy(value) {
-  if (isObject(value) && value.policy !== undefined) {
-    return normalizeMobilePolicy(value.policy);
-  }
-  if (value === true) {
-    return "push";
-  }
-  if (value === false) {
-    return "off";
-  }
-  const normalized = String(value ?? "auto").trim().toLowerCase();
-  if (MOBILE_POLICY_VALUES.has(normalized)) {
-    return normalized;
-  }
-  if (["on", "true", "enabled", "yes", "1"].includes(normalized)) {
-    return "push";
-  }
-  if (["off", "false", "disabled", "no", "0"].includes(normalized)) {
-    return "off";
-  }
-  if (normalized === "inherit") {
-    return "auto";
-  }
-  return "auto";
-}
 
-function resolveSmartEntityMobilePolicy(overrideMobile, baseMobile) {
-  if (!isExplicitSmartEntityMobile(overrideMobile)) {
-    return normalizeMobilePolicy(baseMobile ?? "auto");
-  }
-  return normalizeMobilePolicy(overrideMobile);
-}
 
-function backgroundMobilePayloadOverLimit(payload) {
-  return Number(payload?.chunk_count) > BACKGROUND_MOBILE_MAX_CHUNKS;
-}
 
-function normalizeSmartEntityMobile(value) {
-  return normalizeMobilePolicy(value);
-}
 
-function normalizeSmartEntityOverrideMobile(value) {
-  if (value === undefined || value === null || String(value).trim() === "") {
-    return "inherit";
-  }
-  const raw = String(value).trim().toLowerCase();
-  if (raw === "inherit") {
-    return "inherit";
-  }
-  return normalizeSmartEntityMobile(value);
-}
 
-function isExplicitSmartEntityMobile(value) {
-  if (value === undefined || value === null) {
-    return false;
-  }
-  const raw = String(value).trim().toLowerCase();
-  if (!raw || raw === "inherit" || raw === "auto") {
-    return false;
-  }
-  const normalized = normalizeMobilePolicy(value);
-  return normalized === "push" || normalized === "off" || normalized === "card_only";
-}
 
-function parseClockMinutes(value) {
-  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) {
-    return null;
-  }
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) {
-    return null;
-  }
-  return hours * 60 + minutes;
-}
 
-function isWithinQuietHours(quietHours, date = new Date()) {
-  if (!quietHours?.enabled) {
-    return false;
-  }
-  const start = parseClockMinutes(quietHours.start);
-  const end = parseClockMinutes(quietHours.end);
-  if (start === null || end === null) {
-    return false;
-  }
-  const now = date.getHours() * 60 + date.getMinutes();
-  if (start === end) {
-    return false;
-  }
-  if (start < end) {
-    return now >= start && now < end;
-  }
-  return now >= start || now < end;
-}
 
-function normalizeQuietHours(value) {
-  const row = isObject(value) ? value : {};
-  return {
-    enabled: row.enabled === true,
-    start: String(row.start || "23:00").trim() || "23:00",
-    end: String(row.end || "08:00").trim() || "08:00",
-    allow_critical: row.allow_critical !== false,
-  };
-}
 
-function normalizeMobileContext(value) {
-  const row = isObject(value) ? value : {};
-  return {
-    only_when_away: row.only_when_away === true,
-    only_when_home: row.only_when_home === true,
-    quiet_hours: normalizeQuietHours(row.quiet_hours),
-  };
-}
 
 function normalizeExternalAlerts(value, options = {}) {
   const rows = Array.isArray(value) ? value : [];
@@ -486,124 +385,6 @@ function normalizeExternalAlerts(value, options = {}) {
       return true;
     });
 }
-
-function severityScore(severity) {
-  return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
-}
-
-function resolvePresenceOccupancy(hass, presenceEntityId) {
-  const entityId = String(presenceEntityId || "").trim();
-  if (!entityId || !hass?.states?.[entityId]) {
-    return null;
-  }
-  const stateKey = String(hass.states[entityId].state || "").trim().toLowerCase();
-  if (["home", "on", "true", "occupied", "present"].includes(stateKey)) {
-    return "home";
-  }
-  if (["not_home", "away", "off", "false", "absent", "out"].includes(stateKey)) {
-    return "away";
-  }
-  return "unknown";
-}
-
-function passesPresenceContext(mobileContext, occupancy) {
-  const context = normalizeMobileContext(mobileContext);
-  if (context.only_when_away && context.only_when_home) {
-    return true;
-  }
-  if (occupancy === null) {
-    return true;
-  }
-  if (context.only_when_away) {
-    return occupancy === "away";
-  }
-  if (context.only_when_home) {
-    return occupancy === "home";
-  }
-  return true;
-}
-
-function buildMobileAlertIdentity(item = {}) {
-  const parts = [
-    String(item.alertType || item.type || "").trim(),
-    String(item.entity || "").trim(),
-    String(item.id || "").trim(),
-    String(item.severity || "").trim(),
-    item.threshold !== undefined && item.threshold !== null ? String(item.threshold) : "",
-  ].filter(Boolean);
-  return parts.join("|") || String(item.id || "");
-}
-
-function buildMobileGroupIdentity(item = {}) {
-  const parts = [
-    String(item.alertType || item.type || "").trim(),
-    String(item.entity || "").trim(),
-    String(item.severity || "").trim(),
-  ].filter(Boolean);
-  return parts.join("|");
-}
-
-function resolveMobileDeliveryState(options = {}) {
-  const alertPolicy = normalizeMobilePolicy(options.alertPolicy ?? options.mobilePolicy ?? "auto");
-  const defaultPolicy = normalizeMobilePolicy(options.defaultPolicy ?? "auto");
-  const effectivePolicy = alertPolicy === "auto" ? defaultPolicy : alertPolicy;
-
-  if (effectivePolicy === "off") {
-    return "off";
-  }
-  if (effectivePolicy === "card_only") {
-    return "card_only";
-  }
-
-  const minSeverity = normalizeSeverity(options.minSeverity || "warning");
-  const alertSeverity = normalizeSeverity(options.alertSeverity || "info");
-  const isCritical = alertSeverity === "critical";
-  const backgroundEnabled = options.backgroundMobileEnabled === true;
-  const notifyTargetsConfigured = options.notifyTargetsConfigured === true;
-  const globalMobileEnabled = options.globalMobileEnabled === true;
-  const quietHours = normalizeQuietHours(options.quietHours);
-  const quietActive = options.quietHoursActive === true
-    || isWithinQuietHours(quietHours, options.now instanceof Date ? options.now : new Date());
-  const occupancy = options.presenceOccupancy ?? null;
-  const contextAllowed = passesPresenceContext(options.mobileContext, occupancy);
-
-  if (!contextAllowed) {
-    return "blocked_by_context";
-  }
-  if (quietActive && !(quietHours.allow_critical && isCritical)) {
-    return "blocked_by_quiet_hours";
-  }
-  if (options.cooldownActive === true) {
-    return "blocked_by_cooldown";
-  }
-
-  const severityAllowed = effectivePolicy === "push"
-    || severityScore(alertSeverity) >= severityScore(minSeverity);
-  if (!severityAllowed) {
-    return "blocked_by_severity";
-  }
-
-  const canDeliver = backgroundEnabled
-    ? notifyTargetsConfigured
-    : (globalMobileEnabled || effectivePolicy === "push") && notifyTargetsConfigured;
-  if (!canDeliver) {
-    return effectivePolicy === "push" ? "blocked_by_context" : "card_only";
-  }
-
-  return "allowed";
-}
-
-function legacyMobilePolicyLabel(policy) {
-  const normalized = normalizeMobilePolicy(policy);
-  if (normalized === "push") {
-    return "on";
-  }
-  if (normalized === "off") {
-    return "off";
-  }
-  return "inherit";
-}
-
 function normalizeSmartEntityOverrides(value) {
   const rows = Array.isArray(value)
     ? value
@@ -776,9 +557,6 @@ function finiteNumber(value, fallback) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function normalizeMatchText(value) {
   return String(value ?? "")
@@ -939,9 +717,6 @@ function fireEvent(node, type, detail = {}, options = {}) {
   }));
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".").filter(Boolean);
@@ -4441,25 +4216,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -4538,38 +4304,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const active = this.shadowRoot?.activeElement;
-    if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement)) {
-      return null;
-    }
-    const selector = active.dataset?.field ? `[data-field="${escapeSelectorValue(active.dataset.field)}"]` : null;
-    if (!selector) {
-      return null;
-    }
-    return {
-      selector,
-      type: active.type,
-      selectionStart: typeof active.selectionStart === "number" ? active.selectionStart : null,
-      selectionEnd: typeof active.selectionEnd === "number" ? active.selectionEnd : null,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focus) {
-    if (!focus?.selector) {
-      return;
-    }
-    const target = this.shadowRoot?.querySelector(focus.selector);
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) {
-      return;
-    }
-    try {
-      target.focus({ preventScroll: true });
-      if (focus.type !== "checkbox" && typeof target.setSelectionRange === "function") {
-        target.setSelectionRange(focus.selectionStart, focus.selectionEnd);
-      }
-    } catch (_error) {
-      target.focus();
-    }
+  _restoreFocusState(focusState) {
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

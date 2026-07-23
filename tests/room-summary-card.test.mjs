@@ -11,13 +11,16 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 function loadRoomSummaryHelpers() {
   const sandbox = {
     URL,
-    window: { NodaliaUtils: { registerCustomCard() {} } },
+    window: null,
     customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
     globalThis: {},
   };
+  sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-room-summary-model.js"), sandbox);
   vm.runInContext(read("nodalia-room-summary-card.js"), sandbox);
   return sandbox.__NODALIA_ROOM_SUMMARY__;
 }

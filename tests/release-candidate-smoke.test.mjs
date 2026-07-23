@@ -697,6 +697,7 @@ test("power flow supports grid feed-in export sensors", () => {
 
 test("notifications card is bundled and supports smart dismissible notifications", () => {
   const source = read("nodalia-notifications-card.js");
+  const mobilePolicy = read("nodalia-notifications-mobile-policy.js");
   const i18n = read("nodalia-i18n.js");
   const build = read("scripts/build-bundle.mjs");
   const pkg = read("package.json");
@@ -723,7 +724,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
   assert.match(source, /mobileDeliveryState/);
   assert.match(source, /deliveryState !== "allowed"/);
-  assert.match(source, /effectivePolicy === "off"/);
+  assert.match(mobilePolicy, /effectivePolicy === "off"/);
   assert.match(source, /_entranceAnimationTimer/);
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
   assert.match(source, /_scheduleEntranceAnimationReset\(animations\.contentDuration \+ 120\)/);

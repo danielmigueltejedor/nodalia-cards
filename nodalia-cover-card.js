@@ -121,16 +121,17 @@ const STUB_CONFIG = {
   name: "Salon",
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  isUnsafeConfigPathKey,
+  escapeHtml,
+  normalizeTextKey,
+  clamp,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+
 
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
@@ -255,9 +256,6 @@ function normalizeConfig(rawConfig) {
   return config;
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
 function setByPath(obj, path, value) {
   const parts = String(path || "").split(".");
@@ -291,14 +289,6 @@ function deleteByPath(obj, path) {
   delete target[parts[parts.length - 1]];
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function escapeSelectorValue(value) {
   return typeof CSS !== "undefined" && typeof CSS.escape === "function"
@@ -351,14 +341,6 @@ function getEditorColorModel(value, fallbackValue = "#71c0ff") {
   };
 }
 
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function coverDeviceClassPrefersHorizontalOpenClose(deviceClass) {
   const key = normalizeTextKey(deviceClass);
@@ -378,9 +360,6 @@ function resolveOpenCloseControlIcons(mode, deviceClass) {
   return coverDeviceClassPrefersHorizontalOpenClose(deviceClass) ? horizontal : vertical;
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function parseNumber(value) {
   if (value === null || value === undefined || value === "") {
@@ -1897,25 +1876,16 @@ class NodaliaCoverCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -2002,26 +1972,11 @@ class NodaliaCoverCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement)) return null;
-    const selector = activeElement.dataset?.field ? `[data-field="${escapeSelectorValue(activeElement.dataset.field)}"]` : null;
-    if (!selector) return null;
-    return {
-      selector,
-      selectionEnd: typeof activeElement.selectionEnd === "number" ? activeElement.selectionEnd : null,
-      selectionStart: typeof activeElement.selectionStart === "number" ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) return;
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) return;
-    try { target.focus({ preventScroll: true }); } catch (_error) { target.focus(); }
-    if (focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof target.setSelectionRange === "function") {
-      try { target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd); } catch (_error) {}
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

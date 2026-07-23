@@ -127,35 +127,35 @@ const STUB_CONFIG = {
   media_player: "media_player.living_room",
 };
 
-function isObject(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
-function deepClone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  escapeHtml,
+  clamp,
+  isUnsafeConfigPathKey,
+  getByPath,
+} = window.NodaliaUtils;
 
-function mergeConfig(base, override) {
-  if (window.NodaliaUtils?.mergeDeep) return window.NodaliaUtils.mergeDeep(base, override || {});
-  if (Array.isArray(base)) return Array.isArray(override) ? override.map(deepClone) : deepClone(base);
-  if (!isObject(base)) return override === undefined ? base : override;
-  const out = {};
-  new Set([...Object.keys(base), ...Object.keys(override || {})]).forEach(key => {
-    if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
-      out[key] = mergeConfig(base[key], override[key]);
-    } else {
-      out[key] = override?.[key] === undefined ? deepClone(base[key]) : deepClone(override[key]);
-    }
-  });
-  return out;
-}
+const {
+  normalizeEntityField,
+  hubMediaPlayerIds: collectHubMediaPlayerIds,
+  finiteNumber,
+  isUnavailable,
+  stateIsOn,
+  stateIsOpen,
+  stateIsUnlocked,
+  formatMetric,
+  getState,
+  hasRoomContent: hasNormalizedRoomContent,
+  buildRoomSummary: buildNormalizedRoomSummary,
+} = window.NodaliaRoomSummaryModel;
+
+
 
 function normalizeTextKey(v) { return String(v ?? "").trim().toLowerCase(); }
 function entityDomain(id) { const d = String(id || "").indexOf("."); return d > 0 ? String(id).slice(0, d) : ""; }
-
-function normalizeEntityField(value) {
-  if (Array.isArray(value)) {
-    const seen = new Set();
-    return value.map(item => String(item || "").trim()).filter(id => id && !seen.has(id) && seen.add(id));
-  }
-  const single = String(value ?? "").trim();
-  return single ? [single] : [];
-}
 
 function entityScalar(...values) {
   for (const value of values) {
@@ -175,28 +175,8 @@ function entityList(...values) {
 }
 
 function hubMediaPlayerIds(config) {
-  const c = normalizeConfig(config || {});
-  const ids = [];
-  const seen = new Set();
-  const push = id => {
-    const normalized = String(id || "").trim();
-    if (!normalized || seen.has(normalized)) return;
-    seen.add(normalized);
-    ids.push(normalized);
-  };
-  push(c.media_player);
-  (c.media_players || []).forEach(push);
-  (c.media_config?.players || []).forEach(player => push(player?.entity));
-  return ids;
+  return collectHubMediaPlayerIds(normalizeConfig(config || {}));
 }
-
-function escapeHtml(v) {
-  return String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-}
-
-function finiteNumber(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
-function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
@@ -250,31 +230,6 @@ function getEditorColorFallbackValue(field) {
   }
   return "var(--info-color, #71c0ff)";
 }
-function isUnavailable(state) { const k = normalizeTextKey(state?.state); return k === "unavailable" || k === "unknown"; }
-function stateIsOn(state) {
-  const k = normalizeTextKey(state?.state);
-  return ["on", "open", "opening", "true", "home", "occupied", "present", "detected", "unlocked", "playing", "paused"].includes(k);
-}
-function stateIsOpen(state) { const k = normalizeTextKey(state?.state); return k === "on" || k === "open" || k === "opening"; }
-function stateIsUnlocked(state) { const k = normalizeTextKey(state?.state); return k === "unlocked" || k === "open"; }
-
-function formatMetric(state, unitFallback = "") {
-  if (!state || isUnavailable(state)) return "—";
-  const unit = String(state.attributes?.unit_of_measurement || unitFallback || "").trim();
-  const num = finiteNumber(state.state);
-  if (num !== null) return `${Number.isInteger(num) ? num : num.toFixed(1)}${unit}`;
-  return String(state.state ?? "—");
-}
-
-function getState(hass, entityId) {
-  const id = String(entityId || "").trim();
-  return id && hass?.states?.[id] ? hass.states[id] : null;
-}
-
-function countMatching(hass, ids, predicate) {
-  return (ids || []).filter(id => { const s = getState(hass, id); return s && !isUnavailable(s) && predicate(s); }).length;
-}
-
 function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
   const result = deepClone(config || {});
   const walk = (cur, base) => {
@@ -389,95 +344,13 @@ function normalizeConfig(rawConfig = {}) {
 }
 
 function hasRoomContent(config) {
-  const c = config || {};
-  return Boolean(
-    String(c.name || "").trim()
-    || c.temperature || c.humidity || c.presence || c.occupancy || c.climate
-    || c.camera || c.media_player || c.power || c.air_quality
-    || (c.media_players || []).length
-    || (c.media_config?.players || []).length
-    || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
-    || (c.vacuums || []).length || (c.fans || []).length
-    || (c.humidifiers || []).length || (c.others || []).length
-    || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length,
-  );
+  const normalized = normalizeConfig(config || {});
+  return Boolean(String(normalized.name || "").trim()) || hasNormalizedRoomContent(normalized);
 }
 
 function buildRoomSummary(hass, config) {
   const c = normalizeConfig(config || {});
-  const tempState = getState(hass, c.temperature);
-  const humidityState = getState(hass, c.humidity);
-  const presenceState = getState(hass, c.presence) || getState(hass, c.occupancy);
-  const climateState = getState(hass, c.climate);
-  const cameraState = getState(hass, c.camera);
-  const mediaState = getState(hass, hubMediaPlayerIds(c)[0]);
-
-  const tempNum = tempState ? finiteNumber(tempState.state) : null;
-  const humidityNum = humidityState ? finiteNumber(humidityState.state) : null;
-
-  const lightsOn = countMatching(hass, c.lights, stateIsOn);
-  const lightsTotal = (c.lights || []).length;
-  const coversOpen = countMatching(hass, c.covers, stateIsOpen);
-  const doorsOpen = countMatching(hass, c.doors, stateIsOpen);
-  const windowsOpen = countMatching(hass, c.windows, stateIsOpen);
-  const locksUnlocked = countMatching(hass, c.locks, stateIsUnlocked);
-  const alertsActive = countMatching(hass, c.alerts, stateIsOn);
-
-  const occupied = presenceState && !isUnavailable(presenceState) ? stateIsOn(presenceState) : null;
-  const mediaPlaying = mediaState && normalizeTextKey(mediaState.state) === "playing";
-  const cameraAvailable = cameraState ? !isUnavailable(cameraState) : false;
-  const cameraOffline = cameraState ? isUnavailable(cameraState) : false;
-
-  const hot = tempNum !== null && tempNum >= COMFORT.hot;
-  const cold = tempNum !== null && tempNum <= COMFORT.cold;
-  const humid = humidityNum !== null && humidityNum >= COMFORT.humid;
-  const dry = humidityNum !== null && humidityNum <= COMFORT.dry;
-  const comfortable = tempNum !== null && !hot && !cold && !humid && !dry;
-
-  const securityIssue = doorsOpen > 0 || windowsOpen > 0 || locksUnlocked > 0 || alertsActive > 0;
-
-  let climateLabel = "";
-  if (climateState && !isUnavailable(climateState)) {
-    const mode = normalizeTextKey(climateState.attributes?.hvac_mode || climateState.state);
-    const current = finiteNumber(climateState.attributes?.current_temperature);
-    const target = finiteNumber(climateState.attributes?.temperature);
-    const unit = String(climateState.attributes?.unit_of_measurement || "°").trim();
-    climateLabel = mode;
-    if (current !== null) {
-      climateLabel = target !== null && target !== current ? `${current}${unit} → ${target}${unit}` : `${current}${unit}`;
-    }
-  }
-
-  return {
-    occupied: occupied === true,
-    empty: occupied === false,
-    comfortable,
-    cold,
-    hot,
-    humid,
-    dry,
-    lights_on: lightsOn > 0,
-    all_lights_off: lightsTotal > 0 && lightsOn === 0,
-    lightsOn,
-    lightsTotal,
-    cover_open: coversOpen > 0,
-    cover_closed: (c.covers || []).length > 0 && coversOpen === 0,
-    coversOpen,
-    media_playing: mediaPlaying,
-    camera_available: cameraAvailable,
-    camera_offline: cameraOffline,
-    security_issue: securityIssue,
-    alert: alertsActive > 0,
-    unknown: !tempState && !humidityState && !presenceState && lightsTotal === 0,
-    temperature: formatMetric(tempState),
-    humidity: formatMetric(humidityState, "%"),
-    climateLabel,
-    doorsOpen,
-    windowsOpen,
-    locksUnlocked,
-    alertsActive,
-    mediaState: mediaState ? String(mediaState.state) : "",
-  };
+  return buildNormalizedRoomSummary(hass, c, COMFORT);
 }
 
 function fireEvent(node, type, detail, options) {
@@ -497,24 +370,7 @@ function moveListItem(list, fromIndex, toIndex) {
   list.splice(toIndex, 0, item);
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key) {
-      return undefined;
-    }
-    if (!isObject(cursor) && !Array.isArray(cursor)) {
-      return undefined;
-    }
-    cursor = cursor[key];
-  }
-  return cursor;
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".");
@@ -1842,25 +1698,16 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["click", this._onShadowClick],
+      ["value-changed", this._onShadowValueChanged],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   setConfig(config) {
@@ -1890,41 +1737,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const active = this.shadowRoot?.activeElement;
-    if (
-      !(
-        active instanceof HTMLInputElement
-        || active instanceof HTMLTextAreaElement
-        || active instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-    return {
-      field: active.dataset?.field || "",
-      start: typeof active.selectionStart === "number" ? active.selectionStart : null,
-      end: typeof active.selectionEnd === "number" ? active.selectionEnd : null,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.field) {
-      return;
-    }
-    const next = this.shadowRoot?.querySelector(`[data-field="${CSS.escape(focusState.field)}"]`);
-    if (
-      !(
-        next instanceof HTMLInputElement
-        || next instanceof HTMLTextAreaElement
-        || next instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-    next.focus();
-    if (typeof focusState.start === "number" && typeof focusState.end === "number" && typeof next.setSelectionRange === "function") {
-      next.setSelectionRange(focusState.start, focusState.end);
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _watchEditorControlTag(tagName) {

@@ -43,6 +43,7 @@ function loadCameraHelpers() {
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-camera-stream-model.js"), sandbox);
   vm.runInContext(helperSource, sandbox);
   return sandbox.__cameraHelpers;
 }

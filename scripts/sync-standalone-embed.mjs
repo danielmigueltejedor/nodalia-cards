@@ -34,7 +34,11 @@ const FILES = [
   "nodalia-person-card.js",
   "nodalia-scenes-card.js",
   "nodalia-weather-card.js",
+  "nodalia-calendar-card.js",
   "nodalia-notifications-card.js",
+  "nodalia-news-card.js",
+  "nodalia-room-summary-card.js",
+  "nodalia-camera-card.js",
   "nodalia-vacuum-card.js",
 ];
 
@@ -83,12 +87,30 @@ if (stripOnly) {
   console.log(`Standalone utils embed: stripped ${updated} file(s).`);
 } else {
   const utilsSrc = fs.readFileSync(path.join(root, "nodalia-utils.js"), "utf8");
-  const embed = wrapEmbed(utilsSrc);
+  const notificationsPolicySrc = fs.readFileSync(
+    path.join(root, "nodalia-notifications-mobile-policy.js"),
+    "utf8",
+  );
+  const roomSummaryModelSrc = fs.readFileSync(
+    path.join(root, "nodalia-room-summary-model.js"),
+    "utf8",
+  );
+  const cameraStreamModelSrc = fs.readFileSync(
+    path.join(root, "nodalia-camera-stream-model.js"),
+    "utf8",
+  );
+  const supportPreludeByCard = new Map([
+    ["nodalia-notifications-card.js", notificationsPolicySrc],
+    ["nodalia-room-summary-card.js", roomSummaryModelSrc],
+    ["nodalia-camera-card.js", cameraStreamModelSrc],
+  ]);
   for (const name of FILES) {
     const filePath = path.join(root, name);
     const beforeFull = fs.readFileSync(filePath, "utf8");
     const stripped = stripEmbed(beforeFull);
-    const next = embed + stripped;
+    const supportPrelude = supportPreludeByCard.get(name) || "";
+    const standalonePrelude = supportPrelude ? `${utilsSrc}\n${supportPrelude}` : utilsSrc;
+    const next = wrapEmbed(standalonePrelude) + stripped;
     if (normalizeNewlines(next) !== normalizeNewlines(beforeFull)) {
       fs.writeFileSync(filePath, next);
       updated += 1;

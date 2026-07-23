@@ -7,6 +7,14 @@
     "isObject",
     "deepClone",
     "deepEqual",
+    "mergeDeep",
+    "compactConfig",
+    "getByPath",
+    "clamp",
+    "escapeHtml",
+    "escapeSelectorValue",
+    "fireEvent",
+    "normalizeTextKey",
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
@@ -42,6 +50,10 @@
     "releaseEditorDialogLayoutFix",
     "clampEditorDialogScroll",
     "renderReducedMotionStyles",
+    "captureEditorFocusState",
+    "restoreEditorFocusState",
+    "bindShadowListeners",
+    "releaseShadowListeners",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -167,6 +179,111 @@
       return false;
     }
     return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  /**
+   * Recursively merges plain objects while replacing arrays and cloning every
+   * inherited value. This is the canonical configuration merge used by cards.
+   */
+  function mergeDeep(base, override) {
+    if (Array.isArray(base)) {
+      return Array.isArray(override) ? deepClone(override) : deepClone(base);
+    }
+    if (!isObject(base)) {
+      return override === undefined ? deepClone(base) : deepClone(override);
+    }
+
+    const source = isObject(override) ? override : {};
+    const result = {};
+    const keys = new Set([...Object.keys(base), ...Object.keys(source)]);
+    keys.forEach(key => {
+      const baseValue = base[key];
+      const overrideValue = source[key];
+      if (overrideValue === undefined) {
+        result[key] = deepClone(baseValue);
+      } else if (isObject(baseValue) && isObject(overrideValue)) {
+        result[key] = mergeDeep(baseValue, overrideValue);
+      } else {
+        result[key] = deepClone(overrideValue);
+      }
+    });
+    return result;
+  }
+
+  /** Removes empty editor values without mutating the input configuration. */
+  function compactConfig(value) {
+    if (Array.isArray(value)) {
+      return value
+        .map(item => compactConfig(item))
+        .filter(item => item !== undefined);
+    }
+    if (isObject(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        const cleaned = compactConfig(item);
+        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== undefined && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
+      });
+      return compacted;
+    }
+    if (value === "" || value === null || value === undefined) {
+      return undefined;
+    }
+    return value;
+  }
+
+  function getByPath(target, path) {
+    const parts = String(path || "").split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return undefined;
+    }
+    let cursor = target;
+    for (const key of parts) {
+      if (!key || (!isObject(cursor) && !Array.isArray(cursor))) {
+        return undefined;
+      }
+      cursor = cursor[key];
+    }
+    return cursor;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function escapeSelectorValue(value) {
+    return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  }
+
+  function fireEvent(node, type, detail, options = {}) {
+    const event = new CustomEvent(type, {
+      bubbles: options.bubbles ?? true,
+      cancelable: Boolean(options.cancelable),
+      composed: options.composed ?? true,
+      detail,
+    });
+    node.dispatchEvent(event);
+    return event;
+  }
+
+  function normalizeTextKey(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
   }
 
   function stripEqualToDefaults(config, defaults) {
@@ -1751,6 +1868,101 @@
     return timer;
   }
 
+  function isEditorTextControl(value) {
+    return (
+      (typeof HTMLInputElement !== "undefined" && value instanceof HTMLInputElement)
+      || (typeof HTMLTextAreaElement !== "undefined" && value instanceof HTMLTextAreaElement)
+      || (typeof HTMLSelectElement !== "undefined" && value instanceof HTMLSelectElement)
+    );
+  }
+
+  /** Captures the editor control and caret without retaining a detached DOM node. */
+  function captureEditorFocusState(editorHost) {
+    const activeElement = editorHost?.shadowRoot?.activeElement;
+    if (!isEditorTextControl(activeElement)) {
+      return null;
+    }
+    const field = String(activeElement.dataset?.field || "");
+    if (!field) {
+      return null;
+    }
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number"
+      && typeof activeElement.selectionEnd === "number";
+    return {
+      selector: `[data-field="${escapeSelectorValue(field)}"]`,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  /** Restores focus after an editor render while keeping Lovelace scroll stable. */
+  function restoreEditorFocusState(editorHost, focusState) {
+    if (!focusState?.selector || !editorHost?.shadowRoot) {
+      return;
+    }
+    const target = editorHost.shadowRoot.querySelector(focusState.selector);
+    if (!isEditorTextControl(target)) {
+      return;
+    }
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+    const canRestoreSelection =
+      focusState.type !== "checkbox"
+      && typeof focusState.selectionStart === "number"
+      && typeof focusState.selectionEnd === "number"
+      && typeof target.setSelectionRange === "function";
+    if (!canRestoreSelection) {
+      return;
+    }
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Some input types expose selection properties but reject setSelectionRange.
+    }
+  }
+
+  /**
+   * Idempotently binds a declarative event map to a component shadow root.
+   * The same map key can later be released during disconnectedCallback.
+   */
+  function bindShadowListeners(host, listeners, key = "editor") {
+    const root = host?.shadowRoot;
+    if (!root || !Array.isArray(listeners)) {
+      return false;
+    }
+    if (!host._nodaliaShadowListenerGroups) {
+      host._nodaliaShadowListenerGroups = new Map();
+    }
+    if (host._nodaliaShadowListenerGroups.has(key)) {
+      return false;
+    }
+    const active = listeners
+      .map(item => Array.isArray(item)
+        ? { type: item[0], listener: item[1], options: item[2] }
+        : item)
+      .filter(item => item && typeof item.type === "string" && typeof item.listener === "function")
+      .map(item => ({ type: item.type, listener: item.listener, options: item.options }));
+    active.forEach(item => root.addEventListener(item.type, item.listener, item.options));
+    host._nodaliaShadowListenerGroups.set(key, active);
+    return true;
+  }
+
+  function releaseShadowListeners(host, key = "editor") {
+    const groups = host?._nodaliaShadowListenerGroups;
+    const active = groups?.get(key);
+    if (!active || !host?.shadowRoot) {
+      return false;
+    }
+    active.forEach(item => host.shadowRoot.removeEventListener(item.type, item.listener, item.options));
+    groups.delete(key);
+    return true;
+  }
+
   function renderReducedMotionStyles() {
     return `
       @media (prefers-reduced-motion: reduce) {
@@ -1775,6 +1987,14 @@
     deleteByPath,
     deepClone,
     deepEqual,
+    mergeDeep,
+    compactConfig,
+    getByPath,
+    clamp,
+    escapeHtml,
+    escapeSelectorValue,
+    fireEvent,
+    normalizeTextKey,
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
@@ -1810,6 +2030,10 @@
     releaseEditorDialogLayoutFix,
     clampEditorDialogScroll,
     renderReducedMotionStyles,
+    captureEditorFocusState,
+    restoreEditorFocusState,
+    bindShadowListeners,
+    releaseShadowListeners,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,

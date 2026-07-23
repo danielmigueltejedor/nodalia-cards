@@ -19,6 +19,7 @@ function loadMobileHelpers() {
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-mobile-policy.js"), sandbox);
   vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
   return sandbox.__NODALIA_NOTIFICATIONS_MOBILE__;
 }

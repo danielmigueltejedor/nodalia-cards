@@ -311,13 +311,15 @@ test("media player editor preserves nested service data drafts until change comm
 test("media player editor round-trips service data as a JSON object", () => {
   const sandbox = {
     URL,
-    window: { NodaliaUtils: { registerCustomCard() {} } },
+    window: null,
     customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
     globalThis: {},
   };
+  sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-media-player.js"), sandbox);
 
   const helpers = sandbox.__NODALIA_MEDIA_PLAYER__;

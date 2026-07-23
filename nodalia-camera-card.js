@@ -86,16 +86,24 @@ const STUB_CONFIG = {
   name: "Entrada",
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  getByPath,
+  escapeHtml,
+  clamp,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+const {
+  buildGo2rtcViewerUrl,
+  sanitizeIframeUrl,
+  buildGo2rtcWebSocketEndpoint,
+  buildFrigateGo2rtcPath,
+  isMixedContentUrl,
+} = window.NodaliaCameraStreamModel;
+
+
 
 function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
@@ -134,20 +142,6 @@ function mergeConfig(base, override) {
   return result;
 }
 
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key) {
-      return undefined;
-    }
-    if (!isObject(cursor) && !Array.isArray(cursor)) {
-      return undefined;
-    }
-    cursor = cursor[key];
-  }
-  return cursor;
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".");
@@ -162,14 +156,6 @@ function setByPath(target, path, value) {
   cursor[parts[parts.length - 1]] = value;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function normalizeTextKey(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -421,64 +407,6 @@ function compactCameraStreams(rawStreams = []) {
   }).filter(Boolean);
 }
 
-function buildGo2rtcViewerUrl(baseUrl, streamName, mode = "auto") {
-  const base = String(baseUrl || "").trim();
-  const stream = String(streamName || "").trim();
-  if (!base || !stream || !/^https?:\/\//i.test(base)) {
-    return "";
-  }
-  try {
-    const url = new URL(base);
-    if (!/\.html?$/i.test(url.pathname)) {
-      url.pathname = `${url.pathname.replace(/\/$/, "")}/stream.html`;
-    }
-    url.searchParams.set("src", stream);
-    const normalizedMode = STREAM_MODES.has(normalizeTextKey(mode)) ? normalizeTextKey(mode) : "auto";
-    if (normalizedMode === "webrtc") {
-      url.searchParams.set("mode", "webrtc,webrtc/tcp");
-    } else if (normalizedMode !== "auto") {
-      url.searchParams.set("mode", normalizedMode);
-    } else {
-      url.searchParams.delete("mode");
-    }
-    return url.toString();
-  } catch (_error) {
-    return "";
-  }
-}
-
-function sanitizeIframeUrl(rawValue) {
-  const value = String(rawValue || "").trim();
-  return /^(?:https?:\/\/|\/(?!\/))/i.test(value) ? value : "";
-}
-
-function buildGo2rtcWebSocketEndpoint(baseUrl, streamName) {
-  const base = String(baseUrl || "").trim();
-  const stream = String(streamName || "").trim();
-  if (!base || !stream || !/^https?:\/\//i.test(base)) {
-    return "";
-  }
-  try {
-    const url = new URL(base);
-    if (!/\/api\/ws\/?$/i.test(url.pathname)) {
-      url.pathname = `${url.pathname.replace(/\/$/, "")}/api/ws`;
-    }
-    url.searchParams.set("src", stream);
-    return url.toString();
-  } catch (_error) {
-    return "";
-  }
-}
-
-function buildFrigateGo2rtcPath(clientId, streamName) {
-  const instance = String(clientId || "frigate").trim() || "frigate";
-  const stream = String(streamName || "").trim();
-  if (!stream) {
-    return "";
-  }
-  return `/api/frigate/${encodeURIComponent(instance)}/mse/api/ws?src=${encodeURIComponent(stream)}`;
-}
-
 const SIGNED_PATH_CACHE = new WeakMap();
 
 function signedPathCacheForHass(hass) {
@@ -557,17 +485,6 @@ async function resolveGo2rtcPlayerSource(hass, streamConfig) {
   });
   const proxyPath = `/api/hass_web_proxy/v0/ws?url=${encodeURIComponent(endpoint)}`;
   return signHomeAssistantPath(hass, proxyPath);
-}
-
-function isMixedContentUrl(rawValue) {
-  if (window.location?.protocol !== "https:") {
-    return false;
-  }
-  try {
-    return new URL(String(rawValue || ""), window.location.href).protocol === "http:";
-  } catch (_error) {
-    return false;
-  }
 }
 
 function normalizeConfig(rawConfig) {
@@ -2428,9 +2345,6 @@ class NodaliaCameraCard extends HTMLElement {
   }
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaCameraCard);
@@ -2451,25 +2365,16 @@ class NodaliaCameraCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -2516,33 +2421,11 @@ class NodaliaCameraCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const active = this.shadowRoot?.activeElement;
-    if (!(active instanceof HTMLElement)) {
-      return null;
-    }
-    return {
-      field: active.dataset?.field || "",
-      selectionStart: active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
-        ? active.selectionStart
-        : null,
-      selectionEnd: active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
-        ? active.selectionEnd
-        : null,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.field) {
-      return;
-    }
-    const node = this.shadowRoot?.querySelector(`[data-field="${focusState.field}"]`);
-    if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement)) {
-      return;
-    }
-    node.focus();
-    if (typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number") {
-      node.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig(reRender = false) {
