@@ -30,6 +30,7 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "installPointerFocusRingGuard",
     "isKeyboardActivationEvent",
     "bindModalFocus",
     "releaseModalFocus",
@@ -1356,6 +1357,110 @@
     };
   }
 
+  const POINTER_FOCUSABLE_SELECTOR = [
+    "button",
+    "a[href]",
+    "summary",
+    "[role='button']",
+    "[tabindex]:not([tabindex='-1'])",
+  ].join(",");
+
+  /**
+   * Safari/WebKit can keep :focus-visible on role=button surfaces after a
+   * touch. Suppress only that pointer-created outline; the first keyboard
+   * event restores the element's original inline style before it is handled.
+   */
+  function installPointerFocusRingGuard() {
+    if (
+      typeof window === "undefined"
+      || typeof document === "undefined"
+      || typeof document.addEventListener !== "function"
+    ) {
+      return false;
+    }
+    if (window.__nodaliaPointerFocusRingGuardInstalled === true) {
+      return true;
+    }
+
+    const inlineOutlineState = new WeakMap();
+    let pointerFocusedElement = null;
+
+    const restoreOutline = element => {
+      if (!(typeof HTMLElement !== "undefined" && element instanceof HTMLElement)) {
+        return;
+      }
+      const previous = inlineOutlineState.get(element);
+      if (previous) {
+        if (previous.value) {
+          element.style.setProperty("outline", previous.value, previous.priority);
+        } else {
+          element.style.removeProperty("outline");
+        }
+        inlineOutlineState.delete(element);
+      }
+      element.removeAttribute("data-nodalia-pointer-focus");
+      if (pointerFocusedElement === element) {
+        pointerFocusedElement = null;
+      }
+    };
+
+    const suppressOutline = element => {
+      if (!(typeof HTMLElement !== "undefined" && element instanceof HTMLElement)) {
+        return;
+      }
+      if (pointerFocusedElement && pointerFocusedElement !== element) {
+        restoreOutline(pointerFocusedElement);
+      }
+      if (!inlineOutlineState.has(element)) {
+        inlineOutlineState.set(element, {
+          priority: element.style.getPropertyPriority("outline"),
+          value: element.style.getPropertyValue("outline"),
+        });
+      }
+      element.setAttribute("data-nodalia-pointer-focus", "");
+      element.style.setProperty("outline", "none", "important");
+      pointerFocusedElement = element;
+    };
+
+    document.addEventListener("pointerdown", event => {
+      if (typeof event.button === "number" && event.button !== 0) {
+        return;
+      }
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      const belongsToNodalia = path.some(node => (
+        typeof HTMLElement !== "undefined"
+        && node instanceof HTMLElement
+        && String(node.tagName || "").startsWith("NODALIA-")
+      ));
+      if (!belongsToNodalia) {
+        return;
+      }
+      const target = path.find(node => (
+        typeof HTMLElement !== "undefined"
+        && node instanceof HTMLElement
+        && typeof node.matches === "function"
+        && node.matches(POINTER_FOCUSABLE_SELECTOR)
+      ));
+      if (target) {
+        suppressOutline(target);
+      }
+    }, true);
+
+    document.addEventListener("keydown", () => {
+      restoreOutline(pointerFocusedElement);
+    }, true);
+
+    document.addEventListener("focusout", event => {
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      if (pointerFocusedElement && path.includes(pointerFocusedElement)) {
+        restoreOutline(pointerFocusedElement);
+      }
+    }, true);
+
+    window.__nodaliaPointerFocusRingGuardInstalled = true;
+    return true;
+  }
+
   function isKeyboardActivationEvent(event) {
     if (!event || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
       return false;
@@ -2010,6 +2115,7 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    installPointerFocusRingGuard,
     isKeyboardActivationEvent,
     bindModalFocus,
     releaseModalFocus,
@@ -2042,5 +2148,6 @@
   if (typeof window !== "undefined") {
     ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
+    installPointerFocusRingGuard();
   }
 })();

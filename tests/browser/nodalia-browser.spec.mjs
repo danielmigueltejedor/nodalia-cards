@@ -184,6 +184,56 @@ test("Entity select bubble remains visible after its bounce animation", async ({
   expect(visual.pressing).toBe(false);
 });
 
+test("pointer taps do not leave a focus outline while keyboard focus remains visible", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const unrelatedButton = document.createElement("button");
+    unrelatedButton.id = "unrelated-button";
+    unrelatedButton.textContent = "Outside Nodalia";
+    document.querySelector("#fixture").append(unrelatedButton);
+
+    const card = document.createElement("nodalia-entity-card");
+    card.setConfig({ entity: "sensor.test", tap_action: "more-info" });
+    card.hass = window.makeHass({
+      "sensor.test": {
+        entity_id: "sensor.test",
+        state: "2.70",
+        attributes: { friendly_name: "Consumo hoy", unit_of_measurement: "kWh" },
+      },
+    });
+    document.querySelector("#fixture").append(card);
+  });
+
+  const unrelatedButton = page.locator("#unrelated-button");
+  await unrelatedButton.click();
+  expect(await unrelatedButton.evaluate(element => ({
+    marker: element.hasAttribute("data-nodalia-pointer-focus"),
+    inlineOutline: element.style.getPropertyValue("outline"),
+  }))).toEqual({ marker: false, inlineOutline: "" });
+
+  const surface = page.locator("nodalia-entity-card").locator('ha-card[data-entity-action="body"]');
+  if (await page.evaluate(() => navigator.maxTouchPoints > 0)) {
+    await surface.tap();
+  } else {
+    await surface.click();
+  }
+  const afterTap = await surface.evaluate(element => ({
+    marker: element.hasAttribute("data-nodalia-pointer-focus"),
+    outline: getComputedStyle(element).outlineStyle,
+  }));
+  expect(afterTap).toEqual({ marker: true, outline: "none" });
+
+  await surface.press("Enter");
+  const afterKeyboard = await surface.evaluate(element => ({
+    marker: element.hasAttribute("data-nodalia-pointer-focus"),
+    inlineOutline: element.style.getPropertyValue("outline"),
+    focusVisible: element.matches(":focus-visible"),
+  }));
+  expect(afterKeyboard.marker).toBe(false);
+  expect(afterKeyboard.inlineOutline).toBe("");
+  expect(afterKeyboard.focusVisible).toBe(true);
+});
+
 test("representative interactive cards have no serious axe violations", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {
