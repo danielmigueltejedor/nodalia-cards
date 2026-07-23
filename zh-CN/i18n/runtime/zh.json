@@ -255,7 +255,8 @@
       "volumeUp": "Volume up",
       "openMedia": "Open media",
       "navigationBar": "Navigation bar",
-      "mediaPlayers": "Media players"
+      "mediaPlayers": "Media players",
+      "primaryAction": "Primary action"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Set `entity` to a `vacuum.*` entity to show this card."
   },
   "insigniaCard": {
+    "cardDescription": "Compact bubble-style badge for Nodalia dashboards.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Configure `entity` or basic content to show the badge."
   },
@@ -816,6 +818,7 @@
     "triggered": "已触发"
   },
   "calendarCard": {
+    "cardDescription": "Calendar card with native events and an expanded agenda.",
     "allDay": "全天",
     "timeRange": {
       "threeDays": "3 天",
