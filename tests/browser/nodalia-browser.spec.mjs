@@ -18,9 +18,15 @@ async function loadBundle(page) {
   return errors;
 }
 
-test("editor infrastructure is lazy and every visual editor can be created", async ({ page }) => {
+test("HACS entrypoint creates every visual editor without requesting a sidecar", async ({ page }) => {
+  const editorChunkRequests = [];
+  page.on("request", request => {
+    if (/nodalia-cards-editor-[^/]+\.js(?:\?|$)/.test(request.url())) {
+      editorChunkRequests.push(request.url());
+    }
+  });
   const errors = await loadBundle(page);
-  expect(await page.evaluate(() => Boolean(window.NodaliaEditorUI))).toBe(false);
+  expect(await page.evaluate(() => Boolean(window.NodaliaEditorUI))).toBe(true);
 
   const result = await page.evaluate(async () => {
     const states = {
@@ -63,6 +69,7 @@ test("editor infrastructure is lazy and every visual editor can be created", asy
   expect(result.created.length).toBeGreaterThanOrEqual(24);
   expect(result.stalled).toEqual([]);
   expect(result.created.every(item => item.shadow)).toBe(true);
+  expect(editorChunkRequests).toEqual([]);
   expect(errors).toEqual([]);
 });
 

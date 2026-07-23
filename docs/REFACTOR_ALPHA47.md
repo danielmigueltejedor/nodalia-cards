@@ -8,7 +8,7 @@ publish a release. The existing Alpha 47 line remains the comparison point.
 
 - 24 card custom elements and their 24 editor elements keep their exact tags.
 - YAML keys, defaults, migrations, Lovelace action objects, editor events,
-  translations, styles, animations and lazy-editor loading remain compatible.
+  translations, styles and animations remain compatible.
 - Notifications Card receives no visual redesign.
 - Camera providers, Home Assistant path signing, Frigate/go2rtc paths, direct
   go2rtc fallback and mixed-content proxy behavior remain covered.
@@ -37,8 +37,12 @@ loaders and generated bundles
   │   ├─ Room Summary state projection
   │   └─ Camera/go2rtc URL and transport rules
   ├─ card view/controllers (24 custom elements)
-  └─ lazy visual-editor catalog
+  └─ visual-editor catalog
 ```
+
+The HACS entrypoint is deliberately self-contained because HACS installs only
+`nodalia-cards.js`. The explicit core + suite distribution keeps the visual
+editor as an adjacent lazy sidecar for advanced/manual deployments.
 
 `nodalia-utils.js` is the source of truth for generic immutable configuration,
 safe paths, escaping, Lovelace events/actions, editor focus, shadow listeners,
@@ -73,9 +77,10 @@ Camera resources.
 | Source files in measured graph | 29 | 32 | +3 focused models |
 | Source lines | 128,433 | 125,085 | -3,348 (-2.6%) |
 | Source bytes | 5,406,762 | 5,313,002 | -93,760 (-1.7%) |
-| Full bundle raw | 3,118,747 | 3,068,061 | -50,686 (-1.6%) |
-| Full bundle gzip | 653,351 | 640,319 | -13,032 (-2.0%) |
-| Full bundle Brotli | 362,087 | 362,291 | +204 (+0.06%) |
+| Card runtime raw (without editor catalog) | 3,118,747 | 3,068,061 | -50,686 (-1.6%) |
+| HACS bundle raw (self-contained) | 3,118,747 | 3,887,386 | +768,639 (+24.6%) |
+| HACS bundle gzip (self-contained) | 653,351 | 850,469 | +197,118 (+30.2%) |
+| HACS bundle Brotli (self-contained) | 362,087 | 506,178 | +144,091 (+39.8%) |
 | Core raw | 355,679 | 359,002 | +3,323 |
 | Suite raw | 2,761,950 | 2,707,934 | -54,016 |
 | Lazy editor raw | 820,692 | 820,692 | unchanged |
@@ -83,9 +88,11 @@ Camera resources.
 | Browser tests | 12 passing | 12 passing | unchanged |
 | Bundle build | 0.42 s | 0.38 s | -0.04 s |
 
-The small Brotli regression is accepted for this branch because the three new
-module boundaries improve ownership and testability while raw and gzip payloads
-fall. It should be watched before merging.
+The card runtime itself is still smaller after the refactor. The shipped HACS
+file grows because it now embeds the 820,692-byte editor catalog that Alpha 47
+incorrectly left in a sidecar HACS does not install. This restores the
+single-file HACS/manual-install contract; the explicit split distribution keeps
+the smaller runtime and lazy editor for deployments that copy every artifact.
 
 ## Remaining technical debt
 

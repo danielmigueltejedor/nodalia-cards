@@ -139,18 +139,24 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
 });
 
-test("HACS runtime keeps the visual editor lazy and within bundle budgets", () => {
+test("HACS runtime is self-contained while the explicit split build keeps the editor lazy", () => {
   const pkg = JSON.parse(read("package.json"));
   const runtimeFile = path.join(root, "nodalia-cards.js");
+  const suiteFile = path.join(root, `nodalia-cards-suite-${pkg.version}.js`);
   const editorName = `nodalia-cards-editor-${pkg.version}.js`;
   const editorFile = path.join(root, editorName);
   const runtime = fs.readFileSync(runtimeFile, "utf8");
+  const suite = fs.readFileSync(suiteFile, "utf8");
 
-  assert.ok(fs.statSync(runtimeFile).size < 3.25 * 1024 * 1024, "runtime bundle should stay below 3.25 MiB");
+  assert.ok(fs.statSync(runtimeFile).size < 4 * 1024 * 1024, "self-contained HACS bundle should stay below 4 MiB");
   assert.ok(fs.statSync(editorFile).size < 900 * 1024, "lazy editor bundle should stay below 900 KiB");
-  assert.match(runtime, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
-  assert.match(runtime, /ensureEditorRuntime/);
-  assert.doesNotMatch(runtime, /const ROWS_JSON =/);
+  assert.match(runtime, /\.editorStr=function/);
+  assert.match(runtime, /window\.NodaliaEditorUI=window\.__NODALIA_EDITOR__/);
+  assert.doesNotMatch(runtime, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
+  assert.doesNotMatch(runtime, /ensureEditorRuntime/);
+  assert.match(suite, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
+  assert.match(suite, /ensureEditorRuntime/);
+  assert.doesNotMatch(suite, /\.editorStr=function/);
 });
 
 test("card sources use nodalia-utils.js instead of inlined duplicate helpers", () => {
@@ -992,7 +998,7 @@ test("HACS bundle entrypoint is self-contained and still emits diagnostics", () 
   assert.match(source, /versionedLoaderFile = `nodalia-cards-\$\{pkg\.version\}\.js`/);
   assert.match(source, /coreFile = `nodalia-cards-core-\$\{pkg\.version\}\.js`/);
   assert.match(source, /suiteFile = `nodalia-cards-suite-\$\{pkg\.version\}\.js`/);
-  assert.match(source, /fs\.writeFileSync\(path\.join\(root, versionedLoaderFile\), `\$\{fullBody\}/);
+  assert.match(source, /fs\.writeFileSync\(path\.join\(root, versionedLoaderFile\), `\$\{hacsBody\}/);
   assert.match(source, /fs\.writeFileSync\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
   assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);

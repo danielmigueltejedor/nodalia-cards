@@ -113,6 +113,11 @@ const fullBody = await buildParts(ALL_PARTS, "full");
 const coreBody = await buildParts(CORE_PARTS, "core");
 const suiteBody = await buildParts([...CARD_SUPPORT_PARTS, ...CARD_PARTS], "suite");
 const editorBody = await buildParts(EDITOR_PARTS, "editor");
+// HACS installs only the file declared in hacs.json. Keep that entrypoint (and
+// the equivalent full/versioned artifacts) self-contained so opening a visual
+// editor never depends on an auxiliary module that HACS did not download.
+// The editor remains a lazy sidecar only for the explicit core + suite build.
+const hacsBody = `${fullBody}\n${editorBody}`;
 
 function assertCardRegistrations(source, label) {
   const missing = CARD_PARTS
@@ -126,7 +131,7 @@ function assertCardRegistrations(source, label) {
 assertCardRegistrations(fullBody, "Full");
 assertCardRegistrations(suiteBody, "Suite");
 
-const fullHash = crypto.createHash("sha256").update(fullBody).digest("hex").slice(0, 12);
+const fullHash = crypto.createHash("sha256").update(hacsBody).digest("hex").slice(0, 12);
 const coreHash = crypto.createHash("sha256").update(coreBody).digest("hex").slice(0, 12);
 const suiteHash = crypto.createHash("sha256").update(suiteBody).digest("hex").slice(0, 12);
 const editorHash = crypto.createHash("sha256").update(editorBody).digest("hex").slice(0, 12);
@@ -239,10 +244,10 @@ export const splitSuiteFile = ${JSON.stringify(suiteFile)};
 export const editorFile = ${JSON.stringify(editorFile)};
 `;
 
-fs.writeFileSync(path.join(root, bundleFile), `${fullBody}\n${fullFooter}\n${editorLoaderFooter}\n`);
+fs.writeFileSync(path.join(root, bundleFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n`);
 fs.writeFileSync(path.join(root, manifestFile), manifestSource);
-fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${editorLoaderFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
-fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${editorLoaderFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
+fs.writeFileSync(path.join(root, loaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
+fs.writeFileSync(path.join(root, versionedLoaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
 compatLoaderFiles.forEach(file => {
   fs.writeFileSync(path.join(root, file), compatibilityLoaderSource(file));
 });
@@ -252,7 +257,7 @@ fs.writeFileSync(path.join(root, editorFile), `${editorBody}\n${editorFooter}\n`
 
 const formatKb = bytes => `${(bytes / 1024).toFixed(0)} KB`;
 console.log(
-  `Wrote ${loaderFile} + ${versionedLoaderFile} (${formatKb(Buffer.byteLength(fullBody))}, ${fullHash}), `
+  `Wrote ${loaderFile} + ${versionedLoaderFile} (${formatKb(Buffer.byteLength(hacsBody))}, ${fullHash}), `
   + `split ${coreFile} (${formatKb(Buffer.byteLength(coreBody))}, ${coreHash}) + `
   + `${suiteFile} (${formatKb(Buffer.byteLength(suiteBody))}, ${suiteHash}). `
   + `Lazy editor ${editorFile} (${formatKb(Buffer.byteLength(editorBody))}, ${editorHash}).`,
