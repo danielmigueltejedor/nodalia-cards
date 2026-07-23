@@ -89,7 +89,7 @@ test("build and package expose the exact supported card source set", () => {
 
   const pkg = JSON.parse(read("package.json"));
   CARD_FILES.forEach(file => assert.ok(pkg.files.includes(file), `${file} must remain published`));
-  assert.equal(pkg.version, "2.0.0-alpha.47");
+  assert.equal(pkg.version, "2.0.0-alpha.48");
   assert.ok(pkg.files.includes("nodalia-notifications-mobile-policy.js"));
   assert.ok(pkg.files.includes("nodalia-room-summary-model.js"));
   assert.ok(pkg.files.includes("nodalia-camera-stream-model.js"));

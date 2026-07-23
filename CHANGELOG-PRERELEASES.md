@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.48] - 2026-07-23
+
+Forty-eighth **`2.0.0`** **`alpha`**: cohesive architecture and reliable single-file HACS editors. Release channel **`2.0.0-alpha.48`**.
+
+### Fixed
+
+- **HACS visual editors:** `nodalia-cards.js` once again contains the complete editor runtime, preventing Safari's `Importing a module script failed` error when HACS installs only its declared entrypoint.
+- **Pointer focus feedback:** touch and mouse activation no longer leave the theme-colored focus outline around Entity, Gauge, Person, Insignia, Power Flow, Camera, or other Nodalia controls; keyboard interaction restores the accessible focus ring immediately.
+- **Entity Card selectors:** the icon bubble keeps its bounce without flashing at the end of the animation in Chromium or WebKit/iPhone.
+
+### Changed
+
+- **Architecture:** shared configuration, lifecycle, focus, event, and rendering primitives now live in `nodalia-utils.js`; Notifications mobile policy, Room Summary projection, and Camera stream resolution use focused support models instead of view-controller duplication.
+- **HACS distribution:** the recommended and manual `nodalia-cards.js` entrypoint is self-contained; the explicit core + suite distribution retains the adjacent lazy editor chunk for advanced deployments that copy every artifact.
+- **Visual family:** shared metrics and semantic surfaces remain aligned across the card suite while Notifications Card keeps its existing presentation.
+- **Validation:** the release is covered by 322 unit tests and 14 Chromium/WebKit-iPhone browser tests, including HACS editor loading, pointer focus, keyboard accessibility, Entity selector bounce, and Notifications external-alert drafts.
+- **Compatibility loaders:** `2.0.0-alpha.46` and `2.0.0-alpha.47` remain available as lightweight loaders pointing to `2.0.0-alpha.48`.
+
 ## [2.0.0-alpha.47] - 2026-07-23
 
 Forty-seventh **`2.0.0`** **`alpha`**: audited interactions, accessibility, and reproducible releases. Release channel **`2.0.0-alpha.47`**.

@@ -1,8 +1,8 @@
-# Alpha 47 architecture refactor
+# Alpha 48 architecture refactor
 
-This document records the experimental refactor on branch
-`refactor/alpha47-architecture`. It does not change the package version or
-publish a release. The existing Alpha 47 line remains the comparison point.
+This document records the refactor developed on branch
+`refactor/alpha47-architecture` and promoted to Alpha 48 after validation.
+The published Alpha 47 line remains the comparison point.
 
 ## Preserved public contract
 
@@ -13,7 +13,7 @@ publish a release. The existing Alpha 47 line remains the comparison point.
 - Camera providers, Home Assistant path signing, Frigate/go2rtc paths, direct
   go2rtc fallback and mixed-content proxy behavior remain covered.
 - The generated loader, full bundle, core/suite split and editor bundle retain
-  the Alpha 47 filenames.
+  their established roles with versioned filenames promoted to Alpha 48.
 
 These invariants are executable in `tests/architecture-contracts.test.mjs`, in
 the existing unit suites and in the Chromium/WebKit browser suite.
@@ -78,14 +78,14 @@ Camera resources.
 | Source lines | 128,433 | 125,085 | -3,348 (-2.6%) |
 | Source bytes | 5,406,762 | 5,313,002 | -93,760 (-1.7%) |
 | Card runtime raw (without editor catalog) | 3,118,747 | 3,068,061 | -50,686 (-1.6%) |
-| HACS bundle raw (self-contained) | 3,118,747 | 3,887,386 | +768,639 (+24.6%) |
-| HACS bundle gzip (self-contained) | 653,351 | 850,469 | +197,118 (+30.2%) |
-| HACS bundle Brotli (self-contained) | 362,087 | 506,178 | +144,091 (+39.8%) |
-| Core raw | 355,679 | 359,002 | +3,323 |
+| HACS bundle raw (self-contained) | 3,118,747 | 3,889,000 | +770,253 (+24.7%) |
+| HACS bundle gzip (self-contained) | 653,351 | 851,073 | +197,722 (+30.3%) |
+| HACS bundle Brotli (self-contained) | 362,087 | 506,710 | +144,623 (+39.9%) |
+| Core raw | 355,679 | 360,565 | +4,886 |
 | Suite raw | 2,761,950 | 2,707,934 | -54,016 |
 | Lazy editor raw | 820,692 | 820,692 | unchanged |
 | Unit tests | 316 passing | 322 passing | +6 contracts |
-| Browser tests | 12 passing | 12 passing | unchanged |
+| Browser tests | 12 passing | 14 passing | +2 interaction contracts |
 | Bundle build | 0.42 s | 0.38 s | -0.04 s |
 
 The card runtime itself is still smaller after the refactor. The shipped HACS
