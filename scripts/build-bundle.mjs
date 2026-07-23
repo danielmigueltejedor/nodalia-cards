@@ -11,6 +11,18 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const STANDALONE_UTILS_START = "// <nodalia-standalone-utils>";
 const STANDALONE_UTILS_END = "// </nodalia-standalone-utils>";
 
+const UNSAFE_JS_CHAR_MAP = {
+  "<": "\\u003C",
+  ">": "\\u003E",
+  "/": "\\u002F",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029",
+};
+
+function escapeUnsafeJsString(str) {
+  return str.replace(/[<>\/\u2028\u2029]/g, ch => UNSAFE_JS_CHAR_MAP[ch]);
+}
+
 const CORE_PARTS = [
   "nodalia-i18n.js",
   "nodalia-utils.js",
@@ -196,7 +208,7 @@ const editorFooter = `;if(typeof window!=="undefined"){window.__NODALIA_EDITOR__
   contentSha256_12: editorHash,
 })};window.NodaliaEditorUI=window.__NODALIA_EDITOR__;}`;
 
-const editorLoaderFooter = `;if(typeof window!=="undefined"&&window.NodaliaUtils){let editorPromise=null;const ensureEditorRuntime=()=>{if(window.NodaliaEditorUI){return Promise.resolve(window.NodaliaEditorUI);}if(!editorPromise){editorPromise=import("./${editorFile}").then(()=>window.NodaliaEditorUI).catch(error=>{editorPromise=null;throw error;});}return editorPromise;};window.NodaliaUtils.ensureEditorRuntime=ensureEditorRuntime;${JSON.stringify(CARD_PARTS.map(name => name.replace(/\.js$/, "")))}.forEach(tag=>{const ctor=customElements.get(tag);if(!ctor||ctor.__nodaliaLazyEditorWrapped||typeof ctor.getConfigElement!=="function"){return;}const original=ctor.getConfigElement;ctor.getConfigElement=async function(...args){await ensureEditorRuntime();return original.apply(this,args);};Object.defineProperty(ctor,"__nodaliaLazyEditorWrapped",{value:true});});}`;
+const editorLoaderFooter = `;if(typeof window!=="undefined"&&window.NodaliaUtils){let editorPromise=null;const ensureEditorRuntime=()=>{if(window.NodaliaEditorUI){return Promise.resolve(window.NodaliaEditorUI);}if(!editorPromise){editorPromise=import("./${editorFile}").then(()=>window.NodaliaEditorUI).catch(error=>{editorPromise=null;throw error;});}return editorPromise;};window.NodaliaUtils.ensureEditorRuntime=ensureEditorRuntime;${escapeUnsafeJsString(JSON.stringify(CARD_PARTS.map(name => name.replace(/\.js$/, ""))))}.forEach(tag=>{const ctor=customElements.get(tag);if(!ctor||ctor.__nodaliaLazyEditorWrapped||typeof ctor.getConfigElement!=="function"){return;}const original=ctor.getConfigElement;ctor.getConfigElement=async function(...args){await ensureEditorRuntime();return original.apply(this,args);};Object.defineProperty(ctor,"__nodaliaLazyEditorWrapped",{value:true});});}`;
 
 const inlineLoaderFooter = file => `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
   mode: "inline",
