@@ -255,7 +255,8 @@
       "volumeUp": "Volum opp",
       "openMedia": "Åpne medier",
       "navigationBar": "Navigasjonslinje",
-      "mediaPlayers": "Mediespillere"
+      "mediaPlayers": "Mediespillere",
+      "primaryAction": "Primær handling"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Sett `entity` til en `vacuum.*`-entitet for å vise kortet."
   },
   "insigniaCard": {
+    "cardDescription": "Kompakt boblemerke for Nodalia-instrumentbord.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Konfigurer `entity` eller grunninnhold for å vise merket."
   },
@@ -816,6 +818,7 @@
     "triggered": "Utløst"
   },
   "calendarCard": {
+    "cardDescription": "Kalenderkort med innebygde hendelser og utvidet agenda.",
     "allDay": "Hele dagen",
     "timeRange": {
       "threeDays": "3 dagen",

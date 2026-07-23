@@ -723,7 +723,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
   }
 
   connectedCallback() {
@@ -1140,6 +1142,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._openMoreInfo();
   }
 
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
+  }
+
   _circularGaugeCardUi(key, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
@@ -1310,6 +1319,11 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           display: block;
           height: 100%;
           min-height: 0;
+        }
+
+        [data-gauge-action="primary"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
         }
 
         * {
@@ -1870,7 +1884,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="gauge-card">
-        <div class="gauge-card__content" ${this._canRunTapAction() ? 'data-gauge-action="primary"' : ""}>
+        <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
           ${
             showHeader
               ? `

@@ -22,6 +22,9 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "isKeyboardActivationEvent",
+    "bindModalFocus",
+    "releaseModalFocus",
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
     "isNodaliaSliderChromeHit",
@@ -1236,6 +1239,126 @@
     };
   }
 
+  function isKeyboardActivationEvent(event) {
+    if (!event || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") {
+      return false;
+    }
+    const origin = typeof event.composedPath === "function" ? event.composedPath()[0] : event.target;
+    if (!(origin instanceof HTMLElement)) {
+      return true;
+    }
+    if (origin.isContentEditable) {
+      return false;
+    }
+    return !["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"].includes(origin.tagName);
+  }
+
+  const modalFocusState = new WeakMap();
+  const MODAL_FOCUSABLE_SELECTOR = [
+    "button:not([disabled])",
+    "[href]",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "[tabindex]:not([tabindex='-1'])",
+  ].join(",");
+
+  function modalFocusableElements(dialog) {
+    if (!(dialog instanceof HTMLElement)) {
+      return [];
+    }
+    return Array.from(dialog.querySelectorAll(MODAL_FOCUSABLE_SELECTOR)).filter(element => (
+      element instanceof HTMLElement
+      && element.hidden !== true
+      && element.getAttribute("aria-hidden") !== "true"
+    ));
+  }
+
+  function bindModalFocus(host, dialog, options = {}) {
+    if (!(host instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
+      return () => {};
+    }
+
+    const previousState = modalFocusState.get(host);
+    const previousFocus = previousState?.previousFocus
+      || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    if (previousState) {
+      previousState.dialog.removeEventListener("keydown", previousState.onKeyDown);
+      if (previousState.focusTimer) {
+        window.clearTimeout(previousState.focusTimer);
+      }
+    }
+
+    const onKeyDown = event => {
+      if (event.key !== "Tab") {
+        return;
+      }
+      const focusable = modalFocusableElements(dialog);
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    };
+
+    if (!dialog.hasAttribute("tabindex")) {
+      dialog.setAttribute("tabindex", "-1");
+    }
+    dialog.addEventListener("keydown", onKeyDown);
+    const state = {
+      dialog,
+      onKeyDown,
+      previousFocus,
+      restoreFocus: typeof options.restoreFocus === "function" ? options.restoreFocus : null,
+      focusTimer: 0,
+    };
+    modalFocusState.set(host, state);
+    state.focusTimer = window.setTimeout(() => {
+      state.focusTimer = 0;
+      if (modalFocusState.get(host) !== state || !dialog.isConnected) {
+        return;
+      }
+      const requested = options.initialFocusSelector
+        ? dialog.querySelector(options.initialFocusSelector)
+        : null;
+      const target = requested instanceof HTMLElement
+        ? requested
+        : modalFocusableElements(dialog)[0] || dialog;
+      target.focus({ preventScroll: true });
+    }, 0);
+    return () => releaseModalFocus(host);
+  }
+
+  function releaseModalFocus(host) {
+    const state = modalFocusState.get(host);
+    if (!state) {
+      return;
+    }
+    modalFocusState.delete(host);
+    state.dialog.removeEventListener("keydown", state.onKeyDown);
+    if (state.focusTimer) {
+      window.clearTimeout(state.focusTimer);
+    }
+    if (state.restoreFocus) {
+      state.restoreFocus();
+    } else if (state.previousFocus?.isConnected && typeof state.previousFocus.focus === "function") {
+      state.previousFocus.focus({ preventScroll: true });
+    }
+  }
+
   function mountIconPickerHost(host, options) {
     if (!(host instanceof HTMLElement)) {
       return;
@@ -1667,6 +1790,9 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    isKeyboardActivationEvent,
+    bindModalFocus,
+    releaseModalFocus,
     cancelCardZoneTap,
     scheduleCardZoneTap,
     isNodaliaSliderChromeHit,

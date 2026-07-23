@@ -1,0 +1,78 @@
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+const manifestModule = await import(`../nodalia-cards.manifest.js?release=${Date.now()}`);
+const manifest = manifestModule.default;
+const releaseDir = path.join(root, "release");
+
+if (manifest?.pkgVersion !== pkg.version) {
+  throw new Error(`Manifest version ${manifest?.pkgVersion || "missing"} does not match package ${pkg.version}. Run the bundle first.`);
+}
+
+const distributedFiles = [
+  manifest.loaderFile,
+  `nodalia-cards-${pkg.version}.js`,
+  manifest.splitCoreFile,
+  manifest.splitSuiteFile,
+  manifest.editorFile,
+  ...(manifest.compatLoaderFiles || []),
+  manifest.file,
+  "nodalia-cards.manifest.js",
+  "THIRD_PARTY_NOTICES.md",
+];
+
+for (const name of distributedFiles) {
+  if (!name || !fs.existsSync(path.join(root, name))) {
+    throw new Error(`Required release asset is missing: ${name || "<empty>"}`);
+  }
+}
+
+fs.mkdirSync(releaseDir, { recursive: true });
+
+const components = Object.keys(pkg.devDependencies || {}).sort().map(name => {
+  const packagePath = path.join(root, "node_modules", ...name.split("/"), "package.json");
+  const installed = fs.existsSync(packagePath)
+    ? JSON.parse(fs.readFileSync(packagePath, "utf8"))
+    : { version: String(pkg.devDependencies[name]) };
+  return {
+    type: "library",
+    name,
+    version: String(installed.version || pkg.devDependencies[name]),
+    scope: "excluded",
+    purl: `pkg:npm/${encodeURIComponent(name)}@${encodeURIComponent(String(installed.version || pkg.devDependencies[name]))}`,
+  };
+});
+
+const sbom = {
+  bomFormat: "CycloneDX",
+  specVersion: "1.5",
+  version: 1,
+  metadata: {
+    component: {
+      type: "application",
+      name: pkg.name,
+      version: pkg.version,
+    },
+  },
+  components,
+};
+const sbomPath = path.join(releaseDir, "nodalia-cards.sbom.cdx.json");
+fs.writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`);
+
+const checksumFiles = [...distributedFiles.map(name => path.join(root, name)), sbomPath];
+const checksumLines = checksumFiles.map(filePath => {
+  const digest = crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+  return `${digest}  ${path.basename(filePath)}`;
+});
+const checksumPath = path.join(releaseDir, "SHA256SUMS");
+fs.writeFileSync(checksumPath, `${checksumLines.join("\n")}\n`);
+
+const releaseAssets = [...checksumFiles, checksumPath];
+const assetListPath = path.join(releaseDir, "release-assets.txt");
+fs.writeFileSync(assetListPath, `${releaseAssets.map(filePath => path.relative(root, filePath)).join("\n")}\n`);
+
+console.log(`Validated ${distributedFiles.length} required assets and wrote ${path.relative(root, checksumPath)}.`);

@@ -44,7 +44,7 @@ jobs:
                   "Closing this issue because it has been waiting for feedback for 7 days.",
                   "",
                   "If the problem still exists or you have more information, feel free to reopen it or create a new issue."
-                ].join("\\n")
+                ].join("\n")
               });
 
               await github.rest.issues.update({

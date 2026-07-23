@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.46";
+const CARD_VERSION = "2.0.0-alpha.47";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -654,6 +654,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._expandedOpen = false;
     this._expandedEntityId = "";
+    this._expandedReturnFocus = null;
     this._failedImageUrls = new Set();
     this._previewAgeTimer = 0;
     this._expandedCardCache = new Map();
@@ -663,12 +664,14 @@ class NodaliaCameraCard extends HTMLElement {
     this._go2rtcPrefetchOwner = null;
     this._go2rtcPrefetchSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onWindowKeyDown = this._onWindowKeyDown.bind(this);
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     window.addEventListener("keydown", this._onWindowKeyDown);
     this._animateContentOnNextRender = true;
     this._prefetchGo2rtcSources();
@@ -679,10 +682,13 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     this._expandedOpen = false;
     this._expandedEntityId = "";
+    this._expandedReturnFocus = null;
     this._expandedStreamMountId += 1;
     this._disposeExpandedStream();
     this._expandedCardCache.clear();
@@ -1105,13 +1111,13 @@ class NodaliaCameraCard extends HTMLElement {
     invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
-  _performTapAction() {
+  _performTapAction(returnTarget = null) {
     const action = normalizeTextKey(this._config?.tap_action || "more-info");
     switch (action) {
       case "none":
         return;
       case "toggle":
-        this._openExpanded();
+        this._openExpanded(this._config?.entity, returnTarget);
         return;
       case "more-info":
         this._openMoreInfo();
@@ -1164,10 +1170,22 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _openExpanded(entityId = this._config?.entity) {
+  _openExpanded(entityId = this._config?.entity, returnTarget = null) {
     if (this._expandedOpen) {
       return;
     }
+    const active = returnTarget instanceof HTMLElement ? returnTarget : this.shadowRoot?.activeElement;
+    const returnAction = active instanceof HTMLElement ? String(active.dataset?.cameraAction || "") : "";
+    const returnEntity = active instanceof HTMLElement ? String(active.dataset?.cameraEntity || "") : "";
+    this._expandedReturnFocus = () => {
+      const candidates = returnAction === "expand"
+        ? Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="expand"]') || [])
+        : Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="body"]') || []);
+      const target = returnEntity
+        ? candidates.find(element => element.dataset?.cameraEntity === returnEntity)
+        : candidates[0];
+      target?.focus?.({ preventScroll: true });
+    };
     this._expandedEntityId = String(entityId || this._config?.entity || "").trim();
     this._expandedOpen = true;
     this._lastRenderSignature = "";
@@ -1246,7 +1264,7 @@ class NodaliaCameraCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
-      this._openExpanded(button.dataset.cameraEntity || this._config?.entity);
+      this._openExpanded(button.dataset.cameraEntity || this._config?.entity, button);
       return;
     }
     if (action === "close-expanded") {
@@ -1259,8 +1277,15 @@ class NodaliaCameraCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
-      this._performTapAction();
+      this._performTapAction(button);
     }
+  }
+
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
   }
 
   _renderEmptyState() {
@@ -1881,6 +1906,11 @@ class NodaliaCameraCard extends HTMLElement {
 
         * { box-sizing: border-box; }
 
+        [data-camera-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         ha-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -2328,7 +2358,7 @@ class NodaliaCameraCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="camera-card camera-card--${escapeHtml(layout)} ${feedLayout ? "camera-card--feed" : ""}">
-        <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}" data-camera-action="body">
+        <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}" data-camera-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}">
           ${previewMarkup}
           ${showHeader ? `
             <div class="camera-card__header" data-camera-action="body">
@@ -2376,6 +2406,19 @@ class NodaliaCameraCard extends HTMLElement {
 
     this._mountExpandedCards();
     this._mountExpandedStream();
+    const expandedDialog = this.shadowRoot.querySelector('.camera-card__expanded[role="dialog"]');
+    if (expandedDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, expandedDialog, {
+        initialFocusSelector: ".camera-card__expanded-close",
+        restoreFocus: () => {
+          const restore = this._expandedReturnFocus;
+          this._expandedReturnFocus = null;
+          restore?.();
+        },
+      });
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
 
     if (shouldAnimateEntrance) {
       this._animateContentOnNextRender = false;

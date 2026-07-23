@@ -519,10 +519,12 @@ class NodaliaInsigniaCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._suppressNextInsigniaTap = false;
     this._onClick = this._onClick.bind(this);
+    this._onKeyDown = this._onKeyDown.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onClick);
+    this.shadowRoot.addEventListener("keydown", this._onKeyDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -546,6 +548,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     this.shadowRoot.removeEventListener("click", this._onClick);
+    this.shadowRoot.removeEventListener("keydown", this._onKeyDown);
   }
 
   setConfig(config) {
@@ -862,6 +865,13 @@ class NodaliaInsigniaCard extends HTMLElement {
     this._handlePrimaryAction();
   }
 
+  _onKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onClick(event);
+  }
+
   _resolveInsigniaHoldAction() {
     const state = this._getState();
     const action = String(this._config?.hold_action || "none").trim().toLowerCase();
@@ -1163,6 +1173,11 @@ class NodaliaInsigniaCard extends HTMLElement {
           box-sizing: border-box;
         }
 
+        [data-insignia-action="primary"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: 2px;
+        }
+
         .insignia-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -1330,7 +1345,7 @@ class NodaliaInsigniaCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
-        <div class="insignia-card__content" data-insignia-action="primary">
+        <div class="insignia-card__content" data-insignia-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}">
           <div class="insignia-card__icon">
             ${showPicture
               ? `<img src="${escapeHtml(pictureUrl)}" alt="${escapeHtml(title)}" />`
@@ -2352,11 +2367,15 @@ if (Array.isArray(window.customCards)) {
 
 window.customBadges = window.customBadges || [];
 if (!window.customBadges.some(item => item?.type === CARD_TAG)) {
+  const language = window.NodaliaI18n?.resolveLanguage?.(null, "auto") ?? "en";
+  const strings = window.NodaliaI18n?.strings?.(language)?.insigniaCard
+    || window.NodaliaI18n?.strings?.("en")?.insigniaCard
+    || {};
   window.customBadges.push({
     type: CARD_TAG,
     name: "Nodalia Insignia",
     preview: true,
-    description: "Insignia compacta estilo chip burbuja para usar en la zona de badges.",
+    description: String(strings.cardDescription || "Compact bubble-style badge for Nodalia dashboards."),
     documentationURL: "https://developers.home-assistant.io/docs/frontend/custom-ui/custom-badge/",
   });
 }

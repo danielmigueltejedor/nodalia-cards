@@ -255,7 +255,8 @@
       "volumeUp": "Увеличение громкости",
       "openMedia": "Открытые СМИ",
       "navigationBar": "Панель навигации",
-      "mediaPlayers": "Медиаплееры"
+      "mediaPlayers": "Медиаплееры",
+      "primaryAction": "Основное действие"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Укажите `entity` как сущность `vacuum.*`, чтобы показать карточку."
   },
   "insigniaCard": {
+    "cardDescription": "Компактный значок-пузырь для панелей Nodalia.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Настройте `entity` или базовое содержимое для отображения значка."
   },
@@ -816,6 +818,7 @@
     "triggered": "Сработала"
   },
   "calendarCard": {
+    "cardDescription": "Карточка календаря со встроенными событиями и расширенной повесткой.",
     "allDay": "Весь день",
     "timeRange": {
       "threeDays": "3 дня",

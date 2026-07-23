@@ -477,7 +477,8 @@
           volumeUp: "Volume up",
           openMedia: "Open media",
           navigationBar: "Navigation bar",
-          mediaPlayers: "Media players"
+          mediaPlayers: "Media players",
+          primaryAction: "Primary action"
         }
       },
       alarmPanel: {
@@ -918,6 +919,7 @@
         emptyBody: "Set `entity` to a `vacuum.*` entity to show this card."
       },
       insigniaCard: {
+        cardDescription: "Compact bubble-style badge for Nodalia dashboards.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configure `entity` or basic content to show the badge."
       },
@@ -1038,6 +1040,7 @@
         triggered: "Triggered"
       },
       calendarCard: {
+        cardDescription: "Calendar card with native events and an expanded agenda.",
         allDay: "All day",
         timeRange: {
           threeDays: "3 days",
@@ -1437,7 +1440,8 @@
           volumeUp: "Lautstärke erhöhen",
           openMedia: "Offene Medien",
           navigationBar: "Navigationsleiste",
-          mediaPlayers: "Mediaplayer"
+          mediaPlayers: "Mediaplayer",
+          primaryAction: "Hauptaktion"
         }
       },
       alarmPanel: {
@@ -1878,6 +1882,7 @@
         emptyBody: "Lege `entity` auf eine `vacuum.*`-Entität fest, um diese Karte anzuzeigen."
       },
       insigniaCard: {
+        cardDescription: "Kompaktes Badge im Blasenstil für Nodalia-Dashboards.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Konfiguriere `entity` oder Basisinhalt, um das Abzeichen anzuzeigen."
       },
@@ -1998,6 +2003,7 @@
         triggered: "Ausgelöst"
       },
       calendarCard: {
+        cardDescription: "Kalenderkarte mit nativen Ereignissen und erweiterter Agenda.",
         allDay: "Ganztägig",
         timeRange: {
           threeDays: "3 Tage",
@@ -2397,7 +2403,8 @@
           volumeUp: "Αύξηση έντασης",
           openMedia: "Ανοίξτε τα μέσα",
           navigationBar: "Γραμμή πλοήγησης",
-          mediaPlayers: "Media player"
+          mediaPlayers: "Media player",
+          primaryAction: "Κύρια ενέργεια"
         }
       },
       alarmPanel: {
@@ -2838,6 +2845,7 @@
         emptyBody: "Ορίστε το `entity` σε οντότητα `vacuum.*` για να εμφανιστεί η κάρτα."
       },
       insigniaCard: {
+        cardDescription: "Συμπαγές σήμα τύπου φυσαλίδας για πίνακες Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Ρυθμίστε `entity` ή βασικό περιεχόμενο για να εμφανιστεί το σήμα."
       },
@@ -2958,6 +2966,7 @@
         triggered: "Ενεργοποιήθηκε"
       },
       calendarCard: {
+        cardDescription: "Κάρτα ημερολογίου με εγγενή συμβάντα και αναλυτική ατζέντα.",
         allDay: "Όλη μέρα",
         timeRange: {
           threeDays: "3 ημέρες",
@@ -3357,7 +3366,8 @@
           volumeUp: "Subir volumen",
           openMedia: "Abrir medios",
           navigationBar: "Barra de navegación",
-          mediaPlayers: "Reproductores multimedia"
+          mediaPlayers: "Reproductores multimedia",
+          primaryAction: "Acción principal"
         }
       },
       alarmPanel: {
@@ -3798,6 +3808,7 @@
         emptyBody: "Configura `entity` con una entidad `vacuum.*` para mostrar la tarjeta."
       },
       insigniaCard: {
+        cardDescription: "Insignia compacta estilo burbuja para paneles Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configura `entity` o contenido básico para mostrar la insignia."
       },
@@ -3918,6 +3929,7 @@
         triggered: "Disparada"
       },
       calendarCard: {
+        cardDescription: "Tarjeta de calendario con eventos nativos y agenda ampliada.",
         allDay: "Todo el día",
         timeRange: {
           threeDays: "3 días",
@@ -4317,7 +4329,8 @@
           volumeUp: "Augmenter le volume",
           openMedia: "Médias ouverts",
           navigationBar: "Barre de navigation",
-          mediaPlayers: "Lecteurs multimédias"
+          mediaPlayers: "Lecteurs multimédias",
+          primaryAction: "Action principale"
         }
       },
       alarmPanel: {
@@ -4758,6 +4771,7 @@
         emptyBody: "Définissez `entity` sur une entité `vacuum.*` pour afficher cette carte."
       },
       insigniaCard: {
+        cardDescription: "Badge compact en forme de bulle pour les tableaux de bord Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configurez `entity` ou un contenu de base pour afficher le badge."
       },
@@ -4878,6 +4892,7 @@
         triggered: "Déclenchée"
       },
       calendarCard: {
+        cardDescription: "Carte de calendrier avec événements natifs et agenda détaillé.",
         allDay: "Toute la journée",
         timeRange: {
           threeDays: "3 jours",
@@ -5277,7 +5292,8 @@
           volumeUp: "Alza il volume",
           openMedia: "Supporti aperti",
           navigationBar: "Barra di navigazione",
-          mediaPlayers: "Lettori multimediali"
+          mediaPlayers: "Lettori multimediali",
+          primaryAction: "Azione principale"
         }
       },
       alarmPanel: {
@@ -5718,6 +5734,7 @@
         emptyBody: "Imposta `entity` su un'entità `vacuum.*` per mostrare questa scheda."
       },
       insigniaCard: {
+        cardDescription: "Badge compatto in stile bolla per le dashboard Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configura `entity` o contenuto di base per mostrare il badge."
       },
@@ -5838,6 +5855,7 @@
         triggered: "Scattato"
       },
       calendarCard: {
+        cardDescription: "Scheda calendario con eventi nativi e agenda estesa.",
         allDay: "Tutto il giorno",
         timeRange: {
           threeDays: "3 giorni",
@@ -6237,7 +6255,8 @@
           volumeUp: "Volume omhoog",
           openMedia: "Open media",
           navigationBar: "Navigatiebalk",
-          mediaPlayers: "Mediaspelers"
+          mediaPlayers: "Mediaspelers",
+          primaryAction: "Primaire actie"
         }
       },
       alarmPanel: {
@@ -6678,6 +6697,7 @@
         emptyBody: "Stel `entity` in op een `vacuum.*`-entiteit om deze kaart te tonen."
       },
       insigniaCard: {
+        cardDescription: "Compacte badge in bubbelstijl voor Nodalia-dashboards.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configureer `entity` of basisinhoud om de badge te tonen."
       },
@@ -6798,6 +6818,7 @@
         triggered: "Getriggerd"
       },
       calendarCard: {
+        cardDescription: "Kalenderkaart met native afspraken en uitgebreide agenda.",
         allDay: "Hele dag",
         timeRange: {
           threeDays: "3 dagen",
@@ -7197,7 +7218,8 @@
           volumeUp: "Volum opp",
           openMedia: "Åpne medier",
           navigationBar: "Navigasjonslinje",
-          mediaPlayers: "Mediespillere"
+          mediaPlayers: "Mediespillere",
+          primaryAction: "Primær handling"
         }
       },
       alarmPanel: {
@@ -7638,6 +7660,7 @@
         emptyBody: "Sett `entity` til en `vacuum.*`-entitet for å vise kortet."
       },
       insigniaCard: {
+        cardDescription: "Kompakt boblemerke for Nodalia-instrumentbord.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Konfigurer `entity` eller grunninnhold for å vise merket."
       },
@@ -7758,6 +7781,7 @@
         triggered: "Utløst"
       },
       calendarCard: {
+        cardDescription: "Kalenderkort med innebygde hendelser og utvidet agenda.",
         allDay: "Hele dagen",
         timeRange: {
           threeDays: "3 dagen",
@@ -8157,7 +8181,8 @@
           volumeUp: "Aumentar o volume",
           openMedia: "Mídia aberta",
           navigationBar: "Barra de navegação",
-          mediaPlayers: "Reprodutores de mídia"
+          mediaPlayers: "Reprodutores de mídia",
+          primaryAction: "Ação principal"
         }
       },
       alarmPanel: {
@@ -8598,6 +8623,7 @@
         emptyBody: "Defina `entity` como uma entidade `vacuum.*` para mostrar este cartão."
       },
       insigniaCard: {
+        cardDescription: "Distintivo compacto em estilo de bolha para painéis Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configure `entity` ou conteúdo básico para mostrar o distintivo."
       },
@@ -8718,6 +8744,7 @@
         triggered: "Disparado"
       },
       calendarCard: {
+        cardDescription: "Cartão de calendário com eventos nativos e agenda expandida.",
         allDay: "Dia inteiro",
         timeRange: {
           threeDays: "3 dias",
@@ -9117,7 +9144,8 @@
           volumeUp: "Crește volumul",
           openMedia: "Deschide mass-media",
           navigationBar: "Bara de navigare",
-          mediaPlayers: "Playere media"
+          mediaPlayers: "Playere media",
+          primaryAction: "Acțiune principală"
         }
       },
       alarmPanel: {
@@ -9558,6 +9586,7 @@
         emptyBody: "Setează `entity` la o entitate `vacuum.*` pentru a afișa cardul."
       },
       insigniaCard: {
+        cardDescription: "Insignă compactă tip bulă pentru panourile Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Configurează `entity` sau conținut de bază pentru a afișa insigna."
       },
@@ -9678,6 +9707,7 @@
         triggered: "Declanșat"
       },
       calendarCard: {
+        cardDescription: "Card de calendar cu evenimente native și agendă extinsă.",
         allDay: "Toată ziua",
         timeRange: {
           threeDays: "3 zile",
@@ -10077,7 +10107,8 @@
           volumeUp: "Увеличение громкости",
           openMedia: "Открытые СМИ",
           navigationBar: "Панель навигации",
-          mediaPlayers: "Медиаплееры"
+          mediaPlayers: "Медиаплееры",
+          primaryAction: "Основное действие"
         }
       },
       alarmPanel: {
@@ -10518,6 +10549,7 @@
         emptyBody: "Укажите `entity` как сущность `vacuum.*`, чтобы показать карточку."
       },
       insigniaCard: {
+        cardDescription: "Компактный значок-пузырь для панелей Nodalia.",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "Настройте `entity` или базовое содержимое для отображения значка."
       },
@@ -10638,6 +10670,7 @@
         triggered: "Сработала"
       },
       calendarCard: {
+        cardDescription: "Карточка календаря со встроенными событиями и расширенной повесткой.",
         allDay: "Весь день",
         timeRange: {
           threeDays: "3 дня",
@@ -11037,7 +11070,8 @@
           volumeUp: "调高音量",
           openMedia: "开放媒体",
           navigationBar: "导航栏",
-          mediaPlayers: "媒体播放器"
+          mediaPlayers: "媒体播放器",
+          primaryAction: "主要操作"
         }
       },
       alarmPanel: {
@@ -11478,6 +11512,7 @@
         emptyBody: "将 `entity` 设置为 `vacuum.*` 实体以显示此卡片。"
       },
       insigniaCard: {
+        cardDescription: "适用于 Nodalia 仪表板的紧凑气泡徽章。",
         emptyTitle: "Nodalia Insignia Card",
         emptyBody: "配置 `entity` 或基本内容以显示徽章。"
       },
@@ -11598,6 +11633,7 @@
         triggered: "已触发"
       },
       calendarCard: {
+        cardDescription: "包含原生日历事件和扩展日程的日历卡片。",
         allDay: "全天",
         timeRange: {
           threeDays: "3 天",

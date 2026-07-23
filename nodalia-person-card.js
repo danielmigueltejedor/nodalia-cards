@@ -359,10 +359,12 @@ class NodaliaPersonCard extends HTMLElement {
     this._pendingImagePreloads = new Map();
     this._displayPictureUrl = "";
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -372,6 +374,7 @@ class NodaliaPersonCard extends HTMLElement {
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -872,6 +875,13 @@ class NodaliaPersonCard extends HTMLElement {
     this._performTapAction();
   }
 
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
+  }
+
   _personUiCopy() {
     const person = this._personStrings();
     if (!person.emptyTitle && !person.emptyBody) {
@@ -982,6 +992,11 @@ class NodaliaPersonCard extends HTMLElement {
 
         * {
           box-sizing: border-box;
+        }
+
+        [data-person-action="primary"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
         }
 
         ha-card {
@@ -1294,7 +1309,7 @@ class NodaliaPersonCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}">
-        <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? 'data-person-action="primary"' : ""}>
+        <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${

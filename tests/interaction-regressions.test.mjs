@@ -1520,8 +1520,10 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(feedbackSource, /querySelector\("\.entity-card__icon"\)/);
   assert.match(feedbackSource, /const opensSelectPicker = this\._shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)/);
   assert.match(feedbackSource, /if \(!opensSelectPicker\) \{[\s\S]*querySelector\("\.entity-card__content"\)/);
-  assert.match(source, /_triggerPressAnimation\(element[\s\S]*this\._clearEntranceAnimationClasses\(element\);[\s\S]*element\.classList\.add\(className\)/);
-  assert.match(source, /_scheduleEntranceAnimationReset\(delay\)[\s\S]*this\._animateContentOnNextRender = false;[\s\S]*this\._clearEntranceAnimationClasses\(\);/);
+  assert.match(source, /_triggerPressAnimation\(element[\s\S]*element\.classList\.remove\(className\);[\s\S]*element\.classList\.add\(className\)/);
+  assert.doesNotMatch(source, /_clearEntranceAnimationClasses/);
+  assert.match(source, /@keyframes entity-card-bubble-bounce[\s\S]*scale: 1\.12;[\s\S]*scale: 1;/);
+  assert.doesNotMatch(source, /@keyframes entity-card-bubble-bounce[\s\S]{0,500}transform: scale/);
   assert.match(source, /"entity-card__icon--entering"/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
   assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);

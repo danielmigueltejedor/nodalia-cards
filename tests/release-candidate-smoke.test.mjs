@@ -15,10 +15,17 @@ function cardPartsFromBuildScript() {
 }
 
 function compatibilityLoadersFromBuildScript() {
-  const source = read("scripts/build-bundle.mjs");
-  const match = source.match(/const compatLoaderFiles = \[([\s\S]*?)\];/);
-  assert.ok(match, "build-bundle.mjs should declare compatLoaderFiles");
-  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+  const source = read("nodalia-cards.manifest.js");
+  const match = source.match(/^export default ([\s\S]*?);\nexport const/m);
+  assert.ok(match, "generated manifest should export its metadata object");
+  return JSON.parse(match[1]).compatLoaderFiles;
+}
+
+function packagePatternIncludes(patterns, file) {
+  return patterns.some(pattern => {
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*");
+    return new RegExp(`^${escaped}$`).test(file);
+  });
 }
 
 function editorRowsFromGeneratedSource(source = read("nodalia-editor-ui.js")) {
@@ -71,11 +78,12 @@ test("compatibility aliases are unique lightweight loaders for the current versi
 test("repository retains only current versioned artifacts and compatibility loaders", () => {
   const pkg = JSON.parse(read("package.json"));
   const compatibilityLoaders = compatibilityLoadersFromBuildScript();
-  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
   const expected = [
     `nodalia-cards-${pkg.version}.js`,
     `nodalia-cards-core-${pkg.version}.js`,
     `nodalia-cards-suite-${pkg.version}.js`,
+    `nodalia-cards-editor-${pkg.version}.js`,
     ...compatibilityLoaders,
   ].sort();
   const actual = fs.readdirSync(root).filter(file => versionedBundlePattern.test(file)).sort();
@@ -107,24 +115,42 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
-  assert.ok(pkg.files.includes(expectedVersionedFile), `${expectedVersionedFile} should be published`);
+  assert.ok(packagePatternIncludes(pkg.files, expectedVersionedFile), `${expectedVersionedFile} should be published`);
   expectedCompatFiles.forEach(file => {
     assert.ok(manifest.includes(`"${file}"`), `${file} should be listed as a compatibility loader`);
-    assert.ok(pkg.files.includes(file), `${file} should be published`);
+    assert.ok(packagePatternIncludes(pkg.files, file), `${file} should be published`);
     assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist after bundle`);
   });
 
   const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
   const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
+  const expectedEditorFile = `nodalia-cards-editor-${pkg.version}.js`;
   assert.ok(manifest.includes(`"splitCoreFile": "${expectedCoreFile}"`));
   assert.ok(manifest.includes(`"splitSuiteFile": "${expectedSuiteFile}"`));
+  assert.ok(manifest.includes(`"editorFile": "${expectedEditorFile}"`));
   assert.ok(fs.existsSync(path.join(root, expectedCoreFile)), `${expectedCoreFile} should exist after bundle`);
   assert.ok(fs.existsSync(path.join(root, expectedSuiteFile)), `${expectedSuiteFile} should exist after bundle`);
+  assert.ok(fs.existsSync(path.join(root, expectedEditorFile)), `${expectedEditorFile} should exist after bundle`);
 
-  pkg.files.forEach(file => {
-    assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
+  pkg.files.forEach(pattern => {
+    const matches = fs.readdirSync(root).filter(file => packagePatternIncludes([pattern], file));
+    assert.ok(matches.length || fs.existsSync(path.join(root, pattern)), `${pattern} should match a published file or directory`);
   });
   assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
+});
+
+test("HACS runtime keeps the visual editor lazy and within bundle budgets", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const runtimeFile = path.join(root, "nodalia-cards.js");
+  const editorName = `nodalia-cards-editor-${pkg.version}.js`;
+  const editorFile = path.join(root, editorName);
+  const runtime = fs.readFileSync(runtimeFile, "utf8");
+
+  assert.ok(fs.statSync(runtimeFile).size < 3.25 * 1024 * 1024, "runtime bundle should stay below 3.25 MiB");
+  assert.ok(fs.statSync(editorFile).size < 900 * 1024, "lazy editor bundle should stay below 900 KiB");
+  assert.match(runtime, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
+  assert.match(runtime, /ensureEditorRuntime/);
+  assert.doesNotMatch(runtime, /const ROWS_JSON =/);
 });
 
 test("card sources use nodalia-utils.js instead of inlined duplicate helpers", () => {

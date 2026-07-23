@@ -889,8 +889,10 @@ class NodaliaEntityCard extends HTMLElement {
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -2279,7 +2281,6 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    this._clearEntranceAnimationClasses(element);
     element.classList.remove(className);
     element.getBoundingClientRect();
     element.classList.add(className);
@@ -2296,25 +2297,6 @@ class NodaliaEntityCard extends HTMLElement {
     } else {
       window.setTimeout(done, animations.buttonBounceDuration + 40);
     }
-  }
-
-  _clearEntranceAnimationClasses(element = null) {
-    const entranceClasses = [
-      "entity-card__content--entering",
-      "entity-card__hero--entering",
-      "entity-card__icon--entering",
-      "entity-card__actions--entering",
-    ];
-
-    if (element instanceof HTMLElement) {
-      element.classList.remove(...entranceClasses);
-      return;
-    }
-
-    const selector = entranceClasses.map(className => `.${className}`).join(", ");
-    this.shadowRoot?.querySelectorAll(selector).forEach(node => {
-      node.classList.remove(...entranceClasses);
-    });
   }
 
   _scheduleEntranceAnimationReset(delay) {
@@ -2334,8 +2316,17 @@ class NodaliaEntityCard extends HTMLElement {
       if (!this.isConnected) {
         return;
       }
+      this.shadowRoot?.querySelectorAll([
+        ".entity-card__content--entering",
+        ".entity-card__hero--entering",
+        ".entity-card__icon--entering",
+        ".entity-card__copy--entering",
+        ".entity-card__actions--entering",
+      ].join(",")).forEach(element => {
+        const entranceClasses = Array.from(element.classList).filter(name => name.endsWith("--entering"));
+        element.classList.remove(...entranceClasses);
+      });
       this._animateContentOnNextRender = false;
-      this._clearEntranceAnimationClasses();
     }, safeDelay);
   }
 
@@ -2443,6 +2434,13 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
+  }
+
   _renderChip(label, tone = "default") {
     if (!label) {
       return "";
@@ -2458,6 +2456,14 @@ class NodaliaEntityCard extends HTMLElement {
     const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _commonAria(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
+    return String(pack?.[key] ?? enPack?.[key] ?? fallback);
   }
 
   _renderSelectPickerPanel(state, accentColor) {
@@ -2614,6 +2620,11 @@ class NodaliaEntityCard extends HTMLElement {
           box-sizing: border-box;
         }
 
+        ha-card[data-entity-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         ha-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -2727,8 +2738,9 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           justify-self: start;
           transform-origin: center;
-          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform;
+          scale: 1;
+          transition: scale 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+          will-change: transform, scale;
           width: ${effectiveIconSize};
         }
 
@@ -3158,16 +3170,16 @@ class NodaliaEntityCard extends HTMLElement {
 
         @keyframes entity-card-bubble-bounce {
           0% {
-            transform: scale(1);
+            scale: 1;
           }
           48% {
-            transform: scale(1.12);
+            scale: 1.12;
           }
           72% {
-            transform: scale(1.04);
+            scale: 1.04;
           }
           100% {
-            transform: scale(1);
+            scale: 1;
           }
         }
 
@@ -3224,7 +3236,7 @@ class NodaliaEntityCard extends HTMLElement {
       <ha-card
         class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${isSelectEntity ? "entity-card--select" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${canRunBodyTap ? 'data-entity-action="body"' : ""}
+        ${canRunBodyTap ? `data-entity-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}
       >
         <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
           <div class="entity-card__hero ${shouldAnimateEntrance ? "entity-card__hero--entering" : ""}">
@@ -3232,7 +3244,7 @@ class NodaliaEntityCard extends HTMLElement {
               type="button"
               class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""} ${canRunIconTap ? "entity-card__icon--clickable" : ""}"
               ${canRunIconTap ? 'data-entity-action="icon"' : ""}
-              aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? "Accion principal" : title)}"
+              aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? this._commonAria("primaryAction", "Primary action") : title)}"
             >
               ${entityPicture
                 ? `<img class="entity-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`

@@ -188,6 +188,19 @@ test("external_alerts normalize and deduplicate by id", () => {
   assert.equal(rows[1].mobile, "off");
 });
 
+test("external alert editor drafts survive normalization until required fields are filled", () => {
+  const draft = { _draft: true, id: "", title: "", type: "camera_event", severity: "warning" };
+  const editorRows = mobile.normalizeExternalAlerts([draft], { keepDrafts: true });
+  const emittedRows = mobile.normalizeExternalAlerts([draft]);
+  assert.equal(editorRows.length, 1);
+  assert.equal(editorRows[0]._draft, true);
+  assert.equal(emittedRows.length, 0);
+
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /case "add-external-alert":[\s\S]*_draft: true/);
+  assert.match(source, /case "add-external-alert":[\s\S]*this\._showExternalAlertsSection = true;[\s\S]*this\._emitConfig\(\)/);
+});
+
 test("background payload includes policy context cooldown and external alerts", () => {
   const payload = mobile.getBackgroundMobileConfigPayload({
     background_mobile: { enabled: true },

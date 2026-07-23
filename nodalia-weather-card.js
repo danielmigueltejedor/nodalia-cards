@@ -851,6 +851,15 @@ class NodaliaWeatherCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this._onWindowKeyDown = event => {
+      if (event.key !== "Escape" || !this._meteoalarmPopupOpen) {
+        return;
+      }
+      event.preventDefault();
+      this._meteoalarmPopupOpen = false;
+      this._lastRenderSignature = "";
+      this._render();
+    };
     this._detachHostHold = () => {};
     this._suppressNextWeatherTap = false;
   }
@@ -887,6 +896,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
+    window.addEventListener("keydown", this._onWindowKeyDown);
     this._animateContentOnNextRender = true;
     this._ensureForecastSubscription();
     if (this._hass && this._config) {
@@ -896,12 +906,14 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     this._detachHostHold?.();
     this._detachHostHold = () => {};
     window.NodaliaUtils?.cancelCardZoneTap?.(this);
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot?.removeEventListener("pointerleave", this._onShadowPointerLeave);
+    window.removeEventListener("keydown", this._onWindowKeyDown);
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -3452,6 +3464,15 @@ class NodaliaWeatherCard extends HTMLElement {
 
     if (shouldAnimateForecast) {
       this._animateForecastOnNextRender = false;
+    }
+
+    const meteoalarmDialog = this.shadowRoot.querySelector('.weather-alert-panel[role="dialog"]');
+    if (meteoalarmDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, meteoalarmDialog, {
+        initialFocusSelector: ".weather-alert-panel__close",
+      });
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
     }
 
     this._lastRenderSignature = this._getRenderSignature();

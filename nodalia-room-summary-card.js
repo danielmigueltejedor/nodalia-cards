@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.46";
+const CARD_VERSION = "2.0.0-alpha.47";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -548,6 +548,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._hubExpanded = false;
     this._hubEmbedCache = new Map();
     this._hubEmbedConfigSignatures = new WeakMap();
+    this._suppressNextPrimaryClick = false;
+    this._detachPrimaryHold = () => {};
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
   }
@@ -555,6 +557,24 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this._detachPrimaryHold?.();
+    this._detachPrimaryHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const actionTarget = event.composedPath().find(
+                node => node instanceof HTMLElement && node.dataset?.roomAction === "primary",
+              );
+              return actionTarget ? "primary" : null;
+            },
+            shouldBeginHold: () => String(this._config?.hold_action || "none") !== "none",
+            onHold: () => this._performCardAction("hold"),
+            markHoldConsumedClick: () => {
+              this._suppressNextPrimaryClick = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
     this._animateContentOnNextRender = true;
     if (this._hass) { this._lastRenderSignature = ""; this._render(); }
   }
@@ -562,6 +582,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("input", this._onShadowInput);
+    this._detachPrimaryHold?.();
+    this._detachPrimaryHold = () => {};
+    this._suppressNextPrimaryClick = false;
     this._lastRenderSignature = "";
     this._hubEmbedCache?.clear();
     this._hubEmbedConfigSignatures = new WeakMap();
@@ -1065,11 +1088,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     event.stopPropagation();
     const action = el.dataset.roomAction;
     if (action === "primary") {
+      if (this._suppressNextPrimaryClick) {
+        this._suppressNextPrimaryClick = false;
+        return;
+      }
       this._performCardAction("tap");
-      return;
-    }
-    if (action === "hold") {
-      this._performCardAction("hold");
       return;
     }
     if (action?.startsWith("nav:")) {
@@ -1561,7 +1584,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const collapsed = collapsible && this._hubExpanded !== true;
     const activePanel = collapsed ? "home" : HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
     const navItems = this._getHubNavItems(config, summary);
-    const renderedPanels = collapsed ? ["home"] : ["home", ...navItems.map(item => item.id)];
+    // Only the visible panel belongs in the DOM. Embedded cards are relatively
+    // expensive and must not receive hass updates while their panel is hidden.
+    const renderedPanels = [activePanel];
     const animate = config.animations?.enabled !== false && this._animateContentOnNextRender;
     const cardBackground = styles.card.background;
     const cardBorder = styles.card.border;

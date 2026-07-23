@@ -25,6 +25,9 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue_number = issue.number;
+            const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 30 });
+            const latestAlpha = releases.find(release => !release.draft && /-alpha\.\d+$/.test(release.tag_name));
+            const latestAlphaVersion = latestAlpha?.tag_name?.replace(/^v/, "") || "latest alpha";
 
             async function add(labels) {
               await github.rest.issues.addLabels({
@@ -78,7 +81,7 @@ jobs:
                 "2. Go to Nodalia Cards",
                 "3. Click the menu → Redownload",
                 "4. Select **Need a different version?**",
-                "5. Choose the latest `1.2.0-alpha.x` release",
+                `5. Choose **${latestAlphaVersion}**`,
                 "",
                 "If anything still feels off, please let me know."
               ].join("\n"));

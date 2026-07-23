@@ -940,6 +940,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
@@ -5323,6 +5324,14 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     this._restoreMediaBrowserScrollState();
     this._restoreTvPanelScrollState();
+    const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');
+    if (mediaBrowserDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, mediaBrowserDialog, {
+        initialFocusSelector: '[data-media-browser-close="true"]',
+      });
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
     this._tvSourcePanelAnimatingEntity = null;
     this._tvVolumePanelAnimatingEntity = null;
     if (this._mediaBrowserState?.animateIn === true) {

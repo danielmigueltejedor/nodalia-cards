@@ -445,8 +445,9 @@ function normalizeMobileContext(value) {
   };
 }
 
-function normalizeExternalAlerts(value) {
+function normalizeExternalAlerts(value, options = {}) {
   const rows = Array.isArray(value) ? value : [];
+  const keepDrafts = options.keepDrafts === true;
   const seen = new Set();
   return rows
     .map(item => {
@@ -454,7 +455,7 @@ function normalizeExternalAlerts(value) {
       const id = String(row.id || "").trim();
       const type = String(row.type || "external_alert").trim().toLowerCase() || "external_alert";
       const mobileRaw = row.mobile ?? row.mobile_notifications ?? row.mobile_enabled;
-      return {
+      const normalized = {
         id,
         type,
         title: String(row.title || "").trim(),
@@ -469,8 +470,15 @@ function normalizeExternalAlerts(value) {
         url: String(row.url || "").trim(),
         action_label: String(row.action_label || "").trim(),
       };
+      if (keepDrafts && row._draft === true) {
+        normalized._draft = true;
+      }
+      return normalized;
     })
     .filter(item => {
+      if (keepDrafts && item._draft === true) {
+        return true;
+      }
       if (!item.id || !item.title || seen.has(item.id)) {
         return false;
       }
@@ -722,7 +730,9 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
   config.presence_entity = String(config.presence_entity || "").trim();
   config.mobile_context = normalizeMobileContext(config.mobile_context);
-  config.external_alerts = normalizeExternalAlerts(config.external_alerts);
+  config.external_alerts = normalizeExternalAlerts(config.external_alerts, {
+    keepDrafts: options.keepDrafts === true,
+  });
   config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
   config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
   config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
@@ -4893,6 +4903,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           this._config.external_alerts = [];
         }
         this._config.external_alerts.push({
+          _draft: true,
           id: "",
           type: "camera_event",
           title: "",
@@ -4900,6 +4911,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           severity: "warning",
           mobile: "auto",
         });
+        this._showExternalAlertsSection = true;
         this._emitConfig();
         break;
       case "remove-external-alert":

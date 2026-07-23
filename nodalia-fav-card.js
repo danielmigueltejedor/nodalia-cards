@@ -1737,6 +1737,14 @@ class NodaliaFavCard extends HTMLElement {
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
+  _commonAria(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
+    return String(pack?.[key] ?? enPack?.[key] ?? fallback);
+  }
+
   _renderEmptyState() {
     const title = escapeHtml(this._favCardUi("emptyTitle", "Nodalia Fav Card"));
     const body = escapeHtml(this._favCardUi("emptyBody", "Set `entity` to show the favorite."));
@@ -2195,7 +2203,7 @@ class NodaliaFavCard extends HTMLElement {
               type="button"
               class="fav-card__icon"
               ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
-              aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
+              aria-label="${escapeHtml(canRunPrimaryAction ? this._commonAria("primaryAction", "Primary action") : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}

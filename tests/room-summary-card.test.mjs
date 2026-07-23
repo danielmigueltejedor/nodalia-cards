@@ -143,6 +143,9 @@ test("room summary executes normalized Lovelace actions without mixing tap and h
   assert.match(source, /action === "toggle"[\s\S]*?_toggleEntity\(this\._primaryActionEntity\(\)\)/);
   assert.match(source, /_parseActionObject\(this\._config\?\.\[\x60\$\{prefix\}_service_target\x60\]\)/);
   assert.match(source, /prefix === "tap" \? cfg\.navigation_path : cfg\[\x60\$\{prefix\}_navigation_path\x60\]/);
+  assert.match(source, /bindHostPointerHoldGesture\(this,[\s\S]*onHold: \(\) => this\._performCardAction\("hold"\)/);
+  assert.match(source, /markHoldConsumedClick:[\s\S]*this\._suppressNextPrimaryClick = true/);
+  assert.match(source, /action === "primary"[\s\S]*this\._suppressNextPrimaryClick = false;[\s\S]*this\._performCardAction\("tap"\)/);
 });
 
 test("room summary always migrates legacy layouts to Hub", () => {
@@ -267,7 +270,7 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /_hubEmbedConfigSignatures = new WeakMap/);
   assert.match(source, /_activateHubPanel\(next\)/);
   assert.match(source, /data-hub-panel=/);
-  assert.match(source, /view\.hidden = !active/);
+  assert.match(source, /const renderedPanels = \[activePanel\]/);
   assert.match(source, /data-hub-slot="home"/);
   assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
   assert.match(source, /panel_duration: 0/);
@@ -356,7 +359,7 @@ test("room summary hub supports a collapsible compact mode", () => {
   assert.match(source, /this\._hubExpanded = false/);
   assert.match(source, /collapsible === true && this\._hubExpanded !== true \? 2 : 4/);
   assert.match(source, /action === "toggle-hub-expand"/);
-  assert.match(source, /const renderedPanels = collapsed \? \["home"\]/);
+  assert.match(source, /const renderedPanels = \[activePanel\]/);
   assert.match(source, /!collapsed && navItems\.length/);
   assert.match(source, /collapsed \? "mdi:chevron-down" : "mdi:chevron-up"/);
   assert.match(source, /aria-expanded="\$\{collapsed \? "false" : "true"\}"/);

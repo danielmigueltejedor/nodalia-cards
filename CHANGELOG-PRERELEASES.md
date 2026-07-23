@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.47] - 2026-07-23
+
+Forty-seventh **`2.0.0`** **`alpha`**: audited interactions, accessibility, and reproducible releases. Release channel **`2.0.0-alpha.47`**.
+
+### Fixed
+
+- **Entity Card selector animation:** the icon bubble keeps its bounce while completed entrance classes are retired safely, preventing the final opacity flash in Chromium and WebKit/iPhone.
+- **Notifications external alerts:** incomplete alert rows remain editable instead of disappearing before their required fields are filled; emitted runtime configuration still excludes invalid drafts.
+- **Room Summary actions and rendering:** `hold_action` is reachable through a real pointer hold gesture, its following synthetic tap is suppressed, and only the active embedded panel is mounted.
+- **Keyboard and dialog accessibility:** primary surfaces on Entity, Gauge, Person, Insignia, Power Flow, and Camera support Enter/Space with visible focus; Camera, Media, Calendar, Weather, and Power Flow dialogs trap focus and restore it when closed.
+- **Runtime localization:** shared primary-action labels and card descriptions no longer fall back to hard-coded Spanish strings.
+- **Repository automation:** stale issue messages now use real line breaks and release guidance resolves the current alpha dynamically.
+
+### Changed
+
+- **Lazy visual editor:** the 801 KB editor catalog is shipped as `nodalia-cards-editor-2.0.0-alpha.47.js` and loaded only when Lovelace requests an editor, reducing the HACS runtime bundle to about 3.0 MB.
+- **Release integrity:** CI now exercises Chromium and WebKit/iPhone, CodeQL scans JavaScript, and tagged releases validate their version, publish compatibility loaders, checksums and a CycloneDX SBOM, and create build attestations.
+- **Compatibility loaders:** `2.0.0-alpha.45` and `2.0.0-alpha.46` remain available as lightweight loaders pointing to `2.0.0-alpha.47`.
+
 ## [2.0.0-alpha.46] - 2026-07-23
 
 Forty-sixth **`2.0.0`** **`alpha`**: stable Entity Card selector bounce. Release channel **`2.0.0-alpha.46`**.

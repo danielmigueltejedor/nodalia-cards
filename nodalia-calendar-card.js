@@ -853,6 +853,7 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
     }
@@ -4078,6 +4079,13 @@ class NodaliaCalendarCard extends HTMLElement {
     this._mountNativeCalendarControl();
     this._mountNativeColorControl();
     this._mountNativeRepeatControl();
+    const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
+    const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
+    if (activeCalendarDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog);
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
   }
 
   _mountNativeCalendarControl() {
@@ -5752,10 +5760,14 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
 }
 
+const _nodaliaCalendarLanguage = window.NodaliaI18n?.resolveLanguage?.(null, "auto") ?? "en";
+const _nodaliaCalendarStrings = window.NodaliaI18n?.strings?.(_nodaliaCalendarLanguage)?.calendarCard
+  || window.NodaliaI18n?.strings?.("en")?.calendarCard
+  || {};
 const _nodaliaCalendarCardMeta = {
   type: CARD_TAG,
   name: "Nodalia Calendar Card",
-  description: "Tarjeta de calendario elegante estilo Nodalia con eventos nativos.",
+  description: String(_nodaliaCalendarStrings.cardDescription || "Calendar card with native events and an expanded agenda."),
   preview: true,
 };
 if (typeof window.NodaliaUtils?.registerCustomCard === "function") {

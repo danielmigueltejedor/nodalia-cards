@@ -1057,6 +1057,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onHomePopupKeydown = this._onHomePopupKeydown.bind(this);
     this._homePopupOpen = false;
     this._flowViewportVisible = true;
@@ -1176,6 +1177,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     if (typeof document !== "undefined") {
       document.addEventListener("keydown", this._onHomePopupKeydown);
     }
@@ -1188,9 +1190,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     this._clearFlowUnpauseRaf();
     this._detachFlowViewportTracking();
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     if (typeof document !== "undefined") {
       document.removeEventListener("keydown", this._onHomePopupKeydown);
     }
@@ -2974,6 +2978,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
   }
 
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
+  }
+
   _getTitle() {
     return this._config?.title || this._config?.name || "Flujo";
   }
@@ -3177,6 +3188,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         * {
           box-sizing: border-box;
+        }
+
+        [data-card-action="primary"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
         }
 
         ha-card {
@@ -4305,7 +4321,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             `
             : ""
         }
-        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? 'data-card-action="primary"' : ""}>
+        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || "Energy")}"` : ""}>
           ${
             layoutPreset === "simple"
               ? this._renderSimpleLayout(nodes, lines, {
@@ -4378,6 +4394,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
 
     this._syncFlowMotionPause();
+    const homePopupDialog = this.shadowRoot.querySelector('.power-flow-card__home-popup-panel[role="dialog"]');
+    if (homePopupDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, homePopupDialog, {
+        initialFocusSelector: '[data-home-popup-action="close"]',
+      });
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
     this._lastRenderSignature = this._getRenderSignature();
 
     if (shouldAnimateEntrance) {

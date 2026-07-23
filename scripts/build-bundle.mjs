@@ -13,11 +13,12 @@ const STANDALONE_UTILS_END = "// </nodalia-standalone-utils>";
 
 const CORE_PARTS = [
   "nodalia-i18n.js",
-  "nodalia-editor-ui.js",
   "nodalia-utils.js",
   "nodalia-render-signature.js",
   "nodalia-bubble-contrast.js",
 ];
+
+const EDITOR_PARTS = ["nodalia-editor-ui.js"];
 
 const CARD_PARTS = [
   "nodalia-navigation-bar.js",
@@ -105,6 +106,7 @@ async function buildParts(parts, label) {
 const fullBody = await buildParts(ALL_PARTS, "full");
 const coreBody = await buildParts(CORE_PARTS, "core");
 const suiteBody = await buildParts(CARD_PARTS, "suite");
+const editorBody = await buildParts(EDITOR_PARTS, "editor");
 
 function assertCardRegistrations(source, label) {
   const missing = CARD_PARTS
@@ -121,6 +123,7 @@ assertCardRegistrations(suiteBody, "Suite");
 const fullHash = crypto.createHash("sha256").update(fullBody).digest("hex").slice(0, 12);
 const coreHash = crypto.createHash("sha256").update(coreBody).digest("hex").slice(0, 12);
 const suiteHash = crypto.createHash("sha256").update(suiteBody).digest("hex").slice(0, 12);
+const editorHash = crypto.createHash("sha256").update(editorBody).digest("hex").slice(0, 12);
 
 const bundleFile = "nodalia-cards.bundle.js";
 const manifestFile = "nodalia-cards.manifest.js";
@@ -128,13 +131,29 @@ const loaderFile = "nodalia-cards.js";
 const versionedLoaderFile = `nodalia-cards-${pkg.version}.js`;
 const coreFile = `nodalia-cards-core-${pkg.version}.js`;
 const suiteFile = `nodalia-cards-suite-${pkg.version}.js`;
-const compatLoaderFiles = [
-  "nodalia-cards-2.0.0-alpha.44.js",
-  "nodalia-cards-2.0.0-alpha.45.js",
-];
+const editorFile = `nodalia-cards-editor-${pkg.version}.js`;
+function deriveCompatLoaderFiles(version) {
+  const configured = Array.isArray(pkg.nodalia?.compatVersions)
+    ? pkg.nodalia.compatVersions.map(value => String(value || "").trim()).filter(Boolean)
+    : [];
+  if (configured.length) {
+    return configured.map(value => `nodalia-cards-${value}.js`);
+  }
+  const match = String(version || "").match(/^(\d+\.\d+\.\d+)-(alpha|beta|rc)\.(\d+)$/);
+  if (!match) {
+    return [];
+  }
+  const [, base, channel, rawNumber] = match;
+  const number = Number(rawNumber);
+  return [number - 2, number - 1]
+    .filter(candidate => candidate > 0)
+    .map(candidate => `nodalia-cards-${base}-${channel}.${candidate}.js`);
+}
 
-const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
-const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile, ...compatLoaderFiles]);
+const compatLoaderFiles = deriveCompatLoaderFiles(pkg.version);
+
+const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile, editorFile, ...compatLoaderFiles]);
 for (const name of fs.readdirSync(root)) {
   if (!VERSIONED_BUNDLE_PATTERN.test(name) || keepVersionedBundles.has(name)) {
     continue;
@@ -146,6 +165,7 @@ for (const name of fs.readdirSync(root)) {
 const fullFooter = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSON.stringify({
   pkgVersion: pkg.version,
   contentSha256_12: fullHash,
+  editorFile,
 })};if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards %c v${pkg.version} (${fullHash}) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}`;
 
 const coreFooter = `;if(typeof window!=="undefined"){window.__NODALIA_CORE__=${JSON.stringify({
@@ -160,6 +180,13 @@ const suiteFooter = `;if(typeof window!=="undefined"){window.__NODALIA_SUITE__=$
   requiresCore: coreFile,
 })};if(!window.NodaliaUtils&&typeof console!=="undefined"&&typeof console.warn==="function"){console.warn("[nodalia-cards] Load ${coreFile} before ${suiteFile}.");}if(typeof console!=="undefined"&&typeof console.info==="function"){console.info("%c nodalia-cards suite %c v${pkg.version} (${suiteHash}) ","background:#22343f;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;","background:#3f6a80;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;");}}`;
 
+const editorFooter = `;if(typeof window!=="undefined"){window.__NODALIA_EDITOR__=${JSON.stringify({
+  pkgVersion: pkg.version,
+  contentSha256_12: editorHash,
+})};window.NodaliaEditorUI=window.__NODALIA_EDITOR__;}`;
+
+const editorLoaderFooter = `;if(typeof window!=="undefined"&&window.NodaliaUtils){let editorPromise=null;const ensureEditorRuntime=()=>{if(window.NodaliaEditorUI){return Promise.resolve(window.NodaliaEditorUI);}if(!editorPromise){editorPromise=import("./${editorFile}").then(()=>window.NodaliaEditorUI).catch(error=>{editorPromise=null;throw error;});}return editorPromise;};window.NodaliaUtils.ensureEditorRuntime=ensureEditorRuntime;${JSON.stringify(CARD_PARTS.map(name => name.replace(/\.js$/, "")))}.forEach(tag=>{const ctor=customElements.get(tag);if(!ctor||ctor.__nodaliaLazyEditorWrapped||typeof ctor.getConfigElement!=="function"){return;}const original=ctor.getConfigElement;ctor.getConfigElement=async function(...args){await ensureEditorRuntime();return original.apply(this,args);};Object.defineProperty(ctor,"__nodaliaLazyEditorWrapped",{value:true});});}`;
+
 const inlineLoaderFooter = file => `;if(typeof window!=="undefined"){window.__NODALIA_LOADER__=${JSON.stringify({
   mode: "inline",
   pkgVersion: pkg.version,
@@ -168,6 +195,7 @@ const inlineLoaderFooter = file => `;if(typeof window!=="undefined"){window.__NO
   fallbackFile: loaderFile,
   splitCoreFile: coreFile,
   splitSuiteFile: suiteFile,
+  editorFile,
 })};}`;
 
 const compatibilityLoaderSource = file => `import "./${versionedLoaderFile}";
@@ -192,6 +220,8 @@ const manifest = {
   splitCoreSha256_12: coreHash,
   splitSuiteFile: suiteFile,
   splitSuiteSha256_12: suiteHash,
+  editorFile,
+  editorSha256_12: editorHash,
 };
 
 const manifestSource = `export default ${JSON.stringify(manifest, null, 2)};
@@ -200,21 +230,24 @@ export const contentSha256_12 = ${JSON.stringify(fullHash)};
 export const file = ${JSON.stringify(bundleFile)};
 export const splitCoreFile = ${JSON.stringify(coreFile)};
 export const splitSuiteFile = ${JSON.stringify(suiteFile)};
+export const editorFile = ${JSON.stringify(editorFile)};
 `;
 
-fs.writeFileSync(path.join(root, bundleFile), `${fullBody}\n${fullFooter}\n`);
+fs.writeFileSync(path.join(root, bundleFile), `${fullBody}\n${fullFooter}\n${editorLoaderFooter}\n`);
 fs.writeFileSync(path.join(root, manifestFile), manifestSource);
-fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
-fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
+fs.writeFileSync(path.join(root, loaderFile), `${fullBody}\n${fullFooter}\n${editorLoaderFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
+fs.writeFileSync(path.join(root, versionedLoaderFile), `${fullBody}\n${fullFooter}\n${editorLoaderFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
 compatLoaderFiles.forEach(file => {
   fs.writeFileSync(path.join(root, file), compatibilityLoaderSource(file));
 });
 fs.writeFileSync(path.join(root, coreFile), `${coreBody}\n${coreFooter}\n`);
-fs.writeFileSync(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n`);
+fs.writeFileSync(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n${editorLoaderFooter}\n`);
+fs.writeFileSync(path.join(root, editorFile), `${editorBody}\n${editorFooter}\n`);
 
 const formatKb = bytes => `${(bytes / 1024).toFixed(0)} KB`;
 console.log(
   `Wrote ${loaderFile} + ${versionedLoaderFile} (${formatKb(Buffer.byteLength(fullBody))}, ${fullHash}), `
   + `split ${coreFile} (${formatKb(Buffer.byteLength(coreBody))}, ${coreHash}) + `
-  + `${suiteFile} (${formatKb(Buffer.byteLength(suiteBody))}, ${suiteHash}).`,
+  + `${suiteFile} (${formatKb(Buffer.byteLength(suiteBody))}, ${suiteHash}). `
+  + `Lazy editor ${editorFile} (${formatKb(Buffer.byteLength(editorBody))}, ${editorHash}).`,
 );
