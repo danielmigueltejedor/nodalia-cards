@@ -241,6 +241,135 @@ test("foreground push is skipped only after background sync succeeds", () => {
   assert.match(source, /_backgroundMobileSuppressesForeground\(\)/);
   assert.match(source, /_lastBackgroundMobileSyncSignature/);
   assert.match(source, /background\.enabled !== true[\s\S]*return false/);
+  assert.match(
+    source,
+    /currentSignature === lastSignature/,
+    "foreground suppression must require the current config signature, not any historical sync",
+  );
+  assert.match(
+    source,
+    /backgroundMobilePayloadOverLimit\(payload\)[\s\S]*?_lastBackgroundMobileSyncSignature = ""/,
+    "oversized sync must clear the cached success signature",
+  );
+});
+
+test("stale background sync signature does not suppress foreground after config diverges", () => {
+  let CardClass = null;
+  const sandbox = {
+    URL,
+    window: { NodaliaUtils: {} },
+    customElements: {
+      define(_tag, ctor) {
+        if (!CardClass && typeof ctor === "function" && ctor.name === "NodaliaNotificationsCard") {
+          CardClass = ctor;
+        }
+      },
+      get() {
+        return null;
+      },
+    },
+    HTMLElement: class {
+      constructor() {
+        this.isConnected = true;
+        this.shadowRoot = null;
+      }
+
+      attachShadow() {
+        this.shadowRoot = {
+          addEventListener() {},
+          removeEventListener() {},
+          innerHTML: "",
+          querySelector() {
+            return null;
+          },
+          querySelectorAll() {
+            return [];
+          },
+        };
+        return this.shadowRoot;
+      }
+
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() {
+        return true;
+      }
+    },
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    document: {
+      addEventListener() {},
+      removeEventListener() {},
+      visibilityState: "visible",
+    },
+    console,
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
+
+  assert.ok(CardClass, "NodaliaNotificationsCard should register in the test sandbox");
+  const helpers = sandbox.__NODALIA_NOTIFICATIONS_MOBILE__;
+  const instance = new CardClass();
+
+  const syncedConfig = {
+    background_mobile: {
+      enabled: true,
+      webhook: "nodalia_notifications_background_sync",
+      chunk_size: 240,
+    },
+    mobile_notifications: {
+      enabled: true,
+      entities: ["notify.phone"],
+      default_policy: "push",
+    },
+    door_entities: ["binary_sensor.front_door"],
+  };
+  instance.setConfig(syncedConfig);
+
+  const syncedPayload = helpers.buildBackgroundMobileWebhookPayload(instance._config);
+  assert.equal(helpers.backgroundMobilePayloadOverLimit(syncedPayload), false);
+  const webhookId = "nodalia_notifications_background_sync";
+  instance._lastBackgroundMobileSyncSignature =
+    `${webhookId}:${syncedPayload.config_hash}:${syncedPayload.chunk_count}`;
+  assert.equal(instance._backgroundMobileSuppressesForeground(), true);
+
+  instance.setConfig({
+    ...syncedConfig,
+    background_mobile: { ...syncedConfig.background_mobile, chunk_size: 120 },
+    custom_notifications: Array.from({ length: 80 }, (_, index) => ({
+      title: `Alert ${index}`,
+      message: "x".repeat(180),
+      severity: "warning",
+    })),
+  });
+  const oversizedPayload = helpers.buildBackgroundMobileWebhookPayload(instance._config);
+  assert.ok(helpers.backgroundMobilePayloadOverLimit(oversizedPayload));
+  assert.equal(
+    instance._backgroundMobileSuppressesForeground(),
+    false,
+    "oversized current config must not suppress foreground just because an older sync succeeded",
+  );
+
+  // Divergent in-limit config should also stop suppressing until the new signature syncs.
+  instance.setConfig({
+    ...syncedConfig,
+    door_entities: ["binary_sensor.front_door", "binary_sensor.garage"],
+  });
+  assert.equal(
+    instance._backgroundMobileSuppressesForeground(),
+    false,
+    "changed config with a stale sync signature must not suppress foreground",
+  );
 });
 
 test("background payload rejects configs exceeding 40 chunks", () => {

@@ -61,3 +61,17 @@ test("climate schedule composer blocks oversized storage_state before webhook de
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
+
+test("notifications suppress foreground only when current background sync signature matches", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(
+    source,
+    /_backgroundMobileSuppressesForeground\(\) \{[\s\S]*currentSignature === lastSignature/,
+    "foreground suppression must compare against the current config signature",
+  );
+  assert.match(
+    source,
+    /background mobile config exceeds[\s\S]*?_lastBackgroundMobileSyncSignature = ""/,
+    "oversized background sync must clear the cached success signature",
+  );
+});

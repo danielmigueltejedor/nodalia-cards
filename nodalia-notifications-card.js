@@ -1778,6 +1778,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
         );
       }
+      // Stale success must not keep suppressing foreground while the package still has an older config.
+      this._lastBackgroundMobileSyncSignature = "";
       this._pendingBackgroundMobileSync = true;
       return false;
     }
@@ -3100,7 +3102,23 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (background.enabled !== true) {
       return false;
     }
-    return Boolean(this._lastBackgroundMobileSyncSignature);
+    const lastSignature = String(this._lastBackgroundMobileSyncSignature || "");
+    if (!lastSignature) {
+      return false;
+    }
+    const webhookId = String(background.webhook || "").trim();
+    if (!webhookId) {
+      return false;
+    }
+    // Suppress duplicates only while the *current* card config matches the last successful sync.
+    // A prior success must not mute foreground after the config grows past capacity or otherwise
+    // diverges from what the Home Assistant package still holds.
+    const payload = this._buildBackgroundMobileWebhookPayload();
+    if (backgroundMobilePayloadOverLimit(payload)) {
+      return false;
+    }
+    const currentSignature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    return currentSignature === lastSignature;
   }
 
   _shouldSendMobileNotification(item) {
@@ -4614,6 +4632,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           `Nodalia Notifications Card editor: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
         );
       }
+      this._lastBackgroundMobileSyncSignature = "";
       return false;
     }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
