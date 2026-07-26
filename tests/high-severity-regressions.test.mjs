@@ -61,3 +61,25 @@ test("climate schedule composer blocks oversized storage_state before webhook de
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
+
+test("notifications foreground delivery ignores background-only canDeliver bypass", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(
+    source,
+    /const canDeliver = \(globalMobileEnabled \|\| effectivePolicy === "push"\) && notifyTargetsConfigured;/,
+  );
+  assert.doesNotMatch(
+    source,
+    /const canDeliver = backgroundEnabled\s*\?\s*notifyTargetsConfigured/,
+  );
+});
+
+test("notifications card revalidates mobile policy at flush and tracks presence context", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /async _flushMobileNotifications\([\s\S]*!this\._shouldSendMobileNotification\(item\)/);
+  assert.match(
+    source,
+    /_getTrackedEntityIds\(\)[\s\S]*this\._config\.presence_entity[\s\S]*this\._config\.dismissed_entity/,
+  );
+  assert.match(source, /_scheduleQuietHoursWake/);
+});

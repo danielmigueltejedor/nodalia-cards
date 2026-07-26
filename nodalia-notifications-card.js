@@ -426,6 +426,28 @@ function isWithinQuietHours(quietHours, date = new Date()) {
   return now >= start || now < end;
 }
 
+function msUntilQuietHoursBoundary(quietHours, date = new Date()) {
+  const normalized = normalizeQuietHours(quietHours);
+  if (!normalized.enabled) {
+    return null;
+  }
+  const start = parseClockMinutes(normalized.start);
+  const end = parseClockMinutes(normalized.end);
+  if (start === null || end === null || start === end) {
+    return null;
+  }
+  const now = date.getHours() * 60 + date.getMinutes();
+  const seconds = date.getSeconds();
+  const ms = date.getMilliseconds();
+  const target = isWithinQuietHours(normalized, date) ? end : start;
+  let deltaMinutes = target - now;
+  if (deltaMinutes <= 0) {
+    deltaMinutes += 24 * 60;
+  }
+  const delayMs = deltaMinutes * 60 * 1000 - seconds * 1000 - ms;
+  return Math.max(250, delayMs);
+}
+
 function normalizeQuietHours(value) {
   const row = isObject(value) ? value : {};
   return {
@@ -550,7 +572,8 @@ function resolveMobileDeliveryState(options = {}) {
   const minSeverity = normalizeSeverity(options.minSeverity || "warning");
   const alertSeverity = normalizeSeverity(options.alertSeverity || "info");
   const isCritical = alertSeverity === "critical";
-  const backgroundEnabled = options.backgroundMobileEnabled === true;
+  // backgroundMobileEnabled only means a Home Assistant package may deliver later.
+  // Foreground eligibility must still honor the card's mobile send toggle (or explicit push).
   const notifyTargetsConfigured = options.notifyTargetsConfigured === true;
   const globalMobileEnabled = options.globalMobileEnabled === true;
   const quietHours = normalizeQuietHours(options.quietHours);
@@ -575,9 +598,7 @@ function resolveMobileDeliveryState(options = {}) {
     return "blocked_by_severity";
   }
 
-  const canDeliver = backgroundEnabled
-    ? notifyTargetsConfigured
-    : (globalMobileEnabled || effectivePolicy === "push") && notifyTargetsConfigured;
+  const canDeliver = (globalMobileEnabled || effectivePolicy === "push") && notifyTargetsConfigured;
   if (!canDeliver) {
     return effectivePolicy === "push" ? "blocked_by_context" : "card_only";
   }
@@ -1471,6 +1492,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._lastNotificationIdsSignature = "";
     this._lastNotifications = [];
     this._backgroundMobileSyncTimer = 0;
+    this._quietHoursWakeTimer = 0;
     this._pendingBackgroundMobileSync = false;
     this._forceNextBackgroundMobileSync = false;
     this._lastBackgroundMobileSyncSignature = "";
@@ -1510,6 +1532,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._renderIfChanged(true);
     }
     this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
+    this._scheduleQuietHoursWake();
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
     window.addEventListener("resize", this._onViewportResize, { passive: true });
@@ -1547,6 +1570,10 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (this._backgroundMobileSyncTimer) {
       window.clearTimeout(this._backgroundMobileSyncTimer);
       this._backgroundMobileSyncTimer = 0;
+    }
+    if (this._quietHoursWakeTimer) {
+      window.clearTimeout(this._quietHoursWakeTimer);
+      this._quietHoursWakeTimer = 0;
     }
     if (this._entranceAnimationTimer) {
       window.clearTimeout(this._entranceAnimationTimer);
@@ -1686,6 +1713,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._renderIfChanged(true);
     }
     this._scheduleBackgroundMobileSync(320, { force: true });
+    this._scheduleQuietHoursWake();
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
   }
@@ -3110,7 +3138,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!item?.id) {
       return false;
     }
-    const deliveryState = item.mobileDeliveryState || this._resolveMobileDeliveryForItem(item);
+    // Always resolve against current hass/config — queued items may carry a stale
+    // mobileDeliveryState from an earlier render.
+    const deliveryState = this._resolveMobileDeliveryForItem(item);
     if (deliveryState !== "allowed") {
       return false;
     }
@@ -3198,6 +3228,11 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (!this.isConnected) {
         return;
       }
+      // Re-evaluate at drain time: background sync, presence, or quiet hours may have
+      // changed during the queue delay, and policy must still allow delivery.
+      if (!this._shouldSendMobileNotification(item)) {
+        continue;
+      }
       const hash = this._dismissKey(item.id);
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
@@ -3278,7 +3313,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.humidifier_full_entities,
       ...this._config.ink_entities,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
-    ];
+      this._config.presence_entity,
+      this._config.dismissed_entity,
+    ].filter(Boolean);
     const templateEntities = this._config.custom_notifications.flatMap(item => [
       item.title,
       item.message,
@@ -3382,6 +3419,8 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
+    const quietHours = this._config?.mobile_context?.quiet_hours;
+    const quietActive = isWithinQuietHours(quietHours, new Date());
     const parts = [
       CARD_VERSION,
       this._expanded ? "expanded" : "collapsed",
@@ -3390,6 +3429,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarError,
       this._calendarEventsSignature || "",
       this._weatherForecastsSignature || "",
+      quietActive ? "qh1" : "qh0",
     ];
     parts.push(this._config.language || "auto");
     parts.push(
@@ -3400,6 +3440,31 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     parts.push(this._trackedEntitiesStamp);
     return parts.join("||");
+  }
+
+  _scheduleQuietHoursWake() {
+    if (this._quietHoursWakeTimer) {
+      window.clearTimeout(this._quietHoursWakeTimer);
+      this._quietHoursWakeTimer = 0;
+    }
+    if (!this.isConnected) {
+      return;
+    }
+    const delayMs = msUntilQuietHoursBoundary(this._config?.mobile_context?.quiet_hours, new Date());
+    if (delayMs == null) {
+      return;
+    }
+    // Cap far-future wakes; the next hass update or boundary will reschedule.
+    const safeDelay = Math.min(delayMs, 6 * 60 * 60 * 1000);
+    this._quietHoursWakeTimer = window.setTimeout(() => {
+      this._quietHoursWakeTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      this._lastRenderSignature = "";
+      this._renderIfChanged(true);
+      this._scheduleQuietHoursWake();
+    }, safeDelay);
   }
 
   _renderIfChanged(force = false) {
@@ -4394,6 +4459,7 @@ if (typeof globalThis !== "undefined") {
     normalizeExternalAlerts,
     normalizeQuietHours,
     isWithinQuietHours,
+    msUntilQuietHoursBoundary,
     resolvePresenceOccupancy,
     passesPresenceContext,
     buildMobileAlertIdentity,

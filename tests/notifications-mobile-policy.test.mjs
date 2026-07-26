@@ -93,6 +93,39 @@ test("push forces delivery when context and severity allow", () => {
   );
 });
 
+test("background mobile enabled does not bypass disabled foreground mobile send", () => {
+  assert.equal(
+    mobile.resolveMobileDeliveryState({
+      ...baseOptions,
+      alertPolicy: "auto",
+      globalMobileEnabled: false,
+      backgroundMobileEnabled: true,
+      notifyTargetsConfigured: true,
+    }),
+    "card_only",
+  );
+});
+
+test("msUntilQuietHoursBoundary returns delay to next start or end", () => {
+  const duringQuiet = new Date("2026-05-29T23:30:00");
+  const untilEnd = mobile.msUntilQuietHoursBoundary(
+    { enabled: true, start: "23:00", end: "08:00", allow_critical: true },
+    duringQuiet,
+  );
+  assert.ok(Number.isFinite(untilEnd));
+  assert.ok(untilEnd > 0);
+  assert.ok(untilEnd > 8 * 60 * 60 * 1000);
+  assert.ok(untilEnd < 9 * 60 * 60 * 1000);
+
+  const afternoon = new Date("2026-05-29T15:00:00");
+  const untilStart = mobile.msUntilQuietHoursBoundary(
+    { enabled: true, start: "23:00", end: "08:00", allow_critical: true },
+    afternoon,
+  );
+  assert.ok(untilStart > 7 * 60 * 60 * 1000);
+  assert.ok(untilStart < 9 * 60 * 60 * 1000);
+});
+
 test("min_severity still applies for auto policy", () => {
   assert.equal(
     mobile.resolveMobileDeliveryState({
@@ -241,6 +274,28 @@ test("foreground push is skipped only after background sync succeeds", () => {
   assert.match(source, /_backgroundMobileSuppressesForeground\(\)/);
   assert.match(source, /_lastBackgroundMobileSyncSignature/);
   assert.match(source, /background\.enabled !== true[\s\S]*return false/);
+});
+
+test("flush re-checks mobile delivery before calling notify services", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(
+    source,
+    /async _flushMobileNotifications\([\s\S]*_shouldSendMobileNotification\(item\)[\s\S]*callService/,
+  );
+  assert.match(
+    source,
+    /_shouldSendMobileNotification\([\s\S]*_resolveMobileDeliveryForItem\(item\)/,
+  );
+});
+
+test("presence and dismissed helpers invalidate tracked entity stamps", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(
+    source,
+    /_getTrackedEntityIds\(\)[\s\S]*this\._config\.presence_entity[\s\S]*this\._config\.dismissed_entity/,
+  );
+  assert.match(source, /_scheduleQuietHoursWake\(\)/);
+  assert.match(source, /quietActive \? "qh1" : "qh0"/);
 });
 
 test("background payload rejects configs exceeding 40 chunks", () => {
