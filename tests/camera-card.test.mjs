@@ -528,15 +528,59 @@ test("camera bundles the native go2rtc player protocol", () => {
   assert.match(source, /nodalia-go2rtc-state/);
   assert.match(source, /GO2RTC_MODE_TIMEOUTS/);
   assert.match(source, /GO2RTC_SOCKET_OPEN_TIMEOUT/);
+  assert.match(source, /this\._mode === "auto-mse"/);
+  assert.match(source, /orientationchange/);
+  assert.match(source, /webkitbeginfullscreen/);
+  assert.match(source, /requestVideoFrameCallback/);
+  assert.match(source, /_restartTransportForDisplayRecovery/);
   assert.match(source, /go2rtc websocket open timed out/);
   assert.doesNotMatch(source, /nodalia-go2rtc-audio-blocked/);
   assert.match(source, /Adapted from go2rtc VideoRTC/);
   assert.match(source, /customElements\.define\(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer\)/);
   assert.match(read("nodalia-camera-card.js"), /document\.createElement\("nodalia-go2rtc-player"\)/);
+  assert.match(read("nodalia-camera-card.js"), /streamConfig\.provider === "frigate_go2rtc" && streamConfig\.mode === "auto"[\s\S]*?"auto-mse"/);
   assert.match(read("nodalia-camera-card.js"), /data-camera-stream-status/);
   assert.match(build, /legalComments: "inline"/);
   assert.ok(pkg.files.includes("nodalia-go2rtc-player.js"));
   assert.ok(pkg.files.includes("THIRD_PARTY_NOTICES.md"));
+});
+
+test("Frigate auto mode negotiates MSE first while retaining fallbacks", () => {
+  const Player = loadGo2rtcPlayer();
+  Player.__testWindow.MediaSource = class {};
+  Player.__testWindow.RTCPeerConnection = class {};
+  const player = new Player();
+  player._mode = "auto-mse";
+  player._video = { canPlayType: () => "probably" };
+
+  assert.equal(player._availableModes().join(","), "mse,webrtc,hls,mjpeg");
+});
+
+test("go2rtc display recovery preserves the video element and reattaches WebRTC", () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  const stream = new Player.__testWindow.MediaStream([
+    { kind: "video", readyState: "live" },
+  ]);
+  let playCalls = 0;
+  const video = {
+    style: { transform: "", willChange: "" },
+    srcObject: stream,
+    readyState: 3,
+    videoWidth: 1280,
+    videoHeight: 720,
+    getBoundingClientRect() { return { width: 320, height: 180 }; },
+    play() { playCalls += 1; return Promise.resolve(); },
+  };
+  player._video = video;
+  player._activeMode = "webrtc";
+  player._playbackStream = stream;
+
+  assert.equal(player._recoverVideoDisplay("orientationchange"), true);
+  assert.equal(player.video, video);
+  assert.equal(video.srcObject, stream);
+  assert.equal(playCalls, 1);
+  clearTimeout(player._displayHealthTimer);
 });
 
 test("camera iframe provider is sandboxed", () => {

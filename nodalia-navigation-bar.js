@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.0.0-alpha.49";
+const CARD_VERSION = "2.0.0-alpha.50";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -654,6 +654,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      this._patchMediaVolumeControls();
       return;
     }
     this._lastRenderSignature = nextSignature;
@@ -764,7 +765,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
               attrs.app_name || "",
               attrs.source || "",
               attrs.media_channel || "",
-              Number(attrs.volume_level ?? -1),
+              typeof attrs.volume_level === "number" ? 1 : 0,
               Number(attrs.media_duration ?? -1),
               Number(attrs.supported_features ?? 0),
               Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
@@ -2296,6 +2297,31 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
+  _patchMediaVolumeControls(entityId = "", volumeLevel = NaN) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    let targetEntityId = String(entityId || "").trim();
+    let nextVolume = Number(volumeLevel);
+    if (!targetEntityId || !Number.isFinite(nextVolume)) {
+      const visiblePlayers = this._getVisibleMediaPlayers();
+      const player = visiblePlayers[this._activeMediaPlayerIndex];
+      targetEntityId = String(player?.entity || "").trim();
+      nextVolume = Number(this._hass?.states?.[targetEntityId]?.attributes?.volume_level);
+    }
+    if (!targetEntityId || !Number.isFinite(nextVolume)) {
+      return;
+    }
+    const normalizedVolume = String(clamp(nextVolume, 0, 1));
+    this.shadowRoot
+      .querySelectorAll('[data-media-control="volume-down"], [data-media-control="volume-up"]')
+      .forEach(button => {
+        if (button instanceof HTMLElement && button.dataset.entity === targetEntityId) {
+          button.dataset.mediaVolume = normalizedVolume;
+        }
+      });
+  }
+
   _handleMediaControl(control, entityId, options = {}) {
     if (!this._hass || !entityId) {
       return;
@@ -2313,17 +2339,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
         break;
       case "volume-down": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const nextVolume = clamp(currentVolume - 0.08, 0, 1);
+        this._patchMediaVolumeControls(entityId, nextVolume);
         this._hass.callService("media_player", "volume_set", {
           entity_id: entityId,
-          volume_level: clamp(currentVolume - 0.08, 0, 1),
+          volume_level: nextVolume,
         });
         break;
       }
       case "volume-up": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const nextVolume = clamp(currentVolume + 0.08, 0, 1);
+        this._patchMediaVolumeControls(entityId, nextVolume);
         this._hass.callService("media_player", "volume_set", {
           entity_id: entityId,
-          volume_level: clamp(currentVolume + 0.08, 0, 1),
+          volume_level: nextVolume,
         });
         break;
       }
@@ -4324,6 +4354,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (this._popupState) {
       this._schedulePopupPositionSync();
     }
+    this._lastRenderSignature = this._getRenderSignature(this._hass);
   }
 }
 

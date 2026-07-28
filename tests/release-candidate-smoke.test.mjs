@@ -146,13 +146,15 @@ test("HACS runtime is self-contained while the explicit split build keeps the ed
   const suiteFile = path.join(root, `nodalia-cards-suite-${pkg.version}.js`);
   const editorName = `nodalia-cards-editor-${pkg.version}.js`;
   const editorFile = path.join(root, editorName);
-  const runtime = fs.readFileSync(runtimeFile, "utf8");
+  const runtimeBuffer = fs.readFileSync(runtimeFile);
+  const editorBuffer = fs.readFileSync(editorFile);
+  const runtime = runtimeBuffer.toString("utf8");
   const suite = fs.readFileSync(suiteFile, "utf8");
 
-  assert.ok(fs.statSync(runtimeFile).size < 4 * 1024 * 1024, "self-contained HACS bundle should stay below 4 MiB");
-  assert.ok(fs.statSync(editorFile).size < 900 * 1024, "lazy editor bundle should stay below 900 KiB");
-  assert.ok(gzipSync(runtime).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
-  assert.ok(gzipSync(fs.readFileSync(editorFile)).length < 225 * 1024, "lazy editor bundle should stay below 225 KiB gzip");
+  assert.ok(runtimeBuffer.length < 4 * 1024 * 1024, "self-contained HACS bundle should stay below 4 MiB");
+  assert.ok(editorBuffer.length < 900 * 1024, "lazy editor bundle should stay below 900 KiB");
+  assert.ok(gzipSync(runtimeBuffer).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
+  assert.ok(gzipSync(editorBuffer).length < 225 * 1024, "lazy editor bundle should stay below 225 KiB gzip");
   assert.match(runtime, /\.editorStr=function/);
   assert.match(runtime, /window\.NodaliaEditorUI=window\.__NODALIA_EDITOR__/);
   assert.doesNotMatch(runtime, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));

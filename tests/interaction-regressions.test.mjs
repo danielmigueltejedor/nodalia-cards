@@ -206,6 +206,16 @@ test("nav media/popup entrance animations are transition-driven", () => {
   assert.match(source, /playMediaToggleEntrance = .*?!this\._lastMediaToggleVisible/);
 });
 
+test("navigation volume changes patch controls without rebuilding the card", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /_patchMediaVolumeControls\(/);
+  assert.match(source, /nextSignature === this\._lastRenderSignature\) \{[\s\S]*?_patchMediaVolumeControls\(\);[\s\S]*?return;/);
+  assert.match(source, /typeof attrs\.volume_level === "number" \? 1 : 0/);
+  assert.match(source, /const nextVolume = clamp\(currentVolume [+-] 0\.08, 0, 1\);[\s\S]*?_patchMediaVolumeControls\(entityId, nextVolume\)/);
+  assert.match(source, /this\._lastRenderSignature = this\._getRenderSignature\(this\._hass\);/);
+  assert.doesNotMatch(source, /Number\(attrs\.volume_level \?\? -1\)/);
+});
+
 test("visual editors reattach shadow listeners on reconnect", () => {
   const editorFiles = [
     ["nodalia-light-card.js", "NodaliaLightCardEditor"],
@@ -383,6 +393,8 @@ test("person defaults to the family card proportions and keeps compact mode expl
   assert.match(source, /getCardSize\(\) \{\s*return 3;/);
   assert.match(source, /getGridOptions\(\) \{[\s\S]*min_rows: 2/);
   assert.match(source, /const singleRowLayout = Number\.isFinite\(configuredRows\) && configuredRows <= 1;/);
+  assert.match(source, /avatar:\s*\{\s*size: "38px",\s*background: "rgba\(255, 255, 255, 0\.06\)"/);
+  assert.match(source, /title_size: "12px",\s*subtitle_size: "9px"/);
 });
 
 test("fav active state tints both the card surface and icon bubble", () => {
@@ -1785,11 +1797,14 @@ test("weather forecast subscription guards disconnected lifecycle", () => {
   assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
-test("vacuum user services respect strict allowlist while internal helpers bypass it", () => {
+test("vacuum built-in controls bypass the configurable service allowlist", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /_callUserVacuumService\(/);
+  assert.doesNotMatch(source, /_callUserVacuumService\(/);
+  assert.doesNotMatch(source, /_isServiceAllowed\(/);
   assert.match(source, /_callSelectOption\(/);
-  assert.match(source, /_callUserVacuumService\(service, data = \{\}\) \{[\s\S]*_isServiceAllowed\(fullService\)/);
+  for (const service of ["start", "pause", "stop", "return_to_base", "locate", "set_fan_speed", "clean_area"]) {
+    assert.match(source, new RegExp(`_callService\\("${service}"`));
+  }
   const selectBody = source.match(/_callSelectOption\(entityId, option\) \{[\s\S]*?\n  \}/);
   assert.ok(selectBody, "expected _callSelectOption implementation");
   assert.doesNotMatch(selectBody[0], /_isServiceAllowed/);

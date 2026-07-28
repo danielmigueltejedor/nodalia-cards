@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.49";
+const CARD_VERSION = "2.0.0-alpha.50";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -1394,9 +1394,12 @@ class NodaliaCameraCard extends HTMLElement {
           throw new Error("The native go2rtc player is not registered");
         }
         player.classList.add("camera-card__expanded-go2rtc");
+        const playbackMode = streamConfig.provider === "frigate_go2rtc" && streamConfig.mode === "auto"
+          ? "auto-mse"
+          : streamConfig.mode;
         player.configure({
           source: "",
-          mode: streamConfig.mode,
+          mode: playbackMode,
           muted: streamConfig.muted,
           controls: streamConfig.controls,
         });
@@ -1457,7 +1460,7 @@ class NodaliaCameraCard extends HTMLElement {
         });
         player.configure({
           source,
-          mode: streamConfig.mode,
+          mode: playbackMode,
           muted: streamConfig.muted,
           controls: streamConfig.controls,
         });

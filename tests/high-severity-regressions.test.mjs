@@ -81,6 +81,18 @@ test("notifications re-check queued delivery and current background sync", () =>
   );
 });
 
+test("vacuum primary controls are never blocked by strict configured-action security", () => {
+  const source = read("nodalia-vacuum-card.js");
+  assert.doesNotMatch(source, /_callUserVacuumService|_isServiceAllowed/);
+  for (const service of ["start", "pause", "stop", "return_to_base", "locate", "set_fan_speed", "clean_area"]) {
+    assert.match(
+      source,
+      new RegExp(`_callService\\("${service}"`),
+      `vacuum.${service} should use the card-owned service path`,
+    );
+  }
+});
+
 test("climate popup viewport constraints remain valid CSS functions", () => {
   const source = read("nodalia-climate-card.js");
   assert.doesNotMatch(source, /min\(100vw\s*-\s*\d+px,/);

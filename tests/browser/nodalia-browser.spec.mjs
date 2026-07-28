@@ -248,6 +248,89 @@ test("Entity select bubble remains visible after its bounce animation", async ({
   expect(visual.pressing).toBe(false);
 });
 
+test("Vacuum built-ins ignore strict configured-service security", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const calls = [];
+    const hass = window.makeHass({
+      "vacuum.test": {
+        entity_id: "vacuum.test",
+        state: "docked",
+        attributes: { friendly_name: "Vacuum", fan_speed: "standard", fan_speed_list: ["standard", "turbo"] },
+      },
+    });
+    hass.callService = async (domain, service, data) => calls.push({ domain, service, data });
+    const card = document.createElement("nodalia-vacuum-card");
+    card.setConfig({
+      entity: "vacuum.test",
+      security: { strict_service_actions: true, allowed_services: [], allowed_service_domains: [] },
+    });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    window.vacuumCalls = calls;
+  });
+
+  await page.locator("nodalia-vacuum-card").locator('[data-vacuum-action="primary"]').click();
+  await expect.poll(() => page.evaluate(() => window.vacuumCalls)).toEqual([
+    { domain: "vacuum", service: "start", data: { entity_id: "vacuum.test" } },
+  ]);
+});
+
+test("Navigation volume updates preserve the mounted media card", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const state = volume => ({
+      entity_id: "media_player.test",
+      state: "playing",
+      attributes: {
+        friendly_name: "Media",
+        media_title: "Song",
+        volume_level: volume,
+        supported_features: 1,
+      },
+    });
+    const calls = [];
+    const hass = window.makeHass({ "media_player.test": state(0.5) });
+    hass.callService = async (domain, service, data) => calls.push({ domain, service, data });
+    const card = document.createElement("nodalia-navigation-bar");
+    card.setConfig({
+      layout: { fixed: false, show_desktop: true },
+      routes: [{ icon: "mdi:home", label: "Home", path: "/" }],
+      media_player: {
+        show: true,
+        show_desktop: true,
+        players: [{ entity: "media_player.test" }],
+      },
+    });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    window.navigationVolumeFixture = { card, calls, state };
+  });
+
+  const nav = page.locator("nodalia-navigation-bar");
+  await nav.locator('[data-media-toggle="expand"]').click();
+  await page.evaluate(() => {
+    window.navigationVolumeFixture.mediaNode = window.navigationVolumeFixture.card.shadowRoot.querySelector(".media-player-card");
+  });
+  await nav.locator('[data-media-control="volume-up"]').click();
+  await page.evaluate(() => {
+    const fixture = window.navigationVolumeFixture;
+    const hass = window.makeHass({ "media_player.test": fixture.state(0.58) });
+    hass.callService = async (domain, service, data) => fixture.calls.push({ domain, service, data });
+    fixture.card.hass = hass;
+  });
+
+  expect(await page.evaluate(() => {
+    const fixture = window.navigationVolumeFixture;
+    return fixture.mediaNode === fixture.card.shadowRoot.querySelector(".media-player-card");
+  })).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.navigationVolumeFixture.calls[0])).toEqual({
+    domain: "media_player",
+    service: "volume_set",
+    data: { entity_id: "media_player.test", volume_level: 0.58 },
+  });
+});
+
 test("Person, Fav and single-scene mode share the Nodalia visual family", async ({ page }) => {
   await loadBundle(page);
   const initial = await page.evaluate(async () => {
@@ -298,6 +381,9 @@ test("Person, Fav and single-scene mode share the Nodalia visual family", async 
       personSize: person.getCardSize(),
       personGrid: person.getGridOptions(),
       personSingleRow: person.shadowRoot.querySelector("ha-card")?.classList.contains("person-card--single-row"),
+      personAvatarWidth: getComputedStyle(person.shadowRoot.querySelector(".person-card__avatar")).width,
+      personTitleSize: getComputedStyle(person.shadowRoot.querySelector(".person-card__title")).fontSize,
+      personSubtitleSize: getComputedStyle(person.shadowRoot.querySelector(".person-card__state-chip")).fontSize,
       favClass: fav.shadowRoot.querySelector("ha-card")?.className,
       favCardBackground: getComputedStyle(fav.shadowRoot.querySelector("ha-card")).backgroundImage,
       favBubbleBackground: getComputedStyle(fav.shadowRoot.querySelector(".fav-card__icon")).backgroundImage,
@@ -312,6 +398,9 @@ test("Person, Fav and single-scene mode share the Nodalia visual family", async 
   expect(initial.personSize).toBe(3);
   expect(initial.personGrid.min_rows).toBe(2);
   expect(initial.personSingleRow).toBe(false);
+  expect(initial.personAvatarWidth).toBe("38px");
+  expect(initial.personTitleSize).toBe("12px");
+  expect(initial.personSubtitleSize).toBe("9px");
   expect(initial.favClass).toContain("is-on");
   expect(initial.favCardBackground).toContain("linear-gradient");
   expect(initial.favBubbleBackground).toContain("radial-gradient");
