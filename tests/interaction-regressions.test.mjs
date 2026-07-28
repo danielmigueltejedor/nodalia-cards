@@ -533,7 +533,7 @@ test("advanced vacuum calibration signature includes direct point values", () =>
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /fingerprint: JSON\.stringify\(directPoints\)/);
   assert.match(source, /this\._calibrationSignatureStamp = "";[\s\S]*this\._syncCalibrationIfNeeded\(\)/);
-  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => this\._callInternalService/);
+  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => this\._callRoomCleaningService/);
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {

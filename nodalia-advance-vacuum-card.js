@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.51";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -13,6 +13,8 @@ const HAPTIC_PATTERNS = {
   failure: [12, 40, 12, 40, 18],
 };
 const CLEANING_SESSION_PENDING_TIMEOUT_MS = 45000;
+/** Home Assistant `VacuumEntityFeature.CLEAN_AREA`; keep in sync with vacuum/const.py. */
+const VACUUM_FEATURE_CLEAN_AREA = 16384;
 /** English seeds when i18n is not loaded yet (avoid stuck Spanish on first paint). */
 const MODE_LABELS = {
   all: "All",
@@ -249,7 +251,14 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
-  vacuum_platform: "Roborock",
+  vacuum_platform: "auto",
+  vacuum_mqtt_topic: "",
+  room_tracking: {
+    entity: "",
+    attribute: "",
+    activity_entity: "",
+    auto_detect: true,
+  },
   map_source: {
     camera: "",
     image: "",
@@ -356,7 +365,7 @@ const DEFAULT_CONFIG = {
 const STUB_CONFIG = {
   entity: "vacuum.roborock_qrevo_s",
   name: "Roborock Qrevo S",
-  vacuum_platform: "Roborock",
+  vacuum_platform: "auto",
 };
 
 // Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
@@ -1382,6 +1391,13 @@ function resolveHeaderIcons(config) {
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
+  config.room_tracking = mergeConfig(DEFAULT_CONFIG.room_tracking, config.room_tracking || {});
+  config.room_tracking.entity = String(config.room_tracking.entity ?? "").trim();
+  config.room_tracking.attribute = String(config.room_tracking.attribute ?? "").trim();
+  config.room_tracking.activity_entity = String(config.room_tracking.activity_entity ?? "").trim();
+  config.room_tracking.auto_detect = config.room_tracking.auto_detect !== false;
+  config.vacuum_platform = String(config.vacuum_platform || "auto").trim() || "auto";
+  config.vacuum_mqtt_topic = String(config.vacuum_mqtt_topic ?? "").trim().replace(/\/+$/, "");
   config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
   config.routines = normalizeRoutineItems(config.routines);
   config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
@@ -1456,6 +1472,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._calibrationSignatureStamp = "";
     this._selectionUpdatedAt = 0;
     this._wasCleaningSessionActive = false;
+    this._roomTrackingEntityCache = null;
     this._lastRenderSignature = "";
     this._calibrationSignatureStamp = "";
     this._animateContentOnNextRender = true;
@@ -1607,6 +1624,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._lastSharedCleaningSessionOverflowFingerprint = null;
     this._selectionUpdatedAt = 0;
     this._wasCleaningSessionActive = false;
+    this._roomTrackingEntityCache = null;
     this._animateContentOnNextRender = true;
     this._activeMode = this._getAvailableModes()[0]?.id || "all";
     this._ensurePersistedCleaningSessionStateLoaded();
@@ -1760,7 +1778,37 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getReportedStateKey(state) {
-    return normalizeTextKey(state?.state);
+    const baseKey = normalizeTextKey(state?.state);
+    const { activityIds } = this._getRelatedVacuumEntityIds();
+    const candidates = [
+      state?.attributes?.status,
+      state?.attributes?.task_status,
+      state?.attributes?.cleaning_status,
+      state?.attributes?.activity,
+      state?.attributes?.dock_status,
+      state?.attributes?.station_status,
+      ...activityIds.flatMap(entityId => {
+        const activityState = this._hass?.states?.[entityId];
+        return [
+          `${entityId} ${activityState?.state || ""}`,
+          activityState?.attributes?.status,
+          activityState?.attributes?.activity,
+        ];
+      }),
+    ].map(value => normalizeTextKey(value)).filter(Boolean);
+    const aliases = [
+      ["washing_mop", /self_wash.*(wash|washing|cleaning)|wash(ing)?_(the_)?(mop|mops|pad|pads)|mop_(wash|washing)|lavando_(mopa|mopas)/],
+      ["drying_mop", /self_wash.*(dry|drying)|dry(ing)?_(the_)?(mop|mops|pad|pads)|mop_(dry|drying)|secando_(mopa|mopas)/],
+      ["self_emptying", /self_empty|auto_empty|emptying_(the_)?(bin|dust)|vaciando|autovaciando/],
+      ["segment_cleaning", /segment_clean|room_clean|cleaning_(room|rooms|segment|segments)/],
+      ["zone_cleaning", /zone_clean|cleaning_(zone|zones)/],
+      ["returning", /returning|going_to_(dock|base|charger|wash)|return_to_(dock|base)/],
+    ];
+    const specific = aliases.find(([, pattern]) => candidates.some(key => pattern.test(key)))?.[0];
+    if (specific && ["cleaning", "docked", "charging", "returning", "paused", "idle", ""].includes(baseKey)) {
+      return specific;
+    }
+    return baseKey || candidates[0] || "";
   }
 
   _matchesActivity(state, values) {
@@ -2593,57 +2641,285 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
   }
 
-  _extractRoomIdsFromValue(value) {
-    return arrayFromMaybe(value)
-      .flatMap(item => {
-        if (item === null || item === undefined) {
-          return [];
-        }
+  _extractRoomIdsFromValue(value, depth = 0) {
+    if (value === null || value === undefined || depth > 5) {
+      return [];
+    }
 
-        if (typeof item === "object") {
-          const candidate = item.id ?? item.room_id ?? item.segment_id ?? item.number;
-          return candidate === null || candidate === undefined ? [] : [String(candidate)];
-        }
+    if (Array.isArray(value)) {
+      return value.flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+    }
 
-        return [String(item)];
-      })
-      .map(item => item.trim())
-      .filter(Boolean);
+    if (isObject(value)) {
+      const directCandidates = [
+        value.id,
+        value.room_id,
+        value.roomId,
+        value.segment_id,
+        value.segmentId,
+        value.area_id,
+        value.areaId,
+        value.number,
+      ].filter(candidate => candidate !== null && candidate !== undefined && candidate !== "");
+      if (directCandidates.length) {
+        return directCandidates.flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+      }
+      return [
+        value.active_segments,
+        value.selected_segments,
+        value.current_segments,
+        value.selected_rooms,
+        value.room_ids,
+        value.selected_areas,
+        value.current_area,
+      ].flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed || ["unknown", "unavailable", "none", "null"].includes(normalizeTextKey(trimmed))) {
+        return [];
+      }
+      if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+        try {
+          return this._extractRoomIdsFromValue(JSON.parse(trimmed), depth + 1);
+        } catch (_error) {
+          // Keep the raw value: some integrations use non-JSON room labels.
+        }
+      }
+      if (trimmed.includes(",")) {
+        return trimmed.split(",").flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+      }
+      return [trimmed];
+    }
+
+    if (typeof value === "number" || typeof value === "bigint") {
+      return [String(value)];
+    }
+
+    return [];
+  }
+
+  _normalizeReportedRoomIds(values = []) {
+    const rooms = this._getRoomSegments();
+    const configuredRooms = arrayFromMaybe(this._config?.room_segments);
+    const byId = new Map(rooms.map(room => [String(room.id), String(room.id)]));
+    const byLabel = new Map(rooms.map(room => [normalizeTextKey(room.label), String(room.id)]).filter(([label]) => label));
+    const byAreaId = new Map(configuredRooms.flatMap(room => [
+      room?.cleaning_area_id,
+      room?.area_id,
+      room?.ha_area_id,
+    ].filter(Boolean).map(areaId => [String(areaId), String(room?.id ?? "")])));
+    const resolved = this._extractRoomIdsFromValue(values).map(value => {
+      const direct = byId.get(value);
+      if (direct) {
+        return direct;
+      }
+      const areaMatch = byAreaId.get(value);
+      if (areaMatch) {
+        return areaMatch;
+      }
+      const labelMatch = byLabel.get(normalizeTextKey(value));
+      if (labelMatch) {
+        return labelMatch;
+      }
+      const suffixMatches = rooms
+        .map(room => String(room.id))
+        .filter(roomId => roomId.endsWith(`_${value}`));
+      return suffixMatches.length === 1 ? suffixMatches[0] : value;
+    });
+    return [...new Set(resolved.map(item => String(item || "").trim()).filter(Boolean))];
+  }
+
+  _getRelatedVacuumEntityIds(hass = this._hass) {
+    const entityId = String(this._config?.entity || "");
+    const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
+    const explicitActivityEntityId = String(this._config?.room_tracking?.activity_entity || "");
+    const autoDetect = this._config?.room_tracking?.auto_detect !== false;
+    const registry = hass?.entities || {};
+    const states = hass?.states || {};
+    if (
+      this._roomTrackingEntityCache?.hass === hass
+      && this._roomTrackingEntityCache?.states === states
+      && this._roomTrackingEntityCache?.registry === registry
+      && this._roomTrackingEntityCache?.entityId === entityId
+      && this._roomTrackingEntityCache?.explicitRoomEntityId === explicitRoomEntityId
+      && this._roomTrackingEntityCache?.explicitActivityEntityId === explicitActivityEntityId
+      && this._roomTrackingEntityCache?.autoDetect === autoDetect
+    ) {
+      return this._roomTrackingEntityCache;
+    }
+    const cacheKey = [
+      entityId,
+      explicitRoomEntityId,
+      explicitActivityEntityId,
+      autoDetect ? "1" : "0",
+      Object.keys(registry).length,
+      Object.keys(states).length,
+    ].join("|");
+    if (this._roomTrackingEntityCache?.key === cacheKey) {
+      this._roomTrackingEntityCache.hass = hass;
+      this._roomTrackingEntityCache.states = states;
+      this._roomTrackingEntityCache.registry = registry;
+      return this._roomTrackingEntityCache;
+    }
+
+    const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
+    const activityIds = new Set(explicitActivityEntityId ? [explicitActivityEntityId] : []);
+    if (autoDetect && entityId) {
+      const vacuumRegistryEntry = registry[entityId] || null;
+      const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
+      const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
+      Object.keys(states).forEach(candidateId => {
+        if (candidateId === entityId) {
+          return;
+        }
+        const domain = candidateId.split(".")[0];
+        const supportsRoomTracking = ["sensor", "select", "text", "input_text"].includes(domain);
+        const supportsActivityTracking = supportsRoomTracking || domain === "binary_sensor";
+        if (!supportsActivityTracking) {
+          return;
+        }
+        const candidateRegistryEntry = registry[candidateId] || null;
+        const isSameDevice = Boolean(vacuumDeviceId && candidateRegistryEntry?.device_id === vacuumDeviceId);
+        const candidateState = states[candidateId];
+        const searchable = normalizeTextKey([
+          candidateId,
+          candidateRegistryEntry?.original_name,
+          candidateRegistryEntry?.translation_key,
+          candidateState?.attributes?.friendly_name,
+        ].filter(Boolean).join(" "));
+        const resemblesVacuum = isSameDevice || (objectId && searchable.includes(objectId));
+        if (!resemblesVacuum) {
+          return;
+        }
+        if (supportsRoomTracking && /(current|active|selected|cleaning)_(room|rooms|segment|segments|area|areas)|room_(id|status)/.test(searchable)) {
+          roomIds.add(candidateId);
+        }
+        if (/(task|cleaning|self_wash|wash_base|dock|station|vacuum)_(status|state)|(^|_)activity($|_)/.test(searchable)) {
+          activityIds.add(candidateId);
+        }
+      });
+    }
+
+    this._roomTrackingEntityCache = {
+      key: cacheKey,
+      hass,
+      states,
+      registry,
+      entityId,
+      explicitRoomEntityId,
+      explicitActivityEntityId,
+      autoDetect,
+      roomIds: [...roomIds].filter(id => states[id]),
+      activityIds: [...activityIds].filter(id => states[id]),
+    };
+    return this._roomTrackingEntityCache;
+  }
+
+  _getExternalRoomTrackingSnapshot(hass = this._hass) {
+    const { roomIds } = this._getRelatedVacuumEntityIds(hass);
+    const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
+    const explicitAttribute = String(this._config?.room_tracking?.attribute || "");
+    const allIds = [];
+    const currentIds = [];
+
+    roomIds.forEach(entityId => {
+      const source = hass?.states?.[entityId];
+      if (!source || isUnavailableState(source)) {
+        return;
+      }
+      const attributes = source.attributes || {};
+      const configuredValue = entityId === explicitRoomEntityId && explicitAttribute
+        ? attributes[explicitAttribute]
+        : undefined;
+      const values = configuredValue !== undefined ? [configuredValue] : [
+        attributes.active_segments,
+        attributes.selected_segments,
+        attributes.current_segments,
+        attributes.cleaning_segments,
+        attributes.selected_rooms,
+        attributes.room_ids,
+        attributes.rooms_to_clean,
+        attributes.active_areas,
+        attributes.selected_areas,
+        attributes.current_area,
+        attributes.room_id,
+        attributes.current_room_id,
+        attributes.segment_id,
+        attributes.current_segment_id,
+      ];
+      const searchable = normalizeTextKey(`${entityId} ${attributes.friendly_name || ""}`);
+      const isCurrentSource = /(current)_(room|segment|area)|room_id/.test(searchable);
+      if (configuredValue === undefined && (isCurrentSource || entityId === explicitRoomEntityId)) {
+        values.push(source.state);
+      }
+      const extracted = values.flatMap(value => this._extractRoomIdsFromValue(value));
+      allIds.push(...extracted);
+      if (isCurrentSource) {
+        currentIds.push(...extracted);
+      }
+    });
+
+    const ids = this._normalizeReportedRoomIds(allIds);
+    const current = this._normalizeReportedRoomIds(currentIds);
+    return {
+      ids,
+      currentId: current[0] || "",
+      entityIds: roomIds,
+    };
   }
 
   _getReportedCleaningRoomIds(state = this._getVacuumState()) {
     const mapState = this._getMapState();
+    const external = this._getExternalRoomTrackingSnapshot();
     const candidates = [
       state?.attributes?.segments,
       state?.attributes?.segment_ids,
+      state?.attributes?.active_segments,
       state?.attributes?.selected_segments,
       state?.attributes?.selected_rooms,
       state?.attributes?.room_ids,
       state?.attributes?.rooms_to_clean,
       state?.attributes?.cleaning_segments,
       state?.attributes?.current_segments,
+      state?.attributes?.active_areas,
+      state?.attributes?.selected_areas,
+      state?.attributes?.current_area,
+      mapState?.attributes?.active_segments,
       mapState?.attributes?.selected_rooms,
       mapState?.attributes?.room_ids,
-      mapState?.attributes?.segments,
+      mapState?.attributes?.selected_segments,
+      mapState?.attributes?.current_segments,
+      mapState?.attributes?.active_areas,
+      mapState?.attributes?.selected_areas,
+      mapState?.attributes?.current_area,
+      external.ids,
     ];
 
-    return [...new Set(candidates.flatMap(value => this._extractRoomIdsFromValue(value)))];
+    return this._normalizeReportedRoomIds(candidates);
   }
 
   _getCurrentVacuumRoomId(state = this._getVacuumState()) {
     const mapState = this._getMapState();
+    const external = this._getExternalRoomTrackingSnapshot();
     const candidate = (
       mapState?.attributes?.vacuum_room ??
+      mapState?.attributes?.current_room ??
+      mapState?.attributes?.current_room_id ??
+      mapState?.attributes?.current_area ??
       state?.attributes?.vacuum_room ??
       state?.attributes?.room_id ??
-      state?.attributes?.current_room_id
+      state?.attributes?.current_room_id ??
+      state?.attributes?.current_area ??
+      external.currentId
     );
 
     if (candidate === null || candidate === undefined || candidate === "") {
       return "";
     }
 
-    return String(candidate).trim();
+    return this._normalizeReportedRoomIds([candidate])[0] || "";
   }
 
   _extractZoneRectsFromValue(value) {
@@ -2721,13 +2997,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _isCleaningSessionActive(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
-    return this._isCleaning(state) || this._isPaused(state) || this._isReturning(state) || this._isCleaningSessionPendingStart(persistedSession);
+    const hasTrackedWork = Boolean(
+      this._activeCleaningRoomIds.length ||
+      this._activeCleaningZones.length ||
+      persistedSession?.activeRoomIds?.length ||
+      persistedSession?.activeZones?.length ||
+      this._getReportedCleaningRoomIds(state).length
+    );
+    const isDockMaintenanceInterlude = hasTrackedWork && (
+      this._isWashingMops(state) ||
+      this._isDryingMops(state) ||
+      this._isAutoEmptying(state)
+    );
+    return this._isCleaning(state)
+      || this._isPaused(state)
+      || this._isReturning(state)
+      || isDockMaintenanceInterlude
+      || this._isCleaningSessionPendingStart(persistedSession);
   }
 
   _isRoomCleaningSessionActive(state = this._getVacuumState()) {
     const persistedSession = this._readStoredCleaningSession();
+    const reportedRoomIds = this._getReportedCleaningRoomIds(state);
     return this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || (
       this._isCleaningSessionActive(state, persistedSession) && (
+        reportedRoomIds.length > 0 ||
         this._activeCleaningSessionMode === "rooms" ||
         persistedSession?.mode === "rooms" ||
         this._activeCleaningRoomIds.length > 0
@@ -2779,10 +3073,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return false;
     }
 
-    const segments = pendingResume.roomIds
-      .map(id => parseInteger(id))
-      .filter(Number.isFinite);
-    if (!segments.length) {
+    const roomIds = pendingResume.roomIds
+      .map(id => String(id || "").trim())
+      .filter(Boolean);
+    if (!roomIds.length) {
       this._clearPendingRoomCleaningResume();
       this._persistCurrentCleaningSessionState(this._activeMode);
       return false;
@@ -2796,14 +3090,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._markCleaningSessionPendingStart();
     this._persistCurrentCleaningSessionState("rooms");
 
-    Promise.resolve().then(() => this._callInternalService("vacuum.send_command", {
-      entity_id: this._config.entity,
-      command: "app_segment_clean",
-      params: [{
-        segments,
-        repeat: pendingResume.repeats,
-      }],
-    }))
+    Promise.resolve().then(() => this._callRoomCleaningService(roomIds, pendingResume.repeats))
       .then(() => {
         this._persistCurrentCleaningSessionState("rooms");
       })
@@ -2828,7 +3115,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    if (this._matchesActivity(state, ["segment_cleaning", "room_cleaning"])) {
+    if (this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || this._getReportedCleaningRoomIds(state).length) {
       return "rooms";
     }
 
@@ -2884,8 +3171,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const trackedRoomIds = this._getTrackedActiveCleaningRoomIds(persistedSession);
     const hasMixedRoomZoneCleaningSession = this._hasMixedRoomZoneCleaningSession(persistedSession, reportedZones);
     const currentRoomId = this._getCurrentVacuumRoomId(state);
-    const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]);
-    const isReportedCleaningSessionActive = this._isCleaning(state) || this._isPaused(state) || this._isReturning(state);
+    const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || reportedRoomIds.length > 0;
+    const isReportedCleaningSessionActive = this._isCleaning(state)
+      || this._isPaused(state)
+      || this._isReturning(state)
+      || (reportedRoomIds.length > 0 && (
+        this._isWashingMops(state) ||
+        this._isDryingMops(state) ||
+        this._isAutoEmptying(state)
+      ));
     const isCleaningSessionActive = this._isCleaningSessionActive(state, persistedSession);
     const wasCleaningSessionActive = this._wasCleaningSessionActive;
     this._wasCleaningSessionActive = isCleaningSessionActive;
@@ -2906,11 +3200,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    if (reportedRoomIds.length) {
+    if (reportedRoomIds.length && isCleaningSessionActive) {
       this._activeCleaningRoomIds = hasMixedRoomZoneCleaningSession && trackedRoomIds.length
         ? trackedRoomIds
         : reportedRoomIds;
-    } else if (isRoomCleaning && currentRoomId && !hasMixedRoomZoneCleaningSession) {
+    } else if (isCleaningSessionActive && isRoomCleaning && currentRoomId && !hasMixedRoomZoneCleaningSession) {
       this._activeCleaningRoomIds = [...new Set([currentRoomId, ...trackedRoomIds])];
     } else if (isCleaningSessionActive && persistedSession?.activeRoomIds?.length) {
       this._activeCleaningRoomIds = [...persistedSession.activeRoomIds];
@@ -3071,6 +3365,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const sharedSessionEntityId = this._getSharedCleaningSessionEntityId();
     const sharedSessionState = sharedSessionEntityId ? hass?.states?.[sharedSessionEntityId] || null : null;
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
+    const relatedVacuumEntities = this._getRelatedVacuumEntityIds(hass);
+    const roomTrackingSignature = [...new Set([
+      ...relatedVacuumEntities.roomIds,
+      ...relatedVacuumEntities.activityIds,
+    ])].map(trackedEntityId => {
+      const trackedState = hass?.states?.[trackedEntityId] || null;
+      return `${trackedEntityId}:${String(trackedState?.state || "")}:${String(trackedState?.last_updated || trackedState?.last_changed || "")}`;
+    }).join("|");
     const currentRoomId = this._getCurrentVacuumRoomId(state);
     const displayModeId = this._getDisplayCleaningModeId();
     const needsModeDescriptorSignature = this._activeUtilityPanel === "modes"
@@ -3115,6 +3417,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._config?.shared_cleaning_session_webhook || "",
           sharedSessionState?.state || "",
           sharedSessionState?.last_updated || "",
+        ],
+      },
+      {
+        prefix: "room-track:",
+        values: [
+          this._config?.room_tracking?.entity || "",
+          this._config?.room_tracking?.attribute || "",
+          this._config?.room_tracking?.activity_entity || "",
+          this._config?.room_tracking?.auto_detect !== false,
+          roomTrackingSignature,
         ],
       },
       {
@@ -3215,12 +3527,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       || { id: "all", label: modeLabels.all || MODE_LABELS.all, icon: "mdi:home" };
   }
 
+  _supportsMapActionKind(actionKind) {
+    if (this._getConfiguredMapMode(actionKind)) {
+      return true;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    if (actionKind === "goto") {
+      return !["deebot", "home_assistant"].includes(profile);
+    }
+    if (actionKind === "zone") {
+      return profile !== "home_assistant";
+    }
+    return true;
+  }
+
   _getAvailableModes() {
     const modeLabels = this._advanceVacuumStrings()?.modeLabels || MODE_LABELS;
     const modes = [];
     const showAllMode = this._config?.show_all_mode !== false;
     const hasRooms = this._getRoomSegments().length > 0;
-    const hasZones = this._config?.allow_zone_mode !== false || this._getPredefinedZones().length > 0 || Boolean(resolveLegacyMode(this._config, "vacuum_clean_zone"));
+    const hasZones = this._supportsMapActionKind("zone") && (
+      this._config?.allow_zone_mode !== false
+      || this._getPredefinedZones().length > 0
+      || Boolean(resolveLegacyMode(this._config, "vacuum_clean_zone"))
+    );
+    const hasGoto = this._supportsMapActionKind("goto") && this._config?.allow_goto_mode !== false;
     const hasRoutines = this._getRoutineItems().length > 0;
 
     if (showAllMode) {
@@ -3231,6 +3562,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     if (hasZones) {
       modes.push({ id: "zone", label: modeLabels.zone || MODE_LABELS.zone, icon: "mdi:vector-rectangle" });
+    }
+    if (hasGoto) {
+      modes.push({ id: "goto", label: modeLabels.goto || MODE_LABELS.goto, icon: "mdi:map-marker" });
     }
     if (hasRoutines) {
       modes.push({ id: "routines", label: modeLabels.routines || MODE_LABELS.routines, icon: "mdi:play-box-multiple-outline" });
@@ -5115,6 +5449,345 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return this._hass.callService(domain, serviceName, data, target || undefined);
   }
 
+  _getVacuumPlatformProfile() {
+    const configured = normalizeTextKey(this._config?.vacuum_platform || "auto");
+    let key = configured;
+    if (["", "auto", "automatic", "default", "home_assistant_auto"].includes(key)) {
+      const entityId = String(this._config?.entity || "");
+      key = normalizeTextKey(
+        this._hass?.entities?.[entityId]?.platform
+        || this._getVacuumState()?.attributes?.integration
+        || "roborock",
+      );
+    }
+    if (key.includes("dreame")) {
+      return "dreame";
+    }
+    if (key.includes("xiaomi_miio") || key === "xiaomi_miio" || key === "xiaomi") {
+      return "xiaomi_miio";
+    }
+    if (key.includes("deebot")) {
+      return "deebot";
+    }
+    if (key.includes("ecovacs")) {
+      return "home_assistant";
+    }
+    if (key.includes("valetudo")) {
+      return "valetudo";
+    }
+    if (key === "matter" || key === "home_assistant" || key === "clean_area") {
+      return "home_assistant";
+    }
+    if (key === "send_command") {
+      return "send_command";
+    }
+    return "roborock";
+  }
+
+  _getConfiguredMapMode(actionKind) {
+    const templates = actionKind === "rooms"
+      ? ["vacuum_clean_segment"]
+      : actionKind === "zone"
+        ? ["vacuum_clean_zone", "vacuum_clean_zone_predefined"]
+        : ["vacuum_goto", "vacuum_goto_predefined"];
+    return templates
+      .map(template => resolveLegacyMode(this._config, template))
+      .find(mode => isObject(mode?.service_call_schema)) || null;
+  }
+
+  _resolveMapActionTemplateValue(value, context, depth = 0) {
+    if (depth > 8) {
+      return null;
+    }
+    if (Array.isArray(value)) {
+      return value.map(item => this._resolveMapActionTemplateValue(item, context, depth + 1));
+    }
+    if (isObject(value)) {
+      return Object.fromEntries(Object.entries(value)
+        .filter(([key]) => !isUnsafeConfigPathKey(key))
+        .map(([key, item]) => [key, this._resolveMapActionTemplateValue(item, context, depth + 1)]));
+    }
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const exactToken = value.match(/^\[\[([a-zA-Z0-9_]+)\]\]$/)?.[1];
+    if (exactToken && Object.prototype.hasOwnProperty.call(context, exactToken)) {
+      return deepClone(context[exactToken]);
+    }
+    return value.replace(/\[\[([a-zA-Z0-9_]+)\]\]/g, (match, token) => {
+      if (!Object.prototype.hasOwnProperty.call(context, token)) {
+        return match;
+      }
+      const replacement = context[token];
+      return typeof replacement === "object" ? JSON.stringify(replacement) : String(replacement ?? "");
+    });
+  }
+
+  _isBuiltInMapService(service, serviceData = {}, target = null, profile = this._getVacuumPlatformProfile()) {
+    const allowedByProfile = {
+      roborock: ["vacuum.send_command", "roborock.set_vacuum_goto_position"],
+      send_command: ["vacuum.send_command"],
+      dreame: [
+        "dreame_vacuum.vacuum_clean_segment",
+        "dreame_vacuum.vacuum_clean_zone",
+        "dreame_vacuum.vacuum_clean_spot",
+        "dreame_vacuum.vacuum_goto",
+      ],
+      xiaomi_miio: [
+        "xiaomi_miio.vacuum_clean_segment",
+        "xiaomi_miio.vacuum_clean_zone",
+        "xiaomi_miio.vacuum_goto",
+      ],
+      deebot: ["vacuum.send_command"],
+      valetudo: ["mqtt.publish"],
+      home_assistant: ["vacuum.clean_area"],
+    };
+    const normalizedService = String(service || "").trim();
+    if (normalizedService === "mqtt.publish") {
+      const baseTopic = String(this._config?.vacuum_mqtt_topic || "");
+      const topic = String(serviceData?.topic || "");
+      return profile === "valetudo" && Boolean(baseTopic) && topic.startsWith(`${baseTopic}/`);
+    }
+    if (!allowedByProfile[profile]?.includes(normalizedService)) {
+      return false;
+    }
+    const configuredEntityId = String(this._config?.entity || "");
+    const requestedEntityIds = [serviceData?.entity_id, target?.entity_id]
+      .flatMap(value => Array.isArray(value) ? value : [value])
+      .map(value => String(value || "").trim())
+      .filter(Boolean);
+    return Boolean(configuredEntityId)
+      && requestedEntityIds.length > 0
+      && requestedEntityIds.every(entityId => entityId === configuredEntityId);
+  }
+
+  _callConfiguredMapModeService(actionKind, selection, repeats = 1, point = null) {
+    const mode = this._getConfiguredMapMode(actionKind);
+    const schema = mode?.service_call_schema;
+    const service = String(schema?.service || "").trim();
+    if (!service) {
+      return null;
+    }
+    if (schema.evaluate_data_as_template === true && /{%|{{/.test(JSON.stringify(schema.service_data || {}))) {
+      return null;
+    }
+
+    const variables = {
+      ...(isObject(this._config?.internal_variables) ? this._config.internal_variables : {}),
+      ...(isObject(mode?.variables) ? mode.variables : {}),
+    };
+    if (this._config?.vacuum_mqtt_topic) {
+      variables.topic = this._config.vacuum_mqtt_topic;
+    }
+    const normalizeSelectionItem = item => Array.isArray(item)
+      ? item.map(normalizeSelectionItem)
+      : (typeof item === "string" && /^-?\d+(?:\.\d+)?$/.test(item.trim()) ? Number(item) : item);
+    const normalizedSelection = normalizeSelectionItem(selection);
+    const unwrapped = Array.isArray(normalizedSelection)
+      ? normalizedSelection.flat(Infinity).map(item => String(item)).join(",")
+      : String(normalizedSelection ?? "");
+    const context = {
+      ...variables,
+      entity_id: this._config.entity,
+      vacuum_entity_id: this._config.entity,
+      selection: normalizedSelection,
+      selection_unwrapped: unwrapped,
+      repeats,
+      point_x: Math.round(Number(point?.x || 0)),
+      point_y: Math.round(Number(point?.y || 0)),
+    };
+    const serviceData = this._resolveMapActionTemplateValue(schema.service_data || {}, context);
+    const target = this._resolveMapActionTemplateValue(schema.target || null, context);
+    if (this._isBuiltInMapService(service, serviceData, target)) {
+      return Promise.resolve(this._callInternalService(service, serviceData, target));
+    }
+    if (!this._isServiceAllowed(service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
+      return Promise.reject(new Error(`Configured map service blocked by security policy: ${service}`));
+    }
+    return Promise.resolve(this._callNamedService(service, serviceData, target));
+  }
+
+  _getCleaningAreaIdsForRooms(roomIds) {
+    const selectedIds = new Set(roomIds.map(id => String(id)));
+    const rooms = this._getRoomSegments().filter(room => selectedIds.has(String(room.id)));
+    const configuredRooms = arrayFromMaybe(this._config?.room_segments);
+    const areaRegistry = this._hass?.areas || {};
+    const areas = Array.isArray(areaRegistry) ? areaRegistry : Object.values(areaRegistry);
+    return [...new Set(rooms.map(room => {
+      const configuredRoom = configuredRooms.find(item => String(item?.id ?? "") === String(room.id));
+      const explicitAreaId = configuredRoom?.cleaning_area_id || configuredRoom?.area_id || configuredRoom?.ha_area_id;
+      if (explicitAreaId) {
+        return String(explicitAreaId);
+      }
+      const labelKey = normalizeTextKey(room.label);
+      const areaMatch = areas.find(area => normalizeTextKey(area?.name) === labelKey);
+      return areaMatch?.area_id || areaMatch?.id || "";
+    }).filter(Boolean))];
+  }
+
+  _callRoomCleaningService(roomIds, repeats = 1) {
+    const configuredCall = this._callConfiguredMapModeService("rooms", roomIds, repeats);
+    if (configuredCall) {
+      return configuredCall;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    const numericOrStringIds = roomIds.map(id => /^-?\d+$/.test(String(id)) ? Number(id) : String(id));
+    const cleaningAreaIds = this._getCleaningAreaIdsForRooms(roomIds);
+    const supportedFeatures = Number(this._getVacuumState()?.attributes?.supported_features || 0);
+    const supportsNativeCleanArea = (supportedFeatures & VACUUM_FEATURE_CLEAN_AREA) === VACUUM_FEATURE_CLEAN_AREA;
+    const canUseNativeCleanArea = profile === "home_assistant" || (
+      profile === "roborock"
+      && repeats === 1
+      && supportsNativeCleanArea
+      && Boolean(this._hass?.services?.vacuum?.clean_area)
+      && cleaningAreaIds.length === roomIds.length
+    );
+    if (canUseNativeCleanArea) {
+      if (cleaningAreaIds.length !== roomIds.length) {
+        throw new Error("No se han podido vincular todas las habitaciones con áreas de Home Assistant.");
+      }
+      return this._callInternalService("vacuum.clean_area", {
+        cleaning_area_id: cleaningAreaIds,
+      }, { entity_id: this._config.entity });
+    }
+    if (profile === "dreame") {
+      return this._callInternalService("dreame_vacuum.vacuum_clean_segment", {
+        entity_id: this._config.entity,
+        segments: numericOrStringIds,
+        repeats,
+      });
+    }
+    if (profile === "xiaomi_miio") {
+      return this._callInternalService("xiaomi_miio.vacuum_clean_segment", {
+        entity_id: this._config.entity,
+        segments: Array.from({ length: repeats }, () => numericOrStringIds).flat(),
+      });
+    }
+    if (profile === "deebot") {
+      return this._callInternalService("vacuum.send_command", {
+        entity_id: this._config.entity,
+        command: "spot_area",
+        params: {
+          rooms: numericOrStringIds.join(","),
+          cleanings: repeats,
+        },
+      });
+    }
+    if (profile === "valetudo") {
+      const topic = this._config?.vacuum_mqtt_topic;
+      if (!topic) {
+        throw new Error("Valetudo necesita vacuum_mqtt_topic para limpiar habitaciones.");
+      }
+      return this._callInternalService("mqtt.publish", {
+        topic: `${topic}/MapSegmentationCapability/clean/set`,
+        payload: JSON.stringify({ segment_ids: numericOrStringIds.map(String), iterations: repeats, customOrder: true }),
+      });
+    }
+    const params = profile === "send_command"
+      ? Array.from({ length: repeats }, () => numericOrStringIds).flat()
+      : [{ segments: numericOrStringIds, repeat: repeats }];
+    return this._callInternalService("vacuum.send_command", {
+      entity_id: this._config.entity,
+      command: "app_segment_clean",
+      params,
+    });
+  }
+
+  _callZoneCleaningService(zones, repeats = 1) {
+    const configuredCall = this._callConfiguredMapModeService("zone", zones, repeats);
+    if (configuredCall) {
+      return configuredCall;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    const coordinates = zones.map(zone => zone.slice(0, 4));
+    if (["dreame", "xiaomi_miio"].includes(profile)) {
+      const service = profile === "dreame"
+        ? "dreame_vacuum.vacuum_clean_zone"
+        : "xiaomi_miio.vacuum_clean_zone";
+      return this._callInternalService(service, {
+        entity_id: this._config.entity,
+        zone: coordinates,
+        repeats,
+      });
+    }
+    if (profile === "deebot") {
+      return this._callInternalService("vacuum.send_command", {
+        entity_id: this._config.entity,
+        command: "custom_area",
+        params: { coordinates: coordinates[0] || [] },
+      });
+    }
+    if (profile === "valetudo") {
+      const topic = this._config?.vacuum_mqtt_topic;
+      if (!topic) {
+        throw new Error("Valetudo necesita vacuum_mqtt_topic para limpiar zonas.");
+      }
+      const payloadZones = coordinates.map(([x1, y1, x2, y2]) => ({
+        points: {
+          pA: { x: x1, y: y1 },
+          pB: { x: x2, y: y1 },
+          pC: { x: x2, y: y2 },
+          pD: { x: x1, y: y2 },
+        },
+      }));
+      return this._callInternalService("mqtt.publish", {
+        topic: `${topic}/ZoneCleaningCapability/start/set`,
+        payload: JSON.stringify({ zones: payloadZones, iterations: repeats }),
+      });
+    }
+    if (profile === "home_assistant") {
+      throw new Error("vacuum.clean_area solo admite áreas configuradas, no rectángulos libres.");
+    }
+    return this._callInternalService("vacuum.send_command", {
+      entity_id: this._config.entity,
+      command: "app_zoned_clean",
+      params: zones,
+    });
+  }
+
+  _callGotoService(point) {
+    const configuredCall = this._callConfiguredMapModeService("goto", [[point.x, point.y]], 1, point);
+    if (configuredCall) {
+      return configuredCall;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    const x = Math.round(point.x);
+    const y = Math.round(point.y);
+    if (profile === "dreame") {
+      return this._callInternalService("dreame_vacuum.vacuum_goto", { entity_id: this._config.entity, x, y });
+    }
+    if (profile === "xiaomi_miio") {
+      return this._callInternalService("xiaomi_miio.vacuum_goto", { entity_id: this._config.entity, x_coord: x, y_coord: y });
+    }
+    if (profile === "valetudo") {
+      const topic = this._config?.vacuum_mqtt_topic;
+      if (!topic) {
+        throw new Error("Valetudo necesita vacuum_mqtt_topic para enviar el robot a un punto.");
+      }
+      return this._callInternalService("mqtt.publish", {
+        topic: `${topic}/GoToLocationCapability/go/set`,
+        payload: JSON.stringify({ coordinates: { x, y } }),
+      });
+    }
+    if (profile === "send_command") {
+      return this._callInternalService("vacuum.send_command", {
+        entity_id: this._config.entity,
+        command: "app_goto_target",
+        params: [x, y],
+      });
+    }
+    if (["deebot", "home_assistant"].includes(profile)) {
+      throw new Error("La integración seleccionada no publica una acción compatible para ir a un punto.");
+    }
+    return this._callInternalService("roborock.set_vacuum_goto_position", {
+      entity_id: this._config.entity,
+      x,
+      y,
+    });
+  }
+
   _toggleRoomSelection(roomId) {
     roomId = String(roomId || "").trim();
     if (!roomId) {
@@ -5313,28 +5986,21 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       }
 
       if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
-        const segments = this._selectedRoomIds
-          .map(id => parseInteger(id))
-          .filter(Number.isFinite);
+        const roomIds = this._selectedRoomIds
+          .map(id => String(id || "").trim())
+          .filter(Boolean);
 
-        if (segments.length) {
+        if (roomIds.length) {
           this._freezeCurrentModePanelPreset(state);
           this._clearPendingRoomCleaningResume();
-          this._activeCleaningRoomIds = segments.map(item => String(item));
+          this._activeCleaningRoomIds = [...roomIds];
           this._activeCleaningZones = [];
           this._activeCleaningSessionMode = "rooms";
           this._markCleaningSessionPendingStart();
           this._persistCurrentCleaningSessionState("rooms", {
             markSelectionChange: true,
           });
-          await this._callInternalService("vacuum.send_command", {
-            entity_id: this._config.entity,
-            command: "app_segment_clean",
-            params: [{
-              segments,
-              repeat: this._repeats,
-            }],
-          });
+          await this._callRoomCleaningService(roomIds, this._repeats);
           if (!this.isConnected) {
             return;
           }
@@ -5381,11 +6047,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           }
         }
 
-        await this._callInternalService("vacuum.send_command", {
-          entity_id: this._config.entity,
-          command: "app_zoned_clean",
-          params: selectedZones,
-        });
+        await this._callZoneCleaningService(selectedZones, this._repeats);
         if (!this.isConnected) {
           return;
         }
@@ -5410,11 +6072,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._activeCleaningSessionMode = "";
         this._clearCleaningSessionPendingStart();
         this._clearPersistedCleaningSession();
-        await this._callInternalService("roborock.set_vacuum_goto_position", {
-          entity_id: this._config.entity,
-          x: Math.round(this._gotoPoint.x),
-          y: Math.round(this._gotoPoint.y),
-        });
+        await this._callGotoService(this._gotoPoint);
         if (!this.isConnected) {
           return;
         }
@@ -8913,11 +9571,29 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
             ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
-            ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "Roborock", [
+            ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "auto", [
+              { value: "auto", label: "Auto (Home Assistant)" },
               { value: "Roborock", label: "Roborock" },
-              { value: "send_command", label: "Send command" },
+              { value: "Tasshack/dreame-vacuum", label: "Dreame Vacuum" },
+              { value: "Xiaomi Miio", label: "Xiaomi Miio" },
+              { value: "Ecovacs", label: "Ecovacs (Home Assistant)" },
+              { value: "DeebotUniverse/Deebot-4-Home-Assistant", label: "Deebot Universe (legacy)" },
+              { value: "Matter", label: "Matter / vacuum.clean_area" },
+              { value: "Hypfer/Valetudo", label: "Valetudo" },
+              { value: "send_command", label: "Generic send_command" },
             ])}
+            ${this._renderTextField("ed.advance_vacuum.mqtt_topic", "vacuum_mqtt_topic", config.vacuum_mqtt_topic || "", {
+              placeholder: "valetudo/robot",
+              hint: "ed.advance_vacuum.mqtt_topic_hint",
+            })}
             ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_entity", "room_tracking.entity", config.room_tracking?.entity, { domains: ["sensor", "select", "text", "input_text"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_activity_entity", "room_tracking.activity_entity", config.room_tracking?.activity_entity, { domains: ["sensor", "binary_sensor", "select", "text", "input_text"] })}
+            ${this._renderTextField("ed.advance_vacuum.room_tracking_attribute", "room_tracking.attribute", config.room_tracking?.attribute || "", {
+              placeholder: "active_segments",
+              hint: "ed.advance_vacuum.room_tracking_attribute_hint",
+            })}
+            ${this._renderCheckboxField("ed.advance_vacuum.room_tracking_auto", "room_tracking.auto_detect", config.room_tracking?.auto_detect !== false)}
             <div class="editor-field editor-field--full">
               <span>${escapeHtml(this._editorLabel("ed.advance_vacuum.shared_session_helper_label"))}</span>
               <div

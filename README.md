@@ -168,6 +168,7 @@ calibration_source:
 | Feature | Documentation |
 |---|---|
 | Climate setpoint scheduling | [Setup, helpers and webhook](./docs/climate-setpoint-schedule.md) |
+| Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
 | Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |
 | Background mobile notifications | [Home Assistant package example](./examples/notifications-background-mobile-package.yaml) |

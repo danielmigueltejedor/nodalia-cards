@@ -2,13 +2,33 @@
 
 This file archives detailed per-build notes for all alpha, beta and release-candidate cycles. Stable release summaries remain in [`CHANGELOG.md`](./CHANGELOG.md).
 
-Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is not part of the active `2.0.0` release-candidate line — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
+Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is not part of the active `2.0.0` preview line — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [2.0.0-alpha.51] - 2026-07-29
+
+Fifty-first **`2.0.0`** alpha: broader Advanced Vacuum compatibility and live room tracking.
+
+### Added
+
+- **Advanced Vacuum platforms:** automatic and explicit adapters for Roborock, Dreame Vacuum, Xiaomi Miio, current Ecovacs, legacy Deebot Universe, Matter/Home Assistant, Valetudo MQTT and generic `send_command` configurations.
+- **Live room tracking:** active room and area identifiers can be read from vacuum/map attributes or related Home Assistant entities, with optional explicit room and activity sensors in the visual editor.
+- **Standard area cleaning:** compatible entities can use Home Assistant's native `vacuum.clean_area` mapping, while vendor-specific room, zone and go-to actions retain their native service formats.
+
+### Fixed
+
+- **Room highlighting:** live integration data now takes precedence over shared helper state; idle current-room sensors no longer leave stale highlights, while active rooms remain visible during mop-wash, drying and auto-empty interludes.
+- **Service safety:** native `clean_area` is selected only when the target vacuum advertises the feature, and configured map schemas cannot act on another vacuum or bypass strict service policy through a mismatched platform.
+
+### Changed
+
+- **Advanced Vacuum editor:** platform selection defaults to automatic detection and exposes Valetudo topic, live-room entity, activity entity, attribute and auto-detection controls.
+- **Documentation and tests:** the compatibility matrix, configuration example and cross-platform regression suite document and lock the supported behavior.
 
 ## [2.0.0-rc.1] - 2026-07-28
 
