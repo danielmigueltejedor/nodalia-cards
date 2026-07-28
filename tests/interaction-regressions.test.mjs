@@ -1746,12 +1746,24 @@ test("weather forecast subscription guards disconnected lifecycle", () => {
 
 test("vacuum user services respect strict allowlist while internal helpers bypass it", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /_callUserVacuumService\(/);
+  assert.match(source, /_callService\(/);
   assert.match(source, /_callSelectOption\(/);
-  assert.match(source, /_callUserVacuumService\(service, data = \{\}\) \{[\s\S]*_isServiceAllowed\(fullService\)/);
+  assert.doesNotMatch(source, /_callUserVacuumService\(/);
+  assert.doesNotMatch(
+    source,
+    /_callService\(service, data = \{\}\) \{[\s\S]*?_isServiceAllowed/,
+    "built-in vacuum controls must not be gated by the strict allowlist",
+  );
   const selectBody = source.match(/_callSelectOption\(entityId, option\) \{[\s\S]*?\n  \}/);
   assert.ok(selectBody, "expected _callSelectOption implementation");
   assert.doesNotMatch(selectBody[0], /_isServiceAllowed/);
+  for (const service of ["start", "pause", "stop", "return_to_base", "locate", "clean_area", "set_fan_speed"]) {
+    assert.match(
+      source,
+      new RegExp(`_callService\\("${service}"`),
+      `built-in ${service} must use ungated _callService`,
+    );
+  }
 });
 
 test("notifications defers side effects until render signature changes", () => {

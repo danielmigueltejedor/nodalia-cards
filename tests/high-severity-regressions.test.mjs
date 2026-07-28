@@ -61,3 +61,16 @@ test("climate schedule composer blocks oversized storage_state before webhook de
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
+
+test("vacuum built-in controls stay callable under strict_service_actions", () => {
+  const source = read("nodalia-vacuum-card.js");
+  assert.doesNotMatch(source, /_callUserVacuumService\(/);
+  assert.doesNotMatch(
+    source,
+    /_callService\(service, data = \{\}\) \{[\s\S]*?_isServiceAllowed/,
+    "start/pause/stop/dock must not silently no-op when strict mode has an empty allowlist",
+  );
+  assert.match(source, /case "primary":[\s\S]*?_runPrimaryAction\(state\)/);
+  assert.match(source, /_runPrimaryAction\(state\) \{[\s\S]*?this\._callService\("start"\)/);
+  assert.match(source, /case "return_to_base":[\s\S]*?this\._callService\("return_to_base"\)/);
+});
