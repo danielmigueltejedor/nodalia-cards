@@ -1,2 +1,2 @@
-import "./nodalia-cards-2.0.0-alpha.50.js";
-if(typeof window!=="undefined"){window.__NODALIA_LOADER__={"mode":"compat","pkgVersion":"2.0.0-alpha.50","contentSha256_12":"86a7777d71c9","file":"nodalia-cards-2.0.0-alpha.49.js","targetFile":"nodalia-cards-2.0.0-alpha.50.js","fallbackFile":"nodalia-cards.js"};}
+import "./nodalia-cards-2.0.0-rc.1.js";
+if(typeof window!=="undefined"){window.__NODALIA_LOADER__={"mode":"compat","pkgVersion":"2.0.0-rc.1","contentSha256_12":"3ddb7fc4a1b4","file":"nodalia-cards-2.0.0-alpha.49.js","targetFile":"nodalia-cards-2.0.0-rc.1.js","fallbackFile":"nodalia-cards.js"};}

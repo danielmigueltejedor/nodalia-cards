@@ -1386,6 +1386,29 @@ test("NodaliaUtils schedules and clears deferred timers on disconnect", () => {
   assert.match(read("nodalia-fan-card.js"), /NodaliaUtils\?\.clearDeferTimers\?\.\(this\)/);
 });
 
+test("card hold gestures reconnect after dashboard view reattachment", () => {
+  const files = [
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-scenes-card.js",
+    "nodalia-entity-card.js",
+  ];
+  files.forEach(file => {
+    const source = read(file);
+    const connectedStart = source.indexOf("  connectedCallback() {");
+    const disconnectedStart = source.indexOf("  disconnectedCallback() {", connectedStart);
+    assert.ok(connectedStart >= 0 && disconnectedStart > connectedStart, `${file} should expose lifecycle callbacks`);
+    assert.match(
+      source.slice(connectedStart, disconnectedStart),
+      /this\._detachHostHold\?\.reconnect\?\.\(\)/,
+      `${file} should restore its host hold binding on reconnect`,
+    );
+  });
+});
+
 test("scenes card empty state uses unified render signature", () => {
   const source = read("nodalia-scenes-card.js");
   assert.doesNotMatch(source, /_lastRenderSignature = `empty:\$\{JSON\.stringify/);
@@ -1759,11 +1782,38 @@ test("fav and vacuum resize observers skip render when signature is unchanged", 
   assert.match(vacuum, /const signature = this\._getRenderSignature\(\);\s*if \(signature === this\._lastRenderSignature\)/);
 });
 
-test("power flow caches tracked entity stamp for render signature", () => {
+test("power flow refreshes its tracked entity stamp before render gating", () => {
   const source = read("nodalia-power-flow-card.js");
-  assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
+  assert.match(source, /set hass\(hass\) \{\s*this\._hass = hass;\s*this\._syncTrackedEntitiesStamp\(hass\);\s*const nextSignature/);
   assert.match(source, /NodaliaRenderSignature\?\.joinParts/);
   assert.match(source, /prefix: "states:", values: \[this\._trackedEntitiesStamp\]/);
+
+  const PowerFlowCard = loadPowerFlowCardClass();
+  const card = new PowerFlowCard();
+  card._config.entities.grid.entity = "sensor.grid";
+  card._config.entities.home.entity = "sensor.home";
+  card._invalidateTrackedEntityStampCache();
+  let renders = 0;
+  card._render = () => {
+    renders += 1;
+    card.shadowRoot.innerHTML = "<ha-card></ha-card>";
+  };
+
+  card.hass = {
+    states: {
+      "sensor.grid": { state: "100", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+      "sensor.home": { state: "100", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+    },
+  };
+  card.hass = {
+    states: {
+      "sensor.grid": { state: "140", last_updated: "2026-07-28T10:00:01Z", attributes: {} },
+      "sensor.home": { state: "140", last_updated: "2026-07-28T10:00:01Z", attributes: {} },
+    },
+  };
+  card.hass = card._hass;
+
+  assert.equal(renders, 2, "tracked power changes should render once while identical hass updates stay gated");
 });
 
 test("advance vacuum map display follows cleaning session mode", () => {

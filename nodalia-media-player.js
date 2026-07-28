@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.0.0-alpha.50";
+const CARD_VERSION = "2.0.0-rc.1";
 const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
@@ -2062,12 +2062,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
         break;
       }
-      case "navigate":
-        if (action.navigation_path) {
-          window.history.pushState(null, "", action.navigation_path);
+      case "navigate": {
+        const path = window.NodaliaUtils?.sanitizeActionUrl(action.navigation_path, { allowRelative: true }) || "";
+        if (path && !/^https?:\/\//i.test(path)) {
+          window.history.pushState(null, "", path);
           window.dispatchEvent(new Event("location-changed"));
         }
         break;
+      }
       case "url": {
         const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url, { allowRelative: true }) || "";
         if (!url) {
@@ -2657,9 +2659,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
 
-      if (fallbackPath) {
+      const safeFallbackPath = window.NodaliaUtils?.sanitizeActionUrl(fallbackPath, { allowRelative: true }) || "";
+      if (safeFallbackPath && !/^https?:\/\//i.test(safeFallbackPath)) {
         this._mediaBrowserState = null;
-        window.history.pushState(null, "", fallbackPath);
+        window.history.pushState(null, "", safeFallbackPath);
         window.dispatchEvent(new Event("location-changed"));
         return;
       }

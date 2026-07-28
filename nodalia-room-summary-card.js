@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.50";
+const CARD_VERSION = "2.0.0-rc.1";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -67,6 +67,11 @@ const DEFAULT_CONFIG = {
   hold_url: "",
   hold_navigation_path: "",
   hold_new_tab: false,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: { enabled: true, style: "medium", fallback_vibrate: false },
   animations: { enabled: true, content_duration: 420, button_bounce_duration: 320 },
   styles: {
@@ -333,6 +338,8 @@ function normalizeConfig(rawConfig = {}) {
 
   config.haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
   config.animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
   Object.defineProperty(config, NORMALIZED_ROOM_CONFIG, {
@@ -485,11 +492,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const config = normalizeConfig(this._config);
     const ids = [
       config.temperature, config.humidity, config.presence, config.climate,
+      config.camera, config.power, config.air_quality,
       ...hubMediaPlayerIds(config), ...(config.lights || []), ...(config.covers || []),
       ...(config.vacuums || []), ...(config.fans || []),
       ...(config.humidifiers || []), ...(config.others || []),
+      ...(config.locks || []), ...(config.doors || []),
+      ...(config.windows || []), ...(config.alerts || []),
     ].filter(Boolean);
-    const states = ids.map(id => {
+    const states = [...new Set(ids)].map(id => {
       const state = hass?.states?.[id];
       return state ? `${id}:${state.state}:${state.last_updated || state.last_changed}` : `${id}:missing`;
     }).join("|");
@@ -830,10 +840,30 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
+  _isConfiguredServiceAllowed(serviceValue) {
+    const security = this._config?.security || DEFAULT_CONFIG.security;
+    if (security.strict_service_actions === false) return true;
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    const separator = normalizedService.indexOf(".");
+    if (separator <= 0 || separator >= normalizedService.length - 1) return false;
+    const domain = normalizedService.slice(0, separator);
+    const allowedServices = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const allowedDomains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
+  }
+
   _runConfiguredService(prefix) {
     const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
     const separator = serviceValue.indexOf(".");
     if (separator <= 0 || separator >= serviceValue.length - 1) return;
+    if (!this._isConfiguredServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Room Summary Card", serviceValue);
+      return;
+    }
     const domain = serviceValue.slice(0, separator);
     const service = serviceValue.slice(separator + 1);
     const data = this._parseActionObject(this._config?.[`${prefix}_service_data`]);

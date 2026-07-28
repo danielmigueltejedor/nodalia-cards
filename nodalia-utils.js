@@ -1356,11 +1356,24 @@
       window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
-    host.addEventListener("pointerdown", onPointerDownCapture, true);
-    return () => {
-      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+    let attached = false;
+    const reconnect = () => {
+      if (attached) {
+        return;
+      }
+      host.addEventListener("pointerdown", onPointerDownCapture, true);
+      attached = true;
+    };
+    const disconnect = () => {
+      if (attached) {
+        host.removeEventListener("pointerdown", onPointerDownCapture, true);
+        attached = false;
+      }
       resetTracking();
     };
+    disconnect.reconnect = reconnect;
+    reconnect();
+    return disconnect;
   }
 
   const POINTER_FOCUSABLE_SELECTOR = [

@@ -9,11 +9,36 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 function loadRoomSummaryHelpers() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        removeEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() {
+      return true;
+    }
+  }
   const sandbox = {
+    console,
     URL,
     window: null,
-    customElements: { define() {}, get() { return null; } },
-    HTMLElement: class {},
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+    },
+    HTMLElement: FakeHTMLElement,
     globalThis: {},
   };
   sandbox.window = sandbox;
@@ -22,7 +47,10 @@ function loadRoomSummaryHelpers() {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-room-summary-model.js"), sandbox);
   vm.runInContext(read("nodalia-room-summary-card.js"), sandbox);
-  return sandbox.__NODALIA_ROOM_SUMMARY__;
+  return {
+    ...sandbox.__NODALIA_ROOM_SUMMARY__,
+    Card: registry.get("nodalia-room-summary-card"),
+  };
 }
 
 const rs = loadRoomSummaryHelpers();
@@ -149,6 +177,75 @@ test("room summary executes normalized Lovelace actions without mixing tap and h
   assert.match(source, /bindHostPointerHoldGesture\(this,[\s\S]*onHold: \(\) => this\._performCardAction\("hold"\)/);
   assert.match(source, /markHoldConsumedClick:[\s\S]*this\._suppressNextPrimaryClick = true/);
   assert.match(source, /action === "primary"[\s\S]*this\._suppressNextPrimaryClick = false;[\s\S]*this\._performCardAction\("tap"\)/);
+});
+
+test("room summary gates only configured services with the strict allowlist", () => {
+  const card = new rs.Card();
+  const calls = [];
+  card._invoke = (...args) => calls.push(args);
+  card._config = rs.normalizeConfig({
+    tap_action: "service",
+    tap_service: "script.room_mode",
+  });
+
+  card._runConfiguredService("tap");
+  assert.equal(calls.length, 0, "strict mode should deny unlisted YAML services");
+
+  card._config = rs.normalizeConfig({
+    tap_action: "service",
+    tap_service: "script.room_mode",
+    security: { allowed_services: ["script.room_mode"] },
+  });
+  card._runConfiguredService("tap");
+  assert.equal(calls.length, 1, "an explicitly allowed configured service should run");
+  assert.deepEqual(calls[0].slice(0, 2), ["script", "room_mode"]);
+});
+
+test("room summary render signature tracks security and camera entities", () => {
+  const card = new rs.Card();
+  card._config = rs.normalizeConfig({
+    name: "Entry",
+    camera: "camera.entry",
+    doors: ["binary_sensor.entry_door"],
+    windows: ["binary_sensor.entry_window"],
+    locks: ["lock.entry"],
+    alerts: ["binary_sensor.entry_motion"],
+  });
+  card._configSignature = JSON.stringify(card._config);
+  let renders = 0;
+  let patches = 0;
+  card._render = () => {
+    renders += 1;
+    card.shadowRoot.innerHTML = "<ha-card class=\"room-summary-card--hub\"></ha-card>";
+  };
+  card._patchHubState = () => {
+    patches += 1;
+    return true;
+  };
+
+  const baseStates = {
+    "camera.entry": { state: "idle", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+    "binary_sensor.entry_door": { state: "off", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+    "binary_sensor.entry_window": { state: "off", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+    "lock.entry": { state: "locked", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+    "binary_sensor.entry_motion": { state: "off", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+  };
+  card.hass = { states: baseStates };
+  card.hass = {
+    states: {
+      ...baseStates,
+      "binary_sensor.entry_door": { state: "on", last_updated: "2026-07-28T10:00:01Z", attributes: {} },
+    },
+  };
+  card.hass = {
+    states: {
+      ...card._hass.states,
+      "sensor.unrelated": { state: "1", last_updated: "2026-07-28T10:00:02Z", attributes: {} },
+    },
+  };
+
+  assert.equal(renders, 1);
+  assert.equal(patches, 1, "tracked security changes should patch the hub while unrelated updates stay gated");
 });
 
 test("room summary always migrates legacy layouts to Hub", () => {

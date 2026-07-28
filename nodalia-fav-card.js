@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.0.0-alpha.50";
+const CARD_VERSION = "2.0.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1418,10 +1418,16 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _notifyLayoutChange() {
+    if (!this.isConnected) {
+      return;
+    }
     fireEvent(this, "iron-resize", {});
 
     if (typeof window !== "undefined") {
       requestAnimationFrame(() => {
+        if (!this.isConnected) {
+          return;
+        }
         window.dispatchEvent(new Event("resize"));
       });
     }
@@ -2123,6 +2129,9 @@ class NodaliaFavCard extends HTMLElement {
     if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
       this._lastAlarmPanelRenderedOpen = showAlarmPanel;
       requestAnimationFrame(() => {
+        if (!this.isConnected) {
+          return;
+        }
         this._applyHostGridSpan(showAlarmPanel);
         this._notifyLayoutChange();
       });

@@ -25,19 +25,32 @@ const distributedFiles = [
   "THIRD_PARTY_NOTICES.md",
 ];
 
-for (const name of distributedFiles) {
-  if (!name || !fs.existsSync(path.join(root, name))) {
-    throw new Error(`Required release asset is missing: ${name || "<empty>"}`);
+const distributedAssets = distributedFiles.map(name => {
+  if (!name) {
+    throw new Error("Required release asset is missing: <empty>");
   }
-}
+  const filePath = path.join(root, name);
+  try {
+    return { filePath, contents: fs.readFileSync(filePath) };
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(`Required release asset is missing: ${name}`, { cause: error });
+    }
+    throw error;
+  }
+});
 
 fs.mkdirSync(releaseDir, { recursive: true });
 
 const components = Object.keys(pkg.devDependencies || {}).sort().map(name => {
   const packagePath = path.join(root, "node_modules", ...name.split("/"), "package.json");
-  const installed = fs.existsSync(packagePath)
-    ? JSON.parse(fs.readFileSync(packagePath, "utf8"))
-    : { version: String(pkg.devDependencies[name]) };
+  let installed;
+  try {
+    installed = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    installed = { version: String(pkg.devDependencies[name]) };
+  }
   return {
     type: "library",
     name,
@@ -70,17 +83,21 @@ const sbom = {
   components,
 };
 const sbomPath = path.join(releaseDir, "nodalia-cards.sbom.cdx.json");
-fs.writeFileSync(sbomPath, `${JSON.stringify(sbom, null, 2)}\n`);
+const sbomSource = `${JSON.stringify(sbom, null, 2)}\n`;
+fs.writeFileSync(sbomPath, sbomSource);
 
-const checksumFiles = [...distributedFiles.map(name => path.join(root, name)), sbomPath];
-const checksumLines = checksumFiles.map(filePath => {
-  const digest = crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+const checksumAssets = [
+  ...distributedAssets,
+  { filePath: sbomPath, contents: Buffer.from(sbomSource) },
+];
+const checksumLines = checksumAssets.map(({ filePath, contents }) => {
+  const digest = crypto.createHash("sha256").update(contents).digest("hex");
   return `${digest}  ${path.basename(filePath)}`;
 });
 const checksumPath = path.join(releaseDir, "SHA256SUMS");
 fs.writeFileSync(checksumPath, `${checksumLines.join("\n")}\n`);
 
-const releaseAssets = [...checksumFiles, checksumPath];
+const releaseAssets = [...checksumAssets.map(asset => asset.filePath), checksumPath];
 const assetListPath = path.join(releaseDir, "release-assets.txt");
 fs.writeFileSync(assetListPath, `${releaseAssets.map(filePath => path.relative(root, filePath)).join("\n")}\n`);
 

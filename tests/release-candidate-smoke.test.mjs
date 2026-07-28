@@ -61,6 +61,21 @@ test("bundle build validates card registrations before writing artifacts", () =>
   assert.match(build, /assertCardRegistrations\(fullBody, "Full"\)/);
   assert.match(build, /assertCardRegistrations\(suiteBody, "Suite"\)/);
   assert.doesNotMatch(build, /Promise\.all\(\[\s*buildParts\(ALL_PARTS/);
+  assert.match(build, /stdin: \{[\s\S]*resolveDir: root/);
+  assert.doesNotMatch(build, /\.tmp-nodalia-bundle-/);
+  assert.match(build, /function writeFileAtomic\(/);
+  assert.ok(
+    build.indexOf("writeFileAtomic(path.join(root, bundleFile)") < build.indexOf("Removed stale bundle"),
+    "current artifacts should be replaced atomically before stale versions are pruned",
+  );
+});
+
+test("release metadata hashes the same buffers it validated", () => {
+  const source = read("scripts/generate-release-metadata.mjs");
+  assert.match(source, /const distributedAssets = distributedFiles\.map/);
+  assert.match(source, /contents: fs\.readFileSync\(filePath\)/);
+  assert.match(source, /checksumAssets\.map\(\(\{ filePath, contents \}\)/);
+  assert.doesNotMatch(source, /existsSync\(/);
 });
 
 test("compatibility aliases are unique lightweight loaders for the current version", () => {
@@ -238,6 +253,14 @@ test("action URL sinks use sanitizeActionUrl", () => {
     const source = read(file);
     assert.match(source, /sanitizeActionUrl\(/);
   });
+});
+
+test("media player validates navigation and media-browser fallback paths before pushState", () => {
+  const source = read("nodalia-media-player.js");
+  assert.match(source, /sanitizeActionUrl\(action\.navigation_path, \{ allowRelative: true \}\)/);
+  assert.match(source, /sanitizeActionUrl\(fallbackPath, \{ allowRelative: true \}\)/);
+  assert.doesNotMatch(source, /pushState\(null, "", action\.navigation_path\)/);
+  assert.doesNotMatch(source, /pushState\(null, "", fallbackPath\)/);
 });
 
 test("high-frequency cards share render signature runtime", () => {
@@ -1003,8 +1026,8 @@ test("HACS bundle entrypoint is self-contained and still emits diagnostics", () 
   assert.match(source, /versionedLoaderFile = `nodalia-cards-\$\{pkg\.version\}\.js`/);
   assert.match(source, /coreFile = `nodalia-cards-core-\$\{pkg\.version\}\.js`/);
   assert.match(source, /suiteFile = `nodalia-cards-suite-\$\{pkg\.version\}\.js`/);
-  assert.match(source, /fs\.writeFileSync\(path\.join\(root, versionedLoaderFile\), `\$\{hacsBody\}/);
-  assert.match(source, /fs\.writeFileSync\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
+  assert.match(source, /writeFileAtomic\(path\.join\(root, versionedLoaderFile\), `\$\{hacsBody\}/);
+  assert.match(source, /writeFileAtomic\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
   assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);
   assert.match(source, /window\.__NODALIA_BUNDLE__/);

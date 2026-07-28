@@ -39,7 +39,24 @@ const CARD_TAGS = CARD_FILES.map(file => file.replace(/\.js$/, ""));
 const EDITOR_TAGS = CARD_TAGS.map(tag => `${tag}-editor`);
 
 function loadUtils() {
-  class FakeElement {}
+  class FakeElement {
+    constructor() {
+      this.listeners = new Map();
+    }
+
+    addEventListener(type, listener) {
+      if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+      this.listeners.get(type).add(listener);
+    }
+
+    removeEventListener(type, listener) {
+      this.listeners.get(type)?.delete(listener);
+    }
+
+    listenerCount(type) {
+      return this.listeners.get(type)?.size || 0;
+    }
+  }
   class FakeInput extends FakeElement {}
   class FakeTextArea extends FakeElement {}
   class FakeSelect extends FakeElement {}
@@ -57,7 +74,11 @@ function loadUtils() {
     HTMLTextAreaElement: FakeTextArea,
     HTMLSelectElement: FakeSelect,
     URL,
+    addEventListener() {},
+    clearTimeout,
     console,
+    removeEventListener() {},
+    setTimeout,
     window: null,
   };
   sandbox.window = sandbox;
@@ -89,7 +110,7 @@ test("build and package expose the exact supported card source set", () => {
 
   const pkg = JSON.parse(read("package.json"));
   CARD_FILES.forEach(file => assert.ok(pkg.files.includes(file), `${file} must remain published`));
-  assert.match(pkg.version, /^2\.0\.0-alpha\.\d+$/);
+  assert.match(pkg.version, /^2\.0\.0(?:-(?:alpha|beta|rc)\.\d+)?$/);
   assert.ok(pkg.files.includes("nodalia-notifications-mobile-policy.js"));
   assert.ok(pkg.files.includes("nodalia-room-summary-model.js"));
   assert.ok(pkg.files.includes("nodalia-camera-stream-model.js"));
@@ -170,6 +191,24 @@ test("service actions use the hardened strict default", () => {
   const { utils } = loadUtils();
   assert.equal(utils.normalizeSecurityConfig({}).strict_service_actions, true);
   assert.equal(utils.normalizeSecurityConfig({ strict_service_actions: false }).strict_service_actions, false);
+});
+
+test("host hold gesture bindings can reconnect without duplicate listeners", () => {
+  const { utils, HTMLElement } = loadUtils();
+  const host = new HTMLElement();
+  const disconnect = utils.bindHostPointerHoldGesture(host, {
+    resolveZone: () => "body",
+    onHold() {},
+  });
+
+  assert.equal(host.listenerCount("pointerdown"), 1);
+  disconnect();
+  assert.equal(host.listenerCount("pointerdown"), 0);
+  disconnect.reconnect();
+  disconnect.reconnect();
+  assert.equal(host.listenerCount("pointerdown"), 1);
+  disconnect();
+  assert.equal(host.listenerCount("pointerdown"), 0);
 });
 
 test("Lovelace action objects retain service data and targets", () => {

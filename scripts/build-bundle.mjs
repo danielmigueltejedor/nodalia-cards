@@ -82,43 +82,39 @@ function stripStandaloneUtilsEmbed(source) {
 }
 
 async function buildParts(parts, label) {
-  const entryPath = path.join(root, `.tmp-nodalia-bundle-${label}.mjs`);
   const entrySource = parts.map(name => `import "./${name}";`).join("\n");
-  fs.writeFileSync(entryPath, `${entrySource}\n`);
-
-  try {
-    const result = await build({
-      absWorkingDir: root,
-      entryPoints: [entryPath],
-      bundle: true,
-      write: false,
-      format: "iife",
-      platform: "browser",
-      target: ["es2020"],
-      charset: "utf8",
-      legalComments: "inline",
-      minify: true,
-      plugins: [
-        {
-          name: "strip-standalone-utils-embed",
-          setup(buildContext) {
-            buildContext.onLoad({ filter: /nodalia-.*\.js$/ }, args => {
-              const source = fs.readFileSync(args.path, "utf8");
-              return {
-                contents: stripStandaloneUtilsEmbed(source),
-                loader: "js",
-              };
-            });
-          },
+  const result = await build({
+    absWorkingDir: root,
+    stdin: {
+      contents: `${entrySource}\n`,
+      loader: "js",
+      resolveDir: root,
+      sourcefile: `nodalia-bundle-${label}.mjs`,
+    },
+    bundle: true,
+    write: false,
+    format: "iife",
+    platform: "browser",
+    target: ["es2020"],
+    charset: "utf8",
+    legalComments: "inline",
+    minify: true,
+    plugins: [
+      {
+        name: "strip-standalone-utils-embed",
+        setup(buildContext) {
+          buildContext.onLoad({ filter: /nodalia-.*\.js$/ }, args => {
+            const source = fs.readFileSync(args.path, "utf8");
+            return {
+              contents: stripStandaloneUtilsEmbed(source),
+              loader: "js",
+            };
+          });
         },
-      ],
-    });
-    return (result.outputFiles?.[0]?.text || "").replace(/[ \t]+$/gm, "");
-  } finally {
-    if (fs.existsSync(entryPath)) {
-      fs.unlinkSync(entryPath);
-    }
-  }
+      },
+    ],
+  });
+  return (result.outputFiles?.[0]?.text || "").replace(/[ \t]+$/gm, "");
 }
 
 const fullBody = await buildParts(ALL_PARTS, "full");
@@ -177,13 +173,6 @@ const compatLoaderFiles = deriveCompatLoaderFiles(pkg.version);
 
 const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
 const keepVersionedBundles = new Set([versionedLoaderFile, coreFile, suiteFile, editorFile, ...compatLoaderFiles]);
-for (const name of fs.readdirSync(root)) {
-  if (!VERSIONED_BUNDLE_PATTERN.test(name) || keepVersionedBundles.has(name)) {
-    continue;
-  }
-  fs.unlinkSync(path.join(root, name));
-  console.log(`Removed stale bundle ${name}`);
-}
 
 const fullFooter = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSON.stringify({
   pkgVersion: pkg.version,
@@ -256,16 +245,43 @@ export const splitSuiteFile = ${JSON.stringify(suiteFile)};
 export const editorFile = ${JSON.stringify(editorFile)};
 `;
 
-fs.writeFileSync(path.join(root, bundleFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n`);
-fs.writeFileSync(path.join(root, manifestFile), manifestSource);
-fs.writeFileSync(path.join(root, loaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
-fs.writeFileSync(path.join(root, versionedLoaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
+function writeFileAtomic(filePath, contents) {
+  const tempPath = `${filePath}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
+  let completed = false;
+  try {
+    fs.writeFileSync(tempPath, contents, { encoding: "utf8", flag: "wx", mode: 0o644 });
+    fs.renameSync(tempPath, filePath);
+    completed = true;
+  } finally {
+    if (!completed) {
+      try {
+        fs.unlinkSync(tempPath);
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error;
+      }
+    }
+  }
+}
+
+writeFileAtomic(path.join(root, bundleFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n`);
+writeFileAtomic(path.join(root, manifestFile), manifestSource);
+writeFileAtomic(path.join(root, loaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
+writeFileAtomic(path.join(root, versionedLoaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
 compatLoaderFiles.forEach(file => {
-  fs.writeFileSync(path.join(root, file), compatibilityLoaderSource(file));
+  writeFileAtomic(path.join(root, file), compatibilityLoaderSource(file));
 });
-fs.writeFileSync(path.join(root, coreFile), `${coreBody}\n${coreFooter}\n`);
-fs.writeFileSync(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n${editorLoaderFooter}\n`);
-fs.writeFileSync(path.join(root, editorFile), `${editorBody}\n${editorFooter}\n`);
+writeFileAtomic(path.join(root, coreFile), `${coreBody}\n${coreFooter}\n`);
+writeFileAtomic(path.join(root, suiteFile), `${suiteBody}\n${suiteFooter}\n${editorLoaderFooter}\n`);
+writeFileAtomic(path.join(root, editorFile), `${editorBody}\n${editorFooter}\n`);
+
+// Only prune old versioned artifacts after every current artifact was written.
+for (const name of fs.readdirSync(root)) {
+  if (!VERSIONED_BUNDLE_PATTERN.test(name) || keepVersionedBundles.has(name)) {
+    continue;
+  }
+  fs.unlinkSync(path.join(root, name));
+  console.log(`Removed stale bundle ${name}`);
+}
 
 const formatKb = bytes => `${(bytes / 1024).toFixed(0)} KB`;
 console.log(
