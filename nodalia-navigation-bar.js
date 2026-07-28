@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -169,7 +169,7 @@ const DEFAULT_CONFIG = {
     fallback_vibrate: false,
   },
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -190,7 +190,7 @@ const DEFAULT_CONFIG = {
     bar: {
       background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px",
       min_height: "90px",
@@ -237,7 +237,7 @@ const DEFAULT_CONFIG = {
     media_player: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       min_height: "104px",
@@ -3394,6 +3394,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           --popup-columns: 1;
           --popup-item-min: calc(${config.styles.popup.item_size} + 24px);
           max-height: calc(100vh - 24px);
+          max-height: calc(100dvh - 24px);
           min-width: min(${config.styles.popup.min_width}, calc(100vw - 24px));
           isolation: isolate;
           overflow: auto;

@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Макет",
   "ed.scenes.layout_grid": "Сетка",
   "ed.scenes.layout_list": "Список",
+  "ed.scenes.layout_single": "Одна сцена",
   "ed.scenes.name_placeholder": "Сцены гостиной",
   "ed.scenes.remove_scene": "Удалить сцену",
   "ed.scenes.scene_color": "Оттенок сцены",

@@ -118,6 +118,29 @@
     return start < end ? now >= start && now < end : now >= start || now < end;
   }
 
+  function getNextQuietHoursBoundaryDelay(quietHours, date = new Date()) {
+    const normalized = normalizeQuietHours(quietHours);
+    const current = date instanceof Date ? date : new Date(date);
+    if (!normalized.enabled || Number.isNaN(current.getTime())) {
+      return null;
+    }
+    const start = parseClockMinutes(normalized.start);
+    const end = parseClockMinutes(normalized.end);
+    if (start === null || end === null || start === end) {
+      return null;
+    }
+    const nowMs = current.getTime();
+    const candidates = [start, end].map(minutes => {
+      const boundary = new Date(current);
+      boundary.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+      if (boundary.getTime() <= nowMs) {
+        boundary.setDate(boundary.getDate() + 1);
+      }
+      return boundary.getTime() - nowMs;
+    });
+    return Math.min(...candidates);
+  }
+
   function normalizeQuietHours(value) {
     const row = isRecord(value) ? value : {};
     return {
@@ -200,7 +223,6 @@
     const minSeverity = normalizeSeverity(options.minSeverity || "warning");
     const alertSeverity = normalizeSeverity(options.alertSeverity || "info");
     const isCritical = alertSeverity === "critical";
-    const backgroundEnabled = options.backgroundMobileEnabled === true;
     const notifyTargetsConfigured = options.notifyTargetsConfigured === true;
     const globalMobileEnabled = options.globalMobileEnabled === true;
     const quietHours = normalizeQuietHours(options.quietHours);
@@ -219,9 +241,10 @@
     if (effectivePolicy !== "push" && severityScore(alertSeverity) < severityScore(minSeverity)) {
       return "blocked_by_severity";
     }
-    const canDeliver = backgroundEnabled
-      ? notifyTargetsConfigured
-      : (globalMobileEnabled || effectivePolicy === "push") && notifyTargetsConfigured;
+    // Background sync describes how Home Assistant can deliver while the card is not
+    // running; it never authorizes this foreground card to call notify.* by itself.
+    const canDeliver = (globalMobileEnabled || effectivePolicy === "push")
+      && notifyTargetsConfigured;
     if (!canDeliver) {
       return effectivePolicy === "push" ? "blocked_by_context" : "card_only";
     }
@@ -247,6 +270,7 @@
     normalizeSmartEntityOverrideMobile,
     isExplicitSmartEntityMobile,
     isWithinQuietHours,
+    getNextQuietHoursBoundaryDelay,
     normalizeQuietHours,
     normalizeMobileContext,
     resolvePresenceOccupancy,

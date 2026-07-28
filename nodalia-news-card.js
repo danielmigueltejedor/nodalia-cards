@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "16px",
       gap: "14px",
@@ -82,6 +82,9 @@ function compactConfig(value) {
   if (isObject(value)) {
     const compacted = {};
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       const cleaned = compactConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
       if (cleaned !== undefined && !isEmptyObject) {

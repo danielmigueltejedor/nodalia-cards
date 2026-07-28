@@ -204,6 +204,14 @@ test("room summary hub layout exposes navigation rail and panels", () => {
   assert.match(source, /"others"/);
 });
 
+test("room summary hub icon-only controls have accessible names", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const coverPanel = source.slice(source.indexOf("  _renderHubCoverPanel(config) {"), source.indexOf("  _renderHubClimatePanel(config) {"));
+  const climatePanel = source.slice(source.indexOf("  _renderHubClimatePanel(config) {"), source.indexOf("  _renderHubVacuumPanel(config) {"));
+  assert.equal((coverPanel.match(/aria-label=/g) || []).length, 4);
+  assert.equal((climatePanel.match(/aria-label=/g) || []).length, 2);
+});
+
 test("room summary normalizeConfig accepts vacuums, fans, humidifiers, and others", () => {
   const config = rs.normalizeConfig({
     vacuums: "vacuum.kitchen",

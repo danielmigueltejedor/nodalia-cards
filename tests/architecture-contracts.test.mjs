@@ -89,10 +89,33 @@ test("build and package expose the exact supported card source set", () => {
 
   const pkg = JSON.parse(read("package.json"));
   CARD_FILES.forEach(file => assert.ok(pkg.files.includes(file), `${file} must remain published`));
-  assert.equal(pkg.version, "2.0.0-alpha.48");
+  assert.match(pkg.version, /^2\.0\.0-alpha\.\d+$/);
   assert.ok(pkg.files.includes("nodalia-notifications-mobile-policy.js"));
   assert.ok(pkg.files.includes("nodalia-room-summary-model.js"));
   assert.ok(pkg.files.includes("nodalia-camera-stream-model.js"));
+});
+
+test("card runtime metadata stays synchronized with package version", () => {
+  const pkg = JSON.parse(read("package.json"));
+  CARD_FILES.forEach(file => {
+    const source = read(file);
+    assert.match(
+      source,
+      new RegExp(`const CARD_VERSION = ${JSON.stringify(pkg.version).replaceAll(".", "\\.")}`),
+      `${file} must report package version ${pkg.version}`,
+    );
+  });
+});
+
+test("Scenes and Calendar integrate with Sections and entity suggestions", () => {
+  const scenes = read("nodalia-scenes-card.js");
+  const calendar = read("nodalia-calendar-card.js");
+  for (const [source, domain] of [[scenes, "scene"], [calendar, "calendar"]]) {
+    assert.match(source, /getGridOptions\(\)/);
+    assert.match(source, /rows: "auto"/);
+    assert.match(source, /static getEntitySuggestion\(/);
+    assert.match(source, new RegExp(`startsWith\\("${domain}\\."\\)`));
+  }
 });
 
 test("complex cards keep policy and state projection outside view components", () => {
@@ -125,6 +148,28 @@ test("shared merge and compaction preserve configuration semantics", () => {
     JSON.parse(JSON.stringify(utils.compactConfig(merged))),
     { nested: { enabled: true, count: 0 }, rows: [{ id: "custom" }], keep: "yes" },
   );
+});
+
+test("shared configuration helpers reject prototype-manipulation keys", () => {
+  const { utils } = loadUtils();
+  const malicious = JSON.parse('{"safe":{"value":1},"__proto__":{"injected":"yes"},"constructor":{"prototype":{"polluted":true}}}');
+  const merged = utils.mergeDeep({}, malicious);
+  const compacted = utils.compactConfig(malicious);
+  for (const result of [merged, compacted]) {
+    assert.equal(Object.getPrototypeOf(result).injected, undefined);
+    assert.equal(Object.getPrototypeOf(Object.getPrototypeOf(result)), null);
+    assert.equal(Object.hasOwn(result, "__proto__"), false);
+    assert.equal(Object.hasOwn(result, "constructor"), false);
+    assert.deepEqual(JSON.parse(JSON.stringify(result.safe)), { value: 1 });
+  }
+  assert.equal({}.injected, undefined);
+  assert.equal({}.polluted, undefined);
+});
+
+test("service actions use the hardened strict default", () => {
+  const { utils } = loadUtils();
+  assert.equal(utils.normalizeSecurityConfig({}).strict_service_actions, true);
+  assert.equal(utils.normalizeSecurityConfig({ strict_service_actions: false }).strict_service_actions, false);
 });
 
 test("Lovelace action objects retain service data and targets", () => {

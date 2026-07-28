@@ -198,6 +198,9 @@
     const result = {};
     const keys = new Set([...Object.keys(base), ...Object.keys(source)]);
     keys.forEach(key => {
+      if (isUnsafeConfigPathKey(key)) {
+        return;
+      }
       const baseValue = base[key];
       const overrideValue = source[key];
       if (overrideValue === undefined) {
@@ -221,6 +224,9 @@
     if (isObject(value)) {
       const compacted = {};
       Object.entries(value).forEach(([key, item]) => {
+        if (isUnsafeConfigPathKey(key)) {
+          return;
+        }
         const cleaned = compactConfig(item);
         const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
         if (cleaned !== undefined && !isEmptyObject) {
@@ -1661,14 +1667,16 @@
 
   function normalizeSecurityConfig(security = {}, defaults = {}) {
     const base = {
-      strict_service_actions: false,
+      strict_service_actions: true,
       allowed_services: [],
       allowed_service_domains: [],
       ...(isObject(defaults) ? defaults : {}),
     };
     const src = isObject(security) ? security : {};
     const normalized = { ...base };
-    normalized.strict_service_actions = src.strict_service_actions === true;
+    normalized.strict_service_actions = src.strict_service_actions === undefined
+      ? base.strict_service_actions === true
+      : src.strict_service_actions === true;
     if (Array.isArray(src.allowed_services)) {
       normalized.allowed_services = src.allowed_services
         .map(item => String(item || "").trim().toLowerCase())
@@ -1818,7 +1826,10 @@
     pane.style.alignSelf = "flex-start";
     pane.style.height = "auto";
     pane.style.minHeight = "0";
-    pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
+    const viewportHeightUnit = typeof CSS !== "undefined" && CSS.supports?.("height", "100dvh")
+      ? "100dvh"
+      : "100vh";
+    pane.style.maxHeight = `var(--code-mirror-max-height, calc(${viewportHeightUnit} - 209px))`;
     pane.style.overflowY = "auto";
     pane.style.overflowAnchor = "none";
     previousAncestors.forEach(({ node }) => {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -36,7 +36,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "12px",
       gap: "12px",
@@ -263,14 +263,14 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 1;
+    return 3;
   }
 
   getGridOptions() {
     return {
       rows: "auto",
       columns: "full",
-      min_rows: 1,
+      min_rows: 2,
       min_columns: 2,
     };
   }
@@ -793,7 +793,7 @@ class NodaliaPersonCard extends HTMLElement {
 
     const styles = config.styles || DEFAULT_CONFIG.styles;
     const configuredRows = Number(this._config?.grid_options?.rows);
-    const singleRowLayout = Number.isFinite(configuredRows) ? configuredRows <= 1 : true;
+    const singleRowLayout = Number.isFinite(configuredRows) && configuredRows <= 1;
     const title = this._getTitle(state);
     const showName = config.show_name !== false;
     const subtitle = config.show_state !== false ? this._translateState(state) : "";

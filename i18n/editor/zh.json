@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "布局",
   "ed.scenes.layout_grid": "网格",
   "ed.scenes.layout_list": "列表",
+  "ed.scenes.layout_single": "单个场景",
   "ed.scenes.name_placeholder": "客厅场景",
   "ed.scenes.remove_scene": "移除场景",
   "ed.scenes.scene_color": "场景色调",

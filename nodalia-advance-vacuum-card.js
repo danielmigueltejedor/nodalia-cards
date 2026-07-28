@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -293,7 +293,7 @@ const DEFAULT_CONFIG = {
   icons: [],
   map_modes: [],
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allow_webhooks_for_non_admin: false,
     allowed_services: [],
     allowed_service_domains: [],
@@ -403,6 +403,9 @@ function compactConfig(value) {
   if (isObject(value)) {
     const compacted = {};
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       const cleaned = compactConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
       if (cleaned !== undefined && !isEmptyObject) {

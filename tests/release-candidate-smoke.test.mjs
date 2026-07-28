@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -150,6 +151,8 @@ test("HACS runtime is self-contained while the explicit split build keeps the ed
 
   assert.ok(fs.statSync(runtimeFile).size < 4 * 1024 * 1024, "self-contained HACS bundle should stay below 4 MiB");
   assert.ok(fs.statSync(editorFile).size < 900 * 1024, "lazy editor bundle should stay below 900 KiB");
+  assert.ok(gzipSync(runtime).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
+  assert.ok(gzipSync(fs.readFileSync(editorFile)).length < 225 * 1024, "lazy editor bundle should stay below 225 KiB gzip");
   assert.match(runtime, /\.editorStr=function/);
   assert.match(runtime, /window\.NodaliaEditorUI=window\.__NODALIA_EDITOR__/);
   assert.doesNotMatch(runtime, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
@@ -816,7 +819,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /channel:\s*"alarm_stream"/);
   assert.match(source, /critical:\s*1/);
   assert.match(source, /priority:\s*"high"/);
-  assert.match(source, /this\._callNamedService\(service, legacyPayload\)/);
+  assert.match(source, /this\._callInternalService\(service, legacyPayload\)/);
   assert.doesNotMatch(source, /data:\s*data\.data/);
   assert.match(source, /data-editor-toggle="connections"/);
   assert.match(source, /type: "calendar-popup"/);

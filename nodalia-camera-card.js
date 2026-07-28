@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.48";
+const CARD_VERSION = "2.0.0-alpha.49";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -60,7 +60,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "10px",
@@ -133,6 +133,9 @@ function mergeConfig(base, override) {
   const result = {};
   const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
   keys.forEach(key => {
+    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+      return;
+    }
     if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
       result[key] = mergeConfig(base[key], override[key]);
       return;
@@ -2267,9 +2270,10 @@ class NodaliaCameraCard extends HTMLElement {
             border-radius: 18px 18px 0 0;
             bottom: 0;
             max-height: 92vh;
+            max-height: 92dvh;
             top: auto;
             transform: translateX(-50%);
-            width: 100vw;
+            width: 100%;
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}

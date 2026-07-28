@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Layout",
   "ed.scenes.layout_grid": "Raster",
   "ed.scenes.layout_list": "Liste",
+  "ed.scenes.layout_single": "Einzelne Szene",
   "ed.scenes.name_placeholder": "Wohnzimmer-Szenen",
   "ed.scenes.remove_scene": "Szene entfernen",
   "ed.scenes.scene_color": "Szenen-Tönung",

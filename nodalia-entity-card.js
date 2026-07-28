@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -78,7 +78,7 @@ const DEFAULT_CONFIG = {
   quick_actions: [],
   language: "auto",
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: ["homeassistant"],
   },
@@ -96,7 +96,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -1397,11 +1397,6 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
-    const serviceValue = `${domain}.${service}`;
-    if (!this._isServiceAllowed(serviceValue)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Entity Card", serviceValue);
-      return Promise.resolve(false);
-    }
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
     return invoke(this, this._hass, domain, service, {

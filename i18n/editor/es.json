@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Disposición",
   "ed.scenes.layout_grid": "Rejilla",
   "ed.scenes.layout_list": "Lista",
+  "ed.scenes.layout_single": "Escena única",
   "ed.scenes.name_placeholder": "Escenas del salón",
   "ed.scenes.remove_scene": "Eliminar escena",
   "ed.scenes.scene_color": "Tono de la escena",

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -48,7 +48,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -109,6 +109,9 @@ function mergeConfig(base, override) {
   const out = {};
   const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
   keys.forEach(key => {
+    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+      return;
+    }
     const baseValue = base[key];
     const overrideValue = override ? override[key] : undefined;
     if (overrideValue === undefined) {
@@ -131,6 +134,9 @@ function compactCalendarConfig(value) {
   if (isObject(value)) {
     const compacted = {};
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       const cleaned = compactCalendarConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
       if (cleaned !== undefined && !isEmptyObject) {
@@ -666,6 +672,21 @@ class NodaliaCalendarCard extends HTMLElement {
 
   static getConfigElement() {
     return document.createElement(EDITOR_TAG);
+  }
+
+  static getEntitySuggestion(_hass, entityId) {
+    return String(entityId || "").startsWith("calendar.")
+      ? { type: `custom:${CARD_TAG}`, calendars: [{ entity: entityId }] }
+      : undefined;
+  }
+
+  getCardSize() {
+    const visible = Math.max(1, Math.min(Number(this._config?.max_visible_events) || 2, 6));
+    return Math.min(8, visible + 2);
+  }
+
+  getGridOptions() {
+    return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
   }
 
   constructor() {

@@ -18,3 +18,13 @@ scenes:
   - entity: scene.living_room_bright
     icon: mdi:brightness-7
     color: "#f0c040"
+
+---
+# Dedicated card for one scene. The selected scene tint colors the full surface.
+type: custom:nodalia-scenes-card
+layout: single
+scenes:
+  - entity: scene.living_room_movie
+    name: Movie night
+    icon: mdi:movie-open
+    color: "#8b7cf6"

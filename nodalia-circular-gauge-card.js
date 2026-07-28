@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -20,7 +20,14 @@ const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
 const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
 const DEFAULT_GAUGE_MIN_TINT_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, transparent)";
 const DEFAULT_GAUGE_MAX_TINT_COLOR = "#ff7d57";
-const GAUGE_TINT_SEGMENT_COUNT = 40;
+const GAUGE_TINT_SEGMENT_COUNT = 16;
+const GAUGE_SVG_FALLBACK_TINT_SCALE = [
+  { offset: 0, channels: [126, 136, 146] },
+  { offset: 0.28, channels: [113, 207, 120] },
+  { offset: 0.52, channels: [217, 196, 90] },
+  { offset: 0.76, channels: [245, 160, 61] },
+  { offset: 1, channels: [255, 125, 87] },
+];
 
 const DEFAULT_CONFIG = {
   entity: "",
@@ -319,6 +326,34 @@ function resolveColorInContext(contextNode, value) {
   const resolved = getComputedStyle(probe).color;
   probe.remove();
   return resolved || rawValue;
+}
+
+function getGaugeSvgFallbackColor(ratio) {
+  const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+  const upperIndex = GAUGE_SVG_FALLBACK_TINT_SCALE.findIndex(stop => safeRatio <= stop.offset);
+  if (upperIndex <= 0) {
+    return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0].channels.join(", ")})`;
+  }
+
+  const upper = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex];
+  const lower = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex - 1];
+  const localRatio = (safeRatio - lower.offset) / Math.max(upper.offset - lower.offset, 0.0001);
+  const channels = lower.channels.map((channel, index) => (
+    Math.round(channel + ((upper.channels[index] - channel) * localRatio))
+  ));
+  return `rgb(${channels.join(", ")})`;
+}
+
+function resolveGaugeSvgStrokeColor(value, fallback) {
+  const source = String(value || "").trim();
+  if (
+    !source
+    || /(?:color-mix|var)\(/i.test(source)
+    || !/^(?:#[\da-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/i.test(source)
+  ) {
+    return fallback;
+  }
+  return source;
 }
 
 function parseRgbColor(value) {
@@ -791,6 +826,17 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return buildGaugeTintScale(gaugeStyles.min_tint_color, gaugeStyles.max_tint_color);
   }
 
+  _resolveGaugeSvgStrokeColor(value, fallback) {
+    const cacheKey = `${value}\u0000${fallback}`;
+    if (this._gaugeSvgColorCache?.has(cacheKey)) {
+      return this._gaugeSvgColorCache.get(cacheKey);
+    }
+
+    const resolved = resolveGaugeSvgStrokeColor(value, fallback);
+    this._gaugeSvgColorCache?.set(cacheKey, resolved);
+    return resolved;
+  }
+
   _getGaugeProgressSegments(ratio, tintScale) {
     const safeRatio = clamp(Number(ratio) || 0, 0, 1);
     const configuredColor = String(this._config?.styles?.gauge?.foreground_color || "").trim();
@@ -801,9 +847,11 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       const startRatio = index * segmentRatioSize;
       const fillRatio = clamp((safeRatio - startRatio) / segmentRatioSize, 0, 1);
       const visibleLength = Number((segmentLength * fillRatio).toFixed(3));
+      const sampleRatio = startRatio + (segmentRatioSize * 0.5);
+      const rawColor = configuredColor || resolveGaugeTintColor(tintScale, sampleRatio);
 
       return {
-        color: configuredColor || resolveGaugeTintColor(tintScale, startRatio + (segmentRatioSize * 0.5)),
+        color: this._resolveGaugeSvgStrokeColor(rawColor, getGaugeSvgFallbackColor(sampleRatio)),
         dasharray: `${visibleLength} ${DIAL_CIRCUMFERENCE}`,
         dashoffset: `${Number((-segmentLength * index).toFixed(3))}`,
         opacity: visibleLength > 0.05 ? 0.96 : 0,
@@ -1112,6 +1160,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const unit = this._getUnit(state);
     const range = this._getRange(state, value);
     const ratio = value === null ? 0 : clamp((value - range.min) / Math.max(range.max - range.min, 1), 0, 1);
+    this._gaugeSvgColorCache = new Map();
     const tintScale = this._getGaugeTintScale();
     const accentColor = this._getAccentColor(state, ratio);
     const progressLength = Number((DIAL_VISIBLE_LENGTH * ratio).toFixed(3));
@@ -1473,7 +1522,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-progress {
-          filter: drop-shadow(0 0 0 transparent);
           opacity: 0;
           pointer-events: none;
           stroke: ${sanitizeCssValue(accentColor, styles.gauge.max_tint_color)};
@@ -1500,14 +1548,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__dial-progress-segment {
-          filter: drop-shadow(0 0 0 transparent);
           opacity: 0;
           stroke-linecap: butt;
           transition:
             stroke var(--gauge-card-dial-duration) ease,
             stroke-dasharray var(--gauge-card-dial-duration) ease-out,
             opacity 180ms ease,
-            filter 180ms ease,
             stroke-dashoffset 0ms linear;
         }
 

@@ -378,6 +378,30 @@ test("person card translates location state with runtime i18n", () => {
   assert.doesNotMatch(source, /return "Fuera";/);
 });
 
+test("person defaults to the family card proportions and keeps compact mode explicit", () => {
+  const source = read("nodalia-person-card.js");
+  assert.match(source, /getCardSize\(\) \{\s*return 3;/);
+  assert.match(source, /getGridOptions\(\) \{[\s\S]*min_rows: 2/);
+  assert.match(source, /const singleRowLayout = Number\.isFinite\(configuredRows\) && configuredRows <= 1;/);
+});
+
+test("fav active state tints both the card surface and icon bubble", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /const cardBackground = isActive[\s\S]*linear-gradient/);
+  assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*radial-gradient/);
+  assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);
+});
+
+test("scenes supports a dedicated single-scene surface and visual-editor option", () => {
+  const source = read("nodalia-scenes-card.js");
+  const labels = JSON.parse(read("i18n/editor/en.json"));
+  assert.match(source, /\["grid", "list", "single"\]\.includes\(layout\)/);
+  assert.match(source, /layout: "single", scenes: \[\{ entity: entityId \}\]/);
+  assert.match(source, /scenes-card--single/);
+  assert.match(source, /const renderedEntries = isSingle \? entries\.slice\(0, 1\) : entries;/);
+  assert.equal(labels["ed.scenes.layout_single"], "Single scene");
+});
+
 test("i18n person home aliases translate with active language", () => {
   const i18n = loadI18nRuntime({ localStorageSelectedLanguage: "en" });
   const state = { entity_id: "person.example", state: "en_casa", attributes: {} };
@@ -1663,6 +1687,15 @@ test("circular gauge entrance animates a single smooth progress arc", () => {
   );
 });
 
+test("circular gauge keeps WebKit-safe literal colors in segmented SVG strokes", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /const GAUGE_TINT_SEGMENT_COUNT = 16;/);
+  assert.match(source, /function resolveGaugeSvgStrokeColor\(/);
+  assert.match(source, /\(\?:color-mix\|var\)\\\(/);
+  assert.match(source, /getGaugeSvgFallbackColor\(sampleRatio\)/);
+  assert.doesNotMatch(source, /\.gauge-card__dial-progress-segment \{[\s\S]*?filter: drop-shadow/);
+});
+
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
   [
     "nodalia-power-flow-card.js",
@@ -1858,8 +1891,10 @@ test("cover card compact auto mode uses width and grid heuristics", () => {
 
 test("fav card aligns service security with entity and cleans up alarm host span", () => {
   const source = read("nodalia-fav-card.js");
-  assert.match(source, /strict_service_actions: false/);
-  assert.match(source, /_invokeEntityService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
+  assert.match(source, /strict_service_actions: true/);
+  const internalService = source.slice(source.indexOf("_invokeEntityService("), source.indexOf("_toggleCoverEntity("));
+  assert.doesNotMatch(internalService, /_isServiceAllowed/);
+  assert.match(source, /_callConfiguredService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
   assert.match(source, /disconnectedCallback\(\) \{[\s\S]*_applyHostGridSpan\(false\)/);
   assert.match(source, /clearDeferTimers/);
 });
@@ -1899,9 +1934,11 @@ test("fav card preserves Lovelace service target for configured tap actions", ()
   assert.match(source, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
 });
 
-test("entity card gates built-in lock cover and select services with strict allowlist", () => {
+test("entity card keeps built-in controls usable while gating configured services", () => {
   const source = read("nodalia-entity-card.js");
-  assert.match(source, /_invokeEntityService\(domain, service, entityId, serviceData = \{\}\) \{[\s\S]*_isServiceAllowed\(serviceValue\)/);
+  const internalService = source.slice(source.indexOf("_invokeEntityService("), source.indexOf("_toggleCoverEntity("));
+  assert.doesNotMatch(internalService, /_isServiceAllowed/);
+  assert.match(source, /_callConfiguredService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
   assert.match(source, /select_option/);
 });
 
@@ -1934,7 +1971,7 @@ test("visual family tokens stay aligned without changing notifications", () => {
   );
   assert.match(
     read("nodalia-fav-card.js"),
-    /card:\s*\{[\s\S]*?border: "1px solid var\(--divider-color\)"[\s\S]*?border_radius: "28px"/,
+    /card:\s*\{[\s\S]*?border: "1px solid var\(--divider-color\)"[\s\S]*?border_radius: "var\(--nodalia-card-border-radius, 28px\)"/,
   );
   assert.match(
     read("nodalia-navigation-bar.js"),

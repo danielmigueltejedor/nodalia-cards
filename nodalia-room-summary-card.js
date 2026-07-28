@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.48";
+const CARD_VERSION = "2.0.0-alpha.49";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -73,7 +73,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -1358,17 +1358,18 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const state = getState(this._hass, entityId);
     const position = finiteNumber(state?.attributes?.current_position);
     const open = state && stateIsOpen(state);
+    const label = this._entityLabel(entityId);
     return `<article class="room-hub__device-row ${open ? "is-on" : ""}">
-      <button type="button" class="room-hub__device-icon" data-room-action="toggle:${escapeHtml(entityId)}">
+      <button type="button" class="room-hub__device-icon" data-room-action="toggle:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${open ? this._t("closeCovers", "Close covers") : this._t("openCovers", "Open covers")}: ${label}`)}">
         <ha-icon icon="${escapeHtml(this._entityIcon(entityId, "mdi:window-shutter"))}"></ha-icon>
       </button>
       <div class="room-hub__device-body">
-        <div class="room-hub__device-name">${escapeHtml(this._entityLabel(entityId))}</div>
+        <div class="room-hub__device-name">${escapeHtml(label)}</div>
         <div class="room-hub__device-state">${escapeHtml(position !== null ? `${position}%` : String(state?.state || "—"))}</div>
         <div class="room-hub__device-controls">
-          <button type="button" class="room-hub__mini-control" data-room-action="cover:open_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="cover:stop_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:stop"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="cover:close_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:open_cover:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("openCovers", "Open covers")}: ${label}`)}"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:stop_cover:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("stopCovers", "Stop covers")}: ${label}`)}"><ha-icon icon="mdi:stop"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:close_cover:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("closeCovers", "Close covers")}: ${label}`)}"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
         </div>
       </div>
     </article>`;
@@ -1383,13 +1384,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const target = finiteNumber(state?.attributes?.temperature);
     const unit = String(state?.attributes?.unit_of_measurement || "°C").trim();
     const mode = String(state?.attributes?.hvac_mode || state?.state || "—");
+    const label = this._entityLabel(entityId);
     return `<div class="room-hub__panel room-hub__panel--climate">
       <div class="room-hub__climate-dial">
         <div class="room-hub__climate-value">${escapeHtml(current !== null ? `${current}${unit}` : "—")}</div>
         <div class="room-hub__climate-target">${escapeHtml(target !== null ? `${this._t("target", "Target")} ${target}${unit}` : mode)}</div>
         <div class="room-hub__device-controls">
-          <button type="button" class="room-hub__mini-control" data-room-action="climate:-1:${escapeHtml(entityId)}"><ha-icon icon="mdi:minus"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="climate:1:${escapeHtml(entityId)}"><ha-icon icon="mdi:plus"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="climate:-1:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("lowerTemperature", "Lower temperature")}: ${label}`)}"><ha-icon icon="mdi:minus"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="climate:1:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("raiseTemperature", "Raise temperature")}: ${label}`)}"><ha-icon icon="mdi:plus"></ha-icon></button>
         </div>
       </div>
     </div>`;

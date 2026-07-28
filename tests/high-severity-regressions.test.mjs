@@ -61,3 +61,29 @@ test("climate schedule composer blocks oversized storage_state before webhook de
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
+
+test("notifications re-check queued delivery and current background sync", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.match(
+    source,
+    /async _flushMobileNotifications\(items\)[\s\S]*?_shouldSendMobileNotification\(item\)/,
+    "queue drains must re-evaluate current foreground policy",
+  );
+  assert.match(
+    source,
+    /_backgroundMobileSuppressesForeground\(\)[\s\S]*?currentSignature === lastSignature/,
+    "foreground suppression must match the current successful background payload",
+  );
+  assert.match(
+    source,
+    /background mobile config exceeds[\s\S]*?_lastBackgroundMobileSyncSignature = ""/,
+    "oversized background payloads must clear stale success",
+  );
+});
+
+test("climate popup viewport constraints remain valid CSS functions", () => {
+  const source = read("nodalia-climate-card.js");
+  assert.doesNotMatch(source, /min\(100vw\s*-\s*\d+px,/);
+  assert.match(source, /min\(calc\(100vw - 24px\), 920px\)/);
+  assert.match(source, /min\(calc\(100vw - 16px\), 920px\)/);
+});

@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "2.0.0-alpha.48",
+  "version": "2.0.0-alpha.49",
   "packageManager": "pnpm@11.1.1",
   "engines": {
     "node": ">=22"
@@ -10,7 +10,9 @@
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
   "scripts": {
     "sync-standalone-embed": "node scripts/sync-standalone-embed.mjs",
-    "bundle": "node scripts/build-bundle.mjs",
+    "version:sync": "node scripts/sync-card-version.mjs",
+    "version:check": "node scripts/sync-card-version.mjs --check",
+    "bundle": "npm run version:check && node scripts/build-bundle.mjs",
     "release:metadata": "node scripts/generate-release-metadata.mjs",
     "i18n:validate-editor": "node scripts/validate-editor-i18n.mjs",
     "i18n:gen-editor": "node scripts/gen-editor-ui.mjs",
@@ -18,7 +20,7 @@
     "i18n:gen-runtime": "node scripts/gen-runtime-i18n.mjs",
     "test": "node --test tests/**/*.test.mjs",
     "test:browser": "pnpm run bundle && playwright test",
-    "validate": "node --check nodalia-*.js && npm run i18n:validate-editor && npm run i18n:validate-runtime && npm test && npm run bundle"
+    "validate": "npm run version:check && node --check nodalia-*.js && npm run i18n:validate-editor && npm run i18n:validate-runtime && npm test && npm run bundle"
   },
   "files": [
     "nodalia-i18n.js",

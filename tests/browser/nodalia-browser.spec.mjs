@@ -73,6 +73,70 @@ test("HACS entrypoint creates every visual editor without requesting a sidecar",
   expect(errors).toEqual([]);
 });
 
+test("every published card mounts from its stub configuration", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const tags = await page.evaluate(() => [...new Set([
+    ...(window.customCards || []).map(item => item.type),
+    "nodalia-insignia-card",
+  ])].filter(Boolean));
+  await page.evaluate(() => {
+    const states = {
+      "sensor.test": { entity_id: "sensor.test", state: "21", attributes: { friendly_name: "Sensor", unit_of_measurement: "°C" } },
+      "binary_sensor.test": { entity_id: "binary_sensor.test", state: "off", attributes: { friendly_name: "Binary" } },
+      "light.test": { entity_id: "light.test", state: "off", attributes: { friendly_name: "Light" } },
+      "fan.test": { entity_id: "fan.test", state: "off", attributes: { friendly_name: "Fan", percentage: 0 } },
+      "humidifier.test": { entity_id: "humidifier.test", state: "off", attributes: { friendly_name: "Humidifier" } },
+      "cover.test": { entity_id: "cover.test", state: "closed", attributes: { friendly_name: "Cover", current_position: 0 } },
+      "climate.test": { entity_id: "climate.test", state: "off", attributes: { friendly_name: "Climate", current_temperature: 21, temperature: 22 } },
+      "alarm_control_panel.test": { entity_id: "alarm_control_panel.test", state: "disarmed", attributes: { friendly_name: "Alarm" } },
+      "vacuum.test": { entity_id: "vacuum.test", state: "docked", attributes: { friendly_name: "Vacuum" } },
+      "media_player.test": { entity_id: "media_player.test", state: "idle", attributes: { friendly_name: "Media" } },
+      "person.test": { entity_id: "person.test", state: "home", attributes: { friendly_name: "Person" } },
+      "scene.test": { entity_id: "scene.test", state: "scening", attributes: { friendly_name: "Scene" } },
+      "weather.test": { entity_id: "weather.test", state: "sunny", attributes: { friendly_name: "Weather", temperature: 21, temperature_unit: "°C" } },
+      "calendar.test": { entity_id: "calendar.test", state: "off", attributes: { friendly_name: "Calendar" } },
+      "camera.test": { entity_id: "camera.test", state: "idle", attributes: { friendly_name: "Camera", entity_picture: "/local/camera.jpg" } },
+      "switch.test": { entity_id: "switch.test", state: "off", attributes: { friendly_name: "Switch" } },
+      "select.test": { entity_id: "select.test", state: "Auto", attributes: { friendly_name: "Select", options: ["Auto", "Eco"] } },
+    };
+    window.stubHass = window.makeHass(states);
+  });
+
+  const requestedTag = process.env.NODALIA_BROWSER_CARD_TAG || "";
+  const mountTags = requestedTag ? tags.filter(tag => tag === requestedTag) : tags;
+  const mounted = [];
+  for (const tag of mountTags) {
+    try {
+      mounted.push(await page.evaluate(async currentTag => {
+        const ctor = customElements.get(currentTag);
+        const card = document.createElement(currentTag);
+        const stub = typeof ctor?.getStubConfig === "function" ? await ctor.getStubConfig(window.stubHass) : {};
+        if (currentTag === "nodalia-navigation-bar") {
+          stub.layout = { ...(stub.layout || {}), show_desktop: true };
+        }
+        card.setConfig?.({ type: `custom:${currentTag}`, ...(stub || {}) });
+        card.hass = window.stubHass;
+        document.querySelector("#fixture").append(card);
+        await new Promise(resolve => window.requestAnimationFrame(() => resolve()));
+        const result = {
+          tag: currentTag,
+          shadow: Boolean(card.shadowRoot),
+          rendered: Boolean(card.shadowRoot?.innerHTML),
+        };
+        card.remove();
+        return result;
+      }, tag));
+    } catch (error) {
+      throw new Error(`Failed to mount ${tag}: ${error?.message || String(error)}`);
+    }
+  }
+
+  expect(mounted.length).toBeGreaterThanOrEqual(requestedTag ? 1 : 24);
+  expect(mounted.every(item => item.shadow)).toBe(true);
+  expect(mounted.filter(item => !item.rendered), JSON.stringify(mounted, null, 2)).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 test("Notifications keeps a new external-alert draft in the visual editor", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(async () => {
@@ -184,6 +248,85 @@ test("Entity select bubble remains visible after its bounce animation", async ({
   expect(visual.pressing).toBe(false);
 });
 
+test("Person, Fav and single-scene mode share the Nodalia visual family", async ({ page }) => {
+  await loadBundle(page);
+  const initial = await page.evaluate(async () => {
+    document.documentElement.style.setProperty("--ha-card-background", "#20242b");
+    document.documentElement.style.setProperty("--primary-text-color", "#f5f7fb");
+    document.documentElement.style.setProperty("--secondary-text-color", "#aeb6c5");
+    document.documentElement.style.setProperty("--divider-color", "#414957");
+    document.documentElement.style.setProperty("--ha-card-box-shadow", "0 8px 24px rgba(0, 0, 0, 0.2)");
+    const states = {
+      "person.ada": { entity_id: "person.ada", state: "home", attributes: { friendly_name: "Ada" } },
+      "sensor.energy": { entity_id: "sensor.energy", state: "42", attributes: { friendly_name: "Energy", unit_of_measurement: "kWh" } },
+      "scene.cinema": { entity_id: "scene.cinema", state: "2026-07-28T12:00:00+00:00", attributes: { friendly_name: "Cinema" } },
+      "scene.reading": { entity_id: "scene.reading", state: "2026-07-28T11:00:00+00:00", attributes: { friendly_name: "Reading" } },
+    };
+
+    const person = document.createElement("nodalia-person-card");
+    person.setConfig({ entity: "person.ada" });
+    person.hass = window.makeHass(states);
+    document.querySelector("#fixture").append(person);
+
+    const fav = document.createElement("nodalia-fav-card");
+    fav.setConfig({ entity: "sensor.energy", styles: { icon: { on_color: "#fec700" } } });
+    fav.hass = window.makeHass(states);
+    document.querySelector("#fixture").append(fav);
+
+    const sceneCalls = [];
+    const sceneHass = window.makeHass(states);
+    sceneHass.callService = async (domain, service, data) => sceneCalls.push({ domain, service, data });
+    const scenes = document.createElement("nodalia-scenes-card");
+    scenes.setConfig({
+      layout: "single",
+      scenes: [
+        { entity: "scene.cinema", color: "#b68cff" },
+        { entity: "scene.reading", color: "#71c0ff" },
+      ],
+    });
+    scenes.hass = sceneHass;
+    document.querySelector("#fixture").append(scenes);
+    window.singleSceneCalls = sceneCalls;
+
+    const scenesCtor = customElements.get("nodalia-scenes-card");
+    const editor = await scenesCtor.getConfigElement();
+    editor.hass = sceneHass;
+    editor.setConfig({ layout: "single", scenes: [{ entity: "scene.cinema" }] });
+    document.querySelector("#fixture").append(editor);
+
+    return {
+      personSize: person.getCardSize(),
+      personGrid: person.getGridOptions(),
+      personSingleRow: person.shadowRoot.querySelector("ha-card")?.classList.contains("person-card--single-row"),
+      favClass: fav.shadowRoot.querySelector("ha-card")?.className,
+      favCardBackground: getComputedStyle(fav.shadowRoot.querySelector("ha-card")).backgroundImage,
+      favBubbleBackground: getComputedStyle(fav.shadowRoot.querySelector(".fav-card__icon")).backgroundImage,
+      sceneTiles: scenes.shadowRoot.querySelectorAll("[data-scene-entity]").length,
+      hasSceneGrid: Boolean(scenes.shadowRoot.querySelector(".scenes-card__grid")),
+      singleLabel: scenes.shadowRoot.querySelector(".scenes-card__tile-label")?.textContent,
+      editorSingleLabel: editor.shadowRoot.querySelector('option[value="single"]')?.textContent?.trim(),
+      editorRows: editor.shadowRoot.querySelectorAll(".scene-editor-card").length,
+    };
+  });
+
+  expect(initial.personSize).toBe(3);
+  expect(initial.personGrid.min_rows).toBe(2);
+  expect(initial.personSingleRow).toBe(false);
+  expect(initial.favClass).toContain("is-on");
+  expect(initial.favCardBackground).toContain("linear-gradient");
+  expect(initial.favBubbleBackground).toContain("radial-gradient");
+  expect(initial.sceneTiles).toBe(1);
+  expect(initial.hasSceneGrid).toBe(false);
+  expect(initial.singleLabel).toBe("Cinema");
+  expect(initial.editorSingleLabel).toBe("Single scene");
+  expect(initial.editorRows).toBe(1);
+
+  await page.locator("nodalia-scenes-card").locator(".scenes-card--single").click();
+  await expect.poll(() => page.evaluate(() => window.singleSceneCalls)).toEqual([
+    { domain: "scene", service: "turn_on", data: { entity_id: "scene.cinema" } },
+  ]);
+});
+
 test("pointer taps do not leave a focus outline while keyboard focus remains visible", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {
@@ -246,6 +389,45 @@ test("representative interactive cards have no serious axe violations", async ({
   });
   const results = await new AxeBuilder({ page })
     .include("nodalia-person-card")
+    .disableRules(["color-contrast"])
+    .analyze();
+  const serious = results.violations.filter(item => ["serious", "critical"].includes(item.impact));
+  expect(serious).toEqual([]);
+});
+
+test("Room Summary cover and climate controls expose accessible names", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const card = document.createElement("nodalia-room-summary-card");
+    card.setConfig({
+      name: "Office",
+      covers: ["cover.blind"],
+      climate: "climate.office",
+    });
+    card.hass = window.makeHass({
+      "cover.blind": { entity_id: "cover.blind", state: "open", attributes: { friendly_name: "Blind", current_position: 60 } },
+      "climate.office": { entity_id: "climate.office", state: "heat", attributes: { friendly_name: "Office climate", current_temperature: 21, temperature: 22, unit_of_measurement: "°C" } },
+    });
+    document.querySelector("#fixture").append(card);
+  });
+
+  const card = page.locator("nodalia-room-summary-card");
+  await card.locator('[data-room-action="nav:covers"]').click();
+  const coverControls = card.locator('.room-hub__panel--covers button');
+  await expect(coverControls).toHaveCount(4);
+  for (let index = 0; index < 4; index += 1) {
+    await expect(coverControls.nth(index)).toHaveAttribute("aria-label", /\S+/);
+  }
+
+  await card.locator('[data-room-action="nav:climate"]').click();
+  const climateControls = card.locator('.room-hub__panel--climate button');
+  await expect(climateControls).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
+    await expect(climateControls.nth(index)).toHaveAttribute("aria-label", /\S+/);
+  }
+
+  const results = await new AxeBuilder({ page })
+    .include("nodalia-room-summary-card")
     .disableRules(["color-contrast"])
     .analyze();
   const serious = results.violations.filter(item => ["serious", "critical"].includes(item.impact));

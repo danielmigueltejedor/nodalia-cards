@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.0.0-alpha.37";
+const CARD_VERSION = "2.0.0-alpha.49";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -97,7 +97,7 @@ const DEFAULT_CONFIG = {
     chunk_size: 240,
   },
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
     allow_webhooks_for_non_admin: false,
@@ -148,6 +148,9 @@ function mergeDeep(base, override) {
     return out;
   }
   Object.entries(override).forEach(([key, value]) => {
+    if (isUnsafeConfigPathKey(key)) {
+      return;
+    }
     if (isObject(value) && isObject(out[key])) {
       out[key] = mergeDeep(out[key], value);
     } else if (value !== undefined) {
@@ -172,6 +175,9 @@ function compactConfig(value) {
   if (isObject(value)) {
     const out = {};
     Object.entries(value).forEach(([key, child]) => {
+      if (isUnsafeConfigPathKey(key)) {
+        return;
+      }
       const next = compactConfig(child);
       if (next !== undefined && next !== "") {
         out[key] = next;
@@ -324,6 +330,7 @@ const {
   normalizeSmartEntityOverrideMobile,
   isExplicitSmartEntityMobile,
   isWithinQuietHours,
+  getNextQuietHoursBoundaryDelay,
   normalizeQuietHours,
   normalizeMobileContext,
   resolvePresenceOccupancy,
@@ -1248,6 +1255,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._runtimeExternalAlerts = [];
     this._mobileNotifyTimer = 0;
     this._mobileNotifyQueue = [];
+    this._quietHoursWakeTimer = 0;
     this._lastRenderSignature = "";
     this._trackedEntityIdsCache = null;
     this._trackedEntityRevision = null;
@@ -1297,6 +1305,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
+    this._scheduleQuietHoursWake();
     window.addEventListener("resize", this._onViewportResize, { passive: true });
     window.addEventListener("orientationchange", this._onViewportResize, { passive: true });
   }
@@ -1329,6 +1338,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._mobileNotifyTimer = 0;
     }
     this._mobileNotifyQueue = [];
+    if (this._quietHoursWakeTimer) {
+      window.clearTimeout(this._quietHoursWakeTimer);
+      this._quietHoursWakeTimer = 0;
+    }
     if (this._backgroundMobileSyncTimer) {
       window.clearTimeout(this._backgroundMobileSyncTimer);
       this._backgroundMobileSyncTimer = 0;
@@ -1473,6 +1486,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._scheduleBackgroundMobileSync(320, { force: true });
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
+    this._scheduleQuietHoursWake();
   }
 
   set hass(hass) {
@@ -1485,15 +1499,15 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._lastRouteKey = nextRouteKey;
       this._replayEntranceAnimation({ force: true });
     }
+    this._syncTrackedEntitiesStamp(hass);
+    this._syncSharedDismissedFromHass();
     const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
       return;
     }
-    this._syncSharedDismissedFromHass();
     this._refreshCalendarEventsSoon();
     this._refreshWeatherForecastsSoon();
-    this._syncTrackedEntitiesStamp(hass);
     this._lastRenderSignature = nextSignature;
     this._renderIfChanged(true);
     this._scheduleBackgroundMobileSync();
@@ -1563,6 +1577,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
         );
       }
+      this._lastBackgroundMobileSyncSignature = "";
       this._pendingBackgroundMobileSync = true;
       return false;
     }
@@ -2885,7 +2900,17 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (background.enabled !== true) {
       return false;
     }
-    return Boolean(this._lastBackgroundMobileSyncSignature);
+    const lastSignature = String(this._lastBackgroundMobileSyncSignature || "");
+    const webhookId = String(background.webhook || "").trim();
+    if (!lastSignature || !webhookId) {
+      return false;
+    }
+    const payload = this._buildBackgroundMobileWebhookPayload();
+    if (backgroundMobilePayloadOverLimit(payload)) {
+      return false;
+    }
+    const currentSignature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    return currentSignature === lastSignature;
   }
 
   _shouldSendMobileNotification(item) {
@@ -2895,7 +2920,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!item?.id) {
       return false;
     }
-    const deliveryState = item.mobileDeliveryState || this._resolveMobileDeliveryForItem(item);
+    // Delivery context is time- and state-sensitive. Never trust the value captured
+    // when the visual notification was built or first queued.
+    const deliveryState = this._resolveMobileDeliveryForItem(item);
     if (deliveryState !== "allowed") {
       return false;
     }
@@ -2983,6 +3010,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (!this.isConnected) {
         return;
       }
+      if (!this._shouldSendMobileNotification(item)) {
+        continue;
+      }
       const hash = this._dismissKey(item.id);
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
@@ -3007,7 +3037,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           : Promise.resolve(false),
         ...legacyServices.map(service => (
           Promise.resolve().then(() => (
-            this._callNamedService(service, legacyPayload)
+            this._callInternalService(service, legacyPayload)
           )).then(() => true, () => false)
         )),
       ]).then(results => {
@@ -3062,7 +3092,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.humidifier_fill_entities,
       ...this._config.humidifier_full_entities,
       ...this._config.ink_entities,
+      this._config.presence_entity,
+      this._config.dismissed_entity,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
+      ...this._config.external_alerts.map(item => item.entity).filter(Boolean),
     ];
     const templateEntities = this._config.custom_notifications.flatMap(item => [
       item.title,
@@ -3070,7 +3103,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       item.action_label,
       item.url,
     ].flatMap(referencedNotificationTemplateEntities));
-    this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities])];
+    this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities].filter(Boolean))];
     return this._trackedEntityIdsCache;
   }
 
@@ -3175,6 +3208,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarError,
       this._calendarEventsSignature || "",
       this._weatherForecastsSignature || "",
+      isWithinQuietHours(this._config?.mobile_context?.quiet_hours, new Date()) ? "quiet" : "awake",
     ];
     parts.push(this._config.language || "auto");
     parts.push(
@@ -3185,6 +3219,26 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     parts.push(this._trackedEntitiesStamp);
     return parts.join("||");
+  }
+
+  _scheduleQuietHoursWake(now = new Date()) {
+    if (this._quietHoursWakeTimer) {
+      window.clearTimeout(this._quietHoursWakeTimer);
+      this._quietHoursWakeTimer = 0;
+    }
+    const delay = getNextQuietHoursBoundaryDelay(this._config?.mobile_context?.quiet_hours, now);
+    if (!Number.isFinite(delay) || delay === null || !this.isConnected) {
+      return;
+    }
+    this._quietHoursWakeTimer = window.setTimeout(() => {
+      this._quietHoursWakeTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      this._lastRenderSignature = "";
+      this._renderIfChanged(true);
+      this._scheduleQuietHoursWake();
+    }, Math.max(250, delay + 50));
   }
 
   _renderIfChanged(force = false) {
@@ -4187,6 +4241,7 @@ if (typeof globalThis !== "undefined") {
     getBackgroundMobileConfigPayload,
     buildBackgroundMobileWebhookPayload,
     backgroundMobilePayloadOverLimit,
+    getNextQuietHoursBoundaryDelay,
     BACKGROUND_MOBILE_MAX_CHUNKS,
     resolveSmartEntityMobilePolicy,
     isExplicitSmartEntityMobile,
@@ -4363,6 +4418,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           `Nodalia Notifications Card editor: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
         );
       }
+      this._lastBackgroundMobileSyncSignature = "";
       return false;
     }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;

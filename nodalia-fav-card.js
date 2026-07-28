@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-alpha.49";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG = {
   state_attribute: "",
   layout_mode: "auto",
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -59,7 +59,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "10px 12px",
       gap: "10px",
@@ -743,11 +743,6 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
-    const serviceValue = `${domain}.${service}`;
-    if (!this._isServiceAllowed(serviceValue)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fav Card", serviceValue);
-      return Promise.resolve(false);
-    }
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
     return invoke(this, this._hass, domain, service, {
@@ -1833,12 +1828,18 @@ class NodaliaFavCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: ${isActive
+            ? `radial-gradient(circle at 30% 24%, color-mix(in srgb, ${accentColor} 34%, transparent), transparent 64%), color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : styles.icon.background};
+          border: 1px solid ${isActive
+            ? `color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : "color-mix(in srgb, var(--primary-text-color) 8%, transparent)"};
           border-radius: ${isSingleRow ? "18px" : (isMini ? "22px" : "24px")};
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            0 12px 30px rgba(0, 0, 0, 0.18);
+            ${isActive
+              ? `0 12px 30px color-mix(in srgb, ${accentColor} 20%, rgba(0, 0, 0, 0.18))`
+              : "0 12px 30px rgba(0, 0, 0, 0.18)"};
           color: ${iconColor};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -2067,7 +2068,8 @@ class NodaliaFavCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
-        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        style="--fav-accent:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
       >
         <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
