@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/alpha/docs/images/nodalia-cards-header.png" alt="Nodalia Cards" width="900">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-header.png" alt="Nodalia Cards" width="900">
   <p><strong>A cohesive, app-like card system for modern Home Assistant dashboards.</strong></p>
 
   <p>
@@ -175,11 +175,14 @@ calibration_source:
 
 ## Release channels
 
-| Channel | Branch | Intended use |
+| Maturity | Branch / tag | Intended use |
 |---|---|---|
-| Stable | `main` | Recommended for daily dashboards |
-| Beta | `beta` | Release candidates and wider compatibility testing |
-| Alpha | `alpha` | Active development; breaking changes are possible |
+| Stable | `main`, `vX.Y.Z` | Recommended for daily dashboards |
+| Release candidate | `vX.Y.Z-rc.N` | Final compatibility and release validation |
+| Beta | `beta`, `vX.Y.Z-beta.N` | Feature-complete preview for broader testing |
+| Alpha | `alpha`, `vX.Y.Z-alpha.N` | Active development; breaking changes are possible |
+
+HACS installs the latest stable release by default. To test a prerelease, open Nodalia Cards in HACS, choose **Redownload → Need a different version?**, and select the desired alpha, beta or RC tag.
 
 Stable changes are documented in the [changelog](./CHANGELOG.md). Detailed prerelease notes live in [CHANGELOG-PRERELEASES.md](./CHANGELOG-PRERELEASES.md), and longer-term work is tracked in the [roadmap](./ROADMAP.md).
 

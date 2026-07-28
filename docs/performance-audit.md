@@ -1,5 +1,8 @@
 # Nodalia Cards — Performance & interaction audit
 
+> [!NOTE]
+> Historical audit snapshot. It records the `1.2.x` findings and the fixes made at that time; unresolved rows are not an authoritative backlog and must be revalidated against the current source. The document was reviewed for `2.0.0-rc.1` on 2026-07-28, while current release gates live in `package.json`, the test suites and `.github/workflows/`.
+
 **Date:** 2026-05-18 (pass 1–3); refreshed **2026-06-11** for stable **`1.2.1.1`**; **2026-06-12** for **`1.2.2-alpha.1`** (graph hover patch, calendar hass gate, fav parity)  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
 **Target environment:** Home Assistant Core 2025.1+, dashboards with 1700+ entities, 36+ Lovelace resources, mobile + desktop  
@@ -169,9 +172,9 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 
 ## 9. Build & HACS
 
-- **Entry:** 25 card modules + i18n + utils + render-signature + bubble-contrast.
+- **Entry:** 24 card modules + i18n + utils + render-signature + bubble-contrast (historical snapshot; current builds also include focused support models).
 - **Standalone embed:** `scripts/sync-standalone-embed.mjs` for single-file artifacts only (not committed in card sources).
-- **Tests:** `node --test tests/**/*.test.mjs` (**149** tests). No ESLint script in `package.json`.
+- **Tests:** `pnpm test` for unit/regression suites and `pnpm run test:browser` for Chromium/WebKit interaction coverage. No ESLint script is currently defined in `package.json`.
 - **i18n:** Editor + runtime JSON; validate via `pnpm run i18n:validate-editor` etc.
 
 ---
@@ -255,7 +258,7 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 - [ ] Navigation bar: editor pickers actualizan nombres al cambiar `hass`.
 
 ### Regresión HACS
-- [ ] Recurso `nodalia-cards-1.1.4.js` (o actual) carga una vez.
+- [ ] El recurso estable `nodalia-cards.js` carga una sola vez.
 - [ ] `window.__NODALIA_BUNDLE__.pkgVersion` coincide con `package.json`.
 
 ---
@@ -273,11 +276,12 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 ## Commands run
 
 ```bash
-node --test tests/**/*.test.mjs   # 95 pass
-node scripts/build-bundle.mjs     # when releasing
+pnpm run validate
+pnpm run test:browser
+pnpm run release:metadata         # before publishing a tag
 ```
 
-`pnpm test` runs the same tests (may trigger `pnpm install` in CI). No `pnpm lint` script defined.
+`pnpm run validate` checks versions, syntax, both translation catalogs, unit regressions and generated bundles. No `pnpm lint` script is currently defined.
 
 ---
 

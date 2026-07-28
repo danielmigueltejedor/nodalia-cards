@@ -226,6 +226,94 @@ test("README keeps a single support badge without legacy donation sections", () 
   assert.doesNotMatch(readme, /## 💰 Donations/);
 });
 
+test("repository workflows pin audited external actions by immutable commit", () => {
+  const auditedActions = new Set([
+    "actions/checkout",
+    "actions/setup-node",
+    "pnpm/action-setup",
+    "actions/github-script",
+    "actions/attest",
+    "github/codeql-action",
+    "hacs/action",
+  ]);
+  const retiredPins = new Set([
+    "11d5960a326750d5838078e36cf38b85af677262",
+    "49933ea5288caeca8642d1e84afbd3f7d6820020",
+    "b906affcce14559ad1aafd4ab0e942779e9f58b1",
+    "f28e40c7f34bde8b3046d885e986cb6290c5673b",
+    "59d89421af93a897026c735860bf21b6eb4f7b26",
+    "f25eda876ebb741d872b63b9f2c6dfdd77f14b83",
+  ]);
+  const workflowDir = path.join(root, ".github", "workflows");
+  const workflows = fs.readdirSync(workflowDir).filter(file => file.endsWith(".yml"));
+
+  for (const file of workflows) {
+    const source = fs.readFileSync(path.join(workflowDir, file), "utf8");
+    assert.doesNotMatch(source, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24/);
+    for (const match of source.matchAll(/uses:\s+([^\s@]+)@([^\s#]+)/g)) {
+      const action = match[1].replace(/\/(?:init|analyze)$/, "");
+      assert.ok(auditedActions.has(action), `${file} should use an audited external action: ${action}`);
+      assert.match(match[2], /^[0-9a-f]{40}$/, `${file} should pin ${action} to an immutable commit`);
+      assert.ok(!retiredPins.has(match[2]), `${file} should not restore the retired ${action} pin`);
+    }
+  }
+
+  assert.match(read(".github/workflows/codeql.yml"), /^\s+- beta$/m);
+  const releaseLabels = read(".github/workflows/issue-release-labels.yml");
+  assert.match(releaseLabels, /^\s+contents: read$/m);
+  assert.ok(releaseLabels.includes("(?:alpha|beta|rc)"), "release guidance should resolve every preview maturity");
+});
+
+test("issue forms stay aligned with the complete supported card catalog", () => {
+  const cardNames = [
+    "Navigation Bar",
+    "Media Player",
+    "Light Card",
+    "Fan Card",
+    "Humidifier Card",
+    "Circular Gauge Card",
+    "Graph Card",
+    "Power Flow Card",
+    "Cover Card",
+    "Climate Card",
+    "Alarm Panel Card",
+    "Advance Vacuum Card",
+    "Entity Card",
+    "Fav Card",
+    "Insignia Card",
+    "Person Card",
+    "Scenes Card",
+    "Weather Card",
+    "Calendar Card",
+    "Notifications Card",
+    "Vacuum Card",
+    "News Card",
+    "Camera Card",
+    "Room Summary Card",
+  ];
+  const forms = ["bug_report.yml", "feature_request.yml", "question.yml", "translation.yml"];
+  const areaLabeler = read(".github/workflows/issue-area-labeler.yml");
+  forms.forEach(file => {
+    const source = read(path.join(".github", "ISSUE_TEMPLATE", file));
+    cardNames.forEach(card => assert.match(source, new RegExp(`- ${card.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m"), `${file} should list ${card}`));
+    assert.doesNotMatch(source, /Battery Card/);
+  });
+  cardNames.forEach(card => assert.ok(areaLabeler.includes(`["${card}",`), `area labeler should map ${card}`));
+  assert.doesNotMatch(areaLabeler, /Battery Card/);
+  assert.match(read(".github/ISSUE_TEMPLATE/translation.yml"), /- Norwegian \(no\)/);
+});
+
+test("active documentation uses channel-neutral resources and current release guidance", () => {
+  const readme = read("README.md");
+  const newsGuide = read("docs/cards/news-card.md");
+  const roadmap = read("ROADMAP.md");
+  assert.match(readme, /Release candidate/);
+  assert.match(readme, /nodalia-cards\.js/);
+  assert.doesNotMatch(newsGuide, /nodalia-cards-\d/);
+  assert.match(roadmap, /2\.0\.0-rc\.1/);
+  assert.match(roadmap, /1\.3\.5/);
+});
+
 test("url openings keep noopener,noreferrer hardening", () => {
   const files = [
     "nodalia-insignia-card.js",

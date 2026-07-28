@@ -1,5 +1,8 @@
 # Alpha 48 architecture refactor
 
+> [!NOTE]
+> Historical record for the Alpha 48 refactor. The architecture continued evolving through Alpha 49, Alpha 50 and `2.0.0-rc.1`; versioned filenames, measurements and validation counts below describe that checkpoint, not the current release.
+
 This document records the refactor developed on branch
 `refactor/alpha47-architecture` and promoted to Alpha 48 after validation.
 The published Alpha 47 line remains the comparison point.

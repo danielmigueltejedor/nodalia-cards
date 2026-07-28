@@ -27,28 +27,31 @@ When contributing, keep these principles in mind:
 
 ---
 
-# 📄 Documentation parity (`main` / `beta` / `alpha`)
+# 📄 Documentation parity (`main` / `beta` / `alpha` / release tags)
 
 The following files should remain aligned whenever possible:
 
 - `README.md`
 - `CHANGELOG.md`
+- `CHANGELOG-PRERELEASES.md`
 - `CONTRIBUTING.md`
 - `ROADMAP.md`
-- `.github/*.md`
+- `.github/ISSUE_TEMPLATE/*.yml`
+- `.github/workflows/*.yml`
 
 between:
 
 - `main`
 - `beta`
+- `alpha`
 
 unless a branch intentionally documents prerelease-only behavior.
 
 ---
 
-## Alpha branch behavior
+## Preview branch behavior
 
-`alpha` moves much faster and may temporarily drift from:
+`alpha` moves much faster, while `beta` and release-candidate tags represent progressively stricter snapshots. Preview documentation may temporarily drift from:
 
 - README
 - changelog
@@ -61,7 +64,8 @@ This is expected.
 
 When work is promoted:
 - `alpha` → `beta`
-- or `beta` → `main`
+- `beta` → an `rc` tag
+- an accepted `rc` → `main`
 
 documentation should be synchronized again.
 
@@ -73,9 +77,10 @@ After syncing branches:
 
 ```bash
 git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github
+git diff beta alpha -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github
 ```
 
-Ideally the result should be empty except during active prerelease work.
+Ideally both results should be empty except for explicitly documented prerelease differences.
 
 ---
 
@@ -346,17 +351,20 @@ nodalia-cards.js
 
 ## Bundle order matters
 
-The bundle currently loads in this order:
+The runtime bundle currently loads in this order:
 
 ```text
 nodalia-i18n.js
-nodalia-editor-ui.js
 nodalia-utils.js
+nodalia-render-signature.js
 nodalia-bubble-contrast.js
+nodalia-notifications-mobile-policy.js
+nodalia-room-summary-model.js
+nodalia-camera-stream-model.js
 card files...
 ```
 
-If changing dependencies or adding modules, preserve correct initialization order.
+The self-contained HACS distribution appends `nodalia-editor-ui.js`; the optional core/suite build lazy-loads the editor only when Home Assistant opens a visual editor. If changing dependencies or adding modules, preserve this initialization order and keep support models ahead of their cards.
 
 ---
 
@@ -372,13 +380,14 @@ For a **single-file** Lovelace resource (one card JS without the full bundle), r
 
 # 🏷️ Release channels
 
-Nodalia Cards uses three release channels.
+Nodalia Cards uses three working branches and four release maturities.
 
-| Branch | Audience | Stability |
-|---|---|---|
-| `main` | Normal users | Stable |
-| `beta` | Early adopters | Mostly stable |
-| `alpha` | Developers / testers | Experimental |
+| Maturity | Branch / tag | Audience | Stability |
+|---|---|---|---|
+| Stable | `main`, `vX.Y.Z` | Normal users | Production |
+| Release candidate | `vX.Y.Z-rc.N` | Final testers | Feature-frozen |
+| Beta | `beta`, `vX.Y.Z-beta.N` | Early adopters | Preview |
+| Alpha | `alpha`, `vX.Y.Z-alpha.N` | Developers / testers | Experimental |
 
 ---
 
@@ -389,9 +398,9 @@ Production-ready releases.
 Examples:
 
 ```text
-1.0.0
-1.0.1
-1.1.0
+1.3.4
+1.3.5
+2.0.0
 ```
 
 These releases should be:
@@ -408,8 +417,8 @@ Feature-preview releases.
 Examples:
 
 ```text
-1.1.0-beta.1
-1.1.0-beta.2
+2.0.0-beta.1
+2.0.0-beta.2
 ```
 
 Beta releases are expected to be usable but may still evolve before stable.
@@ -423,8 +432,8 @@ Fast experimental development.
 Examples:
 
 ```text
-1.1.0-alpha.1
-1.1.0-alpha.2
+2.0.0-alpha.49
+2.0.0-alpha.50
 ```
 
 Alpha builds may:
@@ -437,17 +446,35 @@ This is expected.
 
 ---
 
+# ✅ Release candidate (`rc` tag)
+
+A release candidate is feature-frozen and used for final regression, browser, Home Assistant, package and release-automation validation.
+
+Examples:
+
+```text
+2.0.0-rc.1
+2.0.0-rc.2
+```
+
+RC maturity lives in the version and Git tag. It is not a permanent branch; cut the tag only from an exact commit that has passed the full validation and release metadata checks.
+
+---
+
 # 🔄 Typical release flow
 
 ```text
-alpha → beta → main
+alpha → beta → rc → main
 ```
 
 Typical progression:
 
 1. Experimental work lands in `alpha`
 2. Stable feature batches move into `beta`
-3. Final polished releases merge into `main`
+3. A feature-frozen commit is tagged as one or more release candidates
+4. The accepted candidate is promoted to `main` and tagged stable
+
+Low-risk cycles may skip `beta`, but every published version must still pass the same version, bundle, browser and release-metadata gates.
 
 ---
 
@@ -458,8 +485,8 @@ Typical progression:
 Examples:
 
 ```text
-package.json → 1.0.0-beta.3
-git tag     → v1.0.0-beta.3
+package.json → 2.0.0-rc.1
+git tag     → v2.0.0-rc.1
 ```
 
 This keeps:
@@ -528,7 +555,7 @@ That includes:
 
 - Bug reports
 - Translation fixes
-- Testing alpha builds
+- Testing preview builds
 - UI suggestions
 - Performance feedback
 - Documentation improvements

@@ -11,16 +11,18 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-1.2.1.1
+1.3.5
 ```
 
-The **`1.2.1.1`** hotfix addresses **person-card language**, **entity-card cover/lock tap actions**, **alarm PIN flow**, and **Lovelace toggle parsing** on top of stable **`1.2.1`**. Prerelease notes: [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Current preview release:
 
-The **`1.2.1`** line delivered **stability**, **visual coherence**, **render performance**, and **i18n completion** on top of **`1.2.0`** (Scenes Card, climate setpoint schedule, Power Flow home popup, interaction/security hardening).
+```text
+2.0.0-rc.1
+```
 
-The **`1.0.0`** cycle transformed Nodalia Cards from a growing collection of custom cards into a much more complete and cohesive frontend ecosystem for Home Assistant.
+Stable **`1.3.5`** is the recommended daily-driver release. **`2.0.0-rc.1`** is the first release candidate after the architecture, security, mobile interaction, camera, notification and bundle audits completed during the `2.0.0-alpha.*` cycle. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
-The project now includes:
+The project currently includes:
 
 - Unified design language
 - Shared visual systems
@@ -35,16 +37,16 @@ The project now includes:
 
 ---
 
-# 🎯 Current focus (post-1.0.x)
+# 🎯 Current focus (`2.0.0` release candidate)
 
-The next stage focuses on:
+The release-candidate stage focuses on:
 
-- Stability
-- Refinement
-- Performance
-- UI consistency
-- Ecosystem expansion
-- Long-term maintainability
+- Regression-free mobile and desktop behavior
+- Security and service-action policy consistency
+- Camera and notification delivery resilience
+- Bundle startup and render performance
+- Documentation and release automation parity
+- Final cross-browser and Home Assistant compatibility testing
 
 The goal is no longer “making cards exist”.
 
@@ -57,9 +59,9 @@ The goal is making the entire system feel:
 
 ---
 
-# ⚡ Phase 1 — 1.0.x stabilization
+# ⚡ Phase 1 — 2.0 stabilization
 
-Goal: strengthen the new architecture introduced in `1.0.0`.
+Goal: validate and stabilize the shared architecture consolidated during the `2.0.0` prerelease cycle before promoting it to stable.
 
 ## Focus areas
 
@@ -160,7 +162,9 @@ Goal: continue evolving Nodalia into a truly cohesive UI framework.
 
 # 📊 Phase 4 — Major card redesigns
 
-Goal: evolve older cards to the new 1.0 design quality level.
+Goal: audit mature cards against the current shared design tokens and interaction model, then redesign only where a material consistency or usability gap remains.
+
+> The items in this phase are directional ideas rather than committed release scope. Several original goals have already evolved during the `1.x` and `2.0.0` cycles and should be revalidated before implementation.
 
 ---
 
@@ -358,12 +362,10 @@ Feature-preview releases for advanced users.
 ## Alpha (`alpha`)
 Experimental builds with rapid iteration.
 
-Future experimental work will continue through:
-- `1.0.x`
-- `1.1.x-alpha`
-- future major cycles
+## Release candidate (`vX.Y.Z-rc.N`)
+Feature-frozen builds used for final regression, compatibility and release checks. RC maturity is represented by the Git tag; a candidate may be cut from a staging branch once its exact commit is validated.
 
-depending on the scale of the changes.
+New work normally progresses through `alpha`, then `beta` when broader testing is useful, then one or more RC tags before promotion to `main` as a stable release. Small, low-risk fixes may skip an intermediate branch, but never the version, bundle and release validation gates.
 
 ---
 

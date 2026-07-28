@@ -1,14 +1,56 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable), and completed **`1.3.5-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.5]`** shipped as stable), and **`2.0.0-alpha.*`** prereleases.
+This file archives detailed per-build notes for all alpha, beta and release-candidate cycles. Stable release summaries remain in [`CHANGELOG.md`](./CHANGELOG.md).
 
-Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
+Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is not part of the active `2.0.0` release-candidate line — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [2.0.0-rc.1] - 2026-07-28
+
+First **`2.0.0`** release candidate: final pre-stable security, lifecycle, rendering, bundle and release audit.
+
+### Fixed
+
+- **Tracked state:** Power Flow and Room Summary now invalidate against the complete set of entities that affect their projections, including camera, power, air-quality, lock, door, window and alert state.
+- **Interaction lifecycle:** long-press handlers reconnect cleanly across Entity, Light, Fan, Humidifier, Cover, Vacuum and Scenes; Fav animation frames are guarded after disconnect.
+- **Security:** Room Summary applies strict allowlists to configured service actions, while built-in controls retain their intended safe paths; navigation media routes validate destinations before use.
+- **Build integrity:** esbuild consumes in-memory input, generated artifacts use atomic writes, and release hashes are calculated from the exact buffers written to disk.
+
+### Changed
+
+- **Release gate:** the complete unit/regression suite and Chromium/WebKit interaction suite cover the audited RC behavior.
+- **Compatibility loaders:** Alpha 49 and Alpha 50 remain as bounded aliases to the RC bundle.
+
+## [2.0.0-alpha.50] - 2026-07-28
+
+Fiftieth **`2.0.0`** alpha: reliable built-in controls, smoother media updates and resilient mobile camera playback.
+
+### Fixed
+
+- **Vacuum Card:** Start, Pause, Stop, Dock, Locate, fan-speed and area-clean controls use the trusted built-in service path, so strict user-action allowlists cannot silently disable them.
+- **Navigation media:** volume adjustments patch their local controls without rebuilding and flashing the full card.
+- **Camera Card:** go2rtc startup is faster, fullscreen survives mobile orientation changes without a black video surface, and Safari audio recovery stays connected to the active stream lifecycle.
+- **Person Card:** compact default avatar and typography values align with the rest of the Nodalia visual family.
+
+## [2.0.0-alpha.49] - 2026-07-28
+
+Forty-ninth **`2.0.0`** alpha: hardened mobile notification policy and broader visual consistency.
+
+### Fixed
+
+- **Notifications delivery:** foreground push requires an enabled mobile policy and valid targets; queued batches re-resolve presence, quiet hours, dismissal and background-sync policy at flush time.
+- **Notifications reactivity:** presence and shared-dismiss helpers are tracked, and quiet-hours boundaries schedule a policy wake-up instead of waiting for an unrelated Home Assistant update.
+- **Release validation:** filesystem checks avoid time-of-check/time-of-use races reported by CodeQL.
+
+### Changed
+
+- **Visual family:** Person and Fav surfaces align more closely with shared card geometry and tinting, and Scenes supports a dedicated single-scene presentation alongside the mosaic mode.
+- **Security defaults and architecture:** service-action policy, support models and regression contracts were tightened ahead of the release-candidate audit.
 
 ## [2.0.0-alpha.48] - 2026-07-23
 

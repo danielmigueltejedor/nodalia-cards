@@ -1,7 +1,7 @@
 {
   "name": "nodalia-cards",
   "version": "2.0.0-rc.1",
-  "packageManager": "pnpm@11.1.1",
+  "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
   },
@@ -18,7 +18,7 @@
     "sync-standalone-embed": "node scripts/sync-standalone-embed.mjs",
     "version:sync": "node scripts/sync-card-version.mjs",
     "version:check": "node scripts/sync-card-version.mjs --check",
-    "bundle": "npm run version:check && node scripts/build-bundle.mjs",
+    "bundle": "pnpm run version:check && node scripts/build-bundle.mjs",
     "release:metadata": "node scripts/generate-release-metadata.mjs",
     "i18n:validate-editor": "node scripts/validate-editor-i18n.mjs",
     "i18n:gen-editor": "node scripts/gen-editor-ui.mjs",
@@ -26,7 +26,7 @@
     "i18n:gen-runtime": "node scripts/gen-runtime-i18n.mjs",
     "test": "node --test tests/**/*.test.mjs",
     "test:browser": "pnpm run bundle && playwright test",
-    "validate": "npm run version:check && node --check nodalia-*.js && npm run i18n:validate-editor && npm run i18n:validate-runtime && npm test && npm run bundle"
+    "validate": "pnpm run version:check && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm test && pnpm run bundle"
   },
   "files": [
     "nodalia-i18n.js",
@@ -105,7 +105,7 @@
   "license": "MIT",
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.62.0",
     "esbuild": "^0.28.1"
   }
 }

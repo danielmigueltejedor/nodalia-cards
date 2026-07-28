@@ -12,7 +12,7 @@ The News Card renders headline-first news items from Home Assistant entities. He
 
 ## Installation
 
-The card ships in the main Nodalia Cards HACS bundle. Add the versioned resource (for example `nodalia-cards-1.3.2-alpha.9.js`) to Lovelace resources, then use the YAML below.
+The card ships in the complete Nodalia Cards bundle. HACS registers `/hacsfiles/nodalia-cards/nodalia-cards.js` automatically; manual installations should register `/local/nodalia-cards.js` as a JavaScript module. To test a prerelease, select that version through **HACS → Redownload → Need a different version?** instead of pinning a versioned resource filename.
 
 ## Simple example
 

@@ -24,6 +24,7 @@ body:
         - Circular Gauge Card
         - Graph Card
         - Power Flow Card
+        - Cover Card
         - Climate Card
         - Alarm Panel Card
         - Advance Vacuum Card
@@ -31,11 +32,14 @@ body:
         - Fav Card
         - Insignia Card
         - Person Card
+        - Scenes Card
         - Weather Card
-        - Vacuum Card
         - Calendar Card
         - Notifications Card
-        - Battery Card
+        - Vacuum Card
+        - News Card
+        - Camera Card
+        - Room Summary Card
         - Visual Editor
         - Installation / HACS
         - Configuration / YAML
@@ -88,7 +92,7 @@ body:
     id: nodalia_version
     attributes:
       label: Nodalia Cards version
-      placeholder: e.g. v0.6.1 / v1.0.0-alpha.x / latest
+      placeholder: e.g. v2.0.0-rc.1 / v1.3.5 / latest
     validations:
       required: false
 
