@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Layout",
   "ed.scenes.layout_grid": "Grid",
   "ed.scenes.layout_list": "List",
+  "ed.scenes.layout_single": "Single scene",
   "ed.scenes.name_placeholder": "Living room scenes",
   "ed.scenes.remove_scene": "Remove scene",
   "ed.scenes.scene_color": "Scene tint",
