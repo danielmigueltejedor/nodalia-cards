@@ -7,6 +7,14 @@
     "isObject",
     "deepClone",
     "deepEqual",
+    "mergeDeep",
+    "compactConfig",
+    "getByPath",
+    "clamp",
+    "escapeHtml",
+    "escapeSelectorValue",
+    "fireEvent",
+    "normalizeTextKey",
     "stripEqualToDefaults",
     "editorStatesSignature",
     "editorFilteredStatesSignature",
@@ -22,6 +30,10 @@
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
+    "installPointerFocusRingGuard",
+    "isKeyboardActivationEvent",
+    "bindModalFocus",
+    "releaseModalFocus",
     "cancelCardZoneTap",
     "scheduleCardZoneTap",
     "isNodaliaSliderChromeHit",
@@ -38,6 +50,11 @@
     "bindEditorDialogLayoutFix",
     "releaseEditorDialogLayoutFix",
     "clampEditorDialogScroll",
+    "renderReducedMotionStyles",
+    "captureEditorFocusState",
+    "restoreEditorFocusState",
+    "bindShadowListeners",
+    "releaseShadowListeners",
   ];
   const existing = typeof window !== "undefined" ? window.NodaliaUtils : null;
   if (
@@ -163,6 +180,117 @@
       return false;
     }
     return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  /**
+   * Recursively merges plain objects while replacing arrays and cloning every
+   * inherited value. This is the canonical configuration merge used by cards.
+   */
+  function mergeDeep(base, override) {
+    if (Array.isArray(base)) {
+      return Array.isArray(override) ? deepClone(override) : deepClone(base);
+    }
+    if (!isObject(base)) {
+      return override === undefined ? deepClone(base) : deepClone(override);
+    }
+
+    const source = isObject(override) ? override : {};
+    const result = {};
+    const keys = new Set([...Object.keys(base), ...Object.keys(source)]);
+    keys.forEach(key => {
+      if (isUnsafeConfigPathKey(key)) {
+        return;
+      }
+      const baseValue = base[key];
+      const overrideValue = source[key];
+      if (overrideValue === undefined) {
+        result[key] = deepClone(baseValue);
+      } else if (isObject(baseValue) && isObject(overrideValue)) {
+        result[key] = mergeDeep(baseValue, overrideValue);
+      } else {
+        result[key] = deepClone(overrideValue);
+      }
+    });
+    return result;
+  }
+
+  /** Removes empty editor values without mutating the input configuration. */
+  function compactConfig(value) {
+    if (Array.isArray(value)) {
+      return value
+        .map(item => compactConfig(item))
+        .filter(item => item !== undefined);
+    }
+    if (isObject(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        if (isUnsafeConfigPathKey(key)) {
+          return;
+        }
+        const cleaned = compactConfig(item);
+        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== undefined && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
+      });
+      return compacted;
+    }
+    if (value === "" || value === null || value === undefined) {
+      return undefined;
+    }
+    return value;
+  }
+
+  function getByPath(target, path) {
+    const parts = String(path || "").split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return undefined;
+    }
+    let cursor = target;
+    for (const key of parts) {
+      if (!key || (!isObject(cursor) && !Array.isArray(cursor))) {
+        return undefined;
+      }
+      cursor = cursor[key];
+    }
+    return cursor;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function escapeSelectorValue(value) {
+    return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  }
+
+  function fireEvent(node, type, detail, options = {}) {
+    const event = new CustomEvent(type, {
+      bubbles: options.bubbles ?? true,
+      cancelable: Boolean(options.cancelable),
+      composed: options.composed ?? true,
+      detail,
+    });
+    node.dispatchEvent(event);
+    return event;
+  }
+
+  function normalizeTextKey(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
   }
 
   function stripEqualToDefaults(config, defaults) {
@@ -1228,11 +1356,248 @@
       window.addEventListener("pointermove", onWindowPointerMove, { passive: true, capture: true });
     }
 
-    host.addEventListener("pointerdown", onPointerDownCapture, true);
-    return () => {
-      host.removeEventListener("pointerdown", onPointerDownCapture, true);
+    let attached = false;
+    const reconnect = () => {
+      if (attached) {
+        return;
+      }
+      host.addEventListener("pointerdown", onPointerDownCapture, true);
+      attached = true;
+    };
+    const disconnect = () => {
+      if (attached) {
+        host.removeEventListener("pointerdown", onPointerDownCapture, true);
+        attached = false;
+      }
       resetTracking();
     };
+    disconnect.reconnect = reconnect;
+    reconnect();
+    return disconnect;
+  }
+
+  const POINTER_FOCUSABLE_SELECTOR = [
+    "button",
+    "a[href]",
+    "summary",
+    "[role='button']",
+    "[tabindex]:not([tabindex='-1'])",
+  ].join(",");
+
+  /**
+   * Safari/WebKit can keep :focus-visible on role=button surfaces after a
+   * touch. Suppress only that pointer-created outline; the first keyboard
+   * event restores the element's original inline style before it is handled.
+   */
+  function installPointerFocusRingGuard() {
+    if (
+      typeof window === "undefined"
+      || typeof document === "undefined"
+      || typeof document.addEventListener !== "function"
+    ) {
+      return false;
+    }
+    if (window.__nodaliaPointerFocusRingGuardInstalled === true) {
+      return true;
+    }
+
+    const inlineOutlineState = new WeakMap();
+    let pointerFocusedElement = null;
+
+    const restoreOutline = element => {
+      if (!(typeof HTMLElement !== "undefined" && element instanceof HTMLElement)) {
+        return;
+      }
+      const previous = inlineOutlineState.get(element);
+      if (previous) {
+        if (previous.value) {
+          element.style.setProperty("outline", previous.value, previous.priority);
+        } else {
+          element.style.removeProperty("outline");
+        }
+        inlineOutlineState.delete(element);
+      }
+      element.removeAttribute("data-nodalia-pointer-focus");
+      if (pointerFocusedElement === element) {
+        pointerFocusedElement = null;
+      }
+    };
+
+    const suppressOutline = element => {
+      if (!(typeof HTMLElement !== "undefined" && element instanceof HTMLElement)) {
+        return;
+      }
+      if (pointerFocusedElement && pointerFocusedElement !== element) {
+        restoreOutline(pointerFocusedElement);
+      }
+      if (!inlineOutlineState.has(element)) {
+        inlineOutlineState.set(element, {
+          priority: element.style.getPropertyPriority("outline"),
+          value: element.style.getPropertyValue("outline"),
+        });
+      }
+      element.setAttribute("data-nodalia-pointer-focus", "");
+      element.style.setProperty("outline", "none", "important");
+      pointerFocusedElement = element;
+    };
+
+    document.addEventListener("pointerdown", event => {
+      if (typeof event.button === "number" && event.button !== 0) {
+        return;
+      }
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      const belongsToNodalia = path.some(node => (
+        typeof HTMLElement !== "undefined"
+        && node instanceof HTMLElement
+        && String(node.tagName || "").startsWith("NODALIA-")
+      ));
+      if (!belongsToNodalia) {
+        return;
+      }
+      const target = path.find(node => (
+        typeof HTMLElement !== "undefined"
+        && node instanceof HTMLElement
+        && typeof node.matches === "function"
+        && node.matches(POINTER_FOCUSABLE_SELECTOR)
+      ));
+      if (target) {
+        suppressOutline(target);
+      }
+    }, true);
+
+    document.addEventListener("keydown", () => {
+      restoreOutline(pointerFocusedElement);
+    }, true);
+
+    document.addEventListener("focusout", event => {
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      if (pointerFocusedElement && path.includes(pointerFocusedElement)) {
+        restoreOutline(pointerFocusedElement);
+      }
+    }, true);
+
+    window.__nodaliaPointerFocusRingGuardInstalled = true;
+    return true;
+  }
+
+  function isKeyboardActivationEvent(event) {
+    if (!event || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") {
+      return false;
+    }
+    const origin = typeof event.composedPath === "function" ? event.composedPath()[0] : event.target;
+    if (!(origin instanceof HTMLElement)) {
+      return true;
+    }
+    if (origin.isContentEditable) {
+      return false;
+    }
+    return !["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"].includes(origin.tagName);
+  }
+
+  const modalFocusState = new WeakMap();
+  const MODAL_FOCUSABLE_SELECTOR = [
+    "button:not([disabled])",
+    "[href]",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "[tabindex]:not([tabindex='-1'])",
+  ].join(",");
+
+  function modalFocusableElements(dialog) {
+    if (!(dialog instanceof HTMLElement)) {
+      return [];
+    }
+    return Array.from(dialog.querySelectorAll(MODAL_FOCUSABLE_SELECTOR)).filter(element => (
+      element instanceof HTMLElement
+      && element.hidden !== true
+      && element.getAttribute("aria-hidden") !== "true"
+    ));
+  }
+
+  function bindModalFocus(host, dialog, options = {}) {
+    if (!(host instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
+      return () => {};
+    }
+
+    const previousState = modalFocusState.get(host);
+    const previousFocus = previousState?.previousFocus
+      || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    if (previousState) {
+      previousState.dialog.removeEventListener("keydown", previousState.onKeyDown);
+      if (previousState.focusTimer) {
+        window.clearTimeout(previousState.focusTimer);
+      }
+    }
+
+    const onKeyDown = event => {
+      if (event.key !== "Tab") {
+        return;
+      }
+      const focusable = modalFocusableElements(dialog);
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    };
+
+    if (!dialog.hasAttribute("tabindex")) {
+      dialog.setAttribute("tabindex", "-1");
+    }
+    dialog.addEventListener("keydown", onKeyDown);
+    const state = {
+      dialog,
+      onKeyDown,
+      previousFocus,
+      restoreFocus: typeof options.restoreFocus === "function" ? options.restoreFocus : null,
+      focusTimer: 0,
+    };
+    modalFocusState.set(host, state);
+    state.focusTimer = window.setTimeout(() => {
+      state.focusTimer = 0;
+      if (modalFocusState.get(host) !== state || !dialog.isConnected) {
+        return;
+      }
+      const requested = options.initialFocusSelector
+        ? dialog.querySelector(options.initialFocusSelector)
+        : null;
+      const target = requested instanceof HTMLElement
+        ? requested
+        : modalFocusableElements(dialog)[0] || dialog;
+      target.focus({ preventScroll: true });
+    }, 0);
+    return () => releaseModalFocus(host);
+  }
+
+  function releaseModalFocus(host) {
+    const state = modalFocusState.get(host);
+    if (!state) {
+      return;
+    }
+    modalFocusState.delete(host);
+    state.dialog.removeEventListener("keydown", state.onKeyDown);
+    if (state.focusTimer) {
+      window.clearTimeout(state.focusTimer);
+    }
+    if (state.restoreFocus) {
+      state.restoreFocus();
+    } else if (state.previousFocus?.isConnected && typeof state.previousFocus.focus === "function") {
+      state.previousFocus.focus({ preventScroll: true });
+    }
   }
 
   function mountIconPickerHost(host, options) {
@@ -1315,14 +1680,16 @@
 
   function normalizeSecurityConfig(security = {}, defaults = {}) {
     const base = {
-      strict_service_actions: false,
+      strict_service_actions: true,
       allowed_services: [],
       allowed_service_domains: [],
       ...(isObject(defaults) ? defaults : {}),
     };
     const src = isObject(security) ? security : {};
     const normalized = { ...base };
-    normalized.strict_service_actions = src.strict_service_actions === true;
+    normalized.strict_service_actions = src.strict_service_actions === undefined
+      ? base.strict_service_actions === true
+      : src.strict_service_actions === true;
     if (Array.isArray(src.allowed_services)) {
       normalized.allowed_services = src.allowed_services
         .map(item => String(item || "").trim().toLowerCase())
@@ -1472,7 +1839,10 @@
     pane.style.alignSelf = "flex-start";
     pane.style.height = "auto";
     pane.style.minHeight = "0";
-    pane.style.maxHeight = "var(--code-mirror-max-height, calc(100vh - 209px))";
+    const viewportHeightUnit = typeof CSS !== "undefined" && CSS.supports?.("height", "100dvh")
+      ? "100dvh"
+      : "100vh";
+    pane.style.maxHeight = `var(--code-mirror-max-height, calc(${viewportHeightUnit} - 209px))`;
     pane.style.overflowY = "auto";
     pane.style.overflowAnchor = "none";
     previousAncestors.forEach(({ node }) => {
@@ -1627,6 +1997,118 @@
     return timer;
   }
 
+  function isEditorTextControl(value) {
+    return (
+      (typeof HTMLInputElement !== "undefined" && value instanceof HTMLInputElement)
+      || (typeof HTMLTextAreaElement !== "undefined" && value instanceof HTMLTextAreaElement)
+      || (typeof HTMLSelectElement !== "undefined" && value instanceof HTMLSelectElement)
+    );
+  }
+
+  /** Captures the editor control and caret without retaining a detached DOM node. */
+  function captureEditorFocusState(editorHost) {
+    const activeElement = editorHost?.shadowRoot?.activeElement;
+    if (!isEditorTextControl(activeElement)) {
+      return null;
+    }
+    const field = String(activeElement.dataset?.field || "");
+    if (!field) {
+      return null;
+    }
+    const supportsSelection =
+      typeof activeElement.selectionStart === "number"
+      && typeof activeElement.selectionEnd === "number";
+    return {
+      selector: `[data-field="${escapeSelectorValue(field)}"]`,
+      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+      selectionStart: supportsSelection ? activeElement.selectionStart : null,
+      type: activeElement.type,
+    };
+  }
+
+  /** Restores focus after an editor render while keeping Lovelace scroll stable. */
+  function restoreEditorFocusState(editorHost, focusState) {
+    if (!focusState?.selector || !editorHost?.shadowRoot) {
+      return;
+    }
+    const target = editorHost.shadowRoot.querySelector(focusState.selector);
+    if (!isEditorTextControl(target)) {
+      return;
+    }
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_error) {
+      target.focus();
+    }
+    const canRestoreSelection =
+      focusState.type !== "checkbox"
+      && typeof focusState.selectionStart === "number"
+      && typeof focusState.selectionEnd === "number"
+      && typeof target.setSelectionRange === "function";
+    if (!canRestoreSelection) {
+      return;
+    }
+    try {
+      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+    } catch (_error) {
+      // Some input types expose selection properties but reject setSelectionRange.
+    }
+  }
+
+  /**
+   * Idempotently binds a declarative event map to a component shadow root.
+   * The same map key can later be released during disconnectedCallback.
+   */
+  function bindShadowListeners(host, listeners, key = "editor") {
+    const root = host?.shadowRoot;
+    if (!root || !Array.isArray(listeners)) {
+      return false;
+    }
+    if (!host._nodaliaShadowListenerGroups) {
+      host._nodaliaShadowListenerGroups = new Map();
+    }
+    if (host._nodaliaShadowListenerGroups.has(key)) {
+      return false;
+    }
+    const active = listeners
+      .map(item => Array.isArray(item)
+        ? { type: item[0], listener: item[1], options: item[2] }
+        : item)
+      .filter(item => item && typeof item.type === "string" && typeof item.listener === "function")
+      .map(item => ({ type: item.type, listener: item.listener, options: item.options }));
+    active.forEach(item => root.addEventListener(item.type, item.listener, item.options));
+    host._nodaliaShadowListenerGroups.set(key, active);
+    return true;
+  }
+
+  function releaseShadowListeners(host, key = "editor") {
+    const groups = host?._nodaliaShadowListenerGroups;
+    const active = groups?.get(key);
+    if (!active || !host?.shadowRoot) {
+      return false;
+    }
+    active.forEach(item => host.shadowRoot.removeEventListener(item.type, item.listener, item.options));
+    groups.delete(key);
+    return true;
+  }
+
+  function renderReducedMotionStyles() {
+    return `
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-delay: 0ms !important;
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-delay: 0ms !important;
+          transition-duration: 1ms !important;
+        }
+      }
+    `;
+  }
+
   const api = {
     isObject,
     isUnsafeConfigPathKey,
@@ -1634,6 +2116,14 @@
     deleteByPath,
     deepClone,
     deepEqual,
+    mergeDeep,
+    compactConfig,
+    getByPath,
+    clamp,
+    escapeHtml,
+    escapeSelectorValue,
+    fireEvent,
+    normalizeTextKey,
     stripEqualToDefaults,
     editorStatesSignature,
     editorFilteredStatesSignature,
@@ -1649,6 +2139,10 @@
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
+    installPointerFocusRingGuard,
+    isKeyboardActivationEvent,
+    bindModalFocus,
+    releaseModalFocus,
     cancelCardZoneTap,
     scheduleCardZoneTap,
     isNodaliaSliderChromeHit,
@@ -1665,6 +2159,11 @@
     bindEditorDialogLayoutFix,
     releaseEditorDialogLayoutFix,
     clampEditorDialogScroll,
+    renderReducedMotionStyles,
+    captureEditorFocusState,
+    restoreEditorFocusState,
+    bindShadowListeners,
+    releaseShadowListeners,
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,
@@ -1673,5 +2172,6 @@
   if (typeof window !== "undefined") {
     ensureCustomCardsDeduped();
     window.NodaliaUtils = api;
+    installPointerFocusRingGuard();
   }
 })();

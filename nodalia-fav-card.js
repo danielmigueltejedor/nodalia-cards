@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG = {
   state_attribute: "",
   layout_mode: "auto",
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -58,8 +58,8 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      border_radius: "26px",
+      border: "1px solid var(--divider-color)",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "10px 12px",
       gap: "10px",
@@ -86,17 +86,23 @@ const STUB_CONFIG = {
   layout_mode: "auto",
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  compactConfig,
+  isUnsafeConfigPathKey,
+  setByPath,
+  deleteByPath,
+  clamp,
+  normalizeTextKey,
+  escapeHtml,
+  escapeSelectorValue,
+  fireEvent,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
 
-  return JSON.parse(JSON.stringify(value));
-}
 
 function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
@@ -117,94 +123,10 @@ function applyStubEntity(config, hass, domains) {
   return config;
 }
 
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
 
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
 
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
 
 function getByPath(target, path) {
   return String(path || "")
@@ -213,23 +135,6 @@ function getByPath(target, path) {
     .reduce((cursor, key) => (cursor == null ? undefined : cursor[key]), target);
 }
 
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
 
 function resolveEditorColorValue(value) {
   const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
@@ -298,9 +203,6 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function miredToKelvin(mired) {
   const numeric = Number(mired);
@@ -311,14 +213,6 @@ function miredToKelvin(mired) {
   return Math.round(1000000 / numeric);
 }
 
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function parseNumericValue(value) {
   if (value === null || value === undefined || value === "") {
@@ -570,29 +464,8 @@ function getDynamicEntityIcon(state) {
   return "";
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
 
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
@@ -870,11 +743,6 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
-    const serviceValue = `${domain}.${service}`;
-    if (!this._isServiceAllowed(serviceValue)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fav Card", serviceValue);
-      return Promise.resolve(false);
-    }
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
     return invoke(this, this._hass, domain, service, {
@@ -1550,10 +1418,16 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _notifyLayoutChange() {
+    if (!this.isConnected) {
+      return;
+    }
     fireEvent(this, "iron-resize", {});
 
     if (typeof window !== "undefined") {
       requestAnimationFrame(() => {
+        if (!this.isConnected) {
+          return;
+        }
         window.dispatchEvent(new Event("resize"));
       });
     }
@@ -1737,6 +1611,14 @@ class NodaliaFavCard extends HTMLElement {
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
+  _commonAria(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
+    return String(pack?.[key] ?? enPack?.[key] ?? fallback);
+  }
+
   _renderEmptyState() {
     const title = escapeHtml(this._favCardUi("emptyTitle", "Nodalia Fav Card"));
     const body = escapeHtml(this._favCardUi("emptyBody", "Set `entity` to show the favorite."));
@@ -1881,6 +1763,20 @@ class NodaliaFavCard extends HTMLElement {
           z-index: 0;
         }
 
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${isActive ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
+          z-index: 0;
+        }
+
         .fav-card {
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           min-width: 0;
@@ -1938,12 +1834,18 @@ class NodaliaFavCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${styles.icon.background};
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: ${isActive
+            ? `radial-gradient(circle at 30% 24%, color-mix(in srgb, ${accentColor} 34%, transparent), transparent 64%), color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : styles.icon.background};
+          border: 1px solid ${isActive
+            ? `color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            : "color-mix(in srgb, var(--primary-text-color) 8%, transparent)"};
           border-radius: ${isSingleRow ? "18px" : (isMini ? "22px" : "24px")};
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            0 12px 30px rgba(0, 0, 0, 0.18);
+            ${isActive
+              ? `0 12px 30px color-mix(in srgb, ${accentColor} 20%, rgba(0, 0, 0, 0.18))`
+              : "0 12px 30px rgba(0, 0, 0, 0.18)"};
           color: ${iconColor};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -2169,9 +2071,11 @@ class NodaliaFavCard extends HTMLElement {
           gap: 8px;
           padding: 14px;
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
-        class="fav-card ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        style="--fav-accent:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
       >
         <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
@@ -2180,7 +2084,7 @@ class NodaliaFavCard extends HTMLElement {
               type="button"
               class="fav-card__icon"
               ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
-              aria-label="${escapeHtml(canRunPrimaryAction ? "Accion principal" : title)}"
+              aria-label="${escapeHtml(canRunPrimaryAction ? this._commonAria("primaryAction", "Primary action") : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${showUnavailableBadge ? `<span class="fav-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
@@ -2225,6 +2129,9 @@ class NodaliaFavCard extends HTMLElement {
     if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
       this._lastAlarmPanelRenderedOpen = showAlarmPanel;
       requestAnimationFrame(() => {
+        if (!this.isConnected) {
+          return;
+        }
         this._applyHostGridSpan(showAlarmPanel);
         this._notifyLayoutChange();
       });
@@ -2254,25 +2161,16 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -2388,76 +2286,11 @@ class NodaliaFavCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

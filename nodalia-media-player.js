@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
@@ -175,7 +175,7 @@ const DEFAULT_CONFIG = {
     button_bounce_duration: 320,
   },
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -195,7 +195,7 @@ const DEFAULT_CONFIG = {
     player: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       min_height: "160px",
@@ -218,24 +218,27 @@ const DEFAULT_CONFIG = {
     browser: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "0 18px 40px rgba(0, 0, 0, 0.22)",
       backdrop: "rgba(0, 0, 0, 0.18)",
     },
   },
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  isUnsafeConfigPathKey,
+  setByPath,
+  deleteByPath,
+  fireEvent,
+  escapeHtml,
+  clamp,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
 
-  return JSON.parse(JSON.stringify(value));
-}
 
 function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
@@ -249,42 +252,6 @@ function getStubFriendlyName(hass, entityId) {
   return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
 }
 
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
 
 function compactConfig(value) {
   if (Array.isArray(value)) {
@@ -297,6 +264,9 @@ function compactConfig(value) {
     const compacted = {};
 
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       if (key === "entity" && item === "") {
         compacted.entity = "";
         return;
@@ -389,27 +359,7 @@ function normalizePowerActionConfig(action) {
   return normalized;
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
 
 function getByPath(target, path) {
   return String(path || "")
@@ -418,23 +368,6 @@ function getByPath(target, path) {
     .reduce((cursor, key) => (cursor == null ? undefined : cursor[key]), target);
 }
 
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
 
 function arrayFromCsv(value) {
   return String(value || "")
@@ -630,29 +563,8 @@ function moveItem(array, fromIndex, toIndex) {
   return array;
 }
 
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum);
-}
 
 function getRangeValueFromClientX(slider, clientX) {
   const rect = slider.getBoundingClientRect();
@@ -940,6 +852,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
@@ -2149,12 +2062,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
         break;
       }
-      case "navigate":
-        if (action.navigation_path) {
-          window.history.pushState(null, "", action.navigation_path);
+      case "navigate": {
+        const path = window.NodaliaUtils?.sanitizeActionUrl(action.navigation_path, { allowRelative: true }) || "";
+        if (path && !/^https?:\/\//i.test(path)) {
+          window.history.pushState(null, "", path);
           window.dispatchEvent(new Event("location-changed"));
         }
         break;
+      }
       case "url": {
         const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url, { allowRelative: true }) || "";
         if (!url) {
@@ -2744,9 +2659,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
 
-      if (fallbackPath) {
+      const safeFallbackPath = window.NodaliaUtils?.sanitizeActionUrl(fallbackPath, { allowRelative: true }) || "";
+      if (safeFallbackPath && !/^https?:\/\//i.test(safeFallbackPath)) {
         this._mediaBrowserState = null;
-        window.history.pushState(null, "", fallbackPath);
+        window.history.pushState(null, "", safeFallbackPath);
         window.dispatchEvent(new Event("location-changed"));
         return;
       }
@@ -5308,6 +5224,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             grid-template-columns: ${playerStyles.artwork_size} minmax(0, 1fr);
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">
@@ -5322,6 +5239,14 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     this._restoreMediaBrowserScrollState();
     this._restoreTvPanelScrollState();
+    const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');
+    if (mediaBrowserDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, mediaBrowserDialog, {
+        initialFocusSelector: '[data-media-browser-close="true"]',
+      });
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
     this._tvSourcePanelAnimatingEntity = null;
     this._tvVolumePanelAnimatingEntity = null;
     if (this._mediaBrowserState?.animateIn === true) {
@@ -5358,25 +5283,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -5450,37 +5366,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
@@ -5525,42 +5411,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore inputs that do not support selection ranges.
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

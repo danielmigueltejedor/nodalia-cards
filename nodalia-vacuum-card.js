@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -112,7 +112,7 @@ const DEFAULT_CONFIG = {
     button_bounce_duration: 320,
   },
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -120,7 +120,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -143,7 +143,7 @@ const DEFAULT_CONFIG = {
       accent_background: "rgba(var(--rgb-primary-color), 0.18)",
     },
     chip_height: "24px",
-    chip_font_size: "9px",
+    chip_font_size: "11px",
     chip_padding: "0 9px",
     chip_border_radius: "999px",
     title_size: "12px",
@@ -155,17 +155,22 @@ const STUB_CONFIG = {
   name: "Robot salon",
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  compactConfig,
+  isUnsafeConfigPathKey,
+  setByPath,
+  deleteByPath,
+  clamp,
+  escapeHtml,
+  escapeSelectorValue,
+  fireEvent,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
 
-  return JSON.parse(JSON.stringify(value));
-}
 
 function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
@@ -186,116 +191,12 @@ function applyStubEntity(config, hass, domains) {
   return config;
 }
 
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
 
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
 
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
 
-  cursor[parts[parts.length - 1]] = value;
-}
 
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
@@ -309,18 +210,7 @@ function arrayFromCsv(value) {
     .filter(Boolean);
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
 
 function sanitizeCssValue(value, fallback) {
   const raw = String(value ?? "").trim();
@@ -422,16 +312,6 @@ function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
 
 function normalizeTextKey(value) {
   return String(value || "")
@@ -610,6 +490,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._detachHostHold?.reconnect?.();
     this._resizeObserver?.observe(this);
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
@@ -1724,7 +1605,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return false;
     }
 
-    this._callUserVacuumService("clean_area", {
+    this._callService("clean_area", {
       cleaning_area_id: selectedIds,
     });
     return true;
@@ -2369,15 +2250,6 @@ class NodaliaVacuumCard extends HTMLElement {
     });
   }
 
-  _callUserVacuumService(service, data = {}) {
-    const fullService = `vacuum.${service}`;
-    if (!this._isServiceAllowed(fullService)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Vacuum Card", fullService);
-      return;
-    }
-    this._callService(service, data);
-  }
-
   _callSelectOption(entityId, option) {
     if (!this._hass || !entityId || !option) {
       return;
@@ -2387,28 +2259,6 @@ class NodaliaVacuumCard extends HTMLElement {
       entity_id: entityId,
       option,
     });
-  }
-
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
-      return true;
-    }
-    const normalizedService = String(serviceValue || "").trim().toLowerCase();
-    if (!normalizedService || !normalizedService.includes(".")) {
-      return false;
-    }
-    const [domain] = normalizedService.split(".");
-    const domains = Array.isArray(security.allowed_service_domains)
-      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    const services = Array.isArray(security.allowed_services)
-      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    if (!domains.length && !services.length) {
-      return false;
-    }
-    return services.includes(normalizedService) || domains.includes(domain);
   }
 
   _findMatchingModeOption(options, value) {
@@ -2614,11 +2464,11 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (this._shouldUsePausePrimary(state)) {
-      this._callUserVacuumService("pause");
+      this._callService("pause");
       return;
     }
 
-    this._callUserVacuumService("start");
+    this._callService("start");
   }
 
   _shouldUsePausePrimary(state) {
@@ -2749,19 +2599,19 @@ class NodaliaVacuumCard extends HTMLElement {
         this._runPrimaryAction(state);
         break;
       case "start":
-        this._callUserVacuumService("start");
+        this._callService("start");
         break;
       case "pause":
-        this._callUserVacuumService("pause");
+        this._callService("pause");
         break;
       case "stop":
-        this._callUserVacuumService("stop");
+        this._callService("stop");
         break;
       case "return_to_base":
-        this._callUserVacuumService("return_to_base");
+        this._callService("return_to_base");
         break;
       case "locate":
-        this._callUserVacuumService("locate");
+        this._callService("locate");
         break;
       case "toggle-mode-panel": {
         const modeKind = button.dataset.modeKind || "";
@@ -2783,7 +2633,7 @@ class NodaliaVacuumCard extends HTMLElement {
           this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
           this._setModePanelActiveSelection(button.dataset.modeKind || "suction", button.dataset.value);
-          this._callUserVacuumService("set_fan_speed", {
+          this._callService("set_fan_speed", {
             fan_speed: button.dataset.value,
           });
         }
@@ -2971,6 +2821,20 @@ class NodaliaVacuumCard extends HTMLElement {
           inset: 0;
           pointer-events: none;
           position: absolute;
+          z-index: 0;
+        }
+
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          opacity: ${isTintedState ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          transition: opacity 180ms ease;
           z-index: 0;
         }
 
@@ -3563,25 +3427,16 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -3715,76 +3570,11 @@ class NodaliaVacuumCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

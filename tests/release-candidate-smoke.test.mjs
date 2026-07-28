@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -15,10 +16,17 @@ function cardPartsFromBuildScript() {
 }
 
 function compatibilityLoadersFromBuildScript() {
-  const source = read("scripts/build-bundle.mjs");
-  const match = source.match(/const compatLoaderFiles = \[([\s\S]*?)\];/);
-  assert.ok(match, "build-bundle.mjs should declare compatLoaderFiles");
-  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+  const source = read("nodalia-cards.manifest.js");
+  const match = source.match(/^export default ([\s\S]*?);\nexport const/m);
+  assert.ok(match, "generated manifest should export its metadata object");
+  return JSON.parse(match[1]).compatLoaderFiles;
+}
+
+function packagePatternIncludes(patterns, file) {
+  return patterns.some(pattern => {
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*");
+    return new RegExp(`^${escaped}$`).test(file);
+  });
 }
 
 function editorRowsFromGeneratedSource(source = read("nodalia-editor-ui.js")) {
@@ -53,6 +61,21 @@ test("bundle build validates card registrations before writing artifacts", () =>
   assert.match(build, /assertCardRegistrations\(fullBody, "Full"\)/);
   assert.match(build, /assertCardRegistrations\(suiteBody, "Suite"\)/);
   assert.doesNotMatch(build, /Promise\.all\(\[\s*buildParts\(ALL_PARTS/);
+  assert.match(build, /stdin: \{[\s\S]*resolveDir: root/);
+  assert.doesNotMatch(build, /\.tmp-nodalia-bundle-/);
+  assert.match(build, /function writeFileAtomic\(/);
+  assert.ok(
+    build.indexOf("writeFileAtomic(path.join(root, bundleFile)") < build.indexOf("Removed stale bundle"),
+    "current artifacts should be replaced atomically before stale versions are pruned",
+  );
+});
+
+test("release metadata hashes the same buffers it validated", () => {
+  const source = read("scripts/generate-release-metadata.mjs");
+  assert.match(source, /const distributedAssets = distributedFiles\.map/);
+  assert.match(source, /contents: fs\.readFileSync\(filePath\)/);
+  assert.match(source, /checksumAssets\.map\(\(\{ filePath, contents \}\)/);
+  assert.doesNotMatch(source, /existsSync\(/);
 });
 
 test("compatibility aliases are unique lightweight loaders for the current version", () => {
@@ -71,11 +94,12 @@ test("compatibility aliases are unique lightweight loaders for the current versi
 test("repository retains only current versioned artifacts and compatibility loaders", () => {
   const pkg = JSON.parse(read("package.json"));
   const compatibilityLoaders = compatibilityLoadersFromBuildScript();
-  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
   const expected = [
     `nodalia-cards-${pkg.version}.js`,
     `nodalia-cards-core-${pkg.version}.js`,
     `nodalia-cards-suite-${pkg.version}.js`,
+    `nodalia-cards-editor-${pkg.version}.js`,
     ...compatibilityLoaders,
   ].sort();
   const actual = fs.readdirSync(root).filter(file => versionedBundlePattern.test(file)).sort();
@@ -107,24 +131,52 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
   assert.equal(hacs.filename, expectedHacsFile);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
-  assert.ok(pkg.files.includes(expectedVersionedFile), `${expectedVersionedFile} should be published`);
+  assert.ok(packagePatternIncludes(pkg.files, expectedVersionedFile), `${expectedVersionedFile} should be published`);
   expectedCompatFiles.forEach(file => {
     assert.ok(manifest.includes(`"${file}"`), `${file} should be listed as a compatibility loader`);
-    assert.ok(pkg.files.includes(file), `${file} should be published`);
+    assert.ok(packagePatternIncludes(pkg.files, file), `${file} should be published`);
     assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist after bundle`);
   });
 
   const expectedCoreFile = `nodalia-cards-core-${pkg.version}.js`;
   const expectedSuiteFile = `nodalia-cards-suite-${pkg.version}.js`;
+  const expectedEditorFile = `nodalia-cards-editor-${pkg.version}.js`;
   assert.ok(manifest.includes(`"splitCoreFile": "${expectedCoreFile}"`));
   assert.ok(manifest.includes(`"splitSuiteFile": "${expectedSuiteFile}"`));
+  assert.ok(manifest.includes(`"editorFile": "${expectedEditorFile}"`));
   assert.ok(fs.existsSync(path.join(root, expectedCoreFile)), `${expectedCoreFile} should exist after bundle`);
   assert.ok(fs.existsSync(path.join(root, expectedSuiteFile)), `${expectedSuiteFile} should exist after bundle`);
+  assert.ok(fs.existsSync(path.join(root, expectedEditorFile)), `${expectedEditorFile} should exist after bundle`);
 
-  pkg.files.forEach(file => {
-    assert.ok(fs.existsSync(path.join(root, file)), `${file} should exist`);
+  pkg.files.forEach(pattern => {
+    const matches = fs.readdirSync(root).filter(file => packagePatternIncludes([pattern], file));
+    assert.ok(matches.length || fs.existsSync(path.join(root, pattern)), `${pattern} should match a published file or directory`);
   });
   assert.ok(!pkg.files.includes("nodalia-calendar-completion-codec.js"));
+});
+
+test("HACS runtime is self-contained while the explicit split build keeps the editor lazy", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const runtimeFile = path.join(root, "nodalia-cards.js");
+  const suiteFile = path.join(root, `nodalia-cards-suite-${pkg.version}.js`);
+  const editorName = `nodalia-cards-editor-${pkg.version}.js`;
+  const editorFile = path.join(root, editorName);
+  const runtimeBuffer = fs.readFileSync(runtimeFile);
+  const editorBuffer = fs.readFileSync(editorFile);
+  const runtime = runtimeBuffer.toString("utf8");
+  const suite = fs.readFileSync(suiteFile, "utf8");
+
+  assert.ok(runtimeBuffer.length < 4 * 1024 * 1024, "self-contained HACS bundle should stay below 4 MiB");
+  assert.ok(editorBuffer.length < 900 * 1024, "lazy editor bundle should stay below 900 KiB");
+  assert.ok(gzipSync(runtimeBuffer).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
+  assert.ok(gzipSync(editorBuffer).length < 225 * 1024, "lazy editor bundle should stay below 225 KiB gzip");
+  assert.match(runtime, /\.editorStr=function/);
+  assert.match(runtime, /window\.NodaliaEditorUI=window\.__NODALIA_EDITOR__/);
+  assert.doesNotMatch(runtime, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
+  assert.doesNotMatch(runtime, /ensureEditorRuntime/);
+  assert.match(suite, new RegExp(`import\\(\"\\./${editorName.replaceAll(".", "\\.")}\"\\)`));
+  assert.match(suite, /ensureEditorRuntime/);
+  assert.doesNotMatch(suite, /\.editorStr=function/);
 });
 
 test("card sources use nodalia-utils.js instead of inlined duplicate helpers", () => {
@@ -201,6 +253,14 @@ test("action URL sinks use sanitizeActionUrl", () => {
     const source = read(file);
     assert.match(source, /sanitizeActionUrl\(/);
   });
+});
+
+test("media player validates navigation and media-browser fallback paths before pushState", () => {
+  const source = read("nodalia-media-player.js");
+  assert.match(source, /sanitizeActionUrl\(action\.navigation_path, \{ allowRelative: true \}\)/);
+  assert.match(source, /sanitizeActionUrl\(fallbackPath, \{ allowRelative: true \}\)/);
+  assert.doesNotMatch(source, /pushState\(null, "", action\.navigation_path\)/);
+  assert.doesNotMatch(source, /pushState\(null, "", fallbackPath\)/);
 });
 
 test("high-frequency cards share render signature runtime", () => {
@@ -671,6 +731,7 @@ test("power flow supports grid feed-in export sensors", () => {
 
 test("notifications card is bundled and supports smart dismissible notifications", () => {
   const source = read("nodalia-notifications-card.js");
+  const mobilePolicy = read("nodalia-notifications-mobile-policy.js");
   const i18n = read("nodalia-i18n.js");
   const build = read("scripts/build-bundle.mjs");
   const pkg = read("package.json");
@@ -697,7 +758,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
   assert.match(source, /mobileDeliveryState/);
   assert.match(source, /deliveryState !== "allowed"/);
-  assert.match(source, /effectivePolicy === "off"/);
+  assert.match(mobilePolicy, /effectivePolicy === "off"/);
   assert.match(source, /_entranceAnimationTimer/);
   assert.match(source, /const animateEntrance = animations\.enabled && this\._animateContentOnNextRender/);
   assert.match(source, /_scheduleEntranceAnimationReset\(animations\.contentDuration \+ 120\)/);
@@ -783,7 +844,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /channel:\s*"alarm_stream"/);
   assert.match(source, /critical:\s*1/);
   assert.match(source, /priority:\s*"high"/);
-  assert.match(source, /this\._callNamedService\(service, legacyPayload\)/);
+  assert.match(source, /this\._callInternalService\(service, legacyPayload\)/);
   assert.doesNotMatch(source, /data:\s*data\.data/);
   assert.match(source, /data-editor-toggle="connections"/);
   assert.match(source, /type: "calendar-popup"/);
@@ -965,8 +1026,8 @@ test("HACS bundle entrypoint is self-contained and still emits diagnostics", () 
   assert.match(source, /versionedLoaderFile = `nodalia-cards-\$\{pkg\.version\}\.js`/);
   assert.match(source, /coreFile = `nodalia-cards-core-\$\{pkg\.version\}\.js`/);
   assert.match(source, /suiteFile = `nodalia-cards-suite-\$\{pkg\.version\}\.js`/);
-  assert.match(source, /fs\.writeFileSync\(path\.join\(root, versionedLoaderFile\), `\$\{fullBody\}/);
-  assert.match(source, /fs\.writeFileSync\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
+  assert.match(source, /writeFileAtomic\(path\.join\(root, versionedLoaderFile\), `\$\{hacsBody\}/);
+  assert.match(source, /writeFileAtomic\(path\.join\(root, coreFile\), `\$\{coreBody\}/);
   assert.match(source, /mode: "inline"/);
   assert.match(source, /window\.__NODALIA_LOADER__/);
   assert.match(source, /window\.__NODALIA_BUNDLE__/);

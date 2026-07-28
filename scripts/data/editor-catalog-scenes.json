@@ -77,6 +77,20 @@
     "el": "Λίστα",
     "ro": "Listă"
   },
+  "ed.scenes.layout_single": {
+    "en": "Single scene",
+    "es": "Escena única",
+    "zh": "单个场景",
+    "de": "Einzelne Szene",
+    "fr": "Scène unique",
+    "it": "Scena singola",
+    "nl": "Enkele scène",
+    "no": "Enkeltscene",
+    "pt": "Cena única",
+    "ru": "Одна сцена",
+    "el": "Μία σκηνή",
+    "ro": "Scenă unică"
+  },
   "ed.scenes.name_placeholder": {
     "en": "Living room scenes",
     "es": "Escenas del salón",

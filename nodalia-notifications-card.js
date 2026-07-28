@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.0.0-alpha.37";
+const CARD_VERSION = "2.0.0-rc.1";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -97,7 +97,7 @@ const DEFAULT_CONFIG = {
     chunk_size: 240,
   },
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
     allow_webhooks_for_non_admin: false,
@@ -132,19 +132,15 @@ const DEFAULT_CONFIG = {
   },
 };
 
-function deepClone(value) {
-  if (window.NodaliaUtils?.deepClone) {
-    return window.NodaliaUtils.deepClone(value);
-  }
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  deepClone,
+  isObject,
+  clamp,
+  isUnsafeConfigPathKey,
+} = window.NodaliaUtils;
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+
 
 function mergeDeep(base, override) {
   const out = deepClone(base);
@@ -152,6 +148,9 @@ function mergeDeep(base, override) {
     return out;
   }
   Object.entries(override).forEach(([key, value]) => {
+    if (isUnsafeConfigPathKey(key)) {
+      return;
+    }
     if (isObject(value) && isObject(out[key])) {
       out[key] = mergeDeep(out[key], value);
     } else if (value !== undefined) {
@@ -176,6 +175,9 @@ function compactConfig(value) {
   if (isObject(value)) {
     const out = {};
     Object.entries(value).forEach(([key, child]) => {
+      if (isUnsafeConfigPathKey(key)) {
+        return;
+      }
       const next = compactConfig(child);
       if (next !== undefined && next !== "") {
         out[key] = next;
@@ -317,136 +319,41 @@ function normalizeSmartNotificationOptions(value) {
   };
 }
 
-const MOBILE_POLICY_VALUES = new Set(["auto", "push", "card_only", "off"]);
-const BACKGROUND_MOBILE_MAX_CHUNKS = 40;
-const MOBILE_DELIVERY_STATES = new Set([
-  "allowed",
-  "card_only",
-  "off",
-  "blocked_by_severity",
-  "blocked_by_context",
-  "blocked_by_quiet_hours",
-  "blocked_by_cooldown",
-]);
-const MOBILE_COOLDOWN_STORAGE_KEY = "nodalia_notifications_mobile_cooldown_v1";
+const {
+  BACKGROUND_MOBILE_MAX_CHUNKS,
+  MOBILE_COOLDOWN_STORAGE_KEY,
+  MOBILE_DELIVERY_STATES,
+  normalizeMobilePolicy,
+  resolveSmartEntityMobilePolicy,
+  backgroundMobilePayloadOverLimit,
+  normalizeSmartEntityMobile,
+  normalizeSmartEntityOverrideMobile,
+  isExplicitSmartEntityMobile,
+  isWithinQuietHours,
+  getNextQuietHoursBoundaryDelay,
+  normalizeQuietHours,
+  normalizeMobileContext,
+  resolvePresenceOccupancy,
+  passesPresenceContext,
+  buildMobileAlertIdentity,
+  buildMobileGroupIdentity,
+  resolveMobileDeliveryState,
+  legacyMobilePolicyLabel,
+} = window.NodaliaNotificationsMobilePolicy;
 
-function normalizeMobilePolicy(value) {
-  if (isObject(value) && value.policy !== undefined) {
-    return normalizeMobilePolicy(value.policy);
-  }
-  if (value === true) {
-    return "push";
-  }
-  if (value === false) {
-    return "off";
-  }
-  const normalized = String(value ?? "auto").trim().toLowerCase();
-  if (MOBILE_POLICY_VALUES.has(normalized)) {
-    return normalized;
-  }
-  if (["on", "true", "enabled", "yes", "1"].includes(normalized)) {
-    return "push";
-  }
-  if (["off", "false", "disabled", "no", "0"].includes(normalized)) {
-    return "off";
-  }
-  if (normalized === "inherit") {
-    return "auto";
-  }
-  return "auto";
-}
 
-function resolveSmartEntityMobilePolicy(overrideMobile, baseMobile) {
-  if (!isExplicitSmartEntityMobile(overrideMobile)) {
-    return normalizeMobilePolicy(baseMobile ?? "auto");
-  }
-  return normalizeMobilePolicy(overrideMobile);
-}
 
-function backgroundMobilePayloadOverLimit(payload) {
-  return Number(payload?.chunk_count) > BACKGROUND_MOBILE_MAX_CHUNKS;
-}
 
-function normalizeSmartEntityMobile(value) {
-  return normalizeMobilePolicy(value);
-}
 
-function normalizeSmartEntityOverrideMobile(value) {
-  if (value === undefined || value === null || String(value).trim() === "") {
-    return "inherit";
-  }
-  const raw = String(value).trim().toLowerCase();
-  if (raw === "inherit") {
-    return "inherit";
-  }
-  return normalizeSmartEntityMobile(value);
-}
 
-function isExplicitSmartEntityMobile(value) {
-  if (value === undefined || value === null) {
-    return false;
-  }
-  const raw = String(value).trim().toLowerCase();
-  if (!raw || raw === "inherit" || raw === "auto") {
-    return false;
-  }
-  const normalized = normalizeMobilePolicy(value);
-  return normalized === "push" || normalized === "off" || normalized === "card_only";
-}
 
-function parseClockMinutes(value) {
-  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) {
-    return null;
-  }
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) {
-    return null;
-  }
-  return hours * 60 + minutes;
-}
 
-function isWithinQuietHours(quietHours, date = new Date()) {
-  if (!quietHours?.enabled) {
-    return false;
-  }
-  const start = parseClockMinutes(quietHours.start);
-  const end = parseClockMinutes(quietHours.end);
-  if (start === null || end === null) {
-    return false;
-  }
-  const now = date.getHours() * 60 + date.getMinutes();
-  if (start === end) {
-    return false;
-  }
-  if (start < end) {
-    return now >= start && now < end;
-  }
-  return now >= start || now < end;
-}
 
-function normalizeQuietHours(value) {
-  const row = isObject(value) ? value : {};
-  return {
-    enabled: row.enabled === true,
-    start: String(row.start || "23:00").trim() || "23:00",
-    end: String(row.end || "08:00").trim() || "08:00",
-    allow_critical: row.allow_critical !== false,
-  };
-}
 
-function normalizeMobileContext(value) {
-  const row = isObject(value) ? value : {};
-  return {
-    only_when_away: row.only_when_away === true,
-    only_when_home: row.only_when_home === true,
-    quiet_hours: normalizeQuietHours(row.quiet_hours),
-  };
-}
 
-function normalizeExternalAlerts(value) {
+function normalizeExternalAlerts(value, options = {}) {
   const rows = Array.isArray(value) ? value : [];
+  const keepDrafts = options.keepDrafts === true;
   const seen = new Set();
   return rows
     .map(item => {
@@ -454,7 +361,7 @@ function normalizeExternalAlerts(value) {
       const id = String(row.id || "").trim();
       const type = String(row.type || "external_alert").trim().toLowerCase() || "external_alert";
       const mobileRaw = row.mobile ?? row.mobile_notifications ?? row.mobile_enabled;
-      return {
+      const normalized = {
         id,
         type,
         title: String(row.title || "").trim(),
@@ -469,8 +376,15 @@ function normalizeExternalAlerts(value) {
         url: String(row.url || "").trim(),
         action_label: String(row.action_label || "").trim(),
       };
+      if (keepDrafts && row._draft === true) {
+        normalized._draft = true;
+      }
+      return normalized;
     })
     .filter(item => {
+      if (keepDrafts && item._draft === true) {
+        return true;
+      }
       if (!item.id || !item.title || seen.has(item.id)) {
         return false;
       }
@@ -478,124 +392,6 @@ function normalizeExternalAlerts(value) {
       return true;
     });
 }
-
-function severityScore(severity) {
-  return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
-}
-
-function resolvePresenceOccupancy(hass, presenceEntityId) {
-  const entityId = String(presenceEntityId || "").trim();
-  if (!entityId || !hass?.states?.[entityId]) {
-    return null;
-  }
-  const stateKey = String(hass.states[entityId].state || "").trim().toLowerCase();
-  if (["home", "on", "true", "occupied", "present"].includes(stateKey)) {
-    return "home";
-  }
-  if (["not_home", "away", "off", "false", "absent", "out"].includes(stateKey)) {
-    return "away";
-  }
-  return "unknown";
-}
-
-function passesPresenceContext(mobileContext, occupancy) {
-  const context = normalizeMobileContext(mobileContext);
-  if (context.only_when_away && context.only_when_home) {
-    return true;
-  }
-  if (occupancy === null) {
-    return true;
-  }
-  if (context.only_when_away) {
-    return occupancy === "away";
-  }
-  if (context.only_when_home) {
-    return occupancy === "home";
-  }
-  return true;
-}
-
-function buildMobileAlertIdentity(item = {}) {
-  const parts = [
-    String(item.alertType || item.type || "").trim(),
-    String(item.entity || "").trim(),
-    String(item.id || "").trim(),
-    String(item.severity || "").trim(),
-    item.threshold !== undefined && item.threshold !== null ? String(item.threshold) : "",
-  ].filter(Boolean);
-  return parts.join("|") || String(item.id || "");
-}
-
-function buildMobileGroupIdentity(item = {}) {
-  const parts = [
-    String(item.alertType || item.type || "").trim(),
-    String(item.entity || "").trim(),
-    String(item.severity || "").trim(),
-  ].filter(Boolean);
-  return parts.join("|");
-}
-
-function resolveMobileDeliveryState(options = {}) {
-  const alertPolicy = normalizeMobilePolicy(options.alertPolicy ?? options.mobilePolicy ?? "auto");
-  const defaultPolicy = normalizeMobilePolicy(options.defaultPolicy ?? "auto");
-  const effectivePolicy = alertPolicy === "auto" ? defaultPolicy : alertPolicy;
-
-  if (effectivePolicy === "off") {
-    return "off";
-  }
-  if (effectivePolicy === "card_only") {
-    return "card_only";
-  }
-
-  const minSeverity = normalizeSeverity(options.minSeverity || "warning");
-  const alertSeverity = normalizeSeverity(options.alertSeverity || "info");
-  const isCritical = alertSeverity === "critical";
-  const backgroundEnabled = options.backgroundMobileEnabled === true;
-  const notifyTargetsConfigured = options.notifyTargetsConfigured === true;
-  const globalMobileEnabled = options.globalMobileEnabled === true;
-  const quietHours = normalizeQuietHours(options.quietHours);
-  const quietActive = options.quietHoursActive === true
-    || isWithinQuietHours(quietHours, options.now instanceof Date ? options.now : new Date());
-  const occupancy = options.presenceOccupancy ?? null;
-  const contextAllowed = passesPresenceContext(options.mobileContext, occupancy);
-
-  if (!contextAllowed) {
-    return "blocked_by_context";
-  }
-  if (quietActive && !(quietHours.allow_critical && isCritical)) {
-    return "blocked_by_quiet_hours";
-  }
-  if (options.cooldownActive === true) {
-    return "blocked_by_cooldown";
-  }
-
-  const severityAllowed = effectivePolicy === "push"
-    || severityScore(alertSeverity) >= severityScore(minSeverity);
-  if (!severityAllowed) {
-    return "blocked_by_severity";
-  }
-
-  const canDeliver = backgroundEnabled
-    ? notifyTargetsConfigured
-    : (globalMobileEnabled || effectivePolicy === "push") && notifyTargetsConfigured;
-  if (!canDeliver) {
-    return effectivePolicy === "push" ? "blocked_by_context" : "card_only";
-  }
-
-  return "allowed";
-}
-
-function legacyMobilePolicyLabel(policy) {
-  const normalized = normalizeMobilePolicy(policy);
-  if (normalized === "push") {
-    return "on";
-  }
-  if (normalized === "off") {
-    return "off";
-  }
-  return "inherit";
-}
-
 function normalizeSmartEntityOverrides(value) {
   const rows = Array.isArray(value)
     ? value
@@ -722,7 +518,9 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
   config.presence_entity = String(config.presence_entity || "").trim();
   config.mobile_context = normalizeMobileContext(config.mobile_context);
-  config.external_alerts = normalizeExternalAlerts(config.external_alerts);
+  config.external_alerts = normalizeExternalAlerts(config.external_alerts, {
+    keepDrafts: options.keepDrafts === true,
+  });
   config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
   config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
   config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
@@ -766,9 +564,6 @@ function finiteNumber(value, fallback) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function normalizeMatchText(value) {
   return String(value ?? "")
@@ -929,9 +724,6 @@ function fireEvent(node, type, detail = {}, options = {}) {
   }));
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".").filter(Boolean);
@@ -1463,6 +1255,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._runtimeExternalAlerts = [];
     this._mobileNotifyTimer = 0;
     this._mobileNotifyQueue = [];
+    this._quietHoursWakeTimer = 0;
     this._lastRenderSignature = "";
     this._trackedEntityIdsCache = null;
     this._trackedEntityRevision = null;
@@ -1512,6 +1305,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
+    this._scheduleQuietHoursWake();
     window.addEventListener("resize", this._onViewportResize, { passive: true });
     window.addEventListener("orientationchange", this._onViewportResize, { passive: true });
   }
@@ -1544,6 +1338,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._mobileNotifyTimer = 0;
     }
     this._mobileNotifyQueue = [];
+    if (this._quietHoursWakeTimer) {
+      window.clearTimeout(this._quietHoursWakeTimer);
+      this._quietHoursWakeTimer = 0;
+    }
     if (this._backgroundMobileSyncTimer) {
       window.clearTimeout(this._backgroundMobileSyncTimer);
       this._backgroundMobileSyncTimer = 0;
@@ -1688,6 +1486,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._scheduleBackgroundMobileSync(320, { force: true });
     this._refreshCalendarEventsSoon(0);
     this._refreshWeatherForecastsSoon(0);
+    this._scheduleQuietHoursWake();
   }
 
   set hass(hass) {
@@ -1700,15 +1499,15 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._lastRouteKey = nextRouteKey;
       this._replayEntranceAnimation({ force: true });
     }
+    this._syncTrackedEntitiesStamp(hass);
+    this._syncSharedDismissedFromHass();
     const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
       return;
     }
-    this._syncSharedDismissedFromHass();
     this._refreshCalendarEventsSoon();
     this._refreshWeatherForecastsSoon();
-    this._syncTrackedEntitiesStamp(hass);
     this._lastRenderSignature = nextSignature;
     this._renderIfChanged(true);
     this._scheduleBackgroundMobileSync();
@@ -1778,6 +1577,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
         );
       }
+      this._lastBackgroundMobileSyncSignature = "";
       this._pendingBackgroundMobileSync = true;
       return false;
     }
@@ -3100,7 +2900,17 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (background.enabled !== true) {
       return false;
     }
-    return Boolean(this._lastBackgroundMobileSyncSignature);
+    const lastSignature = String(this._lastBackgroundMobileSyncSignature || "");
+    const webhookId = String(background.webhook || "").trim();
+    if (!lastSignature || !webhookId) {
+      return false;
+    }
+    const payload = this._buildBackgroundMobileWebhookPayload();
+    if (backgroundMobilePayloadOverLimit(payload)) {
+      return false;
+    }
+    const currentSignature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+    return currentSignature === lastSignature;
   }
 
   _shouldSendMobileNotification(item) {
@@ -3110,7 +2920,9 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (!item?.id) {
       return false;
     }
-    const deliveryState = item.mobileDeliveryState || this._resolveMobileDeliveryForItem(item);
+    // Delivery context is time- and state-sensitive. Never trust the value captured
+    // when the visual notification was built or first queued.
+    const deliveryState = this._resolveMobileDeliveryForItem(item);
     if (deliveryState !== "allowed") {
       return false;
     }
@@ -3198,6 +3010,9 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (!this.isConnected) {
         return;
       }
+      if (!this._shouldSendMobileNotification(item)) {
+        continue;
+      }
       const hash = this._dismissKey(item.id);
       if (this._mobileSent.has(hash) || this._isDismissed(item)) {
         continue;
@@ -3222,7 +3037,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           : Promise.resolve(false),
         ...legacyServices.map(service => (
           Promise.resolve().then(() => (
-            this._callNamedService(service, legacyPayload)
+            this._callInternalService(service, legacyPayload)
           )).then(() => true, () => false)
         )),
       ]).then(results => {
@@ -3277,7 +3092,10 @@ class NodaliaNotificationsCard extends HTMLElement {
       ...this._config.humidifier_fill_entities,
       ...this._config.humidifier_full_entities,
       ...this._config.ink_entities,
+      this._config.presence_entity,
+      this._config.dismissed_entity,
       ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
+      ...this._config.external_alerts.map(item => item.entity).filter(Boolean),
     ];
     const templateEntities = this._config.custom_notifications.flatMap(item => [
       item.title,
@@ -3285,7 +3103,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       item.action_label,
       item.url,
     ].flatMap(referencedNotificationTemplateEntities));
-    this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities])];
+    this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities].filter(Boolean))];
     return this._trackedEntityIdsCache;
   }
 
@@ -3390,6 +3208,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._calendarError,
       this._calendarEventsSignature || "",
       this._weatherForecastsSignature || "",
+      isWithinQuietHours(this._config?.mobile_context?.quiet_hours, new Date()) ? "quiet" : "awake",
     ];
     parts.push(this._config.language || "auto");
     parts.push(
@@ -3400,6 +3219,26 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     parts.push(this._trackedEntitiesStamp);
     return parts.join("||");
+  }
+
+  _scheduleQuietHoursWake(now = new Date()) {
+    if (this._quietHoursWakeTimer) {
+      window.clearTimeout(this._quietHoursWakeTimer);
+      this._quietHoursWakeTimer = 0;
+    }
+    const delay = getNextQuietHoursBoundaryDelay(this._config?.mobile_context?.quiet_hours, now);
+    if (!Number.isFinite(delay) || delay === null || !this.isConnected) {
+      return;
+    }
+    this._quietHoursWakeTimer = window.setTimeout(() => {
+      this._quietHoursWakeTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      this._lastRenderSignature = "";
+      this._renderIfChanged(true);
+      this._scheduleQuietHoursWake();
+    }, Math.max(250, delay + 50));
   }
 
   _renderIfChanged(force = false) {
@@ -4402,6 +4241,7 @@ if (typeof globalThis !== "undefined") {
     getBackgroundMobileConfigPayload,
     buildBackgroundMobileWebhookPayload,
     backgroundMobilePayloadOverLimit,
+    getNextQuietHoursBoundaryDelay,
     BACKGROUND_MOBILE_MAX_CHUNKS,
     resolveSmartEntityMobilePolicy,
     isExplicitSmartEntityMobile,
@@ -4431,25 +4271,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -4528,38 +4359,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const active = this.shadowRoot?.activeElement;
-    if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement)) {
-      return null;
-    }
-    const selector = active.dataset?.field ? `[data-field="${escapeSelectorValue(active.dataset.field)}"]` : null;
-    if (!selector) {
-      return null;
-    }
-    return {
-      selector,
-      type: active.type,
-      selectionStart: typeof active.selectionStart === "number" ? active.selectionStart : null,
-      selectionEnd: typeof active.selectionEnd === "number" ? active.selectionEnd : null,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focus) {
-    if (!focus?.selector) {
-      return;
-    }
-    const target = this.shadowRoot?.querySelector(focus.selector);
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) {
-      return;
-    }
-    try {
-      target.focus({ preventScroll: true });
-      if (focus.type !== "checkbox" && typeof target.setSelectionRange === "function") {
-        target.setSelectionRange(focus.selectionStart, focus.selectionEnd);
-      }
-    } catch (_error) {
-      target.focus();
-    }
+  _restoreFocusState(focusState) {
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {
@@ -4614,6 +4418,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           `Nodalia Notifications Card editor: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
         );
       }
+      this._lastBackgroundMobileSyncSignature = "";
       return false;
     }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
@@ -4893,6 +4698,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           this._config.external_alerts = [];
         }
         this._config.external_alerts.push({
+          _draft: true,
           id: "",
           type: "camera_event",
           title: "",
@@ -4900,6 +4706,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           severity: "warning",
           mobile: "auto",
         });
+        this._showExternalAlertsSection = true;
         this._emitConfig();
         break;
       case "remove-external-alert":

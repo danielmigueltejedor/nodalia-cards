@@ -255,7 +255,8 @@
       "volumeUp": "Volume omhoog",
       "openMedia": "Open media",
       "navigationBar": "Navigatiebalk",
-      "mediaPlayers": "Mediaspelers"
+      "mediaPlayers": "Mediaspelers",
+      "primaryAction": "Primaire actie"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Stel `entity` in op een `vacuum.*`-entiteit om deze kaart te tonen."
   },
   "insigniaCard": {
+    "cardDescription": "Compacte badge in bubbelstijl voor Nodalia-dashboards.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Configureer `entity` of basisinhoud om de badge te tonen."
   },
@@ -816,6 +818,7 @@
     "triggered": "Getriggerd"
   },
   "calendarCard": {
+    "cardDescription": "Kalenderkaart met native afspraken en uitgebreide agenda.",
     "allDay": "Hele dag",
     "timeRange": {
       "threeDays": "3 dagen",

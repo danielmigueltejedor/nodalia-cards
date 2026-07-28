@@ -255,7 +255,8 @@
       "volumeUp": "Augmenter le volume",
       "openMedia": "Médias ouverts",
       "navigationBar": "Barre de navigation",
-      "mediaPlayers": "Lecteurs multimédias"
+      "mediaPlayers": "Lecteurs multimédias",
+      "primaryAction": "Action principale"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Définissez `entity` sur une entité `vacuum.*` pour afficher cette carte."
   },
   "insigniaCard": {
+    "cardDescription": "Badge compact en forme de bulle pour les tableaux de bord Nodalia.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Configurez `entity` ou un contenu de base pour afficher le badge."
   },
@@ -816,6 +818,7 @@
     "triggered": "Déclenchée"
   },
   "calendarCard": {
+    "cardDescription": "Carte de calendrier avec événements natifs et agenda détaillé.",
     "allDay": "Toute la journée",
     "timeRange": {
       "threeDays": "3 jours",

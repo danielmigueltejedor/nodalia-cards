@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Verify tag and package version
+        run: node -e 'const p=require("./package.json"); const tag=process.env.GITHUB_REF_NAME.replace(/^v/, ""); if (p.version !== tag) throw new Error(`Tag ${tag} does not match package ${p.version}`)'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and validate
+        run: |
+          pnpm run i18n:gen-editor
+          pnpm run i18n:gen-runtime
+          pnpm run validate
+          git diff --exit-code
+
+      - name: Validate release assets and generate metadata
+        run: pnpm run release:metadata
+
+      - name: Attest build provenance
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-checksums: release/SHA256SUMS
+
+      - name: Attest SBOM
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-checksums: release/SHA256SUMS
+          sbom-path: release/nodalia-cards.sbom.cdx.json
+
+      - name: Publish verified release assets
+        shell: bash
+        run: |
+          mapfile -t assets < release/release-assets.txt
+          release_title="${GITHUB_REF_NAME#v}"
+          prerelease_args=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            prerelease_args+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" --verify-tag --generate-notes --title "$release_title" "${prerelease_args[@]}"

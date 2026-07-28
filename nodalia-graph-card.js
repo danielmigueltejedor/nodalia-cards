@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -94,16 +94,21 @@ const STUB_CONFIG = {
   ],
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  isUnsafeConfigPathKey,
+  setByPath,
+  deleteByPath,
+  escapeHtml,
+  fireEvent,
+  normalizeTextKey,
+  clamp,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+
 
 function getStubEntityIds(hass, domains = [], limit = 1) {
   const states = hass?.states || {};
@@ -119,42 +124,6 @@ function getStubFriendlyName(hass, entityId) {
   return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
 }
 
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
 
 function compactConfig(value) {
   if (Array.isArray(value)) {
@@ -165,6 +134,9 @@ function compactConfig(value) {
     const compacted = {};
 
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       const cleaned = compactConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
 
@@ -184,27 +156,7 @@ function compactConfig(value) {
 }
 
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-}
 
 function getByPath(target, path) {
   return String(path || "")
@@ -212,52 +164,9 @@ function getByPath(target, path) {
     .reduce((cursor, key) => (cursor === undefined || cursor === null ? undefined : cursor[key]), target);
 }
 
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
 
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
 
-  delete cursor[parts[parts.length - 1]];
-}
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
@@ -334,9 +243,6 @@ function parsePaddingEdges(value, fallback = 16) {
   return { top, right, bottom, left };
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function getRenderSignatureRuntime() {
   return window.NodaliaRenderSignature || {
@@ -3056,6 +2962,7 @@ class NodaliaGraphCard extends HTMLElement {
               0 0 0 1px color-mix(in srgb, var(--legend-color) 10%, transparent);
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="graph-card">
         <div class="graph-card__content ${shouldAnimateEntrance ? "graph-card__content--entering" : ""}">
@@ -3846,25 +3753,16 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -3981,76 +3879,11 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore inputs that do not support selection ranges.
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

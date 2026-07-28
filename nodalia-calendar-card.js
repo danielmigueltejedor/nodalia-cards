@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -48,7 +48,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -90,9 +90,14 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  escapeHtml,
+  escapeSelectorValue,
+  clamp,
+} = window.NodaliaUtils;
+
 
 function mergeConfig(base, override) {
   if (Array.isArray(base)) {
@@ -104,6 +109,9 @@ function mergeConfig(base, override) {
   const out = {};
   const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
   keys.forEach(key => {
+    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+      return;
+    }
     const baseValue = base[key];
     const overrideValue = override ? override[key] : undefined;
     if (overrideValue === undefined) {
@@ -126,6 +134,9 @@ function compactCalendarConfig(value) {
   if (isObject(value)) {
     const compacted = {};
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       const cleaned = compactCalendarConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
       if (cleaned !== undefined && !isEmptyObject) {
@@ -390,22 +401,8 @@ function calendarEventKey(event) {
   return `${source}|${uid}|${recurrence}|${start}|${summary}`;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function normalizeTextKey(value) {
   return String(value ?? "")
@@ -677,6 +674,21 @@ class NodaliaCalendarCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
+  static getEntitySuggestion(_hass, entityId) {
+    return String(entityId || "").startsWith("calendar.")
+      ? { type: `custom:${CARD_TAG}`, calendars: [{ entity: entityId }] }
+      : undefined;
+  }
+
+  getCardSize() {
+    const visible = Math.max(1, Math.min(Number(this._config?.max_visible_events) || 2, 6));
+    return Math.min(8, visible + 2);
+  }
+
+  getGridOptions() {
+    return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
+  }
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -853,6 +865,7 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
     }
@@ -4014,6 +4027,7 @@ class NodaliaCalendarCard extends HTMLElement {
             margin-top: 0;
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card>
         <div class="calendar-card">
@@ -4077,6 +4091,13 @@ class NodaliaCalendarCard extends HTMLElement {
     this._mountNativeCalendarControl();
     this._mountNativeColorControl();
     this._mountNativeRepeatControl();
+    const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
+    const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
+    if (activeCalendarDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog);
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
   }
 
   _mountNativeCalendarControl() {
@@ -4440,25 +4461,16 @@ class NodaliaCalendarCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -4542,64 +4554,11 @@ class NodaliaCalendarCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field ? `[data-field="${escapeSelectorValue(dataset.field)}"]` : null;
-    if (!selector) {
-      return null;
-    }
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-    if (!canRestoreSelection) {
-      return;
-    }
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      /* ignore */
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _watchEditorControlTag(tagName) {
@@ -5751,10 +5710,14 @@ if (!customElements.get(EDITOR_TAG)) {
   customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
 }
 
+const _nodaliaCalendarLanguage = window.NodaliaI18n?.resolveLanguage?.(null, "auto") ?? "en";
+const _nodaliaCalendarStrings = window.NodaliaI18n?.strings?.(_nodaliaCalendarLanguage)?.calendarCard
+  || window.NodaliaI18n?.strings?.("en")?.calendarCard
+  || {};
 const _nodaliaCalendarCardMeta = {
   type: CARD_TAG,
   name: "Nodalia Calendar Card",
-  description: "Tarjeta de calendario elegante estilo Nodalia con eventos nativos.",
+  description: String(_nodaliaCalendarStrings.cardDescription || "Calendar card with native events and an expanded agenda."),
   preview: true,
 };
 if (typeof window.NodaliaUtils?.registerCustomCard === "function") {

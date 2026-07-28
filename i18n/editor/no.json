@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Layout",
   "ed.scenes.layout_grid": "Rutenett",
   "ed.scenes.layout_list": "Liste",
+  "ed.scenes.layout_single": "Enkeltscene",
   "ed.scenes.name_placeholder": "Stuescener",
   "ed.scenes.remove_scene": "Fjern scenen",
   "ed.scenes.scene_color": "Scene fargetone",

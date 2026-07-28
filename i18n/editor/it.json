@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Layout",
   "ed.scenes.layout_grid": "Griglia",
   "ed.scenes.layout_list": "Elenco",
+  "ed.scenes.layout_single": "Scena singola",
   "ed.scenes.name_placeholder": "Scene soggiorno",
   "ed.scenes.remove_scene": "Rimuovi scena",
   "ed.scenes.scene_color": "Tinta scena",

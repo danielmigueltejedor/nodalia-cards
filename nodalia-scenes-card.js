@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
 const SCENE_LAUNCH_DURATION = 780;
 const HAPTIC_PATTERNS = {
@@ -43,7 +43,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -75,19 +75,22 @@ const STUB_CONFIG = {
   scenes: [],
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  getByPath,
+  isUnsafeConfigPathKey,
+  setByPath,
+  deleteByPath,
+  clamp,
+  normalizeTextKey,
+  escapeHtml,
+  escapeSelectorValue,
+  fireEvent,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (window.NodaliaUtils?.deepClone) {
-    return window.NodaliaUtils.deepClone(value);
-  }
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+
 
 function mergeConfig(base, override) {
   if (window.NodaliaUtils?.mergeDeep) {
@@ -102,6 +105,9 @@ function mergeConfig(base, override) {
   const result = {};
   const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
   keys.forEach(key => {
+    if (isUnsafeConfigPathKey(key)) {
+      return;
+    }
     const baseValue = base[key];
     const overrideValue = override ? override[key] : undefined;
     if (overrideValue === undefined) {
@@ -131,6 +137,9 @@ function compactConfig(value) {
   if (isObject(value)) {
     const compacted = {};
     Object.entries(value).forEach(([key, item]) => {
+      if (isUnsafeConfigPathKey(key)) {
+        return;
+      }
       const cleaned = compactConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
       if (cleaned !== undefined && !isEmptyObject) {
@@ -145,56 +154,9 @@ function compactConfig(value) {
   return value;
 }
 
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key) {
-      return undefined;
-    }
-    if (!isObject(cursor) && !Array.isArray(cursor)) {
-      return undefined;
-    }
-    cursor = cursor[key];
-  }
-  return cursor;
-}
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-  cursor[parts[parts.length - 1]] = value;
-}
 
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-  delete cursor[parts[parts.length - 1]];
-}
 
 function moveItem(list, fromIndex, toIndex) {
   if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
@@ -204,9 +166,6 @@ function moveItem(list, fromIndex, toIndex) {
   list.splice(toIndex, 0, item);
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
@@ -278,31 +237,12 @@ function parseSizeToPixels(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function isUnavailableState(state) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
 
 function collectDashboardScrollSnapshot(anchor) {
   const containers = [];
@@ -439,16 +379,6 @@ function resolveSceneAccent(value, fallback = DEFAULT_SCENE_ACCENT) {
   return sanitizeCssValue(raw, fallback) || fallback;
 }
 
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
 
 function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
   const defaults = DEFAULT_CONFIG.styles;
@@ -514,7 +444,7 @@ function normalizeSceneRows(rawScenes, options = {}) {
 function normalizeConfig(rawConfig, options = {}) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const layout = normalizeTextKey(config.layout);
-  config.layout = layout === "list" ? "list" : "grid";
+  config.layout = ["grid", "list", "single"].includes(layout) ? layout : "grid";
   config.columns = clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6);
   const tap = normalizeTextKey(config.tap_action);
   config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
@@ -594,6 +524,12 @@ class NodaliaScenesCard extends HTMLElement {
     return applyStubConfig(deepClone(STUB_CONFIG), hass);
   }
 
+  static getEntitySuggestion(_hass, entityId) {
+    return String(entityId || "").startsWith("scene.")
+      ? { type: `custom:${CARD_TAG}`, layout: "single", scenes: [{ entity: entityId }] }
+      : undefined;
+  }
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -637,6 +573,7 @@ class NodaliaScenesCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._detachHostHold?.reconnect?.();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
@@ -672,13 +609,20 @@ class NodaliaScenesCard extends HTMLElement {
   }
 
   getCardSize() {
-    const layout = this._config?.layout === "list" ? "list" : "grid";
+    const layout = ["list", "single"].includes(this._config?.layout) ? this._config.layout : "grid";
     const count = Math.max(1, resolveSceneEntries(this._config, this._hass).length || 1);
+    if (layout === "single") {
+      return 2;
+    }
     if (layout === "list") {
       return Math.min(6, count + 1);
     }
     const columns = clamp(Math.round(Number(this._config?.columns) || 3), 1, 6);
     return Math.min(6, Math.ceil(count / columns) + 1);
+  }
+
+  getGridOptions() {
+    return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
   }
 
   _getAnimationSettings() {
@@ -979,10 +923,14 @@ class NodaliaScenesCard extends HTMLElement {
     `;
   }
 
-  _renderSceneTile(entry, styles, ui, isList) {
+  _getSceneTilePresentation(entry, styles, layout = "grid") {
     const iconSize = parseSizeToPixels(styles.icon.size, 44);
     const listIconSize = Math.max(42, iconSize - 2);
-    const bubbleSize = isList ? listIconSize : Math.max(46, iconSize + 2);
+    const bubbleSize = layout === "single"
+      ? Math.max(56, iconSize + 12)
+      : layout === "list"
+        ? listIconSize
+        : Math.max(46, iconSize + 2);
     const darkenBubbleIconGlyph = Boolean(
       window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(
         { entity_id: entry.entity || "scene.placeholder" },
@@ -992,35 +940,48 @@ class NodaliaScenesCard extends HTMLElement {
     const iconGlyphColor = darkenBubbleIconGlyph
       ? `color-mix(in srgb, var(--primary-text-color) 56%, ${entry.accent})`
       : entry.accent;
-    const tileClass = isList ? "scenes-card__tile scenes-card__tile--list" : "scenes-card__tile scenes-card__tile--grid";
+    return {
+      style: `--scene-accent: ${escapeHtml(entry.accent)}; --scene-icon-glyph: ${escapeHtml(iconGlyphColor)}; --scene-bubble-size: ${bubbleSize}px;`,
+      tileClass: `scenes-card__tile scenes-card__tile--${layout}`,
+    };
+  }
+
+  _renderSceneTileContent(entry, ui) {
+    return `
+      <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
+      <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
+      <span class="scenes-card__tile-burst" aria-hidden="true"></span>
+      <span class="scenes-card__tile-launch" aria-hidden="true"></span>
+      <span class="scenes-card__tile-body">
+        <span class="scenes-card__tile-icon">
+          ${
+            entry.picture
+              ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
+              : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
+          }
+        </span>
+        <span class="scenes-card__tile-copy">
+          <span class="scenes-card__tile-label">${escapeHtml(entry.label)}</span>
+          ${entry.unavailable ? `<span class="scenes-card__tile-state">${escapeHtml(ui.unavailable)}</span>` : `<span class="scenes-card__tile-hint">${escapeHtml(ui.subtitle)}</span>`}
+        </span>
+      </span>
+    `;
+  }
+
+  _renderSceneTile(entry, styles, ui, isList) {
+    const presentation = this._getSceneTilePresentation(entry, styles, isList ? "list" : "grid");
     return `
       <div
         role="button"
         tabindex="-1"
-        class="${tileClass}"
+        class="${presentation.tileClass}"
         data-scene-entity="${escapeHtml(entry.entity)}"
         data-unavailable="${entry.unavailable ? "true" : "false"}"
         ${entry.unavailable ? 'aria-disabled="true"' : ""}
         aria-label="${escapeHtml(entry.label)}"
-        style="--scene-accent: ${escapeHtml(entry.accent)}; --scene-icon-glyph: ${escapeHtml(iconGlyphColor)}; --scene-bubble-size: ${bubbleSize}px;"
+        style="${presentation.style}"
       >
-        <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
-        <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
-        <span class="scenes-card__tile-burst" aria-hidden="true"></span>
-        <span class="scenes-card__tile-launch" aria-hidden="true"></span>
-        <span class="scenes-card__tile-body">
-          <span class="scenes-card__tile-icon">
-            ${
-              entry.picture
-                ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
-                : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
-            }
-          </span>
-          <span class="scenes-card__tile-copy">
-            <span class="scenes-card__tile-label">${escapeHtml(entry.label)}</span>
-            ${entry.unavailable ? `<span class="scenes-card__tile-state">${escapeHtml(ui.unavailable)}</span>` : `<span class="scenes-card__tile-hint">${escapeHtml(ui.subtitle)}</span>`}
-          </span>
-        </span>
+        ${this._renderSceneTileContent(entry, ui)}
       </div>
     `;
   }
@@ -1043,10 +1004,16 @@ class NodaliaScenesCard extends HTMLElement {
     const showTitle = config.show_title !== false;
     const title = String(config.name || "").trim() || ui.defaultName;
     const isList = config.layout === "list";
-    const isGrid = !isList;
+    const isSingle = config.layout === "single";
+    const isGrid = !isList && !isSingle;
+    const singleEntry = isSingle ? entries[0] : null;
+    const renderedEntries = isSingle ? entries.slice(0, 1) : entries;
     const columns = clamp(Math.round(Number(config.columns) || 3), 1, 6);
     const shouldAnimate = animations.enabled && this._animateContentOnNextRender;
-    const accentColor = styles.accent;
+    const accentColor = singleEntry?.accent || styles.accent;
+    const singlePresentation = singleEntry
+      ? this._getSceneTilePresentation(singleEntry, styles, "single")
+      : null;
     const chipBorderRadius = escapeHtml(styles.chip_border_radius);
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
@@ -1306,6 +1273,36 @@ class NodaliaScenesCard extends HTMLElement {
           text-align: left;
         }
 
+        ha-card.scenes-card--single {
+          border-radius: ${styles.card.border_radius};
+          min-height: max(104px, ${tileMinHeight});
+          padding: 0;
+        }
+
+        .scenes-card__tile--single .scenes-card__tile-body {
+          align-items: center;
+          flex-direction: row;
+          gap: 16px;
+          justify-content: flex-start;
+          min-height: max(104px, ${tileMinHeight});
+          padding: 16px 20px;
+          text-align: left;
+        }
+
+        .scenes-card__tile--single .scenes-card__tile-copy {
+          flex: 1 1 auto;
+        }
+
+        .scenes-card__tile--single .scenes-card__tile-label {
+          font-size: max(15px, ${styles.button.label_size});
+          white-space: normal;
+        }
+
+        .scenes-card__tile--single .scenes-card__tile-hint,
+        .scenes-card__tile--single .scenes-card__tile-state {
+          font-size: 11px;
+        }
+
         .scenes-card__tile--list::before {
           background: linear-gradient(180deg, var(--scene-accent), color-mix(in srgb, var(--scene-accent) 42%, transparent));
           border-radius: 999px 0 0 999px;
@@ -1511,27 +1508,38 @@ class NodaliaScenesCard extends HTMLElement {
           30% { transform: scale(1.045); }
           100% { transform: scale(1); }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
-      <ha-card class="scenes-card">
-        ${
-          showTitle
-            ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
-                <div class="scenes-card__brand">
-                  <span class="scenes-card__brand-icon" aria-hidden="true">
-                    <ha-icon icon="mdi:palette-swatch-variant"></ha-icon>
-                  </span>
-                  <div class="scenes-card__title-wrap">
-                    <div class="scenes-card__title">${escapeHtml(title)}</div>
-                    <div class="scenes-card__subtitle">${escapeHtml(ui.subtitle)}</div>
-                  </div>
-                </div>
-                <span class="scenes-card__count-chip">${entries.length} ${escapeHtml(ui.moods)}</span>
-              </div>`
-            : ""
-        }
-        <div class="scenes-card__grid ${shouldAnimate ? "scenes-card__grid--entering" : ""}">
-          ${entries.map(entry => this._renderSceneTile(entry, styles, ui, isList)).join("")}
-        </div>
+      <ha-card
+        class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation.tileClass}` : ""}"
+        ${isSingle ? 'role="button" tabindex="-1"' : ""}
+        ${singleEntry ? `data-scene-entity="${escapeHtml(singleEntry.entity)}" data-unavailable="${singleEntry.unavailable ? "true" : "false"}" aria-label="${escapeHtml(singleEntry.label)}"` : ""}
+        ${singleEntry?.unavailable ? 'aria-disabled="true"' : ""}
+        ${singlePresentation ? `style="${singlePresentation.style}"` : ""}
+      >
+        ${isSingle
+          ? this._renderSceneTileContent(singleEntry, ui)
+          : `
+            ${
+              showTitle
+                ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
+                    <div class="scenes-card__brand">
+                      <span class="scenes-card__brand-icon" aria-hidden="true">
+                        <ha-icon icon="mdi:palette-swatch-variant"></ha-icon>
+                      </span>
+                      <div class="scenes-card__title-wrap">
+                        <div class="scenes-card__title">${escapeHtml(title)}</div>
+                        <div class="scenes-card__subtitle">${escapeHtml(ui.subtitle)}</div>
+                      </div>
+                    </div>
+                    <span class="scenes-card__count-chip">${entries.length} ${escapeHtml(ui.moods)}</span>
+                  </div>`
+                : ""
+            }
+            <div class="scenes-card__grid ${shouldAnimate ? "scenes-card__grid--entering" : ""}">
+              ${renderedEntries.map(entry => this._renderSceneTile(entry, styles, ui, isList)).join("")}
+            </div>
+          `}
       </ha-card>
     `;
 
@@ -1559,25 +1567,16 @@ class NodaliaScenesCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -1671,75 +1670,11 @@ class NodaliaScenesCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _editorLabel(s) {
@@ -2065,6 +2000,8 @@ class NodaliaScenesCardEditor extends HTMLElement {
 
     const config = this._config || {};
     const scenes = Array.isArray(config.scenes) ? config.scenes : [];
+    const isSingle = config.layout === "single";
+    const visibleScenes = isSingle ? scenes.slice(0, 1) : scenes;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2259,11 +2196,11 @@ class NodaliaScenesCardEditor extends HTMLElement {
           <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.weather.general_section_title"))}</div>
           <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.scenes.general_section_hint"))}</div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextField("ed.weather.card_name", "name", config.name, {
+            ${!isSingle ? this._renderTextField("ed.weather.card_name", "name", config.name, {
               fullWidth: true,
               placeholder: this._editorLabel("ed.scenes.name_placeholder"),
-            })}
-            ${this._renderCheckboxField("ed.scenes.show_title", "show_title", config.show_title !== false)}
+            }) : ""}
+            ${!isSingle ? this._renderCheckboxField("ed.scenes.show_title", "show_title", config.show_title !== false) : ""}
             ${this._renderSelectField(
               "ed.scenes.layout",
               "layout",
@@ -2271,10 +2208,11 @@ class NodaliaScenesCardEditor extends HTMLElement {
               [
                 { value: "grid", label: "ed.scenes.layout_grid" },
                 { value: "list", label: "ed.scenes.layout_list" },
+                { value: "single", label: "ed.scenes.layout_single" },
               ],
               { fullWidth: true },
             )}
-            ${this._renderTextField("ed.scenes.columns", "columns", config.columns, { type: "number", valueType: "number" })}
+            ${config.layout === "grid" ? this._renderTextField("ed.scenes.columns", "columns", config.columns, { type: "number", valueType: "number" }) : ""}
             ${this._renderCheckboxField("ed.scenes.use_entity_icon", "use_entity_icon", config.use_entity_icon !== false)}
             ${this._renderCheckboxField("ed.scenes.show_entity_picture", "use_entity_picture", config.use_entity_picture === true)}
           </div>
@@ -2285,12 +2223,12 @@ class NodaliaScenesCardEditor extends HTMLElement {
           <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.scenes.scenes_section_hint"))}</div>
           <div class="scene-editor-list">
             ${
-              scenes.length
-                ? scenes.map((item, index) => this._renderSceneEditorCard(item, index, scenes.length)).join("")
+              visibleScenes.length
+                ? visibleScenes.map((item, index) => this._renderSceneEditorCard(item, index, visibleScenes.length)).join("")
                 : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.scenes.scenes_empty"))}</div>`
             }
           </div>
-          <div class="editor-actions">
+          <div class="editor-actions" ${isSingle && scenes.length ? "hidden" : ""}>
             <button type="button" data-action="add-scene">${escapeHtml(this._editorLabel("ed.scenes.add_scene"))}</button>
           </div>
         </section>

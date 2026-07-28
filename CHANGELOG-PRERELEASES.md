@@ -10,6 +10,74 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.48] - 2026-07-23
+
+Forty-eighth **`2.0.0`** **`alpha`**: cohesive architecture and reliable single-file HACS editors. Release channel **`2.0.0-alpha.48`**.
+
+### Fixed
+
+- **HACS visual editors:** `nodalia-cards.js` once again contains the complete editor runtime, preventing Safari's `Importing a module script failed` error when HACS installs only its declared entrypoint.
+- **Pointer focus feedback:** touch and mouse activation no longer leave the theme-colored focus outline around Entity, Gauge, Person, Insignia, Power Flow, Camera, or other Nodalia controls; keyboard interaction restores the accessible focus ring immediately.
+- **Entity Card selectors:** the icon bubble keeps its bounce without flashing at the end of the animation in Chromium or WebKit/iPhone.
+
+### Changed
+
+- **Architecture:** shared configuration, lifecycle, focus, event, and rendering primitives now live in `nodalia-utils.js`; Notifications mobile policy, Room Summary projection, and Camera stream resolution use focused support models instead of view-controller duplication.
+- **HACS distribution:** the recommended and manual `nodalia-cards.js` entrypoint is self-contained; the explicit core + suite distribution retains the adjacent lazy editor chunk for advanced deployments that copy every artifact.
+- **Visual family:** shared metrics and semantic surfaces remain aligned across the card suite while Notifications Card keeps its existing presentation.
+- **Validation:** the release is covered by 322 unit tests and 14 Chromium/WebKit-iPhone browser tests, including HACS editor loading, pointer focus, keyboard accessibility, Entity selector bounce, and Notifications external-alert drafts.
+- **Compatibility loaders:** `2.0.0-alpha.46` and `2.0.0-alpha.47` remain available as lightweight loaders pointing to `2.0.0-alpha.48`.
+
+## [2.0.0-alpha.47] - 2026-07-23
+
+Forty-seventh **`2.0.0`** **`alpha`**: audited interactions, accessibility, and reproducible releases. Release channel **`2.0.0-alpha.47`**.
+
+### Fixed
+
+- **Entity Card selector animation:** the icon bubble keeps its bounce while completed entrance classes are retired safely, preventing the final opacity flash in Chromium and WebKit/iPhone.
+- **Notifications external alerts:** incomplete alert rows remain editable instead of disappearing before their required fields are filled; emitted runtime configuration still excludes invalid drafts.
+- **Room Summary actions and rendering:** `hold_action` is reachable through a real pointer hold gesture, its following synthetic tap is suppressed, and only the active embedded panel is mounted.
+- **Keyboard and dialog accessibility:** primary surfaces on Entity, Gauge, Person, Insignia, Power Flow, and Camera support Enter/Space with visible focus; Camera, Media, Calendar, Weather, and Power Flow dialogs trap focus and restore it when closed.
+- **Runtime localization:** shared primary-action labels and card descriptions no longer fall back to hard-coded Spanish strings.
+- **Repository automation:** stale issue messages now use real line breaks and release guidance resolves the current alpha dynamically.
+
+### Changed
+
+- **Lazy visual editor:** the 801 KB editor catalog is shipped as `nodalia-cards-editor-2.0.0-alpha.47.js` and loaded only when Lovelace requests an editor, reducing the HACS runtime bundle to about 3.0 MB.
+- **Release integrity:** CI now exercises Chromium and WebKit/iPhone, CodeQL scans JavaScript, and tagged releases validate their version, publish compatibility loaders, checksums and a CycloneDX SBOM, and create build attestations.
+- **Compatibility loaders:** `2.0.0-alpha.45` and `2.0.0-alpha.46` remain available as lightweight loaders pointing to `2.0.0-alpha.47`.
+
+## [2.0.0-alpha.46] - 2026-07-23
+
+Forty-sixth **`2.0.0`** **`alpha`**: stable Entity Card selector bounce. Release channel **`2.0.0-alpha.46`**.
+
+### Fixed
+
+- **Entity Card selector feedback:** `select` and `input_select` entities keep the icon bubble bounce without animating the complete card content.
+- **Animation cleanup:** completed entrance classes are removed before press feedback and after their lifecycle, preventing the stale icon entrance animation from restarting when `is-pressing` is removed and eliminating the final bubble flash.
+
+### Changed
+
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.46`; `2.0.0-alpha.44` and `2.0.0-alpha.45` remain available as lightweight compatibility loaders.
+
+## [2.0.0-alpha.45] - 2026-07-23
+
+Forty-fifth **`2.0.0`** **`alpha`**: flicker-free selectors and a more cohesive visual family. Release channel **`2.0.0-alpha.45`**.
+
+### Fixed
+
+- **Entity Card selectors:** opening `select` and `input_select` pickers keeps the icon bubble bounce but no longer scales the complete card content while the panel changes height and overflow, removing the visible card flash.
+
+### Changed
+
+- **Device-family metrics:** Entity quick controls now match the shared `36px` control size, while Entity, Light, Fan, Humidifier, Cover, and Vacuum use the same `11px` chip type scale.
+- **Active surfaces:** Cover, Vacuum, Alarm, Person, and Favourite cards now share the same semantic accent gradient, top glaze, radial ambient halo, and theme-aware shadow language.
+- **Theme colors:** Cover uses Home Assistant's `--warning-color` for its active icon and slider instead of a fixed yellow.
+- **Favourite, Media Player, and News:** Favourite returns to the standard `28px` shell and divider border; embedded and standalone Media Players share title/subtitle scale; News uses the standard divider border while retaining its editorial typography.
+- **Reduced motion:** animated card surfaces use a shared Shadow DOM rule that collapses animation and transition timing when the operating system requests reduced motion.
+- **Visual documentation:** the styling reference defines the `28px` device/content, `30px` information/dial, and `32px` complex-surface archetypes.
+- **`bundle`:** version metadata promoted to `2.0.0-alpha.45`; `2.0.0-alpha.43` and `2.0.0-alpha.44` remain available as lightweight compatibility loaders.
+
 ## [2.0.0-alpha.44] - 2026-07-22
 
 Forty-fourth **`2.0.0`** **`alpha`**: interaction polish, leaner startup, and runtime hardening. Release channel **`2.0.0-alpha.44`**.

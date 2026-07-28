@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -169,7 +169,7 @@ const DEFAULT_CONFIG = {
     fallback_vibrate: false,
   },
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -190,7 +190,7 @@ const DEFAULT_CONFIG = {
     bar: {
       background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px",
       min_height: "90px",
@@ -237,14 +237,14 @@ const DEFAULT_CONFIG = {
     media_player: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       min_height: "104px",
       artwork_size: "64px",
       control_size: "40px",
-      title_size: "14px",
-      subtitle_size: "12px",
+      title_size: "12px",
+      subtitle_size: "10px",
       progress_color: "var(--primary-color)",
       progress_background: "rgba(var(--rgb-primary-color), 0.14)",
       overlay_color: "rgba(0, 0, 0, 0.32)",
@@ -288,87 +288,23 @@ const STUB_CONFIG = {
   ],
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  compactConfig,
+  isUnsafeConfigPathKey,
+  fireEvent,
+  escapeHtml,
+  clamp,
+} = window.NodaliaUtils;
 
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
+
+
+
+
 
 function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -406,25 +342,7 @@ function deleteByPath(target, path) {
   delete cursor[parts[parts.length - 1]];
 }
 
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function appendQueryParam(url, key, value) {
   const rawUrl = String(url || "").trim();
@@ -449,9 +367,6 @@ function arrayFromCsv(value) {
     .filter(Boolean);
 }
 
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum);
-}
 
 function moveItem(array, fromIndex, toIndex) {
   if (!Array.isArray(array)) {
@@ -739,6 +654,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      this._patchMediaVolumeControls();
       return;
     }
     this._lastRenderSignature = nextSignature;
@@ -849,7 +765,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
               attrs.app_name || "",
               attrs.source || "",
               attrs.media_channel || "",
-              Number(attrs.volume_level ?? -1),
+              typeof attrs.volume_level === "number" ? 1 : 0,
               Number(attrs.media_duration ?? -1),
               Number(attrs.supported_features ?? 0),
               Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
@@ -2381,6 +2297,31 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
+  _patchMediaVolumeControls(entityId = "", volumeLevel = NaN) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    let targetEntityId = String(entityId || "").trim();
+    let nextVolume = Number(volumeLevel);
+    if (!targetEntityId || !Number.isFinite(nextVolume)) {
+      const visiblePlayers = this._getVisibleMediaPlayers();
+      const player = visiblePlayers[this._activeMediaPlayerIndex];
+      targetEntityId = String(player?.entity || "").trim();
+      nextVolume = Number(this._hass?.states?.[targetEntityId]?.attributes?.volume_level);
+    }
+    if (!targetEntityId || !Number.isFinite(nextVolume)) {
+      return;
+    }
+    const normalizedVolume = String(clamp(nextVolume, 0, 1));
+    this.shadowRoot
+      .querySelectorAll('[data-media-control="volume-down"], [data-media-control="volume-up"]')
+      .forEach(button => {
+        if (button instanceof HTMLElement && button.dataset.entity === targetEntityId) {
+          button.dataset.mediaVolume = normalizedVolume;
+        }
+      });
+  }
+
   _handleMediaControl(control, entityId, options = {}) {
     if (!this._hass || !entityId) {
       return;
@@ -2398,17 +2339,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
         break;
       case "volume-down": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const nextVolume = clamp(currentVolume - 0.08, 0, 1);
+        this._patchMediaVolumeControls(entityId, nextVolume);
         this._hass.callService("media_player", "volume_set", {
           entity_id: entityId,
-          volume_level: clamp(currentVolume - 0.08, 0, 1),
+          volume_level: nextVolume,
         });
         break;
       }
       case "volume-up": {
         const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const nextVolume = clamp(currentVolume + 0.08, 0, 1);
+        this._patchMediaVolumeControls(entityId, nextVolume);
         this._hass.callService("media_player", "volume_set", {
           entity_id: entityId,
-          volume_level: clamp(currentVolume + 0.08, 0, 1),
+          volume_level: nextVolume,
         });
         break;
       }
@@ -3479,6 +3424,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           --popup-columns: 1;
           --popup-item-min: calc(${config.styles.popup.item_size} + 24px);
           max-height: calc(100vh - 24px);
+          max-height: calc(100dvh - 24px);
           min-width: min(${config.styles.popup.min_width}, calc(100vw - 24px));
           isolation: isolate;
           overflow: auto;
@@ -4380,6 +4326,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             grid-template-columns: ${config.styles.media_player.artwork_size} minmax(0, 1fr);
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">
@@ -4407,6 +4354,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (this._popupState) {
       this._schedulePopupPositionSync();
     }
+    this._lastRenderSignature = this._getRenderSignature(this._hass);
   }
 }
 
@@ -4423,23 +4371,15 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {

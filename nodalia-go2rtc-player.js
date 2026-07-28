@@ -68,6 +68,14 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._lastAudioState = "";
     this._mseCodecs = "";
     this._posterObjectUrl = "";
+    this._displayRecoveryTimer = 0;
+    this._displayHealthTimer = 0;
+    this._displayRecoveryFrame = 0;
+    this._displayFrameCallback = 0;
+    this._pendingDisplayRecoveryReason = "";
+    this._onDisplayEnvironmentChange = event => {
+      this._scheduleVideoDisplayRecovery(event?.type || "display-change");
+    };
   }
 
   get video() {
@@ -94,10 +102,22 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
 
   connectedCallback() {
     this._ensureVideo();
+    window.addEventListener?.("orientationchange", this._onDisplayEnvironmentChange);
+    window.visualViewport?.addEventListener?.("resize", this._onDisplayEnvironmentChange);
+    if (typeof document !== "undefined") {
+      document.addEventListener?.("fullscreenchange", this._onDisplayEnvironmentChange);
+      document.addEventListener?.("webkitfullscreenchange", this._onDisplayEnvironmentChange);
+    }
     this._connect();
   }
 
   disconnectedCallback() {
+    window.removeEventListener?.("orientationchange", this._onDisplayEnvironmentChange);
+    window.visualViewport?.removeEventListener?.("resize", this._onDisplayEnvironmentChange);
+    if (typeof document !== "undefined") {
+      document.removeEventListener?.("fullscreenchange", this._onDisplayEnvironmentChange);
+      document.removeEventListener?.("webkitfullscreenchange", this._onDisplayEnvironmentChange);
+    }
     this.disconnect();
   }
 
@@ -105,9 +125,22 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     window.clearTimeout(this._reconnectTimer);
     window.clearTimeout(this._modeTimer);
     window.clearTimeout(this._socketOpenTimer);
+    window.clearTimeout(this._displayRecoveryTimer);
+    window.clearTimeout(this._displayHealthTimer);
     this._reconnectTimer = 0;
     this._modeTimer = 0;
     this._socketOpenTimer = 0;
+    this._displayRecoveryTimer = 0;
+    this._displayHealthTimer = 0;
+    if (this._displayRecoveryFrame && typeof window.cancelAnimationFrame === "function") {
+      window.cancelAnimationFrame(this._displayRecoveryFrame);
+    }
+    this._displayRecoveryFrame = 0;
+    if (this._displayFrameCallback && typeof this._video?.cancelVideoFrameCallback === "function") {
+      this._video.cancelVideoFrameCallback(this._displayFrameCallback);
+    }
+    this._displayFrameCallback = 0;
+    this._pendingDisplayRecoveryReason = "";
     this._intentionalClose = true;
     this._autoplayMuted = false;
     if (this._socket) {
@@ -182,6 +215,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
     });
     video.addEventListener("volumechange", () => this._handleVideoVolumeChange());
+    video.addEventListener("webkitbeginfullscreen", this._onDisplayEnvironmentChange);
+    video.addEventListener("webkitendfullscreen", this._onDisplayEnvironmentChange);
     this._video = video;
     this._applyVideoOptions();
     this.replaceChildren(video);
@@ -194,6 +229,117 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._setVideoMuted(this._muted);
     this._video.controls = this._controls;
     this._syncAudioOutput();
+  }
+
+  _scheduleVideoDisplayRecovery(reason = "display-change") {
+    if (!this.isConnected || !this._video) {
+      return;
+    }
+    const pendingIsStructural = /orientationchange|fullscreen/i.test(this._pendingDisplayRecoveryReason);
+    const nextIsStructural = /orientationchange|fullscreen/i.test(reason);
+    if (!pendingIsStructural || nextIsStructural) {
+      this._pendingDisplayRecoveryReason = reason;
+    }
+    window.clearTimeout(this._displayRecoveryTimer);
+    this._displayRecoveryTimer = window.setTimeout(() => {
+      this._displayRecoveryTimer = 0;
+      const pendingReason = this._pendingDisplayRecoveryReason;
+      this._pendingDisplayRecoveryReason = "";
+      this._recoverVideoDisplay(pendingReason);
+    }, 180);
+  }
+
+  _recoverVideoDisplay(reason = "display-change") {
+    const video = this._video;
+    if (!video || !this.isConnected) {
+      return false;
+    }
+    const previousTransform = video.style?.transform || "";
+    const previousWillChange = video.style?.willChange || "";
+    if (video.style) {
+      video.style.willChange = "transform";
+      video.style.transform = previousTransform
+        ? `${previousTransform} translateZ(0)`
+        : "translateZ(0)";
+    }
+    video.getBoundingClientRect?.();
+
+    const finishRecovery = () => {
+      this._displayRecoveryFrame = 0;
+      if (video !== this._video || !this.isConnected) {
+        return;
+      }
+      const shouldReattachWebRtc = this._activeMode === "webrtc"
+        && /orientationchange|fullscreen/i.test(reason)
+        && this._playbackStream
+        && typeof this._playbackStream.getVideoTracks === "function"
+        && this._playbackStream.getVideoTracks().some(track => track?.readyState !== "ended");
+      if (shouldReattachWebRtc) {
+        video.srcObject = null;
+        video.srcObject = this._playbackStream;
+      }
+      if (video.style) {
+        video.style.transform = previousTransform;
+        video.style.willChange = previousWillChange;
+      }
+      try {
+        Promise.resolve(video.play?.()).catch(() => {});
+      } catch (_error) {
+        // Native fullscreen may transiently reject play while WebKit changes surfaces.
+      }
+      this._verifyVideoDisplayRecovery(video);
+    };
+
+    if (typeof window.requestAnimationFrame === "function") {
+      this._displayRecoveryFrame = window.requestAnimationFrame(finishRecovery);
+    } else {
+      finishRecovery();
+    }
+    return true;
+  }
+
+  _verifyVideoDisplayRecovery(video) {
+    window.clearTimeout(this._displayHealthTimer);
+    if (this._displayFrameCallback && typeof video.cancelVideoFrameCallback === "function") {
+      video.cancelVideoFrameCallback(this._displayFrameCallback);
+    }
+    this._displayFrameCallback = 0;
+    let receivedFrame = false;
+    if (typeof video.requestVideoFrameCallback === "function") {
+      this._displayFrameCallback = video.requestVideoFrameCallback(() => {
+        this._displayFrameCallback = 0;
+        receivedFrame = true;
+      });
+    }
+    this._displayHealthTimer = window.setTimeout(() => {
+      this._displayHealthTimer = 0;
+      if (video !== this._video || !this.isConnected) {
+        return;
+      }
+      const hasDecodedFrame = receivedFrame
+        || (Number(video.readyState) >= 2 && Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0);
+      if (!hasDecodedFrame && (this._socket || this._peer || this._mediaSource)) {
+        this._restartTransportForDisplayRecovery();
+      }
+    }, 1200);
+  }
+
+  _restartTransportForDisplayRecovery() {
+    window.clearTimeout(this._reconnectTimer);
+    window.clearTimeout(this._modeTimer);
+    window.clearTimeout(this._socketOpenTimer);
+    this._reconnectTimer = 0;
+    this._modeTimer = 0;
+    this._socketOpenTimer = 0;
+    const socket = this._socket;
+    this._socket = null;
+    socket?.close?.();
+    this._resetModeTransport();
+    this._modeQueue = [];
+    this._activeMode = "";
+    this._startupStartedAt = Date.now();
+    this._intentionalClose = false;
+    this._connect();
   }
 
   _handleVideoVolumeChange() {
@@ -408,9 +554,11 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
   }
 
   _availableModes() {
-    const requested = this._mode === "auto"
-      ? ["webrtc", "mse", "hls", "mjpeg"]
-      : [this._mode];
+    const requested = this._mode === "auto-mse"
+      ? ["mse", "webrtc", "hls", "mjpeg"]
+      : this._mode === "auto"
+        ? ["webrtc", "mse", "hls", "mjpeg"]
+        : [this._mode];
     return requested.filter(mode => {
       if (mode === "webrtc") {
         return "RTCPeerConnection" in window;

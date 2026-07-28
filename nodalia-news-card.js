@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
@@ -45,8 +45,8 @@ const DEFAULT_CONFIG = {
   styles: {
     card: {
       background: "var(--ha-card-background)",
-      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      border_radius: "28px",
+      border: "1px solid var(--divider-color)",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "16px",
       gap: "14px",
@@ -64,48 +64,16 @@ const STUB_CONFIG = {
   sources: [],
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  isUnsafeConfigPathKey,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (window.NodaliaUtils?.deepClone) {
-    return window.NodaliaUtils.deepClone(value);
-  }
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
 
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-    result[key] = overrideValue;
-  });
-  return result;
-}
+
 
 function compactConfig(value) {
   if (Array.isArray(value)) {
@@ -114,6 +82,9 @@ function compactConfig(value) {
   if (isObject(value)) {
     const compacted = {};
     Object.entries(value).forEach(([key, item]) => {
+      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+        return;
+      }
       const cleaned = compactConfig(item);
       const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
       if (cleaned !== undefined && !isEmptyObject) {
@@ -2047,9 +2018,6 @@ class NodaliaNewsCard extends HTMLElement {
   }
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".");
@@ -2115,23 +2083,15 @@ class NodaliaNewsCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -2197,63 +2157,11 @@ class NodaliaNewsCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (
-      !(
-        activeElement instanceof HTMLInputElement
-        || activeElement instanceof HTMLTextAreaElement
-        || activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-    const selector = activeElement.dataset?.field
-      ? `[data-field="${escapeSelectorValue(activeElement.dataset.field)}"]`
-      : null;
-    if (!selector) {
-      return null;
-    }
-    const supportsSelection = typeof activeElement.selectionStart === "number"
-      && typeof activeElement.selectionEnd === "number";
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement
-        || target instanceof HTMLTextAreaElement
-        || target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_err) {
-      target.focus();
-    }
-    if (
-      focusState.type !== "checkbox"
-      && typeof focusState.selectionStart === "number"
-      && typeof focusState.selectionEnd === "number"
-      && typeof target.setSelectionRange === "function"
-    ) {
-      try {
-        target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-      } catch (_err) {
-        // Ignore unsupported inputs.
-      }
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

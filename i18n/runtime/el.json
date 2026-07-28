@@ -255,7 +255,8 @@
       "volumeUp": "Αύξηση έντασης",
       "openMedia": "Ανοίξτε τα μέσα",
       "navigationBar": "Γραμμή πλοήγησης",
-      "mediaPlayers": "Media player"
+      "mediaPlayers": "Media player",
+      "primaryAction": "Κύρια ενέργεια"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Ορίστε το `entity` σε οντότητα `vacuum.*` για να εμφανιστεί η κάρτα."
   },
   "insigniaCard": {
+    "cardDescription": "Συμπαγές σήμα τύπου φυσαλίδας για πίνακες Nodalia.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Ρυθμίστε `entity` ή βασικό περιεχόμενο για να εμφανιστεί το σήμα."
   },
@@ -816,6 +818,7 @@
     "triggered": "Ενεργοποιήθηκε"
   },
   "calendarCard": {
+    "cardDescription": "Κάρτα ημερολογίου με εγγενή συμβάντα και αναλυτική ατζέντα.",
     "allDay": "Όλη μέρα",
     "timeRange": {
       "threeDays": "3 ημέρες",

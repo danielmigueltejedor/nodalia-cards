@@ -19,8 +19,69 @@ function loadMobileHelpers() {
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-mobile-policy.js"), sandbox);
   vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
   return sandbox.__NODALIA_NOTIFICATIONS_MOBILE__;
+}
+
+function loadNotificationsRuntime() {
+  let CardClass = null;
+  const sandbox = {
+    URL,
+    Date,
+    setTimeout,
+    clearTimeout,
+    window: {},
+    customElements: {
+      define(_tag, ctor) {
+        if (!CardClass && typeof ctor === "function" && ctor.name === "NodaliaNotificationsCard") {
+          CardClass = ctor;
+        }
+      },
+      get() {
+        return null;
+      },
+    },
+    HTMLElement: class {
+      constructor() {
+        this.isConnected = true;
+        this.shadowRoot = null;
+      }
+
+      attachShadow() {
+        this.shadowRoot = {
+          addEventListener() {},
+          removeEventListener() {},
+          innerHTML: "",
+          querySelector() { return null; },
+          querySelectorAll() { return []; },
+        };
+        return this.shadowRoot;
+      }
+
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() { return true; }
+    },
+    MutationObserver: class { observe() {} disconnect() {} },
+    ResizeObserver: class { observe() {} disconnect() {} },
+    IntersectionObserver: class { observe() {} disconnect() {} },
+    document: {
+      addEventListener() {},
+      removeEventListener() {},
+      visibilityState: "visible",
+    },
+    console,
+    globalThis: {},
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-mobile-policy.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
+  assert.ok(CardClass, "NodaliaNotificationsCard should register in the runtime sandbox");
+  return { CardClass, sandbox, mobile: sandbox.__NODALIA_NOTIFICATIONS_MOBILE__ };
 }
 
 const mobile = loadMobileHelpers();
@@ -93,6 +154,18 @@ test("push forces delivery when context and severity allow", () => {
   );
 });
 
+test("background mode never authorizes unwanted foreground delivery", () => {
+  assert.equal(
+    mobile.resolveMobileDeliveryState({
+      ...baseOptions,
+      alertPolicy: "auto",
+      globalMobileEnabled: false,
+      backgroundMobileEnabled: true,
+    }),
+    "card_only",
+  );
+});
+
 test("min_severity still applies for auto policy", () => {
   assert.equal(
     mobile.resolveMobileDeliveryState({
@@ -150,6 +223,18 @@ test("quiet hours supports midnight crossing", () => {
   );
 });
 
+test("quiet hours exposes the next start or end boundary", () => {
+  const quietHours = { enabled: true, start: "23:00", end: "08:00", allow_critical: true };
+  assert.equal(
+    mobile.getNextQuietHoursBoundaryDelay(quietHours, new Date("2026-05-29T22:30:00")),
+    30 * 60 * 1000,
+  );
+  assert.equal(
+    mobile.getNextQuietHoursBoundaryDelay(quietHours, new Date("2026-05-29T23:30:00")),
+    8.5 * 60 * 60 * 1000,
+  );
+});
+
 test("only_when_away and only_when_home do not break without presence entity", () => {
   assert.equal(
     mobile.passesPresenceContext({ only_when_away: true, only_when_home: false }, null),
@@ -186,6 +271,19 @@ test("external_alerts normalize and deduplicate by id", () => {
   assert.equal(rows.length, 2);
   assert.equal(rows[0].mobile, "push");
   assert.equal(rows[1].mobile, "off");
+});
+
+test("external alert editor drafts survive normalization until required fields are filled", () => {
+  const draft = { _draft: true, id: "", title: "", type: "camera_event", severity: "warning" };
+  const editorRows = mobile.normalizeExternalAlerts([draft], { keepDrafts: true });
+  const emittedRows = mobile.normalizeExternalAlerts([draft]);
+  assert.equal(editorRows.length, 1);
+  assert.equal(editorRows[0]._draft, true);
+  assert.equal(emittedRows.length, 0);
+
+  const source = read("nodalia-notifications-card.js");
+  assert.match(source, /case "add-external-alert":[\s\S]*_draft: true/);
+  assert.match(source, /case "add-external-alert":[\s\S]*this\._showExternalAlertsSection = true;[\s\S]*this\._emitConfig\(\)/);
 });
 
 test("background payload includes policy context cooldown and external alerts", () => {
@@ -243,6 +341,89 @@ test("foreground push is skipped only after background sync succeeds", () => {
   assert.match(source, /background\.enabled !== true[\s\S]*return false/);
 });
 
+test("queued foreground delivery is re-evaluated at flush time", async () => {
+  const { CardClass } = loadNotificationsRuntime();
+  const instance = new CardClass();
+  instance.setConfig({
+    mobile_notifications: {
+      enabled: true,
+      entities: ["notify.phone"],
+      min_severity: "warning",
+      default_policy: "auto",
+    },
+  });
+  const calls = [];
+  instance._hass = {
+    states: {},
+    callService(domain, service, data) {
+      calls.push({ domain, service, data });
+      return Promise.resolve();
+    },
+  };
+  const queued = {
+    id: "door-open",
+    title: "Door open",
+    message: "Front door",
+    severity: "warning",
+    mobilePolicy: "auto",
+    mobileDeliveryState: "allowed",
+  };
+
+  instance._config.mobile_notifications.enabled = false;
+  await instance._flushMobileNotifications([queued]);
+  assert.equal(calls.length, 0, "turning foreground delivery off must cancel a queued send");
+
+  instance._config.mobile_notifications.enabled = true;
+  instance._config.presence_entity = "person.owner";
+  instance._config.mobile_context.only_when_away = true;
+  instance._hass.states["person.owner"] = { state: "home" };
+  await instance._flushMobileNotifications([queued]);
+  assert.equal(calls.length, 0, "presence policy must be re-checked when the queue drains");
+});
+
+test("tracked entities include delivery context and shared dismiss helpers", () => {
+  const { CardClass } = loadNotificationsRuntime();
+  const instance = new CardClass();
+  instance.setConfig({
+    presence_entity: "person.owner",
+    dismissed_entity: "input_text.dismissed_notifications",
+    external_alerts: [{ id: "camera", title: "Camera", entity: "binary_sensor.camera_motion" }],
+  });
+  assert.deepEqual(
+    [...instance._getTrackedEntityIds()].sort(),
+    ["binary_sensor.camera_motion", "input_text.dismissed_notifications", "person.owner"],
+  );
+});
+
+test("stale background sync signature does not suppress the current config", () => {
+  const { CardClass, mobile: runtimeMobile } = loadNotificationsRuntime();
+  const instance = new CardClass();
+  const syncedConfig = {
+    background_mobile: {
+      enabled: true,
+      webhook: "nodalia_notifications_background_sync",
+      chunk_size: 240,
+    },
+    mobile_notifications: {
+      enabled: true,
+      entities: ["notify.phone"],
+      default_policy: "push",
+    },
+    door_entities: ["binary_sensor.front_door"],
+  };
+  instance.setConfig(syncedConfig);
+  const syncedPayload = runtimeMobile.buildBackgroundMobileWebhookPayload(instance._config);
+  instance._lastBackgroundMobileSyncSignature =
+    `nodalia_notifications_background_sync:${syncedPayload.config_hash}:${syncedPayload.chunk_count}`;
+  assert.equal(instance._backgroundMobileSuppressesForeground(), true);
+
+  instance.setConfig({
+    ...syncedConfig,
+    door_entities: ["binary_sensor.front_door", "binary_sensor.garage"],
+  });
+  assert.equal(instance._backgroundMobileSuppressesForeground(), false);
+});
+
 test("background payload rejects configs exceeding 40 chunks", () => {
   const oversized = {
     background_mobile: { enabled: true, chunk_size: 120 },
@@ -293,8 +474,4 @@ test("threshold crossing remains in background package templates", () => {
   const backgroundPackage = read("examples/notifications-background-mobile-package.yaml");
   assert.match(backgroundPackage, /ov == none or ov < thresholds/);
   assert.match(backgroundPackage, /old_state\.state != trigger\.event\.data\.new_state\.state/);
-});
-
-test("notifications card version is 2.0.0-alpha.37", () => {
-  assert.match(read("nodalia-notifications-card.js"), /CARD_VERSION = "2\.0\.0-alpha\.37"/);
 });

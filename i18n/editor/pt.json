@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Layout",
   "ed.scenes.layout_grid": "Grelha",
   "ed.scenes.layout_list": "Lista",
+  "ed.scenes.layout_single": "Cena única",
   "ed.scenes.name_placeholder": "Cenas da sala",
   "ed.scenes.remove_scene": "Remover cena",
   "ed.scenes.scene_color": "Tom da cena",

@@ -255,7 +255,8 @@
       "volumeUp": "调高音量",
       "openMedia": "开放媒体",
       "navigationBar": "导航栏",
-      "mediaPlayers": "媒体播放器"
+      "mediaPlayers": "媒体播放器",
+      "primaryAction": "主要操作"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "将 `entity` 设置为 `vacuum.*` 实体以显示此卡片。"
   },
   "insigniaCard": {
+    "cardDescription": "适用于 Nodalia 仪表板的紧凑气泡徽章。",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "配置 `entity` 或基本内容以显示徽章。"
   },
@@ -816,6 +818,7 @@
     "triggered": "已触发"
   },
   "calendarCard": {
+    "cardDescription": "包含原生日历事件和扩展日程的日历卡片。",
     "allDay": "全天",
     "timeRange": {
       "threeDays": "3 天",

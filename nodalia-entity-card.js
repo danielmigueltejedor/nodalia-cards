@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.0.0-alpha.3";
+const CARD_VERSION = "2.0.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -78,7 +78,7 @@ const DEFAULT_CONFIG = {
   quick_actions: [],
   language: "auto",
   security: {
-    strict_service_actions: false,
+    strict_service_actions: true,
     allowed_services: [],
     allowed_service_domains: ["homeassistant"],
   },
@@ -96,7 +96,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -109,7 +109,7 @@ const DEFAULT_CONFIG = {
       off_color: "var(--primary-text-color)",
     },
     control: {
-      size: "40px",
+      size: "36px",
       accent_color: "var(--primary-text-color)",
       accent_background: "rgba(113, 192, 255, 0.18)",
     },
@@ -166,17 +166,24 @@ function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  compactConfig,
+  isUnsafeConfigPathKey,
+  setByPath,
+  deleteByPath,
+  getByPath,
+  clamp,
+  escapeHtml,
+  escapeSelectorValue,
+  fireEvent,
+  normalizeTextKey,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
 
-  return JSON.parse(JSON.stringify(value));
-}
 
 function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
@@ -197,140 +204,18 @@ function applyStubEntity(config, hass, domains) {
   return config;
 }
 
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-
-  keys.forEach(key => {
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
-    }
-
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
-    }
-
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-
-    result[key] = overrideValue;
-  });
-
-  return result;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
 
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
 
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
 
-  cursor[parts[parts.length - 1]] = value;
-}
 
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-
-  for (const key of parts) {
-    if (!key) {
-      return undefined;
-    }
-
-    if (!isObject(cursor) && !Array.isArray(cursor)) {
-      return undefined;
-    }
-
-    cursor = cursor[key];
-  }
-
-  return cursor;
-}
 
 function parseSizeToPixels(value, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 function parseNumericValue(value) {
   if (typeof value === "number") {
@@ -387,18 +272,7 @@ function getValueSignature(value) {
   return String(value);
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-function escapeSelectorValue(value) {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
 
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
@@ -460,25 +334,7 @@ function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-function fireEvent(node, type, detail, options) {
-  const event = new CustomEvent(type, {
-    bubbles: options?.bubbles ?? true,
-    cancelable: Boolean(options?.cancelable),
-    composed: options?.composed ?? true,
-    detail,
-  });
-  node.dispatchEvent(event);
-  return event;
-}
 
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
 
 function shouldDarkenEntityBubbleIconGlyph(state, accentColor) {
   return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
@@ -889,8 +745,10 @@ class NodaliaEntityCard extends HTMLElement {
     });
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -924,6 +782,7 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._detachHostHold?.reconnect?.();
     this._resizeObserver?.observe(this);
     this._scheduleOptimisticToggleTimeout();
     this._animateContentOnNextRender = true;
@@ -1539,11 +1398,6 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _invokeEntityService(domain, service, entityId, serviceData = {}) {
-    const serviceValue = `${domain}.${service}`;
-    if (!this._isServiceAllowed(serviceValue)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Entity Card", serviceValue);
-      return Promise.resolve(false);
-    }
     const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
       || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
     return invoke(this, this._hass, domain, service, {
@@ -2314,6 +2168,16 @@ class NodaliaEntityCard extends HTMLElement {
       if (!this.isConnected) {
         return;
       }
+      this.shadowRoot?.querySelectorAll([
+        ".entity-card__content--entering",
+        ".entity-card__hero--entering",
+        ".entity-card__icon--entering",
+        ".entity-card__copy--entering",
+        ".entity-card__actions--entering",
+      ].join(",")).forEach(element => {
+        const entranceClasses = Array.from(element.classList).filter(name => name.endsWith("--entering"));
+        element.classList.remove(...entranceClasses);
+      });
       this._animateContentOnNextRender = false;
     }, safeDelay);
   }
@@ -2323,7 +2187,10 @@ class NodaliaEntityCard extends HTMLElement {
     this._triggerHaptic(hapticStyle);
 
     if (action === "body" || action === "icon") {
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      const opensSelectPicker = this._shouldOpenSelectPickerOnTap(this._getState(), action);
+      if (!opensSelectPicker) {
+        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+      }
       this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
       return;
     }
@@ -2419,6 +2286,13 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
+  }
+
   _renderChip(label, tone = "default") {
     if (!label) {
       return "";
@@ -2434,6 +2308,14 @@ class NodaliaEntityCard extends HTMLElement {
     const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _commonAria(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
+    return String(pack?.[key] ?? enPack?.[key] ?? fallback);
   }
 
   _renderSelectPickerPanel(state, accentColor) {
@@ -2590,6 +2472,11 @@ class NodaliaEntityCard extends HTMLElement {
           box-sizing: border-box;
         }
 
+        ha-card[data-entity-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         ha-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -2703,8 +2590,9 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           justify-self: start;
           transform-origin: center;
-          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform;
+          scale: 1;
+          transition: scale 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+          will-change: transform, scale;
           width: ${effectiveIconSize};
         }
 
@@ -3134,16 +3022,16 @@ class NodaliaEntityCard extends HTMLElement {
 
         @keyframes entity-card-bubble-bounce {
           0% {
-            transform: scale(1);
+            scale: 1;
           }
           48% {
-            transform: scale(1.12);
+            scale: 1.12;
           }
           72% {
-            transform: scale(1.04);
+            scale: 1.04;
           }
           100% {
-            transform: scale(1);
+            scale: 1;
           }
         }
 
@@ -3195,11 +3083,12 @@ class NodaliaEntityCard extends HTMLElement {
           transition: none !important;
         }
         `}
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
         class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${isSelectEntity ? "entity-card--select" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
-        ${canRunBodyTap ? 'data-entity-action="body"' : ""}
+        ${canRunBodyTap ? `data-entity-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}
       >
         <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
           <div class="entity-card__hero ${shouldAnimateEntrance ? "entity-card__hero--entering" : ""}">
@@ -3207,7 +3096,7 @@ class NodaliaEntityCard extends HTMLElement {
               type="button"
               class="entity-card__icon ${shouldAnimateEntrance ? "entity-card__icon--entering" : ""} ${canRunIconTap ? "entity-card__icon--clickable" : ""}"
               ${canRunIconTap ? 'data-entity-action="icon"' : ""}
-              aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? "Accion principal" : title)}"
+              aria-label="${escapeHtml(canRunIconTap || canRunBodyTap ? this._commonAria("primaryAction", "Primary action") : title)}"
             >
               ${entityPicture
                 ? `<img class="entity-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
@@ -3297,25 +3186,16 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -3423,76 +3303,11 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    const selector = dataset.field
-      ? `[data-field="${escapeSelectorValue(dataset.field)}"]`
-      : null;
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {

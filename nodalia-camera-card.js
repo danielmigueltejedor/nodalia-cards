@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.44";
+const CARD_VERSION = "2.0.0-rc.1";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -60,7 +60,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "10px",
@@ -86,16 +86,24 @@ const STUB_CONFIG = {
   name: "Entrada",
 };
 
-function isObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  getByPath,
+  escapeHtml,
+  clamp,
+} = window.NodaliaUtils;
 
-function deepClone(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  return JSON.parse(JSON.stringify(value));
-}
+const {
+  buildGo2rtcViewerUrl,
+  sanitizeIframeUrl,
+  buildGo2rtcWebSocketEndpoint,
+  buildFrigateGo2rtcPath,
+  isMixedContentUrl,
+} = window.NodaliaCameraStreamModel;
+
+
 
 function getStubEntityId(hass, domains = []) {
   const states = hass?.states || {};
@@ -125,6 +133,9 @@ function mergeConfig(base, override) {
   const result = {};
   const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
   keys.forEach(key => {
+    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+      return;
+    }
     if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
       result[key] = mergeConfig(base[key], override[key]);
       return;
@@ -134,20 +145,6 @@ function mergeConfig(base, override) {
   return result;
 }
 
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key) {
-      return undefined;
-    }
-    if (!isObject(cursor) && !Array.isArray(cursor)) {
-      return undefined;
-    }
-    cursor = cursor[key];
-  }
-  return cursor;
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".");
@@ -162,14 +159,6 @@ function setByPath(target, path, value) {
   cursor[parts[parts.length - 1]] = value;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function normalizeTextKey(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -421,64 +410,6 @@ function compactCameraStreams(rawStreams = []) {
   }).filter(Boolean);
 }
 
-function buildGo2rtcViewerUrl(baseUrl, streamName, mode = "auto") {
-  const base = String(baseUrl || "").trim();
-  const stream = String(streamName || "").trim();
-  if (!base || !stream || !/^https?:\/\//i.test(base)) {
-    return "";
-  }
-  try {
-    const url = new URL(base);
-    if (!/\.html?$/i.test(url.pathname)) {
-      url.pathname = `${url.pathname.replace(/\/$/, "")}/stream.html`;
-    }
-    url.searchParams.set("src", stream);
-    const normalizedMode = STREAM_MODES.has(normalizeTextKey(mode)) ? normalizeTextKey(mode) : "auto";
-    if (normalizedMode === "webrtc") {
-      url.searchParams.set("mode", "webrtc,webrtc/tcp");
-    } else if (normalizedMode !== "auto") {
-      url.searchParams.set("mode", normalizedMode);
-    } else {
-      url.searchParams.delete("mode");
-    }
-    return url.toString();
-  } catch (_error) {
-    return "";
-  }
-}
-
-function sanitizeIframeUrl(rawValue) {
-  const value = String(rawValue || "").trim();
-  return /^(?:https?:\/\/|\/(?!\/))/i.test(value) ? value : "";
-}
-
-function buildGo2rtcWebSocketEndpoint(baseUrl, streamName) {
-  const base = String(baseUrl || "").trim();
-  const stream = String(streamName || "").trim();
-  if (!base || !stream || !/^https?:\/\//i.test(base)) {
-    return "";
-  }
-  try {
-    const url = new URL(base);
-    if (!/\/api\/ws\/?$/i.test(url.pathname)) {
-      url.pathname = `${url.pathname.replace(/\/$/, "")}/api/ws`;
-    }
-    url.searchParams.set("src", stream);
-    return url.toString();
-  } catch (_error) {
-    return "";
-  }
-}
-
-function buildFrigateGo2rtcPath(clientId, streamName) {
-  const instance = String(clientId || "frigate").trim() || "frigate";
-  const stream = String(streamName || "").trim();
-  if (!stream) {
-    return "";
-  }
-  return `/api/frigate/${encodeURIComponent(instance)}/mse/api/ws?src=${encodeURIComponent(stream)}`;
-}
-
 const SIGNED_PATH_CACHE = new WeakMap();
 
 function signedPathCacheForHass(hass) {
@@ -557,17 +488,6 @@ async function resolveGo2rtcPlayerSource(hass, streamConfig) {
   });
   const proxyPath = `/api/hass_web_proxy/v0/ws?url=${encodeURIComponent(endpoint)}`;
   return signHomeAssistantPath(hass, proxyPath);
-}
-
-function isMixedContentUrl(rawValue) {
-  if (window.location?.protocol !== "https:") {
-    return false;
-  }
-  try {
-    return new URL(String(rawValue || ""), window.location.href).protocol === "http:";
-  } catch (_error) {
-    return false;
-  }
 }
 
 function normalizeConfig(rawConfig) {
@@ -654,6 +574,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._expandedOpen = false;
     this._expandedEntityId = "";
+    this._expandedReturnFocus = null;
     this._failedImageUrls = new Set();
     this._previewAgeTimer = 0;
     this._expandedCardCache = new Map();
@@ -663,12 +584,14 @@ class NodaliaCameraCard extends HTMLElement {
     this._go2rtcPrefetchOwner = null;
     this._go2rtcPrefetchSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onWindowKeyDown = this._onWindowKeyDown.bind(this);
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     window.addEventListener("keydown", this._onWindowKeyDown);
     this._animateContentOnNextRender = true;
     this._prefetchGo2rtcSources();
@@ -679,10 +602,13 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     this._expandedOpen = false;
     this._expandedEntityId = "";
+    this._expandedReturnFocus = null;
     this._expandedStreamMountId += 1;
     this._disposeExpandedStream();
     this._expandedCardCache.clear();
@@ -1105,13 +1031,13 @@ class NodaliaCameraCard extends HTMLElement {
     invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
-  _performTapAction() {
+  _performTapAction(returnTarget = null) {
     const action = normalizeTextKey(this._config?.tap_action || "more-info");
     switch (action) {
       case "none":
         return;
       case "toggle":
-        this._openExpanded();
+        this._openExpanded(this._config?.entity, returnTarget);
         return;
       case "more-info":
         this._openMoreInfo();
@@ -1164,10 +1090,22 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _openExpanded(entityId = this._config?.entity) {
+  _openExpanded(entityId = this._config?.entity, returnTarget = null) {
     if (this._expandedOpen) {
       return;
     }
+    const active = returnTarget instanceof HTMLElement ? returnTarget : this.shadowRoot?.activeElement;
+    const returnAction = active instanceof HTMLElement ? String(active.dataset?.cameraAction || "") : "";
+    const returnEntity = active instanceof HTMLElement ? String(active.dataset?.cameraEntity || "") : "";
+    this._expandedReturnFocus = () => {
+      const candidates = returnAction === "expand"
+        ? Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="expand"]') || [])
+        : Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="body"]') || []);
+      const target = returnEntity
+        ? candidates.find(element => element.dataset?.cameraEntity === returnEntity)
+        : candidates[0];
+      target?.focus?.({ preventScroll: true });
+    };
     this._expandedEntityId = String(entityId || this._config?.entity || "").trim();
     this._expandedOpen = true;
     this._lastRenderSignature = "";
@@ -1246,7 +1184,7 @@ class NodaliaCameraCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
-      this._openExpanded(button.dataset.cameraEntity || this._config?.entity);
+      this._openExpanded(button.dataset.cameraEntity || this._config?.entity, button);
       return;
     }
     if (action === "close-expanded") {
@@ -1259,8 +1197,15 @@ class NodaliaCameraCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
-      this._performTapAction();
+      this._performTapAction(button);
     }
+  }
+
+  _onShadowKeyDown(event) {
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+      return;
+    }
+    this._onShadowClick(event);
   }
 
   _renderEmptyState() {
@@ -1449,9 +1394,12 @@ class NodaliaCameraCard extends HTMLElement {
           throw new Error("The native go2rtc player is not registered");
         }
         player.classList.add("camera-card__expanded-go2rtc");
+        const playbackMode = streamConfig.provider === "frigate_go2rtc" && streamConfig.mode === "auto"
+          ? "auto-mse"
+          : streamConfig.mode;
         player.configure({
           source: "",
-          mode: streamConfig.mode,
+          mode: playbackMode,
           muted: streamConfig.muted,
           controls: streamConfig.controls,
         });
@@ -1512,7 +1460,7 @@ class NodaliaCameraCard extends HTMLElement {
         });
         player.configure({
           source,
-          mode: streamConfig.mode,
+          mode: playbackMode,
           muted: streamConfig.muted,
           controls: streamConfig.controls,
         });
@@ -1880,6 +1828,11 @@ class NodaliaCameraCard extends HTMLElement {
         }
 
         * { box-sizing: border-box; }
+
+        [data-camera-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
 
         ha-card {
           background: ${cardBackground};
@@ -2320,14 +2273,16 @@ class NodaliaCameraCard extends HTMLElement {
             border-radius: 18px 18px 0 0;
             bottom: 0;
             max-height: 92vh;
+            max-height: 92dvh;
             top: auto;
             transform: translateX(-50%);
-            width: 100vw;
+            width: 100%;
           }
         }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="camera-card camera-card--${escapeHtml(layout)} ${feedLayout ? "camera-card--feed" : ""}">
-        <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}" data-camera-action="body">
+        <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}" data-camera-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}">
           ${previewMarkup}
           ${showHeader ? `
             <div class="camera-card__header" data-camera-action="body">
@@ -2375,6 +2330,19 @@ class NodaliaCameraCard extends HTMLElement {
 
     this._mountExpandedCards();
     this._mountExpandedStream();
+    const expandedDialog = this.shadowRoot.querySelector('.camera-card__expanded[role="dialog"]');
+    if (expandedDialog instanceof HTMLElement) {
+      window.NodaliaUtils?.bindModalFocus?.(this, expandedDialog, {
+        initialFocusSelector: ".camera-card__expanded-close",
+        restoreFocus: () => {
+          const restore = this._expandedReturnFocus;
+          this._expandedReturnFocus = null;
+          restore?.();
+        },
+      });
+    } else {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
 
     if (shouldAnimateEntrance) {
       this._animateContentOnNextRender = false;
@@ -2384,9 +2352,6 @@ class NodaliaCameraCard extends HTMLElement {
   }
 }
 
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
 
 if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaCameraCard);
@@ -2407,25 +2372,16 @@ class NodaliaCameraCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["value-changed", this._onShadowValueChanged],
+      ["click", this._onShadowClick],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   connectedCallback() {
@@ -2472,33 +2428,11 @@ class NodaliaCameraCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const active = this.shadowRoot?.activeElement;
-    if (!(active instanceof HTMLElement)) {
-      return null;
-    }
-    return {
-      field: active.dataset?.field || "",
-      selectionStart: active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
-        ? active.selectionStart
-        : null,
-      selectionEnd: active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
-        ? active.selectionEnd
-        : null,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.field) {
-      return;
-    }
-    const node = this.shadowRoot?.querySelector(`[data-field="${focusState.field}"]`);
-    if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement)) {
-      return;
-    }
-    node.focus();
-    if (typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number") {
-      node.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig(reRender = false) {

@@ -255,7 +255,8 @@
       "volumeUp": "Aumentar o volume",
       "openMedia": "Mídia aberta",
       "navigationBar": "Barra de navegação",
-      "mediaPlayers": "Reprodutores de mídia"
+      "mediaPlayers": "Reprodutores de mídia",
+      "primaryAction": "Ação principal"
     }
   },
   "alarmPanel": {
@@ -696,6 +697,7 @@
     "emptyBody": "Defina `entity` como uma entidade `vacuum.*` para mostrar este cartão."
   },
   "insigniaCard": {
+    "cardDescription": "Distintivo compacto em estilo de bolha para painéis Nodalia.",
     "emptyTitle": "Nodalia Insignia Card",
     "emptyBody": "Configure `entity` ou conteúdo básico para mostrar o distintivo."
   },
@@ -816,6 +818,7 @@
     "triggered": "Disparado"
   },
   "calendarCard": {
+    "cardDescription": "Cartão de calendário com eventos nativos e agenda expandida.",
     "allDay": "Dia inteiro",
     "timeRange": {
       "threeDays": "3 dias",

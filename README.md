@@ -121,11 +121,14 @@ HACS installs the stable bundle and registers this resource automatically:
 /hacsfiles/nodalia-cards/nodalia-cards.js
 ```
 
+That single file includes both the cards and their visual editors; no extra
+editor resource needs to be registered.
+
 If a card does not appear immediately after an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ### Manual installation
 
-1. Download `nodalia-cards.js` from the [latest stable release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest).
+1. Download `nodalia-cards.js` from the [latest stable release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest). It is the complete single-file distribution.
 2. Copy it to `/config/www/nodalia-cards.js`.
 3. Add `/local/nodalia-cards.js` under **Settings → Dashboards → Resources** as a **JavaScript module**.
 4. Refresh the browser.

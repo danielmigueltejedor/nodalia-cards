@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Disposition",
   "ed.scenes.layout_grid": "Grille",
   "ed.scenes.layout_list": "Liste",
+  "ed.scenes.layout_single": "Scène unique",
   "ed.scenes.name_placeholder": "Scènes du salon",
   "ed.scenes.remove_scene": "Supprimer la scène",
   "ed.scenes.scene_color": "Teinte de la scène",

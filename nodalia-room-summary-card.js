@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.0.0-alpha.44";
+const CARD_VERSION = "2.0.0-rc.1";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -67,13 +67,18 @@ const DEFAULT_CONFIG = {
   hold_url: "",
   hold_navigation_path: "",
   hold_new_tab: false,
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+  },
   haptics: { enabled: true, style: "medium", fallback_vibrate: false },
   animations: { enabled: true, content_duration: 420, button_bounce_duration: 320 },
   styles: {
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "14px",
       gap: "12px",
@@ -127,35 +132,35 @@ const STUB_CONFIG = {
   media_player: "media_player.living_room",
 };
 
-function isObject(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
-function deepClone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
+const {
+  isObject,
+  deepClone,
+  mergeDeep: mergeConfig,
+  escapeHtml,
+  clamp,
+  isUnsafeConfigPathKey,
+  getByPath,
+} = window.NodaliaUtils;
 
-function mergeConfig(base, override) {
-  if (window.NodaliaUtils?.mergeDeep) return window.NodaliaUtils.mergeDeep(base, override || {});
-  if (Array.isArray(base)) return Array.isArray(override) ? override.map(deepClone) : deepClone(base);
-  if (!isObject(base)) return override === undefined ? base : override;
-  const out = {};
-  new Set([...Object.keys(base), ...Object.keys(override || {})]).forEach(key => {
-    if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
-      out[key] = mergeConfig(base[key], override[key]);
-    } else {
-      out[key] = override?.[key] === undefined ? deepClone(base[key]) : deepClone(override[key]);
-    }
-  });
-  return out;
-}
+const {
+  normalizeEntityField,
+  hubMediaPlayerIds: collectHubMediaPlayerIds,
+  finiteNumber,
+  isUnavailable,
+  stateIsOn,
+  stateIsOpen,
+  stateIsUnlocked,
+  formatMetric,
+  getState,
+  hasRoomContent: hasNormalizedRoomContent,
+  buildRoomSummary: buildNormalizedRoomSummary,
+} = window.NodaliaRoomSummaryModel;
+
+
 
 function normalizeTextKey(v) { return String(v ?? "").trim().toLowerCase(); }
 function entityDomain(id) { const d = String(id || "").indexOf("."); return d > 0 ? String(id).slice(0, d) : ""; }
-
-function normalizeEntityField(value) {
-  if (Array.isArray(value)) {
-    const seen = new Set();
-    return value.map(item => String(item || "").trim()).filter(id => id && !seen.has(id) && seen.add(id));
-  }
-  const single = String(value ?? "").trim();
-  return single ? [single] : [];
-}
 
 function entityScalar(...values) {
   for (const value of values) {
@@ -175,28 +180,8 @@ function entityList(...values) {
 }
 
 function hubMediaPlayerIds(config) {
-  const c = normalizeConfig(config || {});
-  const ids = [];
-  const seen = new Set();
-  const push = id => {
-    const normalized = String(id || "").trim();
-    if (!normalized || seen.has(normalized)) return;
-    seen.add(normalized);
-    ids.push(normalized);
-  };
-  push(c.media_player);
-  (c.media_players || []).forEach(push);
-  (c.media_config?.players || []).forEach(player => push(player?.entity));
-  return ids;
+  return collectHubMediaPlayerIds(normalizeConfig(config || {}));
 }
-
-function escapeHtml(v) {
-  return String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-}
-
-function finiteNumber(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
-function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
@@ -250,31 +235,6 @@ function getEditorColorFallbackValue(field) {
   }
   return "var(--info-color, #71c0ff)";
 }
-function isUnavailable(state) { const k = normalizeTextKey(state?.state); return k === "unavailable" || k === "unknown"; }
-function stateIsOn(state) {
-  const k = normalizeTextKey(state?.state);
-  return ["on", "open", "opening", "true", "home", "occupied", "present", "detected", "unlocked", "playing", "paused"].includes(k);
-}
-function stateIsOpen(state) { const k = normalizeTextKey(state?.state); return k === "on" || k === "open" || k === "opening"; }
-function stateIsUnlocked(state) { const k = normalizeTextKey(state?.state); return k === "unlocked" || k === "open"; }
-
-function formatMetric(state, unitFallback = "") {
-  if (!state || isUnavailable(state)) return "—";
-  const unit = String(state.attributes?.unit_of_measurement || unitFallback || "").trim();
-  const num = finiteNumber(state.state);
-  if (num !== null) return `${Number.isInteger(num) ? num : num.toFixed(1)}${unit}`;
-  return String(state.state ?? "—");
-}
-
-function getState(hass, entityId) {
-  const id = String(entityId || "").trim();
-  return id && hass?.states?.[id] ? hass.states[id] : null;
-}
-
-function countMatching(hass, ids, predicate) {
-  return (ids || []).filter(id => { const s = getState(hass, id); return s && !isUnavailable(s) && predicate(s); }).length;
-}
-
 function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
   const result = deepClone(config || {});
   const walk = (cur, base) => {
@@ -378,6 +338,8 @@ function normalizeConfig(rawConfig = {}) {
 
   config.haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
   config.animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
   Object.defineProperty(config, NORMALIZED_ROOM_CONFIG, {
@@ -389,95 +351,13 @@ function normalizeConfig(rawConfig = {}) {
 }
 
 function hasRoomContent(config) {
-  const c = config || {};
-  return Boolean(
-    String(c.name || "").trim()
-    || c.temperature || c.humidity || c.presence || c.occupancy || c.climate
-    || c.camera || c.media_player || c.power || c.air_quality
-    || (c.media_players || []).length
-    || (c.media_config?.players || []).length
-    || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
-    || (c.vacuums || []).length || (c.fans || []).length
-    || (c.humidifiers || []).length || (c.others || []).length
-    || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length,
-  );
+  const normalized = normalizeConfig(config || {});
+  return Boolean(String(normalized.name || "").trim()) || hasNormalizedRoomContent(normalized);
 }
 
 function buildRoomSummary(hass, config) {
   const c = normalizeConfig(config || {});
-  const tempState = getState(hass, c.temperature);
-  const humidityState = getState(hass, c.humidity);
-  const presenceState = getState(hass, c.presence) || getState(hass, c.occupancy);
-  const climateState = getState(hass, c.climate);
-  const cameraState = getState(hass, c.camera);
-  const mediaState = getState(hass, hubMediaPlayerIds(c)[0]);
-
-  const tempNum = tempState ? finiteNumber(tempState.state) : null;
-  const humidityNum = humidityState ? finiteNumber(humidityState.state) : null;
-
-  const lightsOn = countMatching(hass, c.lights, stateIsOn);
-  const lightsTotal = (c.lights || []).length;
-  const coversOpen = countMatching(hass, c.covers, stateIsOpen);
-  const doorsOpen = countMatching(hass, c.doors, stateIsOpen);
-  const windowsOpen = countMatching(hass, c.windows, stateIsOpen);
-  const locksUnlocked = countMatching(hass, c.locks, stateIsUnlocked);
-  const alertsActive = countMatching(hass, c.alerts, stateIsOn);
-
-  const occupied = presenceState && !isUnavailable(presenceState) ? stateIsOn(presenceState) : null;
-  const mediaPlaying = mediaState && normalizeTextKey(mediaState.state) === "playing";
-  const cameraAvailable = cameraState ? !isUnavailable(cameraState) : false;
-  const cameraOffline = cameraState ? isUnavailable(cameraState) : false;
-
-  const hot = tempNum !== null && tempNum >= COMFORT.hot;
-  const cold = tempNum !== null && tempNum <= COMFORT.cold;
-  const humid = humidityNum !== null && humidityNum >= COMFORT.humid;
-  const dry = humidityNum !== null && humidityNum <= COMFORT.dry;
-  const comfortable = tempNum !== null && !hot && !cold && !humid && !dry;
-
-  const securityIssue = doorsOpen > 0 || windowsOpen > 0 || locksUnlocked > 0 || alertsActive > 0;
-
-  let climateLabel = "";
-  if (climateState && !isUnavailable(climateState)) {
-    const mode = normalizeTextKey(climateState.attributes?.hvac_mode || climateState.state);
-    const current = finiteNumber(climateState.attributes?.current_temperature);
-    const target = finiteNumber(climateState.attributes?.temperature);
-    const unit = String(climateState.attributes?.unit_of_measurement || "°").trim();
-    climateLabel = mode;
-    if (current !== null) {
-      climateLabel = target !== null && target !== current ? `${current}${unit} → ${target}${unit}` : `${current}${unit}`;
-    }
-  }
-
-  return {
-    occupied: occupied === true,
-    empty: occupied === false,
-    comfortable,
-    cold,
-    hot,
-    humid,
-    dry,
-    lights_on: lightsOn > 0,
-    all_lights_off: lightsTotal > 0 && lightsOn === 0,
-    lightsOn,
-    lightsTotal,
-    cover_open: coversOpen > 0,
-    cover_closed: (c.covers || []).length > 0 && coversOpen === 0,
-    coversOpen,
-    media_playing: mediaPlaying,
-    camera_available: cameraAvailable,
-    camera_offline: cameraOffline,
-    security_issue: securityIssue,
-    alert: alertsActive > 0,
-    unknown: !tempState && !humidityState && !presenceState && lightsTotal === 0,
-    temperature: formatMetric(tempState),
-    humidity: formatMetric(humidityState, "%"),
-    climateLabel,
-    doorsOpen,
-    windowsOpen,
-    locksUnlocked,
-    alertsActive,
-    mediaState: mediaState ? String(mediaState.state) : "",
-  };
+  return buildNormalizedRoomSummary(hass, c, COMFORT);
 }
 
 function fireEvent(node, type, detail, options) {
@@ -497,24 +377,7 @@ function moveListItem(list, fromIndex, toIndex) {
   list.splice(toIndex, 0, item);
 }
 
-function isUnsafeConfigPathKey(key) {
-  return key === "__proto__" || key === "constructor" || key === "prototype";
-}
 
-function getByPath(target, path) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (const key of parts) {
-    if (!key) {
-      return undefined;
-    }
-    if (!isObject(cursor) && !Array.isArray(cursor)) {
-      return undefined;
-    }
-    cursor = cursor[key];
-  }
-  return cursor;
-}
 
 function setByPath(target, path, value) {
   const parts = String(path || "").split(".");
@@ -548,6 +411,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._hubExpanded = false;
     this._hubEmbedCache = new Map();
     this._hubEmbedConfigSignatures = new WeakMap();
+    this._suppressNextPrimaryClick = false;
+    this._detachPrimaryHold = () => {};
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
   }
@@ -555,6 +420,24 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this._detachPrimaryHold?.();
+    this._detachPrimaryHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const actionTarget = event.composedPath().find(
+                node => node instanceof HTMLElement && node.dataset?.roomAction === "primary",
+              );
+              return actionTarget ? "primary" : null;
+            },
+            shouldBeginHold: () => String(this._config?.hold_action || "none") !== "none",
+            onHold: () => this._performCardAction("hold"),
+            markHoldConsumedClick: () => {
+              this._suppressNextPrimaryClick = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
     this._animateContentOnNextRender = true;
     if (this._hass) { this._lastRenderSignature = ""; this._render(); }
   }
@@ -562,6 +445,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("input", this._onShadowInput);
+    this._detachPrimaryHold?.();
+    this._detachPrimaryHold = () => {};
+    this._suppressNextPrimaryClick = false;
     this._lastRenderSignature = "";
     this._hubEmbedCache?.clear();
     this._hubEmbedConfigSignatures = new WeakMap();
@@ -606,11 +492,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const config = normalizeConfig(this._config);
     const ids = [
       config.temperature, config.humidity, config.presence, config.climate,
+      config.camera, config.power, config.air_quality,
       ...hubMediaPlayerIds(config), ...(config.lights || []), ...(config.covers || []),
       ...(config.vacuums || []), ...(config.fans || []),
       ...(config.humidifiers || []), ...(config.others || []),
+      ...(config.locks || []), ...(config.doors || []),
+      ...(config.windows || []), ...(config.alerts || []),
     ].filter(Boolean);
-    const states = ids.map(id => {
+    const states = [...new Set(ids)].map(id => {
       const state = hass?.states?.[id];
       return state ? `${id}:${state.state}:${state.last_updated || state.last_changed}` : `${id}:missing`;
     }).join("|");
@@ -951,10 +840,30 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
+  _isConfiguredServiceAllowed(serviceValue) {
+    const security = this._config?.security || DEFAULT_CONFIG.security;
+    if (security.strict_service_actions === false) return true;
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    const separator = normalizedService.indexOf(".");
+    if (separator <= 0 || separator >= normalizedService.length - 1) return false;
+    const domain = normalizedService.slice(0, separator);
+    const allowedServices = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const allowedDomains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
+  }
+
   _runConfiguredService(prefix) {
     const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
     const separator = serviceValue.indexOf(".");
     if (separator <= 0 || separator >= serviceValue.length - 1) return;
+    if (!this._isConfiguredServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Room Summary Card", serviceValue);
+      return;
+    }
     const domain = serviceValue.slice(0, separator);
     const service = serviceValue.slice(separator + 1);
     const data = this._parseActionObject(this._config?.[`${prefix}_service_data`]);
@@ -1065,11 +974,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     event.stopPropagation();
     const action = el.dataset.roomAction;
     if (action === "primary") {
+      if (this._suppressNextPrimaryClick) {
+        this._suppressNextPrimaryClick = false;
+        return;
+      }
       this._performCardAction("tap");
-      return;
-    }
-    if (action === "hold") {
-      this._performCardAction("hold");
       return;
     }
     if (action?.startsWith("nav:")) {
@@ -1479,17 +1388,18 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const state = getState(this._hass, entityId);
     const position = finiteNumber(state?.attributes?.current_position);
     const open = state && stateIsOpen(state);
+    const label = this._entityLabel(entityId);
     return `<article class="room-hub__device-row ${open ? "is-on" : ""}">
-      <button type="button" class="room-hub__device-icon" data-room-action="toggle:${escapeHtml(entityId)}">
+      <button type="button" class="room-hub__device-icon" data-room-action="toggle:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${open ? this._t("closeCovers", "Close covers") : this._t("openCovers", "Open covers")}: ${label}`)}">
         <ha-icon icon="${escapeHtml(this._entityIcon(entityId, "mdi:window-shutter"))}"></ha-icon>
       </button>
       <div class="room-hub__device-body">
-        <div class="room-hub__device-name">${escapeHtml(this._entityLabel(entityId))}</div>
+        <div class="room-hub__device-name">${escapeHtml(label)}</div>
         <div class="room-hub__device-state">${escapeHtml(position !== null ? `${position}%` : String(state?.state || "—"))}</div>
         <div class="room-hub__device-controls">
-          <button type="button" class="room-hub__mini-control" data-room-action="cover:open_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="cover:stop_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:stop"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="cover:close_cover:${escapeHtml(entityId)}"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:open_cover:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("openCovers", "Open covers")}: ${label}`)}"><ha-icon icon="mdi:arrow-up"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:stop_cover:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("stopCovers", "Stop covers")}: ${label}`)}"><ha-icon icon="mdi:stop"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="cover:close_cover:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("closeCovers", "Close covers")}: ${label}`)}"><ha-icon icon="mdi:arrow-down"></ha-icon></button>
         </div>
       </div>
     </article>`;
@@ -1504,13 +1414,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const target = finiteNumber(state?.attributes?.temperature);
     const unit = String(state?.attributes?.unit_of_measurement || "°C").trim();
     const mode = String(state?.attributes?.hvac_mode || state?.state || "—");
+    const label = this._entityLabel(entityId);
     return `<div class="room-hub__panel room-hub__panel--climate">
       <div class="room-hub__climate-dial">
         <div class="room-hub__climate-value">${escapeHtml(current !== null ? `${current}${unit}` : "—")}</div>
         <div class="room-hub__climate-target">${escapeHtml(target !== null ? `${this._t("target", "Target")} ${target}${unit}` : mode)}</div>
         <div class="room-hub__device-controls">
-          <button type="button" class="room-hub__mini-control" data-room-action="climate:-1:${escapeHtml(entityId)}"><ha-icon icon="mdi:minus"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="climate:1:${escapeHtml(entityId)}"><ha-icon icon="mdi:plus"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="climate:-1:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("lowerTemperature", "Lower temperature")}: ${label}`)}"><ha-icon icon="mdi:minus"></ha-icon></button>
+          <button type="button" class="room-hub__mini-control" data-room-action="climate:1:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("raiseTemperature", "Raise temperature")}: ${label}`)}"><ha-icon icon="mdi:plus"></ha-icon></button>
         </div>
       </div>
     </div>`;
@@ -1561,7 +1472,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const collapsed = collapsible && this._hubExpanded !== true;
     const activePanel = collapsed ? "home" : HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
     const navItems = this._getHubNavItems(config, summary);
-    const renderedPanels = collapsed ? ["home"] : ["home", ...navItems.map(item => item.id)];
+    // Only the visible panel belongs in the DOM. Embedded cards are relatively
+    // expensive and must not receive hass updates while their panel is hidden.
+    const renderedPanels = [activePanel];
     const animate = config.animations?.enabled !== false && this._animateContentOnNextRender;
     const cardBackground = styles.card.background;
     const cardBorder = styles.card.border;
@@ -1817,25 +1730,16 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _attachEditorShadowListeners() {
-    if (this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("value-changed", this._onShadowValueChanged);
-    this._editorShadowListenersAttached = true;
+    window.NodaliaUtils.bindShadowListeners(this, [
+      ["input", this._onShadowInput],
+      ["change", this._onShadowInput],
+      ["click", this._onShadowClick],
+      ["value-changed", this._onShadowValueChanged],
+    ], "editor");
   }
 
   _detachEditorShadowListeners() {
-    if (!this._editorShadowListenersAttached || !this.shadowRoot) {
-      return;
-    }
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("change", this._onShadowInput);
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this.shadowRoot.removeEventListener("value-changed", this._onShadowValueChanged);
-    this._editorShadowListenersAttached = false;
+    window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
   setConfig(config) {
@@ -1865,41 +1769,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _captureFocusState() {
-    const active = this.shadowRoot?.activeElement;
-    if (
-      !(
-        active instanceof HTMLInputElement
-        || active instanceof HTMLTextAreaElement
-        || active instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-    return {
-      field: active.dataset?.field || "",
-      start: typeof active.selectionStart === "number" ? active.selectionStart : null,
-      end: typeof active.selectionEnd === "number" ? active.selectionEnd : null,
-    };
+    return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
   _restoreFocusState(focusState) {
-    if (!focusState?.field) {
-      return;
-    }
-    const next = this.shadowRoot?.querySelector(`[data-field="${CSS.escape(focusState.field)}"]`);
-    if (
-      !(
-        next instanceof HTMLInputElement
-        || next instanceof HTMLTextAreaElement
-        || next instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-    next.focus();
-    if (typeof focusState.start === "number" && typeof focusState.end === "number" && typeof next.setSelectionRange === "function") {
-      next.setSelectionRange(focusState.start, focusState.end);
-    }
+    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _watchEditorControlTag(tagName) {

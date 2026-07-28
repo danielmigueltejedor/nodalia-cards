@@ -1124,6 +1124,7 @@
   "ed.scenes.layout": "Lay-out",
   "ed.scenes.layout_grid": "Raster",
   "ed.scenes.layout_list": "Lijst",
+  "ed.scenes.layout_single": "Enkele scène",
   "ed.scenes.name_placeholder": "Woonkamer scènes",
   "ed.scenes.remove_scene": "Scène verwijderen",
   "ed.scenes.scene_color": "Scènetint",

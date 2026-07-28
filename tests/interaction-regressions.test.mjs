@@ -206,6 +206,16 @@ test("nav media/popup entrance animations are transition-driven", () => {
   assert.match(source, /playMediaToggleEntrance = .*?!this\._lastMediaToggleVisible/);
 });
 
+test("navigation volume changes patch controls without rebuilding the card", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /_patchMediaVolumeControls\(/);
+  assert.match(source, /nextSignature === this\._lastRenderSignature\) \{[\s\S]*?_patchMediaVolumeControls\(\);[\s\S]*?return;/);
+  assert.match(source, /typeof attrs\.volume_level === "number" \? 1 : 0/);
+  assert.match(source, /const nextVolume = clamp\(currentVolume [+-] 0\.08, 0, 1\);[\s\S]*?_patchMediaVolumeControls\(entityId, nextVolume\)/);
+  assert.match(source, /this\._lastRenderSignature = this\._getRenderSignature\(this\._hass\);/);
+  assert.doesNotMatch(source, /Number\(attrs\.volume_level \?\? -1\)/);
+});
+
 test("visual editors reattach shadow listeners on reconnect", () => {
   const editorFiles = [
     ["nodalia-light-card.js", "NodaliaLightCardEditor"],
@@ -311,13 +321,15 @@ test("media player editor preserves nested service data drafts until change comm
 test("media player editor round-trips service data as a JSON object", () => {
   const sandbox = {
     URL,
-    window: { NodaliaUtils: { registerCustomCard() {} } },
+    window: null,
     customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
     globalThis: {},
   };
+  sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-media-player.js"), sandbox);
 
   const helpers = sandbox.__NODALIA_MEDIA_PLAYER__;
@@ -374,6 +386,32 @@ test("person card translates location state with runtime i18n", () => {
   assert.match(source, /person\.notHome/);
   assert.doesNotMatch(source, /return "En casa";/);
   assert.doesNotMatch(source, /return "Fuera";/);
+});
+
+test("person defaults to the family card proportions and keeps compact mode explicit", () => {
+  const source = read("nodalia-person-card.js");
+  assert.match(source, /getCardSize\(\) \{\s*return 3;/);
+  assert.match(source, /getGridOptions\(\) \{[\s\S]*min_rows: 2/);
+  assert.match(source, /const singleRowLayout = Number\.isFinite\(configuredRows\) && configuredRows <= 1;/);
+  assert.match(source, /avatar:\s*\{\s*size: "38px",\s*background: "rgba\(255, 255, 255, 0\.06\)"/);
+  assert.match(source, /title_size: "12px",\s*subtitle_size: "9px"/);
+});
+
+test("fav active state tints both the card surface and icon bubble", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /const cardBackground = isActive[\s\S]*linear-gradient/);
+  assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*radial-gradient/);
+  assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);
+});
+
+test("scenes supports a dedicated single-scene surface and visual-editor option", () => {
+  const source = read("nodalia-scenes-card.js");
+  const labels = JSON.parse(read("i18n/editor/en.json"));
+  assert.match(source, /\["grid", "list", "single"\]\.includes\(layout\)/);
+  assert.match(source, /layout: "single", scenes: \[\{ entity: entityId \}\]/);
+  assert.match(source, /scenes-card--single/);
+  assert.match(source, /const renderedEntries = isSingle \? entries\.slice\(0, 1\) : entries;/);
+  assert.equal(labels["ed.scenes.layout_single"], "Single scene");
 });
 
 test("i18n person home aliases translate with active language", () => {
@@ -1348,6 +1386,29 @@ test("NodaliaUtils schedules and clears deferred timers on disconnect", () => {
   assert.match(read("nodalia-fan-card.js"), /NodaliaUtils\?\.clearDeferTimers\?\.\(this\)/);
 });
 
+test("card hold gestures reconnect after dashboard view reattachment", () => {
+  const files = [
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-scenes-card.js",
+    "nodalia-entity-card.js",
+  ];
+  files.forEach(file => {
+    const source = read(file);
+    const connectedStart = source.indexOf("  connectedCallback() {");
+    const disconnectedStart = source.indexOf("  disconnectedCallback() {", connectedStart);
+    assert.ok(connectedStart >= 0 && disconnectedStart > connectedStart, `${file} should expose lifecycle callbacks`);
+    assert.match(
+      source.slice(connectedStart, disconnectedStart),
+      /this\._detachHostHold\?\.reconnect\?\.\(\)/,
+      `${file} should restore its host hold binding on reconnect`,
+    );
+  });
+});
+
 test("scenes card empty state uses unified render signature", () => {
   const source = read("nodalia-scenes-card.js");
   assert.doesNotMatch(source, /_lastRenderSignature = `empty:\$\{JSON\.stringify/);
@@ -1518,7 +1579,13 @@ test("entity card opens inline select picker for select and input_select entitie
   const feedbackSource = source.slice(feedbackStart, feedbackEnd);
   assert.match(feedbackSource, /querySelector\("\.entity-card__content"\)/);
   assert.match(feedbackSource, /querySelector\("\.entity-card__icon"\)/);
-  assert.doesNotMatch(feedbackSource, /_shouldOpenSelectPickerOnTap/);
+  assert.match(feedbackSource, /const opensSelectPicker = this\._shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)/);
+  assert.match(feedbackSource, /if \(!opensSelectPicker\) \{[\s\S]*querySelector\("\.entity-card__content"\)/);
+  assert.match(source, /_triggerPressAnimation\(element[\s\S]*element\.classList\.remove\(className\);[\s\S]*element\.classList\.add\(className\)/);
+  assert.doesNotMatch(source, /_clearEntranceAnimationClasses/);
+  assert.match(source, /@keyframes entity-card-bubble-bounce[\s\S]*scale: 1\.12;[\s\S]*scale: 1;/);
+  assert.doesNotMatch(source, /@keyframes entity-card-bubble-bounce[\s\S]{0,500}transform: scale/);
+  assert.match(source, /"entity-card__icon--entering"/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
   assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
   assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
@@ -1655,6 +1722,15 @@ test("circular gauge entrance animates a single smooth progress arc", () => {
   );
 });
 
+test("circular gauge keeps WebKit-safe literal colors in segmented SVG strokes", () => {
+  const source = read("nodalia-circular-gauge-card.js");
+  assert.match(source, /const GAUGE_TINT_SEGMENT_COUNT = 16;/);
+  assert.match(source, /function resolveGaugeSvgStrokeColor\(/);
+  assert.match(source, /\(\?:color-mix\|var\)\\\(/);
+  assert.match(source, /getGaugeSvgFallbackColor\(sampleRatio\)/);
+  assert.doesNotMatch(source, /\.gauge-card__dial-progress-segment \{[\s\S]*?filter: drop-shadow/);
+});
+
 test("numeric display cards use Home Assistant locale instead of hardcoded Spanish", () => {
   [
     "nodalia-power-flow-card.js",
@@ -1706,11 +1782,38 @@ test("fav and vacuum resize observers skip render when signature is unchanged", 
   assert.match(vacuum, /const signature = this\._getRenderSignature\(\);\s*if \(signature === this\._lastRenderSignature\)/);
 });
 
-test("power flow caches tracked entity stamp for render signature", () => {
+test("power flow refreshes its tracked entity stamp before render gating", () => {
   const source = read("nodalia-power-flow-card.js");
-  assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
+  assert.match(source, /set hass\(hass\) \{\s*this\._hass = hass;\s*this\._syncTrackedEntitiesStamp\(hass\);\s*const nextSignature/);
   assert.match(source, /NodaliaRenderSignature\?\.joinParts/);
   assert.match(source, /prefix: "states:", values: \[this\._trackedEntitiesStamp\]/);
+
+  const PowerFlowCard = loadPowerFlowCardClass();
+  const card = new PowerFlowCard();
+  card._config.entities.grid.entity = "sensor.grid";
+  card._config.entities.home.entity = "sensor.home";
+  card._invalidateTrackedEntityStampCache();
+  let renders = 0;
+  card._render = () => {
+    renders += 1;
+    card.shadowRoot.innerHTML = "<ha-card></ha-card>";
+  };
+
+  card.hass = {
+    states: {
+      "sensor.grid": { state: "100", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+      "sensor.home": { state: "100", last_updated: "2026-07-28T10:00:00Z", attributes: {} },
+    },
+  };
+  card.hass = {
+    states: {
+      "sensor.grid": { state: "140", last_updated: "2026-07-28T10:00:01Z", attributes: {} },
+      "sensor.home": { state: "140", last_updated: "2026-07-28T10:00:01Z", attributes: {} },
+    },
+  };
+  card.hass = card._hass;
+
+  assert.equal(renders, 2, "tracked power changes should render once while identical hass updates stay gated");
 });
 
 test("advance vacuum map display follows cleaning session mode", () => {
@@ -1744,11 +1847,14 @@ test("weather forecast subscription guards disconnected lifecycle", () => {
   assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
-test("vacuum user services respect strict allowlist while internal helpers bypass it", () => {
+test("vacuum built-in controls bypass the configurable service allowlist", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /_callUserVacuumService\(/);
+  assert.doesNotMatch(source, /_callUserVacuumService\(/);
+  assert.doesNotMatch(source, /_isServiceAllowed\(/);
   assert.match(source, /_callSelectOption\(/);
-  assert.match(source, /_callUserVacuumService\(service, data = \{\}\) \{[\s\S]*_isServiceAllowed\(fullService\)/);
+  for (const service of ["start", "pause", "stop", "return_to_base", "locate", "set_fan_speed", "clean_area"]) {
+    assert.match(source, new RegExp(`_callService\\("${service}"`));
+  }
   const selectBody = source.match(/_callSelectOption\(entityId, option\) \{[\s\S]*?\n  \}/);
   assert.ok(selectBody, "expected _callSelectOption implementation");
   assert.doesNotMatch(selectBody[0], /_isServiceAllowed/);
@@ -1850,8 +1956,10 @@ test("cover card compact auto mode uses width and grid heuristics", () => {
 
 test("fav card aligns service security with entity and cleans up alarm host span", () => {
   const source = read("nodalia-fav-card.js");
-  assert.match(source, /strict_service_actions: false/);
-  assert.match(source, /_invokeEntityService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
+  assert.match(source, /strict_service_actions: true/);
+  const internalService = source.slice(source.indexOf("_invokeEntityService("), source.indexOf("_toggleCoverEntity("));
+  assert.doesNotMatch(internalService, /_isServiceAllowed/);
+  assert.match(source, /_callConfiguredService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
   assert.match(source, /disconnectedCallback\(\) \{[\s\S]*_applyHostGridSpan\(false\)/);
   assert.match(source, /clearDeferTimers/);
 });
@@ -1891,9 +1999,11 @@ test("fav card preserves Lovelace service target for configured tap actions", ()
   assert.match(source, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
 });
 
-test("entity card gates built-in lock cover and select services with strict allowlist", () => {
+test("entity card keeps built-in controls usable while gating configured services", () => {
   const source = read("nodalia-entity-card.js");
-  assert.match(source, /_invokeEntityService\(domain, service, entityId, serviceData = \{\}\) \{[\s\S]*_isServiceAllowed\(serviceValue\)/);
+  const internalService = source.slice(source.indexOf("_invokeEntityService("), source.indexOf("_toggleCoverEntity("));
+  assert.doesNotMatch(internalService, /_isServiceAllowed/);
+  assert.match(source, /_callConfiguredService\([\s\S]*_isServiceAllowed\(serviceValue\)/);
   assert.match(source, /select_option/);
 });
 
@@ -1905,4 +2015,65 @@ test("notifications card drains pending foreground mobile queue in batches", () 
   assert.match(source, /this\._mobileNotifyQueue\.splice\(0, 4\)/);
   assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._flushMobileNotifications\(batch\)\)[\s\S]*\.catch\(error =>/);
   assert.match(source, /if \(this\._mobileNotifyQueue\.length\) \{[\s\S]*_scheduleMobileNotifyDrain/);
+});
+
+test("visual family tokens stay aligned without changing notifications", () => {
+  for (const file of [
+    "nodalia-entity-card.js",
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+  ]) {
+    assert.match(read(file), /chip_font_size: "11px"/, `${file} should use the device chip type scale`);
+  }
+
+  assert.match(read("nodalia-entity-card.js"), /control:\s*\{[\s\S]*?size: "36px"/);
+  assert.match(
+    read("nodalia-cover-card.js"),
+    /on_color: "var\(--warning-color, #fec700\)"[\s\S]*slider_color: "var\(--warning-color, #fec700\)"/,
+  );
+  assert.match(
+    read("nodalia-fav-card.js"),
+    /card:\s*\{[\s\S]*?border: "1px solid var\(--divider-color\)"[\s\S]*?border_radius: "var\(--nodalia-card-border-radius, 28px\)"/,
+  );
+  assert.match(
+    read("nodalia-navigation-bar.js"),
+    /media_player:\s*\{[\s\S]*?title_size: "12px"[\s\S]*?subtitle_size: "10px"/,
+  );
+  assert.match(read("nodalia-news-card.js"), /border: "1px solid var\(--divider-color\)"/);
+
+  for (const file of [
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-person-card.js",
+    "nodalia-fav-card.js",
+  ]) {
+    assert.match(read(file), /ha-card::after \{[\s\S]*radial-gradient\(circle at 18% 20%/);
+  }
+
+  const reducedMotionCards = [
+    "nodalia-entity-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-climate-card.js",
+    "nodalia-circular-gauge-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-calendar-card.js",
+    "nodalia-camera-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-graph-card.js",
+    "nodalia-insignia-card.js",
+    "nodalia-media-player.js",
+    "nodalia-navigation-bar.js",
+    "nodalia-person-card.js",
+    "nodalia-power-flow-card.js",
+    "nodalia-scenes-card.js",
+  ];
+  reducedMotionCards.forEach(file => {
+    assert.match(read(file), /renderReducedMotionStyles/);
+  });
+  assert.match(read("nodalia-utils.js"), /function renderReducedMotionStyles\(\)[\s\S]*prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(read("nodalia-notifications-card.js"), /renderReducedMotionStyles/);
 });
