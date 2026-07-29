@@ -73,6 +73,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._displayRecoveryFrame = 0;
     this._displayFrameCallback = 0;
     this._pendingDisplayRecoveryReason = "";
+    this._hasDecodedFrameOnce = false;
     this._onDisplayEnvironmentChange = event => {
       this._scheduleVideoDisplayRecovery(event?.type || "display-change");
     };
@@ -141,6 +142,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._displayFrameCallback = 0;
     this._pendingDisplayRecoveryReason = "";
+    this._hasDecodedFrameOnce = false;
     this._intentionalClose = true;
     this._autoplayMuted = false;
     if (this._socket) {
@@ -309,6 +311,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._displayFrameCallback = video.requestVideoFrameCallback(() => {
         this._displayFrameCallback = 0;
         receivedFrame = true;
+        this._hasDecodedFrameOnce = true;
       });
     }
     this._displayHealthTimer = window.setTimeout(() => {
@@ -318,7 +321,15 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
       const hasDecodedFrame = receivedFrame
         || (Number(video.readyState) >= 2 && Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0);
-      if (!hasDecodedFrame && (this._socket || this._peer || this._mediaSource)) {
+      if (hasDecodedFrame) {
+        this._hasDecodedFrameOnce = true;
+        return;
+      }
+      // Soft CSS recovery still runs above. Hard transport restart is only safe after a
+      // frame was shown: mobile visualViewport resize during the first connect would
+      // otherwise abort WebRTC/MSE negotiation (mode timeouts are 4.5–6.5s) and reset
+      // the startup error budget into a reconnect storm.
+      if (this._hasDecodedFrameOnce && (this._socket || this._peer || this._mediaSource)) {
         this._restartTransportForDisplayRecovery();
       }
     }, 1200);
@@ -337,7 +348,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._resetModeTransport();
     this._modeQueue = [];
     this._activeMode = "";
-    this._startupStartedAt = Date.now();
+    this._hasDecodedFrameOnce = false;
     this._intentionalClose = false;
     this._connect();
   }

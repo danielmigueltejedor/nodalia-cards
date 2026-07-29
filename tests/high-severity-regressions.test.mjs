@@ -93,6 +93,44 @@ test("vacuum primary controls are never blocked by strict configured-action secu
   }
 });
 
+test("advance vacuum rooms mode never falls through to full-house start", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  const roomsBranch = source.match(
+    /if \(this\._activeMode === "rooms" && this\._selectedRoomIds\.length\) \{[\s\S]*?(?=\n      if \(this\._activeMode === "zone")/,
+  );
+  assert.ok(roomsBranch, "rooms cleaning branch should exist in _runMapAction");
+  assert.match(
+    roomsBranch[0],
+    /throw new Error\("Selected rooms need numeric segment IDs before room cleaning can start\."\)/,
+    "non-numeric room selections must error instead of falling through",
+  );
+  assert.match(roomsBranch[0], /app_segment_clean/);
+  assert.doesNotMatch(
+    roomsBranch[0],
+    /_callVacuumService\("start"\)/,
+    "rooms branch must not start a whole-house clean",
+  );
+});
+
+test("go2rtc display recovery waits for a decoded frame before transport restart", () => {
+  const source = read("nodalia-go2rtc-player.js");
+  assert.match(source, /this\._hasDecodedFrameOnce = false/);
+  assert.match(
+    source,
+    /if \(this\._hasDecodedFrameOnce && \(this\._socket \|\| this\._peer \|\| this\._mediaSource\)\) \{[\s\S]*_restartTransportForDisplayRecovery/,
+  );
+  const restartFn = source.match(
+    /_restartTransportForDisplayRecovery\(\) \{[\s\S]*?\n  \}/,
+  );
+  assert.ok(restartFn, "display recovery restart helper should exist");
+  assert.doesNotMatch(
+    restartFn[0],
+    /_startupStartedAt\s*=\s*Date\.now\(\)/,
+    "display recovery must not reset the startup error budget",
+  );
+  assert.match(restartFn[0], /this\._hasDecodedFrameOnce = false/);
+});
+
 test("climate popup viewport constraints remain valid CSS functions", () => {
   const source = read("nodalia-climate-card.js");
   assert.doesNotMatch(source, /min\(100vw\s*-\s*\d+px,/);

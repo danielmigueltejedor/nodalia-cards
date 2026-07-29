@@ -583,6 +583,36 @@ test("go2rtc display recovery preserves the video element and reattaches WebRTC"
   clearTimeout(player._displayHealthTimer);
 });
 
+test("go2rtc display recovery does not abort first-frame connects", async () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  let restarts = 0;
+  const video = {
+    style: { transform: "", willChange: "" },
+    readyState: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    getBoundingClientRect() { return { width: 320, height: 180 }; },
+    play() { return Promise.resolve(); },
+  };
+  player._video = video;
+  player._socket = { close() {} };
+  player._hasDecodedFrameOnce = false;
+  player._restartTransportForDisplayRecovery = () => {
+    restarts += 1;
+    player._hasDecodedFrameOnce = false;
+  };
+
+  player._verifyVideoDisplayRecovery(video);
+  await new Promise(resolve => setTimeout(resolve, 1300));
+  assert.equal(restarts, 0, "missing first frame must not tear down transport");
+
+  player._hasDecodedFrameOnce = true;
+  player._verifyVideoDisplayRecovery(video);
+  await new Promise(resolve => setTimeout(resolve, 1300));
+  assert.equal(restarts, 1, "frozen presentation after a decoded frame may restart transport");
+});
+
 test("camera iframe provider is sandboxed", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /sandbox="allow-scripts allow-forms allow-presentation allow-popups"/);

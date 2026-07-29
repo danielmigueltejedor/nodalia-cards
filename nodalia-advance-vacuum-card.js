@@ -5317,32 +5317,36 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           .map(id => parseInteger(id))
           .filter(Number.isFinite);
 
-        if (segments.length) {
-          this._freezeCurrentModePanelPreset(state);
-          this._clearPendingRoomCleaningResume();
-          this._activeCleaningRoomIds = segments.map(item => String(item));
-          this._activeCleaningZones = [];
-          this._activeCleaningSessionMode = "rooms";
-          this._markCleaningSessionPendingStart();
-          this._persistCurrentCleaningSessionState("rooms", {
-            markSelectionChange: true,
-          });
-          await this._callInternalService("vacuum.send_command", {
-            entity_id: this._config.entity,
-            command: "app_segment_clean",
-            params: [{
-              segments,
-              repeat: this._repeats,
-            }],
-          });
-          if (!this.isConnected) {
-            return;
-          }
-          this._persistCurrentCleaningSessionState("rooms");
-          this._triggerHaptic("success");
-          this._render();
+        if (!segments.length) {
+          // Selected rooms without numeric segment IDs must not fall through to
+          // vacuum.start — that would clean the whole house instead of the selection.
+          throw new Error("Selected rooms need numeric segment IDs before room cleaning can start.");
+        }
+
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = segments.map(item => String(item));
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "rooms";
+        this._markCleaningSessionPendingStart();
+        this._persistCurrentCleaningSessionState("rooms", {
+          markSelectionChange: true,
+        });
+        await this._callInternalService("vacuum.send_command", {
+          entity_id: this._config.entity,
+          command: "app_segment_clean",
+          params: [{
+            segments,
+            repeat: this._repeats,
+          }],
+        });
+        if (!this.isConnected) {
           return;
         }
+        this._persistCurrentCleaningSessionState("rooms");
+        this._triggerHaptic("success");
+        this._render();
+        return;
       }
 
       if (this._activeMode === "zone" && selectedZones.length) {
