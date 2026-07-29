@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.53] - 2026-07-29
+
+Fifty-third **`2.0.0`** alpha: standard Person Card actions and high-severity camera and vacuum safeguards.
+
+### Added
+
+- **Person Card actions:** `tap_action`, `hold_action` and `double_tap_action` now support the standard Lovelace actions for navigation, more-info, toggle, URL opening and service execution, including strict service allowlists.
+- **Person Card editor:** all three gestures and their contextual action fields can be configured from the visual editor without writing YAML.
+
+### Fixed
+
+- **Camera live view:** display recovery no longer tears down go2rtc during its initial negotiation; hard recovery is reserved for a stream that has already decoded a frame, preventing mobile reconnect storms and black or stuck feeds.
+- **Advanced Vacuum rooms:** selected room identifiers are preserved when integrations expose string or map-key IDs, and an invalid segment selection now reports an error instead of falling through to a whole-house `vacuum.start` call.
+
 ## [2.0.0-alpha.52] - 2026-07-29
 
 Fifty-second **`2.0.0`** alpha: compact Advanced Vacuum platform controls in the visual editor.

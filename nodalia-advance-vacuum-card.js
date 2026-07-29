@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.0.0-alpha.52";
+const CARD_VERSION = "2.0.0-alpha.53";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -5985,30 +5985,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         return;
       }
 
-      if (this._activeMode === "rooms" && this._selectedRoomIds.length) {
+      if (this._activeMode === "rooms") {
         const roomIds = this._selectedRoomIds
           .map(id => String(id || "").trim())
           .filter(Boolean);
 
-        if (roomIds.length) {
-          this._freezeCurrentModePanelPreset(state);
-          this._clearPendingRoomCleaningResume();
-          this._activeCleaningRoomIds = [...roomIds];
-          this._activeCleaningZones = [];
-          this._activeCleaningSessionMode = "rooms";
-          this._markCleaningSessionPendingStart();
-          this._persistCurrentCleaningSessionState("rooms", {
-            markSelectionChange: true,
-          });
-          await this._callRoomCleaningService(roomIds, this._repeats);
-          if (!this.isConnected) {
-            return;
-          }
-          this._persistCurrentCleaningSessionState("rooms");
-          this._triggerHaptic("success");
-          this._render();
+        if (!roomIds.length) {
+          throw new Error("Selecciona al menos una habitación válida antes de iniciar la limpieza.");
+        }
+
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [...roomIds];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "rooms";
+        this._markCleaningSessionPendingStart();
+        this._persistCurrentCleaningSessionState("rooms", {
+          markSelectionChange: true,
+        });
+        await this._callRoomCleaningService(roomIds, this._repeats);
+        if (!this.isConnected) {
           return;
         }
+        this._persistCurrentCleaningSessionState("rooms");
+        this._triggerHaptic("success");
+        this._render();
+        return;
       }
 
       if (this._activeMode === "zone" && selectedZones.length) {

@@ -388,6 +388,43 @@ test("person card translates location state with runtime i18n", () => {
   assert.doesNotMatch(source, /return "Fuera";/);
 });
 
+test("person card normalizes native Lovelace tap hold and double-tap actions", () => {
+  const normalizeConfig = loadCardNormalizeConfig("nodalia-person-card.js", "NodaliaPersonCard");
+  const config = normalizeConfig({
+    entity: "person.john",
+    tap_action: { action: "navigate", navigation_path: "#bubblecard_john" },
+    hold_action: {
+      action: "perform-action",
+      perform_action: "script.person_hold",
+      data: { source: "person-card" },
+      target: { entity_id: "script.person_hold" },
+    },
+    double_tap_action: { action: "url", url_path: "https://example.com/person", new_tab: true },
+  });
+
+  assert.equal(config.tap_action, "navigate");
+  assert.equal(config.navigation_path, "#bubblecard_john");
+  assert.equal(config.hold_action, "service");
+  assert.equal(config.hold_service, "script.person_hold");
+  assert.equal(config.hold_service_data, JSON.stringify({ source: "person-card" }));
+  assert.equal(config.hold_service_target, JSON.stringify({ entity_id: "script.person_hold" }));
+  assert.equal(config.double_tap_action, "url");
+  assert.equal(config.double_tap_url, "https://example.com/person");
+  assert.equal(config.double_tap_new_tab, true);
+});
+
+test("person card actions use safe navigation services and gesture arbitration", () => {
+  const source = read("nodalia-person-card.js");
+  assert.match(source, /bindHostPointerHoldGesture/);
+  assert.match(source, /scheduleCardZoneTap/);
+  assert.match(source, /cancelCardZoneTap/);
+  assert.match(source, /sanitizeActionUrl\?\.\(value, \{ allowRelative: true, allowHash: true \}\)/);
+  assert.match(source, /_isConfiguredPersonServiceAllowed/);
+  assert.match(source, /invokeHomeAssistantService/);
+  assert.match(source, /double_tap_service_target/);
+  assert.match(source, /"double_tap_action",\s*doubleTapAction/);
+});
+
 test("person defaults to the family card proportions and keeps compact mode explicit", () => {
   const source = read("nodalia-person-card.js");
   assert.match(source, /getCardSize\(\) \{\s*return 3;/);

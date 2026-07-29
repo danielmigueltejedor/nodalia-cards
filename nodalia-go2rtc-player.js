@@ -55,6 +55,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._intentionalClose = false;
     this._autoplayMuted = false;
     this._startupStartedAt = 0;
+    this._hasDecodedFrameOnce = false;
     this._playbackStream = null;
     this._audioContext = null;
     this._audioElementSource = null;
@@ -184,6 +185,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     }
     this._playbackStream = null;
     this._startupStartedAt = 0;
+    this._hasDecodedFrameOnce = false;
   }
 
   _ensureVideo() {
@@ -309,6 +311,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       this._displayFrameCallback = video.requestVideoFrameCallback(() => {
         this._displayFrameCallback = 0;
         receivedFrame = true;
+        this._hasDecodedFrameOnce = true;
       });
     }
     this._displayHealthTimer = window.setTimeout(() => {
@@ -318,7 +321,10 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
       }
       const hasDecodedFrame = receivedFrame
         || (Number(video.readyState) >= 2 && Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0);
-      if (!hasDecodedFrame && (this._socket || this._peer || this._mediaSource)) {
+      if (hasDecodedFrame) {
+        this._hasDecodedFrameOnce = true;
+      }
+      if (this._hasDecodedFrameOnce && !hasDecodedFrame && (this._socket || this._peer || this._mediaSource)) {
         this._restartTransportForDisplayRecovery();
       }
     }, 1200);
@@ -337,7 +343,6 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
     this._resetModeTransport();
     this._modeQueue = [];
     this._activeMode = "";
-    this._startupStartedAt = Date.now();
     this._intentionalClose = false;
     this._connect();
   }
@@ -819,6 +824,7 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
   _markLoaded() {
     window.clearTimeout(this._modeTimer);
     this._modeTimer = 0;
+    this._hasDecodedFrameOnce = true;
     this._startupStartedAt = 0;
     this._emitState("loaded");
     this.dispatchEvent(new CustomEvent("nodalia-go2rtc-loaded", { bubbles: true, composed: true }));

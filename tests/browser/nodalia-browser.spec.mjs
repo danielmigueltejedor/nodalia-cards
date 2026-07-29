@@ -264,6 +264,105 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   await expect(cameraAction).toBeFocused();
 });
 
+test("Person supports native Lovelace tap hold double-tap and service actions", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const states = {
+      "person.test": { entity_id: "person.test", state: "home", attributes: { friendly_name: "John" } },
+    };
+    const person = document.createElement("nodalia-person-card");
+    person.setConfig({
+      entity: "person.test",
+      tap_action: { action: "navigate", navigation_path: "#bubblecard_john" },
+      hold_action: { action: "navigate", navigation_path: "/lovelace/person-hold" },
+      double_tap_action: { action: "navigate", navigation_path: "/lovelace/person-double" },
+    });
+    person.hass = window.makeHass(states);
+    window.personNativeActions = [];
+    person.addEventListener("hass-navigate", event => window.personNativeActions.push(event.detail.path));
+    document.querySelector("#fixture").append(person);
+
+    const serviceCalls = [];
+    const serviceHass = window.makeHass(states);
+    serviceHass.callService = async (domain, service, data, target) => {
+      serviceCalls.push({ domain, service, data, target });
+    };
+    const servicePerson = document.createElement("nodalia-person-card");
+    servicePerson.setConfig({
+      entity: "person.test",
+      tap_action: {
+        action: "perform-action",
+        perform_action: "script.person_action",
+        data: { source: "person-card" },
+        target: { entity_id: "script.person_action" },
+      },
+      security: { allowed_services: ["script.person_action"] },
+    });
+    servicePerson.hass = serviceHass;
+    servicePerson.dataset.testPersonService = "true";
+    document.querySelector("#fixture").append(servicePerson);
+    window.personServiceCalls = serviceCalls;
+  });
+
+  const action = page.locator("nodalia-person-card").first().locator('[data-person-action="primary"]');
+  await action.click();
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual(["#bubblecard_john"]);
+
+  await action.dblclick();
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
+    "#bubblecard_john",
+    "/lovelace/person-double",
+  ]);
+
+  await action.dispatchEvent("pointerdown", { pointerId: 11, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+  await page.waitForTimeout(560);
+  await action.dispatchEvent("pointerup", { pointerId: 11, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+  await action.click();
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
+    "#bubblecard_john",
+    "/lovelace/person-double",
+    "/lovelace/person-hold",
+  ]);
+
+  await page.locator('nodalia-person-card[data-test-person-service="true"]').locator('[data-person-action="primary"]').click();
+  await expect.poll(() => page.evaluate(() => window.personServiceCalls)).toEqual([{
+    domain: "script",
+    service: "person_action",
+    data: { source: "person-card" },
+    target: { entity_id: "script.person_action" },
+  }]);
+});
+
+test("Person visual editor exposes tap hold and double-tap configuration", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    const states = {
+      "person.test": { entity_id: "person.test", state: "home", attributes: { friendly_name: "John" } },
+    };
+    const ctor = customElements.get("nodalia-person-card");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      entity: "person.test",
+      tap_action: { action: "navigate", navigation_path: "#bubblecard_john" },
+      hold_action: { action: "perform-action", perform_action: "script.person_hold" },
+      double_tap_action: { action: "url", url_path: "https://example.com/person" },
+      security: { allowed_services: ["script.person_hold"] },
+    });
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-person-card-editor");
+  await editor.locator('[data-editor-toggle="tap_actions"]').click();
+  await expect(editor.locator('select[data-field="tap_action"]')).toHaveValue("navigate");
+  await expect(editor.locator('input[data-field="navigation_path"]')).toHaveValue("#bubblecard_john");
+  await expect(editor.locator('select[data-field="hold_action"]')).toHaveValue("service");
+  await expect(editor.locator('input[data-field="hold_service"]')).toHaveValue("script.person_hold");
+  await expect(editor.locator('select[data-field="double_tap_action"]')).toHaveValue("url");
+  await expect(editor.locator('input[data-field="double_tap_url"]')).toHaveValue("https://example.com/person");
+  await expect(editor.locator('input[data-field="security.allowed_services"]')).toHaveValue("script.person_hold");
+});
+
 test("Entity select bubble remains visible after its bounce animation", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {

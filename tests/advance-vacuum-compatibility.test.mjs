@@ -103,6 +103,37 @@ test("advanced vacuum routes room cleaning through Dreame and Xiaomi profiles", 
   assert.equal(xiaomi.calls[0].domain, "xiaomi_miio");
 });
 
+test("advanced vacuum preserves string room ids and never falls through to whole-house start", async () => {
+  const { card, calls } = createCard({ platform: "Roborock" });
+  card._activeMode = "rooms";
+  card._selectedRoomIds = ["living_room", "bathroom-main"];
+  card._repeats = 1;
+
+  await card._runMapAction();
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].domain, "vacuum");
+  assert.equal(calls[0].service, "send_command");
+  assert.equal(calls[0].data.command, "app_segment_clean");
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].data.params)), [{
+    segments: ["living_room", "bathroom-main"],
+    repeat: 1,
+  }]);
+});
+
+test("advanced vacuum rejects an invalid rooms selection instead of starting the whole house", async () => {
+  const { card, calls } = createCard({ platform: "Roborock" });
+  card._activeMode = "rooms";
+  card._selectedRoomIds = ["", "   "];
+  card._repeats = 1;
+
+  await assert.rejects(
+    card._runMapAction(),
+    /Selecciona al menos una habitación válida/,
+  );
+  assert.deepEqual(calls, []);
+});
+
 test("advanced vacuum honors compatible map_modes service schemas", async () => {
   const { card, calls } = createCard({ platform: "Dreame" });
   card._config.map_modes = [{
