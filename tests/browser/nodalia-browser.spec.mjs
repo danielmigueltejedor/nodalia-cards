@@ -137,6 +137,62 @@ test("every published card mounts from its stub configuration", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("entity-first picker receives relevant Nodalia card suggestions", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const suggestions = await page.evaluate(() => {
+    const states = {
+      "light.kitchen": { entity_id: "light.kitchen", state: "off", attributes: { friendly_name: "Kitchen" } },
+      "person.marco": { entity_id: "person.marco", state: "home", attributes: { friendly_name: "Marco" } },
+      "sensor.power": { entity_id: "sensor.power", state: "125", attributes: { friendly_name: "Power", unit_of_measurement: "W" } },
+      "sensor.news": { entity_id: "sensor.news", state: "2", attributes: { friendly_name: "News", items: [{ title: "One" }] } },
+      "vacuum.robot": { entity_id: "vacuum.robot", state: "docked", attributes: { friendly_name: "Robot" } },
+      "scene.relax": { entity_id: "scene.relax", state: "scening", attributes: { friendly_name: "Relax" } },
+      "calendar.family": { entity_id: "calendar.family", state: "off", attributes: { friendly_name: "Family" } },
+      "media_player.living_room": { entity_id: "media_player.living_room", state: "idle", attributes: { friendly_name: "Living room" } },
+    };
+    const hass = window.makeHass(states);
+    const forEntity = entityId => (window.customCards || []).flatMap(card => {
+      if (typeof card.getEntitySuggestion !== "function") return [];
+      const result = card.getEntitySuggestion(hass, entityId);
+      return result ? (Array.isArray(result) ? result : [result]) : [];
+    });
+    return Object.fromEntries(Object.keys(states).map(entityId => [entityId, forEntity(entityId)]));
+  });
+
+  const types = entityId => suggestions[entityId].map(item => item.config.type);
+  expect(types("light.kitchen")).toEqual(expect.arrayContaining([
+    "custom:nodalia-light-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(types("person.marco")).toEqual(expect.arrayContaining([
+    "custom:nodalia-person-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(types("sensor.power")).toEqual(expect.arrayContaining([
+    "custom:nodalia-circular-gauge-card",
+    "custom:nodalia-graph-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(types("sensor.power")).not.toContain("custom:nodalia-news-card");
+  expect(types("sensor.news")).toContain("custom:nodalia-news-card");
+  expect(types("vacuum.robot")).toEqual(expect.arrayContaining([
+    "custom:nodalia-vacuum-card",
+    "custom:nodalia-advance-vacuum-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(suggestions["scene.relax"].find(item => item.config.type === "custom:nodalia-scenes-card")?.config).toMatchObject({
+    layout: "single",
+    scenes: [{ entity: "scene.relax" }],
+  });
+  expect(suggestions["calendar.family"].find(item => item.config.type === "custom:nodalia-calendar-card")?.config).toMatchObject({
+    calendars: [{ entity: "calendar.family" }],
+  });
+  expect(suggestions["media_player.living_room"].find(item => item.config.type === "custom:nodalia-media-player")?.config).toMatchObject({
+    players: [{ entity: "media_player.living_room", label: "Living room" }],
+  });
+  expect(errors).toEqual([]);
+});
+
 test("Notifications keeps a new external-alert draft in the visual editor", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(async () => {

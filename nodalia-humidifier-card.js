@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.0.0-alpha.54";
+const CARD_VERSION = "2.0.0-alpha.55";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -136,16 +136,12 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-function applyStubEntity(config, hass, domains) {
-  const entityId = getStubEntityId(hass, domains);
+function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
   }
@@ -457,8 +453,12 @@ class NodaliaHumidifierCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["humidifier"]);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["humidifier"], entities, entitiesFallback);
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["humidifier"] });
   }
 
   constructor() {

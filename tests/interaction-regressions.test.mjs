@@ -447,7 +447,7 @@ test("scenes supports a dedicated single-scene surface and visual-editor option"
   const source = read("nodalia-scenes-card.js");
   const labels = JSON.parse(read("i18n/editor/en.json"));
   assert.match(source, /\["grid", "list", "single"\]\.includes\(layout\)/);
-  assert.match(source, /layout: "single", scenes: \[\{ entity: entityId \}\]/);
+  assert.match(source, /layout: "single",\s*scenes: \[\{ entity: selectedEntityId \}\]/);
   assert.match(source, /scenes-card--single/);
   assert.match(source, /const renderedEntries = isSingle \? entries\.slice\(0, 1\) : entries;/);
   assert.equal(labels["ed.scenes.layout_single"], "Single scene");

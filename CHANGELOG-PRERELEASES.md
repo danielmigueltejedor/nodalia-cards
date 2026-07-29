@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.55] - 2026-07-29
+
+Fifty-fifth **`2.0.0`** alpha: Nodalia suggestions in Home Assistant's entity-first card picker.
+
+### Added
+
+- **Entity-first card suggestions:** selecting an entity now offers the relevant Nodalia cards, including domain-specific cards alongside Entity Card and compatible multi-purpose cards.
+- **Structured suggestions:** scenes, calendars, media players, numeric sensors, news sensors and vacuums receive valid card-specific preview configurations using the selected entity.
+
+### Changed
+
+- **Stub selection:** legacy Lovelace creation flows now prioritize explicitly selected entities, then Home Assistant fallback entities, before scanning the full state registry.
+- **Custom-card registration:** shared metadata automatically exposes each card's entity suggestion provider through Home Assistant's official `getEntitySuggestion` contract.
+
+### Tests
+
+- Added domain-mapping, registration and selected-entity regressions plus full Chromium and WebKit/iPhone coverage for the new picker.
+
 ## [2.0.0-alpha.54] - 2026-07-29
 
 Fifty-fourth **`2.0.0`** alpha: working Lovelace navigation actions on Person Card.

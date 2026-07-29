@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "2.0.0-alpha.54";
+const CARD_VERSION = "2.0.0-alpha.55";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -110,14 +110,8 @@ const {
 
 
 
-function getStubEntityIds(hass, domains = [], limit = 1) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states)
-    .filter(entityId => (
-      !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-    ))
-    .slice(0, limit);
+function getStubEntityIds(hass, domains = [], limit = 1, entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, limit);
 }
 
 function getStubFriendlyName(hass, entityId) {
@@ -512,9 +506,15 @@ class NodaliaGraphCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
     const config = deepClone(STUB_CONFIG);
-    const entityIds = getStubEntityIds(hass, ["sensor", "number", "input_number"], 2);
+    const entityIds = getStubEntityIds(
+      hass,
+      ["sensor", "number", "input_number"],
+      2,
+      entities,
+      entitiesFallback,
+    );
     if (!entityIds.length) {
       return config;
     }
@@ -525,6 +525,18 @@ class NodaliaGraphCard extends HTMLElement {
       name: getStubFriendlyName(hass, entityId),
     }));
     return config;
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["sensor", "number", "input_number"],
+      buildConfig: (_hass, selectedEntityId) => ({
+        entities: [{
+          entity: selectedEntityId,
+          name: getStubFriendlyName(hass, selectedEntityId),
+        }],
+      }),
+    });
   }
 
   constructor() {
