@@ -1,6 +1,6 @@
 # Translating Nodalia Cards
 
-Nodalia Cards is actively improving localization during the `1.1.0` line. Translation pull requests are welcome, including small wording fixes, missing editor labels, and complete new languages.
+Nodalia Cards maintains synchronized runtime and visual-editor catalogs across every supported language. Translation pull requests are welcome, including small wording fixes, missing editor labels, and complete new languages.
 
 ## Community translations (Crowdin)
 
@@ -107,19 +107,19 @@ pnpm run bundle
 5. Run the validation step:
 
 ```bash
-npm run i18n:validate-editor
+pnpm run i18n:validate-editor
 ```
 
 6. Regenerate the embedded editor catalog:
 
 ```bash
-npm run i18n:gen-editor
+pnpm run i18n:gen-editor
 ```
 
 7. Build the bundle before testing a packaged install:
 
 ```bash
-npm run bundle
+pnpm run bundle
 ```
 
 ## 7. Adding a new editor language
@@ -133,18 +133,18 @@ cp i18n/editor/en.json i18n/editor/ja.json
 ```
 
 2. Translate the values in `i18n/editor/ja.json`.
-3. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs`.
-4. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs`, add `ja` to `RUNTIME_LANGS` in `scripts/gen-runtime-i18n.mjs`, copy `i18n/runtime/en.json` to `i18n/runtime/ja.json`, then extend `nodalia-i18n.js` (outside the generated pack) only where needed: `localeTag()`, `baseLang()` / alias handling in `resolveLanguage`, and any card-specific language lists.
+3. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs` and to `RUNTIME_LANGS` in `scripts/gen-runtime-i18n.mjs`.
+4. Copy `i18n/runtime/en.json` to `i18n/runtime/ja.json`, translate it, then extend `nodalia-i18n.js` (outside the generated pack) only where needed: `localeTag()`, `baseLang()` / alias handling in `resolveLanguage`, and any card-specific language lists.
 
 5. Run:
 
 ```bash
-npm run i18n:validate-editor
-npm run i18n:gen-editor
-npm run i18n:validate-runtime
-npm run i18n:gen-runtime
-npm run bundle
-npm test
+pnpm run i18n:validate-editor
+pnpm run i18n:gen-editor
+pnpm run i18n:validate-runtime
+pnpm run i18n:gen-runtime
+pnpm run bundle
+pnpm test
 ```
 
 ## 8. Adding runtime translation keys
@@ -176,7 +176,7 @@ Hardcoded strings make localization harder and can cause mixed-language dashboar
 1. Build the bundle:
 
 ```bash
-npm run bundle
+pnpm run bundle
 ```
 
 2. Install or copy the generated card file used by your resource.
@@ -214,12 +214,12 @@ Nodalia's `language: auto` follows the Home Assistant profile language. You can 
 Before opening a translation PR:
 
 ```bash
-npm run i18n:validate-editor
-npm run i18n:gen-editor
-npm run i18n:validate-runtime
-npm run i18n:gen-runtime
-npm run bundle
-npm test
+pnpm run i18n:validate-editor
+pnpm run i18n:gen-editor
+pnpm run i18n:validate-runtime
+pnpm run i18n:gen-runtime
+pnpm run bundle
+pnpm test
 ```
 
 Then include in the PR description:

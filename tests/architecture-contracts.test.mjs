@@ -135,8 +135,42 @@ test("Scenes and Calendar integrate with Sections and entity suggestions", () =>
     assert.match(source, /getGridOptions\(\)/);
     assert.match(source, /rows: "auto"/);
     assert.match(source, /static getEntitySuggestion\(/);
-    assert.match(source, new RegExp(`startsWith\\("${domain}\\."\\)`));
+    assert.match(source, /createEntitySuggestion\(CARD_TAG, hass, entityId/);
+    assert.match(source, new RegExp(`domains: \\["${domain}"\\]`));
   }
+});
+
+test("entity-first suggestions cover every entity-centric Nodalia card", () => {
+  const expectedDomains = new Map([
+    ["nodalia-light-card.js", "light"],
+    ["nodalia-fan-card.js", "fan"],
+    ["nodalia-humidifier-card.js", "humidifier"],
+    ["nodalia-cover-card.js", "cover"],
+    ["nodalia-climate-card.js", "climate"],
+    ["nodalia-alarm-panel-card.js", "alarm_control_panel"],
+    ["nodalia-vacuum-card.js", "vacuum"],
+    ["nodalia-advance-vacuum-card.js", "vacuum"],
+    ["nodalia-person-card.js", "person"],
+    ["nodalia-weather-card.js", "weather"],
+    ["nodalia-camera-card.js", "camera"],
+    ["nodalia-media-player.js", "media_player"],
+    ["nodalia-scenes-card.js", "scene"],
+    ["nodalia-calendar-card.js", "calendar"],
+  ]);
+  for (const [file, domain] of expectedDomains) {
+    const source = read(file);
+    assert.match(source, /static getEntitySuggestion\(hass, entityId\)/, file);
+    assert.match(source, /createEntitySuggestion\(CARD_TAG, hass, entityId/, file);
+    assert.match(source, new RegExp(`"${domain}"`), file);
+  }
+
+  const entity = read("nodalia-entity-card.js");
+  assert.match(entity, /createEntitySuggestion\(CARD_TAG, hass, entityId\);/);
+  for (const file of ["nodalia-circular-gauge-card.js", "nodalia-graph-card.js"]) {
+    const source = read(file);
+    assert.match(source, /"sensor", "number", "input_number"/, file);
+  }
+  assert.match(read("nodalia-news-card.js"), /attributes\?\.items/);
 });
 
 test("complex cards keep policy and state projection outside view components", () => {

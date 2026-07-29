@@ -4,11 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Prerelease history for `1.0.0-alpha.*` / `1.0.0-beta.*`, the completed `1.1.0-alpha.*` line, completed **`1.1.1-alpha.*`** builds, completed **`1.1.2-alpha.*`** builds, completed **`1.1.3-alpha.*`** builds, completed **`1.2.0-alpha.*`** builds, completed **`1.2.1-alpha.*`** builds, completed **`1.2.1.1-alpha.*`** hotfix builds, completed **`1.2.2-alpha.*`** builds, completed **`1.3.0-alpha.*`** builds, completed **`1.3.1-alpha.*`** builds, completed **`1.3.2-alpha.*`** builds, completed **`1.3.3-alpha.*`** builds, completed **`1.3.4-alpha.*`** builds, and completed **`1.3.5-alpha.*`** builds is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Detailed prerelease history through the current **`2.0.0`** alpha and release-candidate cycle is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
+
+### Changed
+
+- **Documentation:** align installation, release-channel, roadmap, translation, architecture and historical-audit guidance with stable `1.3.5` and preview `2.0.0-rc.1`.
+- **Repository automation:** update JavaScript Actions to their Node 24 generations with immutable commit pins, scan `beta` with CodeQL, and make issue release guidance aware of alpha, beta, RC and stable versions.
+- **Issue intake:** synchronize all issue forms with the 24-card bundle, remove the retired Battery Card option and add Norwegian to translation reports.
+- **Contributor toolchain:** update the pinned pnpm and Playwright patch releases while continuing to test the minimum supported Node 22 runtime.
 
 ## [1.3.5] - 2026-07-03
 

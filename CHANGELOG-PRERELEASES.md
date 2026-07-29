@@ -1,14 +1,141 @@
 # Changelog — prerelease archives
 
-This file archives detailed per-build notes for **`1.0.0-alpha.*`**, **`1.0.0-beta.*`**, the **`1.1.0-alpha.*`** line (copied from [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.0]`** shipped as stable), completed **`1.1.1-alpha.*`** prereleases, completed **`1.1.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.2]`** shipped as stable), completed **`1.1.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.1.3]`** shipped as stable), completed **`1.2.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.0]`** shipped as stable), completed **`1.2.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1]`** shipped as stable), completed **`1.2.1.1-alpha.*`** hotfix prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.2.1.1]`** shipped as stable), completed **`1.2.2-alpha.*`** prereleases, completed **`1.3.0-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.0]`** shipped as stable), completed **`1.3.1-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.1]`** shipped as stable), completed **`1.3.2-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.2]`** shipped as stable), completed **`1.3.3-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.3]`** shipped as stable), completed **`1.3.4-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.4]`** shipped as stable), and completed **`1.3.5-alpha.*`** prereleases (copied to [`CHANGELOG.md`](./CHANGELOG.md) when **`[1.3.5]`** shipped as stable), and **`2.0.0-alpha.*`** prereleases.
+This file archives detailed per-build notes for all alpha, beta and release-candidate cycles. Stable release summaries remain in [`CHANGELOG.md`](./CHANGELOG.md).
 
-Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** for a future **2.0.0** release — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
+Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is not part of the active `2.0.0` preview line — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
 For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
+
+## [2.0.0-alpha.56] - 2026-07-29
+
+Fifty-sixth **`2.0.0`** alpha: entity-native icons by default on Entity and Fav cards.
+
+### Changed
+
+- **Entity Card icons:** new cards now inherit the Home Assistant entity icon by default, including state- and device-class-aware fallbacks when the entity does not define `attributes.icon`.
+- **Fav Card icons:** favorites now inherit their associated entity icon instead of showing a generic star in the usual case.
+- **Manual overrides:** explicitly configured icons remain higher priority than inherited icons, while active/inactive Entity Card icons retain the highest priority.
+- **Fallback behavior:** `mdi:tune` on Entity Card and `mdi:star-four-points` on Fav Card are now used only when no configured, native or inferred entity icon is available.
+
+### Tests
+
+- Added source and browser regressions covering inherited, entity-defined and manual icons in Chromium and WebKit/iPhone.
+
+## [2.0.0-alpha.55] - 2026-07-29
+
+Fifty-fifth **`2.0.0`** alpha: Nodalia suggestions in Home Assistant's entity-first card picker.
+
+### Added
+
+- **Entity-first card suggestions:** selecting an entity now offers the relevant Nodalia cards, including domain-specific cards alongside Entity Card and compatible multi-purpose cards.
+- **Structured suggestions:** scenes, calendars, media players, numeric sensors, news sensors and vacuums receive valid card-specific preview configurations using the selected entity.
+
+### Changed
+
+- **Stub selection:** legacy Lovelace creation flows now prioritize explicitly selected entities, then Home Assistant fallback entities, before scanning the full state registry.
+- **Custom-card registration:** shared metadata automatically exposes each card's entity suggestion provider through Home Assistant's official `getEntitySuggestion` contract.
+
+### Tests
+
+- Added domain-mapping, registration and selected-entity regressions plus full Chromium and WebKit/iPhone coverage for the new picker.
+
+## [2.0.0-alpha.54] - 2026-07-29
+
+Fifty-fourth **`2.0.0`** alpha: working Lovelace navigation actions on Person Card.
+
+### Fixed
+
+- **Person Card navigation:** `tap_action`, `hold_action` and `double_tap_action` navigation now use Home Assistant's real history and `location-changed` flow, so dashboard paths and hash routes such as `#marcomap` open correctly.
+- **Browser regression:** navigation coverage now verifies the resulting browser URL in Chromium and WebKit/iPhone instead of accepting an unhandled card-local event.
+
+## [2.0.0-alpha.53] - 2026-07-29
+
+Fifty-third **`2.0.0`** alpha: standard Person Card actions and high-severity camera and vacuum safeguards.
+
+### Added
+
+- **Person Card actions:** `tap_action`, `hold_action` and `double_tap_action` now support the standard Lovelace actions for navigation, more-info, toggle, URL opening and service execution, including strict service allowlists.
+- **Person Card editor:** all three gestures and their contextual action fields can be configured from the visual editor without writing YAML.
+
+### Fixed
+
+- **Camera live view:** display recovery no longer tears down go2rtc during its initial negotiation; hard recovery is reserved for a stream that has already decoded a frame, preventing mobile reconnect storms and black or stuck feeds.
+- **Advanced Vacuum rooms:** selected room identifiers are preserved when integrations expose string or map-key IDs, and an invalid segment selection now reports an error instead of falling through to a whole-house `vacuum.start` call.
+
+## [2.0.0-alpha.52] - 2026-07-29
+
+Fifty-second **`2.0.0`** alpha: compact Advanced Vacuum platform controls in the visual editor.
+
+### Fixed
+
+- **Advanced Vacuum editor:** the platform selector no longer stretches to the height of the adjacent MQTT help text, uses the same compact 40 px control height as the rest of the form and restores a clear dropdown chevron.
+- **Contextual configuration:** the platform selector uses the full editor width and the Valetudo MQTT topic is shown only when the Valetudo platform is selected.
+
+## [2.0.0-alpha.51] - 2026-07-29
+
+Fifty-first **`2.0.0`** alpha: broader Advanced Vacuum compatibility and live room tracking.
+
+### Added
+
+- **Advanced Vacuum platforms:** automatic and explicit adapters for Roborock, Dreame Vacuum, Xiaomi Miio, current Ecovacs, legacy Deebot Universe, Matter/Home Assistant, Valetudo MQTT and generic `send_command` configurations.
+- **Live room tracking:** active room and area identifiers can be read from vacuum/map attributes or related Home Assistant entities, with optional explicit room and activity sensors in the visual editor.
+- **Standard area cleaning:** compatible entities can use Home Assistant's native `vacuum.clean_area` mapping, while vendor-specific room, zone and go-to actions retain their native service formats.
+
+### Fixed
+
+- **Room highlighting:** live integration data now takes precedence over shared helper state; idle current-room sensors no longer leave stale highlights, while active rooms remain visible during mop-wash, drying and auto-empty interludes.
+- **Service safety:** native `clean_area` is selected only when the target vacuum advertises the feature, and configured map schemas cannot act on another vacuum or bypass strict service policy through a mismatched platform.
+
+### Changed
+
+- **Advanced Vacuum editor:** platform selection defaults to automatic detection and exposes Valetudo topic, live-room entity, activity entity, attribute and auto-detection controls.
+- **Documentation and tests:** the compatibility matrix, configuration example and cross-platform regression suite document and lock the supported behavior.
+
+## [2.0.0-rc.1] - 2026-07-28
+
+First **`2.0.0`** release candidate: final pre-stable security, lifecycle, rendering, bundle and release audit.
+
+### Fixed
+
+- **Tracked state:** Power Flow and Room Summary now invalidate against the complete set of entities that affect their projections, including camera, power, air-quality, lock, door, window and alert state.
+- **Interaction lifecycle:** long-press handlers reconnect cleanly across Entity, Light, Fan, Humidifier, Cover, Vacuum and Scenes; Fav animation frames are guarded after disconnect.
+- **Security:** Room Summary applies strict allowlists to configured service actions, while built-in controls retain their intended safe paths; navigation media routes validate destinations before use.
+- **Build integrity:** esbuild consumes in-memory input, generated artifacts use atomic writes, and release hashes are calculated from the exact buffers written to disk.
+
+### Changed
+
+- **Release gate:** the complete unit/regression suite and Chromium/WebKit interaction suite cover the audited RC behavior.
+- **Compatibility loaders:** Alpha 49 and Alpha 50 remain as bounded aliases to the RC bundle.
+
+## [2.0.0-alpha.50] - 2026-07-28
+
+Fiftieth **`2.0.0`** alpha: reliable built-in controls, smoother media updates and resilient mobile camera playback.
+
+### Fixed
+
+- **Vacuum Card:** Start, Pause, Stop, Dock, Locate, fan-speed and area-clean controls use the trusted built-in service path, so strict user-action allowlists cannot silently disable them.
+- **Navigation media:** volume adjustments patch their local controls without rebuilding and flashing the full card.
+- **Camera Card:** go2rtc startup is faster, fullscreen survives mobile orientation changes without a black video surface, and Safari audio recovery stays connected to the active stream lifecycle.
+- **Person Card:** compact default avatar and typography values align with the rest of the Nodalia visual family.
+
+## [2.0.0-alpha.49] - 2026-07-28
+
+Forty-ninth **`2.0.0`** alpha: hardened mobile notification policy and broader visual consistency.
+
+### Fixed
+
+- **Notifications delivery:** foreground push requires an enabled mobile policy and valid targets; queued batches re-resolve presence, quiet hours, dismissal and background-sync policy at flush time.
+- **Notifications reactivity:** presence and shared-dismiss helpers are tracked, and quiet-hours boundaries schedule a policy wake-up instead of waiting for an unrelated Home Assistant update.
+- **Release validation:** filesystem checks avoid time-of-check/time-of-use races reported by CodeQL.
+
+### Changed
+
+- **Visual family:** Person and Fav surfaces align more closely with shared card geometry and tinting, and Scenes supports a dedicated single-scene presentation alongside the mosaic mode.
+- **Security defaults and architecture:** service-action policy, support models and regression contracts were tightened ahead of the release-candidate audit.
 
 ## [2.0.0-alpha.48] - 2026-07-23
 

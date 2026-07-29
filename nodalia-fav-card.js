@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -24,7 +24,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
-  use_entity_icon: false,
+  use_entity_icon: true,
   entity_mode: "auto",
   tap_action: "auto",
   tap_service: "",
@@ -104,16 +104,12 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-function applyStubEntity(config, hass, domains) {
-  const entityId = getStubEntityId(hass, domains);
+function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
   }
@@ -502,8 +498,14 @@ class NodaliaFavCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light", "switch"]);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light", "switch"], entities, entitiesFallback);
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["light", "switch"],
+    });
   }
 
   constructor() {
@@ -1012,14 +1014,19 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    const configuredIcon = String(this._config?.icon || "").trim();
+    if (configuredIcon) {
+      return configuredIcon;
+    }
+
     if (this._config?.use_entity_icon === true) {
-      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
+      const resolvedEntityIcon = String(state?.attributes?.icon || "").trim() || getDynamicEntityIcon(state);
       if (resolvedEntityIcon) {
         return resolvedEntityIcon;
       }
     }
 
-    return this._config?.icon || state?.attributes?.icon || "mdi:star-four-points";
+    return String(state?.attributes?.icon || "").trim() || "mdi:star-four-points";
   }
 
   _canRunTapAction(state) {

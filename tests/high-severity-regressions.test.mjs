@@ -93,6 +93,24 @@ test("vacuum primary controls are never blocked by strict configured-action secu
   }
 });
 
+test("go2rtc display recovery cannot interrupt initial negotiation or reset its error budget", () => {
+  const source = read("nodalia-go2rtc-player.js");
+  assert.match(source, /this\._hasDecodedFrameOnce && !hasDecodedFrame/);
+  assert.match(source, /_markLoaded\(\) \{[\s\S]*?this\._hasDecodedFrameOnce = true;/);
+  const restartStart = source.indexOf("  _restartTransportForDisplayRecovery() {");
+  const restartEnd = source.indexOf("\n  _handleVideoVolumeChange()", restartStart);
+  const restart = source.slice(restartStart, restartEnd);
+  assert.doesNotMatch(restart, /_startupStartedAt\s*=/);
+});
+
+test("advanced vacuum rooms mode cannot fall through to whole-house cleaning", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(
+    source,
+    /if \(this\._activeMode === "rooms"\) \{[\s\S]*?if \(!roomIds\.length\) \{[\s\S]*?throw new Error/,
+  );
+});
+
 test("climate popup viewport constraints remain valid CSS functions", () => {
   const source = read("nodalia-climate-card.js");
   assert.doesNotMatch(source, /min\(100vw\s*-\s*\d+px,/);

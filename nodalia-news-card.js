@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-news-card";
 const EDITOR_TAG = "nodalia-news-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.56";
 
 const MAGAZINE_SWIPE_THRESHOLD_PX = 48;
 const MAGAZINE_SWIPE_LOCK_PX = 10;
@@ -782,17 +782,36 @@ class NodaliaNewsCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
     const config = deepClone(STUB_CONFIG);
-    const entityId = Object.keys(hass?.states || {}).find(id => (
-      id.startsWith("sensor.")
-      && Array.isArray(hass.states[id]?.attributes?.items)
-      && hass.states[id].attributes.items.length
-    ));
+    const entityId = window.NodaliaUtils
+      .findStubEntityIds(
+        hass,
+        entities,
+        entitiesFallback,
+        ["sensor"],
+        Object.keys(hass?.states || {}).length,
+      )
+      .find(id => (
+        Array.isArray(hass.states[id]?.attributes?.items)
+        && hass.states[id].attributes.items.length
+      ));
     if (entityId) {
       config.sources = [{ entity: entityId, name: "News" }];
     }
     return config;
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["sensor"],
+      isSupported: (_hass, selectedEntityId) => (
+        Array.isArray(hass?.states?.[selectedEntityId]?.attributes?.items)
+      ),
+      buildConfig: (_hass, selectedEntityId) => ({
+        sources: [{ entity: selectedEntityId, name: "News" }],
+      }),
+    });
   }
 
   constructor() {

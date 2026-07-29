@@ -194,3 +194,65 @@ test("NodaliaUtils deduplicates repeated customCards registrations", () => {
     ["nodalia-cover-card:Cover 2", "nodalia-light-card:Fresh light"],
   );
 });
+
+test("NodaliaUtils builds and registers Home Assistant entity-first suggestions", () => {
+  const code = fs.readFileSync(new URL("../nodalia-utils.js", import.meta.url), "utf8");
+  const definitions = new Map();
+  const sandbox = {
+    window: {
+      customCards: [],
+      customElements: { get: tag => definitions.get(tag) },
+      location: { origin: "https://ha.test" },
+    },
+    console,
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(code, sandbox);
+
+  const hass = {
+    states: {
+      "switch.first": { entity_id: "switch.first", attributes: {} },
+      "light.selected": { entity_id: "light.selected", attributes: { friendly_name: "Selected" } },
+      "light.fallback": { entity_id: "light.fallback", attributes: {} },
+    },
+  };
+  assert.deepStrictEqual(
+    Array.from(sandbox.window.NodaliaUtils.findStubEntityIds(
+      hass,
+      ["switch.first", "light.selected"],
+      ["light.fallback"],
+      ["light"],
+      2,
+    )),
+    ["light.selected", "light.fallback"],
+  );
+
+  class SuggestedLightCard {
+    static getEntitySuggestion(cardHass, entityId) {
+      return sandbox.window.NodaliaUtils.createEntitySuggestion(
+        "nodalia-light-card",
+        cardHass,
+        entityId,
+        { domains: ["light"] },
+      );
+    }
+  }
+  definitions.set("nodalia-light-card", SuggestedLightCard);
+  sandbox.window.NodaliaUtils.registerCustomCard({
+    type: "nodalia-light-card",
+    name: "Nodalia Light Card",
+  });
+
+  const provider = sandbox.window.customCards[0].getEntitySuggestion;
+  assert.strictEqual(typeof provider, "function");
+  assert.strictEqual(provider(hass, "switch.first"), null);
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(provider(hass, "light.selected"))),
+    {
+      config: {
+        entity: "light.selected",
+        type: "custom:nodalia-light-card",
+      },
+    },
+  );
+});

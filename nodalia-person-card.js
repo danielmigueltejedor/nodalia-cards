@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -16,6 +16,29 @@ const DEFAULT_CONFIG = {
   name: "",
   icon: "",
   tap_action: "more-info",
+  tap_service: "",
+  tap_service_data: "",
+  tap_service_target: "",
+  tap_url: "",
+  navigation_path: "",
+  tap_new_tab: false,
+  tap_action_entity: "",
+  hold_action: "none",
+  hold_service: "",
+  hold_service_data: "",
+  hold_service_target: "",
+  hold_url: "",
+  hold_navigation_path: "",
+  hold_new_tab: false,
+  hold_action_entity: "",
+  double_tap_action: "none",
+  double_tap_service: "",
+  double_tap_service_data: "",
+  double_tap_service_target: "",
+  double_tap_url: "",
+  double_tap_navigation_path: "",
+  double_tap_new_tab: false,
+  double_tap_action_entity: "",
   language: "auto",
   show_name: true,
   show_state: true,
@@ -31,6 +54,11 @@ const DEFAULT_CONFIG = {
     enabled: true,
     content_duration: 420,
     button_bounce_duration: 320,
+  },
+  security: {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
   },
   styles: {
     card: {
@@ -79,16 +107,12 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-function applyStubEntity(config, hass, domains) {
-  const entityId = getStubEntityId(hass, domains);
+function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
   }
@@ -186,7 +210,62 @@ function isUnavailableState(state) {
 }
 
 function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const config = mergeConfig(DEFAULT_CONFIG, raw);
+  const actionDefinitions = [
+    {
+      prefix: "tap",
+      rawValue: raw.tap_action ?? config.tap_action,
+      fallback: "more-info",
+      navigationKey: "navigation_path",
+    },
+    {
+      prefix: "hold",
+      rawValue: raw.hold_action ?? config.hold_action,
+      fallback: "none",
+      navigationKey: "hold_navigation_path",
+    },
+    {
+      prefix: "double_tap",
+      rawValue: raw.double_tap_action ?? config.double_tap_action,
+      fallback: "none",
+      navigationKey: "double_tap_navigation_path",
+    },
+  ];
+  const applyAction = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  if (typeof applyAction === "function") {
+    actionDefinitions.forEach(({ prefix, rawValue, fallback, navigationKey }) => {
+      applyAction(config, {
+        actionKey: `${prefix}_action`,
+        serviceKey: `${prefix}_service`,
+        serviceDataKey: `${prefix}_service_data`,
+        serviceTargetKey: `${prefix}_service_target`,
+        urlKey: `${prefix}_url`,
+        navigationKey,
+        newTabKey: `${prefix}_new_tab`,
+      }, rawValue, fallback);
+    });
+  }
+
+  const allowedActions = new Set(["toggle", "more-info", "service", "navigate", "url", "none"]);
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
+  actionDefinitions.forEach(({ prefix, rawValue, fallback, navigationKey }) => {
+    const actionKey = `${prefix}_action`;
+    const normalizedAction = String(config[actionKey] ?? fallback).trim().toLowerCase();
+    config[actionKey] = allowedActions.has(normalizedAction) ? normalizedAction : fallback;
+    config[`${prefix}_service`] = String(config[`${prefix}_service`] ?? "").trim();
+    config[`${prefix}_service_data`] = serializeActionObject(config[`${prefix}_service_data`]);
+    config[`${prefix}_service_target`] = serializeActionObject(config[`${prefix}_service_target`]);
+    config[`${prefix}_url`] = String(config[`${prefix}_url`] ?? "").trim();
+    config[navigationKey] = String(config[navigationKey] ?? "").trim();
+    config[`${prefix}_new_tab`] = config[`${prefix}_new_tab`] === true;
+    const configuredEntity = isObject(rawValue) ? rawValue.entity : config[`${prefix}_action_entity`];
+    config[`${prefix}_action_entity`] = String(configuredEntity ?? "").trim();
+  });
+  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
   return config;
@@ -197,8 +276,12 @@ class NodaliaPersonCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["person"]);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["person"], entities, entitiesFallback);
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["person"] });
   }
 
   constructor() {
@@ -216,9 +299,29 @@ class NodaliaPersonCard extends HTMLElement {
     this._displayPictureUrl = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this._detachHostHold = () => {};
+    this._suppressNextPersonTap = false;
   }
 
   connectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => event.composedPath().some(
+              node => node instanceof HTMLElement && node.dataset?.personAction === "primary",
+            ) ? "body" : null,
+            shouldBeginHold: () => this._canRunPersonAction("hold"),
+            onHold: () => {
+              this._triggerPrimaryPressAnimation();
+              this._performPersonAction("hold");
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextPersonTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     this._animateContentOnNextRender = true;
@@ -229,6 +332,10 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold = () => {};
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    this._suppressNextPersonTap = false;
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     if (this._entranceAnimationResetTimer) {
@@ -599,6 +706,15 @@ class NodaliaPersonCard extends HTMLElement {
       this._config.use_zone_icon !== false,
       this._config.name || "",
       this._config.icon || "",
+      this._config.tap_action || "",
+      this._config.hold_action || "",
+      this._config.double_tap_action || "",
+      this._config.tap_service || "",
+      this._config.hold_service || "",
+      this._config.double_tap_service || "",
+      this._config.navigation_path || "",
+      this._config.hold_navigation_path || "",
+      this._config.double_tap_navigation_path || "",
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "person:", values }]);
@@ -606,13 +722,43 @@ class NodaliaPersonCard extends HTMLElement {
     return values.join("::");
   }
 
-  _canRunTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
+  _personActionPrefix(kind = "tap") {
+    return kind === "double" || kind === "double_tap" ? "double_tap" : kind === "hold" ? "hold" : "tap";
+  }
+
+  _personActionNavigationKey(prefix) {
+    return prefix === "tap" ? "navigation_path" : `${prefix}_navigation_path`;
+  }
+
+  _personActionEntity(prefix) {
+    return String(this._config?.[`${prefix}_action_entity`] || this._config?.entity || "").trim();
+  }
+
+  _canRunPersonAction(kind = "tap") {
+    const prefix = this._personActionPrefix(kind);
+    const fallback = prefix === "tap" ? "more-info" : "none";
+    const action = String(this._config?.[`${prefix}_action`] || fallback).trim().toLowerCase();
     if (action === "none") {
       return false;
     }
+    if (action === "service") {
+      return Boolean(String(this._config?.[`${prefix}_service`] || "").trim());
+    }
+    if (action === "navigate") {
+      return Boolean(String(this._config?.[this._personActionNavigationKey(prefix)] || "").trim());
+    }
+    if (action === "url") {
+      return Boolean(String(this._config?.[`${prefix}_url`] || "").trim());
+    }
+    return Boolean(this._personActionEntity(prefix));
+  }
 
-    return Boolean(this._config?.entity);
+  _canRunTapAction() {
+    return this._canRunPersonAction("tap");
+  }
+
+  _canRunAnyPersonAction() {
+    return ["tap", "hold", "double_tap"].some(kind => this._canRunPersonAction(kind));
   }
 
   _triggerHaptic(styleOverride = null) {
@@ -700,19 +846,145 @@ class NodaliaPersonCard extends HTMLElement {
     }, safeDelay);
   }
 
-  _performTapAction() {
-    const action = String(this._config?.tap_action || "more-info");
-    if (action === "none") {
+  _parsePersonActionObject(value) {
+    if (isObject(value)) {
+      return deepClone(value);
+    }
+    const source = String(value || "").trim();
+    if (!source) {
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(source);
+      return isObject(parsed) ? parsed : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  _isConfiguredPersonServiceAllowed(serviceValue) {
+    const security = this._config?.security || DEFAULT_CONFIG.security;
+    if (security.strict_service_actions === false) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    const separator = normalizedService.indexOf(".");
+    if (separator <= 0 || separator >= normalizedService.length - 1) {
+      return false;
+    }
+    const domain = normalizedService.slice(0, separator);
+    const allowedServices = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const allowedDomains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
+  }
+
+  _invokePersonService(domain, service, data = {}, target = null) {
+    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
+    if (typeof invoke === "function") {
+      return invoke(this, this._hass, domain, service, data, target);
+    }
+    return Promise.resolve(this._hass?.callService?.(domain, service, data, target || undefined));
+  }
+
+  _runConfiguredPersonService(prefix) {
+    const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
+    const separator = serviceValue.indexOf(".");
+    if (separator <= 0 || separator >= serviceValue.length - 1) {
       return;
     }
+    if (!this._isConfiguredPersonServiceAllowed(serviceValue)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Person Card", serviceValue);
+      return;
+    }
+    const data = this._parsePersonActionObject(this._config?.[`${prefix}_service_data`]);
+    const target = this._parsePersonActionObject(this._config?.[`${prefix}_service_target`]);
+    void this._invokePersonService(
+      serviceValue.slice(0, separator),
+      serviceValue.slice(separator + 1),
+      data,
+      Object.keys(target).length ? target : null,
+    );
+  }
+
+  _openPersonNavigation(value) {
+    const path = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
+    if (!path || path.includes("://")) {
+      return;
+    }
+
+    if (this._hass?.navigate) {
+      this._hass.navigate(path);
+      return;
+    }
+
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", path);
+      window.dispatchEvent(new CustomEvent("location-changed", {
+        detail: { replace: false },
+      }));
+      return;
+    }
+
+    fireEvent(this, "hass-navigate", { path });
+  }
+
+  _openPersonUrl(value, newTab = false) {
+    const url = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
+    if (!url) {
+      return;
+    }
+    window.open(url, newTab ? "_blank" : "_self", "noopener,noreferrer");
+  }
+
+  _performPersonAction(kind = "tap") {
+    const prefix = this._personActionPrefix(kind);
+    if (!this._canRunPersonAction(prefix)) {
+      return;
+    }
+    const fallback = prefix === "tap" ? "more-info" : "none";
+    const action = String(this._config?.[`${prefix}_action`] || fallback).trim().toLowerCase();
 
     this._triggerHaptic();
 
     if (action === "more-info") {
       fireEvent(this, "hass-more-info", {
-        entityId: this._config.entity,
+        entityId: this._personActionEntity(prefix),
       });
+      return;
     }
+    if (action === "toggle") {
+      void this._invokePersonService("homeassistant", "toggle", {
+        entity_id: this._personActionEntity(prefix),
+      });
+      return;
+    }
+    if (action === "service") {
+      this._runConfiguredPersonService(prefix);
+      return;
+    }
+    if (action === "navigate") {
+      this._openPersonNavigation(this._config?.[this._personActionNavigationKey(prefix)]);
+      return;
+    }
+    if (action === "url") {
+      this._openPersonUrl(
+        this._config?.[`${prefix}_url`],
+        this._config?.[`${prefix}_new_tab`] === true,
+      );
+    }
+  }
+
+  _performTapAction() {
+    this._performPersonAction("tap");
+  }
+
+  _triggerPrimaryPressAnimation() {
+    this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__content"));
+    this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__avatar"));
   }
 
   _onShadowClick(event) {
@@ -726,16 +998,49 @@ class NodaliaPersonCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
-    this._triggerPressAnimation(this.shadowRoot.querySelector(".person-card__content"));
-    this._triggerPressAnimation(this.shadowRoot.querySelector(".person-card__avatar"));
-    this._performTapAction();
+
+    if (this._suppressNextPersonTap) {
+      this._suppressNextPersonTap = false;
+      return;
+    }
+
+    const runTap = () => {
+      if (!this._canRunPersonAction("tap")) {
+        return;
+      }
+      this._triggerPrimaryPressAnimation();
+      this._performPersonAction("tap");
+    };
+    const runDoubleTap = () => {
+      if (!this._canRunPersonAction("double_tap")) {
+        return;
+      }
+      this._triggerPrimaryPressAnimation();
+      this._performPersonAction("double_tap");
+    };
+
+    if (this._canRunPersonAction("double_tap") && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+      window.NodaliaUtils.scheduleCardZoneTap(this, {
+        zone: "body",
+        onSingle: runTap,
+        onDouble: runDoubleTap,
+      });
+      return;
+    }
+    runTap();
   }
 
   _onShadowKeyDown(event) {
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
-    this._onShadowClick(event);
+    event.preventDefault();
+    event.stopPropagation();
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    if (this._canRunPersonAction("tap")) {
+      this._triggerPrimaryPressAnimation();
+      this._performPersonAction("tap");
+    }
   }
 
   _personUiCopy() {
@@ -803,7 +1108,7 @@ class NodaliaPersonCard extends HTMLElement {
     const fallbackIcon = this._getFallbackIcon(state);
     const badge = this._getBadgeDescriptor(state);
     const accentColor = this._getAccentColor(state);
-    const canRunPrimaryAction = this._canRunTapAction();
+    const canRunPrimaryAction = this._canRunAnyPersonAction();
     const singleRowPaddingY = singleRowLayout ? 4 : 12;
     const singleRowPaddingX = singleRowLayout ? 9 : 12;
     const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 38), singleRowLayout ? 38 : 68));
@@ -1385,6 +1690,13 @@ class NodaliaPersonCardEditor extends HTMLElement {
         return Boolean(input.checked);
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      case "csv": {
+        const values = String(input.value || "")
+          .split(",")
+          .map(item => item.trim().toLowerCase())
+          .filter(Boolean);
+        return values.length ? values : "";
+      }
       default:
         return input.value;
     }
@@ -1488,6 +1800,19 @@ class NodaliaPersonCardEditor extends HTMLElement {
           value="${escapeHtml(inputValue)}"
           ${placeholder}
         />
+      </label>
+    `;
+  }
+
+  _renderTextareaField(label, field, value, options = {}) {
+    const tLabel = this._editorLabel(label);
+    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+    const inputValue = value === undefined || value === null ? "" : String(value);
+
+    return `
+      <label class="editor-field editor-field--full">
+        <span>${escapeHtml(tLabel)}</span>
+        <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
     `;
   }
@@ -1659,6 +1984,17 @@ class NodaliaPersonCardEditor extends HTMLElement {
     const config = this._config || normalizeConfig({});
     const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "more-info";
+    const holdAction = config.hold_action || "none";
+    const doubleTapAction = config.double_tap_action || "none";
+    const actionOptions = [
+      { value: "more-info", label: "ed.entity.tap_more_info" },
+      { value: "toggle", label: "ed.entity.tap_toggle" },
+      { value: "navigate", label: "ed.entity.tap_navigate" },
+      { value: "url", label: "ed.entity.tap_open_url" },
+      { value: "service", label: "ed.entity.tap_service" },
+      { value: "none", label: "ed.entity.tap_none" },
+    ];
+    const showServiceSecurity = [tapAction, holdAction, doubleTapAction].includes("service");
     const animations = config.animations || DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
@@ -1773,7 +2109,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
         }
 
         .editor-field input,
-        .editor-field select {
+        .editor-field select,
+        .editor-field textarea {
           appearance: none;
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
@@ -1784,6 +2121,11 @@ class NodaliaPersonCardEditor extends HTMLElement {
           outline: none;
           padding: 10px 12px;
           width: 100%;
+        }
+
+        .editor-field textarea {
+          min-height: 86px;
+          resize: vertical;
         }
 
         .editor-color-field {
@@ -1997,12 +2339,131 @@ class NodaliaPersonCardEditor extends HTMLElement {
               "ed.entity.tap_action",
               "tap_action",
               tapAction,
-              [
-                { value: "more-info", label: "ed.person.tap_more_info" },
-                { value: "none", label: "ed.person.tap_none" },
-              ],
+              actionOptions,
               { fullWidth: true },
             )}
+            ${tapAction === "service"
+              ? `
+                ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
+                  placeholder: "light.turn_on",
+                  fullWidth: true,
+                })}
+                ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
+                  placeholder: '{"entity_id":"light.salon"}',
+                })}
+              `
+              : ""}
+            ${tapAction === "navigate"
+              ? this._renderTextField("ed.entity.navigation_path", "navigation_path", config.navigation_path, {
+                  placeholder: "#bubblecard_john",
+                  fullWidth: true,
+                })
+              : ""}
+            ${tapAction === "url"
+              ? `
+                ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
+                  placeholder: "https://example.com",
+                  fullWidth: true,
+                })}
+                ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
+              `
+              : ""}
+
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
+            ${this._renderSelectField(
+              "ed.weather.hold_action",
+              "hold_action",
+              holdAction,
+              actionOptions,
+              { fullWidth: true },
+            )}
+            ${holdAction === "service"
+              ? `
+                ${this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, {
+                  placeholder: "script.person_hold",
+                  fullWidth: true,
+                })}
+                ${this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, {
+                  placeholder: '{"entity_id":"person.john"}',
+                })}
+              `
+              : ""}
+            ${holdAction === "navigate"
+              ? this._renderTextField("ed.entity.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
+                  placeholder: "/lovelace/people",
+                  fullWidth: true,
+                })
+              : ""}
+            ${holdAction === "url"
+              ? `
+                ${this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, {
+                  placeholder: "https://example.com",
+                  fullWidth: true,
+                })}
+                ${this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true)}
+              `
+              : ""}
+
+            <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.double_tap_actions_section_hint"))}</div>
+            ${this._renderSelectField(
+              "ed.weather.double_tap_action",
+              "double_tap_action",
+              doubleTapAction,
+              actionOptions,
+              { fullWidth: true },
+            )}
+            ${doubleTapAction === "service"
+              ? `
+                ${this._renderTextField("ed.entity.tap_service_field", "double_tap_service", config.double_tap_service, {
+                  placeholder: "script.person_double_tap",
+                  fullWidth: true,
+                })}
+                ${this._renderTextareaField("ed.entity.tap_service_data_json", "double_tap_service_data", config.double_tap_service_data, {
+                  placeholder: '{"entity_id":"person.john"}',
+                })}
+              `
+              : ""}
+            ${doubleTapAction === "navigate"
+              ? this._renderTextField("ed.entity.double_tap_navigation_path", "double_tap_navigation_path", config.double_tap_navigation_path, {
+                  placeholder: "/lovelace/map",
+                  fullWidth: true,
+                })
+              : ""}
+            ${doubleTapAction === "url"
+              ? `
+                ${this._renderTextField("ed.entity.tap_url_field", "double_tap_url", config.double_tap_url, {
+                  placeholder: "https://example.com",
+                  fullWidth: true,
+                })}
+                ${this._renderCheckboxField("ed.entity.tap_new_tab", "double_tap_new_tab", config.double_tap_new_tab === true)}
+              `
+              : ""}
+
+            ${showServiceSecurity
+              ? `
+                ${this._renderCheckboxField(
+                  "ed.entity.security_strict",
+                  "security.strict_service_actions",
+                  config.security?.strict_service_actions !== false,
+                )}
+                ${config.security?.strict_service_actions !== false
+                  ? `
+                    ${this._renderTextField(
+                      "ed.entity.allowed_services_csv",
+                      "security.allowed_services",
+                      Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                      { placeholder: "light.turn_on, script.person_action", valueType: "csv", fullWidth: true },
+                    )}
+                    ${this._renderTextField(
+                      "ed.notifications.security_allowed_domains",
+                      "security.allowed_service_domains",
+                      Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
+                      { placeholder: "light, script", valueType: "csv", fullWidth: true },
+                    )}
+                  `
+                  : ""}
+              `
+              : ""}
           </div>
               `
               : ""

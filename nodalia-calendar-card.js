@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.56";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -666,18 +666,30 @@ function dateInputIsBeforeToday(value) {
 }
 
 class NodaliaCalendarCard extends HTMLElement {
-  static getStubConfig() {
-    return deepClone(DEFAULT_CONFIG);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    const config = deepClone(DEFAULT_CONFIG);
+    const entityId = window.NodaliaUtils.findStubEntityIds(
+      hass,
+      entities,
+      entitiesFallback,
+      ["calendar"],
+      1,
+    )[0];
+    if (entityId) {
+      config.calendars = [{ entity: entityId }];
+    }
+    return config;
   }
 
   static getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getEntitySuggestion(_hass, entityId) {
-    return String(entityId || "").startsWith("calendar.")
-      ? { type: `custom:${CARD_TAG}`, calendars: [{ entity: entityId }] }
-      : undefined;
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["calendar"],
+      buildConfig: (_hass, selectedEntityId) => ({ calendars: [{ entity: selectedEntityId }] }),
+    });
   }
 
   getCardSize() {

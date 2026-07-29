@@ -5,9 +5,9 @@ contact_links:
     url: https://github.com/danielmigueltejedor/nodalia-cards/discussions
     about: Ask questions, share ideas or discuss Nodalia Cards.
 
-  - name: 🧪 Alpha / Beta feedback
+  - name: 🧪 Preview feedback (Alpha / Beta / RC)
     url: https://github.com/danielmigueltejedor/nodalia-cards/discussions/categories/alpha-beta-feedback
-    about: Share feedback about alpha or beta builds.
+    about: Share feedback about alpha, beta or release-candidate builds.
 
   - name: 📚 Documentation
     url: https://github.com/danielmigueltejedor/nodalia-cards#readme

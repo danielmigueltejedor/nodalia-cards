@@ -388,6 +388,45 @@ test("person card translates location state with runtime i18n", () => {
   assert.doesNotMatch(source, /return "Fuera";/);
 });
 
+test("person card normalizes native Lovelace tap hold and double-tap actions", () => {
+  const normalizeConfig = loadCardNormalizeConfig("nodalia-person-card.js", "NodaliaPersonCard");
+  const config = normalizeConfig({
+    entity: "person.john",
+    tap_action: { action: "navigate", navigation_path: "#bubblecard_john" },
+    hold_action: {
+      action: "perform-action",
+      perform_action: "script.person_hold",
+      data: { source: "person-card" },
+      target: { entity_id: "script.person_hold" },
+    },
+    double_tap_action: { action: "url", url_path: "https://example.com/person", new_tab: true },
+  });
+
+  assert.equal(config.tap_action, "navigate");
+  assert.equal(config.navigation_path, "#bubblecard_john");
+  assert.equal(config.hold_action, "service");
+  assert.equal(config.hold_service, "script.person_hold");
+  assert.equal(config.hold_service_data, JSON.stringify({ source: "person-card" }));
+  assert.equal(config.hold_service_target, JSON.stringify({ entity_id: "script.person_hold" }));
+  assert.equal(config.double_tap_action, "url");
+  assert.equal(config.double_tap_url, "https://example.com/person");
+  assert.equal(config.double_tap_new_tab, true);
+});
+
+test("person card actions use safe navigation services and gesture arbitration", () => {
+  const source = read("nodalia-person-card.js");
+  assert.match(source, /bindHostPointerHoldGesture/);
+  assert.match(source, /scheduleCardZoneTap/);
+  assert.match(source, /cancelCardZoneTap/);
+  assert.match(source, /sanitizeActionUrl\?\.\(value, \{ allowRelative: true, allowHash: true \}\)/);
+  assert.match(source, /window\.history\.pushState\(null, "", path\)/);
+  assert.match(source, /window\.dispatchEvent\(new CustomEvent\("location-changed"/);
+  assert.match(source, /_isConfiguredPersonServiceAllowed/);
+  assert.match(source, /invokeHomeAssistantService/);
+  assert.match(source, /double_tap_service_target/);
+  assert.match(source, /"double_tap_action",\s*doubleTapAction/);
+});
+
 test("person defaults to the family card proportions and keeps compact mode explicit", () => {
   const source = read("nodalia-person-card.js");
   assert.match(source, /getCardSize\(\) \{\s*return 3;/);
@@ -408,7 +447,7 @@ test("scenes supports a dedicated single-scene surface and visual-editor option"
   const source = read("nodalia-scenes-card.js");
   const labels = JSON.parse(read("i18n/editor/en.json"));
   assert.match(source, /\["grid", "list", "single"\]\.includes\(layout\)/);
-  assert.match(source, /layout: "single", scenes: \[\{ entity: entityId \}\]/);
+  assert.match(source, /layout: "single",\s*scenes: \[\{ entity: selectedEntityId \}\]/);
   assert.match(source, /scenes-card--single/);
   assert.match(source, /const renderedEntries = isSingle \? entries\.slice\(0, 1\) : entries;/);
   assert.equal(labels["ed.scenes.layout_single"], "Single scene");
@@ -533,7 +572,7 @@ test("advanced vacuum calibration signature includes direct point values", () =>
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /fingerprint: JSON\.stringify\(directPoints\)/);
   assert.match(source, /this\._calibrationSignatureStamp = "";[\s\S]*this\._syncCalibrationIfNeeded\(\)/);
-  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => this\._callInternalService/);
+  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => this\._callRoomCleaningService/);
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -1630,6 +1669,23 @@ test("entity card supports entity pictures in the main icon bubble", () => {
   assert.match(source, /<img class="entity-card__picture"/);
   assert.match(source, /ed\.entity\.show_entity_picture/);
   assert.match(source, /ed\.entity\.entity_picture/);
+});
+
+test("entity card inherits the associated entity icon by default", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /use_entity_icon: true/);
+  assert.match(source, /const configuredIcon = trimIcon\(this\._config\?\.icon\);/);
+  assert.match(source, /if \(configuredIcon\) \{\s*return configuredIcon;/);
+  assert.match(source, /trimIcon\(state\?\.attributes\?\.icon\) \|\| getDynamicEntityIcon\(state\)/);
+});
+
+test("fav card inherits the associated entity icon instead of defaulting to a star", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /use_entity_icon: true/);
+  assert.match(source, /const configuredIcon = String\(this\._config\?\.icon \|\| ""\)\.trim\(\);/);
+  assert.match(source, /if \(configuredIcon\) \{\s*return configuredIcon;/);
+  assert.match(source, /String\(state\?\.attributes\?\.icon \|\| ""\)\.trim\(\) \|\| getDynamicEntityIcon\(state\)/);
+  assert.match(source, /\|\| "mdi:star-four-points";/);
 });
 
 test("device cards support entity pictures in the main icon bubble", () => {
