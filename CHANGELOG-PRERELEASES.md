@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.52] - 2026-07-29
+
+Fifty-second **`2.0.0`** alpha: compact Advanced Vacuum platform controls in the visual editor.
+
+### Fixed
+
+- **Advanced Vacuum editor:** the platform selector no longer stretches to the height of the adjacent MQTT help text, uses the same compact 40 px control height as the rest of the form and restores a clear dropdown chevron.
+- **Contextual configuration:** the platform selector uses the full editor width and the Valetudo MQTT topic is shown only when the Valetudo platform is selected.
+
 ## [2.0.0-alpha.51] - 2026-07-29
 
 Fifty-first **`2.0.0`** alpha: broader Advanced Vacuum compatibility and live room tracking.

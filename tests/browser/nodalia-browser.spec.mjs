@@ -151,6 +151,58 @@ test("Notifications keeps a new external-alert draft in the visual editor", asyn
   await expect(editor.locator('[data-editor-action="remove-external-alert"]')).toHaveCount(1);
 });
 
+test("Advanced Vacuum keeps its platform selector compact and contextual", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    const states = {
+      "vacuum.test": {
+        entity_id: "vacuum.test",
+        state: "docked",
+        attributes: { friendly_name: "Vacuum" },
+      },
+      "camera.test_map": {
+        entity_id: "camera.test_map",
+        state: "idle",
+        attributes: { friendly_name: "Vacuum map" },
+      },
+    };
+    const ctor = customElements.get("nodalia-advance-vacuum-card");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      type: "custom:nodalia-advance-vacuum-card",
+      entity: "vacuum.test",
+      vacuum_platform: "Roborock",
+      map_source: { camera: "camera.test_map" },
+    });
+    editor.addEventListener("config-changed", event => editor.setConfig(event.detail.config));
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-advance-vacuum-card-editor");
+  const platform = editor.locator('select[data-field="vacuum_platform"]');
+  await expect(platform).toBeVisible();
+  await expect(editor.locator('input[data-field="vacuum_mqtt_topic"]')).toHaveCount(0);
+
+  const compactLayout = await platform.evaluate(select => {
+    const field = select.closest(".editor-field");
+    const grid = field?.parentElement;
+    const style = getComputedStyle(select);
+    return {
+      height: select.getBoundingClientRect().height,
+      widthRatio: field && grid ? field.getBoundingClientRect().width / grid.getBoundingClientRect().width : 0,
+      backgroundImage: style.backgroundImage,
+    };
+  });
+  expect(compactLayout.height).toBe(40);
+  expect(compactLayout.widthRatio).toBeGreaterThan(0.95);
+  expect(compactLayout.backgroundImage).not.toBe("none");
+
+  await platform.selectOption("Hypfer/Valetudo");
+  await expect(editor.locator('input[data-field="vacuum_mqtt_topic"]')).toBeVisible();
+  await expect(editor.locator('select[data-field="vacuum_platform"]')).toHaveValue("Hypfer/Valetudo");
+});
+
 test("Room Summary fires hold_action and suppresses the following tap", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {

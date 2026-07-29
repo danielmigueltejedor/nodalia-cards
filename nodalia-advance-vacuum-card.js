@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.0.0-alpha.51";
+const CARD_VERSION = "2.0.0-alpha.52";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -9389,6 +9389,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         }
 
         .editor-grid {
+          align-items: start;
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -9396,6 +9397,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
         .editor-field,
         .editor-toggle {
+          align-content: start;
+          align-self: start;
           display: grid;
           gap: 6px;
           min-width: 0;
@@ -9444,6 +9447,20 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           min-height: 40px;
           padding: 10px 12px;
           width: 100%;
+        }
+
+        .editor-field select {
+          background-image:
+            linear-gradient(45deg, transparent 50%, var(--secondary-text-color, #9aa0ad) 50%),
+            linear-gradient(135deg, var(--secondary-text-color, #9aa0ad) 50%, transparent 50%);
+          background-position:
+            calc(100% - 17px) 50%,
+            calc(100% - 12px) 50%;
+          background-repeat: no-repeat;
+          background-size: 5px 5px, 5px 5px;
+          cursor: pointer;
+          height: 40px;
+          padding-inline-end: 36px;
         }
 
         .editor-field ha-icon-picker,
@@ -9581,11 +9598,14 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
               { value: "Matter", label: "Matter / vacuum.clean_area" },
               { value: "Hypfer/Valetudo", label: "Valetudo" },
               { value: "send_command", label: "Generic send_command" },
-            ])}
-            ${this._renderTextField("ed.advance_vacuum.mqtt_topic", "vacuum_mqtt_topic", config.vacuum_mqtt_topic || "", {
-              placeholder: "valetudo/robot",
-              hint: "ed.advance_vacuum.mqtt_topic_hint",
-            })}
+            ], { fullWidth: true })}
+            ${normalizeTextKey(config.vacuum_platform || "auto").includes("valetudo")
+              ? this._renderTextField("ed.advance_vacuum.mqtt_topic", "vacuum_mqtt_topic", config.vacuum_mqtt_topic || "", {
+                  fullWidth: true,
+                  placeholder: "valetudo/robot",
+                  hint: "ed.advance_vacuum.mqtt_topic_hint",
+                })
+              : ""}
             ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_entity", "room_tracking.entity", config.room_tracking?.entity, { domains: ["sensor", "select", "text", "input_text"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_activity_entity", "room_tracking.activity_entity", config.room_tracking?.activity_entity, { domains: ["sensor", "binary_sensor", "select", "text", "input_text"] })}

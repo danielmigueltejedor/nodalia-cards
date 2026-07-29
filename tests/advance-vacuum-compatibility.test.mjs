@@ -298,3 +298,11 @@ test("advanced vacuum render signature tracks auxiliary live room entities", () 
   assert.match(source, /_callZoneCleaningService\(selectedZones, this\._repeats\)/);
   assert.match(source, /_callGotoService\(this\._gotoPoint\)/);
 });
+
+test("advanced vacuum editor keeps platform selection compact and Valetudo-specific", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(source, /\.editor-grid \{\n\s+align-items: start;/);
+  assert.match(source, /\.editor-field select \{[\s\S]*height: 40px;[\s\S]*padding-inline-end: 36px;/);
+  assert.match(source, /"send_command", label: "Generic send_command" \},\n\s+\], \{ fullWidth: true \}\)/);
+  assert.match(source, /normalizeTextKey\(config\.vacuum_platform \|\| "auto"\)\.includes\("valetudo"\)/);
+});
