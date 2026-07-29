@@ -6,6 +6,7 @@ on:
       - labeled
 
 permissions:
+  contents: read
   issues: write
 
 jobs:
@@ -25,9 +26,17 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue_number = issue.number;
-            const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 30 });
-            const latestAlpha = releases.find(release => !release.draft && /-alpha\.\d+$/.test(release.tag_name));
-            const latestAlphaVersion = latestAlpha?.tag_name?.replace(/^v/, "") || "latest alpha";
+            const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+            const published = releases.filter(release => !release.draft);
+            const latestPreview = published.find(release => /-(?:alpha|beta|rc)\.\d+$/.test(release.tag_name));
+            const latestBetaOrRc = published.find(release => /-(?:beta|rc)\.\d+$/.test(release.tag_name));
+            const latestStable = published.find(release => !release.prerelease && !/-[0-9A-Za-z]/.test(release.tag_name));
+            const latestPreviewVersion = latestPreview?.tag_name?.replace(/^v/, "") || "latest preview";
+            const latestBetaVersion = latestBetaOrRc?.tag_name?.replace(/^v/, "") || "latest beta/RC";
+            const latestStableVersion = latestStable?.tag_name?.replace(/^v/, "") || "latest stable";
+            const previewMaturityLabel = /-alpha\.\d+$/.test(latestPreview?.tag_name || "")
+              ? "maturity: alpha-ready"
+              : "maturity: beta-ready";
 
             async function add(labels) {
               await github.rest.issues.addLabels({
@@ -69,19 +78,19 @@ jobs:
             ];
 
             if (label === "release: fixed in alpha") {
-              await add(["status: implemented", "maturity: alpha-ready"]);
+              await add(["status: implemented", previewMaturityLabel]);
               await remove(commonRemove);
 
               await comment([
-                "Implemented/fixed in the latest alpha build ✅",
+                "Implemented/fixed in the latest preview build ✅",
                 "",
-                "If you want to test it, install the latest alpha release from HACS:",
+                "If you want to test it, install the latest prerelease from HACS:",
                 "",
                 "1. Open HACS",
                 "2. Go to Nodalia Cards",
                 "3. Click the menu → Redownload",
                 "4. Select **Need a different version?**",
-                `5. Choose **${latestAlphaVersion}**`,
+                `5. Choose **${latestPreviewVersion}**`,
                 "",
                 "If anything still feels off, please let me know."
               ].join("\n"));
@@ -92,7 +101,7 @@ jobs:
               await remove(commonRemove);
 
               await comment([
-                "Available in the latest beta build ✅",
+                `Available in **${latestBetaVersion}** ✅`,
                 "",
                 "Please test it when possible and let me know if anything feels off.",
                 "If there is no further feedback, I may close this issue after validation."
@@ -108,7 +117,7 @@ jobs:
               ]);
 
               await comment([
-                "Released in the latest stable version ✅",
+                `Released in stable **${latestStableVersion}** ✅`,
                 "",
                 "Thanks again for the feedback. I’ll close this issue unless there is anything else to adjust."
               ].join("\n"));

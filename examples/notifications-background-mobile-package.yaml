@@ -1,4 +1,9 @@
-# Nodalia Notifications background mobile package (2.0.0-alpha.2)
+# LEGACY FALLBACK: Nodalia Notifications background mobile package (payload v2)
+#
+# The Nodalia 2.0 integration replaces this entire package. New installations
+# should enable background delivery in the visual editor and leave the webhook
+# field empty/default. Keep this file only during migration or when deliberately
+# running the standalone frontend without the integration.
 #
 # Goal:
 # - Paste this package once.

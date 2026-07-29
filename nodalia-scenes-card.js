@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-scenes-card";
 const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.58";
 const DEFAULT_SCENE_ACCENT = "#c9a86c";
 const SCENE_LAUNCH_DURATION = 780;
 const HAPTIC_PATTERNS = {
@@ -454,17 +454,15 @@ function normalizeConfig(rawConfig, options = {}) {
   return config;
 }
 
-function getStubSceneEntities(hass, limit = 4) {
-  const states = hass?.states || {};
-  return Object.keys(states)
-    .filter(entityId => entityId.startsWith("scene."))
-    .slice(0, limit)
+function getStubSceneEntities(hass, limit = 4, entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils
+    .findStubEntityIds(hass, entities, entitiesFallback, ["scene"], limit)
     .map(entity => ({ entity }));
 }
 
-function applyStubConfig(config, hass) {
+function applyStubConfig(config, hass, entities = [], entitiesFallback = []) {
   const next = deepClone(config);
-  const scenes = getStubSceneEntities(hass);
+  const scenes = getStubSceneEntities(hass, 4, entities, entitiesFallback);
   if (scenes.length) {
     next.scenes = scenes;
   }
@@ -520,14 +518,18 @@ class NodaliaScenesCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    return applyStubConfig(deepClone(STUB_CONFIG), hass);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubConfig(deepClone(STUB_CONFIG), hass, entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(_hass, entityId) {
-    return String(entityId || "").startsWith("scene.")
-      ? { type: `custom:${CARD_TAG}`, layout: "single", scenes: [{ entity: entityId }] }
-      : undefined;
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["scene"],
+      buildConfig: (_hass, selectedEntityId) => ({
+        layout: "single",
+        scenes: [{ entity: selectedEntityId }],
+      }),
+    });
   }
 
   constructor() {

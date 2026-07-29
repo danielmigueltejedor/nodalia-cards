@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "Ukentlig setpoint-plan",
       "popupTitle": "Ukeplan",
-      "popupHint": "Definer tidsblokker og måltemperaturer, og lagre for å synkronisere med Home Assistant via webhooken.",
+      "popupHint": "Definer tidsblokker og måltemperaturer, og lagre dem direkte i Home Assistant.",
       "enabledLabel": "Aktiver plan",
       "addSlot": "Legg til blokk",
       "emptyDay": "Ingen blokker",
@@ -655,7 +655,8 @@
         "sun": "Søndag"
       },
       "errors": {
-        "webhookMissing": "Konfigurer webhook for setpoint-plan i korteditoren.",
+        "webhookMissing": "Installer Nodalia-integrasjonen eller konfigurer den gamle plan-webhooken i korteditoren.",
+        "nativeFailed": "Innebygd lagring av planen mislyktes. Bruk en administratorkonto eller den gamle reserven.",
         "entityMissing": "Velg en climate-entitet først.",
         "webhookFailed": "Kunne ikke synkronisere planen. Sjekk webhook og Home Assistant-logger.",
         "dualRangeUnsupported": "Ukeplaner støttes ikke mens termostaten bruker dual varme/kjøle-område.",

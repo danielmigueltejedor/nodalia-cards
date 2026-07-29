@@ -855,7 +855,7 @@
         schedule: {
           openButton: "Weekly setpoint schedule",
           popupTitle: "Weekly schedule",
-          popupHint: "Define time blocks and target temperatures, then save to sync Home Assistant automations through your webhook.",
+          popupHint: "Define time blocks and target temperatures, then save them natively in Home Assistant.",
           enabledLabel: "Enable schedule",
           addSlot: "Add block",
           emptyDay: "No blocks",
@@ -877,7 +877,8 @@
             sun: "Sunday"
           },
           errors: {
-            webhookMissing: "Configure a setpoint schedule webhook in the card editor.",
+            webhookMissing: "Install the Nodalia integration or configure the legacy schedule webhook in the card editor.",
+            nativeFailed: "Native schedule save failed. Use an administrator account or configure the legacy fallback.",
             entityMissing: "Select a climate entity first.",
             webhookFailed: "Could not sync the schedule. Check the webhook and Home Assistant logs.",
             dualRangeUnsupported: "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
@@ -1818,7 +1819,7 @@
         schedule: {
           openButton: "Wochen-Sollwertplan",
           popupTitle: "Wochenplan",
-          popupHint: "Definiere Zeitblöcke und Solltemperaturen und speichere, um über deinen Webhook mit Home Assistant zu synchronisieren.",
+          popupHint: "Definiere Zeitblöcke und Solltemperaturen und speichere sie nativ in Home Assistant.",
           enabledLabel: "Wochenplan aktivieren",
           addSlot: "Block hinzufügen",
           emptyDay: "Keine Blöcke",
@@ -1840,7 +1841,8 @@
             sun: "Sonntag"
           },
           errors: {
-            webhookMissing: "Konfiguriere einen Webhook für den Sollwert-Wochenplan im Karten-Editor.",
+            webhookMissing: "Installiere die Nodalia-Integration oder konfiguriere den alten Zeitplan-Webhook im Karten-Editor.",
+            nativeFailed: "Der Zeitplan konnte nicht nativ gespeichert werden. Verwende ein Administratorkonto oder den alten Fallback.",
             entityMissing: "Wähle zuerst eine Climate-Entität.",
             webhookFailed: "Plan konnte nicht synchronisiert werden. Prüfe Webhook und Home-Assistant-Protokolle.",
             dualRangeUnsupported: "Wochenpläne sind nicht verfügbar, solange das Thermostat einen dualen Heiz-/Kühlbereich nutzt.",
@@ -2781,7 +2783,7 @@
         schedule: {
           openButton: "Εβδομαδιαίο πρόγραμμα consigna",
           popupTitle: "Εβδομαδιαίο πρόγραμμα",
-          popupHint: "Ορίστε χρονικά διαστήματα και θερμοκρασίες-στόχους και αποθηκεύστε για συγχρονισμό με το Home Assistant μέσω webhook.",
+          popupHint: "Ορίστε χρονικά διαστήματα και θερμοκρασίες-στόχους και αποθηκεύστε τα εγγενώς στο Home Assistant.",
           enabledLabel: "Ενεργοποίηση προγράμματος",
           addSlot: "Προσθήκη διαστήματος",
           emptyDay: "Χωρίς διαστήματα",
@@ -2803,7 +2805,8 @@
             sun: "Κυριακή"
           },
           errors: {
-            webhookMissing: "Ρυθμίστε το webhook προγράμματος στον επεξεργαστή της κάρτας.",
+            webhookMissing: "Εγκαταστήστε την ενσωμάτωση Nodalia ή ρυθμίστε το παλιό webhook προγράμματος στον επεξεργαστή.",
+            nativeFailed: "Η εγγενής αποθήκευση προγράμματος απέτυχε. Χρησιμοποιήστε λογαριασμό διαχειριστή ή την παλιά εφεδρεία.",
             entityMissing: "Επιλέξτε πρώτα μια οντότητα climate.",
             webhookFailed: "Αποτυχία συγχρονισμού προγράμματος. Ελέγξτε webhook και αρχεία καταγραφής Home Assistant.",
             dualRangeUnsupported: "Το εβδομαδιαίο πρόγραμμα δεν είναι διαθέσιμο όσο το θερμοστάτιο χρησιμοποιεί διπλό εύρος θέρμανσης/ψύξης.",
@@ -3744,7 +3747,7 @@
         schedule: {
           openButton: "Horario semanal de consignas",
           popupTitle: "Horario semanal",
-          popupHint: "Define franjas horarias y consignas, luego guarda para sincronizar con Home Assistant mediante tu webhook.",
+          popupHint: "Define franjas horarias y consignas y guárdalas de forma nativa en Home Assistant.",
           enabledLabel: "Activar horario",
           addSlot: "Añadir franja",
           emptyDay: "Sin franjas",
@@ -3766,7 +3769,8 @@
             sun: "Domingo"
           },
           errors: {
-            webhookMissing: "Configura el webhook de horario en el editor de la tarjeta.",
+            webhookMissing: "Instala la integración Nodalia o configura el webhook antiguo de horario en el editor.",
+            nativeFailed: "No se pudo guardar el horario de forma nativa. Usa una cuenta administradora o configura el respaldo antiguo.",
             entityMissing: "Selecciona primero una entidad climate.",
             webhookFailed: "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
             dualRangeUnsupported: "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío.",
@@ -4707,7 +4711,7 @@
         schedule: {
           openButton: "Planning hebdomadaire des consignes",
           popupTitle: "Planning hebdomadaire",
-          popupHint: "Définissez des plages horaires et des consignes, puis enregistrez pour synchroniser avec Home Assistant via votre webhook.",
+          popupHint: "Définissez des plages horaires et des consignes, puis enregistrez-les nativement dans Home Assistant.",
           enabledLabel: "Activer le planning",
           addSlot: "Ajouter une plage",
           emptyDay: "Aucune plage",
@@ -4729,7 +4733,8 @@
             sun: "Dimanche"
           },
           errors: {
-            webhookMissing: "Configurez le webhook de planning dans l’éditeur de la carte.",
+            webhookMissing: "Installez l’intégration Nodalia ou configurez l’ancien webhook de planning dans l’éditeur.",
+            nativeFailed: "L’enregistrement natif du planning a échoué. Utilisez un compte administrateur ou le secours hérité.",
             entityMissing: "Sélectionnez d’abord une entité climate.",
             webhookFailed: "Impossible de synchroniser le planning. Vérifiez le webhook et les journaux Home Assistant.",
             dualRangeUnsupported: "Le planning hebdomadaire n’est pas disponible tant que le thermostat utilise une plage dual chauffage/refroidissement.",
@@ -5670,7 +5675,7 @@
         schedule: {
           openButton: "Programma settimanale consigne",
           popupTitle: "Programma settimanale",
-          popupHint: "Definisci fasce orarie e temperature target, poi salva per sincronizzare con Home Assistant tramite il webhook.",
+          popupHint: "Definisci fasce orarie e temperature target, poi salvale nativamente in Home Assistant.",
           enabledLabel: "Attiva programma",
           addSlot: "Aggiungi fascia",
           emptyDay: "Nessuna fascia",
@@ -5692,7 +5697,8 @@
             sun: "Domenica"
           },
           errors: {
-            webhookMissing: "Configura il webhook del programma nell’editor della scheda.",
+            webhookMissing: "Installa l’integrazione Nodalia o configura il vecchio webhook del programma nell’editor.",
+            nativeFailed: "Salvataggio nativo del programma non riuscito. Usa un account amministratore o il fallback precedente.",
             entityMissing: "Seleziona prima un’entità climate.",
             webhookFailed: "Impossibile sincronizzare il programma. Controlla webhook e log di Home Assistant.",
             dualRangeUnsupported: "Il programma settimanale non è disponibile mentre il termostato usa un intervallo dual heat/cool.",
@@ -6633,7 +6639,7 @@
         schedule: {
           openButton: "Weekschema setpoints",
           popupTitle: "Weekschema",
-          popupHint: "Definieer tijdsblokken en doeltemperaturen en sla op om via je webhook te synchroniseren met Home Assistant.",
+          popupHint: "Definieer tijdsblokken en doeltemperaturen en sla ze rechtstreeks op in Home Assistant.",
           enabledLabel: "Schema inschakelen",
           addSlot: "Blok toevoegen",
           emptyDay: "Geen blokken",
@@ -6655,7 +6661,8 @@
             sun: "Zondag"
           },
           errors: {
-            webhookMissing: "Configureer een webhook voor het weekschema in de kaarteditor.",
+            webhookMissing: "Installeer de Nodalia-integratie of configureer de oude schemawebhook in de kaarteditor.",
+            nativeFailed: "Native opslag van het schema is mislukt. Gebruik een beheerdersaccount of de oude terugval.",
             entityMissing: "Selecteer eerst een climate-entiteit.",
             webhookFailed: "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
             dualRangeUnsupported: "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt.",
@@ -7596,7 +7603,7 @@
         schedule: {
           openButton: "Ukentlig setpoint-plan",
           popupTitle: "Ukeplan",
-          popupHint: "Definer tidsblokker og måltemperaturer, og lagre for å synkronisere med Home Assistant via webhooken.",
+          popupHint: "Definer tidsblokker og måltemperaturer, og lagre dem direkte i Home Assistant.",
           enabledLabel: "Aktiver plan",
           addSlot: "Legg til blokk",
           emptyDay: "Ingen blokker",
@@ -7618,7 +7625,8 @@
             sun: "Søndag"
           },
           errors: {
-            webhookMissing: "Konfigurer webhook for setpoint-plan i korteditoren.",
+            webhookMissing: "Installer Nodalia-integrasjonen eller konfigurer den gamle plan-webhooken i korteditoren.",
+            nativeFailed: "Innebygd lagring av planen mislyktes. Bruk en administratorkonto eller den gamle reserven.",
             entityMissing: "Velg en climate-entitet først.",
             webhookFailed: "Kunne ikke synkronisere planen. Sjekk webhook og Home Assistant-logger.",
             dualRangeUnsupported: "Ukeplaner støttes ikke mens termostaten bruker dual varme/kjøle-område.",
@@ -8559,7 +8567,7 @@
         schedule: {
           openButton: "Horário semanal de consignas",
           popupTitle: "Horário semanal",
-          popupHint: "Defina blocos horários e temperaturas alvo e guarde para sincronizar com o Home Assistant através do webhook.",
+          popupHint: "Defina blocos horários e temperaturas alvo e guarde-os nativamente no Home Assistant.",
           enabledLabel: "Ativar horário",
           addSlot: "Adicionar bloco",
           emptyDay: "Sem blocos",
@@ -8581,7 +8589,8 @@
             sun: "Domingo"
           },
           errors: {
-            webhookMissing: "Configure o webhook de horário no editor do cartão.",
+            webhookMissing: "Instale a integração Nodalia ou configure o webhook antigo de horário no editor.",
+            nativeFailed: "Falha ao guardar o horário de forma nativa. Use uma conta de administrador ou a alternativa antiga.",
             entityMissing: "Selecione primeiro uma entidade climate.",
             webhookFailed: "Não foi possível sincronizar o horário. Verifique o webhook e os registos do Home Assistant.",
             dualRangeUnsupported: "Horários semanais não estão disponíveis enquanto o termostato usa um intervalo dual calor/frio.",
@@ -9522,7 +9531,7 @@
         schedule: {
           openButton: "Program săptămânal consigne",
           popupTitle: "Program săptămânal",
-          popupHint: "Definește intervale orare și temperaturi țintă, apoi salvează pentru a sincroniza cu Home Assistant prin webhook.",
+          popupHint: "Definește intervale orare și temperaturi țintă, apoi salvează-le nativ în Home Assistant.",
           enabledLabel: "Activează programul",
           addSlot: "Adaugă interval",
           emptyDay: "Fără intervale",
@@ -9544,7 +9553,8 @@
             sun: "Duminică"
           },
           errors: {
-            webhookMissing: "Configurează webhook-ul programului în editorul cardului.",
+            webhookMissing: "Instalați integrarea Nodalia sau configurați vechiul webhook al programului în editor.",
+            nativeFailed: "Salvarea nativă a programului a eșuat. Folosiți un cont de administrator sau rezerva veche.",
             entityMissing: "Selectează mai întâi o entitate climate.",
             webhookFailed: "Programul nu a putut fi sincronizat. Verifică webhook-ul și jurnalele Home Assistant.",
             dualRangeUnsupported: "Programele săptămânale nu sunt disponibile cât timp termostatul folosește un interval dual încălzire/răcire.",
@@ -10485,7 +10495,7 @@
         schedule: {
           openButton: "Недельное расписание уставок",
           popupTitle: "Недельное расписание",
-          popupHint: "Задайте временные блоки и целевые температуры, затем сохраните для синхронизации с Home Assistant через webhook.",
+          popupHint: "Задайте временные блоки и целевые температуры, затем сохраните их непосредственно в Home Assistant.",
           enabledLabel: "Включить расписание",
           addSlot: "Добавить блок",
           emptyDay: "Нет блоков",
@@ -10507,7 +10517,8 @@
             sun: "Воскресенье"
           },
           errors: {
-            webhookMissing: "Настройте webhook расписания в редакторе карточки.",
+            webhookMissing: "Установите интеграцию Nodalia или настройте старый webhook расписания в редакторе.",
+            nativeFailed: "Не удалось сохранить расписание встроенным способом. Используйте учётную запись администратора или старый резервный вариант.",
             entityMissing: "Сначала выберите сущность climate.",
             webhookFailed: "Не удалось синхронизировать расписание. Проверьте webhook и журналы Home Assistant.",
             dualRangeUnsupported: "Недельное расписание недоступно, пока термостат использует двойной диапазон нагрева/охлаждения.",
@@ -11448,7 +11459,7 @@
         schedule: {
           openButton: "每周设定温度计划",
           popupTitle: "每周计划",
-          popupHint: "定义时间段和目标温度，然后保存以通过 webhook 与 Home Assistant 同步。",
+          popupHint: "定义时间段和目标温度，然后直接保存到 Home Assistant。",
           enabledLabel: "启用计划",
           addSlot: "添加时段",
           emptyDay: "无时段",
@@ -11470,7 +11481,8 @@
             sun: "周日"
           },
           errors: {
-            webhookMissing: "请在卡片编辑器中配置计划 webhook。",
+            webhookMissing: "请安装 Nodalia 集成，或在卡片编辑器中配置旧版计划 webhook。",
+            nativeFailed: "原生计划保存失败。请使用管理员帐户或配置旧版后备方案。",
             entityMissing: "请先选择 climate 实体。",
             webhookFailed: "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
             dualRangeUnsupported: "恒温器使用双模式冷暖范围时，不支持每周计划。",

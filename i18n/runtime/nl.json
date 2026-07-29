@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "Weekschema setpoints",
       "popupTitle": "Weekschema",
-      "popupHint": "Definieer tijdsblokken en doeltemperaturen en sla op om via je webhook te synchroniseren met Home Assistant.",
+      "popupHint": "Definieer tijdsblokken en doeltemperaturen en sla ze rechtstreeks op in Home Assistant.",
       "enabledLabel": "Schema inschakelen",
       "addSlot": "Blok toevoegen",
       "emptyDay": "Geen blokken",
@@ -655,7 +655,8 @@
         "sun": "Zondag"
       },
       "errors": {
-        "webhookMissing": "Configureer een webhook voor het weekschema in de kaarteditor.",
+        "webhookMissing": "Installeer de Nodalia-integratie of configureer de oude schemawebhook in de kaarteditor.",
+        "nativeFailed": "Native opslag van het schema is mislukt. Gebruik een beheerdersaccount of de oude terugval.",
         "entityMissing": "Selecteer eerst een climate-entiteit.",
         "webhookFailed": "Schema kon niet worden gesynchroniseerd. Controleer webhook en Home Assistant-logboeken.",
         "dualRangeUnsupported": "Weekschema’s zijn niet beschikbaar zolang de thermostaat een dual heat/cool-bereik gebruikt.",

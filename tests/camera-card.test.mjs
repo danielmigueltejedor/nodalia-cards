@@ -583,6 +583,47 @@ test("go2rtc display recovery preserves the video element and reattaches WebRTC"
   clearTimeout(player._displayHealthTimer);
 });
 
+test("go2rtc display recovery does not restart transport before the first decoded frame", () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  const video = {
+    readyState: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+  };
+  let restartCalls = 0;
+  player._video = video;
+  player._socket = {};
+  player._restartTransportForDisplayRecovery = () => { restartCalls += 1; };
+  Player.__testWindow.setTimeout = callback => {
+    callback();
+    return 1;
+  };
+
+  player._verifyVideoDisplayRecovery(video);
+  assert.equal(restartCalls, 0);
+
+  player._hasDecodedFrameOnce = true;
+  player._verifyVideoDisplayRecovery(video);
+  assert.equal(restartCalls, 1);
+});
+
+test("go2rtc display recovery preserves the active startup error budget", () => {
+  const Player = loadGo2rtcPlayer();
+  const player = new Player();
+  const startupStartedAt = Date.now() - 5000;
+  let connectCalls = 0;
+  player._startupStartedAt = startupStartedAt;
+  player._socket = { close() {} };
+  player._resetModeTransport = () => {};
+  player._connect = () => { connectCalls += 1; };
+
+  player._restartTransportForDisplayRecovery();
+
+  assert.equal(player._startupStartedAt, startupStartedAt);
+  assert.equal(connectCalls, 1);
+});
+
 test("camera iframe provider is sandboxed", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /sandbox="allow-scripts allow-forms allow-presentation allow-popups"/);

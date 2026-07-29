@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.58";
 const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
@@ -240,12 +240,8 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
 function getStubFriendlyName(hass, entityId) {
@@ -758,8 +754,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    const entityId = getStubEntityId(hass, ["media_player"]);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
     return {
       players: [
         {
@@ -772,6 +768,19 @@ class NodaliaMediaPlayer extends HTMLElement {
         reserve_space: false,
       },
     };
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["media_player"],
+      buildConfig: (_hass, selectedEntityId) => ({
+        players: [{
+          entity: selectedEntityId,
+          label: getStubFriendlyName(hass, selectedEntityId),
+        }],
+        layout: { fixed: false, reserve_space: false },
+      }),
+    });
   }
 
   constructor() {

@@ -24,6 +24,7 @@ body:
         - Circular Gauge Card
         - Graph Card
         - Power Flow Card
+        - Cover Card
         - Climate Card
         - Alarm Panel Card
         - Advance Vacuum Card
@@ -31,11 +32,14 @@ body:
         - Fav Card
         - Insignia Card
         - Person Card
+        - Scenes Card
         - Weather Card
-        - Vacuum Card
         - Calendar Card
         - Notifications Card
-        - Battery Card
+        - Vacuum Card
+        - News Card
+        - Camera Card
+        - Room Summary Card
         - Visual Editor
         - Translations
         - Styling / Theme

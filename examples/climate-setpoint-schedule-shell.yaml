@@ -1,4 +1,4 @@
-# Optional: Path A — write per-slot automations from the webhook payload.
+# LEGACY FALLBACK ONLY. Native Nodalia 2.0 schedules do not need generated automations.
 # ADMIN ONLY: the webhook payload controls what is written under /config/automations/.
 # Enable only on trusted instances; keep the webhook ID secret and restrict Lovelace access.
 # Guide: docs/climate-setpoint-schedule.md#path-a-per-slot-automations-on-disk

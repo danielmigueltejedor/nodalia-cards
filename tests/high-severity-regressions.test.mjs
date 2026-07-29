@@ -51,13 +51,18 @@ test("alarm panel keeps PIN watchdog armed after resolved service calls", () => 
   );
 });
 
-test("climate schedule composer blocks oversized storage_state before webhook delivery", () => {
+test("native climate schedules bypass helper limits while legacy webhook remains guarded", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /function isSetpointScheduleStorageStateWithinLimit/);
   assert.match(
     source,
-    /if \(!isSetpointScheduleStorageStateWithinLimit\(body\.storage_state\)\) \{[\s\S]*?return;[\s\S]*?this\._scheduleComposerSaving = true;/,
-    "storage guard should run before saving/webhook dispatch",
+    /backend\.setClimateSchedule[\s\S]*?return;[\s\S]*?buildClimateSetpointScheduleWebhookBody/,
+    "native persistence should complete before constructing the compact legacy helper payload",
+  );
+  assert.match(
+    source,
+    /if \(!isSetpointScheduleStorageStateWithinLimit\(body\.storage_state\)\) \{[\s\S]*?return;[\s\S]*?_postScheduleWebhookPayload/,
+    "the helper size guard should still run before legacy webhook dispatch",
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
@@ -71,7 +76,7 @@ test("notifications re-check queued delivery and current background sync", () =>
   );
   assert.match(
     source,
-    /_backgroundMobileSuppressesForeground\(\)[\s\S]*?currentSignature === lastSignature/,
+    /_backgroundMobileSuppressesForeground\(\)[\s\S]*?(?:currentSignature === lastSignature|nativeSignature === currentNative\.signature)/,
     "foreground suppression must match the current successful background payload",
   );
   assert.match(
@@ -91,6 +96,24 @@ test("vacuum primary controls are never blocked by strict configured-action secu
       `vacuum.${service} should use the card-owned service path`,
     );
   }
+});
+
+test("go2rtc display recovery cannot interrupt initial negotiation or reset its error budget", () => {
+  const source = read("nodalia-go2rtc-player.js");
+  assert.match(source, /this\._hasDecodedFrameOnce && !hasDecodedFrame/);
+  assert.match(source, /_markLoaded\(\) \{[\s\S]*?this\._hasDecodedFrameOnce = true;/);
+  const restartStart = source.indexOf("  _restartTransportForDisplayRecovery() {");
+  const restartEnd = source.indexOf("\n  _handleVideoVolumeChange()", restartStart);
+  const restart = source.slice(restartStart, restartEnd);
+  assert.doesNotMatch(restart, /_startupStartedAt\s*=/);
+});
+
+test("advanced vacuum rooms mode cannot fall through to whole-house cleaning", () => {
+  const source = read("nodalia-advance-vacuum-card.js");
+  assert.match(
+    source,
+    /if \(this\._activeMode === "rooms"\) \{[\s\S]*?if \(!roomIds\.length\) \{[\s\S]*?throw new Error/,
+  );
 });
 
 test("climate popup viewport constraints remain valid CSS functions", () => {

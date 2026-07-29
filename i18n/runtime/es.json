@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "Horario semanal de consignas",
       "popupTitle": "Horario semanal",
-      "popupHint": "Define franjas horarias y consignas, luego guarda para sincronizar con Home Assistant mediante tu webhook.",
+      "popupHint": "Define franjas horarias y consignas y guárdalas de forma nativa en Home Assistant.",
       "enabledLabel": "Activar horario",
       "addSlot": "Añadir franja",
       "emptyDay": "Sin franjas",
@@ -655,7 +655,8 @@
         "sun": "Domingo"
       },
       "errors": {
-        "webhookMissing": "Configura el webhook de horario en el editor de la tarjeta.",
+        "webhookMissing": "Instala la integración Nodalia o configura el webhook antiguo de horario en el editor.",
+        "nativeFailed": "No se pudo guardar el horario de forma nativa. Usa una cuenta administradora o configura el respaldo antiguo.",
         "entityMissing": "Selecciona primero una entidad climate.",
         "webhookFailed": "No se pudo sincronizar el horario. Revisa el webhook y los registros de Home Assistant.",
         "dualRangeUnsupported": "El horario semanal no está disponible mientras el termostato usa un rango dual calor/frío.",

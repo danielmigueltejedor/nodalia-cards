@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.58";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -181,12 +181,8 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
 
@@ -918,9 +914,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
     const config = deepClone(STUB_CONFIG);
-    const entityId = getStubEntityId(hass, ["sensor"]);
+    const entityId = getStubEntityId(hass, ["sensor"], entities, entitiesFallback);
     if (!entityId) {
       return config;
     }

@@ -1,5 +1,5 @@
-# Storage helper for Nodalia Climate Card weekly setpoint schedules.
-# Guide: docs/climate-setpoint-schedule.md
+# LEGACY FALLBACK ONLY. Native Nodalia 2.0 schedules do not need this helper.
+# Migration guide: docs/nodalia-integration.md
 #
 # ─── Customize ───────────────────────────────────────────────────────────────
 # YOUR_ROOM          Short slug for this thermostat (e.g. living_room, bedroom).

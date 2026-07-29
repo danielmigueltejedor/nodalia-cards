@@ -1,7 +1,7 @@
 type: custom:nodalia-advance-vacuum-card
 entity: vacuum.robot_vacuum
 name: Robot Vacuum
-vacuum_platform: Roborock
+vacuum_platform: auto
 
 map_source:
   camera: image.robot_vacuum_map
@@ -22,6 +22,17 @@ allow_goto_mode: true
 
 max_zone_selections: 5
 max_repeats: 3
+
+# Optional override. By default, the card looks for live current-room and
+# active-segment entities belonging to the same robot device.
+room_tracking:
+  auto_detect: true
+  entity: ""
+  attribute: ""
+  activity_entity: ""
+
+# Required only with vacuum_platform: Hypfer/Valetudo.
+vacuum_mqtt_topic: ""
 
 icons:
   - icon: mdi:arrow-left

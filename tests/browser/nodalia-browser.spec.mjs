@@ -137,6 +137,62 @@ test("every published card mounts from its stub configuration", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("entity-first picker receives relevant Nodalia card suggestions", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const suggestions = await page.evaluate(() => {
+    const states = {
+      "light.kitchen": { entity_id: "light.kitchen", state: "off", attributes: { friendly_name: "Kitchen" } },
+      "person.marco": { entity_id: "person.marco", state: "home", attributes: { friendly_name: "Marco" } },
+      "sensor.power": { entity_id: "sensor.power", state: "125", attributes: { friendly_name: "Power", unit_of_measurement: "W" } },
+      "sensor.news": { entity_id: "sensor.news", state: "2", attributes: { friendly_name: "News", items: [{ title: "One" }] } },
+      "vacuum.robot": { entity_id: "vacuum.robot", state: "docked", attributes: { friendly_name: "Robot" } },
+      "scene.relax": { entity_id: "scene.relax", state: "scening", attributes: { friendly_name: "Relax" } },
+      "calendar.family": { entity_id: "calendar.family", state: "off", attributes: { friendly_name: "Family" } },
+      "media_player.living_room": { entity_id: "media_player.living_room", state: "idle", attributes: { friendly_name: "Living room" } },
+    };
+    const hass = window.makeHass(states);
+    const forEntity = entityId => (window.customCards || []).flatMap(card => {
+      if (typeof card.getEntitySuggestion !== "function") return [];
+      const result = card.getEntitySuggestion(hass, entityId);
+      return result ? (Array.isArray(result) ? result : [result]) : [];
+    });
+    return Object.fromEntries(Object.keys(states).map(entityId => [entityId, forEntity(entityId)]));
+  });
+
+  const types = entityId => suggestions[entityId].map(item => item.config.type);
+  expect(types("light.kitchen")).toEqual(expect.arrayContaining([
+    "custom:nodalia-light-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(types("person.marco")).toEqual(expect.arrayContaining([
+    "custom:nodalia-person-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(types("sensor.power")).toEqual(expect.arrayContaining([
+    "custom:nodalia-circular-gauge-card",
+    "custom:nodalia-graph-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(types("sensor.power")).not.toContain("custom:nodalia-news-card");
+  expect(types("sensor.news")).toContain("custom:nodalia-news-card");
+  expect(types("vacuum.robot")).toEqual(expect.arrayContaining([
+    "custom:nodalia-vacuum-card",
+    "custom:nodalia-advance-vacuum-card",
+    "custom:nodalia-entity-card",
+  ]));
+  expect(suggestions["scene.relax"].find(item => item.config.type === "custom:nodalia-scenes-card")?.config).toMatchObject({
+    layout: "single",
+    scenes: [{ entity: "scene.relax" }],
+  });
+  expect(suggestions["calendar.family"].find(item => item.config.type === "custom:nodalia-calendar-card")?.config).toMatchObject({
+    calendars: [{ entity: "calendar.family" }],
+  });
+  expect(suggestions["media_player.living_room"].find(item => item.config.type === "custom:nodalia-media-player")?.config).toMatchObject({
+    players: [{ entity: "media_player.living_room", label: "Living room" }],
+  });
+  expect(errors).toEqual([]);
+});
+
 test("Notifications keeps a new external-alert draft in the visual editor", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(async () => {
@@ -149,6 +205,58 @@ test("Notifications keeps a new external-alert draft in the visual editor", asyn
   const editor = page.locator("nodalia-notifications-card-editor");
   await editor.locator('[data-editor-action="add-external-alert"]').click();
   await expect(editor.locator('[data-editor-action="remove-external-alert"]')).toHaveCount(1);
+});
+
+test("Advanced Vacuum keeps its platform selector compact and contextual", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    const states = {
+      "vacuum.test": {
+        entity_id: "vacuum.test",
+        state: "docked",
+        attributes: { friendly_name: "Vacuum" },
+      },
+      "camera.test_map": {
+        entity_id: "camera.test_map",
+        state: "idle",
+        attributes: { friendly_name: "Vacuum map" },
+      },
+    };
+    const ctor = customElements.get("nodalia-advance-vacuum-card");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      type: "custom:nodalia-advance-vacuum-card",
+      entity: "vacuum.test",
+      vacuum_platform: "Roborock",
+      map_source: { camera: "camera.test_map" },
+    });
+    editor.addEventListener("config-changed", event => editor.setConfig(event.detail.config));
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-advance-vacuum-card-editor");
+  const platform = editor.locator('select[data-field="vacuum_platform"]');
+  await expect(platform).toBeVisible();
+  await expect(editor.locator('input[data-field="vacuum_mqtt_topic"]')).toHaveCount(0);
+
+  const compactLayout = await platform.evaluate(select => {
+    const field = select.closest(".editor-field");
+    const grid = field?.parentElement;
+    const style = getComputedStyle(select);
+    return {
+      height: select.getBoundingClientRect().height,
+      widthRatio: field && grid ? field.getBoundingClientRect().width / grid.getBoundingClientRect().width : 0,
+      backgroundImage: style.backgroundImage,
+    };
+  });
+  expect(compactLayout.height).toBe(40);
+  expect(compactLayout.widthRatio).toBeGreaterThan(0.95);
+  expect(compactLayout.backgroundImage).not.toBe("none");
+
+  await platform.selectOption("Hypfer/Valetudo");
+  await expect(editor.locator('input[data-field="vacuum_mqtt_topic"]')).toBeVisible();
+  await expect(editor.locator('select[data-field="vacuum_platform"]')).toHaveValue("Hypfer/Valetudo");
 });
 
 test("Room Summary fires hold_action and suppresses the following tap", async ({ page }) => {
@@ -212,6 +320,111 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   await expect(cameraAction).toBeFocused();
 });
 
+test("Person supports native Lovelace tap hold double-tap and service actions", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const states = {
+      "person.test": { entity_id: "person.test", state: "home", attributes: { friendly_name: "John" } },
+    };
+    const person = document.createElement("nodalia-person-card");
+    person.setConfig({
+      entity: "person.test",
+      tap_action: "navigate",
+      navigation_path: "#marcomap",
+      hold_action: { action: "navigate", navigation_path: "/lovelace/person-hold" },
+      double_tap_action: { action: "navigate", navigation_path: "/lovelace/person-double" },
+    });
+    person.hass = window.makeHass(states);
+    window.personNativeActions = [];
+    window.addEventListener("location-changed", () => {
+      window.personNativeActions.push(`${window.location.pathname}${window.location.hash}`);
+    });
+    document.querySelector("#fixture").append(person);
+
+    const serviceCalls = [];
+    const serviceHass = window.makeHass(states);
+    serviceHass.callService = async (domain, service, data, target) => {
+      serviceCalls.push({ domain, service, data, target });
+    };
+    const servicePerson = document.createElement("nodalia-person-card");
+    servicePerson.setConfig({
+      entity: "person.test",
+      tap_action: {
+        action: "perform-action",
+        perform_action: "script.person_action",
+        data: { source: "person-card" },
+        target: { entity_id: "script.person_action" },
+      },
+      security: { allowed_services: ["script.person_action"] },
+    });
+    servicePerson.hass = serviceHass;
+    servicePerson.dataset.testPersonService = "true";
+    document.querySelector("#fixture").append(servicePerson);
+    window.personServiceCalls = serviceCalls;
+  });
+
+  const action = page.locator("nodalia-person-card").first().locator('[data-person-action="primary"]');
+  await action.click();
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
+    "/tests/fixtures/browser.html#marcomap",
+  ]);
+  await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("#marcomap");
+
+  await action.dblclick();
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
+    "/tests/fixtures/browser.html#marcomap",
+    "/lovelace/person-double",
+  ]);
+
+  await action.dispatchEvent("pointerdown", { pointerId: 11, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+  await page.waitForTimeout(560);
+  await action.dispatchEvent("pointerup", { pointerId: 11, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+  await action.click();
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
+    "/tests/fixtures/browser.html#marcomap",
+    "/lovelace/person-double",
+    "/lovelace/person-hold",
+  ]);
+
+  await page.locator('nodalia-person-card[data-test-person-service="true"]').locator('[data-person-action="primary"]').click();
+  await expect.poll(() => page.evaluate(() => window.personServiceCalls)).toEqual([{
+    domain: "script",
+    service: "person_action",
+    data: { source: "person-card" },
+    target: { entity_id: "script.person_action" },
+  }]);
+});
+
+test("Person visual editor exposes tap hold and double-tap configuration", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    const states = {
+      "person.test": { entity_id: "person.test", state: "home", attributes: { friendly_name: "John" } },
+    };
+    const ctor = customElements.get("nodalia-person-card");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      entity: "person.test",
+      tap_action: { action: "navigate", navigation_path: "#bubblecard_john" },
+      hold_action: { action: "perform-action", perform_action: "script.person_hold" },
+      double_tap_action: { action: "url", url_path: "https://example.com/person" },
+      security: { allowed_services: ["script.person_hold"] },
+    });
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-person-card-editor");
+  await editor.locator('[data-editor-toggle="tap_actions"]').click();
+  await expect(editor.locator('select[data-field="tap_action"]')).toHaveValue("navigate");
+  await expect(editor.locator('input[data-field="navigation_path"]')).toHaveValue("#bubblecard_john");
+  await expect(editor.locator('select[data-field="hold_action"]')).toHaveValue("service");
+  await expect(editor.locator('input[data-field="hold_service"]')).toHaveValue("script.person_hold");
+  await expect(editor.locator('select[data-field="double_tap_action"]')).toHaveValue("url");
+  await expect(editor.locator('input[data-field="double_tap_url"]')).toHaveValue("https://example.com/person");
+  await expect(editor.locator('input[data-field="security.allowed_services"]')).toHaveValue("script.person_hold");
+});
+
 test("Entity select bubble remains visible after its bounce animation", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {
@@ -246,6 +459,78 @@ test("Entity select bubble remains visible after its bounce animation", async ({
   expect(visual.width).toBeGreaterThan(20);
   expect(visual.height).toBeGreaterThan(20);
   expect(visual.pressing).toBe(false);
+});
+
+test("Entity inherits its Home Assistant icon by default while manual icons win", async ({ page }) => {
+  await loadBundle(page);
+  const icons = await page.evaluate(() => {
+    const hass = window.makeHass({
+      "switch.dynamic": {
+        entity_id: "switch.dynamic",
+        state: "off",
+        attributes: { friendly_name: "Dynamic" },
+      },
+      "switch.custom": {
+        entity_id: "switch.custom",
+        state: "on",
+        attributes: { friendly_name: "Custom", icon: "mdi:floor-lamp" },
+      },
+    });
+    const mount = config => {
+      const card = document.createElement("nodalia-entity-card");
+      card.setConfig(config);
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      return card.shadowRoot.querySelector(".entity-card__icon ha-icon")?.getAttribute("icon");
+    };
+    return {
+      dynamic: mount({ entity: "switch.dynamic" }),
+      entityDefined: mount({ entity: "switch.custom" }),
+      manual: mount({ entity: "switch.custom", icon: "mdi:star" }),
+    };
+  });
+
+  expect(icons).toEqual({
+    dynamic: "mdi:toggle-switch-variant-off",
+    entityDefined: "mdi:floor-lamp",
+    manual: "mdi:star",
+  });
+});
+
+test("Fav inherits its Home Assistant icon by default while manual icons win", async ({ page }) => {
+  await loadBundle(page);
+  const icons = await page.evaluate(() => {
+    const hass = window.makeHass({
+      "light.dynamic": {
+        entity_id: "light.dynamic",
+        state: "off",
+        attributes: { friendly_name: "Dynamic" },
+      },
+      "light.custom": {
+        entity_id: "light.custom",
+        state: "on",
+        attributes: { friendly_name: "Custom", icon: "mdi:floor-lamp" },
+      },
+    });
+    const mount = config => {
+      const card = document.createElement("nodalia-fav-card");
+      card.setConfig(config);
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      return card.shadowRoot.querySelector(".fav-card__icon ha-icon")?.getAttribute("icon");
+    };
+    return {
+      dynamic: mount({ entity: "light.dynamic" }),
+      entityDefined: mount({ entity: "light.custom" }),
+      manual: mount({ entity: "light.custom", icon: "mdi:heart" }),
+    };
+  });
+
+  expect(icons).toEqual({
+    dynamic: "mdi:lightbulb-off",
+    entityDefined: "mdi:floor-lamp",
+    manual: "mdi:heart",
+  });
 });
 
 test("Vacuum built-ins ignore strict configured-service security", async ({ page }) => {

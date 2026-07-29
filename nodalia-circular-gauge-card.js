@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.58";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -119,16 +119,12 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-function applyStubEntity(config, hass, domains) {
-  const entityId = getStubEntityId(hass, domains);
+function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
   }
@@ -617,8 +613,20 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["sensor", "number", "input_number"]);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(
+      deepClone(STUB_CONFIG),
+      hass,
+      ["sensor", "number", "input_number"],
+      entities,
+      entitiesFallback,
+    );
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["sensor", "number", "input_number"],
+    });
   }
 
   constructor() {

@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "Programma settimanale consigne",
       "popupTitle": "Programma settimanale",
-      "popupHint": "Definisci fasce orarie e temperature target, poi salva per sincronizzare con Home Assistant tramite il webhook.",
+      "popupHint": "Definisci fasce orarie e temperature target, poi salvale nativamente in Home Assistant.",
       "enabledLabel": "Attiva programma",
       "addSlot": "Aggiungi fascia",
       "emptyDay": "Nessuna fascia",
@@ -655,7 +655,8 @@
         "sun": "Domenica"
       },
       "errors": {
-        "webhookMissing": "Configura il webhook del programma nell’editor della scheda.",
+        "webhookMissing": "Installa l’integrazione Nodalia o configura il vecchio webhook del programma nell’editor.",
+        "nativeFailed": "Salvataggio nativo del programma non riuscito. Usa un account amministratore o il fallback precedente.",
         "entityMissing": "Seleziona prima un’entità climate.",
         "webhookFailed": "Impossibile sincronizzare il programma. Controlla webhook e log di Home Assistant.",
         "dualRangeUnsupported": "Il programma settimanale non è disponibile mentre il termostato usa un intervallo dual heat/cool.",

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/alpha/docs/images/nodalia-cards-header.png" alt="Nodalia Cards" width="900">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-header.png" alt="Nodalia Cards" width="900">
   <p><strong>A cohesive, app-like card system for modern Home Assistant dashboards.</strong></p>
 
   <p>
@@ -21,10 +21,10 @@
 
 ---
 
-Nodalia Cards is a custom card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
+Nodalia is a custom Home Assistant integration with a complete card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
 
 > [!IMPORTANT]
-> Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia Cards through HACS as a custom **Dashboard** repository using the steps below.
+> Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia through HACS as a custom **Integration** repository using the steps below.
 
 ## Preview
 
@@ -103,35 +103,38 @@ Only settings that differ from the defaults are written to YAML, keeping dashboa
 
 ## Installation
 
-### HACS custom repository — recommended
+### HACS custom integration — recommended
 
 Until the default HACS listing is approved:
 
 1. Open **HACS**.
 2. Open the three-dot menu and choose **Custom repositories**.
 3. Add `https://github.com/danielmigueltejedor/nodalia-cards`.
-4. Select category **Dashboard** (shown as **Lovelace** in older HACS versions).
-5. Open **Nodalia Cards**, choose **Download**, and reload Home Assistant.
+4. Select category **Integration**.
+5. Open **Nodalia**, choose **Download**, and restart Home Assistant.
+6. Open **Settings → Devices & services → Add integration**, search for **Nodalia**, and confirm setup once.
+7. Reload the browser.
 
-[![Open Nodalia Cards in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
+[![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=integration)
 
-HACS installs the stable bundle and registers this resource automatically:
+The integration serves and registers the self-contained card bundle automatically:
 
 ```text
-/hacsfiles/nodalia-cards/nodalia-cards.js
+/nodalia/nodalia-cards.js
 ```
 
-That single file includes both the cards and their visual editors; no extra
-editor resource needs to be registered.
+That single file includes both the cards and their visual editors. It also enables native background notifications, shared dismissals and climate schedules without packages, helpers or user-created automations.
+
+If you previously installed Nodalia Cards as a HACS Dashboard repository, follow the [one-time 2.0 migration](./docs/nodalia-integration.md#migrating-from-the-dashboard-only-installation).
 
 If a card does not appear immediately after an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ### Manual installation
 
-1. Download `nodalia-cards.js` from the [latest stable release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest). It is the complete single-file distribution.
-2. Copy it to `/config/www/nodalia-cards.js`.
-3. Add `/local/nodalia-cards.js` under **Settings → Dashboards → Resources** as a **JavaScript module**.
-4. Refresh the browser.
+1. Copy `custom_components/nodalia` from this repository to `/config/custom_components/nodalia`.
+2. Restart Home Assistant.
+3. Add **Nodalia** from **Settings → Devices & services**.
+4. Reload the browser. The integration registers the card resource itself.
 
 ## Quick start
 
@@ -167,19 +170,24 @@ calibration_source:
 
 | Feature | Documentation |
 |---|---|
-| Climate setpoint scheduling | [Setup, helpers and webhook](./docs/climate-setpoint-schedule.md) |
+| Nodalia integration | [Installation, migration and native services](./docs/nodalia-integration.md) |
+| Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
+| Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
 | Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |
-| Background mobile notifications | [Home Assistant package example](./examples/notifications-background-mobile-package.yaml) |
+| Background mobile notifications | [Native delivery and legacy fallback](./docs/nodalia-integration.md#background-mobile-notifications) |
 | Translations | [Contributor guide](./docs/TRANSLATIONS.md) |
 
 ## Release channels
 
-| Channel | Branch | Intended use |
+| Maturity | Branch / tag | Intended use |
 |---|---|---|
-| Stable | `main` | Recommended for daily dashboards |
-| Beta | `beta` | Release candidates and wider compatibility testing |
-| Alpha | `alpha` | Active development; breaking changes are possible |
+| Stable | `main`, `vX.Y.Z` | Recommended for daily dashboards |
+| Release candidate | `vX.Y.Z-rc.N` | Final compatibility and release validation |
+| Beta | `beta`, `vX.Y.Z-beta.N` | Feature-complete preview for broader testing |
+| Alpha | `alpha`, `vX.Y.Z-alpha.N` | Active development; breaking changes are possible |
+
+HACS installs the latest stable release by default. To test a prerelease, open Nodalia Cards in HACS, choose **Redownload → Need a different version?**, and select the desired alpha, beta or RC tag.
 
 Stable changes are documented in the [changelog](./CHANGELOG.md). Detailed prerelease notes live in [CHANGELOG-PRERELEASES.md](./CHANGELOG-PRERELEASES.md), and longer-term work is tracked in the [roadmap](./ROADMAP.md).
 

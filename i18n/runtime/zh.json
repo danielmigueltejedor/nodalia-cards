@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "每周设定温度计划",
       "popupTitle": "每周计划",
-      "popupHint": "定义时间段和目标温度，然后保存以通过 webhook 与 Home Assistant 同步。",
+      "popupHint": "定义时间段和目标温度，然后直接保存到 Home Assistant。",
       "enabledLabel": "启用计划",
       "addSlot": "添加时段",
       "emptyDay": "无时段",
@@ -655,7 +655,8 @@
         "sun": "周日"
       },
       "errors": {
-        "webhookMissing": "请在卡片编辑器中配置计划 webhook。",
+        "webhookMissing": "请安装 Nodalia 集成，或在卡片编辑器中配置旧版计划 webhook。",
+        "nativeFailed": "原生计划保存失败。请使用管理员帐户或配置旧版后备方案。",
         "entityMissing": "请先选择 climate 实体。",
         "webhookFailed": "无法同步计划。请检查 webhook 和 Home Assistant 日志。",
         "dualRangeUnsupported": "恒温器使用双模式冷暖范围时，不支持每周计划。",

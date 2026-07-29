@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.0.0-rc.1";
+const CARD_VERSION = "2.0.0-alpha.58";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -21,7 +21,7 @@ const DEFAULT_CONFIG = {
   icon: "",
   icon_active: "",
   icon_inactive: "",
-  use_entity_icon: false,
+  use_entity_icon: true,
   entity_picture: "",
   show_entity_picture: false,
   number_decimals: 2,
@@ -185,16 +185,12 @@ const {
 
 
 
-function getStubEntityId(hass, domains = []) {
-  const states = hass?.states || {};
-  const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
-  return Object.keys(states).find(entityId => (
-    !normalizedDomains.length || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-  )) || "";
+function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-function applyStubEntity(config, hass, domains) {
-  const entityId = getStubEntityId(hass, domains);
+function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
   }
@@ -697,8 +693,12 @@ class NodaliaEntityCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, []);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, [], entities, entitiesFallback);
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId);
   }
 
   constructor() {
@@ -1561,6 +1561,7 @@ class NodaliaEntityCard extends HTMLElement {
     const trimIcon = value => (typeof value === "string" ? value.trim() : "");
     const iconActive = trimIcon(this._config?.icon_active);
     const iconInactive = trimIcon(this._config?.icon_inactive);
+    const configuredIcon = trimIcon(this._config?.icon);
     const hasStateIcons = Boolean(iconActive || iconInactive);
 
     if (hasStateIcons) {
@@ -1570,14 +1571,18 @@ class NodaliaEntityCard extends HTMLElement {
       }
     }
 
+    if (configuredIcon) {
+      return configuredIcon;
+    }
+
     if (this._config?.use_entity_icon === true) {
-      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
+      const resolvedEntityIcon = trimIcon(state?.attributes?.icon) || getDynamicEntityIcon(state);
       if (resolvedEntityIcon) {
         return resolvedEntityIcon;
       }
     }
 
-    return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
+    return trimIcon(state?.attributes?.icon) || "mdi:tune";
   }
 
   _getEntityPicture(state) {

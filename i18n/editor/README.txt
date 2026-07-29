@@ -10,7 +10,7 @@ Source files (per language, same keys in every file):
   i18n/editor/en.json   — canonical English (required)
   i18n/editor/es.json   — Spanish
   i18n/editor/zh.json   — Chinese
-  i18n/editor/de.json, fr.json, it.json, nl.json, pt.json, ru.json, el.json, ro.json — same keys (validated)
+  i18n/editor/de.json, fr.json, it.json, nl.json, no.json, pt.json, ru.json, el.json, ro.json — same keys (validated)
   Any editor catalog language without a file still merges English at build time.
 
 In card editors, use the same helper as before:

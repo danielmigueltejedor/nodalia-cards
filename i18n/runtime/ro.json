@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "Program săptămânal consigne",
       "popupTitle": "Program săptămânal",
-      "popupHint": "Definește intervale orare și temperaturi țintă, apoi salvează pentru a sincroniza cu Home Assistant prin webhook.",
+      "popupHint": "Definește intervale orare și temperaturi țintă, apoi salvează-le nativ în Home Assistant.",
       "enabledLabel": "Activează programul",
       "addSlot": "Adaugă interval",
       "emptyDay": "Fără intervale",
@@ -655,7 +655,8 @@
         "sun": "Duminică"
       },
       "errors": {
-        "webhookMissing": "Configurează webhook-ul programului în editorul cardului.",
+        "webhookMissing": "Instalați integrarea Nodalia sau configurați vechiul webhook al programului în editor.",
+        "nativeFailed": "Salvarea nativă a programului a eșuat. Folosiți un cont de administrator sau rezerva veche.",
         "entityMissing": "Selectează mai întâi o entitate climate.",
         "webhookFailed": "Programul nu a putut fi sincronizat. Verifică webhook-ul și jurnalele Home Assistant.",
         "dualRangeUnsupported": "Programele săptămânale nu sunt disponibile cât timp termostatul folosește un interval dual încălzire/răcire.",

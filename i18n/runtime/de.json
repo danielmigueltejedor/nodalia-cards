@@ -633,7 +633,7 @@
     "schedule": {
       "openButton": "Wochen-Sollwertplan",
       "popupTitle": "Wochenplan",
-      "popupHint": "Definiere Zeitblöcke und Solltemperaturen und speichere, um über deinen Webhook mit Home Assistant zu synchronisieren.",
+      "popupHint": "Definiere Zeitblöcke und Solltemperaturen und speichere sie nativ in Home Assistant.",
       "enabledLabel": "Wochenplan aktivieren",
       "addSlot": "Block hinzufügen",
       "emptyDay": "Keine Blöcke",
@@ -655,7 +655,8 @@
         "sun": "Sonntag"
       },
       "errors": {
-        "webhookMissing": "Konfiguriere einen Webhook für den Sollwert-Wochenplan im Karten-Editor.",
+        "webhookMissing": "Installiere die Nodalia-Integration oder konfiguriere den alten Zeitplan-Webhook im Karten-Editor.",
+        "nativeFailed": "Der Zeitplan konnte nicht nativ gespeichert werden. Verwende ein Administratorkonto oder den alten Fallback.",
         "entityMissing": "Wähle zuerst eine Climate-Entität.",
         "webhookFailed": "Plan konnte nicht synchronisiert werden. Prüfe Webhook und Home-Assistant-Protokolle.",
         "dualRangeUnsupported": "Wochenpläne sind nicht verfügbar, solange das Thermostat einen dualen Heiz-/Kühlbereich nutzt.",

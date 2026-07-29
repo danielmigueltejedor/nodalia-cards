@@ -27,6 +27,8 @@
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
     "registerCustomCard",
+    "findStubEntityIds",
+    "createEntitySuggestion",
     "renderEditorChipBorderRadiusHtml",
     "renderEditorCardBorderRadiusHtml",
     "bindHostPointerHoldGesture",
@@ -570,6 +572,95 @@
     return window.customCards;
   }
 
+  function normalizeEntityDomains(domains) {
+    return (Array.isArray(domains) ? domains : [domains])
+      .map(domain => String(domain || "").trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  function entityMatchesDomains(entityId, domains = []) {
+    const normalizedId = String(entityId || "").trim();
+    const normalizedDomains = normalizeEntityDomains(domains);
+    if (!normalizedId || !normalizedId.includes(".")) {
+      return false;
+    }
+    return !normalizedDomains.length
+      || normalizedDomains.includes(normalizedId.slice(0, normalizedId.indexOf(".")).toLowerCase());
+  }
+
+  /**
+   * Finds entities for Lovelace stub creation, preferring the entities explicitly selected by
+   * the user, then Home Assistant's fallback selection, and finally the available state list.
+   */
+  function findStubEntityIds(
+    hass,
+    entities = [],
+    entitiesFallback = [],
+    domains = [],
+    limit = 1,
+  ) {
+    const states = hass?.states || {};
+    const maxItems = Math.max(0, Number(limit) || 0);
+    if (!maxItems) {
+      return [];
+    }
+    const selected = Array.isArray(entities) ? entities : [];
+    const fallback = Array.isArray(entitiesFallback) ? entitiesFallback : [];
+    const candidates = [...selected, ...fallback, ...Object.keys(states)];
+    const result = [];
+    const seen = new Set();
+    for (const candidate of candidates) {
+      const entityId = String(candidate || "").trim();
+      if (
+        seen.has(entityId)
+        || !Object.prototype.hasOwnProperty.call(states, entityId)
+        || !entityMatchesDomains(entityId, domains)
+      ) {
+        continue;
+      }
+      seen.add(entityId);
+      result.push(entityId);
+      if (result.length >= maxItems) {
+        break;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Builds the shape expected by Home Assistant's entity-first card selector (2026.8+).
+   * Returning `null` tells Home Assistant that the card is not applicable to that entity.
+   */
+  function createEntitySuggestion(cardType, hass, entityId, options = {}) {
+    const type = String(cardType || "").trim();
+    const normalizedId = String(entityId || "").trim();
+    if (
+      !type
+      || !Object.prototype.hasOwnProperty.call(hass?.states || {}, normalizedId)
+      || !entityMatchesDomains(normalizedId, options.domains)
+      || (typeof options.isSupported === "function" && !options.isSupported(hass, normalizedId))
+    ) {
+      return null;
+    }
+    const suggestedConfig = typeof options.buildConfig === "function"
+      ? options.buildConfig(hass, normalizedId)
+      : { entity: normalizedId };
+    if (!suggestedConfig || typeof suggestedConfig !== "object" || Array.isArray(suggestedConfig)) {
+      return null;
+    }
+    const suggestion = {
+      config: {
+        ...suggestedConfig,
+        type: `custom:${type}`,
+      },
+    };
+    const label = String(options.label || "").trim();
+    if (label) {
+      suggestion.label = label;
+    }
+    return suggestion;
+  }
+
   /**
    * Registers one Lovelace custom card entry, replacing any prior entry with the same `type`.
    * Uses normal array `push` (no monkey-patch on `window.customCards`) so we stay compatible with
@@ -591,7 +682,18 @@
         }
       }
     }
-    cards.push(metadata);
+    const entry = { ...metadata, type };
+    if (
+      typeof entry.getEntitySuggestion !== "function"
+      && type
+      && typeof window.customElements?.get === "function"
+    ) {
+      const cardClass = window.customElements.get(type);
+      if (typeof cardClass?.getEntitySuggestion === "function") {
+        entry.getEntitySuggestion = (hass, entityId) => cardClass.getEntitySuggestion(hass, entityId);
+      }
+    }
+    cards.push(entry);
   }
 
   /**
@@ -2136,6 +2238,8 @@
     postHomeAssistantWebhook,
     warnStrictServiceDenied,
     registerCustomCard,
+    findStubEntityIds,
+    createEntitySuggestion,
     renderEditorChipBorderRadiusHtml,
     renderEditorCardBorderRadiusHtml,
     bindHostPointerHoldGesture,
