@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.0.0-alpha.55";
+const CARD_VERSION = "2.0.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -21,7 +21,7 @@ const DEFAULT_CONFIG = {
   icon: "",
   icon_active: "",
   icon_inactive: "",
-  use_entity_icon: false,
+  use_entity_icon: true,
   entity_picture: "",
   show_entity_picture: false,
   number_decimals: 2,
@@ -1561,6 +1561,7 @@ class NodaliaEntityCard extends HTMLElement {
     const trimIcon = value => (typeof value === "string" ? value.trim() : "");
     const iconActive = trimIcon(this._config?.icon_active);
     const iconInactive = trimIcon(this._config?.icon_inactive);
+    const configuredIcon = trimIcon(this._config?.icon);
     const hasStateIcons = Boolean(iconActive || iconInactive);
 
     if (hasStateIcons) {
@@ -1570,14 +1571,18 @@ class NodaliaEntityCard extends HTMLElement {
       }
     }
 
+    if (configuredIcon) {
+      return configuredIcon;
+    }
+
     if (this._config?.use_entity_icon === true) {
-      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
+      const resolvedEntityIcon = trimIcon(state?.attributes?.icon) || getDynamicEntityIcon(state);
       if (resolvedEntityIcon) {
         return resolvedEntityIcon;
       }
     }
 
-    return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:tune";
+    return trimIcon(state?.attributes?.icon) || "mdi:tune";
   }
 
   _getEntityPicture(state) {

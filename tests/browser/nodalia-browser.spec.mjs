@@ -461,6 +461,78 @@ test("Entity select bubble remains visible after its bounce animation", async ({
   expect(visual.pressing).toBe(false);
 });
 
+test("Entity inherits its Home Assistant icon by default while manual icons win", async ({ page }) => {
+  await loadBundle(page);
+  const icons = await page.evaluate(() => {
+    const hass = window.makeHass({
+      "switch.dynamic": {
+        entity_id: "switch.dynamic",
+        state: "off",
+        attributes: { friendly_name: "Dynamic" },
+      },
+      "switch.custom": {
+        entity_id: "switch.custom",
+        state: "on",
+        attributes: { friendly_name: "Custom", icon: "mdi:floor-lamp" },
+      },
+    });
+    const mount = config => {
+      const card = document.createElement("nodalia-entity-card");
+      card.setConfig(config);
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      return card.shadowRoot.querySelector(".entity-card__icon ha-icon")?.getAttribute("icon");
+    };
+    return {
+      dynamic: mount({ entity: "switch.dynamic" }),
+      entityDefined: mount({ entity: "switch.custom" }),
+      manual: mount({ entity: "switch.custom", icon: "mdi:star" }),
+    };
+  });
+
+  expect(icons).toEqual({
+    dynamic: "mdi:toggle-switch-variant-off",
+    entityDefined: "mdi:floor-lamp",
+    manual: "mdi:star",
+  });
+});
+
+test("Fav inherits its Home Assistant icon by default while manual icons win", async ({ page }) => {
+  await loadBundle(page);
+  const icons = await page.evaluate(() => {
+    const hass = window.makeHass({
+      "light.dynamic": {
+        entity_id: "light.dynamic",
+        state: "off",
+        attributes: { friendly_name: "Dynamic" },
+      },
+      "light.custom": {
+        entity_id: "light.custom",
+        state: "on",
+        attributes: { friendly_name: "Custom", icon: "mdi:floor-lamp" },
+      },
+    });
+    const mount = config => {
+      const card = document.createElement("nodalia-fav-card");
+      card.setConfig(config);
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      return card.shadowRoot.querySelector(".fav-card__icon ha-icon")?.getAttribute("icon");
+    };
+    return {
+      dynamic: mount({ entity: "light.dynamic" }),
+      entityDefined: mount({ entity: "light.custom" }),
+      manual: mount({ entity: "light.custom", icon: "mdi:heart" }),
+    };
+  });
+
+  expect(icons).toEqual({
+    dynamic: "mdi:lightbulb-off",
+    entityDefined: "mdi:floor-lamp",
+    manual: "mdi:heart",
+  });
+});
+
 test("Vacuum built-ins ignore strict configured-service security", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {

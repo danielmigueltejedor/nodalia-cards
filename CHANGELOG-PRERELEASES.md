@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.56] - 2026-07-29
+
+Fifty-sixth **`2.0.0`** alpha: entity-native icons by default on Entity and Fav cards.
+
+### Changed
+
+- **Entity Card icons:** new cards now inherit the Home Assistant entity icon by default, including state- and device-class-aware fallbacks when the entity does not define `attributes.icon`.
+- **Fav Card icons:** favorites now inherit their associated entity icon instead of showing a generic star in the usual case.
+- **Manual overrides:** explicitly configured icons remain higher priority than inherited icons, while active/inactive Entity Card icons retain the highest priority.
+- **Fallback behavior:** `mdi:tune` on Entity Card and `mdi:star-four-points` on Fav Card are now used only when no configured, native or inferred entity icon is available.
+
+### Tests
+
+- Added source and browser regressions covering inherited, entity-defined and manual icons in Chromium and WebKit/iPhone.
+
 ## [2.0.0-alpha.55] - 2026-07-29
 
 Fifty-fifth **`2.0.0`** alpha: Nodalia suggestions in Home Assistant's entity-first card picker.

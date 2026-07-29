@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.0.0-alpha.55";
+const CARD_VERSION = "2.0.0-alpha.56";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -24,7 +24,7 @@ const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   icon: "",
-  use_entity_icon: false,
+  use_entity_icon: true,
   entity_mode: "auto",
   tap_action: "auto",
   tap_service: "",
@@ -1014,14 +1014,19 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getIcon(state) {
+    const configuredIcon = String(this._config?.icon || "").trim();
+    if (configuredIcon) {
+      return configuredIcon;
+    }
+
     if (this._config?.use_entity_icon === true) {
-      const resolvedEntityIcon = state?.attributes?.icon || getDynamicEntityIcon(state);
+      const resolvedEntityIcon = String(state?.attributes?.icon || "").trim() || getDynamicEntityIcon(state);
       if (resolvedEntityIcon) {
         return resolvedEntityIcon;
       }
     }
 
-    return this._config?.icon || state?.attributes?.icon || "mdi:star-four-points";
+    return String(state?.attributes?.icon || "").trim() || "mdi:star-four-points";
   }
 
   _canRunTapAction(state) {

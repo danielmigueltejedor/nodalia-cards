@@ -1671,6 +1671,23 @@ test("entity card supports entity pictures in the main icon bubble", () => {
   assert.match(source, /ed\.entity\.entity_picture/);
 });
 
+test("entity card inherits the associated entity icon by default", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /use_entity_icon: true/);
+  assert.match(source, /const configuredIcon = trimIcon\(this\._config\?\.icon\);/);
+  assert.match(source, /if \(configuredIcon\) \{\s*return configuredIcon;/);
+  assert.match(source, /trimIcon\(state\?\.attributes\?\.icon\) \|\| getDynamicEntityIcon\(state\)/);
+});
+
+test("fav card inherits the associated entity icon instead of defaulting to a star", () => {
+  const source = read("nodalia-fav-card.js");
+  assert.match(source, /use_entity_icon: true/);
+  assert.match(source, /const configuredIcon = String\(this\._config\?\.icon \|\| ""\)\.trim\(\);/);
+  assert.match(source, /if \(configuredIcon\) \{\s*return configuredIcon;/);
+  assert.match(source, /String\(state\?\.attributes\?\.icon \|\| ""\)\.trim\(\) \|\| getDynamicEntityIcon\(state\)/);
+  assert.match(source, /\|\| "mdi:star-four-points";/);
+});
+
 test("device cards support entity pictures in the main icon bubble", () => {
   [
     ["nodalia-fan-card.js", "fan-card__picture"],
