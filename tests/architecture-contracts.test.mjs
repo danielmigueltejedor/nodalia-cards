@@ -125,6 +125,7 @@ test("Nodalia ships as one HACS integration with an authenticated backend bridge
   const workflow = read(".github/workflows/hacs.yml");
   const websocket = read("custom_components/nodalia/websocket_api.py");
   const build = read("scripts/build-bundle.mjs");
+  const brandIcon = fs.readFileSync(path.join(root, "custom_components/nodalia/brand/icon.png"));
 
   assert.equal(manifest.domain, "nodalia");
   assert.equal(manifest.version, pkg.version);
@@ -135,6 +136,8 @@ test("Nodalia ships as one HACS integration with an authenticated backend bridge
   assert.match(websocket, /nodalia\/notifications\/set/);
   assert.match(websocket, /nodalia\/climate\/schedule\/set/);
   assert.match(build, /custom_components", "nodalia", "frontend", loaderFile/);
+  assert.deepEqual([...brandIcon.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.ok(brandIcon.length > 1024, "the integration should ship a non-empty HACS brand icon");
 });
 
 test("card runtime metadata stays synchronized with package version", () => {

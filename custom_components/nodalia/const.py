@@ -6,7 +6,7 @@ from typing import Final
 
 DOMAIN: Final = "nodalia"
 INTEGRATION_NAME: Final = "Nodalia"
-INTEGRATION_VERSION: Final = "2.0.0-alpha.57"
+INTEGRATION_VERSION: Final = "2.0.0-alpha.58"
 API_VERSION: Final = 1
 
 DATA_RUNTIME: Final = "runtime"

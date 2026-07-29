@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.58] - 2026-07-30
+
+Fifty-eighth **`2.0.0`** alpha: HACS-ready packaging for the native Nodalia integration.
+
+### Fixed
+
+- **HACS brand validation:** the integration now includes its Nodalia brand icon inside `custom_components/nodalia/brand`, allowing the repository to pass the Integration category checks.
+- **Release regression:** architecture tests require a valid, non-empty PNG brand asset so future integration releases cannot omit it.
+
 ## [2.0.0-alpha.57] - 2026-07-30
 
 Fifty-seventh **`2.0.0`** alpha: native Home Assistant integration for Nodalia's server-side features.
