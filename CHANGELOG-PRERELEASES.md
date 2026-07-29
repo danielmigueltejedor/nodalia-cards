@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.54] - 2026-07-29
+
+Fifty-fourth **`2.0.0`** alpha: working Lovelace navigation actions on Person Card.
+
+### Fixed
+
+- **Person Card navigation:** `tap_action`, `hold_action` and `double_tap_action` navigation now use Home Assistant's real history and `location-changed` flow, so dashboard paths and hash routes such as `#marcomap` open correctly.
+- **Browser regression:** navigation coverage now verifies the resulting browser URL in Chromium and WebKit/iPhone instead of accepting an unhandled card-local event.
+
 ## [2.0.0-alpha.53] - 2026-07-29
 
 Fifty-third **`2.0.0`** alpha: standard Person Card actions and high-severity camera and vacuum safeguards.

@@ -273,13 +273,16 @@ test("Person supports native Lovelace tap hold double-tap and service actions", 
     const person = document.createElement("nodalia-person-card");
     person.setConfig({
       entity: "person.test",
-      tap_action: { action: "navigate", navigation_path: "#bubblecard_john" },
+      tap_action: "navigate",
+      navigation_path: "#marcomap",
       hold_action: { action: "navigate", navigation_path: "/lovelace/person-hold" },
       double_tap_action: { action: "navigate", navigation_path: "/lovelace/person-double" },
     });
     person.hass = window.makeHass(states);
     window.personNativeActions = [];
-    person.addEventListener("hass-navigate", event => window.personNativeActions.push(event.detail.path));
+    window.addEventListener("location-changed", () => {
+      window.personNativeActions.push(`${window.location.pathname}${window.location.hash}`);
+    });
     document.querySelector("#fixture").append(person);
 
     const serviceCalls = [];
@@ -306,11 +309,14 @@ test("Person supports native Lovelace tap hold double-tap and service actions", 
 
   const action = page.locator("nodalia-person-card").first().locator('[data-person-action="primary"]');
   await action.click();
-  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual(["#bubblecard_john"]);
+  await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
+    "/tests/fixtures/browser.html#marcomap",
+  ]);
+  await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("#marcomap");
 
   await action.dblclick();
   await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
-    "#bubblecard_john",
+    "/tests/fixtures/browser.html#marcomap",
     "/lovelace/person-double",
   ]);
 
@@ -319,7 +325,7 @@ test("Person supports native Lovelace tap hold double-tap and service actions", 
   await action.dispatchEvent("pointerup", { pointerId: 11, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
   await action.click();
   await expect.poll(() => page.evaluate(() => window.personNativeActions)).toEqual([
-    "#bubblecard_john",
+    "/tests/fixtures/browser.html#marcomap",
     "/lovelace/person-double",
     "/lovelace/person-hold",
   ]);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "2.0.0-alpha.53";
+const CARD_VERSION = "2.0.0-alpha.54";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -915,6 +915,20 @@ class NodaliaPersonCard extends HTMLElement {
     if (!path || path.includes("://")) {
       return;
     }
+
+    if (this._hass?.navigate) {
+      this._hass.navigate(path);
+      return;
+    }
+
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", path);
+      window.dispatchEvent(new CustomEvent("location-changed", {
+        detail: { replace: false },
+      }));
+      return;
+    }
+
     fireEvent(this, "hass-navigate", { path });
   }
 

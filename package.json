@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "2.0.0-alpha.53",
+  "version": "2.0.0-alpha.54",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -10,8 +10,8 @@
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
   "nodalia": {
     "compatVersions": [
-      "2.0.0-alpha.51",
-      "2.0.0-alpha.52"
+      "2.0.0-alpha.52",
+      "2.0.0-alpha.53"
     ]
   },
   "scripts": {

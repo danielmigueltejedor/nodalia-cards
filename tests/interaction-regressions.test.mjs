@@ -419,6 +419,8 @@ test("person card actions use safe navigation services and gesture arbitration",
   assert.match(source, /scheduleCardZoneTap/);
   assert.match(source, /cancelCardZoneTap/);
   assert.match(source, /sanitizeActionUrl\?\.\(value, \{ allowRelative: true, allowHash: true \}\)/);
+  assert.match(source, /window\.history\.pushState\(null, "", path\)/);
+  assert.match(source, /window\.dispatchEvent\(new CustomEvent\("location-changed"/);
   assert.match(source, /_isConfiguredPersonServiceAllowed/);
   assert.match(source, /invokeHomeAssistantService/);
   assert.match(source, /double_tap_service_target/);
