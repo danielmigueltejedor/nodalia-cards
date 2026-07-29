@@ -51,13 +51,18 @@ test("alarm panel keeps PIN watchdog armed after resolved service calls", () => 
   );
 });
 
-test("climate schedule composer blocks oversized storage_state before webhook delivery", () => {
+test("native climate schedules bypass helper limits while legacy webhook remains guarded", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /function isSetpointScheduleStorageStateWithinLimit/);
   assert.match(
     source,
-    /if \(!isSetpointScheduleStorageStateWithinLimit\(body\.storage_state\)\) \{[\s\S]*?return;[\s\S]*?this\._scheduleComposerSaving = true;/,
-    "storage guard should run before saving/webhook dispatch",
+    /backend\.setClimateSchedule[\s\S]*?return;[\s\S]*?buildClimateSetpointScheduleWebhookBody/,
+    "native persistence should complete before constructing the compact legacy helper payload",
+  );
+  assert.match(
+    source,
+    /if \(!isSetpointScheduleStorageStateWithinLimit\(body\.storage_state\)\) \{[\s\S]*?return;[\s\S]*?_postScheduleWebhookPayload/,
+    "the helper size guard should still run before legacy webhook dispatch",
   );
   assert.match(source, /errors\.storageTooLarge/);
 });
@@ -71,7 +76,7 @@ test("notifications re-check queued delivery and current background sync", () =>
   );
   assert.match(
     source,
-    /_backgroundMobileSuppressesForeground\(\)[\s\S]*?currentSignature === lastSignature/,
+    /_backgroundMobileSuppressesForeground\(\)[\s\S]*?(?:currentSignature === lastSignature|nativeSignature === currentNative\.signature)/,
     "foreground suppression must match the current successful background payload",
   );
   assert.match(

@@ -114,6 +114,27 @@ test("build and package expose the exact supported card source set", () => {
   assert.ok(pkg.files.includes("nodalia-notifications-mobile-policy.js"));
   assert.ok(pkg.files.includes("nodalia-room-summary-model.js"));
   assert.ok(pkg.files.includes("nodalia-camera-stream-model.js"));
+  assert.ok(pkg.files.includes("nodalia-backend.js"));
+  assert.ok(pkg.files.includes("custom_components/nodalia"));
+});
+
+test("Nodalia ships as one HACS integration with an authenticated backend bridge", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const hacs = JSON.parse(read("hacs.json"));
+  const manifest = JSON.parse(read("custom_components/nodalia/manifest.json"));
+  const workflow = read(".github/workflows/hacs.yml");
+  const websocket = read("custom_components/nodalia/websocket_api.py");
+  const build = read("scripts/build-bundle.mjs");
+
+  assert.equal(manifest.domain, "nodalia");
+  assert.equal(manifest.version, pkg.version);
+  assert.equal(manifest.config_flow, true);
+  assert.equal(hacs.filename, undefined, "integration installs must not retain the old dashboard filename contract");
+  assert.match(workflow, /category: integration/);
+  assert.match(websocket, /connection\.require_admin\(\)/);
+  assert.match(websocket, /nodalia\/notifications\/set/);
+  assert.match(websocket, /nodalia\/climate\/schedule\/set/);
+  assert.match(build, /custom_components", "nodalia", "frontend", loaderFile/);
 });
 
 test("card runtime metadata stays synchronized with package version", () => {

@@ -1,0 +1,14 @@
+{
+  "domain": "nodalia",
+  "name": "Nodalia",
+  "codeowners": ["@danielmigueltejedor"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http", "lovelace"],
+  "documentation": "https://github.com/danielmigueltejedor/nodalia-cards",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/danielmigueltejedor/nodalia-cards/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "2.0.0-alpha.57"
+}

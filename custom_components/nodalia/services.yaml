@@ -1,0 +1,23 @@
+test_notification:
+  name: Test notification
+  description: Send a test through a configured Nodalia notification profile.
+  fields:
+    profile_id:
+      name: Profile
+      required: false
+      default: default
+      selector:
+        text:
+    title:
+      name: Title
+      required: false
+      default: Nodalia
+      selector:
+        text:
+    message:
+      name: Message
+      required: false
+      default: Background notifications are ready.
+      selector:
+        text:
+          multiline: true

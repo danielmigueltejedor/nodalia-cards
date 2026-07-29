@@ -1,0 +1,18 @@
+{
+  "title": "Nodalia",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurar Nodalia",
+        "description": "Activa notificaciones en segundo plano, agendas de climatización y almacenamiento compartido para Nodalia Cards. No requiere helpers, packages ni automatizaciones YAML."
+      },
+      "reconfigure": {
+        "title": "Recargar Nodalia",
+        "description": "Confirma para recargar el motor de Nodalia. La configuración de las tarjetas permanece guardada en Home Assistant."
+      }
+    },
+    "abort": {
+      "already_configured": "Nodalia ya está configurado."
+    }
+  }
+}

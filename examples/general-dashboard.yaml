@@ -138,16 +138,13 @@ views:
                 mobile: inherit
 
             mobile_notifications:
-              # Runs only while a browser has this dashboard/card loaded.
-              # For true background push, copy examples/notifications-background-mobile-package.yaml
-              # and enable background_mobile below.
+              # With the Nodalia integration, delivery continues when the dashboard is closed.
               enabled: true
               entities:
                 - notify.mobile_app_my_phone
 
             background_mobile:
               enabled: true
-              webhook: nodalia_notifications_background_sync
 
             grid_options:
               rows: auto

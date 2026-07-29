@@ -1,5 +1,5 @@
-# Webhook automation — receives schedule saves from every Nodalia Climate Card.
-# Full guide: docs/climate-setpoint-schedule.md
+# LEGACY FALLBACK ONLY. Nodalia 2.0 native schedules do not require this file.
+# Keep it temporarily while migrating a frontend-only installation.
 #
 # ─── Customize ───────────────────────────────────────────────────────────────
 # WEBHOOK_ID   Usually keep the default below. Must match `setpoint_schedule_webhook`

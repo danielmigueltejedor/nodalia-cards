@@ -1,7 +1,5 @@
 {
-  "name": "Nodalia Cards",
-  "content_in_root": true,
-  "filename": "nodalia-cards.js",
+  "name": "Nodalia",
   "render_readme": true,
   "homeassistant": "2025.1.0"
 }

@@ -10,6 +10,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.57] - 2026-07-30
+
+Fifty-seventh **`2.0.0`** alpha: native Home Assistant integration for Nodalia's server-side features.
+
+### Added
+
+- **Nodalia integration:** HACS can now install Nodalia as a Home Assistant integration that serves and registers the complete card bundle automatically.
+- **Native background notifications:** persistent profiles, indexed entity listeners, presence rules, quiet hours, severity policies, cooldowns, custom conditions and shared dismissals now run inside Home Assistant without a package, webhook or `input_text` chunks.
+- **Native Climate schedules:** complete weekly schedules are stored and executed by the integration without helpers, shell commands or generated automations.
+- **Authenticated frontend bridge:** cards use Home Assistant's WebSocket connection to discover backend capabilities and synchronize profiles and schedules; writes require an administrator.
+- **Diagnostics and service:** privacy-preserving integration diagnostics and the `nodalia.test_notification` action make installation and delivery easier to verify.
+
+### Changed
+
+- **HACS distribution:** the repository is now packaged as an Integration and includes the frontend bundle inside `custom_components/nodalia`.
+- **Migration safety:** legacy notification and Climate webhooks remain optional fallbacks while existing installations verify native delivery.
+- **Documentation and editors:** installation, one-time migration, profile selection and native schedule guidance are available throughout the README, examples and all supported editor/runtime locales.
+- **Automation:** version synchronization, HACS validation and CodeQL now cover both the JavaScript card suite and the Python integration.
+
+### Tests
+
+- Added pure Python policy and schedule-engine tests, frontend/backend protocol contracts and release checks for the integrated HACS artifact.
+- Validated 380 JavaScript tests, 7 Python tests, all locale catalogs and the self-contained release bundle.
+
 ## [2.0.0-alpha.56] - 2026-07-29
 
 Fifty-sixth **`2.0.0`** alpha: entity-native icons by default on Entity and Fav cards.

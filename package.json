@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "2.0.0-alpha.56",
+  "version": "2.0.0-alpha.57",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -10,8 +10,8 @@
   "description": "Suite de tarjetas personalizadas de Home Assistant para Nodalia.",
   "nodalia": {
     "compatVersions": [
-      "2.0.0-alpha.54",
-      "2.0.0-alpha.55"
+      "2.0.0-alpha.55",
+      "2.0.0-alpha.56"
     ]
   },
   "scripts": {
@@ -25,13 +25,15 @@
     "i18n:validate-runtime": "node scripts/validate-runtime-i18n.mjs",
     "i18n:gen-runtime": "node scripts/gen-runtime-i18n.mjs",
     "test": "node --test tests/**/*.test.mjs",
+    "test:python": "python3 -m compileall -q custom_components/nodalia && python3 -m unittest discover -s tests/python -p 'test_*.py'",
     "test:browser": "pnpm run bundle && playwright test",
-    "validate": "pnpm run version:check && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm test && pnpm run bundle"
+    "validate": "pnpm run version:check && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm test && pnpm run test:python && pnpm run bundle"
   },
   "files": [
     "nodalia-i18n.js",
     "nodalia-editor-ui.js",
     "nodalia-utils.js",
+    "nodalia-backend.js",
     "nodalia-render-signature.js",
     "nodalia-bubble-contrast.js",
     "nodalia-cards.js",
@@ -66,6 +68,7 @@
     "nodalia-go2rtc-player.js",
     "nodalia-room-summary-card.js",
     "nodalia-room-summary-model.js",
+    "custom_components/nodalia",
     "THIRD_PARTY_NOTICES.md",
     "i18n/runtime/de.json",
     "i18n/runtime/el.json",

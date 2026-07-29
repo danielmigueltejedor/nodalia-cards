@@ -129,7 +129,12 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.ok(manifest.includes(`"hacsFile": "${expectedHacsFile}"`));
   assert.doesNotMatch(manifest, /contentSha256_12": ""/);
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
-  assert.equal(hacs.filename, expectedHacsFile);
+  assert.equal(hacs.filename, undefined, "HACS must install the custom integration instead of the old dashboard-only file");
+  const integrationManifest = JSON.parse(read("custom_components/nodalia/manifest.json"));
+  assert.equal(integrationManifest.version, pkg.version);
+  const integrationFrontend = path.join(root, "custom_components", "nodalia", "frontend", expectedHacsFile);
+  assert.ok(fs.existsSync(integrationFrontend), "the integration should contain the generated self-contained frontend");
+  assert.deepEqual(fs.readFileSync(integrationFrontend), fs.readFileSync(path.join(root, expectedHacsFile)));
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
   assert.ok(packagePatternIncludes(pkg.files, expectedVersionedFile), `${expectedVersionedFile} should be published`);
   expectedCompatFiles.forEach(file => {

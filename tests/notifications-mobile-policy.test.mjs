@@ -303,6 +303,15 @@ test("background payload includes policy context cooldown and external alerts", 
       quiet_hours: { enabled: true, start: "22:00", end: "07:00", allow_critical: false },
     },
     external_alerts: [{ id: "cam1", title: "Person", type: "camera_event", mobile: "auto" }],
+    custom_notifications: [{
+      title: "Warm room",
+      message: "Temperature is {value}",
+      entity: "sensor.room",
+      attribute: "temperature",
+      condition: "above",
+      value: "27",
+      mobile: "push",
+    }],
     smart_notifications: { battery_low: { mobile: "push" } },
     smart_entity_overrides: [{ entity: "binary_sensor.door", mobile: "off" }],
   });
@@ -313,6 +322,9 @@ test("background payload includes policy context cooldown and external alerts", 
   assert.equal(payload.context.presence_entity, "binary_sensor.home");
   assert.equal(payload.context.only_when_away, true);
   assert.equal(payload.external_alerts.length, 1);
+  assert.equal(payload.custom[0].attribute, "temperature");
+  assert.equal(payload.custom[0].condition, "above");
+  assert.equal(payload.custom[0].value, "27");
   assert.equal(payload.smart.battery_low.mobile, "push");
   assert.equal(payload.overrides["binary_sensor.door"].mobile, "off");
 });

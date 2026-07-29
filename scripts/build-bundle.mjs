@@ -26,6 +26,7 @@ function escapeUnsafeJsString(str) {
 const CORE_PARTS = [
   "nodalia-i18n.js",
   "nodalia-utils.js",
+  "nodalia-backend.js",
   "nodalia-render-signature.js",
   "nodalia-bubble-contrast.js",
 ];
@@ -263,9 +264,11 @@ function writeFileAtomic(filePath, contents) {
   }
 }
 
+const hacsLoaderSource = `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`;
 writeFileAtomic(path.join(root, bundleFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n`);
 writeFileAtomic(path.join(root, manifestFile), manifestSource);
-writeFileAtomic(path.join(root, loaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`);
+writeFileAtomic(path.join(root, loaderFile), hacsLoaderSource);
+writeFileAtomic(path.join(root, "custom_components", "nodalia", "frontend", loaderFile), hacsLoaderSource);
 writeFileAtomic(path.join(root, versionedLoaderFile), `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(versionedLoaderFile)}\n`);
 compatLoaderFiles.forEach(file => {
   writeFileAtomic(path.join(root, file), compatibilityLoaderSource(file));

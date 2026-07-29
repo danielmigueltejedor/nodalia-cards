@@ -1,5 +1,5 @@
-# Path B — one automation per thermostat: reads the helper and applies the active slot.
-# Full guide: docs/climate-setpoint-schedule.md#path-b-single-automation-active-slot
+# LEGACY FALLBACK ONLY. Native Nodalia 2.0 schedules do not need this automation.
+# Migration guide: docs/nodalia-integration.md
 #
 # ─── Customize (must match your climate card) ────────────────────────────────
 # YOUR_CLIMATE_ENTITY   climate.* entity (card `entity:` field)

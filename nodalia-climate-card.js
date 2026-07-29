@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.0.0-alpha.56";
+const CARD_VERSION = "2.0.0-alpha.57";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1641,8 +1641,40 @@ class NodaliaClimateCard extends HTMLElement {
     this._scheduleComposerSaving = false;
     this._scheduleComposerDraft = this._loadScheduleDraftFromStorage();
     this._scheduleComposerOpen = true;
+    const loadRevision = this._scheduleDraftRevision || 0;
+    const entityId = String(this._config?.entity || "").trim();
     this._lastRenderSignature = "";
     this._render();
+    void this._loadNativeScheduleDraft(entityId, loadRevision);
+  }
+
+  async _loadNativeScheduleDraft(entityId, loadRevision) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    if (!backend || !entityId || !this._hass) {
+      return false;
+    }
+    try {
+      const status = await backend.status(this._hass, { silent: true });
+      if (!status?.available || !status.capabilities?.includes("climate_schedules")) {
+        return false;
+      }
+      const result = await backend.getClimateSchedule(this._hass, entityId);
+      if (
+        !this._scheduleComposerOpen
+        || entityId !== String(this._config?.entity || "").trim()
+        || loadRevision !== (this._scheduleDraftRevision || 0)
+        || !result?.schedule
+      ) {
+        return false;
+      }
+      this._scheduleComposerDraft = normalizeSetpointScheduleConfig(result.schedule);
+      this._touchScheduleDraftRevision();
+      this._lastRenderSignature = "";
+      this._render();
+      return true;
+    } catch (_error) {
+      return false;
+    }
   }
 
   _closeScheduleComposer() {
@@ -1799,14 +1831,6 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    const webhookId = String(this._config?.setpoint_schedule_webhook || "").trim();
-    if (!webhookId) {
-      this._setScheduleComposerError(
-        this._climateScheduleText("errors.webhookMissing", "Configure a setpoint schedule webhook in the card editor."),
-      );
-      return;
-    }
-
     const entityId = String(this._config?.entity || "").trim();
     if (!entityId) {
       this._setScheduleComposerError(
@@ -1828,6 +1852,53 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._flushScheduleComposerFocusedField();
     const schedule = this._syncScheduleComposerDraftFromDom();
+    this._scheduleComposerSaving = true;
+    this._scheduleComposerError = "";
+    this._lastRenderSignature = "";
+    this._render();
+
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    let nativeSaveError = null;
+    if (backend) {
+      try {
+        const status = await backend.status(this._hass, { silent: true });
+        if (status?.available && status.capabilities?.includes("climate_schedules")) {
+          await backend.setClimateSchedule(this._hass, entityId, {
+            ...schedule,
+            week_starts_on: this._config?.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
+          });
+          this._scheduleComposerSaving = false;
+          if (this.isConnected && this.shadowRoot) {
+            this._scheduleComposerDraft = schedule;
+            this._triggerHaptic("success");
+            this._closeScheduleComposer();
+          }
+          return;
+        }
+      } catch (error) {
+        nativeSaveError = error;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Climate Card: native schedule synchronization failed; trying the legacy webhook.", error);
+        }
+      }
+    }
+
+    const webhookId = String(this._config?.setpoint_schedule_webhook || "").trim();
+    if (!webhookId) {
+      this._scheduleComposerSaving = false;
+      this._setScheduleComposerError(
+        nativeSaveError
+          ? this._climateScheduleText(
+            "errors.nativeFailed",
+            "Native schedule save failed. Use an administrator account or configure the legacy fallback.",
+          )
+          : this._climateScheduleText(
+            "errors.webhookMissing",
+            "Install the Nodalia integration or configure the legacy schedule webhook in the card editor.",
+          ),
+      );
+      return;
+    }
     const storageEntityId = getClimateScheduleStorageEntityId(
       entityId,
       this._config?.setpoint_schedule_helper,
@@ -1849,11 +1920,6 @@ class NodaliaClimateCard extends HTMLElement {
       );
       return;
     }
-
-    this._scheduleComposerSaving = true;
-    this._scheduleComposerError = "";
-    this._lastRenderSignature = "";
-    this._render();
 
     const ok = await this._postScheduleWebhookPayload(webhookId, body);
     this._scheduleComposerSaving = false;
@@ -4732,7 +4798,7 @@ class NodaliaClimateCard extends HTMLElement {
     const title = this._climateScheduleText("popupTitle", "Weekly schedule");
     const hint = this._climateScheduleText(
       "popupHint",
-      "Define time blocks and target temperatures, then save to sync Home Assistant automations through your webhook.",
+      "Define time blocks and target temperatures, then save them natively in Home Assistant.",
     );
     const enabledLabel = this._climateScheduleText("enabledLabel", "Enable schedule");
     const addLabel = this._climateScheduleText("addSlot", "Add block");
