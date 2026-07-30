@@ -21,10 +21,10 @@
 
 ---
 
-Nodalia is a custom Home Assistant integration with a complete card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
+Nodalia Cards is a custom Home Assistant frontend card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
 
 > [!IMPORTANT]
-> Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia through HACS as a custom **Integration** repository using the steps below.
+> Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia Cards through HACS as a custom **Dashboard** repository using the steps below.
 
 ## Preview
 
@@ -103,21 +103,21 @@ Only settings that differ from the defaults are written to YAML, keeping dashboa
 
 ## Installation
 
-### HACS custom integration — recommended
+### HACS custom Dashboard — recommended
 
 Until the default HACS listing is approved:
 
 1. Open **HACS**.
 2. Open the three-dot menu and choose **Custom repositories**.
 3. Add `https://github.com/danielmigueltejedor/nodalia-cards`.
-4. Select category **Integration**.
-5. Open **Nodalia**, choose **Download**, and restart Home Assistant.
-6. Open **Settings → Devices & services → Add integration**, search for **Nodalia**, and confirm setup once.
-7. Reload the browser.
+4. Select category **Dashboard**.
+5. Open **Nodalia Cards** and choose **Download**.
+6. Restart Home Assistant.
+7. Reload your browser (or perform a hard refresh).
 
-[![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=integration)
+[![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
-The integration serves and registers the self-contained card bundle automatically:
+If a card does not appear immediately after installation or an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ```text
 /nodalia/nodalia-cards.js
@@ -125,16 +125,19 @@ The integration serves and registers the self-contained card bundle automaticall
 
 That single file includes both the cards and their visual editors. It also enables native background notifications, shared dismissals and climate schedules without packages, helpers or user-created automations.
 
-If you previously installed Nodalia Cards as a HACS Dashboard repository, follow the [one-time 2.0 migration](./docs/nodalia-integration.md#migrating-from-the-dashboard-only-installation).
-
 If a card does not appear immediately after an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ### Manual installation
 
-1. Copy `custom_components/nodalia` from this repository to `/config/custom_components/nodalia`.
-2. Restart Home Assistant.
-3. Add **Nodalia** from **Settings → Devices & services**.
-4. Reload the browser. The integration registers the card resource itself.
+1. Copy `dist/nodalia-cards.js` to your `/config/www/` directory.
+2. Add it as a Lovelace resource:
+
+```text
+URL: /local/nodalia-cards.js
+Type: module
+```
+
+3. Reload your browser.
 
 ## Quick start
 
@@ -170,7 +173,6 @@ calibration_source:
 
 | Feature | Documentation |
 |---|---|
-| Nodalia integration | [Installation, migration and native services](./docs/nodalia-integration.md) |
 | Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
 | Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
