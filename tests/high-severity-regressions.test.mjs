@@ -122,3 +122,21 @@ test("climate popup viewport constraints remain valid CSS functions", () => {
   assert.match(source, /min\(calc\(100vw - 24px\), 920px\)/);
   assert.match(source, /min\(calc\(100vw - 16px\), 920px\)/);
 });
+
+test("native climate runtime wakes on slot end so overlapping overrides resume", () => {
+  const engine = read("custom_components/nodalia/climate_engine.py");
+  const runtime = read("custom_components/nodalia/climate.py");
+  assert.match(engine, /def next_schedule_boundary\(/);
+  assert.match(engine, /end_at is not None and end_at > now/);
+  assert.match(runtime, /from \.climate_engine import active_slot, next_schedule_boundary, normalize_schedule/);
+  assert.match(
+    runtime,
+    /if \(candidate := next_schedule_boundary\(schedule, now\)\) is not None/,
+    "timer reschedule must use start/end boundaries, not starts alone",
+  );
+  assert.doesNotMatch(
+    runtime,
+    /next_slot_start\(schedule, now\)/,
+    "starts-only scheduling leaves nested overrides stuck until the next start",
+  );
+});

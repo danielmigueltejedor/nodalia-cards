@@ -22,7 +22,7 @@ The agenda stores the full schedule in Home Assistant and is not limited by an `
 
 - Each enabled block has a weekday, start, end and target temperature.
 - If blocks overlap, the block with the latest start wins.
-- The active target is applied after Home Assistant starts, after a schedule is saved and at each upcoming block start.
+- The active target is applied after Home Assistant starts, after a schedule is saved and at each upcoming block boundary (start or end), so overlapping blocks resume correctly when an override ends.
 - If the thermostat already has the desired target, Nodalia avoids the redundant service call.
 - Disabled schedules and disabled blocks are ignored.
 

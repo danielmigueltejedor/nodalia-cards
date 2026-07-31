@@ -35,6 +35,37 @@ class ClimateEngineTests(unittest.TestCase):
         now = datetime.fromisoformat("2026-07-27T08:00:00+02:00")
         self.assertEqual(engine.active_slot(schedule, now)["id"], "morning")
         self.assertEqual(engine.next_slot_start(schedule, now).isoformat(), "2026-07-27T18:30:00+02:00")
+        # While a block is active, the next runtime wake must include its end.
+        self.assertEqual(
+            engine.next_schedule_boundary(schedule, now).isoformat(),
+            "2026-07-27T09:00:00+02:00",
+        )
+
+    def test_overlapping_override_resumes_outer_slot_at_end(self) -> None:
+        schedule = engine.normalize_schedule(
+            "climate.salon",
+            {
+                "enabled": True,
+                "slots": [
+                    {"id": "day", "day": "mon", "start": "08:00", "end": "20:00", "temperature": 22},
+                    {"id": "lunch", "day": "mon", "start": "12:00", "end": "13:00", "temperature": 18},
+                ],
+            },
+        )
+        during_override = datetime.fromisoformat("2026-07-27T12:30:00+02:00")
+        self.assertEqual(engine.active_slot(schedule, during_override)["id"], "lunch")
+        # Starts-only scheduling would jump to next week; end boundary restores the day block.
+        self.assertEqual(
+            engine.next_slot_start(schedule, during_override).isoformat(),
+            "2026-08-03T08:00:00+02:00",
+        )
+        self.assertEqual(
+            engine.next_schedule_boundary(schedule, during_override).isoformat(),
+            "2026-07-27T13:00:00+02:00",
+        )
+        after_override = datetime.fromisoformat("2026-07-27T13:00:00+02:00")
+        self.assertEqual(engine.active_slot(schedule, after_override)["id"], "day")
+        self.assertEqual(engine.active_slot(schedule, after_override)["temperature"], 22.0)
 
     def test_overnight_slot_uses_previous_day(self) -> None:
         schedule = engine.normalize_schedule(
@@ -43,6 +74,10 @@ class ClimateEngineTests(unittest.TestCase):
         )
         now = datetime.fromisoformat("2026-07-28T01:00:00+02:00")
         self.assertEqual(engine.active_slot(schedule, now)["id"], "night")
+        self.assertEqual(
+            engine.next_schedule_boundary(schedule, now).isoformat(),
+            "2026-07-28T06:00:00+02:00",
+        )
 
     def test_invalid_rows_are_rejected(self) -> None:
         schedule = engine.normalize_schedule(
