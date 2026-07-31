@@ -77,12 +77,15 @@ def normalize_schedule(entity_id: str, raw: Any, max_slots: int = 256) -> dict[s
     }
 
 
-def active_slot(schedule: dict[str, Any], now: datetime) -> dict[str, Any] | None:
-    """Return the active slot whose start is latest, including overnight slots."""
+def _active_slot_match(
+    schedule: dict[str, Any], now: datetime
+) -> tuple[dict[str, Any] | None, datetime | None, datetime | None]:
+    """Return the winning active slot plus its local start/end datetimes."""
     if schedule.get("enabled") is False:
-        return None
+        return None, None, None
     winner: dict[str, Any] | None = None
     winner_start: datetime | None = None
+    winner_end: datetime | None = None
     for slot in schedule.get("slots", []):
         if not isinstance(slot, dict) or slot.get("enabled") is False:
             continue
@@ -100,6 +103,13 @@ def active_slot(schedule: dict[str, Any], now: datetime) -> dict[str, Any] | Non
             if start_at <= now < end_at and (winner_start is None or start_at > winner_start):
                 winner = slot
                 winner_start = start_at
+                winner_end = end_at
+    return winner, winner_start, winner_end
+
+
+def active_slot(schedule: dict[str, Any], now: datetime) -> dict[str, Any] | None:
+    """Return the active slot whose start is latest, including overnight slots."""
+    winner, _, _ = _active_slot_match(schedule, now)
     return dict(winner) if winner is not None else None
 
 
@@ -122,6 +132,22 @@ def next_slot_start(schedule: dict[str, Any], now: datetime) -> datetime | None:
             if candidate > now:
                 candidates.append(candidate)
                 break
+    return min(candidates) if candidates else None
+
+
+def next_schedule_boundary(schedule: dict[str, Any], now: datetime) -> datetime | None:
+    """Return the next time the active target may change (slot start or end).
+
+    Overlapping blocks use latest-start-wins. When a nested override ends, the
+    outer block must become active again, so end boundaries are scheduled too.
+    """
+    candidates: list[datetime] = []
+    start = next_slot_start(schedule, now)
+    if start is not None:
+        candidates.append(start)
+    _, _, end_at = _active_slot_match(schedule, now)
+    if end_at is not None and end_at > now:
+        candidates.append(end_at)
     return min(candidates) if candidates else None
 
 

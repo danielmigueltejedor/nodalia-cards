@@ -12,7 +12,7 @@ from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 
-from .climate_engine import active_slot, next_slot_start, normalize_schedule
+from .climate_engine import active_slot, next_schedule_boundary, normalize_schedule
 from .const import MAX_CLIMATE_SCHEDULES, MAX_CLIMATE_SLOTS
 from .storage import NodaliaStorage
 
@@ -85,21 +85,18 @@ class NodaliaClimateManager:
 
     def diagnostics(self) -> dict[str, Any]:
         now = dt_util.now()
+        schedules: dict[str, Any] = {}
+        for entity_id, schedule in self._schedules.items():
+            boundary = next_schedule_boundary(schedule, now)
+            schedules[entity_id] = {
+                "enabled": schedule.get("enabled") is not False,
+                "slot_count": len(schedule.get("slots", [])),
+                "active_slot": (active_slot(schedule, now) or {}).get("id"),
+                "next_start": boundary.isoformat() if boundary is not None else None,
+            }
         return {
             "schedule_count": len(self._schedules),
-            "schedules": {
-                entity_id: {
-                    "enabled": schedule.get("enabled") is not False,
-                    "slot_count": len(schedule.get("slots", [])),
-                    "active_slot": (active_slot(schedule, now) or {}).get("id"),
-                    "next_start": (
-                        next_slot_start(schedule, now).isoformat()
-                        if next_slot_start(schedule, now) is not None
-                        else None
-                    ),
-                }
-                for entity_id, schedule in self._schedules.items()
-            },
+            "schedules": schedules,
         }
 
     async def _async_apply_all(self) -> None:
@@ -144,7 +141,7 @@ class NodaliaClimateManager:
         candidates = [
             candidate
             for schedule in self._schedules.values()
-            if (candidate := next_slot_start(schedule, now)) is not None
+            if (candidate := next_schedule_boundary(schedule, now)) is not None
         ]
         if not candidates:
             return
