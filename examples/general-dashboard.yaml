@@ -138,7 +138,7 @@ views:
                 mobile: inherit
 
             mobile_notifications:
-              # With the Nodalia integration, delivery continues when the dashboard is closed.
+              # With Nodalia Cards Engine, delivery continues when the dashboard is closed.
               enabled: true
               entities:
                 - notify.mobile_app_my_phone

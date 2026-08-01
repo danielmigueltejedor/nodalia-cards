@@ -25,29 +25,6 @@ for (const name of cardFiles) {
   }
 }
 
-const integrationFiles = [
-  {
-    name: "custom_components/nodalia/manifest.json",
-    pattern: /"version":\s*"[^"]+"/,
-    replacement: `"version": ${JSON.stringify(pkg.version)}`,
-  },
-  {
-    name: "custom_components/nodalia/const.py",
-    pattern: /INTEGRATION_VERSION(?:\s*:\s*Final)?\s*=\s*"[^"]+"/,
-    replacement: `INTEGRATION_VERSION: Final = ${JSON.stringify(pkg.version)}`,
-  },
-];
-for (const item of integrationFiles) {
-  const filePath = path.join(root, item.name);
-  if (!fs.existsSync(filePath)) continue;
-  const source = fs.readFileSync(filePath, "utf8");
-  if (source.includes(item.replacement)) continue;
-  stale.push(item.name);
-  if (!checkOnly) {
-    fs.writeFileSync(filePath, source.replace(item.pattern, item.replacement));
-  }
-}
-
 if (checkOnly && stale.length) {
   throw new Error(`Card versions do not match package ${pkg.version}: ${stale.join(", ")}. Run npm run version:sync.`);
 }
@@ -55,5 +32,5 @@ if (checkOnly && stale.length) {
 console.log(
   checkOnly
     ? `Validated ${cardFiles.length} card versions (${pkg.version}).`
-    : `Synchronized ${stale.length} version declarations across ${cardFiles.length} card files and integration metadata to ${pkg.version}.`,
+    : `Synchronized ${stale.length} version declarations across ${cardFiles.length} card files to ${pkg.version}.`,
 );

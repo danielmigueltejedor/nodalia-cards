@@ -22,6 +22,11 @@ const distributedFiles = [
   ...(manifest.compatLoaderFiles || []),
   manifest.file,
   "nodalia-cards.manifest.js",
+  "LICENSE",
+  "README.md",
+  "hacs.json",
+  "CHANGELOG.md",
+  "CHANGELOG-PRERELEASES.md",
   "THIRD_PARTY_NOTICES.md",
 ];
 

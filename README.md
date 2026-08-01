@@ -120,10 +120,10 @@ Until the default HACS listing is approved:
 If a card does not appear immediately after installation or an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ```text
-/nodalia/nodalia-cards.js
+/hacsfiles/nodalia-cards/nodalia-cards.js
 ```
 
-That single file includes both the cards and their visual editors. It also enables native background notifications, shared dismissals and climate schedules without packages, helpers or user-created automations.
+That single file includes both the cards and their visual editors. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
 
 If a card does not appear immediately after an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
