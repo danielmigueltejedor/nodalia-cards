@@ -320,6 +320,32 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   await expect(cameraAction).toBeFocused();
 });
 
+test("Camera preview respects navigate tap actions through Home Assistant SPA navigation", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const camera = document.createElement("nodalia-camera-card");
+    camera.setConfig({
+      entity: "camera.porch",
+      cameras: ["camera.porch", "camera.driveway"],
+      tap_action: "navigate",
+      navigation_path: "/lovelace/home/",
+    });
+    const hass = window.makeHass({
+      "camera.porch": { entity_id: "camera.porch", state: "idle", attributes: { friendly_name: "Porch" } },
+      "camera.driveway": { entity_id: "camera.driveway", state: "idle", attributes: { friendly_name: "Driveway" } },
+    });
+    window.cameraNativeActions = [];
+    hass.navigate = path => window.cameraNativeActions.push(path);
+    camera.hass = hass;
+    document.querySelector("#fixture").append(camera);
+  });
+
+  const previewAction = page.locator("nodalia-camera-card").locator('.camera-card__preview-open[data-camera-action="body"]').first();
+  await previewAction.click();
+  await expect.poll(() => page.evaluate(() => window.cameraNativeActions)).toEqual(["/lovelace/home/"]);
+  await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(0);
+});
+
 test("Person supports native Lovelace tap hold double-tap and service actions", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {

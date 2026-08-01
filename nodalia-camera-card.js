@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.59";
+const CARD_VERSION = "2.0.0-alpha.60";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -957,10 +957,27 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _navigateToPath(pathValue) {
-    const navigationPath = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
-    if (!navigationPath) {
+    const navigationPath = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, {
+      allowRelative: true,
+      allowHash: true,
+    }) || "";
+    if (!navigationPath || navigationPath.includes("://")) {
       return;
     }
+
+    if (this._hass?.navigate) {
+      this._hass.navigate(navigationPath);
+      return;
+    }
+
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", navigationPath);
+      window.dispatchEvent(new CustomEvent("location-changed", {
+        detail: { replace: false },
+      }));
+      return;
+    }
+
     fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
@@ -1226,6 +1243,12 @@ class NodaliaCameraCard extends HTMLElement {
       : this._cameraUi("openCamera", "Open camera");
     const title = this._getTitle(state, entityId);
     const previewAge = this._config?.show_preview_age === false ? "" : this._formatPreviewAge(state);
+    const previewAction = normalizeTextKey(this._config?.tap_action || "toggle") === "toggle"
+      ? "expand"
+      : "body";
+    const previewActionLabel = previewAction === "expand"
+      ? this._cameraUi("openCamera", "Open camera")
+      : title;
 
     return `
       <div class="camera-card__preview ${layout === "compact" ? "camera-card__preview--compact" : ""} ${layout === "security" ? "camera-card__preview--security" : ""}">
@@ -1245,9 +1268,9 @@ class NodaliaCameraCard extends HTMLElement {
         <button
           type="button"
           class="camera-card__preview-open"
-          data-camera-action="expand"
+          data-camera-action="${previewAction}"
           data-camera-entity="${escapeHtml(entityId)}"
-          aria-label="${escapeHtml(this._cameraUi("openCamera", "Open camera"))}"
+          aria-label="${escapeHtml(previewActionLabel)}"
         ></button>
       </div>
     `;

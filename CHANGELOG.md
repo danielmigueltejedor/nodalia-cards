@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **Camera Card:** `tap_action: navigate` now uses Home Assistant SPA navigation across the complete preview surface instead of being intercepted by the live-view overlay; `toggle` continues to open the configured camera stream.
+
 ### Changed
 
 - **Documentation:** align installation, release-channel, roadmap, translation, architecture and historical-audit guidance with stable `1.3.5` and preview `2.0.0-rc.1`.

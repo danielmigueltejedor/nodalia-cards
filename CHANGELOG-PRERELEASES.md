@@ -10,6 +10,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.60] - 2026-08-01
+
+Sixtieth **`2.0.0`** alpha: reliable native navigation across the complete Camera Card surface.
+
+### Fixed
+
+- **Camera Card navigation:** `tap_action: navigate` now uses Home Assistant SPA navigation through `hass.navigate`, with the standard history/location fallback for compatible Home Assistant versions and hash routes.
+- **Preview action interception:** the transparent camera-preview surface now respects the configured card action instead of always opening the live stream. The default `tap_action: toggle` continues to open the selected camera exactly as before.
+
+### Tests
+
+- Added Chromium and WebKit/iPhone coverage for multi-camera previews navigating to `/lovelace/home/` without opening the live-view dialog.
+
 ## [2.0.0-alpha.59] - 2026-08-01
 
 Fifty-ninth **`2.0.0`** alpha: independent Cards plugin, optional Engine architecture and HACS publishing hardening.

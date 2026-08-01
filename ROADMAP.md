@@ -17,10 +17,10 @@ Current stable release:
 Current preview release:
 
 ```text
-2.0.0-alpha.59
+2.0.0-alpha.60
 ```
 
-Stable **`1.3.5`** remains the recommended daily-driver release. **`2.0.0-alpha.59`** restores the established HACS Dashboard plugin distribution, separates optional backend work and hardens release licensing and catalogue readiness before the next candidate. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`1.3.5`** remains the recommended daily-driver release. **`2.0.0-alpha.60`** keeps the independent HACS Dashboard plugin architecture while fixing native Camera Card navigation across the full preview surface. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
