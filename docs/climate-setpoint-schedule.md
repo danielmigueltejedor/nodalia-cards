@@ -1,10 +1,10 @@
 # Climate Card — native weekly setpoint schedule
 
-Nodalia 2.0 stores and executes Climate Card schedules inside the Nodalia Home Assistant integration. A normal installation needs no YAML helper, webhook, package, generated automation or shell command.
+The optional Nodalia Cards Engine stores and executes Climate Card schedules inside Home Assistant. With the Engine installed, no YAML helper, webhook, package, generated automation or shell command is needed.
 
 ## Quick start
 
-1. Install and configure the [Nodalia integration](./nodalia-integration.md).
+1. Install the Nodalia Cards plugin and configure the optional [Nodalia Cards Engine](./nodalia-integration.md).
 2. Add a Climate Card with a `climate.*` entity.
 3. Tap the calendar-clock button.
 4. Add weekly blocks and press **Save**.
@@ -34,23 +34,23 @@ Schedules use Home Assistant's configured local timezone.
 |---|---|
 | `show_schedule_button` | Show the weekly agenda button. Default `true`. |
 | `setpoint_schedule_week_starts_on` | `monday` (default) or `sunday` for agenda row order. |
-| `setpoint_schedule_webhook` | Optional legacy fallback webhook. Not needed with the integration. |
-| `setpoint_schedule_helper` | Optional legacy fallback `input_text`. Not needed with the integration. |
+| `setpoint_schedule_webhook` | Optional legacy fallback webhook. Not needed with the Engine. |
+| `setpoint_schedule_helper` | Optional legacy fallback `input_text`. Not needed with the Engine. |
 
 ## Legacy fallback
 
-The existing webhook/helper implementation remains compatible so a card can still save through old automations when the Nodalia integration is unavailable. The former examples in `examples/climate-setpoint-schedule-*` are retained only for migration and unsupported frontend-only deployments.
+The existing webhook/helper implementation remains compatible so a card can still save through old automations when the Engine is unavailable. The former examples in `examples/climate-setpoint-schedule-*` are retained for migration and plugin-only deployments.
 
-Do not configure both systems intentionally. When the native integration is available, the card saves natively first and does not call the webhook.
+Do not configure both systems intentionally. When the Engine is available, the card saves natively first and does not call the webhook.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---|---|
-| Save asks for an integration or webhook | Nodalia is downloaded, Home Assistant was restarted and the integration was added under Devices & services. |
-| Agenda opens empty after reload | Confirm the card entity id has not changed and reload the Nodalia integration. |
+| Save asks for an integration or webhook | Nodalia Cards Engine is downloaded, Home Assistant was restarted and the integration was added under Devices & services. |
+| Agenda opens empty after reload | Confirm the card entity id has not changed and reload Nodalia Cards Engine. |
 | Temperature does not change | Confirm the schedule and block are enabled, the block is active and the climate entity is available. |
 | Non-admin cannot save | Schedule writes are intentionally admin-only in the initial native implementation. |
 | Wrong day or time | Check Home Assistant's configured timezone. |
 
-Privacy-safe counts and the next schedule boundary are available from the integration diagnostics.
+Privacy-safe counts and the next schedule boundary are available from the Engine diagnostics.

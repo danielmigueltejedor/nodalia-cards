@@ -17,10 +17,10 @@ Current stable release:
 Current preview release:
 
 ```text
-2.0.0-rc.1
+2.0.0-alpha.59
 ```
 
-Stable **`1.3.5`** is the recommended daily-driver release. **`2.0.0-rc.1`** is the first release candidate after the architecture, security, mobile interaction, camera, notification and bundle audits completed during the `2.0.0-alpha.*` cycle. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`1.3.5`** remains the recommended daily-driver release. **`2.0.0-alpha.59`** restores the established HACS Dashboard plugin distribution, separates optional backend work and hardens release licensing and catalogue readiness before the next candidate. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -37,9 +37,9 @@ The project currently includes:
 
 ---
 
-# 🎯 Current focus (`2.0.0` release candidate)
+# 🎯 Current focus (`2.0.0` HACS readiness)
 
-The release-candidate stage focuses on:
+The current stabilization stage focuses on:
 
 - Regression-free mobile and desktop behavior
 - Security and service-action policy consistency

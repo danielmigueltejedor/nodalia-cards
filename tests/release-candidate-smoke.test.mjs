@@ -78,6 +78,29 @@ test("release metadata hashes the same buffers it validated", () => {
   assert.doesNotMatch(source, /existsSync\(/);
 });
 
+test("HACS publishing contract includes license, information, images, and plugin metadata", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const hacs = JSON.parse(read("hacs.json"));
+  const license = read("LICENSE");
+  const readme = read("README.md");
+  const release = read("scripts/generate-release-metadata.mjs");
+  const workflow = read(".github/workflows/hacs.yml");
+
+  assert.match(license, /^MIT License/);
+  assert.match(license, /Copyright \(c\) 2026 Daniel Miguel Tejedor/);
+  assert.ok(pkg.files.includes("LICENSE"), "the published package must include its license explicitly");
+  for (const file of ["LICENSE", "README.md", "hacs.json", "CHANGELOG.md", "CHANGELOG-PRERELEASES.md"]) {
+    assert.match(release, new RegExp(`${file.replaceAll(".", "\\.")}`), `${file} must ship as a release asset`);
+  }
+  assert.equal(hacs.name, "Nodalia Cards");
+  assert.equal(hacs.filename, "nodalia-cards.js");
+  assert.equal(hacs.content_in_root, true);
+  assert.match(workflow, /category: plugin/);
+  assert.doesNotMatch(workflow, /ignore:/);
+  assert.match(readme, /<img\s+src=/, "HACS plugin information must contain an image");
+  assert.ok(fs.existsSync(path.join(root, hacs.filename)), "the HACS plugin filename must exist at repository root");
+});
+
 test("compatibility aliases are unique lightweight loaders for the current version", () => {
   const pkg = JSON.parse(read("package.json"));
   const loaders = compatibilityLoadersFromBuildScript();
@@ -129,12 +152,8 @@ test("published package files and bundle manifest stay coherent", () => {
   assert.ok(manifest.includes(`"hacsFile": "${expectedHacsFile}"`));
   assert.doesNotMatch(manifest, /contentSha256_12": ""/);
   assert.doesNotMatch(manifest, /export const contentSha256_12 = ""/);
-  assert.equal(hacs.filename, undefined, "HACS must install the custom integration instead of the old dashboard-only file");
-  const integrationManifest = JSON.parse(read("custom_components/nodalia/manifest.json"));
-  assert.equal(integrationManifest.version, pkg.version);
-  const integrationFrontend = path.join(root, "custom_components", "nodalia", "frontend", expectedHacsFile);
-  assert.ok(fs.existsSync(integrationFrontend), "the integration should contain the generated self-contained frontend");
-  assert.deepEqual(fs.readFileSync(integrationFrontend), fs.readFileSync(path.join(root, expectedHacsFile)));
+  assert.equal(hacs.filename, expectedHacsFile, "HACS must install the self-contained plugin entrypoint");
+  assert.equal(hacs.content_in_root, true);
   assert.ok(pkg.files.includes(expectedHacsFile), `${expectedHacsFile} should be published`);
   assert.ok(packagePatternIncludes(pkg.files, expectedVersionedFile), `${expectedVersionedFile} should be published`);
   expectedCompatFiles.forEach(file => {
@@ -315,8 +334,42 @@ test("active documentation uses channel-neutral resources and current release gu
   assert.match(readme, /Release candidate/);
   assert.match(readme, /nodalia-cards\.js/);
   assert.doesNotMatch(newsGuide, /nodalia-cards-\d/);
-  assert.match(roadmap, /2\.0\.0-rc\.1/);
+  assert.match(roadmap, /Current preview release:\s*```text\s*2\.0\.0-alpha\.59/);
   assert.match(roadmap, /1\.3\.5/);
+  for (const file of ["bug_report.yml", "question.yml", "translation.yml"]) {
+    assert.match(read(path.join(".github", "ISSUE_TEMPLATE", file)), /v2\.0\.0-alpha\.59 \/ v1\.3\.5 \/ latest/);
+  }
+});
+
+test("local links in active Markdown documentation resolve", () => {
+  const markdownFiles = [
+    "README.md",
+    "CONTRIBUTING.md",
+    "ROADMAP.md",
+    "CHANGELOG.md",
+    "CHANGELOG-PRERELEASES.md",
+  ];
+  const collectMarkdown = directory => {
+    for (const entry of fs.readdirSync(path.join(root, directory), { withFileTypes: true })) {
+      const relative = path.join(directory, entry.name);
+      if (entry.isDirectory()) collectMarkdown(relative);
+      else if (entry.isFile() && entry.name.endsWith(".md")) markdownFiles.push(relative);
+    }
+  };
+  collectMarkdown("docs");
+
+  for (const file of markdownFiles) {
+    const source = read(file);
+    for (const match of source.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      let target = match[1].trim();
+      if (!target || /^(?:https?:|mailto:|#)/i.test(target)) continue;
+      if (target.startsWith("<") && target.endsWith(">")) target = target.slice(1, -1);
+      target = target.split("#", 1)[0].split("?", 1)[0];
+      if (!target) continue;
+      const resolved = path.resolve(root, path.dirname(file), decodeURIComponent(target));
+      assert.ok(fs.existsSync(resolved), `${file} links to missing local path ${match[1]}`);
+    }
+  }
 });
 
 test("url openings keep noopener,noreferrer hardening", () => {

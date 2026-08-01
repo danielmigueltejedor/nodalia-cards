@@ -3,7 +3,7 @@
 #
 # ─── Customize ───────────────────────────────────────────────────────────────
 # YOUR_CLIMATE_ENTITY   Your climate.* entity
-# No helper, webhook or automation is required with the Nodalia integration.
+# No helper, webhook or automation is required with Nodalia Cards Engine.
 # ─────────────────────────────────────────────────────────────────────────────
 
 type: custom:nodalia-climate-card

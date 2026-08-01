@@ -1,42 +1,59 @@
-# Nodalia integration
+# Nodalia Cards Engine
 
-Nodalia 2.0 combines the dashboard cards and their optional server-side features in one Home Assistant custom integration. The integration serves the frontend bundle, registers it as a dashboard resource and provides authenticated native storage and execution.
+Nodalia 2.0 keeps the visual cards and the optional server-side engine as two independent HACS installations. This avoids forcing existing Nodalia Cards users to migrate away from the Dashboard plugin.
 
-## What becomes native
+| Repository | HACS category | Purpose | Required |
+|---|---|---|---|
+| [`nodalia-cards`](https://github.com/danielmigueltejedor/nodalia-cards) | Dashboard | Cards, visual editors and `/hacsfiles/nodalia-cards/nodalia-cards.js` | Yes, for the cards |
+| [`nodalia-cards-engine`](https://github.com/danielmigueltejedor/nodalia-cards-engine) | Integration | Background execution and persistent advanced features | No |
 
-| Feature | Nodalia integration | Previous fallback |
+The Engine complements the plugin; it does not serve or replace the frontend bundle. Card YAML remains unchanged whether the Engine is installed or not.
+
+## What the optional Engine makes native
+
+| Feature | With Nodalia Cards Engine | Plugin-only fallback |
 |---|---|---|
-| Card bundle and visual editors | Served and registered automatically | HACS Dashboard resource |
-| Background mobile notifications | Indexed HA state listeners and persistent profiles | Package, webhook and 40 `input_text` chunks |
-| Shared notification dismissals | Persistent integration storage | Browser storage or an `input_text` helper |
+| Background mobile notifications | Indexed Home Assistant state listeners and persistent profiles | Foreground delivery or the legacy package/webhook |
+| Shared notification dismissals | Persistent server-side storage | Browser storage or an `input_text` helper |
 | Climate weekly schedules | Persistent full schedule and native timers | Webhook, helper and Path A/B automations |
 
-The old webhook fields remain supported as a compatibility fallback. New installations do not need to configure them.
+Legacy webhook and helper fields remain supported. Install the Engine when these native features are useful; ordinary card controls, editors and layouts do not require it.
 
 ## Installation
 
-1. Add `https://github.com/danielmigueltejedor/nodalia-cards` to HACS as an **Integration** custom repository.
-2. Download **Nodalia** and restart Home Assistant.
-3. Go to **Settings → Devices & services → Add integration**.
-4. Search for **Nodalia** and confirm setup.
-5. Reload the browser once.
+### 1. Keep or install the Cards plugin
 
-The resource URL is `/nodalia/nodalia-cards.js`. Do not add it manually: the integration keeps its cache-busting version current.
+Add `https://github.com/danielmigueltejedor/nodalia-cards` to HACS as a **Dashboard** custom repository and download **Nodalia Cards**. Existing users do not need to remove or reinstall it.
 
-If Lovelace resources are managed in YAML mode, Home Assistant does not allow integrations to edit that list. Add `/nodalia/nodalia-cards.js` as a module in the YAML `resources:` section once; the integration still serves the file.
+The plugin resource remains:
 
-## Migrating from the dashboard-only installation
+```text
+/hacsfiles/nodalia-cards/nodalia-cards.js
+```
 
-Dashboard card YAML does not need to change.
+### 2. Add the optional Engine
 
-1. Back up Home Assistant.
-2. Remove the old Nodalia Cards **Dashboard** download from HACS and remove its stale `/hacsfiles/nodalia-cards/nodalia-cards.js` resource if HACS leaves it behind.
-3. Add the same repository to HACS as an **Integration** and download it.
-4. Restart Home Assistant and add the Nodalia integration from **Devices & services**.
-5. Reload the browser and confirm `/nodalia/nodalia-cards.js` appears under dashboard resources.
-6. After verifying native delivery, remove the old Nodalia notification package, climate webhook automations and their dedicated helpers.
+1. Add `https://github.com/danielmigueltejedor/nodalia-cards-engine` to HACS as an **Integration** custom repository.
+2. Download **Nodalia Cards Engine** and restart Home Assistant.
+3. Open **Settings → Devices & services → Add integration**.
+4. Search for **Nodalia Cards Engine** and confirm setup.
+5. Reload the browser once so open cards discover its capabilities.
 
-Keep the legacy package until native notifications have delivered a test successfully. This avoids a gap during migration.
+Both custom repositories can coexist in HACS because they use different repository URLs and categories.
+
+## Migrating advanced features safely
+
+There is no Cards plugin migration and no dashboard YAML rewrite.
+
+If you currently use a notification package or Climate schedule automations:
+
+1. Install and configure Nodalia Cards Engine while keeping the old package or automations temporarily.
+2. Open the relevant card and save its background notification profile or Climate schedule.
+3. Send a test with the `nodalia.test_notification` action and verify at least one real background event.
+4. Verify the Climate schedule survives a Home Assistant restart and applies at its next boundary.
+5. Only then remove the corresponding legacy package, webhook automation and dedicated helpers.
+
+Keeping the fallback until verification avoids a notification or schedule gap.
 
 ## Background mobile notifications
 
@@ -48,7 +65,7 @@ In the Notifications Card editor:
 
 One Notifications Card can keep the default native profile id. If a dashboard uses several independently configured Notifications Cards, give each one a different profile id in the background delivery section.
 
-An administrator synchronizes the card profile to the integration through Home Assistant's authenticated WebSocket connection. The backend then listens only to the entities used by that profile; it does not subscribe to every Home Assistant state change.
+An administrator synchronizes the profile to the Engine through Home Assistant's authenticated WebSocket connection. The backend listens only to the entities used by that profile, not to every Home Assistant state change.
 
 Presence rules, quiet hours, severity, per-alert mobile policy, custom conditions, cooldowns and entity overrides are evaluated on the server. The card suppresses foreground delivery once the native profile is active, preventing duplicate pushes.
 
@@ -56,9 +73,9 @@ Use the `nodalia.test_notification` action from Developer Tools to test a stored
 
 ## Climate schedules
 
-Open the Climate Card agenda, create the weekly blocks and save. The complete schedule is stored in `.storage/nodalia` and applied by the integration at the next block boundary and after Home Assistant starts.
+Open the Climate Card agenda, create weekly blocks and save. The complete schedule is stored in `.storage/nodalia` and applied by the Engine at the next block boundary and after Home Assistant starts.
 
-No `input_text`, webhook, package, shell command or generated automation is required. The legacy fields remain available only for users who deliberately run the frontend without the integration.
+No `input_text`, webhook, package, shell command or generated automation is required. The legacy fields remain available for plugin-only installations.
 
 ## Security and limits
 
@@ -71,4 +88,4 @@ No `input_text`, webhook, package, shell command or generated automation is requ
 
 ## Recovery
 
-If the integration is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their old webhook paths as optional fallbacks when those fields are configured. Reinstalling or reloading the integration does not alter dashboard YAML.
+If the Engine is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their webhook paths as optional fallbacks when those fields are configured. Reloading or removing the Engine does not alter dashboard YAML or the Cards plugin resource.

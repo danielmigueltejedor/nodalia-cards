@@ -115,29 +115,23 @@ test("build and package expose the exact supported card source set", () => {
   assert.ok(pkg.files.includes("nodalia-room-summary-model.js"));
   assert.ok(pkg.files.includes("nodalia-camera-stream-model.js"));
   assert.ok(pkg.files.includes("nodalia-backend.js"));
-  assert.ok(pkg.files.includes("custom_components/nodalia"));
+  assert.ok(!pkg.files.some(file => file.startsWith("custom_components/")));
 });
 
-test("Nodalia ships as one HACS integration with an authenticated backend bridge", () => {
-  const pkg = JSON.parse(read("package.json"));
+test("Nodalia Cards remains a HACS plugin with an optional Engine bridge", () => {
   const hacs = JSON.parse(read("hacs.json"));
-  const manifest = JSON.parse(read("custom_components/nodalia/manifest.json"));
   const workflow = read(".github/workflows/hacs.yml");
-  const websocket = read("custom_components/nodalia/websocket_api.py");
   const build = read("scripts/build-bundle.mjs");
-  const brandIcon = fs.readFileSync(path.join(root, "custom_components/nodalia/brand/icon.png"));
+  const backend = read("nodalia-backend.js");
 
-  assert.equal(manifest.domain, "nodalia");
-  assert.equal(manifest.version, pkg.version);
-  assert.equal(manifest.config_flow, true);
-  assert.equal(hacs.filename, undefined, "integration installs must not retain the old dashboard filename contract");
-  assert.match(workflow, /category: integration/);
-  assert.match(websocket, /connection\.require_admin\(\)/);
-  assert.match(websocket, /nodalia\/notifications\/set/);
-  assert.match(websocket, /nodalia\/climate\/schedule\/set/);
-  assert.match(build, /custom_components", "nodalia", "frontend", loaderFile/);
-  assert.deepEqual([...brandIcon.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
-  assert.ok(brandIcon.length > 1024, "the integration should ship a non-empty HACS brand icon");
+  assert.equal(hacs.filename, "nodalia-cards.js");
+  assert.equal(hacs.content_in_root, true);
+  assert.match(workflow, /category: plugin/);
+  assert.doesNotMatch(build, /custom_components/);
+  assert.match(backend, /nodalia\/status/);
+  assert.match(backend, /nodalia\/notifications\/set/);
+  assert.match(backend, /nodalia\/climate\/schedule\/set/);
+  assert.equal(fs.existsSync(path.join(root, "custom_components")), false);
 });
 
 test("card runtime metadata stays synchronized with package version", () => {

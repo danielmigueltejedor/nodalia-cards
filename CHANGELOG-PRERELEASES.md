@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.0.0-alpha.59] - 2026-08-01
+
+Fifty-ninth **`2.0.0`** alpha: independent Cards plugin, optional Engine architecture and HACS publishing hardening.
+
+### Fixed
+
+- **Release licensing:** every GitHub release now publishes the root MIT `LICENSE` explicitly, alongside the README, HACS manifest and changelogs, so reviewers and downloaded artifacts retain the granted redistribution and modification rights.
+- **HACS regression guard:** release-smoke tests now require the license, plugin filename, README image, non-ignored HACS validation and complete information assets before a release can be generated.
+
+### Changed
+
+- **No forced migration:** `nodalia-cards` is again distributed as the familiar HACS Dashboard plugin, preserving the existing resource URL and every dashboard configuration.
+- **Optional native backend:** advanced background notifications, shared dismissals and Climate schedules move to the independent `nodalia-cards-engine` HACS Integration repository.
+- **Independent lifecycle:** users can install and update the visual cards and the Engine separately; the cards continue to work without the Engine and retain legacy fallbacks.
+- **Future preservation:** the combined plugin-and-integration experiment remains available on `future/nodalia-all-in-one-integration` for possible later development.
+
+### Tests
+
+- Updated packaging, release-smoke, HACS and architecture contracts to prevent the cards repository from silently becoming an Integration again or publishing an unlicensed artifact.
+
 ## [2.0.0-alpha.58] - 2026-07-30
 
 Fifty-eighth **`2.0.0`** alpha: HACS-ready packaging for the native Nodalia integration.
