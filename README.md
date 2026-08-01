@@ -21,7 +21,7 @@
 
 ---
 
-Nodalia Cards is a Home Assistant dashboard plugin built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
+Nodalia Cards is a custom Home Assistant frontend card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
 
 > [!IMPORTANT]
 > Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia Cards through HACS as a custom **Dashboard** repository using the steps below.
@@ -103,7 +103,7 @@ Only settings that differ from the defaults are written to YAML, keeping dashboa
 
 ## Installation
 
-### HACS Dashboard plugin — recommended
+### HACS custom Dashboard — recommended
 
 Until the default HACS listing is approved:
 
@@ -112,11 +112,12 @@ Until the default HACS listing is approved:
 3. Add `https://github.com/danielmigueltejedor/nodalia-cards`.
 4. Select category **Dashboard**.
 5. Open **Nodalia Cards** and choose **Download**.
-6. Reload the browser.
+6. Restart Home Assistant.
+7. Reload your browser (or perform a hard refresh).
 
-[![Open Nodalia Cards in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
+[![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
-HACS installs and registers the self-contained card bundle:
+If a card does not appear immediately after installation or an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ```text
 /hacsfiles/nodalia-cards/nodalia-cards.js
@@ -124,22 +125,19 @@ HACS installs and registers the self-contained card bundle:
 
 That single file includes both the cards and their visual editors. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
 
-### Nodalia Cards Engine — optional advanced features
-
-Install the separate [Nodalia Cards Engine](https://github.com/danielmigueltejedor/nodalia-cards-engine) integration only if you want background notifications, shared dismissals or native Climate schedules without packages and helper automations. Add its repository to HACS as category **Integration**, restart Home Assistant, then add **Nodalia Cards Engine** under **Settings → Devices & services**.
-
-The Engine complements this plugin; it does not replace it. You can install, update or remove either repository independently. See the [Engine installation and migration guide](./docs/nodalia-integration.md).
-
 If a card does not appear immediately after an update, perform a hard refresh or clear the Home Assistant frontend cache.
 
 ### Manual installation
 
-1. Download `nodalia-cards.js` from the release you want.
-2. Copy it to `/config/www/community/nodalia-cards/nodalia-cards.js`.
-3. Add `/local/community/nodalia-cards/nodalia-cards.js` as a JavaScript module under dashboard resources.
-4. Reload the browser.
+1. Copy `dist/nodalia-cards.js` to your `/config/www/` directory.
+2. Add it as a Lovelace resource:
 
-For the optional backend, follow the manual installation instructions in the [Nodalia Cards Engine repository](https://github.com/danielmigueltejedor/nodalia-cards-engine).
+```text
+URL: /local/nodalia-cards.js
+Type: module
+```
+
+3. Reload your browser.
 
 ## Quick start
 
@@ -175,7 +173,6 @@ calibration_source:
 
 | Feature | Documentation |
 |---|---|
-| Nodalia Cards Engine | [Optional backend installation, migration and native services](./docs/nodalia-integration.md) |
 | Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
 | Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
