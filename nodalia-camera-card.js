@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0";
+const CARD_VERSION = "2.0.1";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -384,30 +384,36 @@ function normalizeCameraTapActions(rawActions = [], cameraIds = []) {
   }).filter(Boolean).slice(0, MAX_CAMERAS);
 }
 
-function compactCameraTapActions(rawActions = [], globalTapAction = "toggle") {
-  const fallbackAction = normalizeTextKey(globalTapAction || "toggle");
+function compactCameraTapAction(rawAction = {}, fallbackAction = "toggle") {
+  const source = isObject(rawAction) ? rawAction : { tap_action: rawAction };
+  const action = TAP_ACTIONS.has(normalizeTextKey(source.tap_action))
+    ? normalizeTextKey(source.tap_action)
+    : fallbackAction;
+  const compact = { tap_action: action };
+  if (action === "service") {
+    compact.tap_service = String(source.tap_service || "").trim();
+    if (String(source.tap_service_data || "").trim()) compact.tap_service_data = source.tap_service_data;
+    if (String(source.tap_service_target || "").trim()) compact.tap_service_target = source.tap_service_target;
+  } else if (action === "url") {
+    compact.tap_url = String(source.tap_url || "").trim();
+    if (source.tap_new_tab === true) compact.tap_new_tab = true;
+  } else if (action === "navigate") {
+    compact.navigation_path = String(source.navigation_path || source.tap_url || "").trim();
+  }
+  return compact;
+}
+
+function compactCameraTapActions(rawActions = [], globalTapConfig = "toggle") {
+  const fallback = compactCameraTapAction(globalTapConfig, "toggle");
   return rawActions.map(item => {
     if (!item?.camera) {
       return null;
     }
-    const action = TAP_ACTIONS.has(normalizeTextKey(item.tap_action))
-      ? normalizeTextKey(item.tap_action)
-      : "toggle";
-    if (action === "toggle" && fallbackAction === "toggle") {
+    const actionConfig = compactCameraTapAction(item, "toggle");
+    if (JSON.stringify(actionConfig) === JSON.stringify(fallback)) {
       return null;
     }
-    const compact = { camera: item.camera, tap_action: action };
-    if (action === "service") {
-      compact.tap_service = String(item.tap_service || "").trim();
-      if (String(item.tap_service_data || "").trim()) compact.tap_service_data = item.tap_service_data;
-      if (String(item.tap_service_target || "").trim()) compact.tap_service_target = item.tap_service_target;
-    } else if (action === "url") {
-      compact.tap_url = String(item.tap_url || "").trim();
-      if (item.tap_new_tab === true) compact.tap_new_tab = true;
-    } else if (action === "navigate") {
-      compact.navigation_path = String(item.navigation_path || item.tap_url || "").trim();
-    }
-    return compact;
+    return { camera: item.camera, ...actionConfig };
   }).filter(Boolean);
 }
 
@@ -1179,6 +1185,8 @@ class NodaliaCameraCard extends HTMLElement {
         this._navigateToPath(actionConfig.navigation_path || actionConfig.tap_url);
         return;
       case "auto":
+        this._openMoreInfo(camera);
+        return;
       default:
         this._openExpanded(camera, returnTarget);
     }
@@ -1354,7 +1362,7 @@ class NodaliaCameraCard extends HTMLElement {
     const title = this._getTitle(state, entityId);
     const previewAge = this._config?.show_preview_age === false ? "" : this._formatPreviewAge(state);
     const previewTapAction = normalizeTextKey(this._getCameraTapAction(entityId).tap_action || "toggle");
-    const previewActionLabel = previewTapAction === "toggle" || previewTapAction === "auto"
+    const previewActionLabel = previewTapAction === "toggle"
       ? this._cameraUi("openCamera", "Open camera")
       : title;
 
@@ -2571,7 +2579,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
     normalized.camera_streams = compactCameraStreams(normalized.camera_streams);
     normalized.camera_tap_actions = compactCameraTapActions(
       normalized.camera_tap_actions,
-      normalized.tap_action,
+      normalized,
     );
     const outgoing = stripEqualToDefaults(normalized);
     fireEvent(this, "config-changed", {
@@ -2624,7 +2632,8 @@ class NodaliaCameraCardEditor extends HTMLElement {
     };
     this._config.camera_tap_actions = cameras.map(camera => {
       const configured = existing.find(item => normalizeCameraEntityId(item?.camera) === camera);
-      return normalizeCameraTapActions([{ camera, ...legacy, ...(isObject(configured) ? configured : {}) }], [camera])[0];
+      const source = isObject(configured) ? { camera, ...configured } : { camera, ...legacy };
+      return normalizeCameraTapActions([source], [camera])[0];
     }).filter(Boolean);
   }
 
@@ -3036,7 +3045,9 @@ class NodaliaCameraCardEditor extends HTMLElement {
         <div class="editor-list">
           ${cameras.map((cameraId, index) => {
     const action = actions.find(item => item?.camera === cameraId) || { camera: cameraId, tap_action: "toggle" };
-    const tapAction = String(action.tap_action || "toggle");
+    const tapAction = String(action.tap_action || "toggle") === "auto"
+      ? "more-info"
+      : String(action.tap_action || "toggle");
     const cameraName = this._hass?.states?.[cameraId]?.attributes?.friendly_name || cameraId;
     const prefix = `camera_tap_actions.${index}`;
     return `
