@@ -8,6 +8,12 @@ cameras:
   - camera.aqara_g410
   - camera.aqara_g5_pro
   - camera.aqara_g100
+# Sin configuración adicional, cada vista previa abre su propio directo Nodalia.
+# Solo añade aquí las cámaras cuyo toque quieras cambiar.
+camera_tap_actions:
+  - camera: camera.aqara_g5_pro
+    tap_action: navigate
+    navigation_path: /lovelace/jardin
 camera_streams:
   - camera: camera.aqara_g410
     provider: frigate_go2rtc

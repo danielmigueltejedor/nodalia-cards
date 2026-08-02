@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.0-alpha.59";
+const CARD_VERSION = "2.0.0";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
   show_last_changed: false,
   show_preview_age: true,
   camera_streams: [],
+  camera_tap_actions: [],
   camera_actions: [],
   expanded_actions: [],
   tap_action: "toggle",
@@ -328,6 +329,88 @@ function normalizeCameraActions(rawActions = [], cameraIds = []) {
   }).filter(Boolean).slice(0, MAX_CAMERAS * 8);
 }
 
+function normalizeCameraTapActions(rawActions = [], cameraIds = []) {
+  if (!Array.isArray(rawActions)) {
+    return [];
+  }
+  const validCameras = new Set(cameraIds);
+  const seen = new Set();
+  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
+  const serializeActionObject = value => (
+    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
+  );
+  return rawActions.map(item => {
+    if (!isObject(item)) {
+      return null;
+    }
+    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+    if (!camera || seen.has(camera) || (validCameras.size && !validCameras.has(camera))) {
+      return null;
+    }
+    seen.add(camera);
+    const normalized = {
+      camera,
+      tap_action: item.tap_action ?? "toggle",
+      tap_service: item.tap_service ?? "",
+      tap_service_data: item.tap_service_data ?? "",
+      tap_service_target: item.tap_service_target ?? "",
+      tap_url: item.tap_url ?? "",
+      navigation_path: item.navigation_path ?? "",
+      tap_new_tab: item.tap_new_tab === true,
+    };
+    if (typeof applyTap === "function") {
+      applyTap(normalized, {
+        actionKey: "tap_action",
+        serviceKey: "tap_service",
+        serviceDataKey: "tap_service_data",
+        serviceTargetKey: "tap_service_target",
+        urlKey: "tap_url",
+        navigationKey: "navigation_path",
+        newTabKey: "tap_new_tab",
+      }, item.tap_action ?? "toggle", "toggle");
+    }
+    const action = normalizeTextKey(normalized.tap_action || "toggle");
+    normalized.tap_action = TAP_ACTIONS.has(action) ? action : "toggle";
+    normalized.tap_service = String(normalized.tap_service ?? "").trim();
+    normalized.tap_service_data = serializeActionObject(normalized.tap_service_data);
+    normalized.tap_service_target = serializeActionObject(normalized.tap_service_target);
+    normalized.tap_url = String(normalized.tap_url ?? "").trim();
+    normalized.navigation_path = String(normalized.navigation_path ?? "").trim();
+    normalized.tap_new_tab = normalized.tap_new_tab === true;
+    if (normalized.tap_action === "navigate" && !normalized.navigation_path && normalized.tap_url) {
+      normalized.navigation_path = normalized.tap_url;
+    }
+    return normalized;
+  }).filter(Boolean).slice(0, MAX_CAMERAS);
+}
+
+function compactCameraTapActions(rawActions = [], globalTapAction = "toggle") {
+  const fallbackAction = normalizeTextKey(globalTapAction || "toggle");
+  return rawActions.map(item => {
+    if (!item?.camera) {
+      return null;
+    }
+    const action = TAP_ACTIONS.has(normalizeTextKey(item.tap_action))
+      ? normalizeTextKey(item.tap_action)
+      : "toggle";
+    if (action === "toggle" && fallbackAction === "toggle") {
+      return null;
+    }
+    const compact = { camera: item.camera, tap_action: action };
+    if (action === "service") {
+      compact.tap_service = String(item.tap_service || "").trim();
+      if (String(item.tap_service_data || "").trim()) compact.tap_service_data = item.tap_service_data;
+      if (String(item.tap_service_target || "").trim()) compact.tap_service_target = item.tap_service_target;
+    } else if (action === "url") {
+      compact.tap_url = String(item.tap_url || "").trim();
+      if (item.tap_new_tab === true) compact.tap_new_tab = true;
+    } else if (action === "navigate") {
+      compact.navigation_path = String(item.navigation_path || item.tap_url || "").trim();
+    }
+    return compact;
+  }).filter(Boolean);
+}
+
 function cameraStreamName(entityId) {
   return String(entityId || "").trim().replace(/^camera\./, "");
 }
@@ -494,6 +577,7 @@ function normalizeConfig(rawConfig) {
   config.layout = CAMERA_LAYOUT;
   config.presentation = CAMERA_PRESENTATION;
   config.camera_streams = normalizeCameraStreams(config.camera_streams, cameraIds);
+  config.camera_tap_actions = normalizeCameraTapActions(config.camera_tap_actions, cameraIds);
   config.camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
   config.expanded_actions = normalizeExpandedActions(config.expanded_actions);
   config.language = String(config.language ?? "auto").trim() || "auto";
@@ -731,6 +815,7 @@ class NodaliaCameraCard extends HTMLElement {
       String(this._config?.show_last_changed),
       String(this._config?.show_preview_age),
       JSON.stringify(this._config?.camera_streams || []),
+      JSON.stringify(this._config?.camera_tap_actions || []),
       JSON.stringify(this._config?.camera_actions || []),
       JSON.stringify(this._config?.expanded_actions || []),
       this._config?.tap_action || "",
@@ -957,10 +1042,27 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _navigateToPath(pathValue) {
-    const navigationPath = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
-    if (!navigationPath) {
+    const navigationPath = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, {
+      allowRelative: true,
+      allowHash: true,
+    }) || "";
+    if (!navigationPath || navigationPath.includes("://")) {
       return;
     }
+
+    if (this._hass?.navigate) {
+      this._hass.navigate(navigationPath);
+      return;
+    }
+
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", navigationPath);
+      window.dispatchEvent(new CustomEvent("location-changed", {
+        detail: { replace: false },
+      }));
+      return;
+    }
+
     fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
@@ -1031,34 +1133,59 @@ class NodaliaCameraCard extends HTMLElement {
     invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
-  _performTapAction(returnTarget = null) {
-    const action = normalizeTextKey(this._config?.tap_action || "more-info");
+  _getCameraTapAction(entityId = this._config?.entity) {
+    const camera = String(entityId || this._config?.entity || "").trim();
+    const configured = (this._config?.camera_tap_actions || []).find(item => item?.camera === camera);
+    if (configured) {
+      return configured;
+    }
+    return {
+      camera,
+      tap_action: this._config?.tap_action || "toggle",
+      tap_service: this._config?.tap_service || "",
+      tap_service_data: this._config?.tap_service_data || "",
+      tap_service_target: this._config?.tap_service_target || "",
+      tap_url: this._config?.tap_url || "",
+      navigation_path: this._config?.navigation_path || "",
+      tap_new_tab: this._config?.tap_new_tab === true,
+    };
+  }
+
+  _performCameraTapAction(entityId = this._config?.entity, returnTarget = null) {
+    const camera = String(entityId || this._config?.entity || "").trim();
+    const actionConfig = this._getCameraTapAction(camera);
+    const action = normalizeTextKey(actionConfig.tap_action || "toggle");
     switch (action) {
       case "none":
         return;
       case "toggle":
-        this._openExpanded(this._config?.entity, returnTarget);
+        this._openExpanded(camera, returnTarget);
         return;
       case "more-info":
-        this._openMoreInfo();
+        this._openMoreInfo(camera);
         return;
       case "service":
         this._callConfiguredService(
-          this._config?.tap_service,
-          this._config?.tap_service_data,
-          this._config?.tap_service_target,
+          actionConfig.tap_service,
+          actionConfig.tap_service_data,
+          actionConfig.tap_service_target,
+          camera,
         );
         return;
       case "url":
-        this._openConfiguredUrl(this._config?.tap_url, this._config?.tap_new_tab === true);
+        this._openConfiguredUrl(actionConfig.tap_url, actionConfig.tap_new_tab === true);
         return;
       case "navigate":
-        this._navigateToPath(this._config?.navigation_path || this._config?.tap_url);
+        this._navigateToPath(actionConfig.navigation_path || actionConfig.tap_url);
         return;
       case "auto":
       default:
-        this._openMoreInfo();
+        this._openExpanded(camera, returnTarget);
     }
+  }
+
+  _performTapAction(returnTarget = null) {
+    this._performCameraTapAction(this._config?.entity, returnTarget);
   }
 
   _performHoldAction() {
@@ -1098,8 +1225,8 @@ class NodaliaCameraCard extends HTMLElement {
     const returnAction = active instanceof HTMLElement ? String(active.dataset?.cameraAction || "") : "";
     const returnEntity = active instanceof HTMLElement ? String(active.dataset?.cameraEntity || "") : "";
     this._expandedReturnFocus = () => {
-      const candidates = returnAction === "expand"
-        ? Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="expand"]') || [])
+      const candidates = returnAction === "camera-tap"
+        ? Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="camera-tap"]') || [])
         : Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="body"]') || []);
       const target = returnEntity
         ? candidates.find(element => element.dataset?.cameraEntity === returnEntity)
@@ -1180,11 +1307,11 @@ class NodaliaCameraCard extends HTMLElement {
     }
 
     const action = button.dataset.cameraAction;
-    if (action === "expand") {
+    if (action === "camera-tap") {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
-      this._openExpanded(button.dataset.cameraEntity || this._config?.entity, button);
+      this._performCameraTapAction(button.dataset.cameraEntity || this._config?.entity, button);
       return;
     }
     if (action === "close-expanded") {
@@ -1226,6 +1353,10 @@ class NodaliaCameraCard extends HTMLElement {
       : this._cameraUi("openCamera", "Open camera");
     const title = this._getTitle(state, entityId);
     const previewAge = this._config?.show_preview_age === false ? "" : this._formatPreviewAge(state);
+    const previewTapAction = normalizeTextKey(this._getCameraTapAction(entityId).tap_action || "toggle");
+    const previewActionLabel = previewTapAction === "toggle" || previewTapAction === "auto"
+      ? this._cameraUi("openCamera", "Open camera")
+      : title;
 
     return `
       <div class="camera-card__preview ${layout === "compact" ? "camera-card__preview--compact" : ""} ${layout === "security" ? "camera-card__preview--security" : ""}">
@@ -1245,9 +1376,9 @@ class NodaliaCameraCard extends HTMLElement {
         <button
           type="button"
           class="camera-card__preview-open"
-          data-camera-action="expand"
+          data-camera-action="camera-tap"
           data-camera-entity="${escapeHtml(entityId)}"
-          aria-label="${escapeHtml(this._cameraUi("openCamera", "Open camera"))}"
+          aria-label="${escapeHtml(previewActionLabel)}"
         ></button>
       </div>
     `;
@@ -1829,7 +1960,7 @@ class NodaliaCameraCard extends HTMLElement {
 
         * { box-sizing: border-box; }
 
-        [data-camera-action="body"]:focus-visible {
+        [data-camera-action="camera-tap"]:focus-visible {
           outline: 2px solid var(--primary-color);
           outline-offset: -3px;
         }
@@ -2282,10 +2413,10 @@ class NodaliaCameraCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="camera-card camera-card--${escapeHtml(layout)} ${feedLayout ? "camera-card--feed" : ""}">
-        <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}" data-camera-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}">
+        <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}">
           ${previewMarkup}
           ${showHeader ? `
-            <div class="camera-card__header" data-camera-action="body">
+            <div class="camera-card__header">
               ${config.show_name !== false ? `<div class="camera-card__title">${escapeHtml(title)}</div>` : ""}
               ${stateLabel ? `<div class="camera-card__state">${escapeHtml(stateLabel)}</div>` : ""}
             </div>
@@ -2438,6 +2569,10 @@ class NodaliaCameraCardEditor extends HTMLElement {
   _emitConfig(reRender = false) {
     const normalized = normalizeConfig(this._config);
     normalized.camera_streams = compactCameraStreams(normalized.camera_streams);
+    normalized.camera_tap_actions = compactCameraTapActions(
+      normalized.camera_tap_actions,
+      normalized.tap_action,
+    );
     const outgoing = stripEqualToDefaults(normalized);
     fireEvent(this, "config-changed", {
       config: outgoing,
@@ -2449,7 +2584,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
 
   _editorCameras() {
     if (Array.isArray(this._config?.cameras) && this._config.cameras.length) {
-      return this._config.cameras.map(item => String(item ?? "").trim());
+      return this._config.cameras.map(normalizeCameraEntityId);
     }
     const entity = String(this._config?.entity ?? "").trim();
     return entity ? [entity] : [];
@@ -2475,6 +2610,24 @@ class NodaliaCameraCardEditor extends HTMLElement {
     });
   }
 
+  _syncEditorCameraTapActions() {
+    const cameras = this._editorCameras().filter(Boolean).slice(0, MAX_CAMERAS);
+    const existing = Array.isArray(this._config?.camera_tap_actions) ? this._config.camera_tap_actions : [];
+    const legacy = {
+      tap_action: this._config?.tap_action || "toggle",
+      tap_service: this._config?.tap_service || "",
+      tap_service_data: this._config?.tap_service_data || "",
+      tap_service_target: this._config?.tap_service_target || "",
+      tap_url: this._config?.tap_url || "",
+      navigation_path: this._config?.navigation_path || "",
+      tap_new_tab: this._config?.tap_new_tab === true,
+    };
+    this._config.camera_tap_actions = cameras.map(camera => {
+      const configured = existing.find(item => normalizeCameraEntityId(item?.camera) === camera);
+      return normalizeCameraTapActions([{ camera, ...legacy, ...(isObject(configured) ? configured : {}) }], [camera])[0];
+    }).filter(Boolean);
+  }
+
   _migrateCameraReferences(previousCamera, nextCamera) {
     const previous = String(previousCamera || "").trim();
     const next = String(nextCamera || "").trim();
@@ -2483,6 +2636,13 @@ class NodaliaCameraCardEditor extends HTMLElement {
     }
     if (Array.isArray(this._config.camera_actions)) {
       this._config.camera_actions.forEach(action => {
+        if (action?.camera === previous) {
+          action.camera = next;
+        }
+      });
+    }
+    if (Array.isArray(this._config.camera_tap_actions)) {
+      this._config.camera_tap_actions.forEach(action => {
         if (action?.camera === previous) {
           action.camera = next;
         }
@@ -2591,6 +2751,9 @@ class NodaliaCameraCardEditor extends HTMLElement {
         this._config.cameras.splice(index, 1);
         if (removedCamera && Array.isArray(this._config.camera_actions)) {
           this._config.camera_actions = this._config.camera_actions.filter(item => item?.camera !== removedCamera);
+        }
+        if (removedCamera && Array.isArray(this._config.camera_tap_actions)) {
+          this._config.camera_tap_actions = this._config.camera_tap_actions.filter(item => item?.camera !== removedCamera);
         }
         if (removedCamera && Array.isArray(this._config.camera_streams)) {
           this._config.camera_streams = this._config.camera_streams.filter(item => item?.camera !== removedCamera);
@@ -2859,6 +3022,55 @@ class NodaliaCameraCardEditor extends HTMLElement {
     `;
   }
 
+  _renderCameraTapActionsSection(config) {
+    const cameras = this._editorCameras().filter(Boolean);
+    const actions = Array.isArray(config.camera_tap_actions) ? config.camera_tap_actions : [];
+    return `
+      <section class="editor-section">
+        <div class="editor-section__header">
+          <div>
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.camera.tap_actions_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.camera.tap_actions_section_hint"))}</div>
+          </div>
+        </div>
+        <div class="editor-list">
+          ${cameras.map((cameraId, index) => {
+    const action = actions.find(item => item?.camera === cameraId) || { camera: cameraId, tap_action: "toggle" };
+    const tapAction = String(action.tap_action || "toggle");
+    const cameraName = this._hass?.states?.[cameraId]?.attributes?.friendly_name || cameraId;
+    const prefix = `camera_tap_actions.${index}`;
+    return `
+            <div class="editor-camera-group">
+              <div class="editor-card__header"><strong>${escapeHtml(cameraName)}</strong></div>
+              <div class="editor-grid editor-grid--stacked">
+                ${this._renderSelectField("ed.camera.tap_action", `${prefix}.tap_action`, tapAction, [
+    { value: "toggle", label: "ed.camera.tap_open_live" },
+    { value: "more-info", label: "ed.entity.tap_more_info" },
+    { value: "navigate", label: "ed.entity.tap_navigate" },
+    { value: "url", label: "ed.entity.tap_open_url" },
+    { value: "service", label: "ed.entity.tap_service" },
+    { value: "none", label: "ed.entity.tap_none" },
+  ])}
+                ${tapAction === "service"
+    ? this._renderTextField("ed.entity.tap_service_field", `${prefix}.tap_service`, action.tap_service, { placeholder: "camera.turn_on", fullWidth: true })
+      + this._renderTextareaField("ed.entity.tap_service_data_json", `${prefix}.tap_service_data`, action.tap_service_data, { placeholder: `{\"entity_id\":\"${cameraId}\"}` })
+    : ""}
+                ${tapAction === "url"
+    ? this._renderTextField("ed.entity.tap_url_field", `${prefix}.tap_url`, action.tap_url, { placeholder: "https://example.com", fullWidth: true })
+      + this._renderCheckboxField("ed.entity.tap_new_tab", `${prefix}.tap_new_tab`, action.tap_new_tab === true)
+    : ""}
+                ${tapAction === "navigate"
+    ? this._renderTextField("ed.entity.navigation_path", `${prefix}.navigation_path`, action.navigation_path, { placeholder: "/lovelace/cameras", fullWidth: true })
+    : ""}
+              </div>
+            </div>
+          `;
+  }).join("")}
+        </div>
+      </section>
+    `;
+  }
+
   _renderCameraStreamsSection(config) {
     const cameras = this._editorCameras().filter(Boolean);
     const streams = Array.isArray(config.camera_streams) ? config.camera_streams : [];
@@ -2930,9 +3142,8 @@ class NodaliaCameraCardEditor extends HTMLElement {
 
   _render() {
     this._syncEditorCameraStreams();
+    this._syncEditorCameraTapActions();
     const config = this._config || mergeConfig(DEFAULT_CONFIG, {});
-    const tapAction = String(config.tap_action || "more-info");
-    const holdAction = String(config.hold_action || "none");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3073,52 +3284,9 @@ class NodaliaCameraCardEditor extends HTMLElement {
           </div>
         </section>
         ${this._renderCameraListSection(config)}
+        ${this._renderCameraTapActionsSection(config)}
         ${this._renderCameraStreamsSection(config)}
         ${this._renderExpandedActionsSection(config)}
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div>
-              <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
-              <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
-            </div>
-            <div class="editor-section__actions">
-              ${window.NodaliaUtils?.renderEditorCollapsibleToggleHtml?.({
-                toggleId: "tap_actions",
-                expanded: this._showTapActionsSection === true,
-                showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
-                hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
-                escapeHtml,
-              }) || ""}
-            </div>
-          </div>
-          ${this._showTapActionsSection ? `
-            <div class="editor-grid editor-grid--stacked">
-              ${this._renderSelectField("ed.light.card_tap_action", "tap_action", tapAction, [
-                { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "none", label: "ed.entity.tap_none" },
-                { value: "navigate", label: "ed.entity.tap_navigate" },
-                { value: "url", label: "ed.entity.tap_open_url" },
-                { value: "service", label: "ed.entity.tap_service" },
-                { value: "toggle", label: "ed.entity.tap_toggle" },
-              ])}
-              ${tapAction === "service" ? this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, { placeholder: "camera.turn_on", fullWidth: true }) + this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, { placeholder: "{}" }) : ""}
-              ${tapAction === "url" ? this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true) : ""}
-              ${tapAction === "navigate" ? this._renderTextField("ed.entity.navigation_path", "navigation_path", config.navigation_path, { placeholder: "/lovelace/cameras", fullWidth: true }) : ""}
-              <div class="editor-section__hint editor-field--full">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
-              ${this._renderSelectField("ed.light.card_hold_action", "hold_action", holdAction, [
-                { value: "none", label: "ed.entity.tap_none" },
-                { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "navigate", label: "ed.entity.tap_navigate" },
-                { value: "url", label: "ed.entity.tap_open_url" },
-                { value: "service", label: "ed.entity.tap_service" },
-                { value: "toggle", label: "ed.entity.tap_toggle" },
-              ])}
-              ${holdAction === "service" ? this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, { placeholder: "camera.turn_off", fullWidth: true }) + this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, { placeholder: "{}" }) : ""}
-              ${holdAction === "url" ? this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true) : ""}
-              ${holdAction === "navigate" ? this._renderTextField("ed.entity.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, { placeholder: "/lovelace/cameras", fullWidth: true }) : ""}
-            </div>
-          ` : ""}
-        </section>
       </div>
     `;
 

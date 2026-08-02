@@ -112,8 +112,7 @@ Until the default HACS listing is approved:
 3. Add `https://github.com/danielmigueltejedor/nodalia-cards`.
 4. Select category **Dashboard**.
 5. Open **Nodalia Cards** and choose **Download**.
-6. Restart Home Assistant.
-7. Reload your browser (or perform a hard refresh).
+6. Reload your browser (or perform a hard refresh).
 
 [![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
@@ -125,11 +124,9 @@ If a card does not appear immediately after installation or an update, perform a
 
 That single file includes both the cards and their visual editors. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
 
-If a card does not appear immediately after an update, perform a hard refresh or clear the Home Assistant frontend cache.
-
 ### Manual installation
 
-1. Copy `dist/nodalia-cards.js` to your `/config/www/` directory.
+1. Download `nodalia-cards.js` from the [latest GitHub release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest) and copy it to `/config/www/`.
 2. Add it as a Lovelace resource:
 
 ```text

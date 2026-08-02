@@ -16,7 +16,9 @@ function loadCameraHelpers() {
       normalizeCameras,
       normalizeExpandedActions,
       normalizeCameraActions,
+      normalizeCameraTapActions,
       normalizeCameraStreams,
+      compactCameraTapActions,
       compactCameraStreams,
       buildGo2rtcViewerUrl,
       buildGo2rtcWebSocketEndpoint,
@@ -189,6 +191,45 @@ test("camera normalizeCameras supports up to four entities and mosaic layout", (
     cameras: ["camera.one", "camera.two", "camera.three", "camera.four", "camera.five"],
   });
   assert.deepEqual(Array.from(capped.cameras), ["camera.one", "camera.two", "camera.three", "camera.four"]);
+});
+
+test("camera tap actions stay scoped to each preview and keep native action objects", () => {
+  const config = helpers.normalizeConfig({
+    cameras: ["camera.entrada", "camera.jardin"],
+    camera_tap_actions: [
+      {
+        camera: "camera.entrada",
+        tap_action: "toggle",
+      },
+      {
+        camera: "camera.jardin",
+        tap_action: {
+          action: "navigate",
+          navigation_path: "/lovelace/jardin",
+        },
+      },
+      {
+        camera: "camera.inexistente",
+        tap_action: "none",
+      },
+    ],
+  });
+
+  assert.equal(config.camera_tap_actions.length, 2);
+  assert.equal(config.camera_tap_actions[0].tap_action, "toggle");
+  assert.equal(config.camera_tap_actions[1].tap_action, "navigate");
+  assert.equal(config.camera_tap_actions[1].navigation_path, "/lovelace/jardin");
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(helpers.compactCameraTapActions(config.camera_tap_actions, "toggle"))),
+    [{ camera: "camera.jardin", tap_action: "navigate", navigation_path: "/lovelace/jardin" }],
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(helpers.compactCameraTapActions(config.camera_tap_actions, "navigate"))),
+    [
+      { camera: "camera.entrada", tap_action: "toggle" },
+      { camera: "camera.jardin", tap_action: "navigate", navigation_path: "/lovelace/jardin" },
+    ],
+  );
 });
 
 test("camera normalizeExpandedActions keeps action entities", () => {
@@ -479,7 +520,8 @@ test("camera preview opens directly without a visible expand control", () => {
   assert.match(source, /class="camera-card__preview-open"/);
   assert.match(source, /\.camera-card__preview-open \{[\s\S]*background: transparent/);
   assert.match(source, /tap_action: "toggle"/);
-  assert.match(source, /case "toggle":[\s\S]*this\._openExpanded\(\)/);
+  assert.match(source, /_performCameraTapAction[\s\S]*case "toggle":[\s\S]*this\._openExpanded\(camera, returnTarget\)/);
+  assert.match(source, /data-camera-action="camera-tap"/);
   assert.doesNotMatch(source, /class="camera-card__expand"/);
   assert.doesNotMatch(source, /mdi:arrow-expand/);
 });
@@ -503,6 +545,9 @@ test("camera visual editor normalizes config and mounts camera entity picker", (
   assert.match(source, /ed\.camera\.show_preview_age/);
   assert.match(source, /data-editor-action="add-camera-action"/);
   assert.match(source, /camera_actions\.\$\{sourceIndex\}/);
+  assert.match(source, /camera_tap_actions\.\$\{index\}/);
+  assert.match(source, /ed\.camera\.tap_open_live/);
+  assert.doesNotMatch(source, /_renderSelectField\("ed\.light\.card_tap_action", "tap_action"/);
   assert.match(source, /camera_streams\.\$\{index\}/);
   assert.match(source, /ed\.camera\.live_provider_go2rtc/);
   assert.match(source, /ed\.camera\.live_provider_frigate_go2rtc/);

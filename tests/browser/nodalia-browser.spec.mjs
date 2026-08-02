@@ -310,7 +310,7 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   await personAction.press("Enter");
   await expect.poll(() => page.evaluate(() => window.personActions)).toBe(1);
 
-  const cameraAction = page.locator("nodalia-camera-card").locator('[data-camera-action="expand"]').first();
+  const cameraAction = page.locator("nodalia-camera-card").locator('[data-camera-action="camera-tap"]').first();
   await cameraAction.focus();
   await cameraAction.click();
   const close = page.locator("nodalia-camera-card").locator(".camera-card__expanded-close");
@@ -318,6 +318,66 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   await page.keyboard.press("Escape");
   await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(0);
   await expect(cameraAction).toBeFocused();
+});
+
+test("Camera preview respects navigate tap actions through Home Assistant SPA navigation", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const camera = document.createElement("nodalia-camera-card");
+    camera.setConfig({
+      entity: "camera.porch",
+      cameras: ["camera.porch", "camera.driveway"],
+      camera_tap_actions: [
+        {
+          camera: "camera.driveway",
+          tap_action: "navigate",
+          navigation_path: "/lovelace/home/",
+        },
+      ],
+    });
+    const hass = window.makeHass({
+      "camera.porch": { entity_id: "camera.porch", state: "idle", attributes: { friendly_name: "Porch" } },
+      "camera.driveway": { entity_id: "camera.driveway", state: "idle", attributes: { friendly_name: "Driveway" } },
+    });
+    window.cameraNativeActions = [];
+    hass.navigate = path => window.cameraNativeActions.push(path);
+    camera.hass = hass;
+    document.querySelector("#fixture").append(camera);
+  });
+
+  const previewAction = page.locator("nodalia-camera-card").locator('.camera-card__preview-open[data-camera-action="camera-tap"]').nth(1);
+  await previewAction.click();
+  await expect.poll(() => page.evaluate(() => window.cameraNativeActions)).toEqual(["/lovelace/home/"]);
+  await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(0);
+
+  await page.locator("nodalia-camera-card").locator('.camera-card__preview-open[data-camera-action="camera-tap"]').first().click();
+  await expect.poll(() => page.locator("nodalia-camera-card").evaluate(card => card._expandedEntityId)).toBe("camera.porch");
+  await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(1);
+});
+
+test("Camera editor exposes an independent tap action for every configured camera", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const editor = document.createElement("nodalia-camera-card-editor");
+    editor.setConfig({
+      entity: "camera.porch",
+      cameras: ["camera.porch", "camera.driveway"],
+      camera_tap_actions: [
+        { camera: "camera.driveway", tap_action: "navigate", navigation_path: "/lovelace/driveway" },
+      ],
+    });
+    editor.hass = window.makeHass({
+      "camera.porch": { entity_id: "camera.porch", state: "idle", attributes: { friendly_name: "Porch" } },
+      "camera.driveway": { entity_id: "camera.driveway", state: "idle", attributes: { friendly_name: "Driveway" } },
+    });
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-camera-card-editor");
+  await expect(editor.locator('select[data-field="camera_tap_actions.0.tap_action"]')).toHaveValue("toggle");
+  await expect(editor.locator('select[data-field="camera_tap_actions.1.tap_action"]')).toHaveValue("navigate");
+  await expect(editor.locator('input[data-field="camera_tap_actions.1.navigation_path"]')).toHaveValue("/lovelace/driveway");
+  await expect(editor.locator('select[data-field="tap_action"]')).toHaveCount(0);
 });
 
 test("Person supports native Lovelace tap hold double-tap and service actions", async ({ page }) => {
