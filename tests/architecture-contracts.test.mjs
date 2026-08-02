@@ -245,6 +245,35 @@ test("service actions use the hardened strict default", () => {
   assert.equal(utils.normalizeSecurityConfig({ strict_service_actions: false }).strict_service_actions, false);
 });
 
+test("normalizeSecurityConfig preserves allow_webhooks_for_non_admin opt-in", () => {
+  const { utils } = loadUtils();
+  const defaults = {
+    strict_service_actions: true,
+    allowed_services: [],
+    allowed_service_domains: [],
+    allow_webhooks_for_non_admin: false,
+  };
+  assert.equal(
+    utils.normalizeSecurityConfig({ allow_webhooks_for_non_admin: true }, defaults).allow_webhooks_for_non_admin,
+    true,
+    "explicit opt-in must survive normalization against a false default",
+  );
+  assert.equal(
+    utils.normalizeSecurityConfig({}, defaults).allow_webhooks_for_non_admin,
+    false,
+    "omitted values should keep the card default",
+  );
+  assert.equal(
+    utils.normalizeSecurityConfig({ allow_webhooks_for_non_admin: false }, defaults).allow_webhooks_for_non_admin,
+    false,
+  );
+  assert.equal(
+    utils.normalizeSecurityConfig({ allow_webhooks_for_non_admin: true }).allow_webhooks_for_non_admin,
+    true,
+    "opt-in without defaults must still be preserved",
+  );
+});
+
 test("host hold gesture bindings can reconnect without duplicate listeners", () => {
   const { utils, HTMLElement } = loadUtils();
   const host = new HTMLElement();
