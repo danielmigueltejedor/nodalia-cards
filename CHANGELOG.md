@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-08-02
+
+### Fixed
+
+- **Camera Card editor:** saving an unrelated visual option no longer converts inherited card-level `tap_action` settings into frozen per-camera overrides. Global navigation, more-info, URL and service actions remain inherited until a camera receives a genuinely different action.
+- **Camera Card compatibility:** an explicitly configured legacy `tap_action: auto` continues to open Home Assistant more-info, while the unconfigured/default camera tap still opens Nodalia's live popup.
+
+### Validation
+
+- Adds unit and Chromium/WebKit regressions for inherited global action serialization, distinct per-camera overrides and legacy `auto` behavior.
+
 ## [2.0.0] - 2026-08-02
 
 Stable **`2.0.0`** consolidates the full 24-card Nodalia suite as an independent HACS Dashboard plugin, with cohesive visual editors, mobile-first interactions and a hardened self-contained release bundle.

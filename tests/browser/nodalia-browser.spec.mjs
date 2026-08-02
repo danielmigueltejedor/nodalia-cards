@@ -355,6 +355,27 @@ test("Camera preview respects navigate tap actions through Home Assistant SPA na
   await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(1);
 });
 
+test("Camera legacy auto tap keeps opening Home Assistant more-info", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const camera = document.createElement("nodalia-camera-card");
+    camera.setConfig({
+      entity: "camera.porch",
+      tap_action: "auto",
+    });
+    camera.hass = window.makeHass({
+      "camera.porch": { entity_id: "camera.porch", state: "idle", attributes: { friendly_name: "Porch" } },
+    });
+    window.cameraMoreInfoActions = [];
+    camera.addEventListener("hass-more-info", event => window.cameraMoreInfoActions.push(event.detail.entityId));
+    document.querySelector("#fixture").append(camera);
+  });
+
+  await page.locator("nodalia-camera-card").locator('[data-camera-action="camera-tap"]').click();
+  await expect.poll(() => page.evaluate(() => window.cameraMoreInfoActions)).toEqual(["camera.porch"]);
+  await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(0);
+});
+
 test("Camera editor exposes an independent tap action for every configured camera", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(() => {
@@ -378,6 +399,35 @@ test("Camera editor exposes an independent tap action for every configured camer
   await expect(editor.locator('select[data-field="camera_tap_actions.1.tap_action"]')).toHaveValue("navigate");
   await expect(editor.locator('input[data-field="camera_tap_actions.1.navigation_path"]')).toHaveValue("/lovelace/driveway");
   await expect(editor.locator('select[data-field="tap_action"]')).toHaveCount(0);
+});
+
+test("Camera editor does not freeze inherited global tap actions on unrelated saves", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const editor = document.createElement("nodalia-camera-card-editor");
+    editor.setConfig({
+      entity: "camera.porch",
+      cameras: ["camera.porch", "camera.driveway"],
+      tap_action: { action: "navigate", navigation_path: "/lovelace/cameras" },
+    });
+    editor.hass = window.makeHass({
+      "camera.porch": { entity_id: "camera.porch", state: "idle", attributes: { friendly_name: "Porch" } },
+      "camera.driveway": { entity_id: "camera.driveway", state: "idle", attributes: { friendly_name: "Driveway" } },
+    });
+    window.cameraEditorConfigs = [];
+    editor.addEventListener("config-changed", event => {
+      window.cameraEditorConfigs.push(JSON.parse(JSON.stringify(event.detail.config)));
+    });
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-camera-card-editor");
+  await expect(editor.locator('select[data-field="camera_tap_actions.0.tap_action"]')).toHaveValue("navigate");
+  await editor.locator('input[data-field="show_name"]').check({ force: true });
+  const saved = await page.evaluate(() => window.cameraEditorConfigs.at(-1));
+  expect(saved.tap_action).toBe("navigate");
+  expect(saved.navigation_path).toBe("/lovelace/cameras");
+  expect(saved.camera_tap_actions).toBeUndefined();
 });
 
 test("Person supports native Lovelace tap hold double-tap and service actions", async ({ page }) => {

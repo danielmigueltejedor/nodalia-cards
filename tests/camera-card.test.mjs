@@ -232,6 +232,49 @@ test("camera tap actions stay scoped to each preview and keep native action obje
   );
 });
 
+test("camera tap action compaction keeps legacy global actions inherited", () => {
+  const cameras = ["camera.entrada", "camera.jardin"];
+  const inheritedNavigate = helpers.normalizeCameraTapActions(cameras.map(camera => ({
+    camera,
+    tap_action: "navigate",
+    navigation_path: "/lovelace/cameras",
+  })), cameras);
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(helpers.compactCameraTapActions(inheritedNavigate, {
+      tap_action: "navigate",
+      navigation_path: "/lovelace/cameras",
+    }))),
+    [],
+  );
+
+  inheritedNavigate[1].navigation_path = "/lovelace/jardin";
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(helpers.compactCameraTapActions(inheritedNavigate, {
+      tap_action: "navigate",
+      navigation_path: "/lovelace/cameras",
+    }))),
+    [{ camera: "camera.jardin", tap_action: "navigate", navigation_path: "/lovelace/jardin" }],
+  );
+
+  const inheritedService = helpers.normalizeCameraTapActions([{
+    camera: "camera.entrada",
+    tap_action: "service",
+    tap_service: "script.open_camera",
+    tap_service_data: { source: "legacy" },
+    tap_service_target: { entity_id: "script.open_camera" },
+  }], cameras);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(helpers.compactCameraTapActions(inheritedService, {
+      tap_action: "service",
+      tap_service: "script.open_camera",
+      tap_service_data: JSON.stringify({ source: "legacy" }),
+      tap_service_target: JSON.stringify({ entity_id: "script.open_camera" }),
+    }))),
+    [],
+  );
+});
+
 test("camera normalizeExpandedActions keeps action entities", () => {
   const config = helpers.normalizeConfig({
     entity: "camera.entrada",
