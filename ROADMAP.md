@@ -11,16 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-1.3.5
+2.0.0
 ```
 
-Current preview release:
-
-```text
-2.0.0-alpha.60
-```
-
-Stable **`1.3.5`** remains the recommended daily-driver release. **`2.0.0-alpha.60`** keeps the independent HACS Dashboard plugin architecture while fixing native Camera Card navigation across the full preview surface. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.0.0`** is the recommended daily-driver release. It keeps Nodalia Cards as an independent HACS Dashboard plugin, while the optional Nodalia Cards Engine integration provides advanced server-side features without being required by the visual cards. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); the completed prerelease cycle lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -37,16 +31,16 @@ The project currently includes:
 
 ---
 
-# 🎯 Current focus (`2.0.0` HACS readiness)
+# 🎯 Current focus (post-`2.0.0` maintenance)
 
-The current stabilization stage focuses on:
+The current maintenance stage focuses on:
 
 - Regression-free mobile and desktop behavior
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
 - Bundle startup and render performance
 - Documentation and release automation parity
-- Final cross-browser and Home Assistant compatibility testing
+- Ongoing cross-browser and Home Assistant compatibility testing
 
 The goal is no longer “making cards exist”.
 
@@ -59,9 +53,9 @@ The goal is making the entire system feel:
 
 ---
 
-# ⚡ Phase 1 — 2.0 stabilization
+# ✅ Phase 1 — 2.0 stabilization (completed)
 
-Goal: validate and stabilize the shared architecture consolidated during the `2.0.0` prerelease cycle before promoting it to stable.
+Completed in stable `2.0.0`: the shared architecture from the prerelease cycle was validated across the full automated, browser, accessibility, HACS and release pipelines.
 
 ## Focus areas
 

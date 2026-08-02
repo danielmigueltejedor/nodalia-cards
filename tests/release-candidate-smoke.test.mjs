@@ -333,15 +333,21 @@ test("active documentation uses channel-neutral resources and current release gu
   const roadmap = read("ROADMAP.md");
   const currentVersion = JSON.parse(read("package.json")).version;
   const escapedVersion = currentVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const isPrerelease = currentVersion.includes("-");
   assert.match(readme, /Release candidate/);
   assert.match(readme, /nodalia-cards\.js/);
   assert.doesNotMatch(newsGuide, /nodalia-cards-\d/);
-  assert.match(roadmap, new RegExp("Current preview release:\\s*```text\\s*" + escapedVersion));
-  assert.match(roadmap, /1\.3\.5/);
+  assert.match(
+    roadmap,
+    new RegExp(`Current ${isPrerelease ? "preview" : "stable"} release:\\s*\`\`\`text\\s*${escapedVersion}`),
+  );
+  if (!isPrerelease) {
+    assert.doesNotMatch(roadmap, /remains the recommended daily-driver release/);
+  }
   for (const file of ["bug_report.yml", "question.yml", "translation.yml"]) {
     assert.match(
       read(path.join(".github", "ISSUE_TEMPLATE", file)),
-      new RegExp(`v${escapedVersion} / v1\\.3\\.5 / latest`),
+      new RegExp(`v${escapedVersion} / latest`),
     );
   }
 });

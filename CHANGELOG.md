@@ -4,22 +4,49 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning.
 
-> Detailed prerelease history through the current **`2.0.0`** alpha and release-candidate cycle is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+> Detailed history for the completed **`2.0.0`** alpha and release-candidate cycle is archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ---
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-02
+
+Stable **`2.0.0`** consolidates the full 24-card Nodalia suite as an independent HACS Dashboard plugin, with cohesive visual editors, mobile-first interactions and a hardened self-contained release bundle.
+
+### Highlights
+
+- **Complete visual family:** all supported cards share the Nodalia surface, spacing, tint, chip, popup, animation and interaction language while retaining card-specific controls.
+- **Camera experience:** up to four cameras can share a mosaic, each opening its own Nodalia live popup with Home Assistant, native Frigate go2rtc, direct go2rtc or iframe providers.
+- **Optional advanced backend:** Nodalia Cards remains fully usable on its own; the separate Nodalia Cards Engine integration can add native background notifications and climate schedule storage without forcing a plugin migration.
+- **Home Assistant integration:** visual editors, entity-first card suggestions, native entity icons, Sections grid metadata and standard Lovelace action formats are supported throughout the suite.
+
+### Added
+
+- **Camera Card:** independent tap actions for every configured camera. The default opens that camera's Nodalia live view; more-info, navigation, URL, service and disabled actions are available as overrides.
+- **Advanced Vacuum:** broader Roborock, Dreame, Xiaomi, Ecovacs, Valetudo and Home Assistant area compatibility, with live room highlighting and safeguards against accidental whole-house cleaning.
+- **Person, Favourites and Scenes:** standard tap actions, entity-native icon inheritance, cohesive active tinting and a dedicated single-scene presentation.
+- **Release integrity:** deterministic checksums, CycloneDX SBOM, build provenance attestations, explicit MIT license assets and bounded compatibility loaders.
+
 ### Fixed
 
-- **Camera Card:** `tap_action: navigate` now uses Home Assistant SPA navigation across the complete preview surface instead of being intercepted by the live-view overlay; `toggle` continues to open the configured camera stream.
+- **Camera Card:** navigation uses Home Assistant SPA routing across camera previews, mobile fullscreen recovery preserves video after orientation changes, and startup recovery no longer causes go2rtc reconnect storms.
+- **Notifications:** foreground delivery, queued policy revalidation, quiet-hour boundaries, presence tracking and shared dismissal invalidation no longer produce stale, duplicate or unwanted mobile pushes.
+- **Controls and rendering:** built-in Vacuum actions bypass user-service allowlists, navigation volume updates avoid remount flashes, selector bubbles finish their bounce without blinking and pointer focus outlines no longer remain stuck.
+- **Mobile and Safari:** iPhone/WebKit card visibility, camera audio negotiation, popup orientation changes and responsive editor layouts are covered by browser regressions.
 
 ### Changed
 
-- **Documentation:** align installation, release-channel, roadmap, translation, architecture and historical-audit guidance with stable `1.3.5` and preview `2.0.0-rc.1`.
+- **Camera Card editor:** replaces generic card/icon wording with camera-specific interaction controls and keeps legacy global `tap_action` configurations compatible.
+- **Documentation:** aligns installation, release channels, roadmap, translations, architecture and historical guidance with stable `2.0.0`.
 - **Repository automation:** update JavaScript Actions to their Node 24 generations with immutable commit pins, scan `beta` with CodeQL, and make issue release guidance aware of alpha, beta, RC and stable versions.
 - **Issue intake:** synchronize all issue forms with the 24-card bundle, remove the retired Battery Card option and add Norwegian to translation reports.
 - **Contributor toolchain:** update the pinned pnpm and Playwright patch releases while continuing to test the minimum supported Node 22 runtime.
+
+### Security and validation
+
+- Configurable service actions default to strict allowlists, action URLs and navigation paths are sanitized, editor configuration paths reject prototype manipulation and iframe providers remain sandboxed.
+- The stable bundle passes the complete Node regression suite, Chromium and WebKit/iPhone interaction tests, accessibility checks, HACS validation and CodeQL scanning.
 
 ## [1.3.5] - 2026-07-03
 
