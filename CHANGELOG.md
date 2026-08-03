@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-08-04
+
+### Added
+
+- **Nodalia Cards Engine bridge:** capability detection, API version ranges, status limits cache and WebSocket helpers for external notification alerts and immediate Climate schedule application.
+- **Notifications / Climate:** use the expanded Engine bridge when the optional integration exposes the matching capabilities.
+
+### Changed
+
+- Compatibility loaders keep `2.0.0` and `2.0.1` available alongside `2.0.2`.
+
+### Validation
+
+- Extends backend bridge unit coverage for capability negotiation, external alerts and schedule apply commands.
+
 ## [2.0.1] - 2026-08-02
 
 ### Fixed

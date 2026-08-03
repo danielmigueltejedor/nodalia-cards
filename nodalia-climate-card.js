@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.0.1";
+const CARD_VERSION = "2.0.2";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -621,7 +621,7 @@ function normalizeSetpointScheduleSlot(rawSlot, index = 0) {
   }
 
   const temperature = Number(source.temperature);
-  return {
+  const normalized = {
     id: String(source.id || "").trim() || createSetpointScheduleSlotId(),
     day: normalizeSetpointScheduleDay(source.day ?? SETPOINT_SCHEDULE_DAY_ORDER[index % 7]),
     start: formatScheduleClockMinutes(startMinutes),
@@ -629,6 +629,23 @@ function normalizeSetpointScheduleSlot(rawSlot, index = 0) {
     temperature: Number.isFinite(temperature) ? temperature : 21,
     enabled: source.enabled !== false,
   };
+  const hvacMode = String(source.hvac_mode || "").trim().toLowerCase();
+  if (["off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"].includes(hvacMode)) {
+    normalized.hvac_mode = hvacMode;
+  }
+  ["fan_mode", "preset_mode"].forEach(key => {
+    const value = String(source[key] || "").trim();
+    if (value) {
+      normalized[key] = value;
+    }
+  });
+  const targetLow = Number(source.target_temp_low);
+  const targetHigh = Number(source.target_temp_high);
+  if (Number.isFinite(targetLow) && Number.isFinite(targetHigh) && targetLow <= targetHigh) {
+    normalized.target_temp_low = targetLow;
+    normalized.target_temp_high = targetHigh;
+  }
+  return normalized;
 }
 
 function normalizeSetpointScheduleConfig(rawSchedule) {
@@ -639,6 +656,7 @@ function normalizeSetpointScheduleConfig(rawSchedule) {
 
   return {
     enabled: schedule.enabled !== false,
+    week_starts_on: schedule.week_starts_on === "sunday" ? "sunday" : "monday",
     slots,
   };
 }

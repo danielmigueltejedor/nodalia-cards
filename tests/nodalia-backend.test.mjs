@@ -70,3 +70,43 @@ test("backend bridge sends versioned profile and schedule mutations", async () =
     },
   ]);
 });
+
+test("backend bridge accepts a server range that still supports client API v1", async () => {
+  const backend = loadBackend();
+  const status = await backend.status({
+    async callWS() {
+      return {
+        available: true,
+        api_version: 2,
+        api_min_version: 1,
+        api_max_version: 2,
+        capabilities: ["climate_schedule_apply"],
+        limits: { climate_schedules: 128 },
+      };
+    },
+  });
+  assert.equal(status.available, true);
+  assert.equal(backend.hasCapability(status, "climate_schedule_apply"), true);
+  assert.equal(status.limits.climate_schedules, 128);
+});
+
+test("backend bridge exposes external alerts and immediate schedule application", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const hass = { callWS: message => { calls.push(message); return Promise.resolve({}); } };
+  await backend.sendExternalNotification(hass, "camera-door", "security");
+  await backend.applyClimateSchedule(hass, "climate.kitchen");
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    {
+      type: "nodalia/notifications/send_external",
+      api_version: 1,
+      profile_id: "security",
+      alert_id: "camera-door",
+    },
+    {
+      type: "nodalia/climate/schedule/apply",
+      api_version: 1,
+      entity_id: "climate.kitchen",
+    },
+  ]);
+});

@@ -313,7 +313,11 @@ test("background payload includes policy context cooldown and external alerts", 
       mobile: "push",
     }],
     smart_notifications: { battery_low: { mobile: "push" } },
-    smart_entity_overrides: [{ entity: "binary_sensor.door", mobile: "off" }],
+    smart_entity_overrides: [{
+      entity: "binary_sensor.door",
+      mobile: "off",
+      tap_action: { action: "navigate", navigation_path: "/lovelace/security" },
+    }],
   });
   assert.equal(payload.version, 2);
   assert.equal(payload.notify.default_policy, "auto");
@@ -327,6 +331,8 @@ test("background payload includes policy context cooldown and external alerts", 
   assert.equal(payload.custom[0].value, "27");
   assert.equal(payload.smart.battery_low.mobile, "push");
   assert.equal(payload.overrides["binary_sensor.door"].mobile, "off");
+  assert.equal(payload.overrides["binary_sensor.door"].tap_action.navigation_path, "/lovelace/security");
+  assert.equal(payload.smart_recommendations, true);
 });
 
 test("background webhook payload uses version 2", () => {
@@ -336,6 +342,18 @@ test("background webhook payload uses version 2", () => {
   });
   assert.equal(payload.version, 2);
   assert.ok(payload.chunks.length > 0);
+});
+
+test("editor sends a disabled native profile so background delivery can be stopped", () => {
+  const source = read("nodalia-notifications-card.js");
+  assert.doesNotMatch(
+    source,
+    /_scheduleBackgroundMobileSyncFromEditor\([^)]*\)\s*\{[\s\S]{0,260}background\.enabled !== true/,
+  );
+  assert.match(
+    source,
+    /const native = await syncBackgroundMobileNative\(this\._hass, normalized\);[\s\S]*if \(background\.enabled !== true\) \{\s*return false;/,
+  );
 });
 
 test("editor emits normalized mobile policy values", () => {

@@ -39,11 +39,17 @@
     }
     try {
       const result = await callWS(hass, { type: "nodalia/status", api_version: API_VERSION });
+      const serverVersion = Number(result?.api_version) || 0;
+      const minimumVersion = Number(result?.api_min_version) || serverVersion;
+      const maximumVersion = Number(result?.api_max_version) || serverVersion;
       const value = {
-        available: result?.available === true && Number(result?.api_version) === API_VERSION,
-        api_version: Number(result?.api_version) || 0,
+        available: result?.available === true && minimumVersion <= API_VERSION && maximumVersion >= API_VERSION,
+        api_version: serverVersion,
+        api_min_version: minimumVersion,
+        api_max_version: maximumVersion,
         version: String(result?.version || ""),
         capabilities: Array.isArray(result?.capabilities) ? result.capabilities : [],
+        limits: result?.limits && typeof result.limits === "object" ? { ...result.limits } : {},
       };
       statusCache = { connection, checkedAt: now, value };
       return value;
@@ -51,7 +57,15 @@
       if (!isUnavailableError(error) && options.silent !== true && typeof console?.warn === "function") {
         console.warn("Nodalia Cards: could not query the Nodalia integration.", error);
       }
-      const value = { available: false, api_version: 0, version: "", capabilities: [] };
+      const value = {
+        available: false,
+        api_version: 0,
+        api_min_version: 0,
+        api_max_version: 0,
+        version: "",
+        capabilities: [],
+        limits: {},
+      };
       statusCache = { connection, checkedAt: now, value };
       return value;
     }
@@ -66,6 +80,14 @@
     API_VERSION,
     callWS,
     status,
+    clearStatusCache() {
+      statusCache = { connection: null, checkedAt: 0, value: null };
+    },
+    hasCapability(statusValue, capability) {
+      return statusValue?.available === true
+        && Array.isArray(statusValue.capabilities)
+        && statusValue.capabilities.includes(String(capability || ""));
+    },
     notificationProfileId: profileId,
     async getNotificationProfile(hass, id = "default") {
       return callWS(hass, {
@@ -104,6 +126,14 @@
         profile_id: String(id || "default"),
       });
     },
+    async sendExternalNotification(hass, alertId, id = "default") {
+      return callWS(hass, {
+        type: "nodalia/notifications/send_external",
+        api_version: API_VERSION,
+        profile_id: String(id || "default"),
+        alert_id: String(alertId || ""),
+      });
+    },
     async getClimateSchedule(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/get",
@@ -122,6 +152,13 @@
     async deleteClimateSchedule(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/delete",
+        api_version: API_VERSION,
+        entity_id: String(entityId || ""),
+      });
+    },
+    async applyClimateSchedule(hass, entityId) {
+      return callWS(hass, {
+        type: "nodalia/climate/schedule/apply",
         api_version: API_VERSION,
         entity_id: String(entityId || ""),
       });

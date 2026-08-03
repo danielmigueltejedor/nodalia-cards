@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.0.1";
+const CARD_VERSION = "2.0.2";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1115,6 +1115,9 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       title: String(item.title || ""),
       message: String(item.message || ""),
       tint_color: String(item.tint_color || ""),
+      url: String(item.url || ""),
+      action_label: String(item.action_label || ""),
+      tap_action: normalizeNotificationTapAction(item.tap_action),
       ...(isExplicitSmartEntityMobile(item.mobile) ? { mobile: normalizeMobilePolicy(item.mobile) } : {}),
     };
   });
@@ -1123,6 +1126,7 @@ function getBackgroundMobileConfigPayload(rawConfig) {
     card_version: CARD_VERSION,
     source: CARD_TAG,
     enabled: config.background_mobile?.enabled === true,
+    smart_recommendations: config.smart_recommendations !== false,
     notify: {
       enabled: config.mobile_notifications?.enabled === true,
       entities: config.mobile_notifications?.entities || [],
@@ -1146,6 +1150,9 @@ function getBackgroundMobileConfigPayload(rawConfig) {
           title: String(item?.title || ""),
           message: String(item?.message || ""),
           mobile: normalizeMobilePolicy(item?.mobile),
+          url: String(item?.url || ""),
+          action_label: String(item?.action_label || ""),
+          tap_action: normalizeNotificationTapAction(item?.tap_action),
         },
       ]),
     ),
@@ -1159,6 +1166,9 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       condition: String(item.condition || "always"),
       value: String(item.value || ""),
       mobile: normalizeMobilePolicy(item.mobile),
+      url: String(item.url || ""),
+      action_label: String(item.action_label || ""),
+      tap_action: normalizeNotificationTapAction(item.tap_action),
     })),
     external_alerts: (config.external_alerts || []).map(item => ({
       id: item.id,
@@ -1169,6 +1179,9 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       entity: item.entity,
       source: item.source,
       mobile: normalizeMobilePolicy(item.mobile),
+      url: String(item.url || ""),
+      action_label: String(item.action_label || ""),
+      tap_action: normalizeNotificationTapAction(item.tap_action),
     })),
     thresholds: {
       hot_temperature: config.thresholds?.hot_temperature,
@@ -1179,13 +1192,22 @@ function getBackgroundMobileConfigPayload(rawConfig) {
       humidifier_fill_low: config.thresholds?.humidifier_fill_low,
       humidifier_fill_full: config.thresholds?.humidifier_fill_full,
       ink_low: config.thresholds?.ink_low,
+      rain_probability: config.thresholds?.rain_probability,
+      rain_lookahead_hours: config.thresholds?.rain_lookahead_hours,
+      media_absence_minutes: config.thresholds?.media_absence_minutes,
     },
     entities: {
+      calendar: config.calendar_entities || [],
       vacuum: config.vacuum_entities || [],
       vacuum_error: config.vacuum_error_entities || [],
       door: config.door_entities || [],
       window: config.window_entities || [],
       motion: config.motion_entities || [],
+      fan: config.fan_entities || [],
+      climate: config.climate_entities || [],
+      humidifier: config.humidifier_entities || [],
+      media_player: config.media_player_entities || [],
+      weather: config.weather_entities || [],
       temperature: config.temperature_entities || [],
       humidity: config.humidity_entities || [],
       outdoor_temperature: config.outdoor_temperature_entities || [],
@@ -4529,8 +4551,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
 
   _scheduleBackgroundMobileSyncFromEditor(config = this._config, delay = 700) {
     const normalized = normalizeConfig(config || {});
-    const background = normalized.background_mobile || {};
-    if (background.enabled !== true || !this._hass || !this.isConnected) {
+    if (!this._hass || !this.isConnected) {
       return;
     }
     if (this._backgroundMobileSyncTimer) {
@@ -4546,7 +4567,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     const normalized = normalizeConfig(config || {});
     const background = normalized.background_mobile || {};
     const webhookId = String(background.webhook || "").trim();
-    if (background.enabled !== true || !this.isConnected) {
+    if (!this.isConnected) {
       return false;
     }
     const expectedNative = getBackgroundMobileNativeSignature(normalized);
@@ -4561,6 +4582,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       return true;
     }
     this._lastBackgroundMobileNativeSignature = "";
+    if (background.enabled !== true) {
+      return false;
+    }
     if (!webhookId) {
       return false;
     }
