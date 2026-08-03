@@ -2,12 +2,73 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
+function loadNotificationsCard() {
+  let CardClass = null;
+  const sandbox = {
+    URL,
+    Date,
+    setTimeout,
+    clearTimeout,
+    window: {},
+    customElements: {
+      define(_tag, ctor) {
+        if (!CardClass && typeof ctor === "function" && ctor.name === "NodaliaNotificationsCard") {
+          CardClass = ctor;
+        }
+      },
+      get() {
+        return null;
+      },
+    },
+    HTMLElement: class {
+      constructor() {
+        this.isConnected = true;
+        this.shadowRoot = null;
+      }
+
+      attachShadow() {
+        this.shadowRoot = {
+          addEventListener() {},
+          removeEventListener() {},
+          innerHTML: "",
+          querySelector() { return null; },
+          querySelectorAll() { return []; },
+        };
+        return this.shadowRoot;
+      }
+
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() { return true; }
+    },
+    MutationObserver: class { observe() {} disconnect() {} },
+    ResizeObserver: class { observe() {} disconnect() {} },
+    IntersectionObserver: class { observe() {} disconnect() {} },
+    document: {
+      addEventListener() {},
+      removeEventListener() {},
+      visibilityState: "visible",
+    },
+    console,
+    globalThis: {},
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-mobile-policy.js"), sandbox);
+  vm.runInContext(read("nodalia-notifications-card.js"), sandbox);
+  assert.ok(CardClass, "NodaliaNotificationsCard should register");
+  return CardClass;
 }
 
 test("fav card routes cover and lock auto taps through domain services", () => {
@@ -83,6 +144,25 @@ test("notifications re-check queued delivery and current background sync", () =>
     source,
     /background mobile config exceeds[\s\S]*?_lastBackgroundMobileSyncSignature = ""/,
     "oversized background payloads must clear stale success",
+  );
+});
+
+test("notifications preserve allow_webhooks_for_non_admin through config normalization", () => {
+  const CardClass = loadNotificationsCard();
+  const instance = new CardClass();
+  instance.setConfig({
+    security: {
+      allow_webhooks_for_non_admin: true,
+    },
+    background_mobile: {
+      enabled: true,
+      webhook: "nodalia_notifications_background_sync",
+    },
+  });
+  assert.equal(
+    instance._config.security.allow_webhooks_for_non_admin,
+    true,
+    "non-admin webhook opt-in must not be stripped by normalizeSecurityConfig defaults",
   );
 });
 

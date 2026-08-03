@@ -1792,6 +1792,11 @@
     normalized.strict_service_actions = src.strict_service_actions === undefined
       ? base.strict_service_actions === true
       : src.strict_service_actions === true;
+    if (src.allow_webhooks_for_non_admin !== undefined || base.allow_webhooks_for_non_admin !== undefined) {
+      normalized.allow_webhooks_for_non_admin = src.allow_webhooks_for_non_admin === undefined
+        ? base.allow_webhooks_for_non_admin === true
+        : src.allow_webhooks_for_non_admin === true;
+    }
     if (Array.isArray(src.allowed_services)) {
       normalized.allowed_services = src.allowed_services
         .map(item => String(item || "").trim().toLowerCase())
