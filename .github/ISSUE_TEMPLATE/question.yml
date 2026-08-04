@@ -92,7 +92,7 @@ body:
     id: nodalia_version
     attributes:
       label: Nodalia Cards version
-      placeholder: e.g. v2.0.3 / latest
+      placeholder: e.g. v2.0.4 / latest
     validations:
       required: false
 

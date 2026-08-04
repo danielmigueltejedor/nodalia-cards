@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-08-04
+
+### Fixed
+
+- **Camera Card:** snapshot previews always use the live `access_token` and never request `/api/camera_proxy` without one. Failed tokens are quarantined so HA 2026.6+ no longer treats repeated stale snapshot retries as login failures that IP-ban the browser.
+
+### Changed
+
+- Compatibility loaders keep `2.0.2` and `2.0.3` available alongside `2.0.4`.
+
 ## [2.0.3] - 2026-08-04
 
 ### Fixed
