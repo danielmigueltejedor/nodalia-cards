@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-08-04
+
+### Fixed
+
+- **Notifications security:** `allow_webhooks_for_non_admin` is preserved when normalizing security config, so non-admin webhook opt-in no longer resets silently.
+- **CI / CodeQL:** `github/codeql-action` init and analyze stay on the same pin (`4.37.4`) to avoid version-mismatch failures.
+
+### Changed
+
+- Dependency bumps: `@playwright/test` 1.62.1 and `actions/attest` 4.2.1.
+- Compatibility loaders keep `2.0.1` and `2.0.2` available alongside `2.0.3`.
+
+### Validation
+
+- Adds architecture and high-severity regressions covering webhook opt-in preservation through Notifications Card security normalization.
+
 ## [2.0.2] - 2026-08-04
 
 ### Added
