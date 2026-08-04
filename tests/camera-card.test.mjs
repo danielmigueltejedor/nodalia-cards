@@ -30,7 +30,6 @@ function loadCameraHelpers() {
       formatRelativeAge,
       stripEqualToDefaults,
       isUsableCameraAccessToken,
-      cameraProxyFailureKey,
       parseCameraProxyAuth,
       appendQueryParam,
       DEFAULT_CONFIG,
@@ -546,10 +545,12 @@ test("camera proxy URLs require a live access token and quarantine failed tokens
   );
   assert.equal(parsed.entityId, "camera.aqara_g5_pro");
   assert.equal(parsed.accessToken, "deadbeef");
-  assert.equal(
-    helpers.cameraProxyFailureKey(parsed.entityId, parsed.accessToken),
-    "camera.aqara_g5_pro|deadbeef",
-  );
+
+  const source = read("nodalia-camera-card.js");
+  assert.match(source, /_failedCameraTokens = new Map\(\)/);
+  assert.match(source, /_failedCameraTokens\.get\(entityId\) === accessToken/);
+  assert.match(source, /_failedCameraTokens\.set\(parsed\.entityId, parsed\.accessToken\)/);
+  assert.doesNotMatch(source, /_failedCameraTokens\.size > MAX_FAILED_IMAGE_URLS/);
 });
 
 test("camera card expanded overlay opens, closes, and cleans up listeners", () => {

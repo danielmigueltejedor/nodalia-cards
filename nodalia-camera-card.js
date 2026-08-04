@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.4";
+const CARD_VERSION = "2.0.5";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -178,10 +178,6 @@ function appendQueryParam(url, key, value) {
 function isUsableCameraAccessToken(token) {
   const value = String(token ?? "").trim();
   return Boolean(value) && value !== "undefined" && value !== "null";
-}
-
-function cameraProxyFailureKey(entityId, accessToken) {
-  return `${String(entityId || "").trim()}|${String(accessToken || "").trim()}`;
 }
 
 function parseCameraProxyAuth(url) {
@@ -688,7 +684,9 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedEntityId = "";
     this._expandedReturnFocus = null;
     this._failedImageUrls = new Set();
-    this._failedCameraTokens = new Set();
+    // entityId -> access_token that already 401'd. Map (not FIFO Set) so a live
+    // bad token cannot leave quarantine when unrelated failures accumulate.
+    this._failedCameraTokens = new Map();
     this._previewAgeTimer = 0;
     this._expandedCardCache = new Map();
     this._expandedCardConfigSignatures = new WeakMap();
@@ -913,7 +911,7 @@ class NodaliaCameraCard extends HTMLElement {
     if (!isUsableCameraAccessToken(accessToken)) {
       return "";
     }
-    if (this._failedCameraTokens.has(cameraProxyFailureKey(entityId, accessToken))) {
+    if (this._failedCameraTokens.get(entityId) === accessToken) {
       return "";
     }
 
@@ -940,11 +938,16 @@ class NodaliaCameraCard extends HTMLElement {
     if (!parsed.entityId || !isUsableCameraAccessToken(parsed.accessToken)) {
       return;
     }
-    const key = cameraProxyFailureKey(parsed.entityId, parsed.accessToken);
-    this._failedCameraTokens.delete(key);
-    this._failedCameraTokens.add(key);
-    while (this._failedCameraTokens.size > MAX_FAILED_IMAGE_URLS) {
-      this._failedCameraTokens.delete(this._failedCameraTokens.values().next().value);
+    this._failedCameraTokens.set(parsed.entityId, parsed.accessToken);
+  }
+
+  _clearFailedCameraToken(entityId, accessToken) {
+    const id = String(entityId || "").trim();
+    if (!id || !isUsableCameraAccessToken(accessToken)) {
+      return;
+    }
+    if (this._failedCameraTokens.get(id) === accessToken) {
+      this._failedCameraTokens.delete(id);
     }
   }
 
@@ -2497,9 +2500,7 @@ class NodaliaCameraCard extends HTMLElement {
         }
         this._failedImageUrls.delete(src);
         const parsed = parseCameraProxyAuth(src);
-        if (parsed.entityId && isUsableCameraAccessToken(parsed.accessToken)) {
-          this._failedCameraTokens.delete(cameraProxyFailureKey(parsed.entityId, parsed.accessToken));
-        }
+        this._clearFailedCameraToken(parsed.entityId, parsed.accessToken);
       }, { once: true });
     });
 

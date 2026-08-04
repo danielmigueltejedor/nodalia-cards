@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-08-04
+
+### Fixed
+
+- **Camera Card:** quarantine failed snapshot tokens per entity in a Map so a live bad `access_token` cannot leave quarantine when the failed-URL set is capped, closing the Bugbot finding that could reintroduce HA IP bans.
+
+### Changed
+
+- Compatibility loaders keep `2.0.3` and `2.0.4` available alongside `2.0.5`.
+
 ## [2.0.4] - 2026-08-04
 
 ### Fixed
