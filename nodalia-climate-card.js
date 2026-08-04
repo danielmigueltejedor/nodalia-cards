@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.1.0";
+const CARD_VERSION = "2.1.1";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1553,7 +1553,7 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 4;
+    return this._engineOverride?.available === true ? 5 : 4;
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -2642,7 +2642,7 @@ class NodaliaClimateCard extends HTMLElement {
     return {
       rows: "auto",
       columns: "full",
-      min_rows: 5,
+      min_rows: this._engineOverride?.available === true ? 6 : 5,
       min_columns: 7,
     };
   }
@@ -5321,12 +5321,25 @@ class NodaliaClimateCard extends HTMLElement {
     const interBlockGapPx = showStepControls
       ? (tightLayout ? 16 : compactLayout ? 18 : 20)
       : (tightLayout ? 10 : compactLayout ? 12 : 14);
+    // Engine override chips sit between the dial and +/- steps; auto-height must
+    // reserve their row or Sections clips the step controls (overflow: hidden).
+    const showEngineOverride = this._engineOverride?.available === true;
+    const overrideChipPx = showEngineOverride
+      ? Math.max(22, parseSizeToPixels(effectiveChipHeight, 24))
+      : 0;
+    const overrideStatusPx = showEngineOverride && this._engineOverride?.until
+      ? (tightLayout ? 14 : 16)
+      : 0;
+    const overrideBlockPx = showEngineOverride
+      ? overrideChipPx + overrideStatusPx + interBlockGapPx
+      : 0;
     const climateCardMinHeightPx = Math.max(
       220,
       Math.round(
         cardPaddingY * 2 +
           effectiveIconSizePx +
           dialSizePx +
+          overrideBlockPx +
           (showStepControls ? stepControlSize : 0) +
           interBlockGapPx,
       ),
