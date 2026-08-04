@@ -654,6 +654,12 @@
         "sat": "周六",
         "sun": "周日"
       },
+      "override": {
+        "hold2h": "保持 2 小时",
+        "clear": "恢复计划",
+        "activeUntil": "临时设定至 {time}",
+        "failed": "无法更改临时设定。请检查 Engine 与 Home Assistant 日志。"
+      },
       "errors": {
         "webhookMissing": "请安装 Nodalia 集成，或在卡片编辑器中配置旧版计划 webhook。",
         "nativeFailed": "原生计划保存失败。请使用管理员帐户或配置旧版后备方案。",

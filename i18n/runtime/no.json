@@ -654,6 +654,12 @@
         "sat": "Lørdag",
         "sun": "Søndag"
       },
+      "override": {
+        "hold2h": "Hold i 2 timer",
+        "clear": "Fortsett timeplan",
+        "activeUntil": "Overstyring til {time}",
+        "failed": "Kunne ikke endre overstyringen. Sjekk Engine og Home Assistant-loggene."
+      },
       "errors": {
         "webhookMissing": "Installer Nodalia-integrasjonen eller konfigurer den gamle plan-webhooken i korteditoren.",
         "nativeFailed": "Innebygd lagring av planen mislyktes. Bruk en administratorkonto eller den gamle reserven.",

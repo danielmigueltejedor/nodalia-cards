@@ -2199,6 +2199,107 @@
     return true;
   }
 
+  /** Replaces `{token}` placeholders in an already translated editor or runtime label. */
+  function applyLabelValues(text, values = {}) {
+    return String(text ?? "").replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
+      Object.prototype.hasOwnProperty.call(values, token) ? String(values[token] ?? "") : match
+    ));
+  }
+
+  /** Compact fingerprint of an Engine status snapshot, so editors only re-render on real changes. */
+  function engineStatusSignature(engine) {
+    if (!engine) {
+      return "";
+    }
+    const caps = engine.caps || {};
+    const health = engine.health || {};
+    return [
+      engine.available === true ? "1" : "0",
+      String(engine.version || ""),
+      caps.notificationsBackground === true ? "1" : "0",
+      caps.notificationsInbox === true ? "1" : "0",
+      caps.climateSchedules === true ? "1" : "0",
+      caps.climateOverrides === true ? "1" : "0",
+      Number(health.profile_count) || 0,
+      Number(health.schedule_count) || 0,
+      Number(health.inbox_count) || 0,
+      Number(health.override_count) || 0,
+    ].join("|");
+  }
+
+  function renderEditorEngineBannerStyles() {
+    return `
+      .editor-engine-banner {
+        align-items: flex-start;
+        background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-color) 26%, transparent);
+        border-radius: 14px;
+        display: flex;
+        gap: 10px;
+        padding: 10px 12px;
+      }
+
+      .editor-engine-banner ha-icon {
+        --mdc-icon-size: 20px;
+        color: var(--primary-color);
+        flex: 0 0 auto;
+      }
+
+      .editor-engine-banner__copy {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .editor-engine-banner__title {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .editor-engine-banner__meta {
+        color: var(--secondary-text-color);
+        font-size: 11px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+    `;
+  }
+
+  /**
+   * Shared "Engine active" banner for card editors.
+   * `label` resolves editor catalog keys (`ed.engine.*`) for the calling editor.
+   */
+  function renderEditorEngineBannerHtml(options = {}) {
+    const engine = options.engine;
+    const label = typeof options.label === "function" ? options.label : key => key;
+    if (!engine || engine.available !== true) {
+      return "";
+    }
+    const health = engine.health || {};
+    const version = applyLabelValues(label("ed.engine.active_version"), { version: engine.version || "—" });
+    const summary = applyLabelValues(label("ed.engine.health_summary"), {
+      profiles: Number(health.profile_count) || 0,
+      schedules: Number(health.schedule_count) || 0,
+      inbox: Number(health.inbox_count) || 0,
+    });
+    const extraRows = (Array.isArray(options.extraRows) ? options.extraRows : [])
+      .filter(row => typeof row === "string" && row.trim() !== "")
+      .map(row => `<div class="editor-engine-banner__meta">${escapeHtml(row)}</div>`)
+      .join("");
+
+    return `
+      <div class="editor-engine-banner ${options.fullWidthClass || "editor-field--full"}">
+        <ha-icon icon="mdi:shield-check-outline"></ha-icon>
+        <div class="editor-engine-banner__copy">
+          <div class="editor-engine-banner__title">${escapeHtml(label("ed.engine.active_title"))}</div>
+          <div class="editor-engine-banner__meta">${escapeHtml(version)}</div>
+          <div class="editor-engine-banner__meta">${escapeHtml(summary)}</div>
+          ${extraRows}
+        </div>
+      </div>
+    `;
+  }
+
   function renderReducedMotionStyles() {
     return `
       @media (prefers-reduced-motion: reduce) {
@@ -2257,6 +2358,10 @@
     isNodaliaSliderChromeHit,
     renderLovelaceEntityGuardCardHtml,
     renderLovelaceEntityGuardForEntities,
+    applyLabelValues,
+    engineStatusSignature,
+    renderEditorEngineBannerStyles,
+    renderEditorEngineBannerHtml,
     renderEditorCollapsibleToggleHtml,
     renderEditorCollapsibleSectionHeaderHtml,
     getEntityFriendlyName,

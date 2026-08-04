@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.0.5";
+const CARD_VERSION = "2.1.0";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -418,6 +418,27 @@ function getHassLocale(hass) {
     || (typeof navigator !== "undefined" ? navigator.language : "");
   const s = String(raw || "").trim();
   return s || "en";
+}
+
+const ENGINE_OVERRIDE_HOLD_HOURS = 2;
+const ENGINE_OVERRIDE_REFRESH_MS = 30_000;
+
+/** Engine overrides carry an ISO 8601 `until`; values without an offset are local time. */
+function parseEngineOverrideUntil(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatEngineOverrideTime(value, hass) {
+  const parsed = parseEngineOverrideUntil(value);
+  if (!parsed) {
+    return "";
+  }
+  return parsed.toLocaleTimeString(getHassLocale(hass), { hour: "2-digit", minute: "2-digit" });
 }
 
 function getClimateTemperatureUnit(hass) {
@@ -1351,6 +1372,11 @@ class NodaliaClimateCard extends HTMLElement {
     this._scheduleComposerSelectedSlotId = "";
     this._activeScheduleDrag = null;
     this._scheduleBlockDragPending = null;
+    this._engineOverride = null;
+    this._engineOverrideSignature = "";
+    this._engineOverrideInFlight = false;
+    this._engineOverrideBusy = false;
+    this._lastEngineOverrideCheck = 0;
     this._onWindowSchedulePointerMove = this._onWindowSchedulePointerMove.bind(this);
     this._onWindowSchedulePointerUp = this._onWindowSchedulePointerUp.bind(this);
     this._onWindowScheduleBlockDragMove = this._onWindowScheduleBlockDragMove.bind(this);
@@ -1482,14 +1508,19 @@ class NodaliaClimateCard extends HTMLElement {
       this._selectedRangeThumb = null;
       this._lastDualRangeModeKey = null;
       this._temperatureCommitRequiresHvacWake = false;
+      this._engineOverride = null;
+      this._engineOverrideSignature = "";
+      this._lastEngineOverrideCheck = 0;
     }
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
+    void this._refreshEngineOverrideState();
   }
 
   set hass(hass) {
     this._hass = hass;
+    void this._refreshEngineOverrideState();
     const entityId = this._config?.entity || "";
     if (
       entityId
@@ -1557,6 +1588,8 @@ class NodaliaClimateCard extends HTMLElement {
       this._scheduleComposerError,
       this._scheduleComposerSaving === true,
       this._config?.show_schedule_button !== false,
+      this._engineOverrideSignature || "",
+      this._engineOverrideBusy === true,
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "climate:", values }]);
@@ -1693,6 +1726,157 @@ class NodaliaClimateCard extends HTMLElement {
     } catch (_error) {
       return false;
     }
+  }
+
+  /**
+   * Keeps the live override chips in sync with the Engine. Only entities that already have a
+   * stored schedule expose them, so plugin-only installs render the card unchanged.
+   */
+  async _refreshEngineOverrideState(options = {}) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    const entityId = String(this._config?.entity || "").trim();
+    if (!backend || !this._hass || !entityId || this._engineOverrideInFlight) {
+      return false;
+    }
+    const now = Date.now();
+    if (options.force !== true && now - this._lastEngineOverrideCheck < ENGINE_OVERRIDE_REFRESH_MS) {
+      return false;
+    }
+    this._engineOverrideInFlight = true;
+    this._lastEngineOverrideCheck = now;
+    try {
+      const status = await backend.status(this._hass, { silent: true });
+      if (!backend.hasCapability(status, "climate_overrides")) {
+        return this._applyEngineOverrideState(null);
+      }
+      const result = await backend.getClimateSchedule(this._hass, entityId);
+      const schedule = result?.schedule;
+      if (!schedule || typeof schedule !== "object") {
+        return this._applyEngineOverrideState(null);
+      }
+      const until = parseEngineOverrideUntil(schedule.override?.until);
+      return this._applyEngineOverrideState({
+        available: true,
+        until: until && until.getTime() > Date.now() ? until.toISOString() : "",
+      });
+    } catch (_error) {
+      return this._applyEngineOverrideState(null);
+    } finally {
+      this._engineOverrideInFlight = false;
+    }
+  }
+
+  _applyEngineOverrideState(next) {
+    const signature = next?.available === true ? `1:${next.until || ""}` : "0";
+    if (signature === this._engineOverrideSignature) {
+      return false;
+    }
+    this._engineOverrideSignature = signature;
+    this._engineOverride = next?.available === true ? next : null;
+    if (this._activeDialDrag || this._activeScheduleDrag) {
+      return true;
+    }
+    this._lastRenderSignature = "";
+    this._render();
+    return true;
+  }
+
+  async _setEngineOverrideHold(hours = ENGINE_OVERRIDE_HOLD_HOURS) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    const entityId = String(this._config?.entity || "").trim();
+    if (!backend || !this._hass || !entityId || this._engineOverrideBusy) {
+      return false;
+    }
+    const state = this._getState();
+    const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
+    const override = { until: new Date(Date.now() + hours * 3_600_000).toISOString() };
+    if (Number.isFinite(target)) {
+      override.temperature = Number(target);
+    }
+    return this._runEngineOverrideRequest(() => backend.setClimateOverride(this._hass, entityId, override));
+  }
+
+  async _clearEngineOverride() {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    const entityId = String(this._config?.entity || "").trim();
+    if (!backend || !this._hass || !entityId || this._engineOverrideBusy) {
+      return false;
+    }
+    return this._runEngineOverrideRequest(() => backend.clearClimateOverride(this._hass, entityId));
+  }
+
+  async _runEngineOverrideRequest(request) {
+    this._engineOverrideBusy = true;
+    this._lastRenderSignature = "";
+    this._render();
+    try {
+      await request();
+      this._triggerHaptic("success");
+      return true;
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Climate Card: the Engine rejected the override change.", error);
+      }
+      return false;
+    } finally {
+      this._engineOverrideBusy = false;
+      await this._refreshEngineOverrideState({ force: true });
+      if (this.isConnected && this.shadowRoot) {
+        this._lastRenderSignature = "";
+        this._render();
+      }
+    }
+  }
+
+  _renderEngineOverrideHtml() {
+    if (this._engineOverride?.available !== true) {
+      return "";
+    }
+    const applyValues = window.NodaliaUtils?.applyLabelValues
+      || ((text, values) => String(text ?? "").replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
+        Object.prototype.hasOwnProperty.call(values || {}, token) ? String(values[token] ?? "") : match
+      )));
+    const holdLabel = this._climateScheduleText("override.hold2h", "Hold 2 hours");
+    const clearLabel = this._climateScheduleText("override.clear", "Resume schedule");
+    const until = String(this._engineOverride.until || "");
+    const statusText = until
+      ? applyValues(this._climateScheduleText("override.activeUntil", "Override until {time}"), {
+        time: formatEngineOverrideTime(until, this._hass),
+      })
+      : "";
+    const busy = this._engineOverrideBusy === true ? "disabled" : "";
+
+    return `
+      <div class="climate-card__override">
+        <button
+          type="button"
+          class="climate-card__override-chip"
+          data-climate-action="override-hold"
+          title="${escapeHtml(holdLabel)}"
+          ${busy}
+        >
+          <ha-icon icon="mdi:timer-sand"></ha-icon>
+          <span>${escapeHtml(holdLabel)}</span>
+        </button>
+        ${
+          until
+            ? `
+              <button
+                type="button"
+                class="climate-card__override-chip climate-card__override-chip--clear"
+                data-climate-action="override-clear"
+                title="${escapeHtml(clearLabel)}"
+                ${busy}
+              >
+                <ha-icon icon="mdi:calendar-refresh-outline"></ha-icon>
+                <span>${escapeHtml(clearLabel)}</span>
+              </button>
+            `
+            : ""
+        }
+        ${statusText ? `<span class="climate-card__override-status">${escapeHtml(statusText)}</span>` : ""}
+      </div>
+    `;
   }
 
   _closeScheduleComposer() {
@@ -4431,6 +4615,19 @@ class NodaliaClimateCard extends HTMLElement {
         return;
       }
 
+      if (climateAction === "override-hold" || climateAction === "override-clear") {
+        this._triggerHaptic("selection");
+        if (event.detail === 0) {
+          this._triggerButtonBounce(actionButton);
+        }
+        if (climateAction === "override-hold") {
+          void this._setEngineOverrideHold();
+        } else {
+          void this._clearEngineOverride();
+        }
+        return;
+      }
+
       const state = this._getState();
       if (!state) {
         return;
@@ -5327,6 +5524,7 @@ class NodaliaClimateCard extends HTMLElement {
       temperatureRange,
       hass,
     });
+    const engineOverrideMarkup = this._renderEngineOverrideHtml();
     const dialControlsStacked = modeDialButtonCount >= 3;
     const dialModeButtonFragments = [];
     if (!isOff) {
@@ -5677,6 +5875,64 @@ class NodaliaClimateCard extends HTMLElement {
           display: inline-flex;
           height: calc(${stepControlSize}px * 0.42);
           width: calc(${stepControlSize}px * 0.42);
+        }
+
+        .climate-card__override {
+          align-items: center;
+          display: flex;
+          flex: 0 0 auto;
+          flex-wrap: wrap;
+          gap: 6px;
+          justify-content: center;
+          min-height: 0;
+        }
+
+        .climate-card__override-chip {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border: 1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color));
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font-family: inherit;
+          font-size: 11px;
+          font-weight: 700;
+          gap: 4px;
+          height: ${effectiveChipHeight};
+          max-width: 100%;
+          padding: ${effectiveChipPadding};
+          transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+          white-space: nowrap;
+        }
+
+        .climate-card__override-chip:hover:not(:disabled) {
+          transform: translateY(-1px);
+        }
+
+        .climate-card__override-chip:disabled {
+          cursor: default;
+          opacity: 0.55;
+        }
+
+        .climate-card__override-chip ha-icon {
+          --mdc-icon-size: 14px;
+          height: 14px;
+          width: 14px;
+        }
+
+        .climate-card__override-chip--clear {
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+        }
+
+        .climate-card__override-status {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.3;
+          overflow-wrap: anywhere;
         }
 
         .climate-schedule-expanded {
@@ -6855,6 +7111,8 @@ class NodaliaClimateCard extends HTMLElement {
             </div>
           </div>
 
+          ${engineOverrideMarkup}
+
           ${
             showStepControls
               ? `
@@ -6898,6 +7156,94 @@ if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaClimateCard);
 }
 
+/**
+ * Engine status plumbing shared by both Climate editors: while the Engine owns schedules the
+ * legacy webhook and helper fields are hidden, otherwise they stay available as a fallback.
+ */
+async function refreshClimateEditorEngineStatus(editor) {
+  const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+  if (!backend || typeof backend.getEditorEngineStatus !== "function" || !editor._hass || editor._engineStatusInFlight) {
+    return;
+  }
+  editor._engineStatusInFlight = true;
+  try {
+    const engine = await backend.getEditorEngineStatus(editor._hass);
+    const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
+    if (signature === editor._engineStatusSignature) {
+      return;
+    }
+    editor._engineStatus = engine;
+    editor._engineStatusSignature = signature;
+    if (editor.isConnected && editor.shadowRoot) {
+      const focusState = editor._captureFocusState();
+      editor._render();
+      editor._restoreFocusState(focusState);
+    }
+  } catch (_error) {
+    // Without the Engine the editor keeps rendering the legacy schedule fields.
+  } finally {
+    editor._engineStatusInFlight = false;
+  }
+}
+
+function climateEditorEngineSchedulesActive(editor) {
+  return editor?._engineStatus?.available === true && editor._engineStatus?.caps?.climateSchedules === true;
+}
+
+function renderClimateEditorEngineBannerHtml(editor) {
+  return window.NodaliaUtils?.renderEditorEngineBannerHtml?.({
+    engine: editor?._engineStatus,
+    label: key => editor._editorLabel(key),
+    fullWidthClass: "",
+    extraRows: editor?._engineStatus?.caps?.climateOverrides === true
+      ? [
+        window.NodaliaUtils?.applyLabelValues?.(editor._editorLabel("ed.engine.climate_overrides_hint"), {
+          hold: editor._editorLabel("ed.climate.override_2h"),
+          resume: editor._editorLabel("ed.climate.override_clear"),
+        }) || "",
+      ]
+      : [],
+  }) || "";
+}
+
+function renderClimateEditorScheduleSectionHtml(editor, config) {
+  const engineActive = climateEditorEngineSchedulesActive(editor);
+  const weekStartsField = editor._renderSelectField(
+    "ed.climate.schedule_week_starts_on",
+    "setpoint_schedule_week_starts_on",
+    config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
+    [
+      { value: "monday", label: "ed.climate.schedule_week_starts_monday" },
+      { value: "sunday", label: "ed.climate.schedule_week_starts_sunday" },
+    ],
+  );
+
+  if (engineActive) {
+    return `
+      ${renderClimateEditorEngineBannerHtml(editor)}
+      ${weekStartsField}
+    `;
+  }
+
+  return `
+    <div class="editor-engine-note">${escapeHtml(editor._editorLabel("ed.engine.offline_hint"))}</div>
+    ${editor._renderTextField("ed.climate.schedule_webhook", "setpoint_schedule_webhook", config.setpoint_schedule_webhook || "", {
+      placeholder: "nodalia_climate_setpoint_schedule",
+      fullWidth: true,
+    })}
+    ${editor._renderTextField("ed.climate.schedule_helper", "setpoint_schedule_helper", config.setpoint_schedule_helper || "", {
+      placeholder: "input_text.nodalia_climate_schedule_salon",
+      fullWidth: true,
+    })}
+    ${weekStartsField}
+    ${editor._renderCheckboxField(
+      "ed.calendar.allow_webhooks_non_admin",
+      "security.allow_webhooks_for_non_admin",
+      config.security?.allow_webhooks_for_non_admin === true,
+    )}
+  `;
+}
+
 class NodaliaClimateCardEditorLegacy extends HTMLElement {
   constructor() {
     super();
@@ -6906,6 +7252,9 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showTapActionsSection = false;
+    this._engineStatus = null;
+    this._engineStatusSignature = "";
+    this._engineStatusInFlight = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
   }
@@ -6933,6 +7282,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
   connectedCallback() {
     this._attachEditorShadowListeners();
     window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+    void refreshClimateEditorEngineStatus(this);
   }
 
   disconnectedCallback() {
@@ -6951,12 +7301,14 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._entityOptionsSignature = nextSignature;
 
     if (!shouldRender) {
+      void refreshClimateEditorEngineStatus(this);
       return;
     }
 
     const focusState = this._captureFocusState();
     this._render();
     this._restoreFocusState(focusState);
+    void refreshClimateEditorEngineStatus(this);
   }
 
   setConfig(config) {
@@ -6965,6 +7317,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
+    void refreshClimateEditorEngineStatus(this);
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
@@ -7238,6 +7591,19 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           color: var(--secondary-text-color);
           font-size: 12px;
           line-height: 1.45;
+        }
+
+        ${window.NodaliaUtils?.renderEditorEngineBannerStyles?.() || ""}
+
+        .editor-engine-banner {
+          grid-column: 1 / -1;
+        }
+
+        .editor-engine-note {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.35;
+          overflow-wrap: anywhere;
         }
 
         .editor-grid {
@@ -7519,31 +7885,14 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.schedule_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.schedule_section_hint"))}</div>
+            <div class="editor-section__hint">${escapeHtml(
+              climateEditorEngineSchedulesActive(this)
+                ? this._editorLabel("ed.engine.climate_managed_hint")
+                : this._editorLabel("ed.climate.schedule_section_hint"),
+            )}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextField("ed.climate.schedule_webhook", "setpoint_schedule_webhook", config.setpoint_schedule_webhook || "", {
-              placeholder: "nodalia_climate_setpoint_schedule",
-              fullWidth: true,
-            })}
-            ${this._renderTextField("ed.climate.schedule_helper", "setpoint_schedule_helper", config.setpoint_schedule_helper || "", {
-              placeholder: "input_text.nodalia_climate_schedule_salon",
-              fullWidth: true,
-            })}
-            ${this._renderSelectField(
-              "ed.climate.schedule_week_starts_on",
-              "setpoint_schedule_week_starts_on",
-              config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
-              [
-                { value: "monday", label: "ed.climate.schedule_week_starts_monday" },
-                { value: "sunday", label: "ed.climate.schedule_week_starts_sunday" },
-              ],
-            )}
-            ${this._renderCheckboxField(
-              "ed.calendar.allow_webhooks_non_admin",
-              "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin === true,
-            )}
+            ${renderClimateEditorScheduleSectionHtml(this, config)}
           </div>
         </section>
 
@@ -7650,6 +7999,9 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._showAnimationSection = false;
     this._showTapActionsSection = false;
     this._pendingEditorControlTags = new Set();
+    this._engineStatus = null;
+    this._engineStatusSignature = "";
+    this._engineStatusInFlight = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -7671,6 +8023,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
   connectedCallback() {
     this._attachEditorShadowListeners();
     window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+    void refreshClimateEditorEngineStatus(this);
   }
 
   disconnectedCallback() {
@@ -7689,12 +8042,14 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._entityOptionsSignature = nextSignature;
 
     if (!shouldRender) {
+      void refreshClimateEditorEngineStatus(this);
       return;
     }
 
     const focusState = this._captureFocusState();
     this._render();
     this._restoreFocusState(focusState);
+    void refreshClimateEditorEngineStatus(this);
   }
 
   setConfig(config) {
@@ -7703,6 +8058,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
+    void refreshClimateEditorEngineStatus(this);
   }
 
   _watchEditorControlTag(tagName) {
@@ -8199,6 +8555,19 @@ class NodaliaClimateCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
+        ${window.NodaliaUtils?.renderEditorEngineBannerStyles?.() || ""}
+
+        .editor-engine-banner {
+          grid-column: 1 / -1;
+        }
+
+        .editor-engine-note {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.35;
+          overflow-wrap: anywhere;
+        }
+
         .editor-section__actions {
           align-items: center;
           display: flex;
@@ -8561,31 +8930,14 @@ class NodaliaClimateCardEditor extends HTMLElement {
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.climate.schedule_section_title"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.climate.schedule_section_hint"))}</div>
+            <div class="editor-section__hint">${escapeHtml(
+              climateEditorEngineSchedulesActive(this)
+                ? this._editorLabel("ed.engine.climate_managed_hint")
+                : this._editorLabel("ed.climate.schedule_section_hint"),
+            )}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderTextField("ed.climate.schedule_webhook", "setpoint_schedule_webhook", config.setpoint_schedule_webhook || "", {
-              placeholder: "nodalia_climate_setpoint_schedule",
-              fullWidth: true,
-            })}
-            ${this._renderTextField("ed.climate.schedule_helper", "setpoint_schedule_helper", config.setpoint_schedule_helper || "", {
-              placeholder: "input_text.nodalia_climate_schedule_salon",
-              fullWidth: true,
-            })}
-            ${this._renderSelectField(
-              "ed.climate.schedule_week_starts_on",
-              "setpoint_schedule_week_starts_on",
-              config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
-              [
-                { value: "monday", label: "ed.climate.schedule_week_starts_monday" },
-                { value: "sunday", label: "ed.climate.schedule_week_starts_sunday" },
-              ],
-            )}
-            ${this._renderCheckboxField(
-              "ed.calendar.allow_webhooks_non_admin",
-              "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin === true,
-            )}
+            ${renderClimateEditorScheduleSectionHtml(this, config)}
           </div>
         </section>
 

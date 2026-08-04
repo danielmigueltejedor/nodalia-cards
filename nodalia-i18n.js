@@ -876,6 +876,12 @@
             sat: "Saturday",
             sun: "Sunday"
           },
+          override: {
+            hold2h: "Hold 2 hours",
+            clear: "Resume schedule",
+            activeUntil: "Override until {time}",
+            failed: "Could not change the override. Check the Engine and Home Assistant logs."
+          },
           errors: {
             webhookMissing: "Install the Nodalia integration or configure the legacy schedule webhook in the card editor.",
             nativeFailed: "Native schedule save failed. Use an administrator account or configure the legacy fallback.",
@@ -1839,6 +1845,12 @@
             fri: "Freitag",
             sat: "Samstag",
             sun: "Sonntag"
+          },
+          override: {
+            hold2h: "2 Stunden halten",
+            clear: "Zeitplan fortsetzen",
+            activeUntil: "Ausnahme bis {time}",
+            failed: "Ausnahme konnte nicht geändert werden. Prüfe die Engine und die Home-Assistant-Protokolle."
           },
           errors: {
             webhookMissing: "Installiere die Nodalia-Integration oder konfiguriere den alten Zeitplan-Webhook im Karten-Editor.",
@@ -2804,6 +2816,12 @@
             sat: "Σάββατο",
             sun: "Κυριακή"
           },
+          override: {
+            hold2h: "Διατήρηση 2 ώρες",
+            clear: "Συνέχιση προγράμματος",
+            activeUntil: "Παράκαμψη έως {time}",
+            failed: "Δεν ήταν δυνατή η αλλαγή της παράκαμψης. Ελέγξτε το Engine και τα αρχεία καταγραφής του Home Assistant."
+          },
           errors: {
             webhookMissing: "Εγκαταστήστε την ενσωμάτωση Nodalia ή ρυθμίστε το παλιό webhook προγράμματος στον επεξεργαστή.",
             nativeFailed: "Η εγγενής αποθήκευση προγράμματος απέτυχε. Χρησιμοποιήστε λογαριασμό διαχειριστή ή την παλιά εφεδρεία.",
@@ -3767,6 +3785,12 @@
             fri: "Viernes",
             sat: "Sábado",
             sun: "Domingo"
+          },
+          override: {
+            hold2h: "Mantener 2 horas",
+            clear: "Reanudar horario",
+            activeUntil: "Excepción hasta {time}",
+            failed: "No se pudo cambiar la excepción. Revisa el Engine y los registros de Home Assistant."
           },
           errors: {
             webhookMissing: "Instala la integración Nodalia o configura el webhook antiguo de horario en el editor.",
@@ -4732,6 +4756,12 @@
             sat: "Samedi",
             sun: "Dimanche"
           },
+          override: {
+            hold2h: "Maintenir 2 heures",
+            clear: "Reprendre le programme",
+            activeUntil: "Dérogation jusqu’à {time}",
+            failed: "Impossible de modifier la dérogation. Vérifiez l’Engine et les journaux Home Assistant."
+          },
           errors: {
             webhookMissing: "Installez l’intégration Nodalia ou configurez l’ancien webhook de planning dans l’éditeur.",
             nativeFailed: "L’enregistrement natif du planning a échoué. Utilisez un compte administrateur ou le secours hérité.",
@@ -5695,6 +5725,12 @@
             fri: "Venerdì",
             sat: "Sabato",
             sun: "Domenica"
+          },
+          override: {
+            hold2h: "Mantieni 2 ore",
+            clear: "Riprendi programma",
+            activeUntil: "Override fino a {time}",
+            failed: "Non è stato possibile modificare l’override. Controlla l’Engine e i log di Home Assistant."
           },
           errors: {
             webhookMissing: "Installa l’integrazione Nodalia o configura il vecchio webhook del programma nell’editor.",
@@ -6660,6 +6696,12 @@
             sat: "Zaterdag",
             sun: "Zondag"
           },
+          override: {
+            hold2h: "2 uur vasthouden",
+            clear: "Schema hervatten",
+            activeUntil: "Uitzondering tot {time}",
+            failed: "Kon de uitzondering niet wijzigen. Controleer de Engine en de Home Assistant-logboeken."
+          },
           errors: {
             webhookMissing: "Installeer de Nodalia-integratie of configureer de oude schemawebhook in de kaarteditor.",
             nativeFailed: "Native opslag van het schema is mislukt. Gebruik een beheerdersaccount of de oude terugval.",
@@ -7623,6 +7665,12 @@
             fri: "Fredag",
             sat: "Lørdag",
             sun: "Søndag"
+          },
+          override: {
+            hold2h: "Hold i 2 timer",
+            clear: "Fortsett timeplan",
+            activeUntil: "Overstyring til {time}",
+            failed: "Kunne ikke endre overstyringen. Sjekk Engine og Home Assistant-loggene."
           },
           errors: {
             webhookMissing: "Installer Nodalia-integrasjonen eller konfigurer den gamle plan-webhooken i korteditoren.",
@@ -8588,6 +8636,12 @@
             sat: "Sábado",
             sun: "Domingo"
           },
+          override: {
+            hold2h: "Manter 2 horas",
+            clear: "Retomar horário",
+            activeUntil: "Exceção até {time}",
+            failed: "Não foi possível alterar a exceção. Verifique o Engine e os registos do Home Assistant."
+          },
           errors: {
             webhookMissing: "Instale a integração Nodalia ou configure o webhook antigo de horário no editor.",
             nativeFailed: "Falha ao guardar o horário de forma nativa. Use uma conta de administrador ou a alternativa antiga.",
@@ -9551,6 +9605,12 @@
             fri: "Vineri",
             sat: "Sâmbătă",
             sun: "Duminică"
+          },
+          override: {
+            hold2h: "Menține 2 ore",
+            clear: "Reia programul",
+            activeUntil: "Excepție până la {time}",
+            failed: "Nu s-a putut modifica excepția. Verificați Engine și jurnalele Home Assistant."
           },
           errors: {
             webhookMissing: "Instalați integrarea Nodalia sau configurați vechiul webhook al programului în editor.",
@@ -10516,6 +10576,12 @@
             sat: "Суббота",
             sun: "Воскресенье"
           },
+          override: {
+            hold2h: "Держать 2 часа",
+            clear: "Вернуть расписание",
+            activeUntil: "Отклонение до {time}",
+            failed: "Не удалось изменить отклонение. Проверьте Engine и журналы Home Assistant."
+          },
           errors: {
             webhookMissing: "Установите интеграцию Nodalia или настройте старый webhook расписания в редакторе.",
             nativeFailed: "Не удалось сохранить расписание встроенным способом. Используйте учётную запись администратора или старый резервный вариант.",
@@ -11479,6 +11545,12 @@
             fri: "周五",
             sat: "周六",
             sun: "周日"
+          },
+          override: {
+            hold2h: "保持 2 小时",
+            clear: "恢复计划",
+            activeUntil: "临时设定至 {time}",
+            failed: "无法更改临时设定。请检查 Engine 与 Home Assistant 日志。"
           },
           errors: {
             webhookMissing: "请安装 Nodalia 集成，或在卡片编辑器中配置旧版计划 webhook。",

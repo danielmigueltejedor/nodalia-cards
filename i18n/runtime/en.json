@@ -654,6 +654,12 @@
         "sat": "Saturday",
         "sun": "Sunday"
       },
+      "override": {
+        "hold2h": "Hold 2 hours",
+        "clear": "Resume schedule",
+        "activeUntil": "Override until {time}",
+        "failed": "Could not change the override. Check the Engine and Home Assistant logs."
+      },
       "errors": {
         "webhookMissing": "Install the Nodalia integration or configure the legacy schedule webhook in the card editor.",
         "nativeFailed": "Native schedule save failed. Use an administrator account or configure the legacy fallback.",

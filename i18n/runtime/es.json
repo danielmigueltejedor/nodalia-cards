@@ -654,6 +654,12 @@
         "sat": "Sábado",
         "sun": "Domingo"
       },
+      "override": {
+        "hold2h": "Mantener 2 horas",
+        "clear": "Reanudar horario",
+        "activeUntil": "Excepción hasta {time}",
+        "failed": "No se pudo cambiar la excepción. Revisa el Engine y los registros de Home Assistant."
+      },
       "errors": {
         "webhookMissing": "Instala la integración Nodalia o configura el webhook antiguo de horario en el editor.",
         "nativeFailed": "No se pudo guardar el horario de forma nativa. Usa una cuenta administradora o configura el respaldo antiguo.",

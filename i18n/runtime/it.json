@@ -654,6 +654,12 @@
         "sat": "Sabato",
         "sun": "Domenica"
       },
+      "override": {
+        "hold2h": "Mantieni 2 ore",
+        "clear": "Riprendi programma",
+        "activeUntil": "Override fino a {time}",
+        "failed": "Non è stato possibile modificare l’override. Controlla l’Engine e i log di Home Assistant."
+      },
       "errors": {
         "webhookMissing": "Installa l’integrazione Nodalia o configura il vecchio webhook del programma nell’editor.",
         "nativeFailed": "Salvataggio nativo del programma non riuscito. Usa un account amministratore o il fallback precedente.",

@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-04
+
+### Added
+
+- **Engine-native editor mode.** The Notifications and Climate editors query the Engine on load and show an "Engine active" banner with its version and privacy-safe health counters (`profiles · schedules · inbox`). While the Engine owns a feature its legacy webhook and `input_text` helper fields are hidden; when the Engine is absent or offline those fields reappear with an explanatory hint.
+- **Climate live overrides.** With `climate_overrides` available and a stored schedule, the Climate Card shows compact chips next to the schedule controls to hold the current setpoint for two hours or resume the weekly schedule, plus the override expiry time.
+- **Notification inbox sync.** After a successful background profile sync the card pulls the Engine inbox (`nodalia/notifications/inbox/list`) and applies its dismissed entries, so dismissals made on another device are honoured here.
+
+### Changed
+
+- **Backend bridge speaks API v2.** `nodalia-backend.js` negotiates `api_version: 2`, passes the server `health` object through `status()`, and adds `getEditorEngineStatus`, `listNotificationProfiles`, `listNotificationInbox`, `clearNotificationInbox`, `listClimateSchedules`, `setClimateOverride` and `clearClimateOverride`.
+- Compatibility loaders keep `2.0.4` and `2.0.5` available alongside `2.1.0`.
+
+### Validation
+
+- Extends the backend bridge tests for API v2 negotiation, the new commands and the editor status summary, and adds source-level contracts for Engine mode in both editors and the Climate override chips.
+
 ## [2.0.5] - 2026-08-04
 
 ### Fixed

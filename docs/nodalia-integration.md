@@ -15,9 +15,20 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 |---|---|---|
 | Background mobile notifications | Indexed Home Assistant state listeners and persistent profiles | Foreground delivery or the legacy package/webhook |
 | Shared notification dismissals | Persistent server-side storage | Browser storage or an `input_text` helper |
+| Notification inbox | Delivered-alert history per profile, newest first | No history; the card only shows live alerts |
 | Climate weekly schedules | Persistent full schedule and native timers | Webhook, helper and Path A/B automations |
+| Climate temporary overrides | A manual hold that wins over the weekly slots until it expires | Not available; change the setpoint manually |
 
-Legacy webhook and helper fields remain supported. Install the Engine when these native features are useful; ordinary card controls, editors and layouts do not require it.
+Install the Engine when these native features are useful; ordinary card controls, editors and layouts do not require it.
+
+## Engine mode in the card editors
+
+The Notifications and Climate editors query the Engine when they open. What you see depends on what the Engine reports:
+
+- **Engine active.** The editor shows an "Engine active" banner with the Engine version and privacy-safe health counters (stored profiles, schedules and inbox entries). Legacy webhook and `input_text` helper fields are hidden because the Engine owns that behaviour. Options that still matter — the notification profile id, the first day of the week — remain editable.
+- **Engine missing or offline.** The editor shows a short hint and keeps every legacy webhook and helper field visible, so a plugin-only dashboard keeps working exactly as before.
+
+Packages, webhooks and `input_text` helpers are therefore a fallback rather than the primary path. Keep them configured until you have verified the Engine handles a real background event and survives a Home Assistant restart.
 
 ## Installation
 
@@ -71,11 +82,19 @@ Presence rules, quiet hours, severity, per-alert mobile policy, custom condition
 
 Use the `nodalia.test_notification` action from Developer Tools to test a stored profile.
 
+### Notification inbox
+
+When the Engine reports the inbox capability, the card reads the delivered-alert history for its profile after each successful sync and applies the dismissals recorded there. Dismissing an alert on one device therefore keeps it dismissed on the others without an `input_text` helper. The inbox stores alert identities and dismissal state, not notification text or targets.
+
 ## Climate schedules
 
 Open the Climate Card agenda, create weekly blocks and save. The complete schedule is stored in `.storage/nodalia` and applied by the Engine at the next block boundary and after Home Assistant starts.
 
 No `input_text`, webhook, package, shell command or generated automation is required. The legacy fields remain available for plugin-only installations.
+
+### Temporary overrides
+
+When the Engine reports the override capability and the entity has a stored schedule, the Climate Card shows two compact chips next to the schedule controls: one holds the current target temperature for two hours, the other resumes the weekly schedule immediately. While a hold is active the card shows the time it expires. The Engine stops applying schedule blocks until the override expires or is cleared.
 
 ## Security and limits
 
