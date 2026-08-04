@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-2.0.2
+2.0.3
 ```
 
-Stable **`2.0.2`** is the recommended daily-driver release. It keeps Nodalia Cards as an independent HACS Dashboard plugin, while the optional Nodalia Cards Engine integration provides advanced server-side features without being required by the visual cards. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); the completed prerelease cycle lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.0.3`** is the recommended daily-driver release. It keeps Nodalia Cards as an independent HACS Dashboard plugin, while the optional Nodalia Cards Engine integration provides advanced server-side features without being required by the visual cards. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); the completed prerelease cycle lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
