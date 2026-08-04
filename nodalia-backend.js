@@ -3,7 +3,7 @@
     return;
   }
 
-  const API_VERSION = 1;
+  const API_VERSION = 2;
   const STATUS_TTL_MS = 30_000;
   let statusCache = { connection: null, checkedAt: 0, value: null };
 
@@ -50,6 +50,7 @@
         version: String(result?.version || ""),
         capabilities: Array.isArray(result?.capabilities) ? result.capabilities : [],
         limits: result?.limits && typeof result.limits === "object" ? { ...result.limits } : {},
+        health: result?.health && typeof result.health === "object" ? { ...result.health } : {},
       };
       statusCache = { connection, checkedAt: now, value };
       return value;
@@ -65,6 +66,7 @@
         version: "",
         capabilities: [],
         limits: {},
+        health: {},
       };
       statusCache = { connection, checkedAt: now, value };
       return value;
@@ -76,6 +78,12 @@
     return value || "default";
   }
 
+  function hasCapability(statusValue, capability) {
+    return statusValue?.available === true
+      && Array.isArray(statusValue.capabilities)
+      && statusValue.capabilities.includes(String(capability || ""));
+  }
+
   const backend = {
     API_VERSION,
     callWS,
@@ -83,12 +91,44 @@
     clearStatusCache() {
       statusCache = { connection: null, checkedAt: 0, value: null };
     },
-    hasCapability(statusValue, capability) {
-      return statusValue?.available === true
-        && Array.isArray(statusValue.capabilities)
-        && statusValue.capabilities.includes(String(capability || ""));
+    hasCapability,
+    /** Compact status snapshot used by card editors to switch between Engine and legacy fields. */
+    async getEditorEngineStatus(hass) {
+      const statusValue = await status(hass, { silent: true });
+      return {
+        available: statusValue?.available === true,
+        version: String(statusValue?.version || ""),
+        capabilities: Array.isArray(statusValue?.capabilities) ? [...statusValue.capabilities] : [],
+        health: statusValue?.health && typeof statusValue.health === "object" ? { ...statusValue.health } : {},
+        caps: {
+          notificationsBackground: hasCapability(statusValue, "notifications_background"),
+          climateSchedules: hasCapability(statusValue, "climate_schedules"),
+          notificationsInbox: hasCapability(statusValue, "notifications_inbox"),
+          climateOverrides: hasCapability(statusValue, "climate_overrides"),
+        },
+      };
     },
     notificationProfileId: profileId,
+    async listNotificationProfiles(hass) {
+      return callWS(hass, {
+        type: "nodalia/notifications/list",
+        api_version: API_VERSION,
+      });
+    },
+    async listNotificationInbox(hass, id = "default") {
+      return callWS(hass, {
+        type: "nodalia/notifications/inbox/list",
+        api_version: API_VERSION,
+        profile_id: String(id || "default"),
+      });
+    },
+    async clearNotificationInbox(hass, id = "default") {
+      return callWS(hass, {
+        type: "nodalia/notifications/inbox/clear",
+        api_version: API_VERSION,
+        profile_id: String(id || "default"),
+      });
+    },
     async getNotificationProfile(hass, id = "default") {
       return callWS(hass, {
         type: "nodalia/notifications/get",
@@ -137,6 +177,27 @@
     async getClimateSchedule(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/get",
+        api_version: API_VERSION,
+        entity_id: String(entityId || ""),
+      });
+    },
+    async listClimateSchedules(hass) {
+      return callWS(hass, {
+        type: "nodalia/climate/schedule/list",
+        api_version: API_VERSION,
+      });
+    },
+    async setClimateOverride(hass, entityId, override) {
+      return callWS(hass, {
+        type: "nodalia/climate/override/set",
+        api_version: API_VERSION,
+        entity_id: String(entityId || ""),
+        override,
+      });
+    },
+    async clearClimateOverride(hass, entityId) {
+      return callWS(hass, {
+        type: "nodalia/climate/override/clear",
         api_version: API_VERSION,
         entity_id: String(entityId || ""),
       });

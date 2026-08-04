@@ -654,6 +654,12 @@
         "sat": "Zaterdag",
         "sun": "Zondag"
       },
+      "override": {
+        "hold2h": "2 uur vasthouden",
+        "clear": "Schema hervatten",
+        "activeUntil": "Uitzondering tot {time}",
+        "failed": "Kon de uitzondering niet wijzigen. Controleer de Engine en de Home Assistant-logboeken."
+      },
       "errors": {
         "webhookMissing": "Installeer de Nodalia-integratie of configureer de oude schemawebhook in de kaarteditor.",
         "nativeFailed": "Native opslag van het schema is mislukt. Gebruik een beheerdersaccount of de oude terugval.",

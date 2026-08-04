@@ -654,6 +654,12 @@
         "sat": "Samedi",
         "sun": "Dimanche"
       },
+      "override": {
+        "hold2h": "Maintenir 2 heures",
+        "clear": "Reprendre le programme",
+        "activeUntil": "Dérogation jusqu’à {time}",
+        "failed": "Impossible de modifier la dérogation. Vérifiez l’Engine et les journaux Home Assistant."
+      },
       "errors": {
         "webhookMissing": "Installez l’intégration Nodalia ou configurez l’ancien webhook de planning dans l’éditeur.",
         "nativeFailed": "L’enregistrement natif du planning a échoué. Utilisez un compte administrateur ou le secours hérité.",

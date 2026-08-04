@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.0.5";
+const CARD_VERSION = "2.1.0";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -1343,6 +1343,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._forceNextBackgroundMobileSync = false;
     this._lastBackgroundMobileSyncSignature = "";
     this._lastBackgroundMobileNativeSignature = "";
+    this._engineInbox = [];
     this._animateContentOnNextRender = true;
     this._entranceAnimationTimer = 0;
     this._stackTransition = "";
@@ -1654,6 +1655,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       this._lastBackgroundMobileNativeSignature = native.signature;
       this._lastBackgroundMobileSyncSignature = "";
       this._pendingBackgroundMobileSync = false;
+      void this._loadEngineInbox();
       if (dismissalsChanged) {
         this._renderIfChanged(true);
       }
@@ -1704,6 +1706,36 @@ class NodaliaNotificationsCard extends HTMLElement {
       return ok;
     } catch (_error) {
       this._pendingBackgroundMobileSync = true;
+      return false;
+    }
+  }
+
+  /**
+   * Pulls the Engine inbox after a successful background sync so dismissals recorded on other
+   * devices are reflected here. The Engine remains the authority for delivered-alert history.
+   */
+  async _loadEngineInbox() {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    if (!backend || typeof backend.listNotificationInbox !== "function" || !this._hass) {
+      return false;
+    }
+    try {
+      const status = await backend.status(this._hass, { silent: true });
+      if (!backend.hasCapability(status, "notifications_inbox")) {
+        return false;
+      }
+      const result = await backend.listNotificationInbox(this._hass, backend.notificationProfileId(this._config));
+      const inbox = Array.isArray(result?.inbox) ? result.inbox : [];
+      this._engineInbox = inbox;
+      const dismissed = inbox
+        .filter(entry => entry?.dismissed === true)
+        .map(entry => String(entry?.alert_id || entry?.id || ""))
+        .filter(Boolean);
+      if (this._mergeNativeDismissed(dismissed)) {
+        this._renderIfChanged(true);
+      }
+      return true;
+    } catch (_error) {
       return false;
     }
   }
@@ -4434,6 +4466,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     this._backgroundMobileSyncTimer = 0;
     this._lastBackgroundMobileSyncSignature = "";
     this._lastBackgroundMobileNativeSignature = "";
+    this._engineStatus = null;
+    this._engineStatusSignature = "";
+    this._engineStatusInFlight = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -4455,6 +4490,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   connectedCallback() {
     this._attachEditorShadowListeners();
     window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+    void this._refreshEngineStatus();
   }
 
   disconnectedCallback() {
@@ -4476,6 +4512,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       this._render();
       this._restoreFocusState(focus);
     }
+    void this._refreshEngineStatus();
   }
 
   setConfig(config) {
@@ -4484,6 +4521,48 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focus);
+    void this._refreshEngineStatus();
+  }
+
+  /** Engine status drives which delivery fields the editor exposes; the bridge caches it for 30s. */
+  async _refreshEngineStatus() {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    if (!backend || typeof backend.getEditorEngineStatus !== "function" || !this._hass || this._engineStatusInFlight) {
+      return;
+    }
+    this._engineStatusInFlight = true;
+    try {
+      const engine = await backend.getEditorEngineStatus(this._hass);
+      const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
+      if (signature === this._engineStatusSignature) {
+        return;
+      }
+      this._engineStatus = engine;
+      this._engineStatusSignature = signature;
+      if (this.isConnected && this.shadowRoot) {
+        const focus = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focus);
+      }
+    } catch (_error) {
+      // A missing or unreachable Engine simply keeps the legacy webhook fields visible.
+    } finally {
+      this._engineStatusInFlight = false;
+    }
+  }
+
+  _engineBackgroundActive() {
+    return this._engineStatus?.available === true && this._engineStatus?.caps?.notificationsBackground === true;
+  }
+
+  _renderEngineBannerHtml() {
+    return window.NodaliaUtils?.renderEditorEngineBannerHtml?.({
+      engine: this._engineStatus,
+      label: key => this._editorLabel(key),
+      extraRows: this._engineStatus?.caps?.notificationsInbox === true
+        ? [this._editorLabel("ed.engine.inbox_synced")]
+        : [],
+    }) || "";
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
@@ -5401,6 +5480,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       return;
     }
     const config = this._config || normalizeConfig({});
+    const engineBackgroundActive = this._engineBackgroundActive();
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -5658,6 +5738,16 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           margin-top: 2px;
           overflow-wrap: anywhere;
         }
+        ${window.NodaliaUtils?.renderEditorEngineBannerStyles?.() || ""}
+        .editor-engine-banner {
+          grid-column: 1 / -1;
+        }
+        .editor-engine-note {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          line-height: 1.35;
+          overflow-wrap: anywhere;
+        }
         @media (max-width: 640px) {
           .editor-grid {
             grid-template-columns: 1fr;
@@ -5801,10 +5891,15 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               <div class="editor-action__header">
                 <div>
                   <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_title"))}</div>
-                  <div class="editor-action__subtitle">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_hint"))}</div>
+                  <div class="editor-action__subtitle">${escapeHtml(
+                    engineBackgroundActive
+                      ? this._editorLabel("ed.engine.managed_hint")
+                      : this._editorLabel("ed.notifications.background_mobile_hint"),
+                  )}</div>
                 </div>
               </div>
               <div class="editor-grid">
+                ${engineBackgroundActive ? this._renderEngineBannerHtml() : ""}
                 ${this._renderCheckboxField(
                   "ed.notifications.background_mobile_enabled",
                   "background_mobile.enabled",
@@ -5819,15 +5914,22 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                         config.background_mobile?.profile_id,
                         { placeholder: "default", fullWidth: true },
                       )}
-                      ${this._renderTextField(
-                        "ed.notifications.background_mobile_webhook",
-                        "background_mobile.webhook",
-                        config.background_mobile?.webhook,
-                        {
-                          placeholder: "nodalia_notifications_background_sync",
-                          fullWidth: true,
-                        },
-                      )}
+                      ${
+                        engineBackgroundActive
+                          ? ""
+                          : `
+                            ${this._renderTextField(
+                              "ed.notifications.background_mobile_webhook",
+                              "background_mobile.webhook",
+                              config.background_mobile?.webhook,
+                              {
+                                placeholder: "nodalia_notifications_background_sync",
+                                fullWidth: true,
+                              },
+                            )}
+                            <div class="editor-engine-note editor-field--full">${escapeHtml(this._editorLabel("ed.engine.offline_hint"))}</div>
+                          `
+                      }
                     `
                     : ""
                 }

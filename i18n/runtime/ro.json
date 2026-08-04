@@ -654,6 +654,12 @@
         "sat": "Sâmbătă",
         "sun": "Duminică"
       },
+      "override": {
+        "hold2h": "Menține 2 ore",
+        "clear": "Reia programul",
+        "activeUntil": "Excepție până la {time}",
+        "failed": "Nu s-a putut modifica excepția. Verificați Engine și jurnalele Home Assistant."
+      },
       "errors": {
         "webhookMissing": "Instalați integrarea Nodalia sau configurați vechiul webhook al programului în editor.",
         "nativeFailed": "Salvarea nativă a programului a eșuat. Folosiți un cont de administrator sau rezerva veche.",

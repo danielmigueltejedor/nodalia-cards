@@ -654,6 +654,12 @@
         "sat": "Samstag",
         "sun": "Sonntag"
       },
+      "override": {
+        "hold2h": "2 Stunden halten",
+        "clear": "Zeitplan fortsetzen",
+        "activeUntil": "Ausnahme bis {time}",
+        "failed": "Ausnahme konnte nicht geändert werden. Prüfe die Engine und die Home-Assistant-Protokolle."
+      },
       "errors": {
         "webhookMissing": "Installiere die Nodalia-Integration oder konfiguriere den alten Zeitplan-Webhook im Karten-Editor.",
         "nativeFailed": "Der Zeitplan konnte nicht nativ gespeichert werden. Verwende ein Administratorkonto oder den alten Fallback.",
