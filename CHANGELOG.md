@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-08-04
+
+### Fixed
+
+- **Climate Card:** automatic Sections height reserves space for Engine override chips so the +/- step controls are no longer clipped.
+
+### Changed
+
+- Compatibility loaders keep `2.0.5` and `2.1.0` available alongside `2.1.1`.
+
 ## [2.1.0] - 2026-08-04
 
 ### Added
