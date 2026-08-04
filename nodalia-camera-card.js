@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.0.3";
+const CARD_VERSION = "2.0.4";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -173,6 +173,28 @@ function appendQueryParam(url, key, value) {
   }
   const separator = safeUrl.includes("?") ? "&" : "?";
   return `${safeUrl}${separator}${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+}
+
+function isUsableCameraAccessToken(token) {
+  const value = String(token ?? "").trim();
+  return Boolean(value) && value !== "undefined" && value !== "null";
+}
+
+function cameraProxyFailureKey(entityId, accessToken) {
+  return `${String(entityId || "").trim()}|${String(accessToken || "").trim()}`;
+}
+
+function parseCameraProxyAuth(url) {
+  try {
+    const parsed = new URL(String(url || "").trim(), "http://localhost");
+    const match = parsed.pathname.match(/\/api\/camera_proxy\/([^/?]+)/i);
+    return {
+      entityId: match ? decodeURIComponent(match[1]) : "",
+      accessToken: String(parsed.searchParams.get("token") || "").trim(),
+    };
+  } catch (_error) {
+    return { entityId: "", accessToken: "" };
+  }
 }
 
 function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
@@ -666,6 +688,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedEntityId = "";
     this._expandedReturnFocus = null;
     this._failedImageUrls = new Set();
+    this._failedCameraTokens = new Set();
     this._previewAgeTimer = 0;
     this._expandedCardCache = new Map();
     this._expandedCardConfigSignatures = new WeakMap();
@@ -879,24 +902,27 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _getCameraImageUrl(state = this._getState(), entityId = this._config?.entity) {
-    if (!state || !this._hass || !entityId) {
+    if (!state || !this._hass || !entityId || isUnavailableState(state)) {
       return "";
     }
 
-    const refreshToken = String(state.last_updated || state.last_changed || "");
-    const fromPicture = String(state.attributes?.entity_picture || "").trim();
-    if (fromPicture) {
-      const resolved = typeof this._hass.hassUrl === "function"
-        ? this._hass.hassUrl(fromPicture)
-        : fromPicture;
-      return appendQueryParam(resolved, "nodalia_ts", refreshToken);
+    // Always build from the live access_token. Reusing a stale entity_picture token
+    // (or requesting camera_proxy without one) returns 401 on HA 2026.6+ and counts
+    // toward http IP bans when snapshots refresh.
+    const accessToken = String(state.attributes?.access_token || "").trim();
+    if (!isUsableCameraAccessToken(accessToken)) {
+      return "";
+    }
+    if (this._failedCameraTokens.has(cameraProxyFailureKey(entityId, accessToken))) {
+      return "";
     }
 
-    if (typeof this._hass.hassUrl === "function") {
-      return appendQueryParam(this._hass.hassUrl(`/api/camera_proxy/${entityId}`), "nodalia_ts", refreshToken);
-    }
-
-    return "";
+    const path = `/api/camera_proxy/${entityId}?token=${encodeURIComponent(accessToken)}`;
+    const resolved = typeof this._hass.hassUrl === "function"
+      ? this._hass.hassUrl(path)
+      : path;
+    const refreshToken = String(state.last_updated || state.last_changed || accessToken);
+    return appendQueryParam(resolved, "nodalia_ts", refreshToken);
   }
 
   _rememberFailedImageUrl(url) {
@@ -908,6 +934,17 @@ class NodaliaCameraCard extends HTMLElement {
     this._failedImageUrls.add(value);
     while (this._failedImageUrls.size > MAX_FAILED_IMAGE_URLS) {
       this._failedImageUrls.delete(this._failedImageUrls.values().next().value);
+    }
+
+    const parsed = parseCameraProxyAuth(value);
+    if (!parsed.entityId || !isUsableCameraAccessToken(parsed.accessToken)) {
+      return;
+    }
+    const key = cameraProxyFailureKey(parsed.entityId, parsed.accessToken);
+    this._failedCameraTokens.delete(key);
+    this._failedCameraTokens.add(key);
+    while (this._failedCameraTokens.size > MAX_FAILED_IMAGE_URLS) {
+      this._failedCameraTokens.delete(this._failedCameraTokens.values().next().value);
     }
   }
 
@@ -1369,7 +1406,7 @@ class NodaliaCameraCard extends HTMLElement {
     return `
       <div class="camera-card__preview ${layout === "compact" ? "camera-card__preview--compact" : ""} ${layout === "security" ? "camera-card__preview--security" : ""}">
         ${showImage
-          ? `<img class="camera-card__image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" loading="lazy" data-camera-image="true" />`
+          ? `<img class="camera-card__image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" loading="lazy" data-camera-image="true" data-camera-entity="${escapeHtml(entityId)}" />`
           : `<div class="camera-card__placeholder" aria-hidden="true">
               <ha-icon icon="mdi:cctv"></ha-icon>
               <span>${escapeHtml(placeholderLabel)}</span>
@@ -2455,14 +2492,23 @@ class NodaliaCameraCard extends HTMLElement {
       }, { once: true });
       node.addEventListener("load", () => {
         const src = node.getAttribute("src");
-        if (src) {
-          this._failedImageUrls.delete(src);
+        if (!src) {
+          return;
+        }
+        this._failedImageUrls.delete(src);
+        const parsed = parseCameraProxyAuth(src);
+        if (parsed.entityId && isUsableCameraAccessToken(parsed.accessToken)) {
+          this._failedCameraTokens.delete(cameraProxyFailureKey(parsed.entityId, parsed.accessToken));
         }
       }, { once: true });
     });
 
     this.shadowRoot.querySelectorAll('img[data-camera-poster="true"]').forEach(node => {
       node.addEventListener("error", () => {
+        const src = node.getAttribute("src");
+        if (src) {
+          this._rememberFailedImageUrl(src);
+        }
         node.hidden = true;
       }, { once: true });
     });

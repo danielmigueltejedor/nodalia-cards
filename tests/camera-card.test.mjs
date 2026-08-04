@@ -29,6 +29,10 @@ function loadCameraHelpers() {
       parseServiceData,
       formatRelativeAge,
       stripEqualToDefaults,
+      isUsableCameraAccessToken,
+      cameraProxyFailureKey,
+      parseCameraProxyAuth,
+      appendQueryParam,
       DEFAULT_CONFIG,
       CAMERA_LAYOUT,
       CAMERA_PRESENTATION,
@@ -520,11 +524,32 @@ test("camera card handles unavailable state and snapshot fallback", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /isUnavailableState\(state\)/);
   assert.match(source, /camera_proxy/);
-  assert.match(source, /entity_picture/);
+  assert.match(source, /access_token/);
+  assert.match(source, /isUsableCameraAccessToken/);
+  assert.match(source, /_failedCameraTokens/);
   assert.match(source, /_failedImageUrls/);
   assert.match(source, /const src = node\.getAttribute\("src"\)/);
   assert.doesNotMatch(source, /_failedImageUrls\.add\(node\.src\)/);
+  assert.doesNotMatch(source, /hassUrl\(`\/api\/camera_proxy\/\$\{entityId\}`\)/);
   assert.match(source, /camera-card__placeholder/);
+});
+
+test("camera proxy URLs require a live access token and quarantine failed tokens", () => {
+  const helpers = loadCameraHelpers();
+  assert.equal(helpers.isUsableCameraAccessToken(""), false);
+  assert.equal(helpers.isUsableCameraAccessToken("undefined"), false);
+  assert.equal(helpers.isUsableCameraAccessToken("null"), false);
+  assert.equal(helpers.isUsableCameraAccessToken("abc123"), true);
+
+  const parsed = helpers.parseCameraProxyAuth(
+    "/api/camera_proxy/camera.aqara_g5_pro?token=deadbeef&nodalia_ts=2026-08-04T02%3A17%3A08.536Z",
+  );
+  assert.equal(parsed.entityId, "camera.aqara_g5_pro");
+  assert.equal(parsed.accessToken, "deadbeef");
+  assert.equal(
+    helpers.cameraProxyFailureKey(parsed.entityId, parsed.accessToken),
+    "camera.aqara_g5_pro|deadbeef",
+  );
 });
 
 test("camera card expanded overlay opens, closes, and cleans up listeners", () => {
