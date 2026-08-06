@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2453,7 +2453,28 @@ class NodaliaEntityCard extends HTMLElement {
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = isActive ? onCardBackground : styles.card.background;
+    const composeSurface = window.NodaliaUtils?.composeCardSurfaceBackground?.bind(window.NodaliaUtils);
+    const cardBackground = composeSurface
+      ? composeSurface({
+          base: isActive ? onCardBackground : styles.card.background,
+          accentColor,
+          ambient: isActive,
+          glazeMode: isActive ? "accent" : "neutral",
+          glazeStrength: 22,
+          glazeNeutralStrength: 5,
+          glazeTextWash: 6,
+        })
+      : isActive
+        ? [
+            `radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%)`,
+            `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`,
+            `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`,
+            onCardBackground,
+          ].join(", ")
+        : [
+            "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))",
+            styles.card.background,
+          ].join(", ");
     const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
     const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
     const animations = this._getAnimationSettings();
@@ -2489,7 +2510,6 @@ class NodaliaEntityCard extends HTMLElement {
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: block;
-          isolation: isolate;
           overflow: hidden;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -2497,31 +2517,6 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card--single-row {
           min-height: ${effectiveCardMinHeight};
-        }
-
-        ha-card::before {
-          background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
-          border-radius: inherit;
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        ha-card::after {
-          background:
-            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
-          border-radius: inherit;
-          content: "";
-          inset: 0;
-          opacity: ${isActive ? "1" : "0"};
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
         }
 
         .entity-card--clickable {
@@ -2540,7 +2535,6 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: transform 160ms ease;
-          will-change: transform;
           z-index: 1;
         }
 

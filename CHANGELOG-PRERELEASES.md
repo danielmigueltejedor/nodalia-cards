@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.2-alpha.1] - 2026-08-06
+
+First **`2.1.2`** alpha after stable **`2.1.1`**: Gecko-safe card surfaces without browser-specific CSS forks.
+
+### Fixed
+
+- **Weather Card, Calendar Card, Navigation Card and Entity Card:** removed absolute `::before` / `::after` surface fills that sat on top of `overflow: hidden` + `border-radius` shells. Those extra composition layers caused hairline seams, edge fringes and mid-card cracks in Firefox / Zen while Chromium and WebKit stayed clean. Glaze and ambient accents now live in a single shared `background` stack via `NodaliaUtils.composeCardSurfaceBackground`, so container and overlay geometry stay aligned in every engine.
+- **Entity Card:** explains why only some instances looked broken — active cards painted an extra ambient `::after` layer (`opacity: 1`) while idle cards did not. Active and idle variants now use the same single-paint approach.
+
+### Validation
+
+- Adds source contracts for the shared surface helper and for the absence of absolute `ha-card` surface overlays on the affected cards.
+- Extends Playwright coverage with Chromium, Firefox and WebKit surface checks (plus non-default zoom / DPR geometry) for Weather, Calendar, Navigation and representative Entity configurations.
+
+---
+
 ## [2.0.0-alpha.60] - 2026-08-01
 
 Sixtieth **`2.0.0`** alpha: reliable native navigation across the complete Camera Card surface.

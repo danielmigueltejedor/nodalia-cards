@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2-alpha.1";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -2885,7 +2885,18 @@ class NodaliaCalendarCard extends HTMLElement {
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${baseCardBg}) 0%, color-mix(in srgb, ${accentColor} 10%, ${baseCardBg}) 52%, ${baseCardBg} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = onCardBackground;
+    const cardBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
+      base: onCardBackground,
+      accentColor,
+      ambient: true,
+      glazeStrength: 22,
+      glazeTextWash: 6,
+    }) || [
+      `radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%)`,
+      `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`,
+      `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`,
+      onCardBackground,
+    ].join(", ");
     const cardBorder = `1px solid ${onCardBorder}`;
     const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
     const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
@@ -2944,32 +2955,10 @@ class NodaliaCalendarCard extends HTMLElement {
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: block;
-          isolation: isolate;
           overflow: hidden;
           overscroll-behavior-y: contain;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-        }
-        ha-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
-          content: "";
-          border-radius: inherit;
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-        ha-card::after {
-          background:
-            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
-          content: "";
-          border-radius: inherit;
-          inset: 0;
-          opacity: 1;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
         }
         .calendar-card {
           cursor: pointer;

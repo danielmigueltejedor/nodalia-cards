@@ -2317,6 +2317,55 @@
     `;
   }
 
+  /**
+   * Compose ha-card surface paints as a single background stack.
+   * Keeps glaze/ambient overlays on the same layer as the base fill so Gecko
+   * does not open sub-pixel seams between absolute ::before/::after fills and
+   * overflow:hidden + border-radius clipping.
+   */
+  function composeCardSurfaceBackground(options = {}) {
+    const base = String(options.base || "var(--ha-card-background)").trim() || "var(--ha-card-background)";
+    const accentColor =
+      String(options.accentColor || "var(--primary-color)").trim() || "var(--primary-color)";
+    const glazeStrengthRaw = Number(options.glazeStrength);
+    const glazeStrength = Number.isFinite(glazeStrengthRaw) ? Math.max(0, glazeStrengthRaw) : 22;
+    const glazeNeutralStrengthRaw = Number(options.glazeNeutralStrength);
+    const glazeNeutralStrength = Number.isFinite(glazeNeutralStrengthRaw)
+      ? Math.max(0, glazeNeutralStrengthRaw)
+      : 5;
+    const glazeMode = options.glazeMode === "neutral" || options.glazeMode === "none"
+      ? options.glazeMode
+      : "accent";
+    const ambient = options.ambient === true;
+    const extraLayers = Array.isArray(options.extraLayers)
+      ? options.extraLayers.filter(layer => typeof layer === "string" && layer.trim() !== "")
+      : [];
+    const layers = [...extraLayers];
+
+    if (ambient) {
+      layers.push(
+        `radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%)`,
+        `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`,
+      );
+    }
+
+    if (glazeMode === "accent" && glazeStrength > 0) {
+      const textWash = Number.isFinite(Number(options.glazeTextWash))
+        ? Math.max(0, Number(options.glazeTextWash))
+        : 6;
+      layers.push(
+        `linear-gradient(180deg, color-mix(in srgb, ${accentColor} ${glazeStrength}%, color-mix(in srgb, var(--primary-text-color) ${textWash}%, transparent)), rgba(255, 255, 255, 0))`,
+      );
+    } else if (glazeMode === "neutral" && glazeNeutralStrength > 0) {
+      layers.push(
+        `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) ${glazeNeutralStrength}%, transparent), rgba(255, 255, 255, 0))`,
+      );
+    }
+
+    layers.push(base);
+    return layers.join(", ");
+  }
+
   const api = {
     isObject,
     isUnsafeConfigPathKey,
@@ -2374,6 +2423,7 @@
     releaseEditorDialogLayoutFix,
     clampEditorDialogScroll,
     renderReducedMotionStyles,
+    composeCardSurfaceBackground,
     captureEditorFocusState,
     restoreEditorFocusState,
     bindShadowListeners,

@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.2-alpha.1] - 2026-08-06
+
+### Fixed
+
+- **Gecko rendering:** Weather, Calendar, Navigation and Entity cards no longer show hairline seams or edge fringes in Firefox / Zen. Decorative glaze and ambient layers are painted in one shared background stack instead of absolute pseudo-element fills over clipped rounded shells.
+
+### Changed
+
+- Compatibility loaders keep `2.1.0` and `2.1.1` available alongside `2.1.2-alpha.1`.
+
 ## [2.1.1] - 2026-08-04
 
 ### Fixed

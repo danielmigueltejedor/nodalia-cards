@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3013,6 +3013,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
         : config.layout.position === "top"
           ? `0 0 ${barRadiusToken} ${barRadiusToken}`
           : config.styles.bar.border_radius;
+    const navbarSurfaceBase =
+      "linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)), var(--nodalia-user-bar-bg, var(--nodalia-surface-soft))";
+    const navbarSurfaceBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
+      base: navbarSurfaceBase,
+      glazeMode: "neutral",
+      glazeNeutralStrength: 5,
+      ambient: false,
+    }) || `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0)), ${navbarSurfaceBase}`;
     const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
     const mediaBrowserMarkup = this._renderMediaBrowser();
 
@@ -3136,31 +3144,18 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         ha-card.navbar-card {
-          background:
-            linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
-            var(--nodalia-user-bar-bg, var(--nodalia-surface-soft));
+          background: ${navbarSurfaceBackground};
           border: ${config.styles.bar.border};
           border-radius: ${navbarCardBorderRadius};
           box-shadow: ${config.styles.bar.box_shadow};
           backdrop-filter: ${config.styles.bar.backdrop_filter};
           display: block;
-          isolation: isolate;
           padding: ${config.styles.bar.padding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
           pointer-events: none;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, border-radius 180ms ease;
-        }
-
-        ha-card.navbar-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0));
-          border-radius: inherit;
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
         }
 
         ha-card.navbar-card > * {
@@ -3416,7 +3411,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         .popup-panel {
-          background: ${config.styles.popup.background};
+          background:
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent),
+            ${config.styles.popup.background};
           background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border: ${config.styles.popup.border};
           border-radius: ${config.styles.popup.border_radius};
@@ -3426,7 +3423,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
           max-height: calc(100vh - 24px);
           max-height: calc(100dvh - 24px);
           min-width: min(${config.styles.popup.min_width}, calc(100vw - 24px));
-          isolation: isolate;
           overflow: auto;
           padding: ${config.styles.popup.padding};
           position: fixed;
@@ -3437,16 +3433,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .popup-panel.popup-panel--entering {
           ${animations.enabled ? `animation: nodalia-navbar-surface-in ${animations.popupDuration}ms cubic-bezier(0.22, 0.84, 0.26, 1) both;` : ""}
-        }
-
-        .popup-panel::before {
-          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
-          border-radius: inherit;
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
         }
 
         .popup-panel > * {

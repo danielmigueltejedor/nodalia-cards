@@ -14,7 +14,13 @@ Current stable release:
 2.1.1
 ```
 
-Stable **`2.1.1`** is the recommended daily-driver release. It keeps Nodalia Cards as an independent HACS Dashboard plugin, while the optional Nodalia Cards Engine integration provides advanced server-side features without being required by the visual cards. When the Engine is installed the editors switch to Engine-native mode and hide the legacy webhook fields. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); the completed prerelease cycle lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Current preview release:
+
+```text
+2.1.2-alpha.1
+```
+
+Stable **`2.1.1`** remains the recommended daily-driver release. **`2.1.2-alpha.1`** fixes Gecko hairline seams on Weather, Calendar, Navigation and Entity card surfaces while keeping the independent HACS Dashboard plugin and optional Engine integration. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
