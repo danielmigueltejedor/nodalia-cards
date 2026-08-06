@@ -1758,7 +1758,20 @@ class NodaliaNotificationsCard extends HTMLElement {
       return [];
     }
     const result = [raw];
-    const match = raw.match(/^(hot|cold|humidity_high|humidity_low|battery_low|humidifier_fill_low|humidifier_fill_full|ink_low):([^:]+):/);
+    // Foreground comfort/humidity IDs differ from Engine identities (`hot:entity`,
+    // `humidity_high:entity`). Map both directions so inbox sync and local dismissals match.
+    const comfort = raw.match(/^comfort:(hot|cold):(?:climate:)?([^:]+)/);
+    if (comfort) {
+      result.push(`${comfort[1]}:${comfort[2]}`);
+    }
+    const humidity = raw.match(/^humidity:([^:]+):(high|low)(?:$|:)/);
+    if (humidity) {
+      result.push(`humidity_${humidity[2]}:${humidity[1]}`);
+    }
+    // Engine stores `kind:entity`; the card often appends state/value after a third segment.
+    const match = raw.match(
+      /^(hot|cold|humidity_high|humidity_low|battery_low|humidifier_fill_low|humidifier_fill_full|ink_low|door|window|motion|vacuum|rain|media_absence|outdoor_hot|outdoor_cold):([^:]+)(?::|$)/,
+    );
     if (match) {
       result.push(`${match[1]}:${match[2]}`);
     }
