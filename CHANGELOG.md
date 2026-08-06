@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.2-alpha.3] - 2026-08-06
+
+### Fixed
+
+- **Calendar Card:** restore the visible accent tint by bringing back glaze/ambient washes as `::before`/`::after` fills without `border-radius: inherit`, plus the soft white highlight layer used by Notifications Card, so Gecko seams stay gone while the gold surface wash matches again.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2-alpha.2` available alongside `2.1.2-alpha.3`.
+
 ## [2.1.2-alpha.2] - 2026-08-06
 
 ### Fixed

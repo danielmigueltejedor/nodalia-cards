@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.2-alpha.2";
+const CARD_VERSION = "2.1.2-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2450,30 +2450,20 @@ class NodaliaEntityCard extends HTMLElement {
     const isSelectEntity = this._isSelectEntity(state);
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 48%, ${styles.card.background} 100%)`;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-entity-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-entity-surface-base)) 52%, var(--nodalia-entity-surface-base) 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const composeSurface = window.NodaliaUtils?.composeCardSurfaceBackground?.bind(window.NodaliaUtils);
-    const cardBackground = composeSurface
-      ? composeSurface({
-          base: isActive ? onCardBackground : styles.card.background,
-          accentColor,
-          glazeMode: isActive ? "accent" : "neutral",
-          glazeStrength: 22,
-          glazeNeutralStrength: 5,
-          glazeTextWash: 6,
-        })
-      : isActive
-        ? [
-            `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`,
-            onCardBackground,
-          ].join(", ")
-        : [
-            "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))",
-            styles.card.background,
-          ].join(", ");
+    const cardBackground = isActive
+      ? `${onCardBackground}, var(--nodalia-entity-surface-base)`
+      : "var(--nodalia-entity-surface-base)";
     const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
     const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
+    const surfaceGlaze = isActive
+      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+      : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))";
+    const surfaceAmbient = `
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -2501,6 +2491,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         ha-card {
+          --nodalia-entity-surface-base: ${styles.card.background};
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -2514,6 +2505,25 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card--single-row {
           min-height: ${effectiveCardMinHeight};
+        }
+
+        ha-card::before {
+          background: ${surfaceGlaze};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        ha-card::after {
+          background: ${surfaceAmbient};
+          content: "";
+          inset: 0;
+          opacity: ${isActive ? "1" : "0"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
 
         .entity-card--clickable {

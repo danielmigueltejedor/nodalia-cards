@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.2-alpha.3] - 2026-08-06
+
+Third **`2.1.2`** alpha: Calendar tint restored without reintroducing Gecko surface seams.
+
+### Fixed
+
+- **Calendar Card tint:** the strong gold wash came from absolute glaze/ambient overlays. Folding them only into a mild base `color-mix` left the card looking untinted. Overlays are restored without `border-radius: inherit` (parent `overflow: hidden` clips them), matching Notifications Card and avoiding the double-rounding seams from alpha.1.
+
+### Validation
+
+- Updates surface contracts so Calendar/Entity may use radius-free absolute washes while Weather/Navigation keep single-paint backgrounds.
+
+---
+
 ## [2.1.2-alpha.2] - 2026-08-06
 
 Second **`2.1.2`** alpha: restore Calendar/Entity accent tinting on WebKit while keeping Gecko seam-free surfaces.

@@ -13,7 +13,8 @@ async function loadBundle(page) {
 }
 
 function isInactivePseudoContent(content) {
-  return !content || content === "none" || content === "normal" || content === '""' || content === "''";
+  // `content: ""` is an active empty pseudo (computed as '""'). Only none/normal mean unused.
+  return !content || content === "none" || content === "normal";
 }
 
 async function mountSurfaceFixture(page) {
@@ -174,6 +175,7 @@ async function readCardSurface(page, surfaceId) {
       backgroundImage: style.backgroundImage,
       beforeContent: before.content,
       afterContent: after.content,
+      beforeBorderRadius: before.borderRadius,
       haCardBlock,
       hasAbsoluteBeforeRule: /ha-card(?:\.navbar-card)?::before\s*\{[\s\S]*?position:\s*absolute/.test(styleText),
       hasAbsoluteAfterRule: /ha-card(?:\.navbar-card)?::after\s*\{[\s\S]*?position:\s*absolute/.test(styleText),
@@ -204,22 +206,22 @@ test.describe("Gecko-safe card surfaces", () => {
       "entity-vacuum": entityVacuum,
     })) {
       expect(surface, `${id} should render ha-card`).not.toBeNull();
-      expect(isInactivePseudoContent(surface.beforeContent), id).toBe(true);
-      expect(isInactivePseudoContent(surface.afterContent), id).toBe(true);
-      expect(surface.hasAbsoluteBeforeRule, id).toBe(false);
-      expect(surface.hasAbsoluteAfterRule, id).toBe(false);
       expect(surface.isolation, id).not.toBe("isolate");
-      expect(surface.backgroundImage, id).toMatch(/gradient/i);
+      const hasBackgroundGradient = /gradient/i.test(surface.backgroundImage || "");
+      const hasOverlayWash = !isInactivePseudoContent(surface.beforeContent);
+      expect(hasBackgroundGradient || hasOverlayWash, `${id} needs a surface wash`).toBe(true);
       expect(surface.haCardBlock, id).not.toMatch(/isolation:\s*isolate/);
+      expect(surface.beforeBorderRadius || "", id).not.toMatch(/inherit|28px|999px/);
     }
 
-    expect(entityActive.backgroundImage).toMatch(/linear-gradient/i);
-    expect(entityAccent.backgroundImage).toMatch(/linear-gradient/i);
-    expect(entityIdle.backgroundImage).toMatch(/linear-gradient/i);
-    expect(calendar.backgroundImage).toMatch(/linear-gradient/i);
-    expect(calendar.haCardBlock).toMatch(/26%/);
-    expect(entityActive.haCardBlock).toMatch(/26%/);
-    expect(entityIdle.haCardBlock).not.toMatch(/26%/);
+    expect(isInactivePseudoContent(weather.beforeContent)).toBe(true);
+    expect(isInactivePseudoContent(nav.beforeContent)).toBe(true);
+    expect(isInactivePseudoContent(calendar.beforeContent)).toBe(false);
+    expect(isInactivePseudoContent(entityActive.beforeContent)).toBe(false);
+    expect(calendar.hasAbsoluteBeforeRule).toBe(true);
+    expect(entityActive.hasAbsoluteBeforeRule).toBe(true);
+    expect(calendar.haCardBlock).toMatch(/--nodalia-calendar-surface-base/);
+    expect(entityActive.haCardBlock).toMatch(/--nodalia-entity-surface-base/);
 
     // Visual baselines for Chromium/WebKit. Firefox still exercises the same
     // computed-style contracts above; generating PNGs needs a host where
@@ -265,9 +267,10 @@ test.describe("Gecko-safe card surfaces", () => {
     for (const surface of surfaces) {
       expect(surface.width, surface.id).toBeGreaterThan(40);
       expect(surface.height, surface.id).toBeGreaterThan(16);
-      expect(isInactivePseudoContent(surface.beforeContent), surface.id).toBe(true);
       expect(surface.isolation, surface.id).not.toBe("isolate");
-      expect(surface.backgroundImage, surface.id).toMatch(/gradient/i);
+      const hasBackgroundGradient = /gradient/i.test(surface.backgroundImage || "");
+      const hasOverlayWash = !isInactivePseudoContent(surface.beforeContent);
+      expect(hasBackgroundGradient || hasOverlayWash, `${surface.id} needs a surface wash`).toBe(true);
     }
     expect(errors).toEqual([]);
   });

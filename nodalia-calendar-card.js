@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.1.2-alpha.2";
+const CARD_VERSION = "2.1.2-alpha.3";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG = {
   },
   styles: {
     card: {
-      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
+      background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
       border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
@@ -2882,21 +2882,12 @@ class NodaliaCalendarCard extends HTMLElement {
       ? "var(--primary-color)"
       : String(styles.tint?.color || DEFAULT_CONFIG.styles.tint.color).trim() || "var(--primary-color)";
     const baseCardBg = styles.card.background;
-    // Bake former ::after ambient into the opaque tinted base. Extra transparent
-    // gradient layers on top of nested color-mix/var bases can punch through on
-    // WebKit and leave the card looking untinted.
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${baseCardBg}) 0%, color-mix(in srgb, ${accentColor} 14%, ${baseCardBg}) 48%, ${baseCardBg} 100%)`;
+    // Keep accent washes as ::before/::after fills (no border-radius) so the
+    // tint stays as strong as before the Gecko seam fix. Nested color-mix uses a
+    // comma-free custom property, matching Notifications Card.
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-calendar-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-calendar-surface-base)) 52%, var(--nodalia-calendar-surface-base) 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
-      base: onCardBackground,
-      accentColor,
-      glazeStrength: 22,
-      glazeTextWash: 6,
-    }) || [
-      `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`,
-      onCardBackground,
-    ].join(", ");
     const cardBorder = `1px solid ${onCardBorder}`;
     const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
     const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
@@ -2949,7 +2940,11 @@ class NodaliaCalendarCard extends HTMLElement {
         }
         * { box-sizing:border-box; }
         ha-card {
-          background: ${cardBackground};
+          --nodalia-calendar-surface-base: ${baseCardBg};
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+            ${onCardBackground},
+            var(--nodalia-calendar-surface-base);
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
@@ -2959,6 +2954,24 @@ class NodaliaCalendarCard extends HTMLElement {
           overscroll-behavior-y: contain;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        ha-card::before {
+          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+        ha-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
         }
         .calendar-card {
           cursor: pointer;

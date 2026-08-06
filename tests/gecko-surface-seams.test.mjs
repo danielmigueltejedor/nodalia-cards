@@ -8,13 +8,6 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-const SURFACE_CARDS = [
-  "nodalia-weather-card.js",
-  "nodalia-calendar-card.js",
-  "nodalia-entity-card.js",
-  "nodalia-navigation-bar.js",
-];
-
 function loadUtils() {
   const context = { window: {}, console };
   vm.createContext(context);
@@ -45,8 +38,8 @@ test("composeCardSurfaceBackground keeps glaze on one background stack without t
   assert.doesNotMatch(idle, /radial-gradient/);
 });
 
-test("Weather, Calendar, Entity and Navigation avoid absolute ha-card surface overlays", () => {
-  for (const file of SURFACE_CARDS) {
+test("Weather and Navigation avoid absolute ha-card surface overlays", () => {
+  for (const file of ["nodalia-weather-card.js", "nodalia-navigation-bar.js"]) {
     const source = read(file);
     assert.doesNotMatch(
       source,
@@ -59,9 +52,6 @@ test("Weather, Calendar, Entity and Navigation avoid absolute ha-card surface ov
       `${file} should not paint the card surface with an absolute ::after fill`,
     );
   }
-
-  assert.match(read("nodalia-calendar-card.js"), /composeCardSurfaceBackground/);
-  assert.match(read("nodalia-entity-card.js"), /composeCardSurfaceBackground/);
   assert.match(read("nodalia-navigation-bar.js"), /composeCardSurfaceBackground/);
   assert.match(
     read("nodalia-weather-card.js"),
@@ -69,22 +59,22 @@ test("Weather, Calendar, Entity and Navigation avoid absolute ha-card surface ov
   );
 });
 
-test("Entity Card active and idle surfaces stay in one background paint", () => {
-  const source = read("nodalia-entity-card.js");
-  assert.match(source, /glazeMode:\s*isActive \? "accent" : "neutral"/);
-  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 26%/);
-  assert.doesNotMatch(source, /ambient:\s*isActive/);
-  assert.doesNotMatch(source, /ha-card \{[\s\S]*isolation:\s*isolate;/);
-});
-
-test("Calendar Card bakes ambient tint into the opaque surface base", () => {
-  const source = read("nodalia-calendar-card.js");
-  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 26%, \$\{baseCardBg\}\)/);
-  assert.doesNotMatch(source, /ambient:\s*true/);
-  assert.doesNotMatch(
-    source,
-    /composeCardSurfaceBackground\?\. \(\{[\s\S]*radial-gradient\(circle at 18% 20%/,
-  );
+test("Calendar and Entity restore tint overlays without inherited border-radius seams", () => {
+  for (const file of ["nodalia-calendar-card.js", "nodalia-entity-card.js"]) {
+    const source = read(file);
+    assert.match(source, /--nodalia-(?:calendar|entity)-surface-base:/);
+    for (const pseudo of ["before", "after"]) {
+      const block = source.match(new RegExp(`ha-card::${pseudo} \\{[\\s\\S]*?\\n        \\}`))?.[0];
+      assert.ok(block, `${file} should define ha-card::${pseudo}`);
+      assert.match(block, /position:\s*absolute/);
+      assert.match(block, /inset:\s*0/);
+      assert.doesNotMatch(
+        block,
+        /border-radius:\s*inherit/,
+        `${file}::${pseudo} must not reintroduce border-radius: inherit`,
+      );
+    }
+  }
 });
 
 test("Calendar and Navigation card shells no longer force isolation on the clipped surface", () => {
