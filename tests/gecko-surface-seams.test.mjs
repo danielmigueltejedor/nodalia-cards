@@ -22,26 +22,24 @@ function loadUtils() {
   return context.window.NodaliaUtils;
 }
 
-test("composeCardSurfaceBackground keeps glaze and ambient on one background stack", () => {
+test("composeCardSurfaceBackground keeps glaze on one background stack without transparent ambient layers", () => {
   const utils = loadUtils();
   assert.equal(typeof utils.composeCardSurfaceBackground, "function");
 
   const active = utils.composeCardSurfaceBackground({
-    base: "var(--ha-card-background)",
+    base: "linear-gradient(135deg, #224 0%, #112 100%)",
     accentColor: "#71c0ff",
     ambient: true,
     glazeStrength: 22,
   });
-  assert.match(active, /radial-gradient\(circle at 18% 20%/);
-  assert.match(active, /linear-gradient\(135deg/);
   assert.match(active, /linear-gradient\(180deg/);
-  assert.match(active, /var\(--ha-card-background\)$/);
+  assert.match(active, /linear-gradient\(135deg, #224 0%, #112 100%\)$/);
+  assert.doesNotMatch(active, /radial-gradient/);
 
   const idle = utils.composeCardSurfaceBackground({
     base: "var(--ha-card-background)",
     glazeMode: "neutral",
     glazeNeutralStrength: 5,
-    ambient: false,
   });
   assert.match(idle, /var\(--primary-text-color\) 5%/);
   assert.doesNotMatch(idle, /radial-gradient/);
@@ -73,9 +71,20 @@ test("Weather, Calendar, Entity and Navigation avoid absolute ha-card surface ov
 
 test("Entity Card active and idle surfaces stay in one background paint", () => {
   const source = read("nodalia-entity-card.js");
-  assert.match(source, /ambient:\s*isActive/);
   assert.match(source, /glazeMode:\s*isActive \? "accent" : "neutral"/);
+  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 26%/);
+  assert.doesNotMatch(source, /ambient:\s*isActive/);
   assert.doesNotMatch(source, /ha-card \{[\s\S]*isolation:\s*isolate;/);
+});
+
+test("Calendar Card bakes ambient tint into the opaque surface base", () => {
+  const source = read("nodalia-calendar-card.js");
+  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 26%, \$\{baseCardBg\}\)/);
+  assert.doesNotMatch(source, /ambient:\s*true/);
+  assert.doesNotMatch(
+    source,
+    /composeCardSurfaceBackground\?\. \(\{[\s\S]*radial-gradient\(circle at 18% 20%/,
+  );
 });
 
 test("Calendar and Navigation card shells no longer force isolation on the clipped surface", () => {

@@ -2319,9 +2319,14 @@
 
   /**
    * Compose ha-card surface paints as a single background stack.
-   * Keeps glaze/ambient overlays on the same layer as the base fill so Gecko
-   * does not open sub-pixel seams between absolute ::before/::after fills and
+   * Keeps glaze on the same layer as the base fill so Gecko does not open
+   * sub-pixel seams between absolute ::before/::after fills and
    * overflow:hidden + border-radius clipping.
+   *
+   * Ambient radial/diagonal washes must be baked into `base` by the caller.
+   * Stacking extra transparent gradient layers on top of a nested
+   * color-mix/var tinted base can make WebKit drop or punch through the
+   * whole background, leaving a flat untinted card.
    */
   function composeCardSurfaceBackground(options = {}) {
     const base = String(options.base || "var(--ha-card-background)").trim() || "var(--ha-card-background)";
@@ -2336,18 +2341,10 @@
     const glazeMode = options.glazeMode === "neutral" || options.glazeMode === "none"
       ? options.glazeMode
       : "accent";
-    const ambient = options.ambient === true;
     const extraLayers = Array.isArray(options.extraLayers)
       ? options.extraLayers.filter(layer => typeof layer === "string" && layer.trim() !== "")
       : [];
     const layers = [...extraLayers];
-
-    if (ambient) {
-      layers.push(
-        `radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%)`,
-        `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`,
-      );
-    }
 
     if (glazeMode === "accent" && glazeStrength > 0) {
       const textWash = Number.isFinite(Number(options.glazeTextWash))

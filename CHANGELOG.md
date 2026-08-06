@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.2-alpha.2] - 2026-08-06
+
+### Fixed
+
+- **Calendar Card / Entity Card:** restore warm accent tinting after the Gecko surface fix. Transparent ambient gradient layers stacked on nested `color-mix`/`var` bases could punch through or drop the tinted fill on WebKit; ambient is now baked into the opaque base and only the glaze stays as an overlay layer.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2-alpha.1` available alongside `2.1.2-alpha.2`.
+
 ## [2.1.2-alpha.1] - 2026-08-06
 
 ### Fixed

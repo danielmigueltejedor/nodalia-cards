@@ -213,9 +213,13 @@ test.describe("Gecko-safe card surfaces", () => {
       expect(surface.haCardBlock, id).not.toMatch(/isolation:\s*isolate/);
     }
 
-    expect(entityActive.backgroundImage).toMatch(/radial-gradient/i);
-    expect(entityAccent.backgroundImage).toMatch(/radial-gradient/i);
-    expect(entityIdle.backgroundImage).not.toMatch(/radial-gradient/i);
+    expect(entityActive.backgroundImage).toMatch(/linear-gradient/i);
+    expect(entityAccent.backgroundImage).toMatch(/linear-gradient/i);
+    expect(entityIdle.backgroundImage).toMatch(/linear-gradient/i);
+    expect(calendar.backgroundImage).toMatch(/linear-gradient/i);
+    expect(calendar.haCardBlock).toMatch(/26%/);
+    expect(entityActive.haCardBlock).toMatch(/26%/);
+    expect(entityIdle.haCardBlock).not.toMatch(/26%/);
 
     // Visual baselines for Chromium/WebKit. Firefox still exercises the same
     // computed-style contracts above; generating PNGs needs a host where

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.2-alpha.1";
+const CARD_VERSION = "2.1.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2450,7 +2450,7 @@ class NodaliaEntityCard extends HTMLElement {
     const isSelectEntity = this._isSelectEntity(state);
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 48%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
     const composeSurface = window.NodaliaUtils?.composeCardSurfaceBackground?.bind(window.NodaliaUtils);
@@ -2458,7 +2458,6 @@ class NodaliaEntityCard extends HTMLElement {
       ? composeSurface({
           base: isActive ? onCardBackground : styles.card.background,
           accentColor,
-          ambient: isActive,
           glazeMode: isActive ? "accent" : "neutral",
           glazeStrength: 22,
           glazeNeutralStrength: 5,
@@ -2466,8 +2465,6 @@ class NodaliaEntityCard extends HTMLElement {
         })
       : isActive
         ? [
-            `radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%)`,
-            `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`,
             `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`,
             onCardBackground,
           ].join(", ")

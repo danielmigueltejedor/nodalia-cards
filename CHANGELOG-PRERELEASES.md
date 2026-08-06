@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.2-alpha.2] - 2026-08-06
+
+Second **`2.1.2`** alpha: restore Calendar/Entity accent tinting on WebKit while keeping Gecko seam-free surfaces.
+
+### Fixed
+
+- **Calendar Card and Entity Card tinting:** stopped stacking transparent ambient radial/diagonal layers on top of nested `color-mix`/`var` tinted bases. Those layers could make WebKit drop or punch through the surface fill, leaving a flat untinted card with only the accent border. Ambient strength is baked into the opaque base gradient; glaze remains a single overlay layer via `composeCardSurfaceBackground`.
+
+### Validation
+
+- Updates surface composition contracts and browser checks for the baked tint bases.
+
+---
+
 ## [2.1.2-alpha.1] - 2026-08-06
 
 First **`2.1.2`** alpha after stable **`2.1.1`**: Gecko-safe card surfaces without browser-specific CSS forks.
