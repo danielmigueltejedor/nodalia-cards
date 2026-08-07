@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Увлажнители",
   "ed.room_summary.humidifiers_section_hint": "Комнатные увлажнители воздуха, показанные на навигационной направляющей Hub, со встроенными картами увлажнителей.",
   "ed.room_summary.others_section_title": "Другие",
-  "ed.room_summary.others_section_hint": "Любой объект, отображаемый на панели Hub Others с помощью встроенных карточек объектов."
+  "ed.room_summary.others_section_hint": "Любой объект, отображаемый на панели Hub Others с помощью встроенных карточек объектов.",
+  "ed.notifications.card_radius_presets": "Скругление углов (пусто)",
+  "ed.notifications.card_radius_yaml_hint": "Свое значение — задайте `styles.card.border_radius` в YAML.",
+  "ed.notifications.item_radius_presets": "Скругление углов уведомления",
+  "ed.notifications.item_radius_yaml_hint": "Свое значение — задайте `styles.item_radius` в YAML."
 }

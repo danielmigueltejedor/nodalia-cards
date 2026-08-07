@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.2-alpha.5] - 2026-08-07
+
+Fifth **`2.1.2`** alpha: Notifications corner radius aligned with the Nodalia visual family, editable via presets in the visual editor.
+
+### Fixed
+
+- **Notification item radius:** list items used a tighter `18px` radius while the empty state used `28px`. Both now default to `var(--nodalia-card-border-radius, 28px)`.
+
+### Changed
+
+- **Editor presets:** empty-state and notification corner radius are selectable with Capsule / Soft / Rounded / Square controls (YAML still supports custom values).
+
+### Validation
+
+- Interaction regressions cover the shared radius token, legacy migration, and editor preset wiring.
+
+---
+
 ## [2.1.2-alpha.4] - 2026-08-07
 
 Fourth **`2.1.2`** alpha: Entity select corner clip + Gecko animation reliability.

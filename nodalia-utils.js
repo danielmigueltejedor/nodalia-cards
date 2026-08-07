@@ -914,7 +914,11 @@
     }
     const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
     const field = fieldRaw || "styles.card.border_radius";
-    const current = String(options?.value ?? "").trim() || "28px";
+    const FAMILY_RADIUS = "var(--nodalia-card-border-radius, 28px)";
+    let current = String(options?.value ?? "").trim() || "28px";
+    if (current === FAMILY_RADIUS) {
+      current = "28px";
+    }
     const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
     const labels = options?.labels ?? {};
     const tPill = esc(String(labels.pill ?? "Capsule"));

@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Umidificatori",
   "ed.room_summary.humidifiers_section_hint": "Umidificatori per ambienti mostrati nel binario di navigazione Hub con schede umidificatrici integrate.",
   "ed.room_summary.others_section_title": "Altri",
-  "ed.room_summary.others_section_hint": "Qualsiasi entità mostrata nel pannello Altri Hub utilizzando schede entità incorporate."
+  "ed.room_summary.others_section_hint": "Qualsiasi entità mostrata nel pannello Altri Hub utilizzando schede entità incorporate.",
+  "ed.notifications.card_radius_presets": "Raggio angoli (vuoto)",
+  "ed.notifications.card_radius_yaml_hint": "Per un valore personalizzato imposta `styles.card.border_radius` nel YAML.",
+  "ed.notifications.item_radius_presets": "Raggio angoli notifica",
+  "ed.notifications.item_radius_yaml_hint": "Per un valore personalizzato imposta `styles.item_radius` nel YAML."
 }

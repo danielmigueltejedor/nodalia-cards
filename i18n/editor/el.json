@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Υγραντήρες",
   "ed.room_summary.humidifiers_section_hint": "Υγραντήρες δωματίου που εμφανίζονται στη ράγα πλοήγησης Hub με ενσωματωμένες κάρτες υγραντήρα.",
   "ed.room_summary.others_section_title": "Άλλοι",
-  "ed.room_summary.others_section_hint": "Οποιαδήποτε οντότητα εμφανίζεται στον πίνακα Hub Others χρησιμοποιώντας ενσωματωμένες κάρτες οντοτήτων."
+  "ed.room_summary.others_section_hint": "Οποιαδήποτε οντότητα εμφανίζεται στον πίνακα Hub Others χρησιμοποιώντας ενσωματωμένες κάρτες οντοτήτων.",
+  "ed.notifications.card_radius_presets": "Ακτίνα γωνιών (κενό)",
+  "ed.notifications.card_radius_yaml_hint": "Για προσαρμοσμένη τιμή ορίστε `styles.card.border_radius` στο YAML.",
+  "ed.notifications.item_radius_presets": "Ακτίνα γωνιών ειδοποίησης",
+  "ed.notifications.item_radius_yaml_hint": "Για προσαρμοσμένη τιμή ορίστε `styles.item_radius` στο YAML."
 }

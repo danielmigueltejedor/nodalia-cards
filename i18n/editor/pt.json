@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Umidificadores",
   "ed.room_summary.humidifiers_section_hint": "Umidificadores de ambiente mostrados no trilho de navegação do Hub com cartões de umidificador integrados.",
   "ed.room_summary.others_section_title": "Outros",
-  "ed.room_summary.others_section_hint": "Qualquer entidade mostrada no painel Hub Outros usando cartões de entidade incorporados."
+  "ed.room_summary.others_section_hint": "Qualquer entidade mostrada no painel Hub Outros usando cartões de entidade incorporados.",
+  "ed.notifications.card_radius_presets": "Raio dos cantos (vazio)",
+  "ed.notifications.card_radius_yaml_hint": "Para um valor personalizado, defina `styles.card.border_radius` no YAML.",
+  "ed.notifications.item_radius_presets": "Raio dos cantos da notificação",
+  "ed.notifications.item_radius_yaml_hint": "Para um valor personalizado, defina `styles.item_radius` no YAML."
 }

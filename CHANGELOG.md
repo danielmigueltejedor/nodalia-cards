@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.2-alpha.5] - 2026-08-07
+
+### Fixed
+
+- **Notifications Card:** notification items and empty state share the Nodalia family corner radius (`--nodalia-card-border-radius`), with legacy `18px`/`28px` defaults migrated.
+
+### Changed
+
+- **Notifications editor:** card and notification radius use the same visual presets as other Nodalia cards (Capsule / Soft / Rounded / Square).
+- Compatibility loaders keep `2.1.1` and `2.1.2-alpha.4` available alongside `2.1.2-alpha.5`.
+
 ## [2.1.2-alpha.4] - 2026-08-07
 
 ### Fixed

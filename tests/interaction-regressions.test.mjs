@@ -2137,4 +2137,12 @@ test("visual family tokens stay aligned without changing notifications", () => {
   });
   assert.match(read("nodalia-utils.js"), /function renderReducedMotionStyles\(\)[\s\S]*prefers-reduced-motion: reduce/);
   assert.doesNotMatch(read("nodalia-notifications-card.js"), /renderReducedMotionStyles/);
+  assert.match(
+    read("nodalia-notifications-card.js"),
+    /border_radius: "var\(--nodalia-card-border-radius, 28px\)"[\s\S]*item_radius: "var\(--nodalia-card-border-radius, 28px\)"/,
+  );
+  assert.match(read("nodalia-notifications-card.js"), /itemRadius === "18px" \|\| itemRadius === "28px"/);
+  assert.match(read("nodalia-notifications-card.js"), /renderEditorCardBorderRadiusHtml/);
+  assert.match(read("nodalia-notifications-card.js"), /styles\.item_radius/);
+  assert.match(read("nodalia-utils.js"), /FAMILY_RADIUS/);
 });

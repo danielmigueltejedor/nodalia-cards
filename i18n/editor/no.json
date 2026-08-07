@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Luftfuktere",
   "ed.room_summary.humidifiers_section_hint": "Romfuktere vist i Hub-navigasjonsskinnen med innebygde luftfukterkort.",
   "ed.room_summary.others_section_title": "Andre",
-  "ed.room_summary.others_section_hint": "Enhver enhet som vises i Hub Others-panelet ved hjelp av innebygde enhetskort."
+  "ed.room_summary.others_section_hint": "Enhver enhet som vises i Hub Others-panelet ved hjelp av innebygde enhetskort.",
+  "ed.notifications.card_radius_presets": "Hjørneradius (tom)",
+  "ed.notifications.card_radius_yaml_hint": "For en egendefinert verdi, sett `styles.card.border_radius` i YAML.",
+  "ed.notifications.item_radius_presets": "Hjørneradius for varsel",
+  "ed.notifications.item_radius_yaml_hint": "For en egendefinert verdi, sett `styles.item_radius` i YAML."
 }

@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "加湿器",
   "ed.room_summary.humidifiers_section_hint": "Hub 导航栏上显示的房间加湿器带有嵌入式加湿器卡。",
   "ed.room_summary.others_section_title": "其他的",
-  "ed.room_summary.others_section_hint": "使用嵌入式实体卡在“中心其他”面板中显示的任何实体。"
+  "ed.room_summary.others_section_hint": "使用嵌入式实体卡在“中心其他”面板中显示的任何实体。",
+  "ed.notifications.card_radius_presets": "圆角（空状态）",
+  "ed.notifications.card_radius_yaml_hint": "自定义时在 YAML 中设置 `styles.card.border_radius`。",
+  "ed.notifications.item_radius_presets": "通知圆角",
+  "ed.notifications.item_radius_yaml_hint": "自定义时在 YAML 中设置 `styles.item_radius`。"
 }

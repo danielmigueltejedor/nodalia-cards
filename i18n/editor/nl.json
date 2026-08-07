@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Luchtbevochtigers",
   "ed.room_summary.humidifiers_section_hint": "Luchtbevochtigers getoond in de Hub-navigatierail met ingebouwde luchtbevochtigerkaarten.",
   "ed.room_summary.others_section_title": "Anderen",
-  "ed.room_summary.others_section_hint": "Elke entiteit die wordt weergegeven in het Hub Others-paneel met behulp van ingebedde entiteitskaarten."
+  "ed.room_summary.others_section_hint": "Elke entiteit die wordt weergegeven in het Hub Others-paneel met behulp van ingebedde entiteitskaarten.",
+  "ed.notifications.card_radius_presets": "Hoekradius (leeg)",
+  "ed.notifications.card_radius_yaml_hint": "Voor een aangepaste waarde: zet `styles.card.border_radius` in YAML.",
+  "ed.notifications.item_radius_presets": "Hoekradius van melding",
+  "ed.notifications.item_radius_yaml_hint": "Voor een aangepaste waarde: zet `styles.item_radius` in YAML."
 }
