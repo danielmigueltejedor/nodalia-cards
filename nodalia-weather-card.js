@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "2.1.2-alpha.3";
+const CARD_VERSION = "2.1.2-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2174,7 +2174,6 @@ class NodaliaWeatherCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform;
           width: ${styles.icon.size};
         }
 
@@ -2189,9 +2188,6 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
-          backface-visibility: hidden;
-          transform: translateZ(0);
-          will-change: transform, opacity;
         }
 
         .weather-card__icon--rain-motion::after,
@@ -2206,8 +2202,6 @@ class NodaliaWeatherCard extends HTMLElement {
           opacity: 0.42;
           pointer-events: none;
           position: absolute;
-          transform: translateZ(0);
-          will-change: transform, opacity;
         }
 
         .weather-card__icon--snow-motion::after {

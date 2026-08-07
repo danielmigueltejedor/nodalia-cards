@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.2-alpha.4] - 2026-08-07
+
+### Fixed
+
+- **Entity Card:** select picker no longer shows square corner ears when expanded (single clip owner, no nested `border-radius: inherit` / `scaleY`).
+- **Gecko animations:** Entity icon press/entrance use one `transform` path without permanent `will-change`; Weather drops forced compositor hints on icon motion; Calendar defers entrance "played" until after paint so Lovelace double-renders still animate.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2-alpha.3` available alongside `2.1.2-alpha.4`.
+
 ## [2.1.2-alpha.3] - 2026-08-06
 
 ### Fixed

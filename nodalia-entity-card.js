@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.2-alpha.3";
+const CARD_VERSION = "2.1.2-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2596,9 +2596,7 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           justify-self: start;
           transform-origin: center;
-          scale: 1;
-          transition: scale 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform, scale;
+          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
           width: ${effectiveIconSize};
         }
 
@@ -2765,14 +2763,8 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
-        ha-card.entity-card--select-open {
-          overflow: visible;
-        }
-
         .entity-card__select-picker-shell-host {
-          border-radius: calc(${styles.card.border_radius} - 8px);
           min-width: 0;
-          overflow: hidden;
           width: 100%;
         }
 
@@ -2780,40 +2772,31 @@ class NodaliaEntityCard extends HTMLElement {
           display: none;
         }
 
+        /* One clip owner for max-height; keep radius only on the painted panel so
+           Gecko does not compose square ears from nested overflow + scale. */
         .entity-card__select-picker-shell {
-          backface-visibility: hidden;
-          border-radius: inherit;
           overflow: hidden;
-          will-change: max-height, opacity;
         }
 
         .entity-card__select-picker-inner {
-          backface-visibility: hidden;
-          border-radius: inherit;
           display: grid;
-          overflow: hidden;
-          will-change: opacity, transform;
         }
 
         .entity-card__select-picker-shell--entering {
           animation: entity-card-select-shell-expand var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker-shell--entering .entity-card__select-picker-inner {
           animation: entity-card-select-panel-content-in var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker-shell--leaving {
           animation: entity-card-select-shell-collapse var(--entity-card-select-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
           pointer-events: none;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker-shell--leaving .entity-card__select-picker-inner {
           animation: entity-card-select-panel-content-out var(--entity-card-select-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker {
@@ -2829,7 +2812,6 @@ class NodaliaEntityCard extends HTMLElement {
           margin-top: 2px;
           overflow: hidden;
           padding: 10px;
-          transform-origin: top center;
         }
 
         .entity-card__select-options {
@@ -2922,22 +2904,22 @@ class NodaliaEntityCard extends HTMLElement {
         @keyframes entity-card-select-panel-content-in {
           from {
             opacity: 0;
-            transform: translateY(-8px) scaleY(0.96);
+            transform: translateY(-8px);
           }
           to {
             opacity: 1;
-            transform: translateY(0) scaleY(1);
+            transform: translateY(0);
           }
         }
 
         @keyframes entity-card-select-panel-content-out {
           from {
             opacity: 1;
-            transform: translateY(0) scaleY(1);
+            transform: translateY(0);
           }
           to {
             opacity: 0;
-            transform: translateY(-6px) scaleY(0.98);
+            transform: translateY(-6px);
           }
         }
 
@@ -2981,7 +2963,6 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform;
           width: ${effectiveControlSize};
         }
 
@@ -3028,16 +3009,16 @@ class NodaliaEntityCard extends HTMLElement {
 
         @keyframes entity-card-bubble-bounce {
           0% {
-            scale: 1;
+            transform: scale(1);
           }
           48% {
-            scale: 1.12;
+            transform: scale(1.12);
           }
           72% {
-            scale: 1.04;
+            transform: scale(1.04);
           }
           100% {
-            scale: 1;
+            transform: scale(1);
           }
         }
 

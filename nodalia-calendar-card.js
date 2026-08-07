@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.1.2-alpha.3";
+const CARD_VERSION = "2.1.2-alpha.4";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -715,6 +715,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._calendarEntrancePlayed = false;
     /** Evita repetir la animacion del panel expandido en cada re-render. */
     this._expandedOverlayEntrancePlayed = false;
+    this._calendarEntrancePlayFrame = 0;
+    this._expandedOverlayEntrancePlayFrame = 0;
     this._expandedOpen = false;
     this._nativeEventComposerOpen = false;
     this._nativeComposerError = "";
@@ -868,6 +870,7 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     this._attachViewVisibilityObserver();
     // Replay entrance animation whenever the card is re-attached to the dashboard view.
+    this._cancelCalendarEntrancePlayFrames();
     this._calendarEntrancePlayed = false;
     if (this._hadHass) {
       this._renderIfChanged(true);
@@ -891,12 +894,24 @@ class NodaliaCalendarCard extends HTMLElement {
       window.clearTimeout(this._refreshTimer);
       this._refreshTimer = 0;
     }
+    this._cancelCalendarEntrancePlayFrames();
     this._refreshRunId += 1;
     this._refreshInFlight = false;
     this._refreshQueued = false;
     this._calendarEntrancePlayed = false;
     this._wasInViewport = false;
     this._unsubscribeWeatherForecast();
+  }
+
+  _cancelCalendarEntrancePlayFrames() {
+    if (this._calendarEntrancePlayFrame) {
+      window.cancelAnimationFrame(this._calendarEntrancePlayFrame);
+      this._calendarEntrancePlayFrame = 0;
+    }
+    if (this._expandedOverlayEntrancePlayFrame) {
+      window.cancelAnimationFrame(this._expandedOverlayEntrancePlayFrame);
+      this._expandedOverlayEntrancePlayFrame = 0;
+    }
   }
 
   _attachViewVisibilityObserver() {
@@ -917,6 +932,7 @@ class NodaliaCalendarCard extends HTMLElement {
           return;
         }
         // When HA keeps the card mounted but hidden between view switches, replay entrance on return.
+        this._cancelCalendarEntrancePlayFrames();
         this._calendarEntrancePlayed = false;
         this._renderIfChanged(true);
       },
@@ -2922,15 +2938,24 @@ class NodaliaCalendarCard extends HTMLElement {
     const hasEvents = visibleEvents.length > 0;
     const playEntrance =
       config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
-    if (playEntrance) {
-      this._calendarEntrancePlayed = true;
+    // Lovelace often calls setConfig then hass in the same turn. Marking the
+    // entrance as played synchronously made the second render drop --entering
+    // classes before Gecko could composite the first frame.
+    if (playEntrance && !this._calendarEntrancePlayFrame) {
+      this._calendarEntrancePlayFrame = window.requestAnimationFrame(() => {
+        this._calendarEntrancePlayFrame = 0;
+        this._calendarEntrancePlayed = true;
+      });
     }
     const playExpandedPanelEntrance =
       config.animations?.enabled !== false &&
       this._expandedOpen &&
       !this._expandedOverlayEntrancePlayed;
-    if (playExpandedPanelEntrance) {
-      this._expandedOverlayEntrancePlayed = true;
+    if (playExpandedPanelEntrance && !this._expandedOverlayEntrancePlayFrame) {
+      this._expandedOverlayEntrancePlayFrame = window.requestAnimationFrame(() => {
+        this._expandedOverlayEntrancePlayFrame = 0;
+        this._expandedOverlayEntrancePlayed = true;
+      });
     }
 
     this.shadowRoot.innerHTML = `

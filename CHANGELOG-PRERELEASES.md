@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.2-alpha.4] - 2026-08-07
+
+Fourth **`2.1.2`** alpha: Entity select corner clip + Gecko animation reliability.
+
+### Fixed
+
+- **Select picker ears:** nested `overflow: hidden` + `border-radius: inherit` + `scaleY` on the expand shell produced square top corners in Gecko (and sometimes elsewhere). Radius/clip now live only on the painted panel; expand still uses `max-height` on the shell.
+- **Gecko motion:** mixing CSS `scale` with `transform` animations plus permanent `will-change` made icon motion janky and could leave card entrance looking dead after same-turn Lovelace re-renders. Unified Entity bounce on `transform`, removed Weather icon layer forcing, and Calendar entrance marks "played" on `requestAnimationFrame`.
+
+### Validation
+
+- Interaction regressions updated for the new select/clip and bubble-bounce contracts.
+
+---
+
 ## [2.1.2-alpha.3] - 2026-08-06
 
 Third **`2.1.2`** alpha: Calendar tint restored without reintroducing Gecko surface seams.

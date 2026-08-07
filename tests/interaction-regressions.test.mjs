@@ -1622,13 +1622,16 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(feedbackSource, /if \(!opensSelectPicker\) \{[\s\S]*querySelector\("\.entity-card__content"\)/);
   assert.match(source, /_triggerPressAnimation\(element[\s\S]*element\.classList\.remove\(className\);[\s\S]*element\.classList\.add\(className\)/);
   assert.doesNotMatch(source, /_clearEntranceAnimationClasses/);
-  assert.match(source, /@keyframes entity-card-bubble-bounce[\s\S]*scale: 1\.12;[\s\S]*scale: 1;/);
-  assert.doesNotMatch(source, /@keyframes entity-card-bubble-bounce[\s\S]{0,500}transform: scale/);
+  assert.match(source, /@keyframes entity-card-bubble-bounce[\s\S]*transform: scale\(1\.12\);[\s\S]*transform: scale\(1\);/);
+  assert.doesNotMatch(source, /@keyframes entity-card-bubble-bounce[\s\S]{0,500}scale:\s*1\.12/);
   assert.match(source, /"entity-card__icon--entering"/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
-  assert.match(source, /\.entity-card__select-picker-shell-host \{[\s\S]*border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*overflow: hidden;/);
-  assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
-  assert.match(source, /\.entity-card__select-picker-inner \{[\s\S]*border-radius: inherit;[\s\S]*overflow: hidden;/);
+  assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*?overflow: hidden;/);
+  assert.match(source, /\.entity-card__select-picker \{[\s\S]*?border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*?overflow: hidden;/);
+  assert.doesNotMatch(source, /\.entity-card__select-picker-shell \{[^}]*border-radius:\s*inherit/);
+  assert.doesNotMatch(source, /\.entity-card__select-picker-inner \{[^}]*border-radius:\s*inherit/);
+  assert.doesNotMatch(source, /\.entity-card__select-picker-inner \{[^}]*overflow:\s*hidden/);
+  assert.doesNotMatch(source, /ha-card\.entity-card--select-open \{[^}]*overflow:\s*visible/);
   assert.doesNotMatch(source, /entity-card__select-picker-head/);
   assert.doesNotMatch(source, /entity-card__select-picker-kicker/);
   assert.doesNotMatch(source, /entity-card__select-picker-close/);
@@ -1942,6 +1945,8 @@ test("alpha.5 lifecycle guards on notifications media climate scenes calendar gr
   assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
   assert.match(read("nodalia-graph-card.js"), /requestAnimationFrame\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
   assert.match(read("nodalia-navigation-bar.js"), /_dockEntranceResetFrame/);
+  assert.match(read("nodalia-calendar-card.js"), /_calendarEntrancePlayFrame/);
+  assert.match(read("nodalia-calendar-card.js"), /_cancelCalendarEntrancePlayFrames/);
   assert.match(read("nodalia-alarm-panel-card.js"), /_countdownInterval = window\.setInterval\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
