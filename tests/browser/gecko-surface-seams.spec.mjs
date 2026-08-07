@@ -1,4 +1,20 @@
 import { expect, test } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const surfaceSnapshotDir = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "gecko-surface-seams.spec.mjs-snapshots",
+);
+
+function surfaceSnapshotPath(projectName) {
+  // Playwright default: {arg}-{projectName}-{platform}.png
+  return path.join(
+    surfaceSnapshotDir,
+    `card-surfaces-${projectName}-${projectName}-${process.platform}.png`,
+  );
+}
 
 async function loadBundle(page) {
   const errors = [];
@@ -224,9 +240,9 @@ test.describe("Gecko-safe card surfaces", () => {
     expect(entityActive.haCardBlock).toMatch(/--nodalia-entity-surface-base/);
 
     // Visual baselines for Chromium/WebKit. Firefox still exercises the same
-    // computed-style contracts above; generating PNGs needs a host where
-    // Playwright Firefox can map a framebuffer.
-    if (testInfo.project.name !== "firefox") {
+    // computed-style contracts above; PNG generation needs a mapped framebuffer.
+    // Skip screenshots when the OS baseline is missing (CI is Linux; local may be Darwin).
+    if (testInfo.project.name !== "firefox" && fs.existsSync(surfaceSnapshotPath(testInfo.project.name))) {
       await expect(page.locator("#fixture")).toHaveScreenshot(`card-surfaces-${testInfo.project.name}.png`, {
         animations: "disabled",
         caret: "hide",
