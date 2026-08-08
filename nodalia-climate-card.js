@@ -1788,10 +1788,21 @@ class NodaliaClimateCard extends HTMLElement {
       return false;
     }
     const state = this._getState();
-    const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
     const override = { until: new Date(Date.now() + hours * 3_600_000).toISOString() };
-    if (Number.isFinite(target)) {
-      override.temperature = Number(target);
+    // Dual heat/cool ranges must not send the midpoint as `temperature` — Engine applies that as a
+    // single setpoint and collapses the comfort band. Mirror the live commit path instead.
+    if (this._isDualSetpointRange(state)) {
+      const range = this._getEffectiveTargetLowHigh(state);
+      const pair = this._normalizeLowHighPair(range.low, range.high, state);
+      if (pair) {
+        override.target_temp_low = Number(pair.low);
+        override.target_temp_high = Number(pair.high);
+      }
+    } else {
+      const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
+      if (Number.isFinite(target)) {
+        override.temperature = Number(target);
+      }
     }
     return this._runEngineOverrideRequest(() => backend.setClimateOverride(this._hass, entityId, override));
   }
