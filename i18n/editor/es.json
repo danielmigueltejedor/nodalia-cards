@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Humidificadores",
   "ed.room_summary.humidifiers_section_hint": "Humidificadores de la habitación en el menú Hub con tarjetas embebidas.",
   "ed.room_summary.others_section_title": "Otros",
-  "ed.room_summary.others_section_hint": "Cualquier entidad en el panel Otros del Hub mediante entity cards embebidas."
+  "ed.room_summary.others_section_hint": "Cualquier entidad en el panel Otros del Hub mediante entity cards embebidas.",
+  "ed.notifications.card_radius_presets": "Radio de esquinas (sin avisos)",
+  "ed.notifications.card_radius_yaml_hint": "Para un valor personalizado, define `styles.card.border_radius` en YAML.",
+  "ed.notifications.item_radius_presets": "Radio de esquinas de notificación",
+  "ed.notifications.item_radius_yaml_hint": "Para un valor personalizado, define `styles.item_radius` en YAML."
 }

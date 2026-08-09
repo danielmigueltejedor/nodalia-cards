@@ -71,6 +71,53 @@ function loadNotificationsCard() {
   return CardClass;
 }
 
+function loadClimateCard() {
+  const registry = new Map();
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: class {
+      attachShadow() {
+        this.shadowRoot = {
+          addEventListener() {},
+          innerHTML: "",
+          querySelector() { return null; },
+          querySelectorAll() { return []; },
+        };
+        return this.shadowRoot;
+      }
+
+      dispatchEvent() { return true; }
+    },
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-climate-card.js"), sandbox);
+  const CardClass = registry.get("nodalia-climate-card");
+  assert.ok(CardClass, "NodaliaClimateCard should register");
+  return { CardClass, sandbox };
+}
+
 test("fav card routes cover and lock auto taps through domain services", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /applyCardTapActionField/);
@@ -201,4 +248,93 @@ test("climate popup viewport constraints remain valid CSS functions", () => {
   assert.doesNotMatch(source, /min\(100vw\s*-\s*\d+px,/);
   assert.match(source, /min\(calc\(100vw - 24px\), 920px\)/);
   assert.match(source, /min\(calc\(100vw - 16px\), 920px\)/);
+});
+
+test("Engine climate hold preserves dual heat/cool range instead of midpoint temperature", async () => {
+  const { CardClass, sandbox } = loadClimateCard();
+  const card = new CardClass();
+  card.setConfig({ entity: "climate.ecobee" });
+  card._hass = {
+    states: {
+      "climate.ecobee": {
+        entity_id: "climate.ecobee",
+        state: "heat_cool",
+        attributes: {
+          hvac_mode: "heat_cool",
+          hvac_modes: ["off", "heat", "cool", "heat_cool"],
+          target_temp_low: 20,
+          target_temp_high: 24,
+          min_temp: 10,
+          max_temp: 32,
+          target_temp_step: 0.5,
+        },
+      },
+    },
+  };
+
+  let captured = null;
+  sandbox.window.NodaliaBackend = {
+    async setClimateOverride(_hass, entityId, override) {
+      captured = { entityId, override };
+      return { ok: true };
+    },
+    async status() {
+      return { available: true, capabilities: ["climate_overrides"] };
+    },
+    hasCapability(status, capability) {
+      return status?.available === true && status.capabilities?.includes(capability);
+    },
+    async getClimateSchedule() {
+      return { schedule: { enabled: true, slots: [], override: captured?.override || null } };
+    },
+  };
+
+  const ok = await card._setEngineOverrideHold(2);
+  assert.equal(ok, true);
+  assert.equal(captured.entityId, "climate.ecobee");
+  assert.equal(captured.override.target_temp_low, 20);
+  assert.equal(captured.override.target_temp_high, 24);
+  assert.equal(captured.override.temperature, undefined);
+  assert.equal(typeof captured.override.until, "string");
+});
+
+test("Engine inbox dismissals map onto foreground smart alert ids", () => {
+  const CardClass = loadNotificationsCard();
+  const card = new CardClass();
+  card.setConfig({});
+
+  const asSet = ids => new Set(ids);
+  assert.deepEqual(
+    asSet(card._nativeDismissalIds("comfort:hot:sensor.living_room:fan.living_room:27")),
+    asSet(["comfort:hot:sensor.living_room:fan.living_room:27", "hot:sensor.living_room"]),
+  );
+  assert.deepEqual(
+    asSet(card._nativeDismissalIds("comfort:hot:climate:sensor.hall:climate.hall:28")),
+    asSet(["comfort:hot:climate:sensor.hall:climate.hall:28", "hot:sensor.hall"]),
+  );
+  assert.deepEqual(
+    asSet(card._nativeDismissalIds("humidity:sensor.bath:high:80")),
+    asSet(["humidity:sensor.bath:high:80", "humidity_high:sensor.bath"]),
+  );
+
+  const engineKinds = [
+    "door:binary_sensor.front",
+    "window:binary_sensor.kitchen",
+    "motion:binary_sensor.hall",
+    "vacuum:vacuum.downstairs",
+    "rain:weather.home",
+    "media_absence:media_player.living_room",
+    "outdoor_hot:sensor.patio",
+    "outdoor_cold:sensor.garden",
+  ];
+  engineKinds.forEach(id => {
+    assert.ok(card._nativeDismissalIds(id).includes(id), `${id} should remain a valid Engine identity`);
+    assert.ok(card._nativeDismissalIds(`${id}:active`).includes(id), `${id}:state should collapse to the Engine identity`);
+  });
+
+  card._mergeNativeDismissed(["hot:sensor.living_room", "humidity_high:sensor.bath", "door:binary_sensor.front"]);
+  assert.equal(card._isDismissed({ id: "comfort:hot:sensor.living_room:fan.living_room:27" }), true);
+  assert.equal(card._isDismissed({ id: "humidity:sensor.bath:high:80" }), true);
+  assert.equal(card._isDismissed({ id: "door:binary_sensor.front:on" }), true);
+  assert.equal(card._isDismissed({ id: "comfort:cold:sensor.living_room:18" }), false);
 });

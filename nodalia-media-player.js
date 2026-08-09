@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2";
 const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG = {
   },
   styles: {
     card: {
-      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
+      background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
       border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
@@ -715,6 +715,8 @@ class NodaliaCalendarCard extends HTMLElement {
     this._calendarEntrancePlayed = false;
     /** Evita repetir la animacion del panel expandido en cada re-render. */
     this._expandedOverlayEntrancePlayed = false;
+    this._calendarEntrancePlayFrame = 0;
+    this._expandedOverlayEntrancePlayFrame = 0;
     this._expandedOpen = false;
     this._nativeEventComposerOpen = false;
     this._nativeComposerError = "";
@@ -868,6 +870,7 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     this._attachViewVisibilityObserver();
     // Replay entrance animation whenever the card is re-attached to the dashboard view.
+    this._cancelCalendarEntrancePlayFrames();
     this._calendarEntrancePlayed = false;
     if (this._hadHass) {
       this._renderIfChanged(true);
@@ -891,12 +894,24 @@ class NodaliaCalendarCard extends HTMLElement {
       window.clearTimeout(this._refreshTimer);
       this._refreshTimer = 0;
     }
+    this._cancelCalendarEntrancePlayFrames();
     this._refreshRunId += 1;
     this._refreshInFlight = false;
     this._refreshQueued = false;
     this._calendarEntrancePlayed = false;
     this._wasInViewport = false;
     this._unsubscribeWeatherForecast();
+  }
+
+  _cancelCalendarEntrancePlayFrames() {
+    if (this._calendarEntrancePlayFrame) {
+      window.cancelAnimationFrame(this._calendarEntrancePlayFrame);
+      this._calendarEntrancePlayFrame = 0;
+    }
+    if (this._expandedOverlayEntrancePlayFrame) {
+      window.cancelAnimationFrame(this._expandedOverlayEntrancePlayFrame);
+      this._expandedOverlayEntrancePlayFrame = 0;
+    }
   }
 
   _attachViewVisibilityObserver() {
@@ -917,6 +932,7 @@ class NodaliaCalendarCard extends HTMLElement {
           return;
         }
         // When HA keeps the card mounted but hidden between view switches, replay entrance on return.
+        this._cancelCalendarEntrancePlayFrames();
         this._calendarEntrancePlayed = false;
         this._renderIfChanged(true);
       },
@@ -2882,10 +2898,12 @@ class NodaliaCalendarCard extends HTMLElement {
       ? "var(--primary-color)"
       : String(styles.tint?.color || DEFAULT_CONFIG.styles.tint.color).trim() || "var(--primary-color)";
     const baseCardBg = styles.card.background;
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${baseCardBg}) 0%, color-mix(in srgb, ${accentColor} 10%, ${baseCardBg}) 52%, ${baseCardBg} 100%)`;
+    // Keep accent washes as ::before/::after fills (no border-radius) so the
+    // tint stays as strong as before the Gecko seam fix. Nested color-mix uses a
+    // comma-free custom property, matching Notifications Card.
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-calendar-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-calendar-surface-base)) 52%, var(--nodalia-calendar-surface-base) 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = onCardBackground;
     const cardBorder = `1px solid ${onCardBorder}`;
     const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
     const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
@@ -2920,15 +2938,24 @@ class NodaliaCalendarCard extends HTMLElement {
     const hasEvents = visibleEvents.length > 0;
     const playEntrance =
       config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
-    if (playEntrance) {
-      this._calendarEntrancePlayed = true;
+    // Lovelace often calls setConfig then hass in the same turn. Marking the
+    // entrance as played synchronously made the second render drop --entering
+    // classes before Gecko could composite the first frame.
+    if (playEntrance && !this._calendarEntrancePlayFrame) {
+      this._calendarEntrancePlayFrame = window.requestAnimationFrame(() => {
+        this._calendarEntrancePlayFrame = 0;
+        this._calendarEntrancePlayed = true;
+      });
     }
     const playExpandedPanelEntrance =
       config.animations?.enabled !== false &&
       this._expandedOpen &&
       !this._expandedOverlayEntrancePlayed;
-    if (playExpandedPanelEntrance) {
-      this._expandedOverlayEntrancePlayed = true;
+    if (playExpandedPanelEntrance && !this._expandedOverlayEntrancePlayFrame) {
+      this._expandedOverlayEntrancePlayFrame = window.requestAnimationFrame(() => {
+        this._expandedOverlayEntrancePlayFrame = 0;
+        this._expandedOverlayEntrancePlayed = true;
+      });
     }
 
     this.shadowRoot.innerHTML = `
@@ -2938,13 +2965,16 @@ class NodaliaCalendarCard extends HTMLElement {
         }
         * { box-sizing:border-box; }
         ha-card {
-          background: ${cardBackground};
+          --nodalia-calendar-surface-base: ${baseCardBg};
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+            ${onCardBackground},
+            var(--nodalia-calendar-surface-base);
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: block;
-          isolation: isolate;
           overflow: hidden;
           overscroll-behavior-y: contain;
           position: relative;
@@ -2953,7 +2983,6 @@ class NodaliaCalendarCard extends HTMLElement {
         ha-card::before {
           background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0));
           content: "";
-          border-radius: inherit;
           inset: 0;
           pointer-events: none;
           position: absolute;
@@ -2964,9 +2993,7 @@ class NodaliaCalendarCard extends HTMLElement {
             radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
           content: "";
-          border-radius: inherit;
           inset: 0;
-          opacity: 1;
           pointer-events: none;
           position: absolute;
           z-index: 0;

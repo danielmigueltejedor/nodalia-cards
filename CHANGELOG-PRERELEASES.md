@@ -10,6 +10,83 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.2-alpha.5] - 2026-08-07
+
+Fifth **`2.1.2`** alpha: Notifications corner radius aligned with the Nodalia visual family, editable via presets in the visual editor.
+
+### Fixed
+
+- **Notification item radius:** list items used a tighter `18px` radius while the empty state used `28px`. Both now default to `var(--nodalia-card-border-radius, 28px)`.
+
+### Changed
+
+- **Editor presets:** empty-state and notification corner radius are selectable with Capsule / Soft / Rounded / Square controls (YAML still supports custom values).
+
+### Validation
+
+- Interaction regressions cover the shared radius token, legacy migration, and editor preset wiring.
+
+---
+
+## [2.1.2-alpha.4] - 2026-08-07
+
+Fourth **`2.1.2`** alpha: Entity select corner clip + Gecko animation reliability.
+
+### Fixed
+
+- **Select picker ears:** nested `overflow: hidden` + `border-radius: inherit` + `scaleY` on the expand shell produced square top corners in Gecko (and sometimes elsewhere). Radius/clip now live only on the painted panel; expand still uses `max-height` on the shell.
+- **Gecko motion:** mixing CSS `scale` with `transform` animations plus permanent `will-change` made icon motion janky and could leave card entrance looking dead after same-turn Lovelace re-renders. Unified Entity bounce on `transform`, removed Weather icon layer forcing, and Calendar entrance marks "played" on `requestAnimationFrame`.
+
+### Validation
+
+- Interaction regressions updated for the new select/clip and bubble-bounce contracts.
+
+---
+
+## [2.1.2-alpha.3] - 2026-08-06
+
+Third **`2.1.2`** alpha: Calendar tint restored without reintroducing Gecko surface seams.
+
+### Fixed
+
+- **Calendar Card tint:** the strong gold wash came from absolute glaze/ambient overlays. Folding them only into a mild base `color-mix` left the card looking untinted. Overlays are restored without `border-radius: inherit` (parent `overflow: hidden` clips them), matching Notifications Card and avoiding the double-rounding seams from alpha.1.
+
+### Validation
+
+- Updates surface contracts so Calendar/Entity may use radius-free absolute washes while Weather/Navigation keep single-paint backgrounds.
+
+---
+
+## [2.1.2-alpha.2] - 2026-08-06
+
+Second **`2.1.2`** alpha: restore Calendar/Entity accent tinting on WebKit while keeping Gecko seam-free surfaces.
+
+### Fixed
+
+- **Calendar Card and Entity Card tinting:** stopped stacking transparent ambient radial/diagonal layers on top of nested `color-mix`/`var` tinted bases. Those layers could make WebKit drop or punch through the surface fill, leaving a flat untinted card with only the accent border. Ambient strength is baked into the opaque base gradient; glaze remains a single overlay layer via `composeCardSurfaceBackground`.
+
+### Validation
+
+- Updates surface composition contracts and browser checks for the baked tint bases.
+
+---
+
+## [2.1.2-alpha.1] - 2026-08-06
+
+First **`2.1.2`** alpha after stable **`2.1.1`**: Gecko-safe card surfaces without browser-specific CSS forks.
+
+### Fixed
+
+- **Weather Card, Calendar Card, Navigation Card and Entity Card:** removed absolute `::before` / `::after` surface fills that sat on top of `overflow: hidden` + `border-radius` shells. Those extra composition layers caused hairline seams, edge fringes and mid-card cracks in Firefox / Zen while Chromium and WebKit stayed clean. Glaze and ambient accents now live in a single shared `background` stack via `NodaliaUtils.composeCardSurfaceBackground`, so container and overlay geometry stay aligned in every engine.
+- **Entity Card:** explains why only some instances looked broken — active cards painted an extra ambient `::after` layer (`opacity: 1`) while idle cards did not. Active and idle variants now use the same single-paint approach.
+
+### Validation
+
+- Adds source contracts for the shared surface helper and for the absence of absolute `ha-card` surface overlays on the affected cards.
+- Extends Playwright coverage with Chromium, Firefox and WebKit surface checks (plus non-default zoom / DPR geometry) for Weather, Calendar, Navigation and representative Entity configurations.
+
+---
+
 ## [2.0.0-alpha.60] - 2026-08-01
 
 Sixtieth **`2.0.0`** alpha: reliable native navigation across the complete Camera Card surface.

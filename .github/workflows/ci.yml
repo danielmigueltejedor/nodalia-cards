@@ -36,7 +36,7 @@ jobs:
         run: pnpm run validate
 
       - name: Install browser engines
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run browser, editor, and accessibility smoke tests
         run: pnpm run test:browser

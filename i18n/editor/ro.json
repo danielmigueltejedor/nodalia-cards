@@ -1360,5 +1360,9 @@
   "ed.room_summary.humidifiers_section_title": "Umidificatoare",
   "ed.room_summary.humidifiers_section_hint": "Umidificatoare de cameră prezentate pe șina de navigare Hub cu carduri de umidificator încorporate.",
   "ed.room_summary.others_section_title": "Alţii",
-  "ed.room_summary.others_section_hint": "Orice entitate afișată în panoul Hub Others folosind carduri de entitate încorporate."
+  "ed.room_summary.others_section_hint": "Orice entitate afișată în panoul Hub Others folosind carduri de entitate încorporate.",
+  "ed.notifications.card_radius_presets": "Raza colțurilor (gol)",
+  "ed.notifications.card_radius_yaml_hint": "Pentru o valoare personalizată folosește `styles.card.border_radius` în YAML.",
+  "ed.notifications.item_radius_presets": "Raza colțurilor notificării",
+  "ed.notifications.item_radius_yaml_hint": "Pentru o valoare personalizată folosește `styles.item_radius` în YAML."
 }

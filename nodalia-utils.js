@@ -914,7 +914,11 @@
     }
     const fieldRaw = String(options?.field ?? "styles.card.border_radius").trim();
     const field = fieldRaw || "styles.card.border_radius";
-    const current = String(options?.value ?? "").trim() || "28px";
+    const FAMILY_RADIUS = "var(--nodalia-card-border-radius, 28px)";
+    let current = String(options?.value ?? "").trim() || "28px";
+    if (current === FAMILY_RADIUS) {
+      current = "28px";
+    }
     const tHeading = esc(String(options?.tHeading ?? "Card corner radius"));
     const labels = options?.labels ?? {};
     const tPill = esc(String(labels.pill ?? "Capsule"));
@@ -2317,6 +2321,52 @@
     `;
   }
 
+  /**
+   * Compose ha-card surface paints as a single background stack.
+   * Keeps glaze on the same layer as the base fill so Gecko does not open
+   * sub-pixel seams between absolute ::before/::after fills and
+   * overflow:hidden + border-radius clipping.
+   *
+   * Ambient radial/diagonal washes must be baked into `base` by the caller.
+   * Stacking extra transparent gradient layers on top of a nested
+   * color-mix/var tinted base can make WebKit drop or punch through the
+   * whole background, leaving a flat untinted card.
+   */
+  function composeCardSurfaceBackground(options = {}) {
+    const base = String(options.base || "var(--ha-card-background)").trim() || "var(--ha-card-background)";
+    const accentColor =
+      String(options.accentColor || "var(--primary-color)").trim() || "var(--primary-color)";
+    const glazeStrengthRaw = Number(options.glazeStrength);
+    const glazeStrength = Number.isFinite(glazeStrengthRaw) ? Math.max(0, glazeStrengthRaw) : 22;
+    const glazeNeutralStrengthRaw = Number(options.glazeNeutralStrength);
+    const glazeNeutralStrength = Number.isFinite(glazeNeutralStrengthRaw)
+      ? Math.max(0, glazeNeutralStrengthRaw)
+      : 5;
+    const glazeMode = options.glazeMode === "neutral" || options.glazeMode === "none"
+      ? options.glazeMode
+      : "accent";
+    const extraLayers = Array.isArray(options.extraLayers)
+      ? options.extraLayers.filter(layer => typeof layer === "string" && layer.trim() !== "")
+      : [];
+    const layers = [...extraLayers];
+
+    if (glazeMode === "accent" && glazeStrength > 0) {
+      const textWash = Number.isFinite(Number(options.glazeTextWash))
+        ? Math.max(0, Number(options.glazeTextWash))
+        : 6;
+      layers.push(
+        `linear-gradient(180deg, color-mix(in srgb, ${accentColor} ${glazeStrength}%, color-mix(in srgb, var(--primary-text-color) ${textWash}%, transparent)), rgba(255, 255, 255, 0))`,
+      );
+    } else if (glazeMode === "neutral" && glazeNeutralStrength > 0) {
+      layers.push(
+        `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) ${glazeNeutralStrength}%, transparent), rgba(255, 255, 255, 0))`,
+      );
+    }
+
+    layers.push(base);
+    return layers.join(", ");
+  }
+
   const api = {
     isObject,
     isUnsafeConfigPathKey,
@@ -2374,6 +2424,7 @@
     releaseEditorDialogLayoutFix,
     clampEditorDialogScroll,
     renderReducedMotionStyles,
+    composeCardSurfaceBackground,
     captureEditorFocusState,
     restoreEditorFocusState,
     bindShadowListeners,

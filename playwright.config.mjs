@@ -19,6 +19,19 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "firefox",
+      use: {
+        ...devices["Desktop Firefox"],
+        launchOptions: {
+          firefoxUserPrefs: {
+            "layers.acceleration.disabled": true,
+            "gfx.webrender.force-disabled": true,
+          },
+        },
+      },
+    },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "webkit-iphone", use: { ...devices["iPhone 15"] } },
   ],
 });

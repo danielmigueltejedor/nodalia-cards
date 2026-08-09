@@ -1,6 +1,6 @@
 # Nodalia Cards Engine
 
-Nodalia 2.0 keeps the visual cards and the optional server-side engine as two independent HACS installations. This avoids forcing existing Nodalia Cards users to migrate away from the Dashboard plugin.
+Nodalia Cards keeps the visual cards and the optional server-side engine as two independent HACS installations. This avoids forcing existing users to migrate away from the Dashboard plugin.
 
 | Repository | HACS category | Purpose | Required |
 |---|---|---|---|
@@ -8,6 +8,18 @@ Nodalia 2.0 keeps the visual cards and the optional server-side engine as two in
 | [`nodalia-cards-engine`](https://github.com/danielmigueltejedor/nodalia-cards-engine) | Integration | Background execution and persistent advanced features | No |
 
 The Engine complements the plugin; it does not serve or replace the frontend bundle. Card YAML remains unchanged whether the Engine is installed or not.
+
+[![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
+
+## Compatibility for Nodalia Cards 2.1.2
+
+| Component | Supported baseline | Recommended for 2.1.2 |
+|---|---|---|
+| Home Assistant | `2025.1.0` or newer | Current supported stable release |
+| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.1.2` |
+| Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.0` |
+
+Cards `2.1.2` and Engine `2.0.0` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## What the optional Engine makes native
 
@@ -35,6 +47,8 @@ Packages, webhooks and `input_text` helpers are therefore a fallback rather than
 ### 1. Keep or install the Cards plugin
 
 Add `https://github.com/danielmigueltejedor/nodalia-cards` to HACS as a **Dashboard** custom repository and download **Nodalia Cards**. Existing users do not need to remove or reinstall it.
+
+[![Add Nodalia Cards to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
 The plugin resource remains:
 
@@ -84,7 +98,7 @@ Use the `nodalia.test_notification` action from Developer Tools to test a stored
 
 ### Notification inbox
 
-When the Engine reports the inbox capability, the card reads the delivered-alert history for its profile after each successful sync and applies the dismissals recorded there. Dismissing an alert on one device therefore keeps it dismissed on the others without an `input_text` helper. The inbox stores alert identities and dismissal state, not notification text or targets.
+When the Engine reports the inbox capability, the card reads the delivered-alert history for its profile after each successful sync and applies the dismissals recorded there. Dismissing an alert on one device therefore keeps it dismissed on the others without an `input_text` helper. Cards `2.1.2` normalize Engine identities against foreground comfort, humidity, door, window, motion, vacuum, rain, media and outdoor alerts, so the same alert stays dismissed across devices. The inbox stores alert identities and dismissal state, not notification text or targets.
 
 ## Climate schedules
 
@@ -94,7 +108,7 @@ No `input_text`, webhook, package, shell command or generated automation is requ
 
 ### Temporary overrides
 
-When the Engine reports the override capability and the entity has a stored schedule, the Climate Card shows two compact chips next to the schedule controls: one holds the current target temperature for two hours, the other resumes the weekly schedule immediately. While a hold is active the card shows the time it expires. The Engine stops applying schedule blocks until the override expires or is cleared.
+When the Engine reports the override capability and the entity has a stored schedule, the Climate Card shows two compact chips next to the schedule controls: one holds the current target for two hours, the other resumes the weekly schedule immediately. A `heat_cool` thermostat keeps its complete `target_temp_low` / `target_temp_high` comfort band during the hold; single-setpoint modes keep using `temperature`. While a hold is active the card shows the time it expires. The Engine stops applying schedule blocks until the override expires or is cleared.
 
 ## Security and limits
 
@@ -108,3 +122,8 @@ When the Engine reports the override capability and the entity has a stored sche
 ## Recovery
 
 If the Engine is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their webhook paths as optional fallbacks when those fields are configured. Reloading or removing the Engine does not alter dashboard YAML or the Cards plugin resource.
+
+## Support boundaries
+
+- Report card rendering, visual editor or frontend Engine-bridge issues in the [Nodalia Cards repository](https://github.com/danielmigueltejedor/nodalia-cards/issues).
+- Report integration setup, background execution, stored-profile or Engine diagnostic issues in the [Nodalia Cards Engine repository](https://github.com/danielmigueltejedor/nodalia-cards-engine/issues).

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2450,12 +2450,20 @@ class NodaliaEntityCard extends HTMLElement {
     const isSelectEntity = this._isSelectEntity(state);
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-entity-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-entity-surface-base)) 52%, var(--nodalia-entity-surface-base) 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBackground = isActive ? onCardBackground : styles.card.background;
+    const cardBackground = isActive
+      ? `${onCardBackground}, var(--nodalia-entity-surface-base)`
+      : "var(--nodalia-entity-surface-base)";
     const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
     const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
+    const surfaceGlaze = isActive
+      ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+      : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))";
+    const surfaceAmbient = `
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
 
@@ -2483,13 +2491,13 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         ha-card {
+          --nodalia-entity-surface-base: ${styles.card.background};
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           display: block;
-          isolation: isolate;
           overflow: hidden;
           position: relative;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -2500,10 +2508,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
-          border-radius: inherit;
+          background: ${surfaceGlaze};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -2512,10 +2517,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         ha-card::after {
-          background:
-            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
-          border-radius: inherit;
+          background: ${surfaceAmbient};
           content: "";
           inset: 0;
           opacity: ${isActive ? "1" : "0"};
@@ -2540,7 +2542,6 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: transform 160ms ease;
-          will-change: transform;
           z-index: 1;
         }
 
@@ -2595,9 +2596,7 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           justify-self: start;
           transform-origin: center;
-          scale: 1;
-          transition: scale 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform, scale;
+          transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
           width: ${effectiveIconSize};
         }
 
@@ -2764,14 +2763,8 @@ class NodaliaEntityCard extends HTMLElement {
           color: var(--primary-text-color);
         }
 
-        ha-card.entity-card--select-open {
-          overflow: visible;
-        }
-
         .entity-card__select-picker-shell-host {
-          border-radius: calc(${styles.card.border_radius} - 8px);
           min-width: 0;
-          overflow: hidden;
           width: 100%;
         }
 
@@ -2779,40 +2772,31 @@ class NodaliaEntityCard extends HTMLElement {
           display: none;
         }
 
+        /* One clip owner for max-height; keep radius only on the painted panel so
+           Gecko does not compose square ears from nested overflow + scale. */
         .entity-card__select-picker-shell {
-          backface-visibility: hidden;
-          border-radius: inherit;
           overflow: hidden;
-          will-change: max-height, opacity;
         }
 
         .entity-card__select-picker-inner {
-          backface-visibility: hidden;
-          border-radius: inherit;
           display: grid;
-          overflow: hidden;
-          will-change: opacity, transform;
         }
 
         .entity-card__select-picker-shell--entering {
           animation: entity-card-select-shell-expand var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker-shell--entering .entity-card__select-picker-inner {
           animation: entity-card-select-panel-content-in var(--entity-card-select-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker-shell--leaving {
           animation: entity-card-select-shell-collapse var(--entity-card-select-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
           pointer-events: none;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker-shell--leaving .entity-card__select-picker-inner {
           animation: entity-card-select-panel-content-out var(--entity-card-select-panel-duration) cubic-bezier(0.38, 0, 0.24, 1) both;
-          transform-origin: top center;
         }
 
         .entity-card__select-picker {
@@ -2828,7 +2812,6 @@ class NodaliaEntityCard extends HTMLElement {
           margin-top: 2px;
           overflow: hidden;
           padding: 10px;
-          transform-origin: top center;
         }
 
         .entity-card__select-options {
@@ -2921,22 +2904,22 @@ class NodaliaEntityCard extends HTMLElement {
         @keyframes entity-card-select-panel-content-in {
           from {
             opacity: 0;
-            transform: translateY(-8px) scaleY(0.96);
+            transform: translateY(-8px);
           }
           to {
             opacity: 1;
-            transform: translateY(0) scaleY(1);
+            transform: translateY(0);
           }
         }
 
         @keyframes entity-card-select-panel-content-out {
           from {
             opacity: 1;
-            transform: translateY(0) scaleY(1);
+            transform: translateY(0);
           }
           to {
             opacity: 0;
-            transform: translateY(-6px) scaleY(0.98);
+            transform: translateY(-6px);
           }
         }
 
@@ -2980,7 +2963,6 @@ class NodaliaEntityCard extends HTMLElement {
           position: relative;
           transform-origin: center;
           transition: transform 160ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
-          will-change: transform;
           width: ${effectiveControlSize};
         }
 
@@ -3027,16 +3009,16 @@ class NodaliaEntityCard extends HTMLElement {
 
         @keyframes entity-card-bubble-bounce {
           0% {
-            scale: 1;
+            transform: scale(1);
           }
           48% {
-            scale: 1.12;
+            transform: scale(1.12);
           }
           72% {
-            scale: 1.04;
+            transform: scale(1.04);
           }
           100% {
-            scale: 1;
+            transform: scale(1);
           }
         }
 

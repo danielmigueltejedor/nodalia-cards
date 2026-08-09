@@ -850,7 +850,11 @@ test("pointer taps do not leave a focus outline while keyboard focus remains vis
   }));
   expect(afterTap).toEqual({ marker: true, outline: "none" });
 
-  await surface.press("Enter");
+  // Leave and return with the keyboard. Pressing Enter while still pointer-focused keeps
+  // Firefox on the pointer modality, so :focus-visible stays false there.
+  await unrelatedButton.focus();
+  await page.keyboard.press("Tab");
+  await expect(surface).toBeFocused();
   const afterKeyboard = await surface.evaluate(element => ({
     marker: element.hasAttribute("data-nodalia-pointer-focus"),
     inlineOutline: element.style.getPropertyValue("outline"),

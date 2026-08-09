@@ -10,6 +10,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-08-09
+
+Stable **`2.1.2`** completes the Gecko surface-stability cycle and hardens the optional Nodalia Cards Engine bridge without changing card YAML or the HACS Dashboard resource.
+
+### Fixed
+
+- **Cross-browser card surfaces:** Weather, Calendar, Navigation and Entity cards no longer show hairline seams, edge fringes or dropped tint layers in Firefox, Zen or WebKit. Shared surface composition keeps glaze, ambient tint and clipping aligned without browser-specific CSS forks.
+- **Entity Card:** the select picker keeps its rounded top corners while opening, and icon/entrance motion remains reliable after same-turn Lovelace re-renders.
+- **Notifications Card:** notification items and the empty state share the Nodalia family corner radius, with visual presets and legacy radius migration.
+- **Climate Card / Engine holds:** `heat_cool` entities now send `target_temp_low` and `target_temp_high` during a two-hour hold and omit the midpoint `temperature`, preserving the thermostat's comfort band.
+- **Notifications / Engine inbox:** cross-device dismissals now match foreground comfort and humidity alert ids, accept native `kind:entity` identities without a third segment, and cover door, window, motion, vacuum, rain, media and outdoor alert kinds.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2-alpha.5` available alongside `2.1.2`.
+
+### Documentation
+
+- Add a direct HACS installation button for the optional Nodalia Cards Engine to the main repository and advanced guides.
+- Clarify the Cards `2.1.2` / Engine `2.0.0` compatibility baseline, update and migration paths, support boundaries, dual-range hold behaviour and shared dismissal semantics.
+
+### Validation
+
+- Add executable regressions for dual-range Engine holds and inbox identity matching, rebuild the HACS and compatibility loaders, and validate the complete Node test suite and bundle.
+
 ## [2.1.1] - 2026-08-04
 
 ### Fixed

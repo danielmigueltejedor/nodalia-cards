@@ -250,6 +250,19 @@ test("README keeps a single support badge without legacy donation sections", () 
   assert.doesNotMatch(readme, /## 💰 Donations/);
 });
 
+test("Cards documentation exposes the optional Engine HACS installer", () => {
+  const engineHacsUrl = "https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration";
+  const readme = read("README.md");
+  const engineGuide = read("docs/nodalia-integration.md");
+  const climateGuide = read("docs/climate-setpoint-schedule.md");
+
+  assert.ok(readme.includes(engineHacsUrl));
+  assert.match(readme, /Nodalia Cards Engine is optional/);
+  assert.ok(engineGuide.includes(engineHacsUrl));
+  assert.ok(climateGuide.includes(engineHacsUrl));
+  assert.match(engineGuide, /Cards `2\.1\.2` and Engine `2\.0\.0`/);
+});
+
 test("repository workflows pin audited external actions by immutable commit", () => {
   const auditedActions = new Set([
     "actions/checkout",

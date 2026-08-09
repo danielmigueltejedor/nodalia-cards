@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.1.1";
+const CARD_VERSION = "2.1.2";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -117,7 +117,7 @@ const DEFAULT_CONFIG = {
     card: {
       background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
       border: "1px solid var(--divider-color)",
-      border_radius: "28px",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
       box_shadow: "var(--ha-card-box-shadow)",
       padding: "18px",
       gap: "14px",
@@ -128,7 +128,7 @@ const DEFAULT_CONFIG = {
       size: "54px",
     },
     title_size: "22px",
-    item_radius: "18px",
+    item_radius: "var(--nodalia-card-border-radius, 28px)",
     accent: "var(--primary-color)",
   },
 };
@@ -558,6 +558,17 @@ function normalizeConfig(rawConfig = {}, options = {}) {
   config.animations.content_duration = Math.max(120, Math.min(1800, Number(config.animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
   config.animations.button_bounce_duration = Math.max(120, Math.min(1200, Number(config.animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration));
   config.styles = mergeDeep(DEFAULT_CONFIG.styles, config.styles || {});
+  // Older defaults used a tighter notification chip radius (18px) and a bare 28px
+  // card radius. Promote them to the shared Nodalia card radius token so list
+  // items match the empty state and the rest of the suite.
+  const familyRadius = DEFAULT_CONFIG.styles.card.border_radius;
+  if (String(config.styles?.card?.border_radius ?? "").trim() === "28px") {
+    config.styles.card.border_radius = familyRadius;
+  }
+  const itemRadius = String(config.styles?.item_radius ?? "").trim();
+  if (itemRadius === "18px" || itemRadius === "28px") {
+    config.styles.item_radius = familyRadius;
+  }
   return config;
 }
 
@@ -1758,7 +1769,17 @@ class NodaliaNotificationsCard extends HTMLElement {
       return [];
     }
     const result = [raw];
-    const match = raw.match(/^(hot|cold|humidity_high|humidity_low|battery_low|humidifier_fill_low|humidifier_fill_full|ink_low):([^:]+):/);
+    const comfort = raw.match(/^comfort:(hot|cold):(?:climate:)?([^:]+)/);
+    if (comfort) {
+      result.push(`${comfort[1]}:${comfort[2]}`);
+    }
+    const humidity = raw.match(/^humidity:([^:]+):(high|low)(?:$|:)/);
+    if (humidity) {
+      result.push(`humidity_${humidity[2]}:${humidity[1]}`);
+    }
+    const match = raw.match(
+      /^(hot|cold|humidity_high|humidity_low|battery_low|humidifier_fill_low|humidifier_fill_full|ink_low|door|window|motion|vacuum|rain|media_absence|outdoor_hot|outdoor_cold):([^:]+)(?::|$)/,
+    );
     if (match) {
       result.push(`${match[1]}:${match[2]}`);
     }
@@ -5536,6 +5557,32 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         .editor-grid--stacked {
           grid-column: 1 / -1;
         }
+        .editor-chip-radius__options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .editor-chip-radius__option {
+          align-items: center;
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+        .editor-chip-radius__option:has(input:checked) {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          border-color: var(--primary-color);
+        }
+        .editor-chip-radius__option input[type="radio"] {
+          accent-color: var(--primary-color);
+          appearance: auto;
+          margin: 0;
+          min-height: auto;
+          padding: 0;
+          width: auto;
+        }
         .editor-grid--stacked {
           grid-template-columns: 1fr;
         }
@@ -6120,7 +6167,19 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 <div class="editor-grid">
                   ${this._renderColorField("ed.notifications.card_background", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.notifications.card_border", "styles.card.border", config.styles.card.border)}
-                  ${this._renderTextField("ed.notifications.card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  ${window.NodaliaUtils?.renderEditorCardBorderRadiusHtml?.({
+                    escapeHtml,
+                    field: "styles.card.border_radius",
+                    value: config.styles?.card?.border_radius,
+                    tHeading: this._editorLabel("ed.notifications.card_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  }) || this._renderTextField("ed.notifications.card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.notifications.card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.notifications.box_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.notifications.padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.notifications.gap", "styles.card.gap", config.styles.card.gap)}
@@ -6128,7 +6187,19 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderColorField("ed.notifications.icon_color", "styles.icon.color", config.styles.icon.color)}
                   ${this._renderTextField("ed.notifications.icon_size", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderTextField("ed.notifications.title_size", "styles.title_size", config.styles.title_size)}
-                  ${this._renderTextField("ed.notifications.item_radius", "styles.item_radius", config.styles.item_radius)}
+                  ${window.NodaliaUtils?.renderEditorCardBorderRadiusHtml?.({
+                    escapeHtml,
+                    field: "styles.item_radius",
+                    value: config.styles?.item_radius,
+                    tHeading: this._editorLabel("ed.notifications.item_radius_presets"),
+                    labels: {
+                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
+                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
+                      round: this._editorLabel("ed.entity.chip_radius_round"),
+                      square: this._editorLabel("ed.entity.chip_radius_square"),
+                    },
+                  }) || this._renderTextField("ed.notifications.item_radius", "styles.item_radius", config.styles.item_radius)}
+                  <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.notifications.item_radius_yaml_hint"))}</div>
                   ${this._renderColorField("ed.notifications.visual_tint", "styles.accent", config.styles.accent, { fullWidth: true })}
                 </div>
               `
