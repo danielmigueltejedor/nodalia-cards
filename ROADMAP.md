@@ -11,16 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-2.1.1
+2.1.2
 ```
 
-Current preview release:
-
-```text
-2.1.2-alpha.5
-```
-
-Stable **`2.1.1`** remains the recommended daily-driver release. **`2.1.2-alpha.5`** fixes Gecko hairline seams on Weather, Calendar, Navigation and Entity card surfaces while keeping the independent HACS Dashboard plugin and optional Engine integration. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.1.2`** is the recommended daily-driver release. It fixes Gecko hairline seams on Weather, Calendar, Navigation and Entity surfaces, preserves `heat_cool` comfort bands during Engine holds, makes cross-device Engine dismissals reliable, and adds a direct installation path for the optional Engine. Existing Dashboard resources and card YAML remain compatible. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); the completed prerelease cycle lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -37,7 +31,7 @@ The project currently includes:
 
 ---
 
-# 🎯 Current focus (post-`2.0.0` maintenance)
+# 🎯 Current focus (post-`2.1.2` maintenance)
 
 The current maintenance stage focuses on:
 

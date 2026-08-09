@@ -13,6 +13,7 @@
   <p>
     <a href="#installation">Installation</a> ·
     <a href="#included-cards">Cards</a> ·
+    <a href="#optional-companion-nodalia-cards-engine">Engine</a> ·
     <a href="#quick-start">Quick start</a> ·
     <a href="https://github.com/danielmigueltejedor/nodalia-cards/issues">Support</a> ·
     <a href="https://crowdin.com/project/nodalia-cards">Translate</a>
@@ -25,6 +26,9 @@ Nodalia Cards is a custom Home Assistant frontend card suite built as one visual
 
 > [!IMPORTANT]
 > Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia Cards through HACS as a custom **Dashboard** repository using the steps below.
+
+> [!TIP]
+> **Nodalia Cards Engine is optional.** Install it when you want background notifications, shared dismissals, a notification inbox or native Climate schedules. The cards and visual editors continue to work without it.
 
 ## Preview
 
@@ -124,6 +128,21 @@ If a card does not appear immediately after installation or an update, perform a
 
 That single file includes both the cards and their visual editors. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
 
+### Optional companion: Nodalia Cards Engine
+
+Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.0` is the recommended companion for Nodalia Cards `2.1.2`.
+
+[![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
+
+After opening the repository:
+
+1. Download **Nodalia Cards Engine** in HACS.
+2. Restart Home Assistant.
+3. Open **Settings → Devices & services → Add integration**.
+4. Search for **Nodalia Cards Engine**, complete setup and reload the browser once.
+
+The Engine does not replace `/hacsfiles/nodalia-cards/nodalia-cards.js` and does not require dashboard YAML changes. See the [Cards + Engine guide](./docs/nodalia-integration.md) for compatibility, migration and recovery details.
+
 ### Manual installation
 
 1. Download `nodalia-cards.js` from the [latest GitHub release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest) and copy it to `/config/www/`.
@@ -135,6 +154,13 @@ Type: module
 ```
 
 3. Reload your browser.
+
+### Updating to 2.1.2
+
+- Update Nodalia Cards from HACS and perform a hard browser refresh so the self-contained `nodalia-cards.js` resource is replaced in the frontend cache.
+- Existing card YAML and Lovelace resources remain compatible; no Dashboard-to-Integration migration is required.
+- If you use the optional Engine, keep it on stable `2.0.0`, restart Home Assistant after installing or updating it, and confirm the editor shows **Engine active**.
+- Climate `heat_cool` holds preserve both low and high setpoints, and Engine inbox dismissals now match the corresponding foreground comfort, humidity, door, window, motion, vacuum, rain, media and outdoor alerts.
 
 ## Quick start
 
@@ -170,6 +196,7 @@ calibration_source:
 
 | Feature | Documentation |
 |---|---|
+| Nodalia Cards Engine | [Installation, compatibility and migration](./docs/nodalia-integration.md) |
 | Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
 | Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
@@ -199,6 +226,7 @@ Help review or extend the project on [Crowdin](https://crowdin.com/project/nodal
 ## Support and contributions
 
 - Use [GitHub Issues](https://github.com/danielmigueltejedor/nodalia-cards/issues) for reproducible bugs and focused feature requests.
+- Use the [Engine issue tracker](https://github.com/danielmigueltejedor/nodalia-cards-engine/issues) for integration setup, background execution or Engine diagnostics problems.
 - Include the Home Assistant version, Nodalia Cards version, browser, relevant YAML and screenshots when reporting a visual problem.
 - Read [CONTRIBUTING.md](./CONTRIBUTING.md) before submitting code or translations.
 - Never publish tokens, webhook secrets or private entity data.

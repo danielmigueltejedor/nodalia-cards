@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.1.2-alpha.5";
+const CARD_VERSION = "2.1.2";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1788,10 +1788,20 @@ class NodaliaClimateCard extends HTMLElement {
       return false;
     }
     const state = this._getState();
-    const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
     const override = { until: new Date(Date.now() + hours * 3_600_000).toISOString() };
-    if (Number.isFinite(target)) {
-      override.temperature = Number(target);
+    // Engine treats `temperature` as a single setpoint, so preserve both ends of a live range.
+    if (this._isDualSetpointRange(state)) {
+      const range = this._getEffectiveTargetLowHigh(state);
+      const pair = this._normalizeLowHighPair(range.low, range.high, state);
+      if (pair) {
+        override.target_temp_low = Number(pair.low);
+        override.target_temp_high = Number(pair.high);
+      }
+    } else {
+      const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
+      if (Number.isFinite(target)) {
+        override.temperature = Number(target);
+      }
     }
     return this._runEngineOverrideRequest(() => backend.setClimateOverride(this._hass, entityId, override));
   }

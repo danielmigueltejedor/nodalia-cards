@@ -2,6 +2,8 @@
 
 The optional Nodalia Cards Engine stores and executes Climate Card schedules inside Home Assistant. With the Engine installed, no YAML helper, webhook, package, generated automation or shell command is needed.
 
+[![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
+
 ## Quick start
 
 1. Install the Nodalia Cards plugin and configure the optional [Nodalia Cards Engine](./nodalia-integration.md).
@@ -24,6 +26,7 @@ The agenda stores the full schedule in Home Assistant and is not limited by an `
 - If blocks overlap, the block with the latest start wins.
 - The active target is applied after Home Assistant starts, after a schedule is saved and at each upcoming block start.
 - If the thermostat already has the desired target, Nodalia avoids the redundant service call.
+- A two-hour hold preserves both `target_temp_low` and `target_temp_high` on `heat_cool` thermostats instead of replacing the range with its midpoint.
 - Disabled schedules and disabled blocks are ignored.
 
 Schedules use Home Assistant's configured local timezone.

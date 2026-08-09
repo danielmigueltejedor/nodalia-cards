@@ -36,6 +36,8 @@ The following files should remain aligned whenever possible:
 - `CHANGELOG-PRERELEASES.md`
 - `CONTRIBUTING.md`
 - `ROADMAP.md`
+- `docs/nodalia-integration.md`
+- `docs/climate-setpoint-schedule.md`
 - `.github/ISSUE_TEMPLATE/*.yml`
 - `.github/workflows/*.yml`
 
@@ -76,8 +78,8 @@ documentation should be synchronized again.
 After syncing branches:
 
 ```bash
-git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github
-git diff beta alpha -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md .github
+git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs/nodalia-integration.md docs/climate-setpoint-schedule.md .github
+git diff beta alpha -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs/nodalia-integration.md docs/climate-setpoint-schedule.md .github
 ```
 
 Ideally both results should be empty except for explicitly documented prerelease differences.
@@ -475,6 +477,8 @@ Typical progression:
 4. The accepted candidate is promoted to `main` and tagged stable
 
 Low-risk cycles may skip `beta`, but every published version must still pass the same version, bundle, browser and release-metadata gates.
+
+For releases that change the optional backend bridge, also verify that the main README and `docs/nodalia-integration.md` contain working, category-specific HACS links for both repositories and document the tested Cards/Engine compatibility pair.
 
 ---
 
