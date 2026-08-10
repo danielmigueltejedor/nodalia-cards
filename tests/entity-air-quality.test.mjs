@@ -133,6 +133,8 @@ test("entity card air quality layout renders metric grid and WHO tint", () => {
     layout: "air_quality",
     air_quality: {
       guidelines: "who",
+      show_graphs: true,
+      graph_hours: 24,
       pm1: "sensor.nodalia_demo_pm1",
       pm25: "sensor.nodalia_demo_pm25",
       pm4: "sensor.nodalia_demo_pm4",
@@ -196,13 +198,35 @@ test("entity card air quality layout renders metric grid and WHO tint", () => {
 
   const html = String(card.shadowRoot.innerHTML);
   assert.match(html, /entity-card--air-quality/);
-  assert.match(html, /entity-card__chips/);
+  assert.match(html, /entity-card__headline/);
   assert.match(html, /entity-card__chip--state/);
   assert.match(html, /entity-card__aq-metrics/);
   assert.match(html, /entity-card__aq-bubble/);
+  assert.match(html, /entity-card__headline[\s\S]*22\.4/);
+  assert.match(html, /entity-card__headline[\s\S]*48/);
   assert.match(html, /WHO 24h AQG/);
   assert.match(html, /PM2\.5/);
-  assert.match(html, /--aq-bubble-accent:#3f9d7a/);
+  assert.match(html, /entity-card__aq-chart-panel/);
+  const metricsHtml = html.split('class="entity-card__aq-metrics"')[1] || "";
+  assert.doesNotMatch(metricsHtml, /22\.4/);
+  assert.doesNotMatch(metricsHtml, /48 %/);
+  card.isConnected = false;
+  if (card._entranceAnimationResetTimer) {
+    clearTimeout(card._entranceAnimationResetTimer);
+    card._entranceAnimationResetTimer = 0;
+  }
+  card._clearAirQualityHistory?.();
+});
+
+test("entity card air quality sparkline helpers build smooth paths", () => {
+  const points = [
+    { x: 0, y: 10 },
+    { x: 10, y: 4 },
+    { x: 20, y: 8 },
+  ];
+  assert.match(helpers.buildAirQualitySmoothPath(points), /^M /);
+  assert.match(helpers.buildAirQualityAreaPath(points, 20), / Z$/);
+  assert.equal(helpers.buildAirQualityInterpolatedSamples([], 0, 1000, 4, 12).length, 4);
 });
 
 test("entity card air quality demo package and example exist", () => {

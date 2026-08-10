@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.3] - 2026-08-10
+
+### Added
+
+- **Entity Card air quality graphs:** optional history chart panel (`air_quality.show_graphs`, `graph_hours`) inspired by Graph Card, using Home Assistant history.
+
+### Changed
+
+- **Entity Card air quality:** temperature and humidity move to Climate-style headline chips on the top right; pollutant metrics stay as metric bubbles.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.2` available alongside `2.1.3-alpha.3`.
+
 ## [2.1.3-alpha.2] - 2026-08-10
 
 ### Changed

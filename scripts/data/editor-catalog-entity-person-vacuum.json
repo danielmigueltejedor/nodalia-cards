@@ -51,6 +51,19 @@
     "el": "Αισθητήρας CO₂",
     "ro": "Senzor CO₂"
   },
+  "ed.entity.air_quality_graph_hours": {
+    "en": "Graph hours",
+    "es": "Horas de la gráfica",
+    "zh": "图表小时数",
+    "de": "Grafikstunden",
+    "fr": "Heures du graphique",
+    "it": "Ore del grafico",
+    "nl": "Grafiekuren",
+    "pt": "Horas do gráfico",
+    "ru": "Часы графика",
+    "el": "Ώρες γραφήματος",
+    "ro": "Ore grafic"
+  },
   "ed.entity.air_quality_guidelines": {
     "en": "Guideline bands",
     "es": "Bandas de referencia",
@@ -180,6 +193,19 @@
     "ru": "Показатели качества воздуха",
     "el": "Μετρήσεις ποιότητας αέρα",
     "ro": "Metrici calitate aer"
+  },
+  "ed.entity.air_quality_show_graphs": {
+    "en": "Show history graphs",
+    "es": "Mostrar gráficas de historial",
+    "zh": "显示历史图表",
+    "de": "Verlaufsgrafiken anzeigen",
+    "fr": "Afficher les graphiques d'historique",
+    "it": "Mostra grafici cronologia",
+    "nl": "Geschiedenisgrafieken tonen",
+    "pt": "Mostrar gráficos de histórico",
+    "ru": "Показывать графики истории",
+    "el": "Εμφάνιση γραφημάτων ιστορικού",
+    "ro": "Afișează graficele istoricului"
   },
   "ed.entity.air_quality_temperature": {
     "en": "Temperature sensor",

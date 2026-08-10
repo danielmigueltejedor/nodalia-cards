@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.3] - 2026-08-10
+
+Third **`2.1.3`** alpha: air-quality graphs plus Climate-style comfort chips.
+
+### Added
+
+- Optional Graph Card-inspired history panel for Entity Card `layout: air_quality` (`show_graphs`, `graph_hours`).
+
+### Changed
+
+- Temperature and humidity render as headline chips on the top right; pollutant readings remain metric bubbles.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.2` available alongside `2.1.3-alpha.3`.
+
+---
+
 ## [2.1.3-alpha.2] - 2026-08-10
 
 Second **`2.1.3`** alpha: air-quality layout visual parity with the rest of Nodalia Cards.

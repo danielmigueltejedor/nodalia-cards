@@ -6,6 +6,8 @@ icon: mdi:air-filter
 layout: air_quality
 air_quality:
   guidelines: who
+  show_graphs: true
+  graph_hours: 24
   pm1: sensor.nodalia_demo_pm1
   pm25: sensor.nodalia_demo_pm25
   pm4: sensor.nodalia_demo_pm4

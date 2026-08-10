@@ -723,7 +723,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Humidity"
-          }
+          },
+          loadingGraphs: "Loading history…",
+          emptyGraphs: "No history yet"
         }
       },
       weatherCard: {
@@ -1718,7 +1720,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Feuchte"
-          }
+          },
+          loadingGraphs: "Verlauf wird geladen…",
+          emptyGraphs: "Noch kein Verlauf"
         }
       },
       weatherCard: {
@@ -2713,7 +2717,9 @@
             co2: "CO₂",
             temperature: "Θερμ.",
             humidity: "Υγρασία"
-          }
+          },
+          loadingGraphs: "Φόρτωση ιστορικού…",
+          emptyGraphs: "Δεν υπάρχει ακόμα ιστορικό"
         }
       },
       weatherCard: {
@@ -3708,7 +3714,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Humedad"
-          }
+          },
+          loadingGraphs: "Cargando historial…",
+          emptyGraphs: "Aún no hay historial"
         }
       },
       weatherCard: {
@@ -4703,7 +4711,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Humidité"
-          }
+          },
+          loadingGraphs: "Chargement de l'historique…",
+          emptyGraphs: "Pas encore d'historique"
         }
       },
       weatherCard: {
@@ -5698,7 +5708,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Umidità"
-          }
+          },
+          loadingGraphs: "Caricamento cronologia…",
+          emptyGraphs: "Nessuna cronologia ancora"
         }
       },
       weatherCard: {
@@ -6693,7 +6705,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Vochtigheid"
-          }
+          },
+          loadingGraphs: "Geschiedenis laden…",
+          emptyGraphs: "Nog geen geschiedenis"
         }
       },
       weatherCard: {
@@ -7688,7 +7702,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Fuktighet"
-          }
+          },
+          loadingGraphs: "Laster historikk…",
+          emptyGraphs: "Ingen historikk ennå"
         }
       },
       weatherCard: {
@@ -8683,7 +8699,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Humidade"
-          }
+          },
+          loadingGraphs: "A carregar histórico…",
+          emptyGraphs: "Ainda sem histórico"
         }
       },
       weatherCard: {
@@ -9678,7 +9696,9 @@
             co2: "CO₂",
             temperature: "Temp",
             humidity: "Umiditate"
-          }
+          },
+          loadingGraphs: "Se încarcă istoricul…",
+          emptyGraphs: "Încă nu există istoric"
         }
       },
       weatherCard: {
@@ -10673,7 +10693,9 @@
             co2: "CO₂",
             temperature: "Темп.",
             humidity: "Влажность"
-          }
+          },
+          loadingGraphs: "Загрузка истории…",
+          emptyGraphs: "Истории пока нет"
         }
       },
       weatherCard: {
@@ -11668,7 +11690,9 @@
             co2: "CO₂",
             temperature: "温度",
             humidity: "湿度"
-          }
+          },
+          loadingGraphs: "正在加载历史…",
+          emptyGraphs: "暂无历史"
         }
       },
       weatherCard: {

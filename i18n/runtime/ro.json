@@ -501,7 +501,9 @@
         "co2": "CO₂",
         "temperature": "Temp",
         "humidity": "Umiditate"
-      }
+      },
+      "loadingGraphs": "Se încarcă istoricul…",
+      "emptyGraphs": "Încă nu există istoric"
     }
   },
   "weatherCard": {

@@ -501,7 +501,9 @@
         "co2": "CO₂",
         "temperature": "Temp",
         "humidity": "Humidité"
-      }
+      },
+      "loadingGraphs": "Chargement de l'historique…",
+      "emptyGraphs": "Pas encore d'historique"
     }
   },
   "weatherCard": {

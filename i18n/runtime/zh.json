@@ -501,7 +501,9 @@
         "co2": "CO₂",
         "temperature": "温度",
         "humidity": "湿度"
-      }
+      },
+      "loadingGraphs": "正在加载历史…",
+      "emptyGraphs": "暂无历史"
     }
   },
   "weatherCard": {
