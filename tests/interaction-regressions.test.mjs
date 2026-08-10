@@ -528,7 +528,7 @@ test("NodaliaUtils rejects CSS and markup injection in style values", () => {
   const document = renderCardEmptyStateDocument("<div class=\"test--empty\">Empty</div>", {
     card: { background: "red;} </style><script>alert(1)</script>" },
   });
-  assert.doesNotMatch(document, /<script>/);
+  assert.doesNotMatch(document, /<script\b[^>]*>/i);
   assert.match(document, /background: var\(--ha-card-background\)/);
 });
 
