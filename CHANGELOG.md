@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.1] - 2026-08-10
+
+### Added
+
+- **Climate, Humidifier, Fan and Light:** selection haptics tick on each stepped value change while scrolling or dragging dials and sliders (color hue every 5°), not only when the value is committed.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2` available alongside `2.1.3-alpha.1`.
+
 ## [2.1.2] - 2026-08-09
 
 Stable **`2.1.2`** completes the Gecko surface-stability cycle and hardens the optional Nodalia Cards Engine bridge without changing card YAML or the HACS Dashboard resource.

@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.1] - 2026-08-10
+
+First **`2.1.3`** alpha after stable **`2.1.2`**: stepped haptic ticks while dragging climate, humidifier, fan and light controls.
+
+### Added
+
+- **Scroll / dial haptics:** Climate dials (single and dual-range), humidifier humidity, fan percentage and light brightness / color-temperature / hue sliders fire a `"selection"` haptic on each stepped value change during drag, not only on commit. Color hue ticks every 5°.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2` available alongside `2.1.3-alpha.1`.
+
+### Validation
+
+- Interaction regressions cover `_hapticOnSliderStep` / `_hapticOnDialStep`, `lastHapticValue` seeding and light color step quantization.
+
+---
+
 ## [2.1.2-alpha.5] - 2026-08-07
 
 Fifth **`2.1.2`** alpha: Notifications corner radius aligned with the Nodalia visual family, editable via presets in the visual editor.

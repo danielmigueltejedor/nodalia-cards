@@ -14,7 +14,13 @@ Current stable release:
 2.1.2
 ```
 
-Stable **`2.1.2`** is the recommended daily-driver release. It fixes Gecko hairline seams on Weather, Calendar, Navigation and Entity surfaces, preserves `heat_cool` comfort bands during Engine holds, makes cross-device Engine dismissals reliable, and adds a direct installation path for the optional Engine. Existing Dashboard resources and card YAML remain compatible. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); the completed prerelease cycle lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Current preview release:
+
+```text
+2.1.3-alpha.1
+```
+
+Stable **`2.1.2`** remains the recommended daily-driver release. **`2.1.3-alpha.1`** adds stepped selection haptics while dragging Climate dials and Humidifier, Fan and Light sliders. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 

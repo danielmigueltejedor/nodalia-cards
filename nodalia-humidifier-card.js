@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.1.2";
+const CARD_VERSION = "2.1.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2017,22 +2017,49 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
   }
 
+  _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+    const next = Number(steppedValue);
+    if (!Number.isFinite(next)) {
+      return;
+    }
+    const drag = this._activeSliderDrag;
+    if (drag) {
+      if (drag.lastHapticValue === next) {
+        return;
+      }
+      drag.lastHapticValue = next;
+      this._triggerHaptic("selection");
+      return;
+    }
+    if (commit) {
+      this._triggerHaptic("selection");
+      this._lastIdleSliderHapticValue = undefined;
+      return;
+    }
+    if (this._lastIdleSliderHapticValue === next) {
+      return;
+    }
+    this._lastIdleSliderHapticValue = next;
+    this._triggerHaptic("selection");
+  }
+
   _applySliderValue(slider, value, options = {}) {
     const commit = options.commit === true;
     const state = this._getState();
     const range = this._getHumidityRange(state);
     const nextValue = clamp(Number(value), range.min, range.max);
+    const stepped = Math.round(nextValue);
 
     this._draftHumidity.set(this._config.entity, nextValue);
     this._updateHumidityPreview(nextValue);
 
     const chip = this.shadowRoot?.querySelector('[data-humidifier-chip="humidity"]');
     if (chip instanceof HTMLElement) {
-      chip.textContent = `${Math.round(nextValue)}%`;
+      chip.textContent = `${stepped}%`;
     }
 
+    this._hapticOnSliderStep(stepped, { commit });
     if (commit) {
-      this._triggerHaptic("selection");
       this._commitHumidity(nextValue);
     }
   }
@@ -2068,6 +2095,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       pointerId,
       slider,
       geometry: getSliderDragGeometry(slider),
+      lastHapticValue: Math.round(Number(slider.value)),
     };
     this._attachWindowDragListeners();
 
