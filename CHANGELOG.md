@@ -10,6 +10,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.2] - 2026-08-10
+
+### Changed
+
+- **Entity Card air quality layout:** metrics use Nodalia pill chips / metric bubbles (same language as Entity and Room Hub), instead of a separate card grid and oversized hero readout.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.1` available alongside `2.1.3-alpha.2`.
+
 ## [2.1.3-alpha.1] - 2026-08-10
 
 ### Added

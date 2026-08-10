@@ -196,11 +196,13 @@ test("entity card air quality layout renders metric grid and WHO tint", () => {
 
   const html = String(card.shadowRoot.innerHTML);
   assert.match(html, /entity-card--air-quality/);
-  assert.match(html, /entity-card__aq-grid/);
+  assert.match(html, /entity-card__chips/);
+  assert.match(html, /entity-card__chip--state/);
+  assert.match(html, /entity-card__aq-metrics/);
+  assert.match(html, /entity-card__aq-bubble/);
   assert.match(html, /WHO 24h AQG/);
   assert.match(html, /PM2\.5/);
-  assert.match(html, /TVOC/);
-  assert.match(html, /--aq-metric-accent:#3f9d7a/);
+  assert.match(html, /--aq-bubble-accent:#3f9d7a/);
 });
 
 test("entity card air quality demo package and example exist", () => {

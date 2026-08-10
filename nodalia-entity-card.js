@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.3-alpha.1";
+const CARD_VERSION = "2.1.3-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2708,6 +2708,29 @@ class NodaliaEntityCard extends HTMLElement {
     `;
   }
 
+  _airQualityMetricIcon(kind) {
+    switch (kind) {
+      case "pm1":
+        return "mdi:dots-hexagon";
+      case "pm25":
+        return "mdi:blur";
+      case "pm4":
+        return "mdi:blur-linear";
+      case "pm10":
+        return "mdi:cloud";
+      case "tvoc":
+        return "mdi:molecule";
+      case "co2":
+        return "mdi:molecule-co2";
+      case "temperature":
+        return "mdi:thermometer";
+      case "humidity":
+        return "mdi:water-percent";
+      default:
+        return "mdi:gauge";
+    }
+  }
+
   _renderAirQualityLayout() {
     if (!this.shadowRoot) {
       return;
@@ -2753,11 +2776,9 @@ class NodaliaEntityCard extends HTMLElement {
     const guidelinesLabel = guidelines === "who"
       ? this._entityCardUi("airQuality.whoGuidelines", "WHO 24h AQG")
       : "";
-    const heroValue = summary.primaryNumeric != null
+    const heroNumeric = summary.primaryNumeric != null
       ? formatNumericValue(summary.primaryNumeric, this._getNumberDecimals())
-      : (metrics.find(metric => metric.kind === "pm25")?.display
-        || metrics[0]?.display
-        || "—");
+      : null;
     const heroCaption = summary.primaryIsAqi
       ? this._entityCardUi("airQuality.aqi", "AQI")
       : (metrics.find(metric => metric.kind === "pm25")?.label
@@ -2766,31 +2787,73 @@ class NodaliaEntityCard extends HTMLElement {
     const canRunIconTap = primaryState ? this._canRunTapAction(primaryState, "icon") : false;
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+    const chipHeight = escapeHtml(String(styles.chip_height ?? "24px"));
+    const chipFontSize = escapeHtml(String(styles.chip_font_size ?? "11px"));
+    const chipPadding = escapeHtml(String(styles.chip_padding ?? "0 9px"));
+    const iconSize = escapeHtml(String(styles.icon?.size ?? "38px"));
+    const titleSize = escapeHtml(String(styles.title_size ?? "12px"));
     const surfaceBase = styles.card.background;
-    const cardBackground = `linear-gradient(145deg, color-mix(in srgb, ${accentColor} 16%, ${surfaceBase}) 0%, color-mix(in srgb, ${accentColor} 7%, ${surfaceBase}) 48%, ${surfaceBase} 100%)`;
-    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`;
-    const cardShadow = `${styles.card.box_shadow}, 0 18px 34px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.16))`;
-    const metricCells = metrics.map(metric => {
-      const tone = metric.level !== "unknown" ? metric.level : "neutral";
-      const metricAccent = AIR_QUALITY_LEVEL_COLORS[metric.level] || "var(--primary-text-color)";
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-entity-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-entity-surface-base)) 52%, var(--nodalia-entity-surface-base) 100%)`;
+    const cardBackground = `${onCardBackground}, var(--nodalia-entity-surface-base)`;
+    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+    const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+    const surfaceGlaze = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`;
+    const surfaceAmbient = `
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`;
+
+    const headerChips = [
+      this._renderChip(levelLabel, "state"),
+      guidelinesLabel ? this._renderChip(guidelinesLabel, "value") : "",
+      heroNumeric != null
+        ? this._renderChip(
+          summary.primaryIsAqi ? `${heroCaption} ${heroNumeric}` : String(heroNumeric),
+          "value",
+        )
+        : "",
+    ].filter(Boolean).join("");
+
+    const metricBubbles = metrics.map(metric => {
+      const metricAccent = metric.level !== "unknown"
+        ? (AIR_QUALITY_LEVEL_COLORS[metric.level] || accentColor)
+        : "var(--primary-text-color)";
+      const compactValue = metric.kind === "temperature" || metric.kind === "humidity"
+        ? metric.display
+        : `${metric.label} ${metric.display}`;
+      const bubbleTitle = guidelines === "who" && AIR_QUALITY_POLLUTION_KEYS.has(metric.kind)
+        ? `${metric.label}: ${metric.display} · ${this._airQualityLevelLabel(metric.level)}`
+        : `${metric.label}: ${metric.display}`;
       return `
-        <div class="entity-card__aq-metric entity-card__aq-metric--${escapeHtml(tone)}" style="--aq-metric-accent:${escapeHtml(metricAccent)};">
-          <div class="entity-card__aq-metric-label">${escapeHtml(metric.label)}</div>
-          <div class="entity-card__aq-metric-value">${escapeHtml(metric.display)}</div>
-          ${
-            guidelines === "who" && AIR_QUALITY_POLLUTION_KEYS.has(metric.kind)
-              ? `<div class="entity-card__aq-metric-level">${escapeHtml(this._airQualityLevelLabel(metric.level))}</div>`
-              : ""
-          }
+        <div
+          class="entity-card__aq-bubble"
+          style="--aq-bubble-accent:${escapeHtml(metricAccent)};"
+          title="${escapeHtml(bubbleTitle)}"
+        >
+          <ha-icon icon="${escapeHtml(this._airQualityMetricIcon(metric.kind))}"></ha-icon>
+          <span>${escapeHtml(compactValue)}</span>
         </div>
       `;
     }).join("");
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; position: relative; }
+        :host {
+          --entity-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --entity-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          display: block;
+          position: relative;
+        }
+
         * { box-sizing: border-box; }
+
+        ha-card[data-entity-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         ha-card {
+          --nodalia-entity-surface-base: ${surfaceBase};
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
@@ -2799,129 +2862,173 @@ class NodaliaEntityCard extends HTMLElement {
           display: block;
           overflow: hidden;
           position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         }
+
         ha-card::before {
-          background: linear-gradient(180deg, color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0));
+          background: ${surfaceGlaze};
           content: "";
           inset: 0;
           pointer-events: none;
           position: absolute;
           z-index: 0;
         }
+
+        ha-card::after {
+          background: ${surfaceAmbient};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .entity-card--clickable { cursor: pointer; }
+        .entity-card__icon.entity-card__icon--clickable { cursor: pointer; }
+
         .entity-card__content {
           display: grid;
-          gap: 14px;
+          gap: ${styles.card.gap};
+          min-width: 0;
           padding: ${styles.card.padding};
           position: relative;
           z-index: 1;
         }
+
         .entity-card__content--entering {
-          animation: entity-aq-fade-up 420ms cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation: entity-card-fade-up calc(var(--entity-card-content-duration) * 0.88) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
-        .entity-card__aq-header {
+
+        .entity-card__hero {
           align-items: center;
           display: grid;
           gap: 12px;
-          grid-template-columns: 52px minmax(0, 1fr);
+          grid-template-columns: ${iconSize} minmax(0, 1fr);
           min-width: 0;
         }
+
         .entity-card__icon {
+          -webkit-tap-highlight-color: transparent;
           align-items: center;
-          background: color-mix(in srgb, ${accentColor} 22%, transparent);
-          border: 0;
-          border-radius: 50%;
+          appearance: none;
+          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${accentColor};
           display: inline-flex;
-          height: 52px;
+          flex: 0 0 auto;
+          height: ${iconSize};
           justify-content: center;
+          line-height: 0;
+          margin: 0;
+          outline: none;
           padding: 0;
-          width: 52px;
+          position: relative;
+          width: ${iconSize};
         }
+
         .entity-card__icon ha-icon {
-          --mdc-icon-size: 28px;
+          --mdc-icon-size: calc(${iconSize} * 0.44);
+          color: ${accentColor};
+          display: inline-flex;
+          height: calc(${iconSize} * 0.44);
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: calc(${iconSize} * 0.44);
         }
-        .entity-card__aq-copy { min-width: 0; }
+
+        .entity-card__copy {
+          display: grid;
+          gap: 8px;
+          min-width: 0;
+        }
+
         .entity-card__title {
-          font-size: ${styles.title_size};
+          font-size: ${titleSize};
           font-weight: 700;
-          letter-spacing: 0.01em;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+          min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
-        .entity-card__aq-status {
+
+        .entity-card__chips {
           align-items: center;
-          color: color-mix(in srgb, var(--primary-text-color) 72%, transparent);
           display: flex;
           flex-wrap: wrap;
-          font-size: 12px;
           gap: 8px;
-          margin-top: 4px;
-        }
-        .entity-card__aq-level {
-          background: color-mix(in srgb, ${accentColor} 18%, transparent);
-          border-radius: 999px;
-          color: ${accentColor};
-          font-weight: 700;
-          padding: 3px 9px;
-        }
-        .entity-card__aq-hero {
-          align-items: end;
-          display: grid;
-          gap: 4px;
-          padding: 4px 2px 2px;
-        }
-        .entity-card__aq-hero-value {
-          font-size: clamp(34px, 8vw, 48px);
-          font-weight: 760;
-          letter-spacing: -0.03em;
-          line-height: 1;
-        }
-        .entity-card__aq-hero-caption {
-          color: color-mix(in srgb, var(--primary-text-color) 68%, transparent);
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-        .entity-card__aq-grid {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-        }
-        .entity-card__aq-metric {
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--aq-metric-accent, var(--primary-text-color)) 22%, var(--divider-color));
-          border-radius: 18px;
-          display: grid;
-          gap: 4px;
           min-width: 0;
-          padding: 12px 12px 11px;
         }
-        .entity-card__aq-metric-label {
-          color: color-mix(in srgb, var(--primary-text-color) 66%, transparent);
-          font-size: 11px;
-          font-weight: 650;
-          letter-spacing: 0.03em;
-          text-transform: uppercase;
+
+        .entity-card__chip {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: ${chipBorderRadius};
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 0 auto;
+          font-size: ${chipFontSize};
+          font-weight: 600;
+          line-height: 1;
+          max-width: 100%;
+          min-height: ${chipHeight};
+          min-width: 0;
+          overflow: hidden;
+          padding: ${chipPadding};
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
-        .entity-card__aq-metric-value {
-          font-size: 18px;
-          font-weight: 720;
-          letter-spacing: -0.02em;
-          line-height: 1.15;
+
+        .entity-card__chip--state {
+          background: color-mix(in srgb, ${accentColor} 16%, transparent);
+          border-color: color-mix(in srgb, ${accentColor} 22%, transparent);
+          color: ${accentColor};
         }
-        .entity-card__aq-metric-level {
-          color: var(--aq-metric-accent, var(--primary-text-color));
-          font-size: 11px;
-          font-weight: 650;
+
+        .entity-card__aq-metrics {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-width: 0;
         }
-        .entity-card--clickable { cursor: pointer; }
-        .entity-card__icon.entity-card__icon--clickable { cursor: pointer; }
-        @keyframes entity-aq-fade-up {
+
+        .entity-card__aq-bubble {
+          align-items: center;
+          background: color-mix(in srgb, var(--aq-bubble-accent, var(--primary-text-color)) 18%, var(--nodalia-entity-surface-base));
+          border: 1px solid color-mix(in srgb, var(--aq-bubble-accent, var(--primary-text-color)) 28%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent),
+            0 8px 18px rgba(0, 0, 0, 0.13);
+          color: color-mix(in srgb, var(--aq-bubble-accent, var(--primary-text-color)) 88%, var(--primary-text-color));
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 700;
+          gap: 5px;
+          line-height: 1;
+          min-height: 32px;
+          padding: 0 11px 0 9px;
+        }
+
+        .entity-card__aq-bubble ha-icon {
+          --mdc-icon-size: 15px;
+          flex: 0 0 auto;
+        }
+
+        @keyframes entity-card-fade-up {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
+
         ${animations.enabled ? "" : `
         ha-card, .entity-card__content, .entity-card__content * {
           animation: none !important;
@@ -2931,12 +3038,12 @@ class NodaliaEntityCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
-        class="entity-card entity-card--air-quality ${canRunBodyTap ? "entity-card--clickable" : ""}"
+        class="entity-card entity-card--air-quality is-on ${canRunBodyTap ? "entity-card--clickable" : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
         ${canRunBodyTap ? `data-entity-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}
       >
         <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
-          <div class="entity-card__aq-header">
+          <div class="entity-card__hero">
             <button
               type="button"
               class="entity-card__icon ${canRunIconTap ? "entity-card__icon--clickable" : ""}"
@@ -2945,19 +3052,12 @@ class NodaliaEntityCard extends HTMLElement {
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
             </button>
-            <div class="entity-card__aq-copy">
+            <div class="entity-card__copy">
               <div class="entity-card__title">${escapeHtml(title)}</div>
-              <div class="entity-card__aq-status">
-                <span class="entity-card__aq-level">${escapeHtml(levelLabel)}</span>
-                ${guidelinesLabel ? `<span>${escapeHtml(guidelinesLabel)}</span>` : ""}
-              </div>
+              ${headerChips ? `<div class="entity-card__chips">${headerChips}</div>` : ""}
             </div>
           </div>
-          <div class="entity-card__aq-hero">
-            <div class="entity-card__aq-hero-value">${escapeHtml(String(heroValue))}</div>
-            <div class="entity-card__aq-hero-caption">${escapeHtml(heroCaption)}</div>
-          </div>
-          ${metricCells ? `<div class="entity-card__aq-grid">${metricCells}</div>` : ""}
+          ${metricBubbles ? `<div class="entity-card__aq-metrics">${metricBubbles}</div>` : ""}
         </div>
       </ha-card>
     `;

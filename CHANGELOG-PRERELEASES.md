@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.2] - 2026-08-10
+
+Second **`2.1.3`** alpha: air-quality layout visual parity with the rest of Nodalia Cards.
+
+### Changed
+
+- **Entity Card air quality:** header uses standard Entity chips; pollutant and climate readings use Room Hub-style metric bubbles with soft WHO tinting.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.1` available alongside `2.1.3-alpha.2`.
+
+---
+
 ## [2.1.3-alpha.1] - 2026-08-10
 
 First **`2.1.3`** alpha after stable **`2.1.2`**: stepped haptic ticks on device sliders/dials, plus an air-quality layout on Entity Card.
