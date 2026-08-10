@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Climate, Humidifier, Fan and Light:** selection haptics tick on each stepped value change while scrolling or dragging dials and sliders (color hue every 5°), not only when the value is committed.
+- **Entity Card:** optional `layout: air_quality` presents AQI plus PM / TVOC / CO₂ / temperature / humidity in one Nodalia card, with optional WHO 24h AQG bands. Demo sensors live in `examples/entity-card-air-quality-demo-package.yaml`.
 
 ### Changed
 

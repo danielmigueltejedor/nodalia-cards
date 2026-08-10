@@ -12,11 +12,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2.1.3-alpha.1] - 2026-08-10
 
-First **`2.1.3`** alpha after stable **`2.1.2`**: stepped haptic ticks while dragging climate, humidifier, fan and light controls.
+First **`2.1.3`** alpha after stable **`2.1.2`**: stepped haptic ticks on device sliders/dials, plus an air-quality layout on Entity Card.
 
 ### Added
 
 - **Scroll / dial haptics:** Climate dials (single and dual-range), humidifier humidity, fan percentage and light brightness / color-temperature / hue sliders fire a `"selection"` haptic on each stepped value change during drag, not only on commit. Color hue ticks every 5°.
+- **Entity Card air quality layout:** `layout: air_quality` shows a hero AQI/value with a metric grid for PM1 / PM2.5 / PM4 / PM10 / TVOC / CO₂ / temperature / humidity. Optional WHO 24h AQG colour bands; empty metric slots can fall back to attributes on the main entity. Demo package: `examples/entity-card-air-quality-demo-package.yaml`.
 
 ### Changed
 
@@ -25,6 +26,7 @@ First **`2.1.3`** alpha after stable **`2.1.2`**: stepped haptic ticks while dra
 ### Validation
 
 - Interaction regressions cover `_hapticOnSliderStep` / `_hapticOnDialStep`, `lastHapticValue` seeding and light color step quantization.
+- Entity air-quality tests cover WHO/AQI band helpers, metric-grid render and the demo package example.
 
 ---
 

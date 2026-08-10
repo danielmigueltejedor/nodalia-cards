@@ -477,6 +477,31 @@
       "good": "Goed",
       "fair": "Redelijk",
       "poor": "Slecht"
+    },
+    "airQuality": {
+      "title": "Luftkvalitet",
+      "aqi": "AQI",
+      "headline": "Luftkvalitet",
+      "whoGuidelines": "WHO 24t AQG",
+      "levels": {
+        "good": "God",
+        "moderate": "Moderat",
+        "unhealthy_sensitive": "Usunt for sensitive grupper",
+        "unhealthy": "Usunt",
+        "very_unhealthy": "Svært usunt",
+        "hazardous": "Farlig",
+        "unknown": "Ukjent"
+      },
+      "metrics": {
+        "pm1": "PM1",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "pm10": "PM10",
+        "tvoc": "TVOC",
+        "co2": "CO₂",
+        "temperature": "Temp",
+        "humidity": "Fuktighet"
+      }
     }
   },
   "weatherCard": {

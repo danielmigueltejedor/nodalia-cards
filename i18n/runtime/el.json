@@ -477,6 +477,31 @@
       "good": "Καλό",
       "fair": "Μέτριο",
       "poor": "Κακό"
+    },
+    "airQuality": {
+      "title": "Ποιότητα αέρα",
+      "aqi": "AQI",
+      "headline": "Ποιότητα αέρα",
+      "whoGuidelines": "ΠΟΥ AQG 24 ώρες",
+      "levels": {
+        "good": "Καλή",
+        "moderate": "Μέτρια",
+        "unhealthy_sensitive": "Επιβλαβής για ευαίσθητες ομάδες",
+        "unhealthy": "Επιβλαβής",
+        "very_unhealthy": "Πολύ επιβλαβής",
+        "hazardous": "Επικίνδυνη",
+        "unknown": "Άγνωστη"
+      },
+      "metrics": {
+        "pm1": "PM1",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "pm10": "PM10",
+        "tvoc": "TVOC",
+        "co2": "CO₂",
+        "temperature": "Θερμ.",
+        "humidity": "Υγρασία"
+      }
     }
   },
   "weatherCard": {

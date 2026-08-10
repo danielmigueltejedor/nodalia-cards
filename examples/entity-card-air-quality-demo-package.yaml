@@ -1,0 +1,97 @@
+############################################################
+# PACKAGE: Nodalia Entity Card — air quality demo
+#
+# Creates synthetic sensors so you can preview the Entity Card
+# `layout: air_quality` without a real DIY monitor.
+#
+# Install:
+# 1. Copy this file into your Home Assistant `packages/` folder
+#    (or merge under `template:` in configuration.yaml).
+# 2. Restart Home Assistant (or reload Template entities).
+# 3. Add the card YAML from
+#    `examples/entity-card-air-quality.yaml` to a dashboard.
+#
+# Entities created (name-based ids):
+# - sensor.nodalia_demo_aqi
+# - sensor.nodalia_demo_pm1
+# - sensor.nodalia_demo_pm25
+# - sensor.nodalia_demo_pm4
+# - sensor.nodalia_demo_pm10
+# - sensor.nodalia_demo_tvoc
+# - sensor.nodalia_demo_temperature
+# - sensor.nodalia_demo_humidity
+# - sensor.nodalia_demo_co2
+############################################################
+
+template:
+  - sensor:
+      - name: "Nodalia Demo AQI"
+        unique_id: nodalia_demo_aqi
+        unit_of_measurement: "AQI"
+        device_class: aqi
+        state_class: measurement
+        icon: mdi:air-filter
+        state: "42"
+        attributes:
+          friendly_demo: true
+
+      - name: "Nodalia Demo PM1"
+        unique_id: nodalia_demo_pm1
+        unit_of_measurement: "µg/m³"
+        state_class: measurement
+        icon: mdi:dots-hexagon
+        state: "8"
+
+      - name: "Nodalia Demo PM25"
+        unique_id: nodalia_demo_pm25
+        unit_of_measurement: "µg/m³"
+        device_class: pm25
+        state_class: measurement
+        icon: mdi:blur
+        state: "12"
+
+      - name: "Nodalia Demo PM4"
+        unique_id: nodalia_demo_pm4
+        unit_of_measurement: "µg/m³"
+        state_class: measurement
+        icon: mdi:blur-linear
+        state: "16"
+
+      - name: "Nodalia Demo PM10"
+        unique_id: nodalia_demo_pm10
+        unit_of_measurement: "µg/m³"
+        device_class: pm10
+        state_class: measurement
+        icon: mdi:cloud
+        state: "22"
+
+      - name: "Nodalia Demo TVOC"
+        unique_id: nodalia_demo_tvoc
+        unit_of_measurement: "µg/m³"
+        state_class: measurement
+        icon: mdi:molecule
+        state: "180"
+
+      - name: "Nodalia Demo Temperature"
+        unique_id: nodalia_demo_temperature
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:thermometer
+        state: "22.4"
+
+      - name: "Nodalia Demo Humidity"
+        unique_id: nodalia_demo_humidity
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+        icon: mdi:water-percent
+        state: "48"
+
+      - name: "Nodalia Demo CO2"
+        unique_id: nodalia_demo_co2
+        unit_of_measurement: "ppm"
+        device_class: carbon_dioxide
+        state_class: measurement
+        icon: mdi:molecule-co2
+        state: "780"

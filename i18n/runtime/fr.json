@@ -477,6 +477,31 @@
       "good": "Bon",
       "fair": "Correct",
       "poor": "Mauvais"
+    },
+    "airQuality": {
+      "title": "Qualité de l'air",
+      "aqi": "AQI",
+      "headline": "Qualité de l'air",
+      "whoGuidelines": "OMS AQG 24 h",
+      "levels": {
+        "good": "Bonne",
+        "moderate": "Modérée",
+        "unhealthy_sensitive": "Malsaine pour les groupes sensibles",
+        "unhealthy": "Malsaine",
+        "very_unhealthy": "Très malsaine",
+        "hazardous": "Dangereuse",
+        "unknown": "Inconnue"
+      },
+      "metrics": {
+        "pm1": "PM1",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "pm10": "PM10",
+        "tvoc": "TVOC",
+        "co2": "CO₂",
+        "temperature": "Temp",
+        "humidity": "Humidité"
+      }
     }
   },
   "weatherCard": {

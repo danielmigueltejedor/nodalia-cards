@@ -20,7 +20,7 @@ Current preview release:
 2.1.3-alpha.1
 ```
 
-Stable **`2.1.2`** remains the recommended daily-driver release. **`2.1.3-alpha.1`** adds stepped selection haptics while dragging Climate dials and Humidifier, Fan and Light sliders. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.1.2`** remains the recommended daily-driver release. **`2.1.3-alpha.1`** adds stepped selection haptics on Climate / Humidifier / Fan / Light controls and an air-quality layout on Entity Card. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 

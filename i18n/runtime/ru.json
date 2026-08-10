@@ -477,6 +477,31 @@
       "good": "Хорошо",
       "fair": "Удовлетворительно",
       "poor": "Плохо"
+    },
+    "airQuality": {
+      "title": "Качество воздуха",
+      "aqi": "AQI",
+      "headline": "Качество воздуха",
+      "whoGuidelines": "ВОЗ AQG 24 ч",
+      "levels": {
+        "good": "Хорошее",
+        "moderate": "Умеренное",
+        "unhealthy_sensitive": "Вредно для чувствительных групп",
+        "unhealthy": "Вредное",
+        "very_unhealthy": "Очень вредное",
+        "hazardous": "Опасное",
+        "unknown": "Неизвестно"
+      },
+      "metrics": {
+        "pm1": "PM1",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "pm10": "PM10",
+        "tvoc": "TVOC",
+        "co2": "CO₂",
+        "temperature": "Темп.",
+        "humidity": "Влажность"
+      }
     }
   },
   "weatherCard": {
