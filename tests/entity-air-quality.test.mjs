@@ -204,7 +204,9 @@ test("entity card air quality layout renders metric grid and WHO tint", () => {
 });
 
 test("entity card air quality demo package and example exist", () => {
-  assert.match(read("examples/entity-card-air-quality-demo-package.yaml"), /sensor\.nodalia_demo_pm25/);
+  const demoPackage = read("examples/entity-card-air-quality-demo-package.yaml");
+  assert.match(demoPackage, /default_entity_id:\s*sensor\.nodalia_demo_pm25/);
+  assert.match(demoPackage, /state:\s*"\{\{\s*12\s*\}\}"/);
   assert.match(read("examples/entity-card-air-quality.yaml"), /layout:\s*air_quality/);
   assert.match(read("nodalia-entity-card.js"), /layout === "air_quality"/);
   assert.match(read("nodalia-entity-card.js"), /_renderAirQualityLayout/);
