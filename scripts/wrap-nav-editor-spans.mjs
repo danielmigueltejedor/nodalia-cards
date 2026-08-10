@@ -131,7 +131,7 @@ c = c.replace(
 );
 
 for (const display of ["Anadir ruta", "Anadir player", "Anadir popup", "Subir", "Bajar", "Eliminar"]) {
-  const esc = display.replace(/"/g, '\\"');
+  const esc = display.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   c = c.split(`>${display}<`).join(`>\${this._L("${esc}")}<`);
 }
 
