@@ -144,7 +144,11 @@ function setByPath(target, path, value) {
   let cursor = target;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];
-    if (!isObject(cursor[key])) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      return;
+    }
+    const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
+    if (!isObject(current)) {
       Object.defineProperty(cursor, key, {
         configurable: true,
         enumerable: true,
@@ -154,7 +158,11 @@ function setByPath(target, path, value) {
     }
     cursor = cursor[key];
   }
-  Object.defineProperty(cursor, parts[parts.length - 1], {
+  const finalKey = parts[parts.length - 1];
+  if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+    return;
+  }
+  Object.defineProperty(cursor, finalKey, {
     configurable: true,
     enumerable: true,
     value,

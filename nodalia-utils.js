@@ -132,12 +132,20 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        return;
+      }
+      const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
+      if (!isObject(current) && !Array.isArray(current)) {
         defineOwnValue(cursor, key, /^\d+$/.test(parts[index + 1]) ? [] : {});
       }
       cursor = cursor[key];
     }
-    defineOwnValue(cursor, parts[parts.length - 1], value);
+    const finalKey = parts[parts.length - 1];
+    if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+      return;
+    }
+    defineOwnValue(cursor, finalKey, value);
   }
 
   function deleteByPath(target, path) {

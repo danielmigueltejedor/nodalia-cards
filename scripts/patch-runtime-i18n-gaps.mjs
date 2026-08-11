@@ -17,7 +17,11 @@ function setDeep(obj, dotted, value) {
   let cur = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const k = parts[i];
-    if (!cur[k] || typeof cur[k] !== "object") {
+    if (k === "__proto__" || k === "constructor" || k === "prototype") {
+      throw new Error(`Unsafe translation key: ${dotted}`);
+    }
+    const current = Object.hasOwn(cur, k) ? cur[k] : undefined;
+    if (!current || typeof current !== "object") {
       Object.defineProperty(cur, k, {
         configurable: true,
         enumerable: true,
@@ -27,7 +31,11 @@ function setDeep(obj, dotted, value) {
     }
     cur = cur[k];
   }
-  Object.defineProperty(cur, parts[parts.length - 1], {
+  const finalKey = parts[parts.length - 1];
+  if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+    throw new Error(`Unsafe translation key: ${dotted}`);
+  }
+  Object.defineProperty(cur, finalKey, {
     configurable: true,
     enumerable: true,
     value,
