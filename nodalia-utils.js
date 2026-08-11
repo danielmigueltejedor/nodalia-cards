@@ -156,12 +156,22 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
         return;
       }
-      cursor = cursor[key];
+      const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
+      if (!isObject(current) && !Array.isArray(current)) {
+        return;
+      }
+      cursor = current;
     }
-    delete cursor[parts[parts.length - 1]];
+    const finalKey = parts[parts.length - 1];
+    if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+      return;
+    }
+    if (Object.hasOwn(cursor, finalKey)) {
+      delete cursor[finalKey];
+    }
   }
 
   function deepClone(value) {

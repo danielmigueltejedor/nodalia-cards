@@ -243,8 +243,12 @@ test("shared configuration helpers reject prototype-manipulation keys", () => {
   utils.setByPath(target, "__proto__.injected", "yes");
   utils.setByPath(target, "constructor.prototype.polluted", true);
   assert.deepEqual(JSON.parse(JSON.stringify(target)), { safe: { nested: 42 } });
+  utils.deleteByPath(target, "constructor.prototype.toString");
+  utils.deleteByPath(target, "safe.nested");
+  assert.deepEqual(JSON.parse(JSON.stringify(target)), { safe: {} });
   assert.equal({}.injected, undefined);
   assert.equal({}.polluted, undefined);
+  assert.equal(typeof {}.toString, "function");
 });
 
 test("service actions use the hardened strict default", () => {
