@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.5] - 2026-08-11
+
+### Fixed
+
+- **Release packaging:** generated bundle inventory now includes every stale-artifact deletion, so the release workflow reproduces a clean tree and can publish the verified assets.
+
+### Changed
+
+- Carries forward the Air Quality height correction and CodeQL hardening prepared for `2.1.3-alpha.4`.
+- Updates CodeQL Action to `4.37.6`, pnpm/action-setup to `6.0.10` and actions/attest to `4.2.2`, with CodeQL init/analyze kept on the same revision.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.5`.
+
 ## [2.1.3-alpha.4] - 2026-08-11
 
 ### Fixed
