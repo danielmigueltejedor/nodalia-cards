@@ -1153,13 +1153,16 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._config?.layout === "air_quality" ? 5 : 3;
+    if (this._config?.layout === "air_quality") {
+      return this._config?.air_quality?.show_graphs === true ? 5 : 3;
+    }
+    return 3;
   }
 
   getGridOptions() {
     if (this._config?.layout === "air_quality") {
       return {
-        rows: 4,
+        rows: "auto",
         columns: 12,
         min_rows: 3,
         min_columns: 6,

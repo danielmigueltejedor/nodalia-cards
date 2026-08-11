@@ -316,12 +316,22 @@ function setByPath(target, path, value) {
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];
     if (!isObject(cursor[key])) {
-      cursor[key] = {};
+      Object.defineProperty(cursor, key, {
+        configurable: true,
+        enumerable: true,
+        value: {},
+        writable: true,
+      });
     }
     cursor = cursor[key];
   }
 
-  cursor[parts[parts.length - 1]] = value;
+  Object.defineProperty(cursor, parts[parts.length - 1], {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
 }
 
 function deleteByPath(target, path) {

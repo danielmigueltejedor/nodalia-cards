@@ -229,6 +229,28 @@ test("entity card air quality sparkline helpers build smooth paths", () => {
   assert.equal(helpers.buildAirQualityInterpolatedSamples([], 0, 1000, 4, 12).length, 4);
 });
 
+test("entity card air quality lets Home Assistant measure its dynamic height", () => {
+  const card = new Card();
+  card.setConfig({
+    entity: "sensor.nodalia_demo_aqi",
+    layout: "air_quality",
+    air_quality: { show_graphs: false },
+  });
+
+  assert.equal(card.getCardSize(), 3);
+  assert.equal(card.getGridOptions().rows, "auto");
+  assert.equal(card.getGridOptions().columns, 12);
+
+  card.setConfig({
+    entity: "sensor.nodalia_demo_aqi",
+    layout: "air_quality",
+    air_quality: { show_graphs: true },
+  });
+
+  assert.equal(card.getCardSize(), 5);
+  assert.equal(card.getGridOptions().rows, "auto");
+});
+
 test("entity card air quality demo package and example exist", () => {
   const demoPackage = read("examples/entity-card-air-quality-demo-package.yaml");
   assert.match(demoPackage, /default_entity_id:\s*sensor\.nodalia_demo_pm25/);

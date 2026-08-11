@@ -115,6 +115,15 @@
     return key === "__proto__" || key === "constructor" || key === "prototype";
   }
 
+  function defineOwnValue(target, key, value) {
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    });
+  }
+
   function setByPath(target, path, value) {
     const parts = String(path || "").split(".");
     if (parts.some(isUnsafeConfigPathKey)) {
@@ -124,11 +133,11 @@
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
       if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-        cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+        defineOwnValue(cursor, key, /^\d+$/.test(parts[index + 1]) ? [] : {});
       }
       cursor = cursor[key];
     }
-    cursor[parts[parts.length - 1]] = value;
+    defineOwnValue(cursor, parts[parts.length - 1], value);
   }
 
   function deleteByPath(target, path) {

@@ -818,7 +818,6 @@ function enToNl(s) {
     .replace(/^Enable haptics$/i, "Haptiek inschakelen")
     .replace(/^Show /, "Toon ")
     .replace(/^Enable /, "Schakel ")
-    .replace(/^Open /, "Open ")
     .replace(/^Icon$/i, "Pictogram")
     .replace(/^General$/i, "Algemeen")
     .replace(/^Styles$/i, "Stijlen")
