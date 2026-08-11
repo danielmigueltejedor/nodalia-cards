@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.4] - 2026-08-11
+
+### Fixed
+
+- **Entity Card air quality sizing:** Home Assistant now measures the card's real content height, including the optional history panel, so the card no longer overlaps the row below it.
+- **Configuration hardening:** dynamic configuration paths reject prototype keys and only mutate owned configuration data; translation utilities avoid time-of-check/time-of-use file access and apply complete escaping and HTML filtering.
+- **CodeQL:** resolved the 20 open JavaScript security and quality alerts covered by the hardened configuration and translation paths.
+
+### Changed
+
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.4`.
+
 ## [2.1.3-alpha.3] - 2026-08-10
 
 ### Added
