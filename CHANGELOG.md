@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.8] - 2026-08-12
+
+### Changed
+
+- **Fluid Air Quality hover:** time, value and marker position now interpolate continuously across a denser 96-sample history.
+- **Efficient hover rendering:** pointer movement updates only the graph overlays instead of rebuilding the Entity Card.
+- **Adaptive preview placement:** the hover chip follows the graph height and renders above or below the circular marker without covering it.
+
+### Validation
+
+- Full validation covers 420 Node tests, card syntax, version synchronization, i18n and generated release bundles.
+
 ## [2.1.3-alpha.7] - 2026-08-12
 
 ### Changed

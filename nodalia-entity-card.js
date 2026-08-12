@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.3-alpha.7";
+const CARD_VERSION = "2.1.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -88,7 +88,7 @@ const DEFAULT_CONFIG = {
     guidelines: "who",
     show_graphs: false,
     graph_hours: 24,
-    graph_points: 24,
+    graph_points: 96,
     graph_colors: {
       pm1: "#f29f05",
       pm25: "#42a5f5",
@@ -414,7 +414,7 @@ function normalizeAirQualityBlock(raw) {
     guidelines: String(source.guidelines ?? "who").trim().toLowerCase() === "none" ? "none" : "who",
     show_graphs: source.show_graphs === true,
     graph_hours: Number.isFinite(hours) ? clamp(Math.round(hours), 1, 168) : 24,
-    graph_points: Number.isFinite(points) ? clamp(Math.round(points), 8, 96) : 24,
+    graph_points: Number.isFinite(points) ? clamp(Math.round(points), 8, 96) : 96,
     graph_colors: Object.fromEntries(AIR_QUALITY_METRIC_KEYS.map(kind => [
       kind,
       sanitizeCssValue(graphColors[kind], AIR_QUALITY_GRAPH_SERIES_COLORS[kind]),
@@ -519,11 +519,29 @@ function getAirQualityHoverPayload(geometry, hoverState) {
   if (!path?.points?.length) {
     return null;
   }
-  const index = clamp(Math.round(Number(hoverState.index) || 0), 0, path.points.length - 1);
-  const point = path.points[index];
+  const requestedPosition = Number(hoverState.position);
+  const position = clamp(
+    Number.isFinite(requestedPosition) ? requestedPosition : (Number(hoverState.index) || 0),
+    0,
+    path.points.length - 1,
+  );
+  const leftIndex = Math.floor(position);
+  const rightIndex = Math.ceil(position);
+  const fraction = position - leftIndex;
+  const leftPoint = path.points[leftIndex];
+  const rightPoint = path.points[rightIndex] || leftPoint;
+  const interpolate = key => leftPoint[key] + ((rightPoint[key] - leftPoint[key]) * fraction);
+  const point = {
+    x: interpolate("x"),
+    y: interpolate("y"),
+    ts: interpolate("ts"),
+    value: interpolate("value"),
+  };
+  const index = clamp(Math.round(position), 0, path.points.length - 1);
   return {
     kind: path.kind,
     index,
+    position,
     label: path.label,
     unit: path.unit,
     color: path.color,
@@ -1103,6 +1121,8 @@ class NodaliaEntityCard extends HTMLElement {
     this._aqHistoryLoading = false;
     this._aqHoverPreview = null;
     this._aqHiddenSeries = new Set();
+    this._aqHoverTimeFormatter = null;
+    this._aqHoverTimeFormatterLocale = "";
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._lastRenderSignature = "";
@@ -1209,6 +1229,8 @@ class NodaliaEntityCard extends HTMLElement {
     this._clearOptimisticToggleTimer();
     this._clearAirQualityHistory();
     this._aqHoverPreview = null;
+    this._aqHoverTimeFormatter = null;
+    this._aqHoverTimeFormatterLocale = "";
   }
 
   setConfig(config) {
@@ -3048,7 +3070,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._aqHistoryAbort = controller;
     const aq = this._config?.air_quality || normalizeAirQualityBlock();
     const hours = Number(aq.graph_hours) || 24;
-    const pointsCount = Number(aq.graph_points) || 24;
+    const pointsCount = Number(aq.graph_points) || 96;
     const end = new Date();
     const start = new Date(end.getTime() - (hours * 60 * 60 * 1000));
 
@@ -3175,11 +3197,10 @@ class NodaliaEntityCard extends HTMLElement {
         ? `<path d="${escapeHtml(entry.linePath)}" fill="none" stroke="${escapeHtml(entry.color)}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"></path>`
         : ""
     )).join("");
-    const hoverMarker = hover
-      ? `
-        <line class="entity-card__aq-hover-line" x1="${hover.x.toFixed(2)}" x2="${hover.x.toFixed(2)}" y1="${geometry.paddingTop}" y2="${geometry.height - geometry.paddingBottom}"></line>
-      `
-      : "";
+    const hoverX = hover?.x ?? 0;
+    const hoverMarker = `
+      <line class="entity-card__aq-hover-line" x1="${hoverX.toFixed(2)}" x2="${hoverX.toFixed(2)}" y1="${geometry.paddingTop}" y2="${geometry.height - geometry.paddingBottom}"${hover ? "" : " hidden"}></line>
+    `;
     return `
       <svg class="entity-card__aq-chart" data-air-quality-chart="true" viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" aria-hidden="true">
         ${fills}
@@ -3203,8 +3224,64 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
     this._aqHoverPreview = null;
-    this._lastRenderSignature = "";
-    this._render();
+    if (!this._patchAirQualityHoverPreview(null, null)) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
+  }
+
+  _patchAirQualityHoverPreview(geometry = null, hoverState = this._aqHoverPreview) {
+    const line = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-line");
+    const point = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-point");
+    const chip = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-chip");
+    if (!line || !point || !chip) {
+      return false;
+    }
+    let resolvedGeometry = geometry;
+    if (!resolvedGeometry) {
+      const graphSeries = this._getAirQualityGraphSeries(
+        this._collectAirQualityMetrics(this._getState()).metrics,
+      );
+      resolvedGeometry = buildAirQualityChartGeometry(
+        this._getAirQualityChartEntries(graphSeries)
+          .filter(entry => !this._aqHiddenSeries.has(entry.kind)),
+      );
+    }
+    const hover = getAirQualityHoverPayload(resolvedGeometry, hoverState);
+    for (const element of [line, point, chip]) {
+      element.toggleAttribute("hidden", !hover);
+    }
+    if (!hover) {
+      return true;
+    }
+    const left = `${hover.xPercent.toFixed(3)}%`;
+    const top = `${hover.yPercent.toFixed(3)}%`;
+    line.setAttribute("x1", hover.x.toFixed(3));
+    line.setAttribute("x2", hover.x.toFixed(3));
+    point.style.setProperty("--aq-hover-left", left);
+    point.style.setProperty("--aq-hover-top", top);
+    point.style.setProperty("--aq-hover-color", hover.color);
+    chip.style.setProperty("--aq-hover-left", left);
+    chip.style.setProperty("--aq-hover-top", top);
+    chip.style.setProperty("--aq-hover-color", hover.color);
+    chip.dataset.aqHoverPlacement = hover.yPercent < 50 ? "below" : "above";
+    const label = chip.querySelector("[data-aq-hover-label]");
+    const value = chip.querySelector("[data-aq-hover-value]");
+    const time = chip.querySelector("[data-aq-hover-time]");
+    if (label) {
+      label.textContent = hover.label;
+    }
+    if (value) {
+      value.textContent = formatNumericValueWithUnit(
+        hover.value,
+        hover.unit,
+        this._getNumberDecimals(),
+      );
+    }
+    if (time) {
+      time.textContent = this._formatAirQualityHoverTime(hover.ts);
+    }
+    return true;
   }
 
   _onShadowPointerMove(event) {
@@ -3238,28 +3315,35 @@ class NodaliaEntityCard extends HTMLElement {
       if (!path.points.length) {
         return;
       }
-      const index = clamp(
-        Math.round(((x - geometry.paddingX) / Math.max(geometry.width - (geometry.paddingX * 2), 1)) * (path.points.length - 1)),
+      const position = clamp(
+        ((x - geometry.paddingX) / Math.max(geometry.width - (geometry.paddingX * 2), 1)) * (path.points.length - 1),
         0,
         path.points.length - 1,
       );
-      const point = path.points[index];
-      const distance = Math.abs(point.y - y);
+      const leftIndex = Math.floor(position);
+      const rightIndex = Math.ceil(position);
+      const fraction = position - leftIndex;
+      const leftPoint = path.points[leftIndex];
+      const rightPoint = path.points[rightIndex] || leftPoint;
+      const pointY = leftPoint.y + ((rightPoint.y - leftPoint.y) * fraction);
+      const distance = Math.abs(pointY - y);
       if (!nearest || distance < nearest.distance) {
-        nearest = { kind: path.kind, index, distance };
+        nearest = { kind: path.kind, position, distance };
       }
     });
     if (!nearest) {
       this._clearAirQualityHoverPreview();
       return;
     }
-    const key = `${nearest.kind}:${nearest.index}`;
+    const key = `${nearest.kind}:${nearest.position.toFixed(3)}`;
     if (this._aqHoverPreview?.key === key) {
       return;
     }
-    this._aqHoverPreview = { key, kind: nearest.kind, index: nearest.index };
-    this._lastRenderSignature = "";
-    this._render();
+    this._aqHoverPreview = { key, kind: nearest.kind, position: nearest.position };
+    if (!this._patchAirQualityHoverPreview(geometry, this._aqHoverPreview)) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
   }
 
   _onShadowPointerLeave() {
@@ -3273,10 +3357,15 @@ class NodaliaEntityCard extends HTMLElement {
     }
     const locale = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) || undefined;
     try {
-      return new Intl.DateTimeFormat(locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(date);
+      const localeKey = String(locale || "");
+      if (!this._aqHoverTimeFormatter || this._aqHoverTimeFormatterLocale !== localeKey) {
+        this._aqHoverTimeFormatter = new Intl.DateTimeFormat(locale, {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        this._aqHoverTimeFormatterLocale = localeKey;
+      }
+      return this._aqHoverTimeFormatter.format(date);
     } catch (_error) {
       return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     }
@@ -3374,25 +3463,28 @@ class NodaliaEntityCard extends HTMLElement {
     const chartSvg = aqConfig.show_graphs === true
       ? this._buildAirQualityChartSvg(chartEntries, this._aqHoverPreview)
       : "";
-    const chartHoverPoint = chartHover
+    const chartHoverPoint = chartSvg
       ? `
         <span
           class="entity-card__aq-hover-point"
-          style="--aq-hover-left:${chartHover.xPercent.toFixed(2)}%;--aq-hover-top:${chartHover.yPercent.toFixed(2)}%;--aq-hover-color:${escapeHtml(chartHover.color)};"
+          style="--aq-hover-left:${(chartHover?.xPercent ?? 0).toFixed(3)}%;--aq-hover-top:${(chartHover?.yPercent ?? 0).toFixed(3)}%;--aq-hover-color:${escapeHtml(chartHover?.color || "var(--primary-color)")};"
+          ${chartHover ? "" : "hidden"}
           aria-hidden="true"
         ></span>
       `
       : "";
-    const chartHoverChip = chartHover
+    const chartHoverChip = chartSvg
       ? `
         <div
           class="entity-card__aq-hover-chip"
-          style="--aq-hover-left:${chartHover.xPercent.toFixed(2)}%;--aq-hover-color:${escapeHtml(chartHover.color)};"
+          style="--aq-hover-left:${(chartHover?.xPercent ?? 0).toFixed(3)}%;--aq-hover-top:${(chartHover?.yPercent ?? 0).toFixed(3)}%;--aq-hover-color:${escapeHtml(chartHover?.color || "var(--primary-color)")};"
+          data-aq-hover-placement="${(chartHover?.yPercent ?? 0) < 50 ? "below" : "above"}"
+          ${chartHover ? "" : "hidden"}
         >
           <span class="entity-card__aq-hover-swatch"></span>
-          <span class="entity-card__aq-hover-label">${escapeHtml(chartHover.label)}</span>
-          <strong>${escapeHtml(formatNumericValueWithUnit(chartHover.value, chartHover.unit, this._getNumberDecimals()))}</strong>
-          <time>${escapeHtml(this._formatAirQualityHoverTime(chartHover.ts))}</time>
+          <span class="entity-card__aq-hover-label" data-aq-hover-label>${escapeHtml(chartHover?.label || "")}</span>
+          <strong data-aq-hover-value>${escapeHtml(chartHover ? formatNumericValueWithUnit(chartHover.value, chartHover.unit, this._getNumberDecimals()) : "")}</strong>
+          <time data-aq-hover-time>${escapeHtml(chartHover ? this._formatAirQualityHoverTime(chartHover.ts) : "")}</time>
         </div>
       `
       : "";
@@ -3706,6 +3798,12 @@ class NodaliaEntityCard extends HTMLElement {
           vector-effect: non-scaling-stroke;
         }
 
+        .entity-card__aq-hover-line[hidden],
+        .entity-card__aq-hover-point[hidden],
+        .entity-card__aq-hover-chip[hidden] {
+          display: none;
+        }
+
         .entity-card__aq-hover-point {
           background: var(--nodalia-entity-surface-base);
           border: 2px solid var(--aq-hover-color);
@@ -3739,10 +3837,15 @@ class NodaliaEntityCard extends HTMLElement {
           padding: 0 10px;
           pointer-events: none;
           position: absolute;
-          top: 7px;
-          transform: translateX(-50%);
+          top: clamp(4px, var(--aq-hover-top), calc(100% - 4px));
+          transform: translate(-50%, calc(-100% - 10px));
           white-space: nowrap;
+          will-change: left, top;
           z-index: 3;
+        }
+
+        .entity-card__aq-hover-chip[data-aq-hover-placement="below"] {
+          transform: translate(-50%, 10px);
         }
 
         .entity-card__aq-hover-swatch {

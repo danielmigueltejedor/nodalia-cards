@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.8] - 2026-08-12
+
+Eighth **`2.1.3`** alpha: fluid Air Quality graph inspection.
+
+### Changed
+
+- **Continuous hover:** the Air Quality chart interpolates time, value and marker position continuously instead of jumping between hourly samples.
+- **Denser history:** new Air Quality configurations use 96 graph samples by default instead of 24.
+- **Efficient overlay:** pointer movement patches only the hover line, marker and preview chip rather than rebuilding the complete card.
+- **Adaptive preview:** the hover chip follows the selected graph height and switches above or below the marker with a safe visual gap.
+
+### Validation
+
+- Full validation covers 420 Node tests, card syntax, version synchronization, i18n and generated production bundles.
+
+---
+
 ## [2.1.3-alpha.7] - 2026-08-12
 
 Seventh **`2.1.3`** alpha: selectable Air Quality history with improved visual contrast.

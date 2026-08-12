@@ -244,6 +244,7 @@ test("entity card air quality normalizes custom graph colors safely", () => {
   assert.equal(normalized.graph_colors.pm25, "#123456");
   assert.equal(normalized.graph_colors.pm10, helpers.AIR_QUALITY_GRAPH_SERIES_COLORS.pm10);
   assert.equal(normalized.graph_colors.humidity, helpers.AIR_QUALITY_GRAPH_SERIES_COLORS.humidity);
+  assert.equal(normalized.graph_points, 96);
 });
 
 test("entity card air quality chart geometry resolves the hovered sample", () => {
@@ -271,6 +272,77 @@ test("entity card air quality chart geometry resolves the hovered sample", () =>
   assert.ok(hover.yPercent > 0 && hover.yPercent < 100);
   assert.equal(geometry.paths[0].points[0].x, 0);
   assert.equal(geometry.paths[0].points.at(-1).x, 100);
+
+  const continuousHover = helpers.getAirQualityHoverPayload(geometry, { kind: "pm25", position: 0.5 });
+  assert.equal(continuousHover.value, 12);
+  assert.equal(continuousHover.ts, 1500);
+  assert.equal(continuousHover.xPercent, 25);
+  assert.equal(continuousHover.position, 0.5);
+});
+
+test("entity card air quality patches continuous hover overlays without rebuilding the card", () => {
+  const card = new Card();
+  const attributes = new Map();
+  const makeOverlay = () => ({
+    hidden: true,
+    style: {
+      values: new Map(),
+      setProperty(key, value) { this.values.set(key, value); },
+    },
+    setAttribute(key, value) { attributes.set(key, value); },
+    toggleAttribute(key, force) { this.hidden = Boolean(force); },
+  });
+  const line = makeOverlay();
+  const point = makeOverlay();
+  const label = { textContent: "" };
+  const value = { textContent: "" };
+  const time = { textContent: "" };
+  const chip = {
+    ...makeOverlay(),
+    dataset: {},
+    querySelector(selector) {
+      return {
+        "[data-aq-hover-label]": label,
+        "[data-aq-hover-value]": value,
+        "[data-aq-hover-time]": time,
+      }[selector] || null;
+    },
+  };
+  card.shadowRoot.querySelector = selector => ({
+    ".entity-card__aq-hover-line": line,
+    ".entity-card__aq-hover-point": point,
+    ".entity-card__aq-hover-chip": chip,
+  }[selector] || null);
+  const geometry = helpers.buildAirQualityChartGeometry([{
+    kind: "pm25",
+    label: "PM2.5",
+    unit: "µg/m³",
+    color: "#123456",
+    samples: [
+      { ts: 1000, value: 10 },
+      { ts: 2000, value: 14 },
+    ],
+  }]);
+
+  assert.equal(card._patchAirQualityHoverPreview(geometry, { kind: "pm25", position: 0.5 }), true);
+  assert.equal(line.hidden, false);
+  assert.equal(point.hidden, false);
+  assert.equal(chip.hidden, false);
+  assert.equal(attributes.get("x1"), "50.000");
+  assert.equal(label.textContent, "PM2.5");
+  assert.equal(value.textContent, "12 µg/m³");
+  assert.equal(point.style.values.get("--aq-hover-left"), "50.000%");
+  assert.equal(chip.style.values.get("--aq-hover-top"), "50.000%");
+  assert.equal(chip.dataset.aqHoverPlacement, "above");
+
+  assert.equal(card._patchAirQualityHoverPreview(geometry, { kind: "pm25", position: 1 }), true);
+  assert.equal(chip.dataset.aqHoverPlacement, "below");
+  assert.equal(chip.style.values.get("--aq-hover-top"), "7.143%");
+
+  assert.equal(card._patchAirQualityHoverPreview(geometry, null), true);
+  assert.equal(line.hidden, true);
+  assert.equal(point.hidden, true);
+  assert.equal(chip.hidden, true);
 });
 
 test("entity card air quality metric chips open their own entity more-info dialog", () => {
