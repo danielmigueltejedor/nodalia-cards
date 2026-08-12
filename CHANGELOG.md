@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.6] - 2026-08-12
+
+### Added
+
+- **Air Quality graph colors:** every PM, TVOC, CO₂, temperature and humidity series now has its own color picker in the Entity Card visual editor.
+- **Air Quality graph inspection:** mouse hover selects the nearest series and timestamp, showing a theme-aware chip with its label, value, unit and time.
+
+### Changed
+
+- **Metric navigation:** Air Quality metric chips and graph legend items open `more-info` for the sensor they represent; primary AQI chips continue to target the main entity.
+- **Chart composition:** history lines now start and end at the inner edges of the chart panel without horizontal plot padding.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n and generated release bundles.
+
 ## [2.1.3-alpha.5] - 2026-08-11
 
 ### Fixed

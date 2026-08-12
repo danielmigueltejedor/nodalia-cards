@@ -280,6 +280,8 @@
   "ed.entity.add_action": "Actie toevoegen",
   "ed.entity.air_quality_co2": "CO₂-sensor",
   "ed.entity.air_quality_graph_hours": "Grafiekuren",
+  "ed.entity.air_quality_graph_colors": "Kleuren van grafiekreeksen",
+  "ed.entity.air_quality_graph_colors_hint": "Kies de lijnkleur voor elke geconfigureerde sensor.",
   "ed.entity.air_quality_guidelines": "Richtlijnbanden",
   "ed.entity.air_quality_guidelines_none": "Geen",
   "ed.entity.air_quality_guidelines_who": "WHO 24u AQG",

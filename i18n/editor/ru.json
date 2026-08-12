@@ -280,6 +280,8 @@
   "ed.entity.add_action": "Добавить действие",
   "ed.entity.air_quality_co2": "Датчик CO₂",
   "ed.entity.air_quality_graph_hours": "Часы графика",
+  "ed.entity.air_quality_graph_colors": "Цвета рядов графика",
+  "ed.entity.air_quality_graph_colors_hint": "Выберите цвет линии для каждого настроенного датчика.",
   "ed.entity.air_quality_guidelines": "Пороговые зоны",
   "ed.entity.air_quality_guidelines_none": "Нет",
   "ed.entity.air_quality_guidelines_who": "ВОЗ AQG 24 ч",

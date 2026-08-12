@@ -10,6 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.6] - 2026-08-12
+
+Sixth **`2.1.3`** alpha: interactive and theme-configurable Air Quality history.
+
+### Added
+
+- **Graph series colors:** the Entity Card visual editor exposes an individual color picker for PM1, PM2.5, PM4, PM10, TVOC, CO₂, temperature and humidity.
+- **Hover preview:** hovering the history chart highlights the nearest line sample and shows its sensor label, value, unit and localized time in a Weather-style chip.
+
+### Changed
+
+- Air Quality measurement chips and legend entries open Home Assistant `more-info` for their own sensor instead of the main card entity.
+- History paths span the complete inner width of the graph panel, eliminating the visible left and right margins.
+- Editor labels for the new color controls are available in all twelve supported languages.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n, generated bundles and release metadata.
+
+---
+
 ## [2.1.3-alpha.5] - 2026-08-11
 
 Fifth **`2.1.3`** alpha: publishable Air Quality sizing and CodeQL hardening release.

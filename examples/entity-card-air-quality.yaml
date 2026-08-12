@@ -8,6 +8,15 @@ air_quality:
   guidelines: who
   show_graphs: true
   graph_hours: 24
+  graph_colors:
+    pm1: "#f29f05"
+    pm25: "#42a5f5"
+    pm4: "#7fd0c8"
+    pm10: "#f56aa0"
+    tvoc: "#b993ff"
+    co2: "#7ad66f"
+    temperature: "#d4783a"
+    humidity: "#3f9d7a"
   pm1: sensor.nodalia_demo_pm1
   pm25: sensor.nodalia_demo_pm25
   pm4: sensor.nodalia_demo_pm4

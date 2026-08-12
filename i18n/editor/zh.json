@@ -280,6 +280,8 @@
   "ed.entity.add_action": "添加操作",
   "ed.entity.air_quality_co2": "CO₂ 传感器",
   "ed.entity.air_quality_graph_hours": "图表小时数",
+  "ed.entity.air_quality_graph_colors": "图表系列颜色",
+  "ed.entity.air_quality_graph_colors_hint": "为每个已配置的传感器选择线条颜色。",
   "ed.entity.air_quality_guidelines": "指南色带",
   "ed.entity.air_quality_guidelines_none": "无",
   "ed.entity.air_quality_guidelines_who": "世卫组织 24 小时 AQG",

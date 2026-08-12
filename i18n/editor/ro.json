@@ -280,6 +280,8 @@
   "ed.entity.add_action": "Adăugați o acțiune",
   "ed.entity.air_quality_co2": "Senzor CO₂",
   "ed.entity.air_quality_graph_hours": "Ore grafic",
+  "ed.entity.air_quality_graph_colors": "Culorile seriilor",
+  "ed.entity.air_quality_graph_colors_hint": "Alegeți culoarea liniei pentru fiecare senzor configurat.",
   "ed.entity.air_quality_guidelines": "Benzi de referință",
   "ed.entity.air_quality_guidelines_none": "Niciuna",
   "ed.entity.air_quality_guidelines_who": "OMS AQG 24 h",

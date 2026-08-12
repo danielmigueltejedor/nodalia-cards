@@ -206,6 +206,8 @@ test("entity card air quality layout renders metric grid and WHO tint", () => {
   assert.match(html, /entity-card__headline[\s\S]*48/);
   assert.match(html, /WHO 24h AQG/);
   assert.match(html, /PM2\.5/);
+  assert.match(html, /data-entity="sensor\.nodalia_demo_co2"/);
+  assert.match(html, /data-entity="sensor\.nodalia_demo_temperature"/);
   assert.match(html, /entity-card__aq-chart-panel/);
   const metricsHtml = html.split('class="entity-card__aq-metrics"')[1] || "";
   assert.doesNotMatch(metricsHtml, /22\.4/);
@@ -227,6 +229,117 @@ test("entity card air quality sparkline helpers build smooth paths", () => {
   assert.match(helpers.buildAirQualitySmoothPath(points), /^M /);
   assert.match(helpers.buildAirQualityAreaPath(points, 20), / Z$/);
   assert.equal(helpers.buildAirQualityInterpolatedSamples([], 0, 1000, 4, 12).length, 4);
+});
+
+test("entity card air quality normalizes custom graph colors safely", () => {
+  const normalized = helpers.normalizeAirQualityBlock({
+    graph_colors: {
+      pm25: "#123456",
+      pm10: "red;display:none",
+    },
+  });
+
+  assert.equal(normalized.graph_colors.pm25, "#123456");
+  assert.equal(normalized.graph_colors.pm10, helpers.AIR_QUALITY_GRAPH_SERIES_COLORS.pm10);
+  assert.equal(normalized.graph_colors.humidity, helpers.AIR_QUALITY_GRAPH_SERIES_COLORS.humidity);
+});
+
+test("entity card air quality chart geometry resolves the hovered sample", () => {
+  const geometry = helpers.buildAirQualityChartGeometry([
+    {
+      kind: "pm25",
+      label: "PM2.5",
+      unit: "µg/m³",
+      color: "#123456",
+      samples: [
+        { ts: 1000, value: 10 },
+        { ts: 2000, value: 14 },
+        { ts: 3000, value: 12 },
+      ],
+    },
+  ]);
+  const hover = helpers.getAirQualityHoverPayload(geometry, { kind: "pm25", index: 1 });
+
+  assert.equal(geometry.paths.length, 1);
+  assert.match(geometry.paths[0].linePath, /^M /);
+  assert.equal(hover.value, 14);
+  assert.equal(hover.ts, 2000);
+  assert.equal(hover.color, "#123456");
+  assert.equal(hover.xPercent, 50);
+  assert.equal(geometry.paths[0].points[0].x, 0);
+  assert.equal(geometry.paths[0].points.at(-1).x, 100);
+});
+
+test("entity card air quality metric chips open their own entity more-info dialog", () => {
+  const card = new Card();
+  let moreInfoDetail = null;
+  card.dispatchEvent = event => {
+    moreInfoDetail = event.detail;
+    return true;
+  };
+  card.dataset = {
+    entityAction: "metric-info",
+    entity: "sensor.living_room_co2",
+  };
+
+  card._onShadowClick({
+    composedPath: () => [card],
+    preventDefault() {},
+    stopPropagation() {},
+  });
+
+  assert.equal(moreInfoDetail.entityId, "sensor.living_room_co2");
+});
+
+test("entity card air quality renders custom series colors and hover chip", () => {
+  const card = new Card();
+  card.setConfig({
+    entity: "sensor.air_quality",
+    layout: "air_quality",
+    air_quality: {
+      show_graphs: true,
+      pm25: "sensor.pm25",
+      graph_colors: { pm25: "#123456" },
+    },
+  });
+  card.hass = {
+    states: {
+      "sensor.air_quality": {
+        entity_id: "sensor.air_quality",
+        state: "42",
+        attributes: { device_class: "aqi", friendly_name: "Air quality" },
+      },
+      "sensor.pm25": {
+        entity_id: "sensor.pm25",
+        state: "14",
+        attributes: { device_class: "pm25", unit_of_measurement: "µg/m³" },
+      },
+    },
+  };
+  card._aqHistoryCache = {
+    entries: [{
+      kind: "pm25",
+      entityId: "sensor.pm25",
+      label: "PM2.5",
+      unit: "µg/m³",
+      color: "#42a5f5",
+      samples: [
+        { ts: 1000, value: 10 },
+        { ts: 2000, value: 14 },
+      ],
+    }],
+  };
+  card._aqHoverPreview = { key: "pm25:1", kind: "pm25", index: 1 };
+  card._render();
+
+  const html = String(card.shadowRoot.innerHTML);
+  assert.match(html, /data-air-quality-chart="true"/);
+  assert.match(html, /entity-card__aq-hover-chip/);
+  assert.match(html, /#123456/);
+  assert.match(html, /PM2\.5/);
+  assert.match(html, /14 µg\/m³/);
+  card.isConnected = false;
+  card._clearAirQualityHistory?.();
 });
 
 test("entity card air quality lets Home Assistant measure its dynamic height", () => {
@@ -259,4 +372,6 @@ test("entity card air quality demo package and example exist", () => {
   assert.match(read("nodalia-entity-card.js"), /layout === "air_quality"/);
   assert.match(read("nodalia-entity-card.js"), /_renderAirQualityLayout/);
   assert.match(read("nodalia-entity-card.js"), /AIR_QUALITY_WHO_BANDS/);
+  assert.match(read("nodalia-entity-card.js"), /air_quality\.graph_colors\.\$\{kind\}/);
+  assert.match(read("examples/entity-card-air-quality.yaml"), /graph_colors:/);
 });

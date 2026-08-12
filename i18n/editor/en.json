@@ -280,6 +280,8 @@
   "ed.entity.add_action": "Add action",
   "ed.entity.air_quality_co2": "CO₂ sensor",
   "ed.entity.air_quality_graph_hours": "Graph hours",
+  "ed.entity.air_quality_graph_colors": "Graph series colors",
+  "ed.entity.air_quality_graph_colors_hint": "Choose the line color used for each configured sensor.",
   "ed.entity.air_quality_guidelines": "Guideline bands",
   "ed.entity.air_quality_guidelines_none": "None",
   "ed.entity.air_quality_guidelines_who": "WHO 24h AQG",

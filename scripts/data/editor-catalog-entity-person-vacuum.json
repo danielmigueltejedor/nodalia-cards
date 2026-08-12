@@ -64,6 +64,32 @@
     "el": "Ώρες γραφήματος",
     "ro": "Ore grafic"
   },
+  "ed.entity.air_quality_graph_colors": {
+    "en": "Graph series colors",
+    "es": "Colores de las series",
+    "zh": "图表系列颜色",
+    "de": "Farben der Diagrammreihen",
+    "fr": "Couleurs des séries",
+    "it": "Colori delle serie",
+    "nl": "Kleuren van grafiekreeksen",
+    "pt": "Cores das séries",
+    "ru": "Цвета рядов графика",
+    "el": "Χρώματα σειρών γραφήματος",
+    "ro": "Culorile seriilor"
+  },
+  "ed.entity.air_quality_graph_colors_hint": {
+    "en": "Choose the line color used for each configured sensor.",
+    "es": "Elige el color de línea de cada sensor configurado.",
+    "zh": "为每个已配置的传感器选择线条颜色。",
+    "de": "Wähle die Linienfarbe für jeden konfigurierten Sensor.",
+    "fr": "Choisissez la couleur de ligne de chaque capteur configuré.",
+    "it": "Scegli il colore della linea per ogni sensore configurato.",
+    "nl": "Kies de lijnkleur voor elke geconfigureerde sensor.",
+    "pt": "Escolha a cor da linha de cada sensor configurado.",
+    "ru": "Выберите цвет линии для каждого настроенного датчика.",
+    "el": "Επιλέξτε το χρώμα γραμμής για κάθε διαμορφωμένο αισθητήρα.",
+    "ro": "Alegeți culoarea liniei pentru fiecare senzor configurat."
+  },
   "ed.entity.air_quality_guidelines": {
     "en": "Guideline bands",
     "es": "Bandas de referencia",

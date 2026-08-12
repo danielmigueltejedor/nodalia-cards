@@ -280,6 +280,8 @@
   "ed.entity.add_action": "Ajouter une action",
   "ed.entity.air_quality_co2": "Capteur CO₂",
   "ed.entity.air_quality_graph_hours": "Heures du graphique",
+  "ed.entity.air_quality_graph_colors": "Couleurs des séries",
+  "ed.entity.air_quality_graph_colors_hint": "Choisissez la couleur de ligne de chaque capteur configuré.",
   "ed.entity.air_quality_guidelines": "Bandes de référence",
   "ed.entity.air_quality_guidelines_none": "Aucune",
   "ed.entity.air_quality_guidelines_who": "OMS AQG 24 h",
