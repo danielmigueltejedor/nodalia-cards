@@ -133,7 +133,7 @@
     if (hue === null || Number.isNaN(hue)) {
       return false;
     }
-    if (hue >= 65 && hue <= 155) {
+    if (hue >= 65 && hue <= 165) {
       return true;
     }
     if (hue >= 165 && hue <= 275) {

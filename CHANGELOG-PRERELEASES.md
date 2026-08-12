@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.7] - 2026-08-12
+
+Seventh **`2.1.3`** alpha: selectable Air Quality history with improved visual contrast.
+
+### Changed
+
+- **Interactive graph legend:** tapping a legend label now toggles that individual history series, while the measurement chips continue to open Home Assistant `more-info` for their own sensors.
+- **Hover marker:** the highlighted sample uses a small, fixed circular marker that remains round at every card aspect ratio.
+- **Icon contrast:** green and blue-green Air Quality tints now use the shared theme-aware light/dark glyph treatment for clearer main-entity icons.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n and generated production bundles.
+
+---
+
 ## [2.1.3-alpha.6] - 2026-08-12
 
 Sixth **`2.1.3`** alpha: interactive and theme-configurable Air Quality history.

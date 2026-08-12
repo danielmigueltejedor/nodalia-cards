@@ -106,6 +106,7 @@ function loadAirQualityHelpers() {
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-bubble-contrast.js"), sandbox);
   vm.runInContext(read("nodalia-entity-card.js"), sandbox);
   return {
     helpers: sandbox.__NODALIA_ENTITY_AIR_QUALITY__,
@@ -209,6 +210,7 @@ test("entity card air quality layout renders metric grid and WHO tint", () => {
   assert.match(html, /data-entity="sensor\.nodalia_demo_co2"/);
   assert.match(html, /data-entity="sensor\.nodalia_demo_temperature"/);
   assert.match(html, /entity-card__aq-chart-panel/);
+  assert.match(html, /color-mix\(in srgb, var\(--primary-text-color\) 56%, #3f9d7a\)/);
   const metricsHtml = html.split('class="entity-card__aq-metrics"')[1] || "";
   assert.doesNotMatch(metricsHtml, /22\.4/);
   assert.doesNotMatch(metricsHtml, /48 %/);
@@ -266,6 +268,7 @@ test("entity card air quality chart geometry resolves the hovered sample", () =>
   assert.equal(hover.ts, 2000);
   assert.equal(hover.color, "#123456");
   assert.equal(hover.xPercent, 50);
+  assert.ok(hover.yPercent > 0 && hover.yPercent < 100);
   assert.equal(geometry.paths[0].points[0].x, 0);
   assert.equal(geometry.paths[0].points.at(-1).x, 100);
 });
@@ -335,9 +338,37 @@ test("entity card air quality renders custom series colors and hover chip", () =
   const html = String(card.shadowRoot.innerHTML);
   assert.match(html, /data-air-quality-chart="true"/);
   assert.match(html, /entity-card__aq-hover-chip/);
+  assert.match(html, /class="entity-card__aq-hover-point"/);
+  assert.doesNotMatch(html, /<circle[^>]*entity-card__aq-hover-point/);
+  assert.match(html, /data-entity-action="graph-series-toggle"/);
+  assert.match(html, /aria-pressed="true"/);
   assert.match(html, /#123456/);
   assert.match(html, /PM2\.5/);
   assert.match(html, /14 µg\/m³/);
+
+  card.dataset = {
+    entityAction: "graph-series-toggle",
+    seriesKind: "pm25",
+  };
+  card._onShadowClick({
+    composedPath: () => [card],
+    preventDefault() {},
+    stopPropagation() {},
+  });
+
+  assert.equal(card._aqHiddenSeries.has("pm25"), true);
+  assert.match(String(card.shadowRoot.innerHTML), /entity-card__aq-legend-item--hidden/);
+  assert.match(String(card.shadowRoot.innerHTML), /aria-pressed="false"/);
+  assert.doesNotMatch(String(card.shadowRoot.innerHTML), /data-air-quality-chart="true"/);
+
+  card._onShadowClick({
+    composedPath: () => [card],
+    preventDefault() {},
+    stopPropagation() {},
+  });
+
+  assert.equal(card._aqHiddenSeries.has("pm25"), false);
+  assert.match(String(card.shadowRoot.innerHTML), /data-air-quality-chart="true"/);
   card.isConnected = false;
   card._clearAirQualityHistory?.();
 });

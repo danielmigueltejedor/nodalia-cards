@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.3-alpha.6";
+const CARD_VERSION = "2.1.3-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -532,6 +532,7 @@ function getAirQualityHoverPayload(geometry, hoverState) {
     x: point.x,
     y: point.y,
     xPercent: clamp((point.x / geometry.width) * 100, 0, 100),
+    yPercent: clamp((point.y / geometry.height) * 100, 0, 100),
   };
 }
 
@@ -1101,6 +1102,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._aqHistoryTimer = 0;
     this._aqHistoryLoading = false;
     this._aqHoverPreview = null;
+    this._aqHiddenSeries = new Set();
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._lastRenderSignature = "";
@@ -1221,6 +1223,7 @@ class NodaliaEntityCard extends HTMLElement {
     );
     this._lastRenderSignature = "";
     this._aqHoverPreview = null;
+    this._aqHiddenSeries.clear();
     this._selectPickerOpen = false;
     this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
     this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
@@ -1331,6 +1334,7 @@ class NodaliaEntityCard extends HTMLElement {
       `aqs:${aq.show_graphs === true ? 1 : 0}`,
       `aqh:${Number(aq.graph_hours) || 24}`,
       `aqcl:${AIR_QUALITY_METRIC_KEYS.map(key => String(aq.graph_colors?.[key] || "")).join(",")}`,
+      `aqv:${[...this._aqHiddenSeries].sort().join(",")}`,
       `aq:${aqParts.join(";")}`,
       `aqc:${this._aqHistoryCache ? 1 : 0}`,
     ].join("|");
@@ -2656,7 +2660,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (action === "select-option" || action === "quick" || action === "metric-info") {
+    if (action === "select-option" || action === "quick" || action === "metric-info" || action === "graph-series-toggle") {
       this._triggerEntityPressFeedback(action, actionTarget);
     }
   }
@@ -2675,6 +2679,24 @@ class NodaliaEntityCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
+
+    if (action === "graph-series-toggle") {
+      const kind = String(actionTarget.dataset.seriesKind || "").trim();
+      if (!AIR_QUALITY_METRIC_KEYS.includes(kind)) {
+        return;
+      }
+      if (this._aqHiddenSeries.has(kind)) {
+        this._aqHiddenSeries.delete(kind);
+      } else {
+        this._aqHiddenSeries.add(kind);
+      }
+      if (this._aqHoverPreview?.kind === kind) {
+        this._aqHoverPreview = null;
+      }
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
 
     if (action === "metric-info") {
       this._openMoreInfo(String(actionTarget.dataset.entity || "").trim());
@@ -3156,7 +3178,6 @@ class NodaliaEntityCard extends HTMLElement {
     const hoverMarker = hover
       ? `
         <line class="entity-card__aq-hover-line" x1="${hover.x.toFixed(2)}" x2="${hover.x.toFixed(2)}" y1="${geometry.paddingTop}" y2="${geometry.height - geometry.paddingBottom}"></line>
-        <circle class="entity-card__aq-hover-point" cx="${hover.x.toFixed(2)}" cy="${hover.y.toFixed(2)}" r="2.15" style="--aq-hover-color:${escapeHtml(hover.color)};"></circle>
       `
       : "";
     return `
@@ -3201,7 +3222,10 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
     const graphSeries = this._getAirQualityGraphSeries(this._collectAirQualityMetrics(this._getState()).metrics);
-    const geometry = buildAirQualityChartGeometry(this._getAirQualityChartEntries(graphSeries));
+    const geometry = buildAirQualityChartGeometry(
+      this._getAirQualityChartEntries(graphSeries)
+        .filter(entry => !this._aqHiddenSeries.has(entry.kind)),
+    );
     const rect = chart.getBoundingClientRect();
     if (!geometry.paths.length || !rect.width || !rect.height) {
       this._clearAirQualityHoverPreview();
@@ -3299,6 +3323,15 @@ class NodaliaEntityCard extends HTMLElement {
       ? (this._getIcon(primaryState) || "mdi:air-filter")
       : (String(config.icon || "").trim() || "mdi:air-filter");
     const accentColor = summary.accent;
+    const iconContrastState = primaryState || metrics
+      .map(metric => this._hass?.states?.[metric.infoEntityId])
+      .find(Boolean);
+    const darkenIconGlyph = iconContrastState
+      ? shouldDarkenEntityBubbleIconGlyph(iconContrastState, accentColor)
+      : false;
+    const iconGlyphColor = darkenIconGlyph
+      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+      : accentColor;
     const levelLabel = this._airQualityLevelLabel(summary.overall);
     const guidelinesLabel = guidelines === "who"
       ? this._entityCardUi("airQuality.whoGuidelines", "WHO 24h AQG")
@@ -3334,11 +3367,21 @@ class NodaliaEntityCard extends HTMLElement {
     const pollutionMetrics = metrics.filter(metric => !AIR_QUALITY_COMFORT_KEYS.has(metric.kind));
     const graphSeries = this._getAirQualityGraphSeries(metrics);
     this._scheduleAirQualityHistory(graphSeries);
-    const chartEntries = this._getAirQualityChartEntries(graphSeries);
+    const allChartEntries = this._getAirQualityChartEntries(graphSeries);
+    const chartEntries = allChartEntries.filter(entry => !this._aqHiddenSeries.has(entry.kind));
     const chartGeometry = buildAirQualityChartGeometry(chartEntries);
     const chartHover = getAirQualityHoverPayload(chartGeometry, this._aqHoverPreview);
     const chartSvg = aqConfig.show_graphs === true
       ? this._buildAirQualityChartSvg(chartEntries, this._aqHoverPreview)
+      : "";
+    const chartHoverPoint = chartHover
+      ? `
+        <span
+          class="entity-card__aq-hover-point"
+          style="--aq-hover-left:${chartHover.xPercent.toFixed(2)}%;--aq-hover-top:${chartHover.yPercent.toFixed(2)}%;--aq-hover-color:${escapeHtml(chartHover.color)};"
+          aria-hidden="true"
+        ></span>
+      `
       : "";
     const chartHoverChip = chartHover
       ? `
@@ -3397,18 +3440,23 @@ class NodaliaEntityCard extends HTMLElement {
       `;
     }).join("");
 
-    const legendChips = chartEntries.map(entry => `
+    const legendChips = allChartEntries.map(entry => {
+      const isVisible = !this._aqHiddenSeries.has(entry.kind);
+      return `
       <button
         type="button"
-        class="entity-card__aq-legend-item"
-        data-entity-action="metric-info"
-        data-entity="${escapeHtml(entry.entityId)}"
+        class="entity-card__aq-legend-item ${isVisible ? "" : "entity-card__aq-legend-item--hidden"}"
+        style="--aq-series-color:${escapeHtml(entry.color)};"
+        data-entity-action="graph-series-toggle"
+        data-series-kind="${escapeHtml(entry.kind)}"
+        aria-pressed="${String(isVisible)}"
         aria-label="${escapeHtml(entry.label)}"
       >
-        <span class="entity-card__aq-legend-swatch" style="background:${escapeHtml(entry.color)};"></span>
+        <span class="entity-card__aq-legend-swatch"></span>
         <span>${escapeHtml(entry.label)}</span>
       </button>
-    `).join("");
+    `;
+    }).join("");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -3491,7 +3539,7 @@ class NodaliaEntityCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.16);
-          color: ${accentColor};
+          color: ${iconGlyphColor};
           display: inline-flex;
           flex: 0 0 auto;
           height: ${iconSize};
@@ -3506,7 +3554,7 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__icon ha-icon {
           --mdc-icon-size: calc(${iconSize} * 0.44);
-          color: ${accentColor};
+          color: ${iconGlyphColor};
           display: inline-flex;
           height: calc(${iconSize} * 0.44);
           left: 50%;
@@ -3659,10 +3707,18 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__aq-hover-point {
-          fill: var(--nodalia-entity-surface-base);
-          stroke: var(--aq-hover-color);
-          stroke-width: 1.7;
-          vector-effect: non-scaling-stroke;
+          background: var(--nodalia-entity-surface-base);
+          border: 2px solid var(--aq-hover-color);
+          border-radius: 50%;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--nodalia-entity-surface-base) 72%, transparent);
+          height: 8px;
+          left: clamp(4px, var(--aq-hover-left), calc(100% - 4px));
+          pointer-events: none;
+          position: absolute;
+          top: clamp(4px, var(--aq-hover-top), calc(100% - 4px));
+          transform: translate(-50%, -50%);
+          width: 8px;
+          z-index: 2;
         }
 
         .entity-card__aq-hover-chip {
@@ -3686,7 +3742,7 @@ class NodaliaEntityCard extends HTMLElement {
           top: 7px;
           transform: translateX(-50%);
           white-space: nowrap;
-          z-index: 2;
+          z-index: 3;
         }
 
         .entity-card__aq-hover-swatch {
@@ -3736,13 +3792,26 @@ class NodaliaEntityCard extends HTMLElement {
           gap: 6px;
           margin: 0;
           padding: 0;
+          transition: color 140ms ease, opacity 140ms ease;
         }
 
         .entity-card__aq-legend-swatch {
+          background: var(--aq-series-color);
           border-radius: 999px;
           display: inline-block;
           height: 8px;
+          transition: background 140ms ease, box-shadow 140ms ease;
           width: 8px;
+        }
+
+        .entity-card__aq-legend-item--hidden {
+          opacity: 0.44;
+          text-decoration: line-through;
+        }
+
+        .entity-card__aq-legend-item--hidden .entity-card__aq-legend-swatch {
+          background: transparent;
+          box-shadow: inset 0 0 0 1.5px var(--aq-series-color);
         }
 
         .entity-card__aq-chart-empty {
@@ -3807,8 +3876,10 @@ class NodaliaEntityCard extends HTMLElement {
                   <div class="entity-card__aq-chart-wrap">
                     ${
                       chartSvg
-                        ? `${chartSvg}${chartHoverChip}`
-                        : `<div class="entity-card__aq-chart-empty">${escapeHtml(
+                        ? `${chartSvg}${chartHoverPoint}${chartHoverChip}`
+                        : allChartEntries.length > 0 && chartEntries.length === 0
+                          ? ""
+                          : `<div class="entity-card__aq-chart-empty">${escapeHtml(
                           this._aqHistoryLoading
                             ? this._entityCardUi("airQuality.loadingGraphs", "Loading history…")
                             : this._entityCardUi("airQuality.emptyGraphs", "No history yet"),

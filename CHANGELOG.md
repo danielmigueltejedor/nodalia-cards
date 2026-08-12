@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.7] - 2026-08-12
+
+### Changed
+
+- **Interactive Air Quality legend:** graph labels now toggle individual history series while the measurement chips retain their entity-specific `more-info` action.
+- **Hover marker:** the selected sample uses a compact circular marker that cannot stretch with the chart SVG.
+- **Icon contrast:** green and blue-green Air Quality tints now use the shared theme-aware glyph contrast treatment.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n and generated release bundles.
+
 ## [2.1.3-alpha.6] - 2026-08-12
 
 ### Added
