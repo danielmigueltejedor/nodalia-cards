@@ -8,6 +8,15 @@ air_quality:
   guidelines: who
   show_graphs: true
   graph_hours: 24
+  graph_series:
+    pm1: true
+    pm25: true
+    pm4: true
+    pm10: true
+    tvoc: true
+    co2: true
+    temperature: false
+    humidity: false
   graph_colors:
     pm1: "#f29f05"
     pm25: "#42a5f5"

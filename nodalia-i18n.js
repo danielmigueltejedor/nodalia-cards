@@ -726,6 +726,30 @@
           },
           loadingGraphs: "Loading history…",
           emptyGraphs: "No history yet"
+        },
+        battery: {
+          title: "Batteries",
+          subtitle: "Battery overview",
+          average: "average",
+          devices: "devices"
+        },
+        network: {
+          title: "Network",
+          subtitle: "Connection overview",
+          metrics: "metrics",
+          roles: {
+            status: "Status",
+            download: "Download",
+            upload: "Upload",
+            latency: "Latency",
+            signal: "Signal",
+            traffic: "Traffic"
+          }
+        },
+        overview: {
+          empty: "Add entities in the visual editor.",
+          unavailable: "Unavailable",
+          unconfigured: "Not configured"
         }
       },
       weatherCard: {
@@ -1723,6 +1747,30 @@
           },
           loadingGraphs: "Verlauf wird geladen…",
           emptyGraphs: "Noch kein Verlauf"
+        },
+        battery: {
+          title: "Batterien",
+          subtitle: "Batterieübersicht",
+          average: "Durchschnitt",
+          devices: "Geräte"
+        },
+        network: {
+          title: "Netzwerk",
+          subtitle: "Verbindungsübersicht",
+          metrics: "Messwerte",
+          roles: {
+            status: "Status",
+            download: "Download",
+            upload: "Upload",
+            latency: "Latenz",
+            signal: "Signal",
+            traffic: "Datenverkehr"
+          }
+        },
+        overview: {
+          empty: "Füge Entitäten im visuellen Editor hinzu.",
+          unavailable: "Nicht verfügbar",
+          unconfigured: "Nicht konfiguriert"
         }
       },
       weatherCard: {
@@ -2720,6 +2768,30 @@
           },
           loadingGraphs: "Φόρτωση ιστορικού…",
           emptyGraphs: "Δεν υπάρχει ακόμα ιστορικό"
+        },
+        battery: {
+          title: "Μπαταρίες",
+          subtitle: "Επισκόπηση μπαταριών",
+          average: "μέσος όρος",
+          devices: "συσκευές"
+        },
+        network: {
+          title: "Δίκτυο",
+          subtitle: "Επισκόπηση σύνδεσης",
+          metrics: "μετρήσεις",
+          roles: {
+            status: "Κατάσταση",
+            download: "Λήψη",
+            upload: "Μεταφόρτωση",
+            latency: "Καθυστέρηση",
+            signal: "Σήμα",
+            traffic: "Κίνηση"
+          }
+        },
+        overview: {
+          empty: "Προσθέστε οντότητες στον οπτικό επεξεργαστή.",
+          unavailable: "Μη διαθέσιμο",
+          unconfigured: "Δεν έχει ρυθμιστεί"
         }
       },
       weatherCard: {
@@ -3717,6 +3789,30 @@
           },
           loadingGraphs: "Cargando historial…",
           emptyGraphs: "Aún no hay historial"
+        },
+        battery: {
+          title: "Baterías",
+          subtitle: "Vista general de baterías",
+          average: "de media",
+          devices: "dispositivos"
+        },
+        network: {
+          title: "Red",
+          subtitle: "Vista general de la conexión",
+          metrics: "métricas",
+          roles: {
+            status: "Estado",
+            download: "Descarga",
+            upload: "Subida",
+            latency: "Latencia",
+            signal: "Señal",
+            traffic: "Tráfico"
+          }
+        },
+        overview: {
+          empty: "Añade entidades desde el editor visual.",
+          unavailable: "No disponible",
+          unconfigured: "Sin configurar"
         }
       },
       weatherCard: {
@@ -4714,6 +4810,30 @@
           },
           loadingGraphs: "Chargement de l'historique…",
           emptyGraphs: "Pas encore d'historique"
+        },
+        battery: {
+          title: "Batteries",
+          subtitle: "Vue d’ensemble des batteries",
+          average: "en moyenne",
+          devices: "appareils"
+        },
+        network: {
+          title: "Réseau",
+          subtitle: "Vue d’ensemble de la connexion",
+          metrics: "mesures",
+          roles: {
+            status: "État",
+            download: "Téléchargement",
+            upload: "Envoi",
+            latency: "Latence",
+            signal: "Signal",
+            traffic: "Trafic"
+          }
+        },
+        overview: {
+          empty: "Ajoutez des entités dans l’éditeur visuel.",
+          unavailable: "Indisponible",
+          unconfigured: "Non configuré"
         }
       },
       weatherCard: {
@@ -5711,6 +5831,30 @@
           },
           loadingGraphs: "Caricamento cronologia…",
           emptyGraphs: "Nessuna cronologia ancora"
+        },
+        battery: {
+          title: "Batterie",
+          subtitle: "Panoramica batterie",
+          average: "media",
+          devices: "dispositivi"
+        },
+        network: {
+          title: "Rete",
+          subtitle: "Panoramica connessione",
+          metrics: "metriche",
+          roles: {
+            status: "Stato",
+            download: "Download",
+            upload: "Upload",
+            latency: "Latenza",
+            signal: "Segnale",
+            traffic: "Traffico"
+          }
+        },
+        overview: {
+          empty: "Aggiungi entità nell’editor visuale.",
+          unavailable: "Non disponibile",
+          unconfigured: "Non configurato"
         }
       },
       weatherCard: {
@@ -6708,6 +6852,30 @@
           },
           loadingGraphs: "Geschiedenis laden…",
           emptyGraphs: "Nog geen geschiedenis"
+        },
+        battery: {
+          title: "Batterijen",
+          subtitle: "Batterijoverzicht",
+          average: "gemiddeld",
+          devices: "apparaten"
+        },
+        network: {
+          title: "Netwerk",
+          subtitle: "Verbindingsoverzicht",
+          metrics: "metingen",
+          roles: {
+            status: "Status",
+            download: "Download",
+            upload: "Upload",
+            latency: "Latentie",
+            signal: "Signaal",
+            traffic: "Verkeer"
+          }
+        },
+        overview: {
+          empty: "Voeg entiteiten toe in de visuele editor.",
+          unavailable: "Niet beschikbaar",
+          unconfigured: "Niet geconfigureerd"
         }
       },
       weatherCard: {
@@ -7705,6 +7873,30 @@
           },
           loadingGraphs: "Laster historikk…",
           emptyGraphs: "Ingen historikk ennå"
+        },
+        battery: {
+          title: "Batterier",
+          subtitle: "Batterioversikt",
+          average: "gjennomsnitt",
+          devices: "enheter"
+        },
+        network: {
+          title: "Nettverk",
+          subtitle: "Tilkoblingsoversikt",
+          metrics: "målinger",
+          roles: {
+            status: "Status",
+            download: "Nedlasting",
+            upload: "Opplasting",
+            latency: "Ventetid",
+            signal: "Signal",
+            traffic: "Trafikk"
+          }
+        },
+        overview: {
+          empty: "Legg til enheter i det visuelle redigeringsverktøyet.",
+          unavailable: "Utilgjengelig",
+          unconfigured: "Ikke konfigurert"
         }
       },
       weatherCard: {
@@ -8702,6 +8894,30 @@
           },
           loadingGraphs: "A carregar histórico…",
           emptyGraphs: "Ainda sem histórico"
+        },
+        battery: {
+          title: "Baterias",
+          subtitle: "Vista geral das baterias",
+          average: "média",
+          devices: "dispositivos"
+        },
+        network: {
+          title: "Rede",
+          subtitle: "Vista geral da ligação",
+          metrics: "métricas",
+          roles: {
+            status: "Estado",
+            download: "Download",
+            upload: "Upload",
+            latency: "Latência",
+            signal: "Sinal",
+            traffic: "Tráfego"
+          }
+        },
+        overview: {
+          empty: "Adicione entidades no editor visual.",
+          unavailable: "Indisponível",
+          unconfigured: "Não configurado"
         }
       },
       weatherCard: {
@@ -9699,6 +9915,30 @@
           },
           loadingGraphs: "Se încarcă istoricul…",
           emptyGraphs: "Încă nu există istoric"
+        },
+        battery: {
+          title: "Baterii",
+          subtitle: "Prezentare baterii",
+          average: "medie",
+          devices: "dispozitive"
+        },
+        network: {
+          title: "Rețea",
+          subtitle: "Prezentare conexiune",
+          metrics: "valori",
+          roles: {
+            status: "Stare",
+            download: "Descărcare",
+            upload: "Încărcare",
+            latency: "Latență",
+            signal: "Semnal",
+            traffic: "Trafic"
+          }
+        },
+        overview: {
+          empty: "Adăugați entități în editorul vizual.",
+          unavailable: "Indisponibil",
+          unconfigured: "Neconfigurat"
         }
       },
       weatherCard: {
@@ -10696,6 +10936,30 @@
           },
           loadingGraphs: "Загрузка истории…",
           emptyGraphs: "Истории пока нет"
+        },
+        battery: {
+          title: "Батареи",
+          subtitle: "Обзор батарей",
+          average: "в среднем",
+          devices: "устройства"
+        },
+        network: {
+          title: "Сеть",
+          subtitle: "Обзор подключения",
+          metrics: "показатели",
+          roles: {
+            status: "Состояние",
+            download: "Загрузка",
+            upload: "Отдача",
+            latency: "Задержка",
+            signal: "Сигнал",
+            traffic: "Трафик"
+          }
+        },
+        overview: {
+          empty: "Добавьте объекты в визуальном редакторе.",
+          unavailable: "Недоступно",
+          unconfigured: "Не настроено"
         }
       },
       weatherCard: {
@@ -11693,6 +11957,30 @@
           },
           loadingGraphs: "正在加载历史…",
           emptyGraphs: "暂无历史"
+        },
+        battery: {
+          title: "电池",
+          subtitle: "电池概览",
+          average: "平均",
+          devices: "设备"
+        },
+        network: {
+          title: "网络",
+          subtitle: "连接概览",
+          metrics: "指标",
+          roles: {
+            status: "状态",
+            download: "下载",
+            upload: "上传",
+            latency: "延迟",
+            signal: "信号",
+            traffic: "流量"
+          }
+        },
+        overview: {
+          empty: "请在可视化编辑器中添加实体。",
+          unavailable: "不可用",
+          unconfigured: "未配置"
         }
       },
       weatherCard: {

@@ -504,7 +504,10 @@
       },
       "loadingGraphs": "Laster historikk…",
       "emptyGraphs": "Ingen historikk ennå"
-    }
+    },
+    "battery": { "title": "Batterier", "subtitle": "Batterioversikt", "average": "gjennomsnitt", "devices": "enheter" },
+    "network": { "title": "Nettverk", "subtitle": "Tilkoblingsoversikt", "metrics": "målinger", "roles": { "status": "Status", "download": "Nedlasting", "upload": "Opplasting", "latency": "Ventetid", "signal": "Signal", "traffic": "Trafikk" } },
+    "overview": { "empty": "Legg til enheter i det visuelle redigeringsverktøyet.", "unavailable": "Utilgjengelig", "unconfigured": "Ikke konfigurert" }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",

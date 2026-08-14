@@ -10,6 +10,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.9] - 2026-08-14
+
+### Added
+
+- **Entity Card battery layout:** overview of up to 16 battery entities with level, color, charging icons and progress bars; each row opens that entity's more-info.
+- **Entity Card network layout:** status, download, upload, latency, signal and traffic metrics with automatic or manual role detection; each row opens that entity's more-info.
+- Visual editor support to add, remove and reorder battery/network entities, plus examples `entity-card-battery.yaml` and `entity-card-network.yaml`.
+
+### Changed
+
+- **Air Quality editor:** unused content, quick-action, image and incompatible style options stay hidden while `layout: air_quality` is selected and return when switching back to the default layout without losing their values.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.9`.
+
+### Validation
+
+- Full validation covers 424 Node tests plus Chromium final checks (24/24). WebKit and mobile passed in the broader browser run; Firefox could not start under the macOS sandbox graphics restriction.
+
 ## [2.1.3-alpha.8] - 2026-08-12
 
 ### Changed

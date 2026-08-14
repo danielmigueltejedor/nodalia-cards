@@ -56,11 +56,13 @@ function loadAirQualityHelpers() {
       querySelector() { return null; },
     },
     HTMLElement: FakeHTMLElement,
+    ShadowRoot: class {},
     ResizeObserver: class {
       observe() {}
       disconnect() {}
     },
     navigator: {},
+    requestAnimationFrame() { return 1; },
     window: null,
     NodaliaI18n: {
       resolveLanguage() { return "en"; },
@@ -111,10 +113,11 @@ function loadAirQualityHelpers() {
   return {
     helpers: sandbox.__NODALIA_ENTITY_AIR_QUALITY__,
     Card: registry.get("nodalia-entity-card"),
+    Editor: registry.get("nodalia-entity-card-editor"),
   };
 }
 
-const { helpers, Card } = loadAirQualityHelpers();
+const { helpers, Card, Editor } = loadAirQualityHelpers();
 
 test("entity card air quality helpers classify WHO PM and AQI bands", () => {
   assert.equal(helpers.resolveAirQualityLevelFromBands(12, helpers.AIR_QUALITY_WHO_BANDS.pm25), "good");
@@ -235,6 +238,10 @@ test("entity card air quality sparkline helpers build smooth paths", () => {
 
 test("entity card air quality normalizes custom graph colors safely", () => {
   const normalized = helpers.normalizeAirQualityBlock({
+    graph_series: {
+      temperature: false,
+      humidity: false,
+    },
     graph_colors: {
       pm25: "#123456",
       pm10: "red;display:none",
@@ -245,6 +252,72 @@ test("entity card air quality normalizes custom graph colors safely", () => {
   assert.equal(normalized.graph_colors.pm10, helpers.AIR_QUALITY_GRAPH_SERIES_COLORS.pm10);
   assert.equal(normalized.graph_colors.humidity, helpers.AIR_QUALITY_GRAPH_SERIES_COLORS.humidity);
   assert.equal(normalized.graph_points, 96);
+  assert.equal(normalized.graph_series.pm25, true);
+  assert.equal(normalized.graph_series.temperature, false);
+  assert.equal(normalized.graph_series.humidity, false);
+});
+
+test("entity card air quality excludes editor-disabled graph series but keeps their current-value chips", () => {
+  const card = new Card();
+  card.setConfig({
+    entity: "sensor.air_quality",
+    layout: "air_quality",
+    air_quality: {
+      show_graphs: true,
+      pm25: "sensor.pm25",
+      temperature: "sensor.temperature",
+      humidity: "sensor.humidity",
+      graph_series: {
+        temperature: false,
+        humidity: false,
+      },
+    },
+  });
+  card.hass = {
+    states: {
+      "sensor.air_quality": {
+        entity_id: "sensor.air_quality",
+        state: "42",
+        attributes: { device_class: "aqi", friendly_name: "Air quality" },
+      },
+      "sensor.pm25": {
+        entity_id: "sensor.pm25",
+        state: "12",
+        attributes: { device_class: "pm25", unit_of_measurement: "µg/m³" },
+      },
+      "sensor.temperature": {
+        entity_id: "sensor.temperature",
+        state: "22.4",
+        attributes: { device_class: "temperature", unit_of_measurement: "°C" },
+      },
+      "sensor.humidity": {
+        entity_id: "sensor.humidity",
+        state: "48",
+        attributes: { device_class: "humidity", unit_of_measurement: "%" },
+      },
+    },
+  };
+
+  const { metrics } = card._collectAirQualityMetrics(card._getState());
+  const graphSeries = card._getAirQualityGraphSeries(metrics);
+  card._aqHistoryCache = {
+    entries: [
+      { kind: "pm25", samples: [{ ts: 1000, value: 12 }] },
+      { kind: "temperature", samples: [{ ts: 1000, value: 22.4 }] },
+      { kind: "humidity", samples: [{ ts: 1000, value: 48 }] },
+    ],
+  };
+  const chartEntries = card._getAirQualityChartEntries(graphSeries);
+  const html = String(card.shadowRoot.innerHTML);
+
+  assert.equal(graphSeries.map(entry => entry.kind).join(","), "pm25");
+  assert.equal(chartEntries.map(entry => entry.kind).join(","), "pm25");
+  assert.match(html, /data-entity="sensor\.temperature"/);
+  assert.match(html, /data-entity="sensor\.humidity"/);
+  assert.match(html, /22\.4/);
+  assert.match(html, /48/);
+  card.isConnected = false;
+  card._clearAirQualityHistory?.();
 });
 
 test("entity card air quality chart geometry resolves the hovered sample", () => {
@@ -467,6 +540,83 @@ test("entity card air quality lets Home Assistant measure its dynamic height", (
   assert.equal(card.getGridOptions().rows, "auto");
 });
 
+test("entity card editor hides default-only controls for air quality and restores them on default", () => {
+  const editor = new Editor();
+  editor.setConfig({ entity: "sensor.air_quality", layout: "air_quality" });
+  const airQualityHtml = String(editor.shadowRoot.innerHTML);
+
+  assert.match(airQualityHtml, /ed\.entity\.air_quality_section_title/);
+  assert.doesNotMatch(airQualityHtml, /ed\.entity\.content_section_title/);
+  assert.doesNotMatch(airQualityHtml, /ed\.entity\.quick_actions_title/);
+  assert.doesNotMatch(airQualityHtml, /data-field="entity_picture"/);
+
+  editor.setConfig({ entity: "sensor.air_quality", layout: "default" });
+  const defaultHtml = String(editor.shadowRoot.innerHTML);
+  assert.match(defaultHtml, /ed\.entity\.content_section_title/);
+  assert.match(defaultHtml, /ed\.entity\.quick_actions_title/);
+  assert.match(defaultHtml, /data-field="entity_picture"/);
+  assert.match(read("nodalia-entity-card.js"), /isDefaultLayout \? this\._renderTextField\("ed\.entity\.style_card_border"/);
+  assert.match(read("nodalia-entity-card.js"), /isDefaultLayout \? this\._renderTextField\("ed\.entity\.style_aux_button_size"/);
+});
+
+test("entity card battery layout renders multiple entity levels and entity-specific actions", () => {
+  const card = new Card();
+  card.setConfig({
+    layout: "battery",
+    name: "Batteries",
+    battery: {
+      entities: [
+        { entity: "sensor.phone_battery", name: "Phone" },
+        { entity: "sensor.door_battery", name: "Door" },
+      ],
+    },
+  });
+  card.hass = {
+    states: {
+      "sensor.phone_battery": { entity_id: "sensor.phone_battery", state: "82", attributes: { unit_of_measurement: "%" } },
+      "sensor.door_battery": { entity_id: "sensor.door_battery", state: "12", attributes: { unit_of_measurement: "%" } },
+    },
+  };
+  const html = String(card.shadowRoot.innerHTML);
+
+  assert.match(html, /entity-card--battery/);
+  assert.match(html, /Phone/);
+  assert.match(html, /82%/);
+  assert.match(html, /Door/);
+  assert.match(html, /12%/);
+  assert.match(html, /data-entity="sensor\.phone_battery"/);
+  assert.equal(card.getGridOptions().columns, 12);
+});
+
+test("entity card network layout renders typed network metrics", () => {
+  const card = new Card();
+  card.setConfig({
+    layout: "network",
+    network: {
+      entities: [
+        { entity: "binary_sensor.internet", name: "Internet", role: "status" },
+        { entity: "sensor.download", role: "download" },
+        { entity: "sensor.ping", role: "latency" },
+      ],
+    },
+  });
+  card.hass = {
+    states: {
+      "binary_sensor.internet": { entity_id: "binary_sensor.internet", state: "on", attributes: {} },
+      "sensor.download": { entity_id: "sensor.download", state: "612", attributes: { friendly_name: "Download", unit_of_measurement: "Mbps" } },
+      "sensor.ping": { entity_id: "sensor.ping", state: "8", attributes: { friendly_name: "Ping", unit_of_measurement: "ms" } },
+    },
+  };
+  const html = String(card.shadowRoot.innerHTML);
+
+  assert.match(html, /entity-card--network/);
+  assert.match(html, /Internet/);
+  assert.match(html, /612 Mbps/);
+  assert.match(html, /8 ms/);
+  assert.match(html, /mdi:download-network-outline/);
+  assert.match(html, /mdi:timer-outline/);
+});
+
 test("entity card air quality demo package and example exist", () => {
   const demoPackage = read("examples/entity-card-air-quality-demo-package.yaml");
   assert.match(demoPackage, /default_entity_id:\s*sensor\.nodalia_demo_pm25/);
@@ -475,6 +625,10 @@ test("entity card air quality demo package and example exist", () => {
   assert.match(read("nodalia-entity-card.js"), /layout === "air_quality"/);
   assert.match(read("nodalia-entity-card.js"), /_renderAirQualityLayout/);
   assert.match(read("nodalia-entity-card.js"), /AIR_QUALITY_WHO_BANDS/);
+  assert.match(read("nodalia-entity-card.js"), /air_quality\.graph_series\.\$\{kind\}/);
   assert.match(read("nodalia-entity-card.js"), /air_quality\.graph_colors\.\$\{kind\}/);
+  assert.match(read("examples/entity-card-air-quality.yaml"), /graph_series:/);
   assert.match(read("examples/entity-card-air-quality.yaml"), /graph_colors:/);
+  assert.match(read("examples/entity-card-battery.yaml"), /layout:\s*battery/);
+  assert.match(read("examples/entity-card-network.yaml"), /layout:\s*network/);
 });

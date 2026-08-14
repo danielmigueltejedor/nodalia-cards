@@ -504,7 +504,10 @@
       },
       "loadingGraphs": "Caricamento cronologia…",
       "emptyGraphs": "Nessuna cronologia ancora"
-    }
+    },
+    "battery": { "title": "Batterie", "subtitle": "Panoramica batterie", "average": "media", "devices": "dispositivi" },
+    "network": { "title": "Rete", "subtitle": "Panoramica connessione", "metrics": "metriche", "roles": { "status": "Stato", "download": "Download", "upload": "Upload", "latency": "Latenza", "signal": "Segnale", "traffic": "Traffico" } },
+    "overview": { "empty": "Aggiungi entità nell’editor visuale.", "unavailable": "Non disponibile", "unconfigured": "Non configurato" }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",

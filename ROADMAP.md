@@ -17,7 +17,7 @@ Current stable release:
 Current preview release:
 
 ```text
-2.1.3-alpha.8
+2.1.3-alpha.9
 ```
 
 Stable **`2.1.2`** remains the recommended daily-driver release. **`2.1.3-alpha.1`** adds stepped selection haptics on Climate / Humidifier / Fan / Light controls and an air-quality layout on Entity Card. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).

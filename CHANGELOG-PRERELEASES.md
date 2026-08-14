@@ -10,6 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.9] - 2026-08-14
+
+Ninth **`2.1.3`** alpha: Entity Card battery and network overview layouts, plus a cleaner Air Quality editor surface.
+
+### Added
+
+- Battery overview layout (up to 16 entities) with level coloring, charging icons and charge bars.
+- Network overview layout with status / download / upload / latency / signal / traffic roles (auto or manual).
+- Full visual editor flows to manage overview entities, plus battery and network YAML examples.
+
+### Changed
+
+- Air Quality hides editor options it does not use; switching back to the default layout restores them without dropping config.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.9`.
+
+### Validation
+
+- 424 Node tests and 24/24 Chromium final checks. WebKit and mobile passed in the general browser run; Firefox failed to launch due to a macOS sandbox graphics restriction, not a card defect.
+
+---
+
 ## [2.1.3-alpha.8] - 2026-08-12
 
 Eighth **`2.1.3`** alpha: fluid Air Quality graph inspection.
