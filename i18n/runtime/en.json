@@ -505,7 +505,7 @@
       "loadingGraphs": "Loading history…",
       "emptyGraphs": "No history yet"
     },
-    "battery": { "title": "Batteries", "subtitle": "Battery overview", "average": "average", "devices": "devices" },
+    "battery": { "title": "Batteries", "subtitle": "Battery overview", "average": "average", "devices": "devices", "good": "Good", "low": "Low", "critical": "Critical" },
     "network": { "title": "Network", "subtitle": "Connection overview", "metrics": "metrics", "roles": { "status": "Status", "download": "Download", "upload": "Upload", "latency": "Latency", "signal": "Signal", "traffic": "Traffic" } },
     "overview": { "empty": "Add entities in the visual editor.", "unavailable": "Unavailable", "unconfigured": "Not configured" }
   },

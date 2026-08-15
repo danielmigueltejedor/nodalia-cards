@@ -585,6 +585,10 @@ test("entity card battery layout renders multiple entity levels and entity-speci
   assert.match(html, /Door/);
   assert.match(html, /12%/);
   assert.match(html, /data-entity="sensor\.phone_battery"/);
+  assert.match(html, /entity-card__battery-gauge/);
+  assert.match(html, /--battery-level:82/);
+  assert.match(html, /entity-card__overview-chip--alert/);
+  assert.match(html, /entity-card__overview-item--battery/);
   assert.equal(card.getGridOptions().columns, 12);
 });
 
@@ -615,6 +619,26 @@ test("entity card network layout renders typed network metrics", () => {
   assert.match(html, /8 ms/);
   assert.match(html, /mdi:download-network-outline/);
   assert.match(html, /mdi:timer-outline/);
+  assert.match(html, /entity-card__overview-live-dot/);
+  assert.match(html, /entity-card__overview-item--download/);
+  assert.match(html, /entity-card__network-decoration/);
+});
+
+test("entity card network layout keeps a network accent without a status entity", () => {
+  const card = new Card();
+  card.setConfig({
+    layout: "network",
+    network: {
+      entities: [{ entity: "sensor.download", role: "download" }],
+    },
+  });
+  card.hass = {
+    states: {
+      "sensor.download": { entity_id: "sensor.download", state: "612", attributes: { unit_of_measurement: "Mbps" } },
+    },
+  };
+
+  assert.match(String(card.shadowRoot.innerHTML), /border:1px solid color-mix\(in srgb,var\(--info-color, #42a5f5\) 28%/);
 });
 
 test("entity card air quality demo package and example exist", () => {

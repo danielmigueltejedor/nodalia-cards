@@ -505,7 +505,7 @@
       "loadingGraphs": "Φόρτωση ιστορικού…",
       "emptyGraphs": "Δεν υπάρχει ακόμα ιστορικό"
     },
-    "battery": { "title": "Μπαταρίες", "subtitle": "Επισκόπηση μπαταριών", "average": "μέσος όρος", "devices": "συσκευές" },
+    "battery": { "title": "Μπαταρίες", "subtitle": "Επισκόπηση μπαταριών", "average": "μέσος όρος", "devices": "συσκευές", "good": "Καλή", "low": "Χαμηλή", "critical": "Κρίσιμη" },
     "network": { "title": "Δίκτυο", "subtitle": "Επισκόπηση σύνδεσης", "metrics": "μετρήσεις", "roles": { "status": "Κατάσταση", "download": "Λήψη", "upload": "Μεταφόρτωση", "latency": "Καθυστέρηση", "signal": "Σήμα", "traffic": "Κίνηση" } },
     "overview": { "empty": "Προσθέστε οντότητες στον οπτικό επεξεργαστή.", "unavailable": "Μη διαθέσιμο", "unconfigured": "Δεν έχει ρυθμιστεί" }
   },

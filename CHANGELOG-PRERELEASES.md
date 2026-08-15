@@ -10,6 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.10] - 2026-08-15
+
+Tenth **`2.1.3`** alpha: a full Nodalia visual redesign for the Entity Card battery and network layouts.
+
+### Changed
+
+- Battery entities use circular level gauges, semantic health labels, raised metric surfaces and aggregate device / average / low-battery chips.
+- Network connectivity is promoted to a full-width status surface; download, upload, latency, signal and traffic use distinct semantic colors and activity details.
+- Both layouts inherit the visual depth, ambient tint, responsive composition, interaction feedback and reduced-motion behavior of established Nodalia cards.
+- Battery health labels are translated in all twelve runtime locales.
+
+### Fixed
+
+- Network layouts without an explicit status entity retain an intentional blue accent.
+- Entity Card ambient overlays preserve Gecko-safe clipped corners without visible surface seams.
+
+### Validation
+
+- 425/425 Node tests and 24/24 Chromium browser checks pass, including accessibility and fractional surface geometry coverage.
+
+---
+
 ## [2.1.3-alpha.9] - 2026-08-14
 
 Ninth **`2.1.3`** alpha: Entity Card battery and network overview layouts, plus a cleaner Air Quality editor surface.

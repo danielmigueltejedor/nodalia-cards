@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.3-alpha.9";
+const CARD_VERSION = "2.1.3-alpha.10";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3108,7 +3108,7 @@ class NodaliaEntityCard extends HTMLElement {
       return charging ? "mdi:battery-charging" : "mdi:battery-unknown";
     }
     const level = Math.max(10, Math.min(100, Math.round(percent / 10) * 10));
-    return charging ? `mdi:battery-charging-${level}` : `mdi:battery-${level}`;
+    return charging ? `mdi:battery-charging-${level}` : level === 100 ? "mdi:battery" : `mdi:battery-${level}`;
   }
 
   _batteryColor(percent) {
@@ -3152,6 +3152,23 @@ class NodaliaEntityCard extends HTMLElement {
       : "mdi:lan-disconnect";
   }
 
+  _networkColor(role, state) {
+    if (!state || isUnavailableState(state)) {
+      return "var(--secondary-text-color)";
+    }
+    if (role === "status") {
+      const value = normalizeTextKey(state.state);
+      return ["on", "online", "connected", "home", "true", "ok"].includes(value)
+        ? "var(--success-color, #55b77e)"
+        : "var(--error-color, #ef5350)";
+    }
+    if (role === "download") return "var(--info-color, #42a5f5)";
+    if (role === "upload") return "#a78bfa";
+    if (role === "latency") return "var(--warning-color, #f6b73c)";
+    if (role === "signal") return "#45c4a0";
+    return "#e879b7";
+  }
+
   _formatOverviewState(state) {
     const numeric = parseAirQualityNumeric(state?.state);
     const unit = String(state?.attributes?.unit_of_measurement || "").trim();
@@ -3170,23 +3187,39 @@ class NodaliaEntityCard extends HTMLElement {
     const entries = config?.[layout]?.entities || [];
     const title = this._overviewTitle(layout);
     const icon = this._overviewIcon(layout);
-    const available = entries.map(item => ({ item, state: this._hass?.states?.[item.entity] || null }));
+    const available = entries.map((item, index) => ({
+      item,
+      index,
+      state: this._hass?.states?.[item.entity] || null,
+    }));
     const batteryValues = layout === "battery"
       ? available.map(({ state }) => this._resolveBatteryPercent(state)).filter(Number.isFinite)
       : [];
     const average = batteryValues.length
       ? batteryValues.reduce((sum, value) => sum + value, 0) / batteryValues.length
       : null;
+    const lowest = batteryValues.length ? Math.min(...batteryValues) : null;
+    const lowCount = batteryValues.filter(value => value <= 35).length;
+    const networkEntries = layout === "network"
+      ? available.map(entry => ({ ...entry, role: this._networkRole(entry.item, entry.state) }))
+      : [];
+    const statusEntry = networkEntries.find(entry => entry.role === "status");
     const accent = layout === "battery"
-      ? this._batteryColor(average)
-      : "var(--info-color, #42a5f5)";
-    const summary = layout === "battery"
-      ? (Number.isFinite(average)
-        ? `${Math.round(average)}% ${this._entityCardUi("battery.average", "average")}`
-        : `${available.length} ${this._entityCardUi("battery.devices", "devices")}`)
-      : `${available.length} ${this._entityCardUi("network.metrics", "metrics")}`;
+      ? this._batteryColor(Number.isFinite(lowest) ? lowest : average)
+      : statusEntry ? this._networkColor("status", statusEntry.state) : "var(--info-color, #42a5f5)";
     const animations = this._getAnimationSettings();
-    const rows = available.map(({ item, state }) => {
+    const insightMarkup = layout === "battery"
+      ? `
+        <span class="entity-card__overview-chip"><ha-icon icon="mdi:battery-multiple"></ha-icon><strong>${available.length}</strong><span>${escapeHtml(this._entityCardUi("battery.devices", "devices"))}</span></span>
+        ${Number.isFinite(average) ? `<span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-donut"></ha-icon><strong>${Math.round(average)}%</strong><span>${escapeHtml(this._entityCardUi("battery.average", "average"))}</span></span>` : ""}
+        ${lowCount ? `<span class="entity-card__overview-chip entity-card__overview-chip--alert"><ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon><strong>${lowCount}</strong><span>${escapeHtml(this._entityCardUi("battery.low", "low"))}</span></span>` : ""}
+      `
+      : `
+        ${statusEntry ? `<span class="entity-card__overview-chip" style="--overview-chip-accent:${escapeHtml(this._networkColor("status", statusEntry.state))};"><span class="entity-card__overview-live-dot"></span><strong>${escapeHtml(statusEntry.state ? this._formatOverviewState(statusEntry.state) : this._entityCardUi("overview.unavailable", "Unavailable"))}</strong></span>` : ""}
+        <span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-box-outline"></ha-icon><strong>${available.length}</strong><span>${escapeHtml(this._entityCardUi("network.metrics", "metrics"))}</span></span>
+      `;
+    const rowSource = layout === "network" ? networkEntries : available;
+    const rows = rowSource.map(({ item, state, index, role: configuredRole }) => {
       const name = item.name || state?.attributes?.friendly_name || item.entity || this._entityCardUi("overview.unconfigured", "Not configured");
       const unavailable = !state || isUnavailableState(state);
       if (layout === "battery") {
@@ -3196,62 +3229,124 @@ class NodaliaEntityCard extends HTMLElement {
           : Number.isFinite(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
         const color = this._batteryColor(percent);
         const rowIcon = item.icon || this._batteryIcon(percent, state);
+        const batteryStatus = unavailable
+          ? this._entityCardUi("overview.unavailable", "Unavailable")
+          : !Number.isFinite(percent)
+            ? this._entityCardUi("overview.unconfigured", "Not configured")
+            : percent <= 15
+              ? this._entityCardUi("battery.critical", "Critical")
+              : percent <= 35
+                ? this._entityCardUi("battery.low", "Low")
+                : this._entityCardUi("battery.good", "Good");
         return `
-          <button type="button" class="entity-card__overview-item" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};">
-            <span class="entity-card__overview-icon"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
-            <span class="entity-card__overview-copy"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(value)}</span></span>
-            <span class="entity-card__battery-track" aria-hidden="true"><span style="width:${Number.isFinite(percent) ? percent : 0}%"></span></span>
+          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-index:${index};--battery-level:${Number.isFinite(percent) ? percent : 0};">
+            <span class="entity-card__battery-gauge" aria-hidden="true">
+              <span class="entity-card__battery-gauge-inner"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
+            </span>
+            <span class="entity-card__overview-copy"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(batteryStatus)}</span></span>
+            <strong class="entity-card__overview-value">${escapeHtml(value)}</strong>
           </button>`;
       }
-      const role = this._networkRole(item, state);
+      const role = configuredRole || this._networkRole(item, state);
       const value = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : this._formatOverviewState(state);
       const rowIcon = item.icon || this._networkIcon(role, state);
+      const color = this._networkColor(role, state);
+      const roleLabel = this._entityCardUi(`network.roles.${role}`, role);
       return `
-        <button type="button" class="entity-card__overview-item" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(accent)};">
+        <button type="button" class="entity-card__overview-item entity-card__overview-item--network entity-card__overview-item--${escapeHtml(role)}${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-index:${index};">
           <span class="entity-card__overview-icon"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
-          <span class="entity-card__overview-copy"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(value)}</span></span>
-          <span class="entity-card__overview-role">${escapeHtml(this._entityCardUi(`network.roles.${role}`, role))}</span>
+          <span class="entity-card__overview-copy"><span class="entity-card__overview-role">${escapeHtml(roleLabel)}</span><strong>${escapeHtml(name)}</strong></span>
+          <strong class="entity-card__overview-value">${escapeHtml(value)}</strong>
+          <span class="entity-card__network-decoration" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>`;
     }).join("");
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display:block; position:relative; }
+        :host { --entity-card-overview-duration:${animations.enabled ? animations.contentDuration : 0}ms; display:block; position:relative; }
         * { box-sizing:border-box; }
-        ha-card { --nodalia-entity-surface-base:${styles.card.background}; background:linear-gradient(135deg,color-mix(in srgb,${accent} 16%,var(--nodalia-entity-surface-base)),var(--nodalia-entity-surface-base) 72%); border:1px solid color-mix(in srgb,${accent} 28%,var(--divider-color)); border-radius:${styles.card.border_radius}; box-shadow:${styles.card.box_shadow}; color:var(--primary-text-color); overflow:hidden; }
-        .entity-card__overview { display:grid; gap:${styles.card.gap}; padding:${styles.card.padding}; }
-        .entity-card__overview.entity-card__content--entering { animation:entity-card-overview-enter ${animations.enabled ? animations.contentDuration : 0}ms cubic-bezier(.22,.84,.26,1) both; }
-        .entity-card__overview-header { align-items:center; display:grid; gap:12px; grid-template-columns:48px minmax(0,1fr) auto; }
-        .entity-card__overview-main-icon { align-items:center; background:color-mix(in srgb,${accent} 18%,transparent); border:1px solid color-mix(in srgb,${accent} 30%,var(--divider-color)); border-radius:999px; color:${accent}; display:flex; height:48px; justify-content:center; width:48px; }
-        .entity-card__overview-main-icon ha-icon { --mdc-icon-size:25px; }
+        ha-card { --nodalia-entity-surface-base:${styles.card.background}; background:var(--nodalia-entity-surface-base); border:1px solid color-mix(in srgb,${accent} 28%,var(--divider-color)); border-radius:${styles.card.border_radius}; box-shadow:${styles.card.box_shadow},0 16px 36px color-mix(in srgb,${accent} 12%,rgba(0,0,0,.16)); color:var(--primary-text-color); isolation:isolate; overflow:hidden; position:relative; }
+        ha-card::before {
+          background:linear-gradient(180deg,color-mix(in srgb,${accent} 16%,color-mix(in srgb,var(--primary-text-color) 5%,transparent)),transparent 48%);
+          content:"";
+          inset:0;
+          pointer-events:none;
+          position:absolute;
+          z-index:0;
+        }
+        ha-card::after {
+          background:radial-gradient(circle at 14% 8%,color-mix(in srgb,${accent} 28%,transparent),transparent 48%),radial-gradient(circle at 96% 92%,color-mix(in srgb,${accent} 12%,transparent),transparent 42%);
+          content:"";
+          inset:0;
+          pointer-events:none;
+          position:absolute;
+          z-index:0;
+        }
+        .entity-card__overview { display:grid; gap:${styles.card.gap}; padding:${styles.card.padding}; position:relative; z-index:1; }
+        .entity-card__overview.entity-card__content--entering { animation:entity-card-overview-enter var(--entity-card-overview-duration) cubic-bezier(.22,.84,.26,1) both; }
+        .entity-card__overview-header { align-items:center; display:grid; gap:12px; grid-template-columns:54px minmax(0,1fr) minmax(0,auto); }
+        .entity-card__overview-main-icon { align-items:center; background:radial-gradient(circle at 30% 24%,color-mix(in srgb,${accent} 38%,transparent),transparent 64%),color-mix(in srgb,${accent} 14%,color-mix(in srgb,var(--primary-text-color) 7%,transparent)); border:1px solid color-mix(in srgb,${accent} 32%,color-mix(in srgb,var(--primary-text-color) 9%,transparent)); border-radius:999px; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 10%,transparent),0 10px 24px color-mix(in srgb,${accent} 18%,rgba(0,0,0,.14)); color:${accent}; display:flex; height:54px; justify-content:center; position:relative; width:54px; }
+        .entity-card__overview-main-icon::after { background:${accent}; border:2px solid var(--nodalia-entity-surface-base); border-radius:999px; bottom:2px; box-shadow:0 0 0 3px color-mix(in srgb,${accent} 12%,transparent); content:""; height:8px; position:absolute; right:1px; width:8px; }
+        .entity-card__overview-main-icon ha-icon { --mdc-icon-size:27px; }
         .entity-card__overview-title { display:grid; gap:3px; min-width:0; }
-        .entity-card__overview-title strong { font-size:${styles.title_size}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .entity-card__overview-title span,.entity-card__overview-summary { color:var(--secondary-text-color); font-size:11px; }
-        .entity-card__overview-summary { background:color-mix(in srgb,${accent} 11%,transparent); border:1px solid color-mix(in srgb,${accent} 20%,var(--divider-color)); border-radius:999px; padding:6px 10px; white-space:nowrap; }
-        .entity-card__overview-grid { display:grid; gap:9px; grid-template-columns:repeat(2,minmax(0,1fr)); }
-        .entity-card__overview-item { align-items:center; appearance:none; background:color-mix(in srgb,var(--primary-text-color) 4%,transparent); border:1px solid color-mix(in srgb,var(--overview-accent) 24%,var(--divider-color)); border-radius:16px; color:inherit; cursor:pointer; display:grid; gap:9px; grid-template-columns:36px minmax(0,1fr); min-height:64px; padding:10px; position:relative; text-align:left; }
+        .entity-card__overview-title strong { font-size:${styles.title_size}; font-weight:800; letter-spacing:-.025em; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .entity-card__overview-title span { color:var(--secondary-text-color); font-size:11px; font-weight:600; letter-spacing:.01em; }
+        .entity-card__overview-insights { align-items:center; display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; min-width:0; }
+        .entity-card__overview-chip { --overview-chip-accent:${accent}; align-items:center; background:color-mix(in srgb,var(--overview-chip-accent) 9%,color-mix(in srgb,var(--primary-text-color) 5%,transparent)); border:1px solid color-mix(in srgb,var(--overview-chip-accent) 20%,color-mix(in srgb,var(--primary-text-color) 8%,transparent)); border-radius:${escapeHtml(String(styles.chip_border_radius || "999px"))}; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 7%,transparent),0 5px 14px rgba(0,0,0,.08); display:inline-flex; font-size:${styles.chip_font_size}; gap:5px; height:${styles.chip_height}; padding:${styles.chip_padding}; white-space:nowrap; }
+        .entity-card__overview-chip ha-icon { --mdc-icon-size:13px; color:var(--overview-chip-accent); }
+        .entity-card__overview-chip strong { font-weight:800; }
+        .entity-card__overview-chip span { color:var(--secondary-text-color); font-weight:650; }
+        .entity-card__overview-chip--alert { --overview-chip-accent:var(--error-color,#ef5350); }
+        .entity-card__overview-live-dot { animation:entity-card-network-pulse 1.9s ease-in-out infinite; background:var(--overview-chip-accent); border-radius:999px; box-shadow:0 0 0 4px color-mix(in srgb,var(--overview-chip-accent) 12%,transparent); height:7px; width:7px; }
+        .entity-card__overview-grid { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .entity-card__overview-item { -webkit-tap-highlight-color:transparent; align-items:center; appearance:none; background:radial-gradient(circle at 8% 12%,color-mix(in srgb,var(--overview-accent) 15%,transparent),transparent 52%),color-mix(in srgb,var(--primary-text-color) 4%,transparent); border:1px solid color-mix(in srgb,var(--overview-accent) 25%,color-mix(in srgb,var(--primary-text-color) 7%,transparent)); border-radius:18px; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 7%,transparent),0 10px 22px rgba(0,0,0,.09); color:inherit; cursor:pointer; font:inherit; min-width:0; overflow:hidden; position:relative; text-align:left; transform-origin:center; transition:transform 160ms ease,background 180ms ease,border-color 180ms ease,box-shadow 180ms ease; }
+        .entity-card__overview-item::before { background:linear-gradient(125deg,color-mix(in srgb,var(--primary-text-color) 8%,transparent),transparent 42%); content:""; inset:0; pointer-events:none; position:absolute; }
+        .entity-card__overview-item:hover { border-color:color-mix(in srgb,var(--overview-accent) 42%,transparent); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 9%,transparent),0 14px 28px color-mix(in srgb,var(--overview-accent) 12%,rgba(0,0,0,.12)); transform:translateY(-2px); }
+        .entity-card__overview-item:active { transform:scale(.975); }
         .entity-card__overview-item:focus-visible { outline:2px solid var(--overview-accent); outline-offset:2px; }
-        .entity-card__overview-icon { align-items:center; background:color-mix(in srgb,var(--overview-accent) 15%,transparent); border-radius:12px; color:var(--overview-accent); display:flex; height:36px; justify-content:center; width:36px; }
-        .entity-card__overview-icon ha-icon { --mdc-icon-size:21px; }
-        .entity-card__overview-copy { display:grid; gap:3px; min-width:0; }
+        .entity-card__overview-item.is-unavailable { opacity:.62; }
+        .entity-card__overview-item--battery { display:grid; gap:10px; grid-template-columns:58px minmax(0,1fr) auto; min-height:84px; padding:11px 13px 11px 11px; }
+        .entity-card__battery-gauge { align-items:center; background:conic-gradient(var(--overview-accent) calc(var(--battery-level) * 1%),color-mix(in srgb,var(--primary-text-color) 8%,transparent) 0); border-radius:999px; box-shadow:0 8px 18px color-mix(in srgb,var(--overview-accent) 14%,rgba(0,0,0,.1)); display:flex; height:56px; justify-content:center; padding:4px; position:relative; width:56px; z-index:1; }
+        .entity-card__battery-gauge-inner { align-items:center; background:color-mix(in srgb,var(--nodalia-entity-surface-base) 92%,var(--overview-accent)); border:1px solid color-mix(in srgb,var(--overview-accent) 18%,transparent); border-radius:inherit; color:var(--overview-accent); display:flex; height:100%; justify-content:center; width:100%; }
+        .entity-card__battery-gauge-inner ha-icon { --mdc-icon-size:25px; }
+        .entity-card__overview-copy { display:grid; gap:4px; min-width:0; position:relative; z-index:1; }
         .entity-card__overview-copy strong,.entity-card__overview-copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .entity-card__overview-copy strong { font-size:12px; }
-        .entity-card__overview-copy span { color:var(--secondary-text-color); font-size:11px; }
-        .entity-card__battery-track { background:color-mix(in srgb,var(--primary-text-color) 8%,transparent); border-radius:999px; bottom:7px; height:3px; left:55px; overflow:hidden; position:absolute; right:10px; }
-        .entity-card__battery-track span { background:var(--overview-accent); border-radius:inherit; display:block; height:100%; }
-        .entity-card__overview-role { background:color-mix(in srgb,var(--overview-accent) 12%,transparent); border-radius:999px; color:color-mix(in srgb,var(--primary-text-color) 78%,var(--overview-accent)); font-size:9px; grid-column:2; justify-self:start; margin-top:-1px; padding:3px 7px; }
-        .entity-card__overview-empty { color:var(--secondary-text-color); font-size:12px; padding:18px 8px; text-align:center; }
+        .entity-card__overview-copy strong { font-size:12px; font-weight:750; }
+        .entity-card__overview-copy > span:not(.entity-card__overview-role) { color:color-mix(in srgb,var(--overview-accent) 72%,var(--secondary-text-color)); font-size:10px; font-weight:700; }
+        .entity-card__overview-value { font-size:17px; font-variant-numeric:tabular-nums; font-weight:800; letter-spacing:-.025em; max-width:120px; overflow:hidden; position:relative; text-overflow:ellipsis; white-space:nowrap; z-index:1; }
+        .entity-card__overview-item--network { display:grid; gap:7px 10px; grid-template-columns:42px minmax(0,1fr); min-height:82px; padding:11px 13px; }
+        .entity-card__overview-item--network .entity-card__overview-value { grid-column:2; line-height:1; }
+        .entity-card__overview-grid--has-status .entity-card__overview-item--status { grid-column:1 / -1; grid-template-columns:42px minmax(0,1fr) auto; min-height:72px; }
+        .entity-card__overview-grid--has-status .entity-card__overview-item--status .entity-card__overview-value { align-self:center; grid-column:3; grid-row:1 / span 2; padding-right:20px; }
+        .entity-card__overview-grid--has-status .entity-card__overview-item--network:last-child:nth-child(even) { grid-column:1 / -1; }
+        .entity-card__overview-item--download,.entity-card__overview-item--upload { min-height:94px; }
+        .entity-card__overview-item--download .entity-card__overview-value,.entity-card__overview-item--upload .entity-card__overview-value { font-size:20px; }
+        .entity-card__overview-icon { align-items:center; align-self:center; background:radial-gradient(circle at 30% 24%,color-mix(in srgb,var(--overview-accent) 32%,transparent),transparent 62%),color-mix(in srgb,var(--overview-accent) 14%,transparent); border:1px solid color-mix(in srgb,var(--overview-accent) 24%,transparent); border-radius:14px; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent),0 8px 18px color-mix(in srgb,var(--overview-accent) 12%,rgba(0,0,0,.08)); color:var(--overview-accent); display:flex; grid-row:1 / span 2; height:42px; justify-content:center; position:relative; width:42px; z-index:1; }
+        .entity-card__overview-icon ha-icon { --mdc-icon-size:22px; }
+        .entity-card__overview-role { color:color-mix(in srgb,var(--overview-accent) 82%,var(--primary-text-color)); font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+        .entity-card__network-decoration { align-items:end; bottom:9px; display:flex; gap:3px; height:18px; opacity:.24; position:absolute; right:11px; }
+        .entity-card__network-decoration i { background:var(--overview-accent); border-radius:999px; display:block; width:3px; }
+        .entity-card__network-decoration i:nth-child(1) { height:7px; }
+        .entity-card__network-decoration i:nth-child(2) { height:12px; }
+        .entity-card__network-decoration i:nth-child(3) { height:18px; }
+        .entity-card__overview-item--download .entity-card__network-decoration i,.entity-card__overview-item--upload .entity-card__network-decoration i { animation:entity-card-network-bars 1.35s ease-in-out infinite alternate; }
+        .entity-card__overview-item--download .entity-card__network-decoration i:nth-child(2),.entity-card__overview-item--upload .entity-card__network-decoration i:nth-child(2) { animation-delay:.18s; }
+        .entity-card__overview-item--download .entity-card__network-decoration i:nth-child(3),.entity-card__overview-item--upload .entity-card__network-decoration i:nth-child(3) { animation-delay:.36s; }
+        .entity-card__overview-empty { background:color-mix(in srgb,var(--primary-text-color) 4%,transparent); border:1px dashed color-mix(in srgb,${accent} 28%,var(--divider-color)); border-radius:18px; color:var(--secondary-text-color); font-size:12px; padding:24px 12px; text-align:center; }
         @keyframes entity-card-overview-enter { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
-        @media (max-width:460px) { .entity-card__overview-grid { grid-template-columns:1fr; } .entity-card__overview-header { grid-template-columns:44px minmax(0,1fr); } .entity-card__overview-summary { grid-column:2; justify-self:start; } }
+        @keyframes entity-card-network-pulse { 50% { box-shadow:0 0 0 7px color-mix(in srgb,var(--overview-chip-accent) 4%,transparent); transform:scale(.92); } }
+        @keyframes entity-card-network-bars { from { transform:scaleY(.55); transform-origin:bottom; } to { transform:scaleY(1); transform-origin:bottom; } }
+        @media (prefers-reduced-motion:reduce) { .entity-card__overview-live-dot,.entity-card__network-decoration i { animation:none !important; } }
+        @media (max-width:520px) { .entity-card__overview-header { grid-template-columns:48px minmax(0,1fr); } .entity-card__overview-main-icon { height:48px; width:48px; } .entity-card__overview-insights { grid-column:1 / -1; justify-content:flex-start; } .entity-card__overview-grid { grid-template-columns:1fr; } }
       </style>
       <ha-card class="entity-card entity-card--${escapeHtml(layout)}">
         <div class="entity-card__overview${animations.enabled && this._animateContentOnNextRender ? " entity-card__content--entering" : ""}">
           <div class="entity-card__overview-header">
             <span class="entity-card__overview-main-icon"><ha-icon icon="${escapeHtml(icon)}"></ha-icon></span>
             <span class="entity-card__overview-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(this._entityCardUi(`${layout}.subtitle`, layout === "battery" ? "Battery overview" : "Connection overview"))}</span></span>
-            <span class="entity-card__overview-summary">${escapeHtml(summary)}</span>
+            <span class="entity-card__overview-insights">${insightMarkup}</span>
           </div>
-          ${rows ? `<div class="entity-card__overview-grid">${rows}</div>` : `<div class="entity-card__overview-empty">${escapeHtml(this._entityCardUi("overview.empty", "Add entities in the visual editor."))}</div>`}
+          ${rows ? `<div class="entity-card__overview-grid${statusEntry ? " entity-card__overview-grid--has-status" : ""}">${rows}</div>` : `<div class="entity-card__overview-empty">${escapeHtml(this._entityCardUi("overview.empty", "Add entities in the visual editor."))}</div>`}
         </div>
       </ha-card>`;
     if (animations.enabled && this._animateContentOnNextRender) {

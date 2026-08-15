@@ -505,7 +505,7 @@
       "loadingGraphs": "Se încarcă istoricul…",
       "emptyGraphs": "Încă nu există istoric"
     },
-    "battery": { "title": "Baterii", "subtitle": "Prezentare baterii", "average": "medie", "devices": "dispozitive" },
+    "battery": { "title": "Baterii", "subtitle": "Prezentare baterii", "average": "medie", "devices": "dispozitive", "good": "Bună", "low": "Scăzută", "critical": "Critică" },
     "network": { "title": "Rețea", "subtitle": "Prezentare conexiune", "metrics": "valori", "roles": { "status": "Stare", "download": "Descărcare", "upload": "Încărcare", "latency": "Latență", "signal": "Semnal", "traffic": "Trafic" } },
     "overview": { "empty": "Adăugați entități în editorul vizual.", "unavailable": "Indisponibil", "unconfigured": "Neconfigurat" }
   },

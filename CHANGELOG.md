@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.10] - 2026-08-15
+
+### Changed
+
+- **Battery layout redesign:** device levels now use prominent circular gauges, semantic Good / Low / Critical states and a header summary for device count, average charge and low-battery alerts.
+- **Network layout redesign:** connectivity becomes a full-width operational status, download and upload receive stronger visual hierarchy, and every role uses its own semantic tint and compact activity treatment.
+- Both overview layouts now share the layered Nodalia surface, raised bubbles, responsive spacing, hover / press feedback and reduced-motion support used by the rest of the card family.
+- Battery state labels are translated across all twelve supported runtime languages.
+
+### Fixed
+
+- Network cards without a status entity keep the network-blue surface accent instead of falling back to a neutral unavailable tint.
+- Overview tint overlays retain Gecko-safe clipping without inherited-radius seams.
+
+### Validation
+
+- Full validation covers 425 Node tests plus Chromium final checks (24/24), including surface geometry, accessibility and responsive rendering.
+
 ## [2.1.3-alpha.9] - 2026-08-14
 
 ### Added

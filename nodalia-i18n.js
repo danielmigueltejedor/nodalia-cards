@@ -731,7 +731,10 @@
           title: "Batteries",
           subtitle: "Battery overview",
           average: "average",
-          devices: "devices"
+          devices: "devices",
+          good: "Good",
+          low: "Low",
+          critical: "Critical"
         },
         network: {
           title: "Network",
@@ -1752,7 +1755,10 @@
           title: "Batterien",
           subtitle: "Batterieübersicht",
           average: "Durchschnitt",
-          devices: "Geräte"
+          devices: "Geräte",
+          good: "Gut",
+          low: "Niedrig",
+          critical: "Kritisch"
         },
         network: {
           title: "Netzwerk",
@@ -2773,7 +2779,10 @@
           title: "Μπαταρίες",
           subtitle: "Επισκόπηση μπαταριών",
           average: "μέσος όρος",
-          devices: "συσκευές"
+          devices: "συσκευές",
+          good: "Καλή",
+          low: "Χαμηλή",
+          critical: "Κρίσιμη"
         },
         network: {
           title: "Δίκτυο",
@@ -3794,7 +3803,10 @@
           title: "Baterías",
           subtitle: "Vista general de baterías",
           average: "de media",
-          devices: "dispositivos"
+          devices: "dispositivos",
+          good: "Correcta",
+          low: "Baja",
+          critical: "Crítica"
         },
         network: {
           title: "Red",
@@ -4815,7 +4827,10 @@
           title: "Batteries",
           subtitle: "Vue d’ensemble des batteries",
           average: "en moyenne",
-          devices: "appareils"
+          devices: "appareils",
+          good: "Bonne",
+          low: "Faible",
+          critical: "Critique"
         },
         network: {
           title: "Réseau",
@@ -5836,7 +5851,10 @@
           title: "Batterie",
           subtitle: "Panoramica batterie",
           average: "media",
-          devices: "dispositivi"
+          devices: "dispositivi",
+          good: "Buona",
+          low: "Bassa",
+          critical: "Critica"
         },
         network: {
           title: "Rete",
@@ -6857,7 +6875,10 @@
           title: "Batterijen",
           subtitle: "Batterijoverzicht",
           average: "gemiddeld",
-          devices: "apparaten"
+          devices: "apparaten",
+          good: "Goed",
+          low: "Laag",
+          critical: "Kritiek"
         },
         network: {
           title: "Netwerk",
@@ -7878,7 +7899,10 @@
           title: "Batterier",
           subtitle: "Batterioversikt",
           average: "gjennomsnitt",
-          devices: "enheter"
+          devices: "enheter",
+          good: "God",
+          low: "Lav",
+          critical: "Kritisk"
         },
         network: {
           title: "Nettverk",
@@ -8899,7 +8923,10 @@
           title: "Baterias",
           subtitle: "Vista geral das baterias",
           average: "média",
-          devices: "dispositivos"
+          devices: "dispositivos",
+          good: "Boa",
+          low: "Baixa",
+          critical: "Crítica"
         },
         network: {
           title: "Rede",
@@ -9920,7 +9947,10 @@
           title: "Baterii",
           subtitle: "Prezentare baterii",
           average: "medie",
-          devices: "dispozitive"
+          devices: "dispozitive",
+          good: "Bună",
+          low: "Scăzută",
+          critical: "Critică"
         },
         network: {
           title: "Rețea",
@@ -10941,7 +10971,10 @@
           title: "Батареи",
           subtitle: "Обзор батарей",
           average: "в среднем",
-          devices: "устройства"
+          devices: "устройства",
+          good: "Норма",
+          low: "Низкий",
+          critical: "Критический"
         },
         network: {
           title: "Сеть",
@@ -11962,7 +11995,10 @@
           title: "电池",
           subtitle: "电池概览",
           average: "平均",
-          devices: "设备"
+          devices: "设备",
+          good: "良好",
+          low: "电量低",
+          critical: "严重不足"
         },
         network: {
           title: "网络",
