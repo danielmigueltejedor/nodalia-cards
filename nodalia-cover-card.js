@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.1.3-alpha.10";
+const CARD_VERSION = "2.2.0-alpha.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -75,6 +75,10 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+    scrolls: {
+      position: true,
+      tilt: true,
+    },
   },
   animations: {
     enabled: true,
@@ -1323,7 +1327,9 @@ class NodaliaCoverCard extends HTMLElement {
           : `${nextValue}%`;
     }
     if (options.commit !== true) return;
-    this._triggerHaptic("selection");
+    if (this._config?.haptics?.scrolls?.[sliderKind] !== false) {
+      this._triggerHaptic("selection");
+    }
     if (sliderKind === "position") {
       this._callCover("set_cover_position", { position: nextValue });
     } else if (sliderKind === "tilt") {
@@ -2647,6 +2653,8 @@ class NodaliaCoverCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_position", "haptics.scrolls.position", config.haptics.scrolls?.position !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_tilt", "haptics.scrolls.tilt", config.haptics.scrolls?.tilt !== false)}
             ${this._renderSelectField("ed.vacuum.haptic_style", "haptics.style", hapticStyle, [
               { value: "selection", label: "ed.weather.haptic_selection" },
               { value: "light", label: "ed.weather.haptic_light" },

@@ -10,6 +10,33 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.1] - 2026-08-15
+
+First **`2.2.0`** alpha: the expanded Entity Card layout work, cross-browser device motion and granular control haptics graduate into a new minor preview line.
+
+### Added
+
+- Visual-editor haptic toggles for each Light brightness / temperature / color slider, Fan percentage slider, Humidifier humidity slider, Climate temperature dial and Cover position / tilt slider.
+- Multi-engine browser regressions sample device control-panel expansion and collapse and verify that the settled off state contains no stale controls shell.
+
+### Changed
+
+- Light, Fan and Humidifier animate control height through `grid-template-rows`, avoiding fixed-height interpolation and preserving responsive content.
+- The master haptics setting remains available; all new per-scroll controls default to enabled so existing configurations retain their behavior.
+- The `2.2.0` preview line includes the Air Quality graph/editor work and the redesigned battery and network Entity Card overview layouts developed during the `2.1.3` alpha cycle.
+
+### Fixed
+
+- Animation cleanup performs a final stable render after power, controls and secondary-panel transitions, so Gecko cannot leave an off device visually expanded when CSS completion events or fill behavior differ.
+- Person Card focus feedback now uses the outer rounded card as its interactive surface, matching Entity Card and eliminating clipped rectangular focus borders.
+
+### Validation
+
+- 428/428 Node tests pass together with version, syntax, editor/runtime i18n and production bundle validation.
+- Eight Chromium/WebKit browser checks cover real control-panel motion and visual-editor haptic persistence. The same regression runs under the Firefox project when a functional Gecko binary is available.
+
+---
+
 ## [2.1.3-alpha.10] - 2026-08-15
 
 Tenth **`2.1.3`** alpha: a full Nodalia visual redesign for the Entity Card battery and network layouts.

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.1.3-alpha.10";
+const CARD_VERSION = "2.2.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -81,6 +81,9 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+    scrolls: {
+      percentage: true,
+    },
   },
   animations: {
     enabled: true,
@@ -1308,9 +1311,21 @@ class NodaliaFanCard extends HTMLElement {
 
     this._animationCleanupTimer = window.setTimeout(() => {
       this._animationCleanupTimer = 0;
+      const shouldFinalizeRender = Boolean(
+        this._powerTransition || this._controlsTransition || this._presetPanelTransition,
+      );
       this._powerTransition = null;
       this._controlsTransition = null;
       this._presetPanelTransition = null;
+      if (!shouldFinalizeRender || !this.isConnected) {
+        return;
+      }
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+      this._lastRenderSignature = "";
+      this._render();
     }, safeDelay);
   }
 
@@ -1863,6 +1878,9 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+    if (this._config?.haptics?.scrolls?.percentage === false) {
+      return;
+    }
     const next = Number(steppedValue);
     if (!Number.isFinite(next)) {
       return;
@@ -2903,26 +2921,31 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__controls-shell {
           backface-visibility: hidden;
+          display: grid;
+          grid-template-rows: 1fr;
           margin-top: var(--fan-card-controls-gap);
           overflow: visible;
-          will-change: margin-top, max-height, opacity;
+          will-change: grid-template-rows, margin-top, opacity;
         }
 
         .fan-card__controls-inner {
           backface-visibility: hidden;
           display: grid;
           gap: 10px;
+          min-height: 0;
+          overflow: visible;
           will-change: opacity, transform;
         }
 
         .fan-card__controls-shell--entering {
           animation: fan-card-controls-expand var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-controls-delay, 0ms) both;
-          overflow: visible;
+          overflow: hidden;
           transform-origin: top;
         }
 
         .fan-card__controls-shell--entering .fan-card__controls-inner {
           animation: fan-card-controls-content-in var(--fan-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--fan-card-controls-delay, 0ms) both;
+          overflow: hidden;
           transform-origin: top;
         }
 
@@ -2935,6 +2958,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__controls-shell--leaving .fan-card__controls-inner {
           animation: fan-card-controls-content-out var(--fan-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--fan-card-controls-delay, 0ms) both;
+          overflow: hidden;
           transform-origin: top;
         }
 
@@ -3262,13 +3286,13 @@ class NodaliaFanCard extends HTMLElement {
 
         @keyframes fan-card-controls-expand {
           0% {
+            grid-template-rows: 0fr;
             margin-top: 0;
-            max-height: 0;
             opacity: 0;
           }
           100% {
+            grid-template-rows: 1fr;
             margin-top: var(--fan-card-controls-gap);
-            max-height: var(--fan-card-controls-max-height);
             opacity: 1;
           }
         }
@@ -3293,13 +3317,13 @@ class NodaliaFanCard extends HTMLElement {
 
         @keyframes fan-card-controls-collapse {
           0% {
+            grid-template-rows: 1fr;
             margin-top: var(--fan-card-controls-gap);
-            max-height: var(--fan-card-controls-max-height);
             opacity: 1;
           }
           100% {
+            grid-template-rows: 0fr;
             margin-top: 0;
-            max-height: 0;
             opacity: 0;
           }
         }
@@ -4645,6 +4669,7 @@ class NodaliaFanCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_percentage", "haptics.scrolls.percentage", config.haptics.scrolls?.percentage !== false)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",

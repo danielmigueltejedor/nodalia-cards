@@ -10,6 +10,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-alpha.1] - 2026-08-15
+
+First **`2.2.0`** alpha: cross-browser device motion, granular haptics and the completed Nodalia overview-layout redesigns move into a new minor preview line.
+
+### Added
+
+- **Individual scroll haptics:** visual-editor toggles independently control Light brightness / temperature / color, Fan percentage, Humidifier humidity, Climate temperature dial, and Cover position / tilt feedback.
+- Browser regressions measure the real opening, midpoint, closing and settled DOM states of Light, Fan and Humidifier control panels.
+
+### Changed
+
+- Light, Fan and Humidifier control expansion uses interpolated grid tracks instead of fixed `max-height` guesses, keeping content height fluid across browser engines.
+- The global haptics switch remains the master control while every scroll control stays enabled by default for backward compatibility.
+- Carries the Air Quality, battery and network Entity Card layouts into the `2.2.0` preview line.
+
+### Fixed
+
+- Device-card animation cleanup now commits a final render after power and controls transitions. Turning a device off removes stale expanded controls from the DOM instead of relying on CSS animation fill behavior.
+- Person Card keyboard / click feedback follows the real rounded `ha-card` surface rather than the rectangular inner content layer.
+
+### Validation
+
+- Full validation covers 428 Node tests, synchronized versions, all editor/runtime locale catalogs and generated release bundles.
+- Eight browser checks pass across Chromium and WebKit for device expansion / collapse and visual-editor haptic persistence. The regression is also registered for Firefox; the local Playwright Firefox 153 binary could not render even an empty page in this environment.
+
 ## [2.1.3-alpha.10] - 2026-08-15
 
 ### Changed

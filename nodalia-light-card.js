@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "2.1.3-alpha.10";
+const CARD_VERSION = "2.2.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -85,6 +85,11 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+    scrolls: {
+      brightness: true,
+      temperature: true,
+      color: true,
+    },
   },
   animations: {
     enabled: true,
@@ -1853,8 +1858,18 @@ class NodaliaLightCard extends HTMLElement {
 
     this._animationCleanupTimer = window.setTimeout(() => {
       this._animationCleanupTimer = 0;
+      const shouldFinalizeRender = Boolean(this._powerTransition || this._controlsTransition);
       this._powerTransition = null;
       this._controlsTransition = null;
+      if (!shouldFinalizeRender || !this.isConnected) {
+        return;
+      }
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+      this._lastRenderSignature = "";
+      this._render();
     }, safeDelay);
   }
 
@@ -2328,7 +2343,10 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+  _hapticOnSliderStep(kind, steppedValue, { commit = false } = {}) {
+    if (this._config?.haptics?.scrolls?.[kind] === false) {
+      return;
+    }
     const next = Number(steppedValue);
     if (!Number.isFinite(next)) {
       return;
@@ -2376,7 +2394,7 @@ class NodaliaLightCard extends HTMLElement {
         this._draftBrightness.set(this._config.entity, nextValue);
         this._updateBrightnessPreview(nextValue);
         this._patchLightActiveChip("brightness", `${Math.round(nextValue)}%`);
-        this._hapticOnSliderStep(this._lightSliderHapticStep(kind, nextValue), { commit });
+        this._hapticOnSliderStep(kind, this._lightSliderHapticStep(kind, nextValue), { commit });
         if (commit) {
           this._commitBrightness(nextValue);
         }
@@ -2390,7 +2408,7 @@ class NodaliaLightCard extends HTMLElement {
         this._draftTemperature.set(this._config.entity, nextKelvin);
         this._updateTemperaturePreview(nextValue, state);
         this._patchLightActiveChip("temperature", `${nextKelvin}K`);
-        this._hapticOnSliderStep(this._lightSliderHapticStep(kind, nextKelvin), { commit });
+        this._hapticOnSliderStep(kind, this._lightSliderHapticStep(kind, nextKelvin), { commit });
         if (commit) {
           this._commitTemperaturePreset(nextKelvin);
         }
@@ -2402,7 +2420,7 @@ class NodaliaLightCard extends HTMLElement {
         this._draftHue.set(this._config.entity, nextValue);
         this._updateColorPreview(nextValue);
         this._patchLightActiveChip("color", `${nextValue}°`);
-        this._hapticOnSliderStep(this._lightSliderHapticStep(kind, nextValue), { commit });
+        this._hapticOnSliderStep(kind, this._lightSliderHapticStep(kind, nextValue), { commit });
         if (commit) {
           this._commitColorHue(nextValue, state);
         }
@@ -3724,15 +3742,19 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__controls-shell {
           backface-visibility: hidden;
+          display: grid;
+          grid-template-rows: 1fr;
           margin-top: var(--light-card-controls-gap);
-          overflow: hidden;
-          will-change: margin-top, max-height, opacity;
+          overflow: visible;
+          will-change: grid-template-rows, margin-top, opacity;
         }
 
         .light-card__controls-inner {
           backface-visibility: hidden;
           display: grid;
           gap: 10px;
+          min-height: 0;
+          overflow: visible;
           will-change: opacity, transform;
         }
 
@@ -3781,12 +3803,13 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__controls-shell--entering {
           animation: light-card-controls-expand var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--light-card-controls-delay) both;
-          overflow: visible;
+          overflow: hidden;
           transform-origin: top;
         }
 
         .light-card__controls-shell--entering .light-card__controls-inner {
           animation: light-card-controls-content-in var(--light-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--light-card-controls-delay) both;
+          overflow: hidden;
           transform-origin: top;
         }
 
@@ -3798,6 +3821,7 @@ class NodaliaLightCard extends HTMLElement {
 
         .light-card__controls-shell--leaving .light-card__controls-inner {
           animation: light-card-controls-content-out var(--light-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--light-card-controls-delay) both;
+          overflow: hidden;
           transform-origin: top;
         }
 
@@ -4206,26 +4230,26 @@ class NodaliaLightCard extends HTMLElement {
 
         @keyframes light-card-controls-expand {
           0% {
+            grid-template-rows: 0fr;
             margin-top: 0;
-            max-height: 0;
             opacity: 0;
           }
           100% {
+            grid-template-rows: 1fr;
             margin-top: var(--light-card-controls-gap);
-            max-height: var(--light-card-controls-max-height);
             opacity: 1;
           }
         }
 
         @keyframes light-card-controls-collapse {
           0% {
+            grid-template-rows: 1fr;
             margin-top: var(--light-card-controls-gap);
-            max-height: var(--light-card-controls-max-height);
             opacity: 1;
           }
           100% {
+            grid-template-rows: 0fr;
             margin-top: 0;
-            max-height: 0;
             opacity: 0;
           }
         }
@@ -5591,6 +5615,9 @@ class NodaliaLightCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_brightness", "haptics.scrolls.brightness", config.haptics.scrolls?.brightness !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_temperature", "haptics.scrolls.temperature", config.haptics.scrolls?.temperature !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_color", "haptics.scrolls.color", config.haptics.scrolls?.color !== false)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",
