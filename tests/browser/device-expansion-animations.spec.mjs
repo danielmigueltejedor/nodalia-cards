@@ -63,22 +63,58 @@ const devices = [
   },
 ];
 
-async function sampleAnimation(page, shell, animationName) {
-  const readSample = () => shell.evaluate((element, expectedName) => ({
-    found: element.getAnimations().some(item => item.animationName === expectedName),
-    height: element.getBoundingClientRect().height,
-    row: getComputedStyle(element).gridTemplateRows,
-  }), animationName);
-  const first = await readSample();
-  await page.waitForTimeout(220);
-  const middle = await readSample();
-  await page.waitForTimeout(260);
-  const last = await readSample();
-  return {
-    found: first.found && middle.found && last.found,
-    heights: [first.height, middle.height, last.height],
-    rows: [first.row, middle.row, last.row],
-  };
+async function sampleAnimation(shell, animationName, expectedClass) {
+  return shell.evaluate(async (element, expected) => {
+    const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const deadline = performance.now() + 2_000;
+    let animation = null;
+
+    while (!animation && performance.now() < deadline) {
+      animation = element.getAnimations().find(item => item.animationName === expected.name) || null;
+      if (!animation) {
+        await nextFrame();
+      }
+    }
+
+    if (!animation || !animation.effect) {
+      return {
+        found: false,
+        hadExpectedClass: element.classList.contains(expected.className),
+        heights: [],
+        rows: [],
+      };
+    }
+
+    const timing = animation.effect.getTiming();
+    const duration = Number(timing.duration);
+    const delay = Number(timing.delay) || 0;
+    const samples = [];
+
+    animation.pause();
+    try {
+      await animation.ready;
+    } catch {
+      // A detached animation can reject ready in some WebKit builds. Setting
+      // currentTime below still provides deterministic computed-style samples.
+    }
+
+    for (const progress of [0.15, 0.5, 0.85]) {
+      animation.currentTime = delay + duration * progress;
+      await nextFrame();
+      samples.push({
+        height: element.getBoundingClientRect().height,
+        row: getComputedStyle(element).gridTemplateRows,
+      });
+    }
+
+    animation.play();
+    return {
+      found: true,
+      hadExpectedClass: element.classList.contains(expected.className),
+      heights: samples.map(sample => sample.height),
+      rows: samples.map(sample => sample.row),
+    };
+  }, { name: animationName, className: expectedClass });
 }
 
 for (const device of devices) {
@@ -132,9 +168,9 @@ for (const device of devices) {
     }, device);
 
     const openingShell = card.locator(device.shell);
-    await expect(openingShell).toHaveClass(new RegExp(device.entering));
-    const opening = await sampleAnimation(page, openingShell, device.expandAnimation);
+    const opening = await sampleAnimation(openingShell, device.expandAnimation, device.entering);
     expect(opening.found).toBe(true);
+    expect(opening.hadExpectedClass).toBe(true);
     expect(opening.heights[1]).toBeGreaterThan(opening.heights[0] + 1);
     expect(opening.heights[2]).toBeGreaterThan(opening.heights[1] + 1);
     expect(opening.rows[0]).not.toBe(opening.rows[2]);
@@ -158,9 +194,9 @@ for (const device of devices) {
     }, device);
 
     const closingShell = card.locator(device.shell);
-    await expect(closingShell).toHaveClass(new RegExp(device.leaving));
-    const closing = await sampleAnimation(page, closingShell, device.collapseAnimation);
+    const closing = await sampleAnimation(closingShell, device.collapseAnimation, device.leaving);
     expect(closing.found).toBe(true);
+    expect(closing.hadExpectedClass).toBe(true);
     expect(closing.heights[1]).toBeLessThan(closing.heights[0] - 1);
     expect(closing.heights[2]).toBeLessThan(closing.heights[1] - 1);
 
