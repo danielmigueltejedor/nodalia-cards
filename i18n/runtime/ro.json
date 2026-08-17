@@ -477,6 +477,33 @@
       "good": "Bun",
       "fair": "Acceptabil",
       "poor": "Slab"
+    },
+    "airQuality": {
+      "title": "Calitatea aerului",
+      "aqi": "AQI",
+      "headline": "Calitatea aerului",
+      "whoGuidelines": "OMS AQG 24 h",
+      "levels": {
+        "good": "Bună",
+        "moderate": "Moderată",
+        "unhealthy_sensitive": "Nesănătoasă pentru grupuri sensibile",
+        "unhealthy": "Nesănătoasă",
+        "very_unhealthy": "Foarte nesănătoasă",
+        "hazardous": "Periculoasă",
+        "unknown": "Necunoscută"
+      },
+      "metrics": {
+        "pm1": "PM1",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "pm10": "PM10",
+        "tvoc": "TVOC",
+        "co2": "CO₂",
+        "temperature": "Temp",
+        "humidity": "Umiditate"
+      },
+      "loadingGraphs": "Se încarcă istoricul…",
+      "emptyGraphs": "Încă nu există istoric"
     }
   },
   "weatherCard": {

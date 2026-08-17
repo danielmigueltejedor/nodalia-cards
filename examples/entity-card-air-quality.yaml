@@ -1,0 +1,32 @@
+# Pair with examples/entity-card-air-quality-demo-package.yaml
+type: custom:nodalia-entity-card
+entity: sensor.nodalia_demo_aqi
+name: Living room air
+icon: mdi:air-filter
+layout: air_quality
+air_quality:
+  guidelines: who
+  show_graphs: true
+  graph_hours: 24
+  graph_colors:
+    pm1: "#f29f05"
+    pm25: "#42a5f5"
+    pm4: "#7fd0c8"
+    pm10: "#f56aa0"
+    tvoc: "#b993ff"
+    co2: "#7ad66f"
+    temperature: "#d4783a"
+    humidity: "#3f9d7a"
+  pm1: sensor.nodalia_demo_pm1
+  pm25: sensor.nodalia_demo_pm25
+  pm4: sensor.nodalia_demo_pm4
+  pm10: sensor.nodalia_demo_pm10
+  tvoc: sensor.nodalia_demo_tvoc
+  temperature: sensor.nodalia_demo_temperature
+  humidity: sensor.nodalia_demo_humidity
+  co2: sensor.nodalia_demo_co2
+tap_action: more-info
+hold_action: more-info
+grid_options:
+  columns: 12
+  rows: 4

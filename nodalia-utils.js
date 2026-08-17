@@ -115,6 +115,15 @@
     return key === "__proto__" || key === "constructor" || key === "prototype";
   }
 
+  function defineOwnValue(target, key, value) {
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    });
+  }
+
   function setByPath(target, path, value) {
     const parts = String(path || "").split(".");
     if (parts.some(isUnsafeConfigPathKey)) {
@@ -123,12 +132,20 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-        cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        return;
+      }
+      const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
+      if (!isObject(current) && !Array.isArray(current)) {
+        defineOwnValue(cursor, key, /^\d+$/.test(parts[index + 1]) ? [] : {});
       }
       cursor = cursor[key];
     }
-    cursor[parts[parts.length - 1]] = value;
+    const finalKey = parts[parts.length - 1];
+    if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+      return;
+    }
+    defineOwnValue(cursor, finalKey, value);
   }
 
   function deleteByPath(target, path) {
@@ -139,12 +156,22 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
         return;
       }
-      cursor = cursor[key];
+      const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
+      if (!isObject(current) && !Array.isArray(current)) {
+        return;
+      }
+      cursor = current;
     }
-    delete cursor[parts[parts.length - 1]];
+    const finalKey = parts[parts.length - 1];
+    if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+      return;
+    }
+    if (Object.hasOwn(cursor, finalKey)) {
+      delete cursor[finalKey];
+    }
   }
 
   function deepClone(value) {

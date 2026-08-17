@@ -10,6 +10,99 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.1.3-alpha.8] - 2026-08-12
+
+### Changed
+
+- **Fluid Air Quality hover:** time, value and marker position now interpolate continuously across a denser 96-sample history.
+- **Efficient hover rendering:** pointer movement updates only the graph overlays instead of rebuilding the Entity Card.
+- **Adaptive preview placement:** the hover chip follows the graph height and renders above or below the circular marker without covering it.
+
+### Validation
+
+- Full validation covers 420 Node tests, card syntax, version synchronization, i18n and generated release bundles.
+
+## [2.1.3-alpha.7] - 2026-08-12
+
+### Changed
+
+- **Interactive Air Quality legend:** graph labels now toggle individual history series while the measurement chips retain their entity-specific `more-info` action.
+- **Hover marker:** the selected sample uses a compact circular marker that cannot stretch with the chart SVG.
+- **Icon contrast:** green and blue-green Air Quality tints now use the shared theme-aware glyph contrast treatment.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n and generated release bundles.
+
+## [2.1.3-alpha.6] - 2026-08-12
+
+### Added
+
+- **Air Quality graph colors:** every PM, TVOC, CO₂, temperature and humidity series now has its own color picker in the Entity Card visual editor.
+- **Air Quality graph inspection:** mouse hover selects the nearest series and timestamp, showing a theme-aware chip with its label, value, unit and time.
+
+### Changed
+
+- **Metric navigation:** Air Quality metric chips and graph legend items open `more-info` for the sensor they represent; primary AQI chips continue to target the main entity.
+- **Chart composition:** history lines now start and end at the inner edges of the chart panel without horizontal plot padding.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n and generated release bundles.
+
+## [2.1.3-alpha.5] - 2026-08-11
+
+### Fixed
+
+- **Release packaging:** generated bundle inventory now includes every stale-artifact deletion, so the release workflow reproduces a clean tree and can publish the verified assets.
+
+### Changed
+
+- Carries forward the Air Quality height correction and CodeQL hardening prepared for `2.1.3-alpha.4`.
+- Updates CodeQL Action to `4.37.6`, pnpm/action-setup to `6.0.10` and actions/attest to `4.2.2`, with CodeQL init/analyze kept on the same revision.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.5`.
+
+## [2.1.3-alpha.4] - 2026-08-11
+
+### Fixed
+
+- **Entity Card air quality sizing:** Home Assistant now measures the card's real content height, including the optional history panel, so the card no longer overlaps the row below it.
+- **Configuration hardening:** dynamic configuration paths reject prototype keys and only mutate owned configuration data; translation utilities avoid time-of-check/time-of-use file access and apply complete escaping and HTML filtering.
+- **CodeQL:** resolved the 20 open JavaScript security and quality alerts covered by the hardened configuration and translation paths.
+
+### Changed
+
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.4`.
+
+## [2.1.3-alpha.3] - 2026-08-10
+
+### Added
+
+- **Entity Card air quality graphs:** optional history chart panel (`air_quality.show_graphs`, `graph_hours`) inspired by Graph Card, using Home Assistant history.
+
+### Changed
+
+- **Entity Card air quality:** temperature and humidity move to Climate-style headline chips on the top right; pollutant metrics stay as metric bubbles.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.2` available alongside `2.1.3-alpha.3`.
+
+## [2.1.3-alpha.2] - 2026-08-10
+
+### Changed
+
+- **Entity Card air quality layout:** metrics use Nodalia pill chips / metric bubbles (same language as Entity and Room Hub), instead of a separate card grid and oversized hero readout.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.1` available alongside `2.1.3-alpha.2`.
+
+## [2.1.3-alpha.1] - 2026-08-10
+
+### Added
+
+- **Climate, Humidifier, Fan and Light:** selection haptics tick on each stepped value change while scrolling or dragging dials and sliders (color hue every 5°), not only when the value is committed.
+- **Entity Card:** optional `layout: air_quality` presents AQI plus PM / TVOC / CO₂ / temperature / humidity in one Nodalia card, with optional WHO 24h AQG bands. Demo sensors live in `examples/entity-card-air-quality-demo-package.yaml`.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2` available alongside `2.1.3-alpha.1`.
+
 ## [2.1.2] - 2026-08-09
 
 Stable **`2.1.2`** completes the Gecko surface-stability cycle and hardens the optional Nodalia Cards Engine bridge without changing card YAML or the HACS Dashboard resource.

@@ -11,15 +11,36 @@ const RUNTIME_DIR = path.join(__dirname, "..", "i18n", "runtime");
 
 function setDeep(obj, dotted, value) {
   const parts = dotted.split(".");
+  if (parts.some(part => part === "__proto__" || part === "constructor" || part === "prototype")) {
+    throw new Error(`Unsafe translation key: ${dotted}`);
+  }
   let cur = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const k = parts[i];
-    if (!cur[k] || typeof cur[k] !== "object") {
-      cur[k] = {};
+    if (k === "__proto__" || k === "constructor" || k === "prototype") {
+      throw new Error(`Unsafe translation key: ${dotted}`);
+    }
+    const current = Object.hasOwn(cur, k) ? cur[k] : undefined;
+    if (!current || typeof current !== "object") {
+      Object.defineProperty(cur, k, {
+        configurable: true,
+        enumerable: true,
+        value: {},
+        writable: true,
+      });
     }
     cur = cur[k];
   }
-  cur[parts[parts.length - 1]] = value;
+  const finalKey = parts[parts.length - 1];
+  if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+    throw new Error(`Unsafe translation key: ${dotted}`);
+  }
+  Object.defineProperty(cur, finalKey, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
 }
 
 function deepMerge(base, overlay) {

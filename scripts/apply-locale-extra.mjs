@@ -43,11 +43,16 @@ for (const lang of langs) {
     process.exit(1);
   }
   const p = path.join(RUNTIME_DIR, `${lang}.json`);
-  if (!fs.existsSync(p)) {
-    console.error("apply-locale-extra: missing", path.relative(ROOT, p));
-    process.exit(1);
+  let current;
+  try {
+    current = JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      console.error("apply-locale-extra: missing", path.relative(ROOT, p));
+      process.exit(1);
+    }
+    throw error;
   }
-  const current = JSON.parse(fs.readFileSync(p, "utf8"));
   const merged = deepMerge(current, inject);
   fs.writeFileSync(p, `${JSON.stringify(merged, null, 2)}\n`);
   console.log("merged locale-extra into", path.relative(ROOT, p));

@@ -699,6 +699,33 @@
           good: "Good",
           fair: "Fair",
           poor: "Poor"
+        },
+        airQuality: {
+          title: "Air quality",
+          aqi: "AQI",
+          headline: "Air quality",
+          whoGuidelines: "WHO 24h AQG",
+          levels: {
+            good: "Good",
+            moderate: "Moderate",
+            unhealthy_sensitive: "Unhealthy for sensitive groups",
+            unhealthy: "Unhealthy",
+            very_unhealthy: "Very unhealthy",
+            hazardous: "Hazardous",
+            unknown: "Unknown"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Humidity"
+          },
+          loadingGraphs: "Loading history…",
+          emptyGraphs: "No history yet"
         }
       },
       weatherCard: {
@@ -1669,6 +1696,33 @@
           good: "Gut",
           fair: "Mäßig",
           poor: "Schlecht"
+        },
+        airQuality: {
+          title: "Luftqualität",
+          aqi: "AQI",
+          headline: "Luftqualität",
+          whoGuidelines: "WHO 24h AQG",
+          levels: {
+            good: "Gut",
+            moderate: "Mäßig",
+            unhealthy_sensitive: "Ungesund für Empfindliche",
+            unhealthy: "Ungesund",
+            very_unhealthy: "Sehr ungesund",
+            hazardous: "Gefährlich",
+            unknown: "Unbekannt"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Feuchte"
+          },
+          loadingGraphs: "Verlauf wird geladen…",
+          emptyGraphs: "Noch kein Verlauf"
         }
       },
       weatherCard: {
@@ -2639,6 +2693,33 @@
           good: "Καλό",
           fair: "Μέτριο",
           poor: "Κακό"
+        },
+        airQuality: {
+          title: "Ποιότητα αέρα",
+          aqi: "AQI",
+          headline: "Ποιότητα αέρα",
+          whoGuidelines: "ΠΟΥ AQG 24 ώρες",
+          levels: {
+            good: "Καλή",
+            moderate: "Μέτρια",
+            unhealthy_sensitive: "Επιβλαβής για ευαίσθητες ομάδες",
+            unhealthy: "Επιβλαβής",
+            very_unhealthy: "Πολύ επιβλαβής",
+            hazardous: "Επικίνδυνη",
+            unknown: "Άγνωστη"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Θερμ.",
+            humidity: "Υγρασία"
+          },
+          loadingGraphs: "Φόρτωση ιστορικού…",
+          emptyGraphs: "Δεν υπάρχει ακόμα ιστορικό"
         }
       },
       weatherCard: {
@@ -3609,6 +3690,33 @@
           good: "Bueno",
           fair: "Aceptable",
           poor: "Malo"
+        },
+        airQuality: {
+          title: "Calidad del aire",
+          aqi: "ICA",
+          headline: "Calidad del aire",
+          whoGuidelines: "OMS AQG 24 h",
+          levels: {
+            good: "Buena",
+            moderate: "Moderada",
+            unhealthy_sensitive: "Dañina para grupos sensibles",
+            unhealthy: "Dañina",
+            very_unhealthy: "Muy dañina",
+            hazardous: "Peligrosa",
+            unknown: "Desconocida"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Humedad"
+          },
+          loadingGraphs: "Cargando historial…",
+          emptyGraphs: "Aún no hay historial"
         }
       },
       weatherCard: {
@@ -4579,6 +4687,33 @@
           good: "Bon",
           fair: "Correct",
           poor: "Mauvais"
+        },
+        airQuality: {
+          title: "Qualité de l'air",
+          aqi: "AQI",
+          headline: "Qualité de l'air",
+          whoGuidelines: "OMS AQG 24 h",
+          levels: {
+            good: "Bonne",
+            moderate: "Modérée",
+            unhealthy_sensitive: "Malsaine pour les groupes sensibles",
+            unhealthy: "Malsaine",
+            very_unhealthy: "Très malsaine",
+            hazardous: "Dangereuse",
+            unknown: "Inconnue"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Humidité"
+          },
+          loadingGraphs: "Chargement de l'historique…",
+          emptyGraphs: "Pas encore d'historique"
         }
       },
       weatherCard: {
@@ -5549,6 +5684,33 @@
           good: "Buono",
           fair: "Discreto",
           poor: "Scarso"
+        },
+        airQuality: {
+          title: "Qualità dell'aria",
+          aqi: "AQI",
+          headline: "Qualità dell'aria",
+          whoGuidelines: "OMS AQG 24 h",
+          levels: {
+            good: "Buona",
+            moderate: "Moderata",
+            unhealthy_sensitive: "Nociva per gruppi sensibili",
+            unhealthy: "Nociva",
+            very_unhealthy: "Molto nociva",
+            hazardous: "Pericolosa",
+            unknown: "Sconosciuta"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Umidità"
+          },
+          loadingGraphs: "Caricamento cronologia…",
+          emptyGraphs: "Nessuna cronologia ancora"
         }
       },
       weatherCard: {
@@ -6519,6 +6681,33 @@
           good: "Goed",
           fair: "Redelijk",
           poor: "Slecht"
+        },
+        airQuality: {
+          title: "Luchtkwaliteit",
+          aqi: "AQI",
+          headline: "Luchtkwaliteit",
+          whoGuidelines: "WHO 24u AQG",
+          levels: {
+            good: "Goed",
+            moderate: "Matig",
+            unhealthy_sensitive: "Ongezond voor gevoelige groepen",
+            unhealthy: "Ongezond",
+            very_unhealthy: "Zeer ongezond",
+            hazardous: "Gevaarlijk",
+            unknown: "Onbekend"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Vochtigheid"
+          },
+          loadingGraphs: "Geschiedenis laden…",
+          emptyGraphs: "Nog geen geschiedenis"
         }
       },
       weatherCard: {
@@ -7489,6 +7678,33 @@
           good: "Goed",
           fair: "Redelijk",
           poor: "Slecht"
+        },
+        airQuality: {
+          title: "Luftkvalitet",
+          aqi: "AQI",
+          headline: "Luftkvalitet",
+          whoGuidelines: "WHO 24t AQG",
+          levels: {
+            good: "God",
+            moderate: "Moderat",
+            unhealthy_sensitive: "Usunt for sensitive grupper",
+            unhealthy: "Usunt",
+            very_unhealthy: "Svært usunt",
+            hazardous: "Farlig",
+            unknown: "Ukjent"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Fuktighet"
+          },
+          loadingGraphs: "Laster historikk…",
+          emptyGraphs: "Ingen historikk ennå"
         }
       },
       weatherCard: {
@@ -8459,6 +8675,33 @@
           good: "Bom",
           fair: "Razoável",
           poor: "Mau"
+        },
+        airQuality: {
+          title: "Qualidade do ar",
+          aqi: "AQI",
+          headline: "Qualidade do ar",
+          whoGuidelines: "OMS AQG 24 h",
+          levels: {
+            good: "Boa",
+            moderate: "Moderada",
+            unhealthy_sensitive: "Prejudicial para grupos sensíveis",
+            unhealthy: "Prejudicial",
+            very_unhealthy: "Muito prejudicial",
+            hazardous: "Perigosa",
+            unknown: "Desconhecida"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Humidade"
+          },
+          loadingGraphs: "A carregar histórico…",
+          emptyGraphs: "Ainda sem histórico"
         }
       },
       weatherCard: {
@@ -9429,6 +9672,33 @@
           good: "Bun",
           fair: "Acceptabil",
           poor: "Slab"
+        },
+        airQuality: {
+          title: "Calitatea aerului",
+          aqi: "AQI",
+          headline: "Calitatea aerului",
+          whoGuidelines: "OMS AQG 24 h",
+          levels: {
+            good: "Bună",
+            moderate: "Moderată",
+            unhealthy_sensitive: "Nesănătoasă pentru grupuri sensibile",
+            unhealthy: "Nesănătoasă",
+            very_unhealthy: "Foarte nesănătoasă",
+            hazardous: "Periculoasă",
+            unknown: "Necunoscută"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Temp",
+            humidity: "Umiditate"
+          },
+          loadingGraphs: "Se încarcă istoricul…",
+          emptyGraphs: "Încă nu există istoric"
         }
       },
       weatherCard: {
@@ -10399,6 +10669,33 @@
           good: "Хорошо",
           fair: "Удовлетворительно",
           poor: "Плохо"
+        },
+        airQuality: {
+          title: "Качество воздуха",
+          aqi: "AQI",
+          headline: "Качество воздуха",
+          whoGuidelines: "ВОЗ AQG 24 ч",
+          levels: {
+            good: "Хорошее",
+            moderate: "Умеренное",
+            unhealthy_sensitive: "Вредно для чувствительных групп",
+            unhealthy: "Вредное",
+            very_unhealthy: "Очень вредное",
+            hazardous: "Опасное",
+            unknown: "Неизвестно"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "Темп.",
+            humidity: "Влажность"
+          },
+          loadingGraphs: "Загрузка истории…",
+          emptyGraphs: "Истории пока нет"
         }
       },
       weatherCard: {
@@ -11369,6 +11666,33 @@
           good: "良好",
           fair: "一般",
           poor: "差"
+        },
+        airQuality: {
+          title: "空气质量",
+          aqi: "AQI",
+          headline: "空气质量",
+          whoGuidelines: "世卫组织 24 小时 AQG",
+          levels: {
+            good: "优",
+            moderate: "良",
+            unhealthy_sensitive: "对敏感人群不健康",
+            unhealthy: "不健康",
+            very_unhealthy: "非常不健康",
+            hazardous: "危险",
+            unknown: "未知"
+          },
+          metrics: {
+            pm1: "PM1",
+            pm25: "PM2.5",
+            pm4: "PM4",
+            pm10: "PM10",
+            tvoc: "TVOC",
+            co2: "CO₂",
+            temperature: "温度",
+            humidity: "湿度"
+          },
+          loadingGraphs: "正在加载历史…",
+          emptyGraphs: "暂无历史"
         }
       },
       weatherCard: {

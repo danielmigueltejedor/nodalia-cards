@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.1.2";
+const CARD_VERSION = "2.1.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1862,20 +1862,47 @@ class NodaliaFanCard extends HTMLElement {
     }
   }
 
+  _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+    const next = Number(steppedValue);
+    if (!Number.isFinite(next)) {
+      return;
+    }
+    const drag = this._activeSliderDrag;
+    if (drag) {
+      if (drag.lastHapticValue === next) {
+        return;
+      }
+      drag.lastHapticValue = next;
+      this._triggerHaptic("selection");
+      return;
+    }
+    if (commit) {
+      this._triggerHaptic("selection");
+      this._lastIdleSliderHapticValue = undefined;
+      return;
+    }
+    if (this._lastIdleSliderHapticValue === next) {
+      return;
+    }
+    this._lastIdleSliderHapticValue = next;
+    this._triggerHaptic("selection");
+  }
+
   _applySliderValue(slider, value, options = {}) {
     const commit = options.commit === true;
     const nextValue = clamp(Number(value), 0, 100);
+    const stepped = Math.round(nextValue);
 
     this._draftPercentage.set(this._config.entity, nextValue);
     this._updatePercentagePreview(nextValue);
 
     const chip = this.shadowRoot?.querySelector('[data-fan-chip="percentage"]');
     if (chip instanceof HTMLElement) {
-      chip.textContent = `${Math.round(nextValue)}%`;
+      chip.textContent = `${stepped}%`;
     }
 
+    this._hapticOnSliderStep(stepped, { commit });
     if (commit) {
-      this._triggerHaptic("selection");
       this._commitPercentage(nextValue);
     }
   }
@@ -1911,6 +1938,7 @@ class NodaliaFanCard extends HTMLElement {
       pointerId,
       slider,
       geometry: getSliderDragGeometry(slider),
+      lastHapticValue: Math.round(Number(slider.value)),
     };
     this._attachWindowDragListeners();
 

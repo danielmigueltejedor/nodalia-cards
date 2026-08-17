@@ -477,6 +477,33 @@
       "good": "Buono",
       "fair": "Discreto",
       "poor": "Scarso"
+    },
+    "airQuality": {
+      "title": "Qualità dell'aria",
+      "aqi": "AQI",
+      "headline": "Qualità dell'aria",
+      "whoGuidelines": "OMS AQG 24 h",
+      "levels": {
+        "good": "Buona",
+        "moderate": "Moderata",
+        "unhealthy_sensitive": "Nociva per gruppi sensibili",
+        "unhealthy": "Nociva",
+        "very_unhealthy": "Molto nociva",
+        "hazardous": "Pericolosa",
+        "unknown": "Sconosciuta"
+      },
+      "metrics": {
+        "pm1": "PM1",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "pm10": "PM10",
+        "tvoc": "TVOC",
+        "co2": "CO₂",
+        "temperature": "Temp",
+        "humidity": "Umidità"
+      },
+      "loadingGraphs": "Caricamento cronologia…",
+      "emptyGraphs": "Nessuna cronologia ancora"
     }
   },
   "weatherCard": {

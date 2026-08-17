@@ -10,6 +10,146 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.1.3-alpha.8] - 2026-08-12
+
+Eighth **`2.1.3`** alpha: fluid Air Quality graph inspection.
+
+### Changed
+
+- **Continuous hover:** the Air Quality chart interpolates time, value and marker position continuously instead of jumping between hourly samples.
+- **Denser history:** new Air Quality configurations use 96 graph samples by default instead of 24.
+- **Efficient overlay:** pointer movement patches only the hover line, marker and preview chip rather than rebuilding the complete card.
+- **Adaptive preview:** the hover chip follows the selected graph height and switches above or below the marker with a safe visual gap.
+
+### Validation
+
+- Full validation covers 420 Node tests, card syntax, version synchronization, i18n and generated production bundles.
+
+---
+
+## [2.1.3-alpha.7] - 2026-08-12
+
+Seventh **`2.1.3`** alpha: selectable Air Quality history with improved visual contrast.
+
+### Changed
+
+- **Interactive graph legend:** tapping a legend label now toggles that individual history series, while the measurement chips continue to open Home Assistant `more-info` for their own sensors.
+- **Hover marker:** the highlighted sample uses a small, fixed circular marker that remains round at every card aspect ratio.
+- **Icon contrast:** green and blue-green Air Quality tints now use the shared theme-aware light/dark glyph treatment for clearer main-entity icons.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n and generated production bundles.
+
+---
+
+## [2.1.3-alpha.6] - 2026-08-12
+
+Sixth **`2.1.3`** alpha: interactive and theme-configurable Air Quality history.
+
+### Added
+
+- **Graph series colors:** the Entity Card visual editor exposes an individual color picker for PM1, PM2.5, PM4, PM10, TVOC, CO₂, temperature and humidity.
+- **Hover preview:** hovering the history chart highlights the nearest line sample and shows its sensor label, value, unit and localized time in a Weather-style chip.
+
+### Changed
+
+- Air Quality measurement chips and legend entries open Home Assistant `more-info` for their own sensor instead of the main card entity.
+- History paths span the complete inner width of the graph panel, eliminating the visible left and right margins.
+- Editor labels for the new color controls are available in all twelve supported languages.
+
+### Validation
+
+- Full validation covers 419 Node tests, card syntax, version synchronization, i18n, generated bundles and release metadata.
+
+---
+
+## [2.1.3-alpha.5] - 2026-08-11
+
+Fifth **`2.1.3`** alpha: publishable Air Quality sizing and CodeQL hardening release.
+
+### Fixed
+
+- **Release packaging:** generated bundle inventory now includes every stale-artifact deletion, so the release workflow reproduces a clean tree and can publish the verified assets.
+
+### Changed
+
+- Carries forward the Air Quality height correction and CodeQL hardening prepared for `2.1.3-alpha.4`.
+- Updates CodeQL Action to `4.37.6`, pnpm/action-setup to `6.0.10` and actions/attest to `4.2.2`, with CodeQL init/analyze kept on the same revision.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.5`.
+
+### Validation
+
+- Full validation covers 415 Node tests, card syntax, version synchronization, i18n, generated bundles, release metadata and CodeQL analysis.
+
+---
+
+## [2.1.3-alpha.4] - 2026-08-11
+
+Fourth **`2.1.3`** alpha: Home Assistant grid sizing and CodeQL hardening.
+
+### Fixed
+
+- **Entity Card air quality sizing:** Home Assistant now measures the card's real content height, including the optional history panel, so the card no longer overlaps the row below it.
+- **Configuration hardening:** dynamic configuration paths reject prototype keys and only mutate owned configuration data; translation utilities avoid time-of-check/time-of-use file access and apply complete escaping and HTML filtering.
+- **CodeQL:** resolved the 20 open JavaScript security and quality alerts covered by the hardened configuration and translation paths.
+
+### Changed
+
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.4`.
+
+### Validation
+
+- Full validation covers 415 Node tests, card syntax, version synchronization, i18n, generated bundles and CodeQL analysis.
+
+---
+
+## [2.1.3-alpha.3] - 2026-08-10
+
+Third **`2.1.3`** alpha: air-quality graphs plus Climate-style comfort chips.
+
+### Added
+
+- Optional Graph Card-inspired history panel for Entity Card `layout: air_quality` (`show_graphs`, `graph_hours`).
+
+### Changed
+
+- Temperature and humidity render as headline chips on the top right; pollutant readings remain metric bubbles.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.2` available alongside `2.1.3-alpha.3`.
+
+---
+
+## [2.1.3-alpha.2] - 2026-08-10
+
+Second **`2.1.3`** alpha: air-quality layout visual parity with the rest of Nodalia Cards.
+
+### Changed
+
+- **Entity Card air quality:** header uses standard Entity chips; pollutant and climate readings use Room Hub-style metric bubbles with soft WHO tinting.
+- Compatibility loaders keep `2.1.2` and `2.1.3-alpha.1` available alongside `2.1.3-alpha.2`.
+
+---
+
+## [2.1.3-alpha.1] - 2026-08-10
+
+First **`2.1.3`** alpha after stable **`2.1.2`**: stepped haptic ticks on device sliders/dials, plus an air-quality layout on Entity Card.
+
+### Added
+
+- **Scroll / dial haptics:** Climate dials (single and dual-range), humidifier humidity, fan percentage and light brightness / color-temperature / hue sliders fire a `"selection"` haptic on each stepped value change during drag, not only on commit. Color hue ticks every 5°.
+- **Entity Card air quality layout:** `layout: air_quality` shows a hero AQI/value with a metric grid for PM1 / PM2.5 / PM4 / PM10 / TVOC / CO₂ / temperature / humidity. Optional WHO 24h AQG colour bands; empty metric slots can fall back to attributes on the main entity. Demo package: `examples/entity-card-air-quality-demo-package.yaml`.
+
+### Changed
+
+- Compatibility loaders keep `2.1.1` and `2.1.2` available alongside `2.1.3-alpha.1`.
+
+### Validation
+
+- Interaction regressions cover `_hapticOnSliderStep` / `_hapticOnDialStep`, `lastHapticValue` seeding and light color step quantization.
+- Entity air-quality tests cover WHO/AQI band helpers, metric-grid render and the demo package example.
+
+---
+
 ## [2.1.2-alpha.5] - 2026-08-07
 
 Fifth **`2.1.2`** alpha: Notifications corner radius aligned with the Nodalia visual family, editable via presets in the visual editor.

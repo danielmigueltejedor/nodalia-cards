@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "2.1.2";
+const CARD_VERSION = "2.1.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2328,17 +2328,56 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
+  _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+    const next = Number(steppedValue);
+    if (!Number.isFinite(next)) {
+      return;
+    }
+    const drag = this._activeSliderDrag;
+    if (drag) {
+      if (drag.lastHapticValue === next) {
+        return;
+      }
+      drag.lastHapticValue = next;
+      this._triggerHaptic("selection");
+      return;
+    }
+    if (commit) {
+      this._triggerHaptic("selection");
+      this._lastIdleSliderHapticValue = undefined;
+      return;
+    }
+    if (this._lastIdleSliderHapticValue === next) {
+      return;
+    }
+    this._lastIdleSliderHapticValue = next;
+    this._triggerHaptic("selection");
+  }
+
+  _lightSliderHapticStep(kind, value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return Number.NaN;
+    }
+    // Hue spans 360 units — tick every 5° so scrolls stay tactile without buzzing constantly.
+    if (kind === "color") {
+      return Math.round(numeric / 5) * 5;
+    }
+    return Math.round(numeric);
+  }
+
   _applySliderValue(slider, value, options = {}) {
     const commit = options.commit === true;
+    const kind = slider.dataset.lightControl;
 
-    switch (slider.dataset.lightControl) {
+    switch (kind) {
       case "brightness": {
         const nextValue = clamp(Number(value), 1, 100);
         this._draftBrightness.set(this._config.entity, nextValue);
         this._updateBrightnessPreview(nextValue);
         this._patchLightActiveChip("brightness", `${Math.round(nextValue)}%`);
+        this._hapticOnSliderStep(this._lightSliderHapticStep(kind, nextValue), { commit });
         if (commit) {
-          this._triggerHaptic("selection");
           this._commitBrightness(nextValue);
         }
         break;
@@ -2351,8 +2390,8 @@ class NodaliaLightCard extends HTMLElement {
         this._draftTemperature.set(this._config.entity, nextKelvin);
         this._updateTemperaturePreview(nextValue, state);
         this._patchLightActiveChip("temperature", `${nextKelvin}K`);
+        this._hapticOnSliderStep(this._lightSliderHapticStep(kind, nextKelvin), { commit });
         if (commit) {
-          this._triggerHaptic("selection");
           this._commitTemperaturePreset(nextKelvin);
         }
         break;
@@ -2363,8 +2402,8 @@ class NodaliaLightCard extends HTMLElement {
         this._draftHue.set(this._config.entity, nextValue);
         this._updateColorPreview(nextValue);
         this._patchLightActiveChip("color", `${nextValue}°`);
+        this._hapticOnSliderStep(this._lightSliderHapticStep(kind, nextValue), { commit });
         if (commit) {
-          this._triggerHaptic("selection");
           this._commitColorHue(nextValue, state);
         }
         break;
@@ -2410,10 +2449,15 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
+    const kind = slider.dataset.lightControl;
+    const seedValue = kind === "temperature"
+      ? this._temperatureSliderValueToKelvin(Number(slider.value), this._getState())
+      : Number(slider.value);
     this._activeSliderDrag = {
       pointerId,
       slider,
       geometry: getSliderDragGeometry(slider),
+      lastHapticValue: this._lightSliderHapticStep(kind, seedValue),
     };
     this._attachWindowDragListeners();
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.2";
+const CARD_VERSION = "2.1.3-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -75,6 +75,31 @@ const DEFAULT_CONFIG = {
   show_primary_chip: true,
   show_secondary_chip: true,
   compact_layout_mode: "auto",
+  layout: "default",
+  air_quality: {
+    pm1: "",
+    pm25: "",
+    pm4: "",
+    pm10: "",
+    tvoc: "",
+    temperature: "",
+    humidity: "",
+    co2: "",
+    guidelines: "who",
+    show_graphs: false,
+    graph_hours: 24,
+    graph_points: 96,
+    graph_colors: {
+      pm1: "#f29f05",
+      pm25: "#42a5f5",
+      pm4: "#7fd0c8",
+      pm10: "#f56aa0",
+      tvoc: "#b993ff",
+      co2: "#7ad66f",
+      temperature: "#d4783a",
+      humidity: "#3f9d7a",
+    },
+  },
   quick_actions: [],
   language: "auto",
   security: {
@@ -166,6 +191,190 @@ function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
+const AIR_QUALITY_METRIC_KEYS = [
+  "pm1",
+  "pm25",
+  "pm4",
+  "pm10",
+  "tvoc",
+  "co2",
+  "temperature",
+  "humidity",
+];
+
+const AIR_QUALITY_GRAPH_SERIES_COLORS = Object.freeze({
+  pm1: "#f29f05",
+  pm25: "#42a5f5",
+  pm4: "#7fd0c8",
+  pm10: "#f56aa0",
+  tvoc: "#b993ff",
+  co2: "#7ad66f",
+  temperature: "#d4783a",
+  humidity: "#3f9d7a",
+});
+
+const AIR_QUALITY_ATTR_ALIASES = {
+  pm1: ["pm1", "pm_1", "pm1_0", "pm_1_0"],
+  pm25: ["pm25", "pm2_5", "pm2.5", "pm_2_5", "particulate_matter_2_5"],
+  pm4: ["pm4", "pm_4", "pm4_0", "pm_4_0"],
+  pm10: ["pm10", "pm_10", "pm10_0", "particulate_matter_10"],
+  tvoc: ["tvoc", "voc", "total_voc", "total_volatile_organic_compounds"],
+  co2: ["co2", "carbon_dioxide", "co2_ppm"],
+  temperature: ["temperature", "temp"],
+  humidity: ["humidity", "relative_humidity"],
+};
+
+/** WHO AQG 2021 24h (+ interim targets) for PM; comfort/UBA-style bands for TVOC/CO2. */
+const AIR_QUALITY_WHO_BANDS = {
+  pm1: [
+    { max: 15, level: "good" },
+    { max: 25, level: "moderate" },
+    { max: 37.5, level: "unhealthy_sensitive" },
+    { max: 50, level: "unhealthy" },
+    { max: 75, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+  pm25: [
+    { max: 15, level: "good" },
+    { max: 25, level: "moderate" },
+    { max: 37.5, level: "unhealthy_sensitive" },
+    { max: 50, level: "unhealthy" },
+    { max: 75, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+  pm4: [
+    { max: 20, level: "good" },
+    { max: 35, level: "moderate" },
+    { max: 50, level: "unhealthy_sensitive" },
+    { max: 70, level: "unhealthy" },
+    { max: 100, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+  pm10: [
+    { max: 45, level: "good" },
+    { max: 50, level: "moderate" },
+    { max: 75, level: "unhealthy_sensitive" },
+    { max: 100, level: "unhealthy" },
+    { max: 150, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+  tvoc_ugm3: [
+    { max: 300, level: "good" },
+    { max: 1000, level: "moderate" },
+    { max: 3000, level: "unhealthy_sensitive" },
+    { max: 10000, level: "unhealthy" },
+    { max: 25000, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+  tvoc_ppb: [
+    { max: 220, level: "good" },
+    { max: 660, level: "moderate" },
+    { max: 2200, level: "unhealthy_sensitive" },
+    { max: 5500, level: "unhealthy" },
+    { max: 11000, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+  co2: [
+    { max: 800, level: "good" },
+    { max: 1000, level: "moderate" },
+    { max: 1500, level: "unhealthy_sensitive" },
+    { max: 2000, level: "unhealthy" },
+    { max: 5000, level: "very_unhealthy" },
+    { max: Infinity, level: "hazardous" },
+  ],
+};
+
+const AIR_QUALITY_LEVEL_RANK = {
+  good: 0,
+  moderate: 1,
+  unhealthy_sensitive: 2,
+  unhealthy: 3,
+  very_unhealthy: 4,
+  hazardous: 5,
+};
+
+const AIR_QUALITY_LEVEL_COLORS = {
+  good: "#3f9d7a",
+  moderate: "#c9a227",
+  unhealthy_sensitive: "#d4783a",
+  unhealthy: "#d4544c",
+  very_unhealthy: "#a8324a",
+  hazardous: "#6b2140",
+  unknown: "var(--primary-text-color)",
+};
+
+const AIR_QUALITY_POLLUTION_KEYS = new Set(["pm1", "pm25", "pm4", "pm10", "tvoc", "co2"]);
+
+function resolveAirQualityLevelFromBands(value, bands) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || !Array.isArray(bands) || !bands.length) {
+    return "unknown";
+  }
+  for (const band of bands) {
+    if (numeric <= Number(band.max)) {
+      return band.level;
+    }
+  }
+  return bands[bands.length - 1]?.level || "unknown";
+}
+
+function resolveAirQualityLevelFromAqi(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "unknown";
+  }
+  if (numeric <= 50) return "good";
+  if (numeric <= 100) return "moderate";
+  if (numeric <= 150) return "unhealthy_sensitive";
+  if (numeric <= 200) return "unhealthy";
+  if (numeric <= 300) return "very_unhealthy";
+  return "hazardous";
+}
+
+function resolveMetricGuidelineBands(kind, unit = "") {
+  const unitKey = String(unit || "").toLowerCase();
+  if (kind === "tvoc") {
+    if (unitKey.includes("ppb")) {
+      return AIR_QUALITY_WHO_BANDS.tvoc_ppb;
+    }
+    return AIR_QUALITY_WHO_BANDS.tvoc_ugm3;
+  }
+  return AIR_QUALITY_WHO_BANDS[kind] || null;
+}
+
+function worseAirQualityLevel(left, right) {
+  const leftRank = AIR_QUALITY_LEVEL_RANK[left];
+  const rightRank = AIR_QUALITY_LEVEL_RANK[right];
+  if (!Number.isFinite(leftRank)) {
+    return Number.isFinite(rightRank) ? right : "unknown";
+  }
+  if (!Number.isFinite(rightRank)) {
+    return left;
+  }
+  return rightRank > leftRank ? right : left;
+}
+
+function readAirQualityAttribute(state, kind) {
+  const attrs = state?.attributes || {};
+  for (const alias of AIR_QUALITY_ATTR_ALIASES[kind] || []) {
+    if (attrs[alias] !== undefined && attrs[alias] !== null && attrs[alias] !== "") {
+      return attrs[alias];
+    }
+  }
+  return null;
+}
+
+function parseAirQualityNumeric(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  const match = String(value ?? "").trim().match(/-?\d+(?:[.,]\d+)?/);
+  if (!match) {
+    return NaN;
+  }
+  return Number(match[0].replace(",", "."));
+}
+
 // Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
 const {
   isObject,
@@ -181,9 +390,203 @@ const {
   escapeSelectorValue,
   fireEvent,
   normalizeTextKey,
+  sanitizeCssValue,
 } = window.NodaliaUtils;
 
+function entityScalar(value) {
+  return String(value ?? "").trim();
+}
 
+function normalizeAirQualityBlock(raw) {
+  const source = isObject(raw) ? raw : {};
+  const hours = Number(source.graph_hours);
+  const points = Number(source.graph_points);
+  const graphColors = isObject(source.graph_colors) ? source.graph_colors : {};
+  return {
+    pm1: entityScalar(source.pm1),
+    pm25: entityScalar(source.pm25 ?? source.pm2_5 ?? source["pm2.5"]),
+    pm4: entityScalar(source.pm4),
+    pm10: entityScalar(source.pm10),
+    tvoc: entityScalar(source.tvoc),
+    temperature: entityScalar(source.temperature),
+    humidity: entityScalar(source.humidity),
+    co2: entityScalar(source.co2),
+    guidelines: String(source.guidelines ?? "who").trim().toLowerCase() === "none" ? "none" : "who",
+    show_graphs: source.show_graphs === true,
+    graph_hours: Number.isFinite(hours) ? clamp(Math.round(hours), 1, 168) : 24,
+    graph_points: Number.isFinite(points) ? clamp(Math.round(points), 8, 96) : 96,
+    graph_colors: Object.fromEntries(AIR_QUALITY_METRIC_KEYS.map(kind => [
+      kind,
+      sanitizeCssValue(graphColors[kind], AIR_QUALITY_GRAPH_SERIES_COLORS[kind]),
+    ])),
+  };
+}
+
+const AIR_QUALITY_COMFORT_KEYS = new Set(["temperature", "humidity"]);
+const AIR_QUALITY_HISTORY_REFRESH_MS = 180000;
+
+function parseAirQualityHistoryTimestamp(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? value : value * 1000;
+  }
+  const parsed = Date.parse(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildAirQualitySmoothPath(points) {
+  if (!Array.isArray(points) || !points.length) {
+    return "";
+  }
+  if (points.length === 1) {
+    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  }
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] || points[index];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] || p2;
+    const cp1x = p1.x + ((p2.x - p0.x) / 6);
+    const cp1y = p1.y + ((p2.y - p0.y) / 6);
+    const cp2x = p2.x - ((p3.x - p1.x) / 6);
+    const cp2y = p2.y - ((p3.y - p1.y) / 6);
+    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return path;
+}
+
+function buildAirQualityAreaPath(points, bottomY) {
+  if (!Array.isArray(points) || !points.length) {
+    return "";
+  }
+  const linePath = buildAirQualitySmoothPath(points);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+}
+
+function buildAirQualityChartGeometry(seriesEntries = []) {
+  const width = 100;
+  const height = 42;
+  const paddingX = 0;
+  const paddingTop = 3;
+  const paddingBottom = 3;
+  const usable = seriesEntries.filter(entry => Array.isArray(entry?.samples) && entry.samples.length);
+  let min = Infinity;
+  let max = -Infinity;
+  usable.forEach(entry => {
+    entry.samples.forEach(sample => {
+      if (Number.isFinite(sample?.value)) {
+        min = Math.min(min, sample.value);
+        max = Math.max(max, sample.value);
+      }
+    });
+  });
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return { width, height, paddingX, paddingTop, paddingBottom, min: null, max: null, paths: [] };
+  }
+  if (max <= min) {
+    max = min + 1;
+  }
+  const spanX = width - (paddingX * 2);
+  const paths = usable.map(entry => {
+    const points = entry.samples.map((sample, index) => {
+      const x = paddingX + (spanX * index) / Math.max(entry.samples.length - 1, 1);
+      const normalized = clamp((sample.value - min) / (max - min), 0, 1);
+      const y = paddingTop + ((height - paddingTop - paddingBottom) * (1 - normalized));
+      return {
+        x,
+        y,
+        ts: sample.ts,
+        value: sample.value,
+      };
+    });
+    return {
+      ...entry,
+      points,
+      linePath: buildAirQualitySmoothPath(points),
+      fillPath: buildAirQualityAreaPath(points, height - paddingBottom),
+    };
+  });
+  return { width, height, paddingX, paddingTop, paddingBottom, min, max, paths };
+}
+
+function getAirQualityHoverPayload(geometry, hoverState) {
+  if (!geometry?.paths?.length || !hoverState) {
+    return null;
+  }
+  const path = geometry.paths.find(entry => entry.kind === hoverState.kind);
+  if (!path?.points?.length) {
+    return null;
+  }
+  const requestedPosition = Number(hoverState.position);
+  const position = clamp(
+    Number.isFinite(requestedPosition) ? requestedPosition : (Number(hoverState.index) || 0),
+    0,
+    path.points.length - 1,
+  );
+  const leftIndex = Math.floor(position);
+  const rightIndex = Math.ceil(position);
+  const fraction = position - leftIndex;
+  const leftPoint = path.points[leftIndex];
+  const rightPoint = path.points[rightIndex] || leftPoint;
+  const interpolate = key => leftPoint[key] + ((rightPoint[key] - leftPoint[key]) * fraction);
+  const point = {
+    x: interpolate("x"),
+    y: interpolate("y"),
+    ts: interpolate("ts"),
+    value: interpolate("value"),
+  };
+  const index = clamp(Math.round(position), 0, path.points.length - 1);
+  return {
+    kind: path.kind,
+    index,
+    position,
+    label: path.label,
+    unit: path.unit,
+    color: path.color,
+    ts: point.ts,
+    value: point.value,
+    x: point.x,
+    y: point.y,
+    xPercent: clamp((point.x / geometry.width) * 100, 0, 100),
+    yPercent: clamp((point.y / geometry.height) * 100, 0, 100),
+  };
+}
+
+function buildAirQualityInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
+  if (!Array.isArray(events) || !events.length) {
+    if (!Number.isFinite(fallbackValue)) {
+      return [];
+    }
+    return Array.from({ length: pointsCount }, (_item, index) => ({
+      ts: startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1)),
+      value: fallbackValue,
+    }));
+  }
+  const spanMs = Math.max(endMs - startMs, 1);
+  const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
+  const buckets = Array.from({ length: pointsCount }, () => []);
+  events.forEach(event => {
+    const clampedTs = clamp(event.ts, startMs, endMs);
+    const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
+    const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
+    buckets[bucketIndex].push(event.value);
+  });
+  let lastValue = Number.isFinite(fallbackValue)
+    ? fallbackValue
+    : buckets.flat().find(Number.isFinite);
+  return buckets.map((bucket, index) => {
+    const sampleTs = startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1));
+    if (bucket.length) {
+      lastValue = bucket.reduce((sum, value) => sum + value, 0) / bucket.length;
+    }
+    return {
+      ts: sampleTs,
+      value: Number.isFinite(lastValue) ? lastValue : 0,
+    };
+  });
+}
 
 function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -680,6 +1083,9 @@ function normalizeConfig(rawConfig) {
   }
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
+  const layoutKey = String(config.layout ?? "default").trim().toLowerCase();
+  config.layout = layoutKey === "air_quality" ? "air_quality" : "default";
+  config.air_quality = normalizeAirQualityBlock(config.air_quality);
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
@@ -708,6 +1114,15 @@ class NodaliaEntityCard extends HTMLElement {
     this._hass = null;
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
+    this._aqHistoryCache = null;
+    this._aqHistoryKey = "";
+    this._aqHistoryAbort = null;
+    this._aqHistoryTimer = 0;
+    this._aqHistoryLoading = false;
+    this._aqHoverPreview = null;
+    this._aqHiddenSeries = new Set();
+    this._aqHoverTimeFormatter = null;
+    this._aqHoverTimeFormatterLocale = "";
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._lastRenderSignature = "";
@@ -746,8 +1161,12 @@ class NodaliaEntityCard extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
+    this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
+    this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerLeave);
     this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
@@ -808,6 +1227,10 @@ class NodaliaEntityCard extends HTMLElement {
     this._lastRenderSignature = "";
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._clearOptimisticToggleTimer();
+    this._clearAirQualityHistory();
+    this._aqHoverPreview = null;
+    this._aqHoverTimeFormatter = null;
+    this._aqHoverTimeFormatterLocale = "";
   }
 
   setConfig(config) {
@@ -821,6 +1244,8 @@ class NodaliaEntityCard extends HTMLElement {
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
     this._lastRenderSignature = "";
+    this._aqHoverPreview = null;
+    this._aqHiddenSeries.clear();
     this._selectPickerOpen = false;
     this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
     this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
@@ -847,10 +1272,21 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   getCardSize() {
+    if (this._config?.layout === "air_quality") {
+      return this._config?.air_quality?.show_graphs === true ? 5 : 3;
+    }
     return 3;
   }
 
   getGridOptions() {
+    if (this._config?.layout === "air_quality") {
+      return {
+        rows: "auto",
+        columns: 12,
+        min_rows: 3,
+        min_columns: 6,
+      };
+    }
     return {
       rows: "auto",
       columns: "full",
@@ -867,6 +1303,17 @@ class NodaliaEntityCard extends HTMLElement {
     const configuredStateAttribute = String(this._config?.state_attribute || "").trim();
     const configuredPrimaryAttribute = String(this._config?.primary_attribute || "").trim();
     const configuredSecondaryAttribute = String(this._config?.secondary_attribute || "").trim();
+    const aq = this._config?.air_quality || {};
+    const aqParts = AIR_QUALITY_METRIC_KEYS.map(key => {
+      const metricEntity = entityScalar(aq[key]);
+      const metricState = metricEntity ? hass?.states?.[metricEntity] : null;
+      return [
+        key,
+        metricEntity,
+        String(metricState?.state ?? ""),
+        String(metricState?.last_updated || metricState?.last_changed || ""),
+      ].join("=");
+    });
     return [
       `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
       `e:${entityId}`,
@@ -904,6 +1351,14 @@ class NodaliaEntityCard extends HTMLElement {
       `ss:${this._config?.show_state !== false ? 1 : 0}`,
       `nm:${String(this._config?.name || "")}`,
       `sel:${isSelectDomainEntity(state) ? getSelectEntityOptions(state).join("\u001f") : ""}`,
+      `ly:${String(this._config?.layout || "default")}`,
+      `aqg:${String(aq.guidelines || "who")}`,
+      `aqs:${aq.show_graphs === true ? 1 : 0}`,
+      `aqh:${Number(aq.graph_hours) || 24}`,
+      `aqcl:${AIR_QUALITY_METRIC_KEYS.map(key => String(aq.graph_colors?.[key] || "")).join(",")}`,
+      `aqv:${[...this._aqHiddenSeries].sort().join(",")}`,
+      `aq:${aqParts.join(";")}`,
+      `aqc:${this._aqHistoryCache ? 1 : 0}`,
     ].join("|");
   }
 
@@ -2227,7 +2682,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (action === "select-option" || action === "quick") {
+    if (action === "select-option" || action === "quick" || action === "metric-info" || action === "graph-series-toggle") {
       this._triggerEntityPressFeedback(action, actionTarget);
     }
   }
@@ -2246,6 +2701,29 @@ class NodaliaEntityCard extends HTMLElement {
 
     event.preventDefault();
     event.stopPropagation();
+
+    if (action === "graph-series-toggle") {
+      const kind = String(actionTarget.dataset.seriesKind || "").trim();
+      if (!AIR_QUALITY_METRIC_KEYS.includes(kind)) {
+        return;
+      }
+      if (this._aqHiddenSeries.has(kind)) {
+        this._aqHiddenSeries.delete(kind);
+      } else {
+        this._aqHiddenSeries.add(kind);
+      }
+      if (this._aqHoverPreview?.kind === kind) {
+        this._aqHoverPreview = null;
+      }
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+
+    if (action === "metric-info") {
+      this._openMoreInfo(String(actionTarget.dataset.entity || "").trim());
+      return;
+    }
 
     if (action === "select-option") {
       const value = actionTarget.dataset.selectValue || "";
@@ -2298,11 +2776,23 @@ class NodaliaEntityCard extends HTMLElement {
     this._onShadowClick(event);
   }
 
-  _renderChip(label, tone = "default") {
+  _renderChip(label, tone = "default", options = {}) {
     if (!label) {
       return "";
     }
 
+    const entityId = String(options.entityId || "").trim();
+    if (entityId) {
+      return `
+        <button
+          type="button"
+          class="entity-card__chip entity-card__chip--${tone} entity-card__chip--clickable"
+          data-entity-action="metric-info"
+          data-entity="${escapeHtml(entityId)}"
+          aria-label="${escapeHtml(options.ariaLabel || label)}"
+        >${escapeHtml(label)}</button>
+      `;
+    }
     return `<div class="entity-card__chip entity-card__chip--${tone}">${escapeHtml(label)}</div>`;
   }
 
@@ -2311,8 +2801,117 @@ class NodaliaEntityCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
     const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
-    const raw = pack?.[key] ?? enPack?.[key];
+    const nested = key.includes(".") ? getByPath(pack, key) ?? getByPath(enPack, key) : undefined;
+    const raw = nested ?? pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _airQualityLevelLabel(level) {
+    const key = String(level || "unknown");
+    return this._entityCardUi(`airQuality.levels.${key}`, key.replace(/_/g, " "));
+  }
+
+  _airQualityMetricLabel(kind) {
+    return this._entityCardUi(`airQuality.metrics.${kind}`, kind.toUpperCase());
+  }
+
+  _collectAirQualityMetrics(primaryState) {
+    const aq = this._config?.air_quality || normalizeAirQualityBlock();
+    const guidelines = aq.guidelines === "none" ? "none" : "who";
+    const decimals = this._getNumberDecimals();
+    const metrics = [];
+
+    for (const kind of AIR_QUALITY_METRIC_KEYS) {
+      const entityId = entityScalar(aq[kind]);
+      let stateObj = entityId ? this._hass?.states?.[entityId] : null;
+      let rawValue = stateObj ? stateObj.state : null;
+      let unit = String(stateObj?.attributes?.unit_of_measurement || "");
+
+      if ((rawValue === null || rawValue === undefined || rawValue === "" || rawValue === "unknown" || rawValue === "unavailable")
+        && primaryState) {
+        const attrValue = readAirQualityAttribute(primaryState, kind);
+        if (attrValue !== null) {
+          rawValue = attrValue;
+          stateObj = primaryState;
+          if (!unit) {
+            const attrUnitKey = `${kind}_unit`;
+            unit = String(primaryState.attributes?.[attrUnitKey] || primaryState.attributes?.unit_of_measurement || "");
+            if (kind.startsWith("pm") && !unit) {
+              unit = "µg/m³";
+            }
+            if (kind === "humidity" && !unit) {
+              unit = "%";
+            }
+            if (kind === "temperature" && !unit) {
+              unit = "°C";
+            }
+            if (kind === "co2" && !unit) {
+              unit = "ppm";
+            }
+          }
+        }
+      }
+
+      if (rawValue === null || rawValue === undefined || rawValue === "" || rawValue === "unknown" || rawValue === "unavailable") {
+        continue;
+      }
+
+      const numeric = parseAirQualityNumeric(rawValue);
+      if (!Number.isFinite(numeric)) {
+        continue;
+      }
+
+      let level = "unknown";
+      if (guidelines === "who" && AIR_QUALITY_POLLUTION_KEYS.has(kind)) {
+        level = resolveAirQualityLevelFromBands(numeric, resolveMetricGuidelineBands(kind, unit));
+      }
+
+      const display = formatNumericValueWithUnit
+        ? formatNumericValueWithUnit(numeric, unit, decimals)
+        : `${Number(numeric.toFixed(decimals))}${unit ? ` ${unit}` : ""}`;
+
+      metrics.push({
+        kind,
+        entityId,
+        infoEntityId: entityId || stateObj?.entity_id || primaryState?.entity_id || "",
+        numeric,
+        unit,
+        display,
+        level,
+        label: this._airQualityMetricLabel(kind),
+      });
+    }
+
+    return { metrics, guidelines };
+  }
+
+  _resolveAirQualityOverall(primaryState, metrics, guidelines) {
+    let overall = "unknown";
+    if (guidelines === "who") {
+      for (const metric of metrics) {
+        if (!AIR_QUALITY_POLLUTION_KEYS.has(metric.kind)) {
+          continue;
+        }
+        overall = worseAirQualityLevel(overall, metric.level);
+      }
+    }
+
+    const primaryNumeric = parseAirQualityNumeric(primaryState?.state);
+    const deviceClass = String(primaryState?.attributes?.device_class || "").toLowerCase();
+    const primaryIsAqi = deviceClass === "aqi"
+      || /aqi|air_quality_index/i.test(String(primaryState?.entity_id || ""))
+      || /aqi|air_quality_index/i.test(String(primaryState?.attributes?.friendly_name || ""));
+
+    if (guidelines === "who" && primaryIsAqi && Number.isFinite(primaryNumeric)) {
+      overall = worseAirQualityLevel(overall, resolveAirQualityLevelFromAqi(primaryNumeric));
+    }
+
+    return {
+      overall,
+      primaryNumeric: Number.isFinite(primaryNumeric) ? primaryNumeric : null,
+      primaryIsAqi,
+      accent: AIR_QUALITY_LEVEL_COLORS[overall] || AIR_QUALITY_LEVEL_COLORS.unknown,
+    };
   }
 
   _commonAria(key, fallback = "") {
@@ -2373,8 +2972,1044 @@ class NodaliaEntityCard extends HTMLElement {
     `;
   }
 
+  _airQualityMetricIcon(kind) {
+    switch (kind) {
+      case "pm1":
+        return "mdi:dots-hexagon";
+      case "pm25":
+        return "mdi:blur";
+      case "pm4":
+        return "mdi:blur-linear";
+      case "pm10":
+        return "mdi:cloud";
+      case "tvoc":
+        return "mdi:molecule";
+      case "co2":
+        return "mdi:molecule-co2";
+      case "temperature":
+        return "mdi:thermometer";
+      case "humidity":
+        return "mdi:water-percent";
+      default:
+        return "mdi:gauge";
+    }
+  }
+
+  _clearAirQualityHistory() {
+    if (this._aqHistoryTimer) {
+      window.clearTimeout(this._aqHistoryTimer);
+      this._aqHistoryTimer = 0;
+    }
+    if (this._aqHistoryAbort) {
+      try {
+        this._aqHistoryAbort.abort();
+      } catch (_error) {
+        /* ignore */
+      }
+      this._aqHistoryAbort = null;
+    }
+    this._aqHistoryLoading = false;
+  }
+
+  _getAirQualityGraphSeries(metrics = []) {
+    const aq = this._config?.air_quality || normalizeAirQualityBlock();
+    if (aq.show_graphs !== true) {
+      return [];
+    }
+    return metrics
+      .filter(metric => metric?.entityId)
+      .slice(0, 8)
+      .map(metric => ({
+        kind: metric.kind,
+        entityId: metric.entityId,
+        label: metric.label,
+        unit: metric.unit,
+        color: aq.graph_colors?.[metric.kind] || AIR_QUALITY_GRAPH_SERIES_COLORS[metric.kind],
+        currentValue: metric.numeric,
+      }));
+  }
+
+  _getAirQualityHistoryKey(series = []) {
+    const aq = this._config?.air_quality || normalizeAirQualityBlock();
+    return [
+      aq.graph_hours,
+      aq.graph_points,
+      series.map(item => item.entityId).join(","),
+    ].join("|");
+  }
+
+  _scheduleAirQualityHistory(series = []) {
+    if (!series.length) {
+      this._clearAirQualityHistory();
+      this._aqHistoryCache = null;
+      this._aqHistoryKey = "";
+      return;
+    }
+    if (typeof this._hass?.callWS !== "function" && typeof this._hass?.auth?.fetchWithAuth !== "function") {
+      return;
+    }
+    const key = this._getAirQualityHistoryKey(series);
+    if (key === this._aqHistoryKey && (this._aqHistoryCache || this._aqHistoryLoading)) {
+      return;
+    }
+    if (key !== this._aqHistoryKey) {
+      this._aqHistoryCache = null;
+      this._aqHistoryKey = key;
+    }
+    this._requestAirQualityHistory(series);
+  }
+
+  async _requestAirQualityHistory(series = []) {
+    if (!series.length || !this._hass) {
+      return;
+    }
+    const requestKey = this._getAirQualityHistoryKey(series);
+    this._clearAirQualityHistory();
+    this._aqHistoryLoading = true;
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    this._aqHistoryAbort = controller;
+    const aq = this._config?.air_quality || normalizeAirQualityBlock();
+    const hours = Number(aq.graph_hours) || 24;
+    const pointsCount = Number(aq.graph_points) || 96;
+    const end = new Date();
+    const start = new Date(end.getTime() - (hours * 60 * 60 * 1000));
+
+    try {
+      const raw = await this._fetchAirQualityHistory(
+        start,
+        end,
+        series.map(item => item.entityId),
+        controller?.signal,
+      );
+      if (requestKey !== this._aqHistoryKey) {
+        return;
+      }
+      const startMs = start.getTime();
+      const endMs = end.getTime();
+      const entries = series.map(item => {
+        const rows = Array.isArray(raw?.[item.entityId]) ? raw[item.entityId] : [];
+        const events = rows
+          .map(row => {
+            const ts = parseAirQualityHistoryTimestamp(
+              row.last_changed ?? row.last_updated ?? row.lc ?? row.lu ?? row.last_changed,
+            );
+            const value = parseAirQualityNumeric(row.state ?? row.s ?? row);
+            return { ts, value };
+          })
+          .filter(event => Number.isFinite(event.ts) && Number.isFinite(event.value))
+          .sort((left, right) => left.ts - right.ts);
+        const live = this._hass?.states?.[item.entityId];
+        const liveValue = parseAirQualityNumeric(live?.state);
+        if (Number.isFinite(liveValue)) {
+          events.push({
+            ts: parseAirQualityHistoryTimestamp(live.last_changed || live.last_updated) || endMs,
+            value: liveValue,
+          });
+        }
+        return {
+          ...item,
+          samples: buildAirQualityInterpolatedSamples(
+            events,
+            startMs,
+            endMs,
+            pointsCount,
+            Number.isFinite(item.currentValue) ? item.currentValue : liveValue,
+          ),
+        };
+      });
+      this._aqHistoryCache = { startMs, endMs, entries };
+      this._aqHistoryLoading = false;
+      if (String(this._config?.layout || "").toLowerCase() === "air_quality") {
+        this._lastRenderSignature = "";
+        this._render();
+      }
+    } catch (_error) {
+      if (requestKey === this._aqHistoryKey) {
+        this._aqHistoryLoading = false;
+      }
+    } finally {
+      if (this.isConnected && String(this._config?.layout || "").toLowerCase() === "air_quality") {
+        this._aqHistoryTimer = window.setTimeout(() => {
+          this._aqHistoryTimer = 0;
+          if (this.isConnected && String(this._config?.layout || "").toLowerCase() === "air_quality") {
+            this._aqHistoryKey = "";
+            this._scheduleAirQualityHistory(series);
+          }
+        }, AIR_QUALITY_HISTORY_REFRESH_MS);
+      }
+    }
+  }
+
+  async _fetchAirQualityHistory(start, end, entityIds, signal) {
+    const groups = await Promise.all(entityIds.map(async entityId => {
+      if (typeof this._hass?.callWS === "function") {
+        try {
+          const result = await this._hass.callWS({
+            type: "history/history_during_period",
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+            entity_ids: [entityId],
+            significant_changes_only: false,
+          });
+          const rows = Array.isArray(result?.[0])
+            ? result[0]
+            : Array.isArray(result?.[entityId])
+              ? result[entityId]
+              : [];
+          return [entityId, rows];
+        } catch (_error) {
+          /* fall through */
+        }
+      }
+      if (typeof this._hass?.auth?.fetchWithAuth === "function") {
+        const query = [
+          `filter_entity_id=${encodeURIComponent(entityId)}`,
+          `end_time=${encodeURIComponent(end.toISOString())}`,
+        ].join("&");
+        const response = await this._hass.auth.fetchWithAuth(
+          `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
+          signal ? { signal } : undefined,
+        );
+        if (!response.ok) {
+          return [entityId, []];
+        }
+        const result = await response.json();
+        return [entityId, Array.isArray(result?.[0]) ? result[0] : []];
+      }
+      return [entityId, []];
+    }));
+    return Object.fromEntries(groups);
+  }
+
+  _buildAirQualityChartSvg(seriesEntries = [], hoverState = this._aqHoverPreview) {
+    const geometry = buildAirQualityChartGeometry(seriesEntries);
+    if (!geometry.paths.length) {
+      return "";
+    }
+    const hover = getAirQualityHoverPayload(geometry, hoverState);
+    const fills = geometry.paths.map((entry, index) => (
+      index === 0 && entry.fillPath
+        ? `<path d="${escapeHtml(entry.fillPath)}" fill="${escapeHtml(entry.color)}" opacity="0.16"></path>`
+        : ""
+    )).join("");
+    const strokes = geometry.paths.map(entry => (
+      entry.linePath
+        ? `<path d="${escapeHtml(entry.linePath)}" fill="none" stroke="${escapeHtml(entry.color)}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"></path>`
+        : ""
+    )).join("");
+    const hoverX = hover?.x ?? 0;
+    const hoverMarker = `
+      <line class="entity-card__aq-hover-line" x1="${hoverX.toFixed(2)}" x2="${hoverX.toFixed(2)}" y1="${geometry.paddingTop}" y2="${geometry.height - geometry.paddingBottom}"${hover ? "" : " hidden"}></line>
+    `;
+    return `
+      <svg class="entity-card__aq-chart" data-air-quality-chart="true" viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" aria-hidden="true">
+        ${fills}
+        ${strokes}
+        ${hoverMarker}
+      </svg>
+    `;
+  }
+
+  _getAirQualityChartEntries(graphSeries = this._getAirQualityGraphSeries(this._collectAirQualityMetrics(this._getState()).metrics)) {
+    const cached = Array.isArray(this._aqHistoryCache?.entries) ? this._aqHistoryCache.entries : [];
+    const currentByKind = new Map(graphSeries.map(entry => [entry.kind, entry]));
+    return cached.map(entry => ({
+      ...entry,
+      color: currentByKind.get(entry.kind)?.color || entry.color,
+    }));
+  }
+
+  _clearAirQualityHoverPreview() {
+    if (!this._aqHoverPreview) {
+      return;
+    }
+    this._aqHoverPreview = null;
+    if (!this._patchAirQualityHoverPreview(null, null)) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
+  }
+
+  _patchAirQualityHoverPreview(geometry = null, hoverState = this._aqHoverPreview) {
+    const line = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-line");
+    const point = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-point");
+    const chip = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-chip");
+    if (!line || !point || !chip) {
+      return false;
+    }
+    let resolvedGeometry = geometry;
+    if (!resolvedGeometry) {
+      const graphSeries = this._getAirQualityGraphSeries(
+        this._collectAirQualityMetrics(this._getState()).metrics,
+      );
+      resolvedGeometry = buildAirQualityChartGeometry(
+        this._getAirQualityChartEntries(graphSeries)
+          .filter(entry => !this._aqHiddenSeries.has(entry.kind)),
+      );
+    }
+    const hover = getAirQualityHoverPayload(resolvedGeometry, hoverState);
+    for (const element of [line, point, chip]) {
+      element.toggleAttribute("hidden", !hover);
+    }
+    if (!hover) {
+      return true;
+    }
+    const left = `${hover.xPercent.toFixed(3)}%`;
+    const top = `${hover.yPercent.toFixed(3)}%`;
+    line.setAttribute("x1", hover.x.toFixed(3));
+    line.setAttribute("x2", hover.x.toFixed(3));
+    point.style.setProperty("--aq-hover-left", left);
+    point.style.setProperty("--aq-hover-top", top);
+    point.style.setProperty("--aq-hover-color", hover.color);
+    chip.style.setProperty("--aq-hover-left", left);
+    chip.style.setProperty("--aq-hover-top", top);
+    chip.style.setProperty("--aq-hover-color", hover.color);
+    chip.dataset.aqHoverPlacement = hover.yPercent < 50 ? "below" : "above";
+    const label = chip.querySelector("[data-aq-hover-label]");
+    const value = chip.querySelector("[data-aq-hover-value]");
+    const time = chip.querySelector("[data-aq-hover-time]");
+    if (label) {
+      label.textContent = hover.label;
+    }
+    if (value) {
+      value.textContent = formatNumericValueWithUnit(
+        hover.value,
+        hover.unit,
+        this._getNumberDecimals(),
+      );
+    }
+    if (time) {
+      time.textContent = this._formatAirQualityHoverTime(hover.ts);
+    }
+    return true;
+  }
+
+  _onShadowPointerMove(event) {
+    if (event.pointerType && event.pointerType !== "mouse") {
+      return;
+    }
+    if (String(this._config?.layout || "").toLowerCase() !== "air_quality") {
+      return;
+    }
+    const chart = event.composedPath().find(node => (
+      node instanceof Element && node.dataset?.airQualityChart === "true"
+    ));
+    if (!chart) {
+      this._clearAirQualityHoverPreview();
+      return;
+    }
+    const graphSeries = this._getAirQualityGraphSeries(this._collectAirQualityMetrics(this._getState()).metrics);
+    const geometry = buildAirQualityChartGeometry(
+      this._getAirQualityChartEntries(graphSeries)
+        .filter(entry => !this._aqHiddenSeries.has(entry.kind)),
+    );
+    const rect = chart.getBoundingClientRect();
+    if (!geometry.paths.length || !rect.width || !rect.height) {
+      this._clearAirQualityHoverPreview();
+      return;
+    }
+    const x = clamp(((event.clientX - rect.left) / rect.width) * geometry.width, 0, geometry.width);
+    const y = clamp(((event.clientY - rect.top) / rect.height) * geometry.height, 0, geometry.height);
+    let nearest = null;
+    geometry.paths.forEach(path => {
+      if (!path.points.length) {
+        return;
+      }
+      const position = clamp(
+        ((x - geometry.paddingX) / Math.max(geometry.width - (geometry.paddingX * 2), 1)) * (path.points.length - 1),
+        0,
+        path.points.length - 1,
+      );
+      const leftIndex = Math.floor(position);
+      const rightIndex = Math.ceil(position);
+      const fraction = position - leftIndex;
+      const leftPoint = path.points[leftIndex];
+      const rightPoint = path.points[rightIndex] || leftPoint;
+      const pointY = leftPoint.y + ((rightPoint.y - leftPoint.y) * fraction);
+      const distance = Math.abs(pointY - y);
+      if (!nearest || distance < nearest.distance) {
+        nearest = { kind: path.kind, position, distance };
+      }
+    });
+    if (!nearest) {
+      this._clearAirQualityHoverPreview();
+      return;
+    }
+    const key = `${nearest.kind}:${nearest.position.toFixed(3)}`;
+    if (this._aqHoverPreview?.key === key) {
+      return;
+    }
+    this._aqHoverPreview = { key, kind: nearest.kind, position: nearest.position };
+    if (!this._patchAirQualityHoverPreview(geometry, this._aqHoverPreview)) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
+  }
+
+  _onShadowPointerLeave() {
+    this._clearAirQualityHoverPreview();
+  }
+
+  _formatAirQualityHoverTime(timestamp) {
+    const date = new Date(Number(timestamp));
+    if (!Number.isFinite(date.getTime())) {
+      return "";
+    }
+    const locale = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) || undefined;
+    try {
+      const localeKey = String(locale || "");
+      if (!this._aqHoverTimeFormatter || this._aqHoverTimeFormatterLocale !== localeKey) {
+        this._aqHoverTimeFormatter = new Intl.DateTimeFormat(locale, {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        this._aqHoverTimeFormatterLocale = localeKey;
+      }
+      return this._aqHoverTimeFormatter.format(date);
+    } catch (_error) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+  }
+
+  _renderAirQualityLayout() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const config = this._config || DEFAULT_CONFIG;
+    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const primaryEntity = entityScalar(config.entity);
+    const primaryState = primaryEntity ? this._hass?.states?.[primaryEntity] : null;
+    const aqConfig = config.air_quality || normalizeAirQualityBlock();
+    const hasMetricEntity = AIR_QUALITY_METRIC_KEYS.some(key => entityScalar(aqConfig[key]));
+
+    if (!primaryState && !hasMetricEntity) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: styles?.card },
+      ) ?? this._renderEmptyState();
+      return;
+    }
+
+    if (primaryEntity && !primaryState) {
+      const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+        this._hass,
+        primaryEntity,
+        { cardClass: "entity-card" },
+      );
+      if (entityGuard && !hasMetricEntity) {
+        this.shadowRoot.innerHTML = entityGuard;
+        return;
+      }
+    }
+
+    const { metrics, guidelines } = this._collectAirQualityMetrics(primaryState);
+    const summary = this._resolveAirQualityOverall(primaryState, metrics, guidelines);
+    const title = primaryState
+      ? this._getTitle(primaryState)
+      : (String(config.name || "").trim() || this._entityCardUi("airQuality.title", "Air quality"));
+    const icon = primaryState
+      ? (this._getIcon(primaryState) || "mdi:air-filter")
+      : (String(config.icon || "").trim() || "mdi:air-filter");
+    const accentColor = summary.accent;
+    const iconContrastState = primaryState || metrics
+      .map(metric => this._hass?.states?.[metric.infoEntityId])
+      .find(Boolean);
+    const darkenIconGlyph = iconContrastState
+      ? shouldDarkenEntityBubbleIconGlyph(iconContrastState, accentColor)
+      : false;
+    const iconGlyphColor = darkenIconGlyph
+      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+      : accentColor;
+    const levelLabel = this._airQualityLevelLabel(summary.overall);
+    const guidelinesLabel = guidelines === "who"
+      ? this._entityCardUi("airQuality.whoGuidelines", "WHO 24h AQG")
+      : "";
+    const heroNumeric = summary.primaryNumeric != null
+      ? formatNumericValue(summary.primaryNumeric, this._getNumberDecimals())
+      : null;
+    const heroCaption = summary.primaryIsAqi
+      ? this._entityCardUi("airQuality.aqi", "AQI")
+      : (metrics.find(metric => metric.kind === "pm25")?.label
+        || this._entityCardUi("airQuality.headline", "Air quality"));
+    const canRunBodyTap = primaryState ? this._canRunTapAction(primaryState, "body") : false;
+    const canRunIconTap = primaryState ? this._canRunTapAction(primaryState, "icon") : false;
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+    const chipHeight = escapeHtml(String(styles.chip_height ?? "24px"));
+    const chipFontSize = escapeHtml(String(styles.chip_font_size ?? "11px"));
+    const chipPadding = escapeHtml(String(styles.chip_padding ?? "0 9px"));
+    const iconSize = escapeHtml(String(styles.icon?.size ?? "38px"));
+    const titleSize = escapeHtml(String(styles.title_size ?? "12px"));
+    const surfaceBase = styles.card.background;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-entity-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-entity-surface-base)) 52%, var(--nodalia-entity-surface-base) 100%)`;
+    const cardBackground = `${onCardBackground}, var(--nodalia-entity-surface-base)`;
+    const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+    const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+    const surfaceGlaze = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`;
+    const surfaceAmbient = `
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%)`;
+
+    const comfortMetrics = metrics.filter(metric => AIR_QUALITY_COMFORT_KEYS.has(metric.kind));
+    const pollutionMetrics = metrics.filter(metric => !AIR_QUALITY_COMFORT_KEYS.has(metric.kind));
+    const graphSeries = this._getAirQualityGraphSeries(metrics);
+    this._scheduleAirQualityHistory(graphSeries);
+    const allChartEntries = this._getAirQualityChartEntries(graphSeries);
+    const chartEntries = allChartEntries.filter(entry => !this._aqHiddenSeries.has(entry.kind));
+    const chartGeometry = buildAirQualityChartGeometry(chartEntries);
+    const chartHover = getAirQualityHoverPayload(chartGeometry, this._aqHoverPreview);
+    const chartSvg = aqConfig.show_graphs === true
+      ? this._buildAirQualityChartSvg(chartEntries, this._aqHoverPreview)
+      : "";
+    const chartHoverPoint = chartSvg
+      ? `
+        <span
+          class="entity-card__aq-hover-point"
+          style="--aq-hover-left:${(chartHover?.xPercent ?? 0).toFixed(3)}%;--aq-hover-top:${(chartHover?.yPercent ?? 0).toFixed(3)}%;--aq-hover-color:${escapeHtml(chartHover?.color || "var(--primary-color)")};"
+          ${chartHover ? "" : "hidden"}
+          aria-hidden="true"
+        ></span>
+      `
+      : "";
+    const chartHoverChip = chartSvg
+      ? `
+        <div
+          class="entity-card__aq-hover-chip"
+          style="--aq-hover-left:${(chartHover?.xPercent ?? 0).toFixed(3)}%;--aq-hover-top:${(chartHover?.yPercent ?? 0).toFixed(3)}%;--aq-hover-color:${escapeHtml(chartHover?.color || "var(--primary-color)")};"
+          data-aq-hover-placement="${(chartHover?.yPercent ?? 0) < 50 ? "below" : "above"}"
+          ${chartHover ? "" : "hidden"}
+        >
+          <span class="entity-card__aq-hover-swatch"></span>
+          <span class="entity-card__aq-hover-label" data-aq-hover-label>${escapeHtml(chartHover?.label || "")}</span>
+          <strong data-aq-hover-value>${escapeHtml(chartHover ? formatNumericValueWithUnit(chartHover.value, chartHover.unit, this._getNumberDecimals()) : "")}</strong>
+          <time data-aq-hover-time>${escapeHtml(chartHover ? this._formatAirQualityHoverTime(chartHover.ts) : "")}</time>
+        </div>
+      `
+      : "";
+
+    const rightChips = [
+      this._renderChip(levelLabel, "state", { entityId: primaryEntity }),
+      heroNumeric != null
+        ? this._renderChip(
+          summary.primaryIsAqi ? `${heroCaption} ${heroNumeric}` : String(heroNumeric),
+          "value",
+          { entityId: primaryEntity },
+        )
+        : "",
+      ...comfortMetrics.map(metric => this._renderChip(metric.display, "value", {
+        entityId: metric.infoEntityId,
+        ariaLabel: `${metric.label}: ${metric.display}`,
+      })),
+    ].filter(Boolean).join("");
+
+    const statusChips = [
+      guidelinesLabel ? this._renderChip(guidelinesLabel, "value") : "",
+    ].filter(Boolean).join("");
+
+    const metricBubbles = pollutionMetrics.map(metric => {
+      const metricAccent = metric.level !== "unknown"
+        ? (AIR_QUALITY_LEVEL_COLORS[metric.level] || accentColor)
+        : "var(--primary-text-color)";
+      const compactValue = `${metric.label} ${metric.display}`;
+      const bubbleTitle = guidelines === "who" && AIR_QUALITY_POLLUTION_KEYS.has(metric.kind)
+        ? `${metric.label}: ${metric.display} · ${this._airQualityLevelLabel(metric.level)}`
+        : `${metric.label}: ${metric.display}`;
+      return `
+        <button
+          type="button"
+          class="entity-card__aq-bubble"
+          style="--aq-bubble-accent:${escapeHtml(metricAccent)};"
+          title="${escapeHtml(bubbleTitle)}"
+          data-entity-action="metric-info"
+          data-entity="${escapeHtml(metric.infoEntityId)}"
+          aria-label="${escapeHtml(bubbleTitle)}"
+        >
+          <ha-icon icon="${escapeHtml(this._airQualityMetricIcon(metric.kind))}"></ha-icon>
+          <span>${escapeHtml(compactValue)}</span>
+        </button>
+      `;
+    }).join("");
+
+    const legendChips = allChartEntries.map(entry => {
+      const isVisible = !this._aqHiddenSeries.has(entry.kind);
+      return `
+      <button
+        type="button"
+        class="entity-card__aq-legend-item ${isVisible ? "" : "entity-card__aq-legend-item--hidden"}"
+        style="--aq-series-color:${escapeHtml(entry.color)};"
+        data-entity-action="graph-series-toggle"
+        data-series-kind="${escapeHtml(entry.kind)}"
+        aria-pressed="${String(isVisible)}"
+        aria-label="${escapeHtml(entry.label)}"
+      >
+        <span class="entity-card__aq-legend-swatch"></span>
+        <span>${escapeHtml(entry.label)}</span>
+      </button>
+    `;
+    }).join("");
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          --entity-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --entity-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          display: block;
+          position: relative;
+        }
+
+        * { box-sizing: border-box; }
+
+        ha-card[data-entity-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
+        ha-card {
+          --nodalia-entity-surface-base: ${surfaceBase};
+          background: ${cardBackground};
+          border: ${cardBorder};
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${cardShadow};
+          color: var(--primary-text-color);
+          display: block;
+          overflow: hidden;
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        ha-card::before {
+          background: ${surfaceGlaze};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        ha-card::after {
+          background: ${surfaceAmbient};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .entity-card--clickable { cursor: pointer; }
+        .entity-card__icon.entity-card__icon--clickable { cursor: pointer; }
+
+        .entity-card__content {
+          display: grid;
+          gap: ${styles.card.gap};
+          min-width: 0;
+          padding: ${styles.card.padding};
+          position: relative;
+          z-index: 1;
+        }
+
+        .entity-card__content--entering {
+          animation: entity-card-fade-up calc(var(--entity-card-content-duration) * 0.88) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .entity-card__hero {
+          align-items: center;
+          display: grid;
+          gap: 12px;
+          grid-template-columns: ${iconSize} minmax(0, 1fr);
+          min-width: 0;
+        }
+
+        .entity-card__icon {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color: ${iconGlyphColor};
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: ${iconSize};
+          justify-content: center;
+          line-height: 0;
+          margin: 0;
+          outline: none;
+          padding: 0;
+          position: relative;
+          width: ${iconSize};
+        }
+
+        .entity-card__icon ha-icon {
+          --mdc-icon-size: calc(${iconSize} * 0.44);
+          color: ${iconGlyphColor};
+          display: inline-flex;
+          height: calc(${iconSize} * 0.44);
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: calc(${iconSize} * 0.44);
+        }
+
+        .entity-card__copy {
+          display: grid;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .entity-card__headline {
+          align-items: start;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+
+        .entity-card__title {
+          font-size: ${titleSize};
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          line-height: 1.15;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .entity-card__chips {
+          align-items: center;
+          display: flex;
+          flex: 0 0 auto;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        .entity-card__chip {
+          appearance: none;
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: ${chipBorderRadius};
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          flex: 0 0 auto;
+          font-size: ${chipFontSize};
+          font-weight: 600;
+          line-height: 1;
+          max-width: 100%;
+          min-height: ${chipHeight};
+          min-width: 0;
+          overflow: hidden;
+          padding: ${chipPadding};
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .entity-card__chip--clickable {
+          cursor: pointer;
+          font-family: inherit;
+          margin: 0;
+        }
+
+        .entity-card__chip--clickable:focus-visible,
+        .entity-card__aq-bubble:focus-visible,
+        .entity-card__aq-legend-item:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: 2px;
+        }
+
+        .entity-card__chip--state {
+          background: color-mix(in srgb, ${accentColor} 16%, transparent);
+          border-color: color-mix(in srgb, ${accentColor} 22%, transparent);
+          color: ${accentColor};
+        }
+
+        .entity-card__aq-metrics {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .entity-card__aq-bubble {
+          appearance: none;
+          align-items: center;
+          background: color-mix(in srgb, var(--aq-bubble-accent, var(--primary-text-color)) 18%, var(--nodalia-entity-surface-base));
+          border: 1px solid color-mix(in srgb, var(--aq-bubble-accent, var(--primary-text-color)) 28%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent),
+            0 8px 18px rgba(0, 0, 0, 0.13);
+          color: color-mix(in srgb, var(--aq-bubble-accent, var(--primary-text-color)) 88%, var(--primary-text-color));
+          cursor: pointer;
+          display: inline-flex;
+          font-size: 12px;
+          font-family: inherit;
+          font-weight: 700;
+          gap: 5px;
+          line-height: 1;
+          margin: 0;
+          min-height: 32px;
+          padding: 0 11px 0 9px;
+        }
+
+        .entity-card__aq-bubble ha-icon {
+          --mdc-icon-size: 15px;
+          flex: 0 0 auto;
+        }
+
+        .entity-card__aq-chart-panel {
+          display: grid;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .entity-card__aq-chart-wrap {
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 18px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          min-height: 112px;
+          overflow: hidden;
+          padding: 0;
+          position: relative;
+        }
+
+        .entity-card__aq-chart {
+          cursor: crosshair;
+          display: block;
+          height: 112px;
+          width: 100%;
+        }
+
+        .entity-card__aq-hover-line {
+          stroke: color-mix(in srgb, var(--primary-text-color) 36%, transparent);
+          stroke-dasharray: 2 2;
+          stroke-width: 0.7;
+          vector-effect: non-scaling-stroke;
+        }
+
+        .entity-card__aq-hover-line[hidden],
+        .entity-card__aq-hover-point[hidden],
+        .entity-card__aq-hover-chip[hidden] {
+          display: none;
+        }
+
+        .entity-card__aq-hover-point {
+          background: var(--nodalia-entity-surface-base);
+          border: 2px solid var(--aq-hover-color);
+          border-radius: 50%;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--nodalia-entity-surface-base) 72%, transparent);
+          height: 8px;
+          left: clamp(4px, var(--aq-hover-left), calc(100% - 4px));
+          pointer-events: none;
+          position: absolute;
+          top: clamp(4px, var(--aq-hover-top), calc(100% - 4px));
+          transform: translate(-50%, -50%);
+          width: 8px;
+          z-index: 2;
+        }
+
+        .entity-card__aq-hover-chip {
+          align-items: center;
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          background: color-mix(in srgb, var(--nodalia-entity-surface-base) 88%, transparent);
+          border: 1px solid color-mix(in srgb, var(--aq-hover-color) 38%, var(--divider-color));
+          border-radius: 999px;
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2), inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          display: flex;
+          font-size: 11px;
+          gap: 6px;
+          left: clamp(86px, var(--aq-hover-left), calc(100% - 86px));
+          line-height: 1;
+          max-width: calc(100% - 16px);
+          min-height: 30px;
+          padding: 0 10px;
+          pointer-events: none;
+          position: absolute;
+          top: clamp(4px, var(--aq-hover-top), calc(100% - 4px));
+          transform: translate(-50%, calc(-100% - 10px));
+          white-space: nowrap;
+          will-change: left, top;
+          z-index: 3;
+        }
+
+        .entity-card__aq-hover-chip[data-aq-hover-placement="below"] {
+          transform: translate(-50%, 10px);
+        }
+
+        .entity-card__aq-hover-swatch {
+          background: var(--aq-hover-color);
+          border-radius: 999px;
+          flex: 0 0 auto;
+          height: 8px;
+          width: 8px;
+        }
+
+        .entity-card__aq-hover-label {
+          color: var(--secondary-text-color);
+          font-weight: 650;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .entity-card__aq-hover-chip strong {
+          color: var(--primary-text-color);
+          font-weight: 750;
+        }
+
+        .entity-card__aq-hover-chip time {
+          color: var(--secondary-text-color);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .entity-card__aq-legend {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .entity-card__aq-legend-item {
+          appearance: none;
+          align-items: center;
+          background: none;
+          border: 0;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font-size: 11px;
+          font-family: inherit;
+          font-weight: 650;
+          gap: 6px;
+          margin: 0;
+          padding: 0;
+          transition: color 140ms ease, opacity 140ms ease;
+        }
+
+        .entity-card__aq-legend-swatch {
+          background: var(--aq-series-color);
+          border-radius: 999px;
+          display: inline-block;
+          height: 8px;
+          transition: background 140ms ease, box-shadow 140ms ease;
+          width: 8px;
+        }
+
+        .entity-card__aq-legend-item--hidden {
+          opacity: 0.44;
+          text-decoration: line-through;
+        }
+
+        .entity-card__aq-legend-item--hidden .entity-card__aq-legend-swatch {
+          background: transparent;
+          box-shadow: inset 0 0 0 1.5px var(--aq-series-color);
+        }
+
+        .entity-card__aq-chart-empty {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 600;
+          padding: 18px 4px;
+          text-align: center;
+        }
+
+        @media (max-width: 420px) {
+          .entity-card__headline {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .entity-card__chips {
+            justify-content: flex-start;
+          }
+        }
+
+        @keyframes entity-card-fade-up {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card, .entity-card__content, .entity-card__content * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      </style>
+      <ha-card
+        class="entity-card entity-card--air-quality is-on ${canRunBodyTap ? "entity-card--clickable" : ""}"
+        style="--accent-color:${escapeHtml(accentColor)};"
+        ${canRunBodyTap ? `data-entity-action="body" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}
+      >
+        <div class="entity-card__content ${shouldAnimateEntrance ? "entity-card__content--entering" : ""}">
+          <div class="entity-card__hero">
+            <button
+              type="button"
+              class="entity-card__icon ${canRunIconTap ? "entity-card__icon--clickable" : ""}"
+              ${canRunIconTap ? 'data-entity-action="icon"' : ""}
+              aria-label="${escapeHtml(title)}"
+            >
+              <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+            </button>
+            <div class="entity-card__copy">
+              <div class="entity-card__headline">
+                <div class="entity-card__title">${escapeHtml(title)}</div>
+                ${rightChips ? `<div class="entity-card__chips">${rightChips}</div>` : ""}
+              </div>
+              ${statusChips ? `<div class="entity-card__chips" style="justify-content:flex-start;">${statusChips}</div>` : ""}
+            </div>
+          </div>
+          ${metricBubbles ? `<div class="entity-card__aq-metrics">${metricBubbles}</div>` : ""}
+          ${
+            aqConfig.show_graphs === true
+              ? `
+                <div class="entity-card__aq-chart-panel">
+                  <div class="entity-card__aq-chart-wrap">
+                    ${
+                      chartSvg
+                        ? `${chartSvg}${chartHoverPoint}${chartHoverChip}`
+                        : allChartEntries.length > 0 && chartEntries.length === 0
+                          ? ""
+                          : `<div class="entity-card__aq-chart-empty">${escapeHtml(
+                          this._aqHistoryLoading
+                            ? this._entityCardUi("airQuality.loadingGraphs", "Loading history…")
+                            : this._entityCardUi("airQuality.emptyGraphs", "No history yet"),
+                        )}</div>`
+                    }
+                  </div>
+                  ${legendChips ? `<div class="entity-card__aq-legend">${legendChips}</div>` : ""}
+                </div>
+              `
+              : ""
+          }
+        </div>
+      </ha-card>
+    `;
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
+  }
+
   _render() {
     if (!this.shadowRoot) {
+      return;
+    }
+
+    if (String(this._config?.layout || "").toLowerCase() === "air_quality") {
+      this._renderAirQualityLayout();
       return;
     }
 
@@ -3154,6 +4789,26 @@ class NodaliaEntityCard extends HTMLElement {
 
 if (!customElements.get(CARD_TAG)) {
   customElements.define(CARD_TAG, NodaliaEntityCard);
+}
+
+if (typeof window !== "undefined") {
+  window.__NODALIA_ENTITY_AIR_QUALITY__ = {
+    AIR_QUALITY_METRIC_KEYS,
+    AIR_QUALITY_GRAPH_SERIES_COLORS,
+    AIR_QUALITY_WHO_BANDS,
+    AIR_QUALITY_COMFORT_KEYS,
+    normalizeAirQualityBlock,
+    resolveAirQualityLevelFromBands,
+    resolveAirQualityLevelFromAqi,
+    resolveMetricGuidelineBands,
+    worseAirQualityLevel,
+    parseAirQualityNumeric,
+    buildAirQualitySmoothPath,
+    buildAirQualityAreaPath,
+    buildAirQualityChartGeometry,
+    getAirQualityHoverPayload,
+    buildAirQualityInterpolatedSamples,
+  };
 }
 
 class NodaliaEntityCardEditor extends HTMLElement {
@@ -4116,6 +5771,16 @@ class NodaliaEntityCardEditor extends HTMLElement {
             ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
               fullWidth: true,
             })}
+            ${this._renderSelectField(
+              "ed.entity.layout",
+              "layout",
+              config.layout || "default",
+              [
+                { value: "default", label: "ed.entity.layout_default" },
+                { value: "air_quality", label: "ed.entity.layout_air_quality" },
+              ],
+              { fullWidth: true },
+            )}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:tune",
               fullWidth: true,
@@ -4143,6 +5808,66 @@ class NodaliaEntityCardEditor extends HTMLElement {
             </div>
           </div>
         </section>
+
+        ${
+          config.layout === "air_quality"
+            ? `
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.air_quality_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.air_quality_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField(
+              "ed.entity.air_quality_guidelines",
+              "air_quality.guidelines",
+              config.air_quality?.guidelines || "who",
+              [
+                { value: "who", label: "ed.entity.air_quality_guidelines_who" },
+                { value: "none", label: "ed.entity.air_quality_guidelines_none" },
+              ],
+              { fullWidth: true },
+            )}
+            ${this._renderCheckboxField(
+              "ed.entity.air_quality_show_graphs",
+              "air_quality.show_graphs",
+              config.air_quality?.show_graphs === true,
+            )}
+            ${
+              config.air_quality?.show_graphs === true
+                ? `
+                  ${this._renderTextField(
+                    "ed.entity.air_quality_graph_hours",
+                    "air_quality.graph_hours",
+                    config.air_quality?.graph_hours ?? 24,
+                    { placeholder: "24", type: "number" },
+                  )}
+                  <div class="editor-field editor-field--full">
+                    <span>${escapeHtml(this._editorLabel("ed.entity.air_quality_graph_colors"))}</span>
+                    <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.air_quality_graph_colors_hint"))}</div>
+                  </div>
+                  ${AIR_QUALITY_METRIC_KEYS.map(kind => this._renderColorField(
+                    `ed.entity.air_quality_${kind}`,
+                    `air_quality.graph_colors.${kind}`,
+                    config.air_quality?.graph_colors?.[kind],
+                    { fallbackValue: AIR_QUALITY_GRAPH_SERIES_COLORS[kind] },
+                  )).join("")}
+                `
+                : ""
+            }
+            ${this._renderEntityPickerField("ed.entity.air_quality_pm1", "air_quality.pm1", config.air_quality?.pm1 || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_pm25", "air_quality.pm25", config.air_quality?.pm25 || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_pm4", "air_quality.pm4", config.air_quality?.pm4 || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_pm10", "air_quality.pm10", config.air_quality?.pm10 || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_tvoc", "air_quality.tvoc", config.air_quality?.tvoc || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_co2", "air_quality.co2", config.air_quality?.co2 || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_temperature", "air_quality.temperature", config.air_quality?.temperature || "", { fullWidth: true })}
+            ${this._renderEntityPickerField("ed.entity.air_quality_humidity", "air_quality.humidity", config.air_quality?.humidity || "", { fullWidth: true })}
+          </div>
+        </section>
+            `
+            : ""
+        }
 
         <section class="editor-section">
           <div class="editor-section__header">

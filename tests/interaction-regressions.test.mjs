@@ -528,7 +528,7 @@ test("NodaliaUtils rejects CSS and markup injection in style values", () => {
   const document = renderCardEmptyStateDocument("<div class=\"test--empty\">Empty</div>", {
     card: { background: "red;} </style><script>alert(1)</script>" },
   });
-  assert.doesNotMatch(document, /<script>/);
+  assert.doesNotMatch(document, /<script\b[^>]*>/i);
   assert.match(document, /background: var\(--ha-card-background\)/);
 });
 
@@ -2145,4 +2145,26 @@ test("visual family tokens stay aligned without changing notifications", () => {
   assert.match(read("nodalia-notifications-card.js"), /renderEditorCardBorderRadiusHtml/);
   assert.match(read("nodalia-notifications-card.js"), /styles\.item_radius/);
   assert.match(read("nodalia-utils.js"), /FAMILY_RADIUS/);
+});
+
+test("climate humidifier fan and light fire selection haptics on scroll step changes", () => {
+  for (const file of ["nodalia-humidifier-card.js", "nodalia-fan-card.js", "nodalia-light-card.js"]) {
+    const source = read(file);
+    assert.match(source, /_hapticOnSliderStep\(/, `${file} should expose slider step haptics`);
+    assert.match(source, /lastHapticValue/, `${file} should track the last stepped haptic value while dragging`);
+    assert.match(
+      source,
+      /_hapticOnSliderStep\([\s\S]*\{ commit \}\)/,
+      `${file} should haptic during apply, not only on bare commit`,
+    );
+  }
+
+  const climate = read("nodalia-climate-card.js");
+  assert.match(climate, /_hapticOnDialStep\(/);
+  assert.match(climate, /_hapticOnDialStep\(stepped, \{ commit: options\.commit === true \}\)/);
+  assert.match(climate, /_hapticOnDialStep\(drag\.handle === "low" \? low : high, \{ commit: false \}\)/);
+
+  const light = read("nodalia-light-card.js");
+  assert.match(light, /_lightSliderHapticStep\(/);
+  assert.match(light, /kind === "color"[\s\S]*Math\.round\(numeric \/ 5\) \* 5/);
 });

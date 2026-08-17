@@ -198,11 +198,16 @@ function patchClassChunk(chunk) {
 
 function patchFile(filePath) {
   const abs = path.join(root, filePath);
-  if (!fs.existsSync(abs)) {
-    console.warn("missing", filePath);
-    return;
+  let content;
+  try {
+    content = fs.readFileSync(abs, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      console.warn("missing", filePath);
+      return;
+    }
+    throw error;
   }
-  let content = fs.readFileSync(abs, "utf8");
   if (content.includes("_editorLabel(s)")) {
     console.log("skip", filePath);
     return;

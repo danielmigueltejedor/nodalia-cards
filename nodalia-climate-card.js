@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.1.2";
+const CARD_VERSION = "2.1.3-alpha.8";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -3899,6 +3899,26 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
+  _hapticOnDialStep(steppedValue, { commit = false } = {}) {
+    const next = Number(steppedValue);
+    if (!Number.isFinite(next)) {
+      return;
+    }
+    const drag = this._activeDialDrag;
+    if (drag) {
+      if (drag.lastHapticValue === next) {
+        return;
+      }
+      drag.lastHapticValue = next;
+      this._triggerHaptic("selection");
+      return;
+    }
+    if (commit) {
+      this._triggerHaptic("selection");
+      return;
+    }
+  }
+
   _applyDialValue(value, options = {}) {
     const state = this._getState();
     if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
@@ -3909,11 +3929,12 @@ class NodaliaClimateCard extends HTMLElement {
     const step = this._getTemperatureStep(state);
     const nextValue = clamp(Number(value), range.min, range.max);
     const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
-    this._draftTemperature.set(this._config.entity, Number(rounded.toFixed(Math.max(1, getStepPrecision(step)))));
+    const stepped = Number(rounded.toFixed(Math.max(1, getStepPrecision(step))));
+    this._draftTemperature.set(this._config.entity, stepped);
     this._updateDialPreview(rounded);
 
+    this._hapticOnDialStep(stepped, { commit: options.commit === true });
     if (options.commit === true) {
-      this._triggerHaptic("selection");
       this._commitTemperature(rounded);
     }
   }
@@ -3923,12 +3944,21 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const seedState = this._getState();
+    const seedStep = seedState ? this._getTemperatureStep(seedState) : 1;
+    const seedDraft = seedState ? this._draftTemperature.get(this._config.entity) : null;
+    const seedValue = Number.isFinite(Number(seedDraft))
+      ? Number(seedDraft)
+      : Number(dial.getAttribute("aria-valuenow"));
     this._activeDialDrag = {
       kind: "single",
       dial,
       geometry: dial.getBoundingClientRect(),
       pointerId,
       lastValue: null,
+      lastHapticValue: Number.isFinite(seedValue)
+        ? Number(seedValue.toFixed(Math.max(1, getStepPrecision(seedStep))))
+        : null,
     };
     this._setDragWindowListeners(true);
     this._setDialDraggingState(true, dial);
@@ -4065,6 +4095,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const pairSeed = this._getEffectiveTargetLowHigh(state);
     this._activeDialDrag = {
       kind: "range",
       handle,
@@ -4076,6 +4107,7 @@ class NodaliaClimateCard extends HTMLElement {
       startClientX: clientX,
       startClientY: clientY,
       rangeThumbDragStarted: false,
+      lastHapticValue: handle === "low" ? pairSeed.low : pairSeed.high,
     };
     this._setDragWindowListeners(true);
     this._setDialDraggingState(true, dial);
@@ -4095,6 +4127,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._activeDialDrag.lastLow = pair.low;
     this._activeDialDrag.lastHigh = pair.high;
+    this._activeDialDrag.lastHapticValue = handle === "low" ? pair.low : pair.high;
 
     const entityId = this._config.entity;
     if (entityId) {
@@ -4150,6 +4183,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
     drag.lastLow = low;
     drag.lastHigh = high;
+    this._hapticOnDialStep(drag.handle === "low" ? low : high, { commit: false });
 
     const entityId = this._config.entity;
     if (entityId) {
@@ -4213,6 +4247,11 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const normalized = this._normalizeLowHighPair(low, high, state);
 
+    if (normalized) {
+      const commitStep = drag.handle === "low" ? normalized.low : normalized.high;
+      this._hapticOnDialStep(commitStep, { commit: true });
+    }
+
     this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
     this._setDragWindowListeners(false);
@@ -4220,7 +4259,6 @@ class NodaliaClimateCard extends HTMLElement {
     this._selectedRangeThumb = drag.handle;
 
     if (normalized) {
-      this._triggerHaptic("selection");
       this._queueRangeCommit(normalized, { immediate: true, render: true });
     }
 
