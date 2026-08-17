@@ -307,6 +307,15 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
 
   const personAction = page.locator("nodalia-person-card").locator('[data-person-action="primary"]');
   await personAction.focus();
+  expect(await personAction.evaluate(element => ({
+    tagName: element.tagName,
+    borderRadius: getComputedStyle(element).borderRadius,
+    outlineOffset: getComputedStyle(element).outlineOffset,
+  }))).toEqual({
+    tagName: "HA-CARD",
+    borderRadius: "28px",
+    outlineOffset: "-3px",
+  });
   await personAction.press("Enter");
   await expect.poll(() => page.evaluate(() => window.personActions)).toBe(1);
 

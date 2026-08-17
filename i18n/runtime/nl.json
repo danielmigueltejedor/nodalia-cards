@@ -504,7 +504,10 @@
       },
       "loadingGraphs": "Geschiedenis laden…",
       "emptyGraphs": "Nog geen geschiedenis"
-    }
+    },
+    "battery": { "title": "Batterijen", "subtitle": "Batterijoverzicht", "average": "gemiddeld", "devices": "apparaten", "good": "Goed", "low": "Laag", "critical": "Kritiek" },
+    "network": { "title": "Netwerk", "subtitle": "Verbindingsoverzicht", "metrics": "metingen", "roles": { "status": "Status", "download": "Download", "upload": "Upload", "latency": "Latentie", "signal": "Signaal", "traffic": "Verkeer" } },
+    "overview": { "empty": "Voeg entiteiten toe in de visuele editor.", "unavailable": "Niet beschikbaar", "unconfigured": "Niet geconfigureerd" }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",

@@ -504,7 +504,10 @@
       },
       "loadingGraphs": "正在加载历史…",
       "emptyGraphs": "暂无历史"
-    }
+    },
+    "battery": { "title": "电池", "subtitle": "电池概览", "average": "平均", "devices": "设备", "good": "良好", "low": "电量低", "critical": "严重不足" },
+    "network": { "title": "网络", "subtitle": "连接概览", "metrics": "指标", "roles": { "status": "状态", "download": "下载", "upload": "上传", "latency": "延迟", "signal": "信号", "traffic": "流量" } },
+    "overview": { "empty": "请在可视化编辑器中添加实体。", "unavailable": "不可用", "unconfigured": "未配置" }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",

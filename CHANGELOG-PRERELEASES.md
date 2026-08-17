@@ -10,6 +10,97 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.2] - 2026-08-17
+
+Second **`2.2.0`** alpha: Engine-first background notifications with an automatic legacy-package fallback.
+
+### Changed
+
+- Native Engine profiles now carry the resolved Notifications Card language.
+- A retained legacy webhook package enters standby while Engine delivery is healthy and is reactivated when the native health check fails.
+- Spanish fallback copy no longer mixes localized titles with English measurement messages.
+
+### Fixed
+
+- One threshold crossing no longer produces both an Engine notification and a legacy package notification after migration.
+
+### Validation
+
+- 431/431 Node tests pass with version, syntax, editor/runtime i18n and production bundle validation.
+- Notification regressions cover Engine ownership, legacy standby, failover and locale propagation.
+
+---
+
+## [2.2.0-alpha.1] - 2026-08-15
+
+First **`2.2.0`** alpha: the expanded Entity Card layout work, cross-browser device motion and granular control haptics graduate into a new minor preview line.
+
+### Added
+
+- Visual-editor haptic toggles for each Light brightness / temperature / color slider, Fan percentage slider, Humidifier humidity slider, Climate temperature dial and Cover position / tilt slider.
+- Multi-engine browser regressions sample device control-panel expansion and collapse and verify that the settled off state contains no stale controls shell.
+
+### Changed
+
+- Light, Fan and Humidifier animate control height through `grid-template-rows`, avoiding fixed-height interpolation and preserving responsive content.
+- The master haptics setting remains available; all new per-scroll controls default to enabled so existing configurations retain their behavior.
+- The `2.2.0` preview line includes the Air Quality graph/editor work and the redesigned battery and network Entity Card overview layouts developed during the `2.1.3` alpha cycle.
+
+### Fixed
+
+- Animation cleanup performs a final stable render after power, controls and secondary-panel transitions, so Gecko cannot leave an off device visually expanded when CSS completion events or fill behavior differ.
+- Person Card focus feedback now uses the outer rounded card as its interactive surface, matching Entity Card and eliminating clipped rectangular focus borders.
+
+### Validation
+
+- 428/428 Node tests pass together with version, syntax, editor/runtime i18n and production bundle validation.
+- Eight Chromium/WebKit browser checks cover real control-panel motion and visual-editor haptic persistence. The same regression runs under the Firefox project when a functional Gecko binary is available.
+
+---
+
+## [2.1.3-alpha.10] - 2026-08-15
+
+Tenth **`2.1.3`** alpha: a full Nodalia visual redesign for the Entity Card battery and network layouts.
+
+### Changed
+
+- Battery entities use circular level gauges, semantic health labels, raised metric surfaces and aggregate device / average / low-battery chips.
+- Network connectivity is promoted to a full-width status surface; download, upload, latency, signal and traffic use distinct semantic colors and activity details.
+- Both layouts inherit the visual depth, ambient tint, responsive composition, interaction feedback and reduced-motion behavior of established Nodalia cards.
+- Battery health labels are translated in all twelve runtime locales.
+
+### Fixed
+
+- Network layouts without an explicit status entity retain an intentional blue accent.
+- Entity Card ambient overlays preserve Gecko-safe clipped corners without visible surface seams.
+
+### Validation
+
+- 425/425 Node tests and 24/24 Chromium browser checks pass, including accessibility and fractional surface geometry coverage.
+
+---
+
+## [2.1.3-alpha.9] - 2026-08-14
+
+Ninth **`2.1.3`** alpha: Entity Card battery and network overview layouts, plus a cleaner Air Quality editor surface.
+
+### Added
+
+- Battery overview layout (up to 16 entities) with level coloring, charging icons and charge bars.
+- Network overview layout with status / download / upload / latency / signal / traffic roles (auto or manual).
+- Full visual editor flows to manage overview entities, plus battery and network YAML examples.
+
+### Changed
+
+- Air Quality hides editor options it does not use; switching back to the default layout restores them without dropping config.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.9`.
+
+### Validation
+
+- 424 Node tests and 24/24 Chromium final checks. WebKit and mobile passed in the general browser run; Firefox failed to launch due to a macOS sandbox graphics restriction, not a card defect.
+
+---
+
 ## [2.1.3-alpha.8] - 2026-08-12
 
 Eighth **`2.1.3`** alpha: fluid Air Quality graph inspection.

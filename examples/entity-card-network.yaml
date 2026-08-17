@@ -1,0 +1,18 @@
+type: custom:nodalia-entity-card
+layout: network
+name: Home network
+icon: mdi:lan
+network:
+  entities:
+    - entity: binary_sensor.internet_connection
+      name: Internet
+      role: status
+    - entity: sensor.speedtest_download
+      role: download
+    - entity: sensor.speedtest_upload
+      role: upload
+    - entity: sensor.speedtest_ping
+      role: latency
+    - entity: sensor.router_signal_strength
+      role: signal
+

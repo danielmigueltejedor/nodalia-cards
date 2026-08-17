@@ -11,15 +11,15 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
-## Compatibility for Nodalia Cards 2.1.2
+## Compatibility for Nodalia Cards 2.2.0-alpha.2
 
-| Component | Supported baseline | Recommended for 2.1.2 |
+| Component | Supported baseline | Recommended for 2.2.0-alpha.2 |
 |---|---|---|
 | Home Assistant | `2025.1.0` or newer | Current supported stable release |
-| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.1.2` |
-| Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.0` |
+| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.0-alpha.2` |
+| Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.1` |
 
-Cards `2.1.2` and Engine `2.0.0` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `2.2.0-alpha.2` and Engine `2.0.1` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## What the optional Engine makes native
 
@@ -40,7 +40,7 @@ The Notifications and Climate editors query the Engine when they open. What you 
 - **Engine active.** The editor shows an "Engine active" banner with the Engine version and privacy-safe health counters (stored profiles, schedules and inbox entries). Legacy webhook and `input_text` helper fields are hidden because the Engine owns that behaviour. Options that still matter — the notification profile id, the first day of the week — remain editable.
 - **Engine missing or offline.** The editor shows a short hint and keeps every legacy webhook and helper field visible, so a plugin-only dashboard keeps working exactly as before.
 
-Packages, webhooks and `input_text` helpers are therefore a fallback rather than the primary path. Keep them configured until you have verified the Engine handles a real background event and survives a Home Assistant restart.
+Packages, webhooks and `input_text` helpers are therefore a fallback rather than the primary path. When the legacy webhook remains configured, the card automatically puts its package profile in standby after a successful Engine sync and re-enables it if the Engine health check fails. Keep the package configured until you have verified the Engine handles a real background event and survives a Home Assistant restart.
 
 ## Installation
 
@@ -121,7 +121,7 @@ When the Engine reports the override capability and the entity has a stored sche
 
 ## Recovery
 
-If the Engine is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their webhook paths as optional fallbacks when those fields are configured. Reloading or removing the Engine does not alter dashboard YAML or the Cards plugin resource.
+If the Engine is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their webhook paths as optional fallbacks when those fields are configured. The Notifications Card rechecks native delivery periodically; a failed check activates the synchronized package profile, while a recovered Engine returns that profile to standby. Reloading or removing the Engine does not alter dashboard YAML or the Cards plugin resource.
 
 ## Support boundaries
 

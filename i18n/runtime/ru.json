@@ -504,7 +504,10 @@
       },
       "loadingGraphs": "Загрузка истории…",
       "emptyGraphs": "Истории пока нет"
-    }
+    },
+    "battery": { "title": "Батареи", "subtitle": "Обзор батарей", "average": "в среднем", "devices": "устройства", "good": "Норма", "low": "Низкий", "critical": "Критический" },
+    "network": { "title": "Сеть", "subtitle": "Обзор подключения", "metrics": "показатели", "roles": { "status": "Состояние", "download": "Загрузка", "upload": "Отдача", "latency": "Задержка", "signal": "Сигнал", "traffic": "Трафик" } },
+    "overview": { "empty": "Добавьте объекты в визуальном редакторе.", "unavailable": "Недоступно", "unconfigured": "Не настроено" }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",

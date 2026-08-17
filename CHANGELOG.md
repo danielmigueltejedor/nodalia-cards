@@ -10,6 +10,85 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-alpha.2] - 2026-08-17
+
+Second **`2.2.0`** alpha: Engine-first background notifications with an automatic legacy-package fallback.
+
+### Changed
+
+- The Notifications Card sends its resolved UI language with native Engine profiles, keeping background copy aligned with the active Home Assistant user locale.
+- A configured legacy notification package is put in standby after a successful Engine sync and reactivated when the periodic native health check fails.
+- The legacy package uses localized Spanish default copy instead of mixing Spanish titles with English messages.
+
+### Fixed
+
+- Engine and package delivery no longer remain active at the same time after migration, preventing duplicate mobile notifications such as localized and English temperature alerts for one threshold crossing.
+
+### Validation
+
+- Full validation covers 431 Node tests, synchronized versions, editor/runtime locale catalogs and generated production/release bundles.
+- Dedicated notification policy tests cover Engine ownership, package standby, fallback activation and language propagation.
+
+## [2.2.0-alpha.1] - 2026-08-15
+
+First **`2.2.0`** alpha: cross-browser device motion, granular haptics and the completed Nodalia overview-layout redesigns move into a new minor preview line.
+
+### Added
+
+- **Individual scroll haptics:** visual-editor toggles independently control Light brightness / temperature / color, Fan percentage, Humidifier humidity, Climate temperature dial, and Cover position / tilt feedback.
+- Browser regressions measure the real opening, midpoint, closing and settled DOM states of Light, Fan and Humidifier control panels.
+
+### Changed
+
+- Light, Fan and Humidifier control expansion uses interpolated grid tracks instead of fixed `max-height` guesses, keeping content height fluid across browser engines.
+- The global haptics switch remains the master control while every scroll control stays enabled by default for backward compatibility.
+- Carries the Air Quality, battery and network Entity Card layouts into the `2.2.0` preview line.
+
+### Fixed
+
+- Device-card animation cleanup now commits a final render after power and controls transitions. Turning a device off removes stale expanded controls from the DOM instead of relying on CSS animation fill behavior.
+- Person Card keyboard / click feedback follows the real rounded `ha-card` surface rather than the rectangular inner content layer.
+
+### Validation
+
+- Full validation covers 428 Node tests, synchronized versions, all editor/runtime locale catalogs and generated release bundles.
+- Eight browser checks pass across Chromium and WebKit for device expansion / collapse and visual-editor haptic persistence. The regression is also registered for Firefox; the local Playwright Firefox 153 binary could not render even an empty page in this environment.
+
+## [2.1.3-alpha.10] - 2026-08-15
+
+### Changed
+
+- **Battery layout redesign:** device levels now use prominent circular gauges, semantic Good / Low / Critical states and a header summary for device count, average charge and low-battery alerts.
+- **Network layout redesign:** connectivity becomes a full-width operational status, download and upload receive stronger visual hierarchy, and every role uses its own semantic tint and compact activity treatment.
+- Both overview layouts now share the layered Nodalia surface, raised bubbles, responsive spacing, hover / press feedback and reduced-motion support used by the rest of the card family.
+- Battery state labels are translated across all twelve supported runtime languages.
+
+### Fixed
+
+- Network cards without a status entity keep the network-blue surface accent instead of falling back to a neutral unavailable tint.
+- Overview tint overlays retain Gecko-safe clipping without inherited-radius seams.
+
+### Validation
+
+- Full validation covers 425 Node tests plus Chromium final checks (24/24), including surface geometry, accessibility and responsive rendering.
+
+## [2.1.3-alpha.9] - 2026-08-14
+
+### Added
+
+- **Entity Card battery layout:** overview of up to 16 battery entities with level, color, charging icons and progress bars; each row opens that entity's more-info.
+- **Entity Card network layout:** status, download, upload, latency, signal and traffic metrics with automatic or manual role detection; each row opens that entity's more-info.
+- Visual editor support to add, remove and reorder battery/network entities, plus examples `entity-card-battery.yaml` and `entity-card-network.yaml`.
+
+### Changed
+
+- **Air Quality editor:** unused content, quick-action, image and incompatible style options stay hidden while `layout: air_quality` is selected and return when switching back to the default layout without losing their values.
+- Compatibility loaders keep `2.1.3-alpha.2` and `2.1.3-alpha.3` available alongside `2.1.3-alpha.9`.
+
+### Validation
+
+- Full validation covers 424 Node tests plus Chromium final checks (24/24). WebKit and mobile passed in the broader browser run; Firefox could not start under the macOS sandbox graphics restriction.
+
 ## [2.1.3-alpha.8] - 2026-08-12
 
 ### Changed

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.1.3-alpha.8";
+const CARD_VERSION = "2.2.0-alpha.2";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -73,6 +73,9 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+    scrolls: {
+      temperature_dial: true,
+    },
   },
   animations: {
     enabled: true,
@@ -3900,6 +3903,9 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _hapticOnDialStep(steppedValue, { commit = false } = {}) {
+    if (this._config?.haptics?.scrolls?.temperature_dial === false) {
+      return;
+    }
     const next = Number(steppedValue);
     if (!Number.isFinite(next)) {
       return;
@@ -7965,6 +7971,7 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.dial_temperature", "haptics.scrolls.temperature_dial", config.haptics.scrolls?.temperature_dial !== false)}
             ${this._renderSelectField(
               "ed.entity.haptic_style",
               "haptics.style",
@@ -9010,6 +9017,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.dial_temperature", "haptics.scrolls.temperature_dial", config.haptics.scrolls?.temperature_dial !== false)}
             ${this._renderSelectField(
               "ed.entity.haptic_style",
               "haptics.style",

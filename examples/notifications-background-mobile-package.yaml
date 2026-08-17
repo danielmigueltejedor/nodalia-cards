@@ -278,6 +278,7 @@ automation:
           notify_cfg: "{{ cfg.get('notify', {}) }}"
           context_cfg: "{{ cfg.get('context', {}) }}"
           smart_cfg: "{{ cfg.get('smart', {}) }}"
+          language: "{{ cfg.get('language', 'en') | string | lower }}"
           default_policy: "{{ notify_cfg.get('default_policy', 'auto') }}"
           entity_id: "{{ trigger.event.data.entity_id }}"
           new_state_value: "{{ trigger.event.data.new_state_value | default('', true) }}"
@@ -363,25 +364,46 @@ automation:
             {% else %}false
             {% endif %}
           default_title: >-
-            {% if match_kind == 'door' %}Puerta abierta
-            {% elif match_kind == 'window' %}Ventana abierta
-            {% elif match_kind == 'motion' %}Presencia detectada
-            {% elif match_kind == 'vacuum' %}Robot necesita atención
-            {% elif match_kind == 'hot' %}Temperatura alta
-            {% elif match_kind == 'cold' %}Temperatura baja
-            {% elif match_kind == 'humidity_high' %}Humedad alta
-            {% elif match_kind == 'humidity_low' %}Humedad baja
-            {% elif match_kind == 'battery_low' %}Batería baja
-            {% elif match_kind == 'humidifier_fill_low' %}Depósito bajo
-            {% elif match_kind == 'humidifier_fill_full' %}Depósito lleno
-            {% elif match_kind == 'ink_low' %}Tinta baja
-            {% else %}Nodalia
+            {% if language == 'es' %}
+              {% if match_kind == 'door' %}Puerta abierta
+              {% elif match_kind == 'window' %}Ventana abierta
+              {% elif match_kind == 'motion' %}Presencia detectada
+              {% elif match_kind == 'vacuum' %}Robot necesita atención
+              {% elif match_kind == 'hot' %}Temperatura alta
+              {% elif match_kind == 'cold' %}Temperatura baja
+              {% elif match_kind == 'humidity_high' %}Humedad alta
+              {% elif match_kind == 'humidity_low' %}Humedad baja
+              {% elif match_kind == 'battery_low' %}Batería baja
+              {% elif match_kind == 'humidifier_fill_low' %}Depósito bajo
+              {% elif match_kind == 'humidifier_fill_full' %}Depósito lleno
+              {% elif match_kind == 'ink_low' %}Tinta baja
+              {% else %}Nodalia
+              {% endif %}
+            {% else %}
+              {% if match_kind == 'door' %}Door open
+              {% elif match_kind == 'window' %}Window open
+              {% elif match_kind == 'motion' %}Motion detected
+              {% elif match_kind == 'vacuum' %}Vacuum needs attention
+              {% elif match_kind == 'hot' %}High temperature
+              {% elif match_kind == 'cold' %}Low temperature
+              {% elif match_kind == 'humidity_high' %}High humidity
+              {% elif match_kind == 'humidity_low' %}Low humidity
+              {% elif match_kind == 'battery_low' %}Low battery
+              {% elif match_kind == 'humidifier_fill_low' %}Humidifier needs water
+              {% elif match_kind == 'humidifier_fill_full' %}Humidifier tank full
+              {% elif match_kind == 'ink_low' %}Low ink
+              {% else %}Nodalia
+              {% endif %}
             {% endif %}
           default_message: >-
             {% if new_value != none %}
-              {{ friendly }} is at {{ new_state_value }}{{ unit }}.
+              {% if language == 'es' %}{{ friendly }} marca {{ new_state_value }}{{ unit }}.
+              {% else %}{{ friendly }} is at {{ new_state_value }}{{ unit }}.
+              {% endif %}
             {% elif match_kind == 'vacuum' %}
-              {{ friendly }} is {{ new_state_value }}.
+              {% if language == 'es' %}{{ friendly }} está en estado {{ new_state_value }}.
+              {% else %}{{ friendly }} is {{ new_state_value }}.
+              {% endif %}
             {% else %}
               {{ friendly }}.
             {% endif %}

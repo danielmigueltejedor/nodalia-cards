@@ -288,6 +288,7 @@ test("external alert editor drafts survive normalization until required fields a
 
 test("background payload includes policy context cooldown and external alerts", () => {
   const payload = mobile.getBackgroundMobileConfigPayload({
+    language: "es",
     background_mobile: { enabled: true },
     mobile_notifications: {
       enabled: true,
@@ -320,6 +321,7 @@ test("background payload includes policy context cooldown and external alerts", 
     }],
   });
   assert.equal(payload.version, 2);
+  assert.equal(payload.language, "es");
   assert.equal(payload.notify.default_policy, "auto");
   assert.equal(payload.notify.cooldown_minutes, 15);
   assert.equal(payload.notify.group_similar, false);
@@ -342,6 +344,73 @@ test("background webhook payload uses version 2", () => {
   });
   assert.equal(payload.version, 2);
   assert.ok(payload.chunks.length > 0);
+});
+
+test("legacy webhook can be put in standby while Engine owns delivery", () => {
+  const payload = mobile.buildBackgroundMobileWebhookPayload(
+    {
+      language: "es",
+      background_mobile: { enabled: true, webhook: "nodalia_notifications_background_sync" },
+      mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+    },
+    null,
+    { enabled: false },
+  );
+  const profile = JSON.parse(payload.chunks.join(""));
+  assert.equal(profile.enabled, false);
+  assert.equal(profile.notify.enabled, true);
+  assert.equal(profile.language, "es");
+});
+
+test("successful Engine sync puts the configured legacy package in standby", async () => {
+  const { CardClass, sandbox } = loadNotificationsRuntime();
+  const postedProfiles = [];
+  sandbox.NodaliaBackend = {
+    status: async () => ({ available: true, capabilities: ["notifications_background"] }),
+    setNotificationProfile: async (_hass, profile) => ({ profile, dismissed: [] }),
+  };
+  sandbox.NodaliaUtils.postHomeAssistantWebhook = async (_webhookId, payload) => {
+    postedProfiles.push(JSON.parse(payload.chunks.join("")));
+    return true;
+  };
+  const instance = new CardClass();
+  instance._hass = { user: { is_admin: true }, locale: { language: "es-ES" } };
+  instance.setConfig({
+    background_mobile: { enabled: true, webhook: "nodalia_notifications_background_sync" },
+    mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+  });
+  clearTimeout(instance._backgroundMobileSyncTimer);
+  instance._backgroundMobileSyncTimer = 0;
+
+  assert.equal(await instance._syncBackgroundMobileConfig(), true);
+  assert.equal(postedProfiles.length, 1);
+  assert.equal(postedProfiles[0].enabled, false);
+  assert.equal(postedProfiles[0].language, "es");
+});
+
+test("failed Engine sync activates the configured legacy fallback", async () => {
+  const { CardClass, sandbox } = loadNotificationsRuntime();
+  const postedProfiles = [];
+  sandbox.NodaliaBackend = {
+    status: async () => ({ available: false, capabilities: [] }),
+  };
+  sandbox.NodaliaUtils.postHomeAssistantWebhook = async (_webhookId, payload) => {
+    postedProfiles.push(JSON.parse(payload.chunks.join("")));
+    return true;
+  };
+  const instance = new CardClass();
+  instance._hass = { user: { is_admin: true }, locale: { language: "es-ES" } };
+  instance.setConfig({
+    background_mobile: { enabled: true, webhook: "nodalia_notifications_background_sync" },
+    mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+  });
+  clearTimeout(instance._backgroundMobileSyncTimer);
+  instance._backgroundMobileSyncTimer = 0;
+
+  assert.equal(await instance._syncBackgroundMobileConfig(), true);
+  assert.equal(postedProfiles.length, 1);
+  assert.equal(postedProfiles[0].enabled, true);
+  assert.equal(postedProfiles[0].language, "es");
 });
 
 test("editor sends a disabled native profile so background delivery can be stopped", () => {

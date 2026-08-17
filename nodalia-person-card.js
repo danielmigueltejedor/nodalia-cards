@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "2.1.3-alpha.8";
+const CARD_VERSION = "2.2.0-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1155,7 +1155,7 @@ class NodaliaPersonCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        [data-person-action="primary"]:focus-visible {
+        ha-card[data-person-action="primary"]:focus-visible {
           outline: 2px solid var(--primary-color);
           outline-offset: -3px;
         }
@@ -1469,8 +1469,8 @@ class NodaliaPersonCard extends HTMLElement {
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}">
-        <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+        <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}">
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
             ${

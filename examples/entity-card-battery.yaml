@@ -1,0 +1,13 @@
+type: custom:nodalia-entity-card
+layout: battery
+name: Batteries
+icon: mdi:battery-multiple
+battery:
+  entities:
+    - entity: sensor.phone_battery_level
+      name: Phone
+    - entity: sensor.tablet_battery_level
+      name: Tablet
+    - entity: sensor.front_door_battery
+      name: Front door
+

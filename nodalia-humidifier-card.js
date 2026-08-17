@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.1.3-alpha.8";
+const CARD_VERSION = "2.2.0-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -70,6 +70,9 @@ const DEFAULT_CONFIG = {
     enabled: true,
     style: "medium",
     fallback_vibrate: false,
+    scrolls: {
+      humidity: true,
+    },
   },
   animations: {
     enabled: true,
@@ -1418,9 +1421,21 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     this._animationCleanupTimer = window.setTimeout(() => {
       this._animationCleanupTimer = 0;
+      const shouldFinalizeRender = Boolean(
+        this._powerTransition || this._controlsTransition || this._panelTransition,
+      );
       this._powerTransition = null;
       this._controlsTransition = null;
       this._panelTransition = null;
+      if (!shouldFinalizeRender || !this.isConnected) {
+        return;
+      }
+      if (this._activeSliderDrag) {
+        this._pendingRenderAfterDrag = true;
+        return;
+      }
+      this._lastRenderSignature = "";
+      this._render();
     }, safeDelay);
   }
 
@@ -2018,6 +2033,9 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+    if (this._config?.haptics?.scrolls?.humidity === false) {
+      return;
+    }
     const next = Number(steppedValue);
     if (!Number.isFinite(next)) {
       return;
@@ -3103,26 +3121,31 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card__controls-shell {
           backface-visibility: hidden;
+          display: grid;
+          grid-template-rows: 1fr;
           margin-top: var(--humidifier-card-controls-gap);
           overflow: visible;
-          will-change: margin-top, max-height, opacity;
+          will-change: grid-template-rows, margin-top, opacity;
         }
 
         .humidifier-card__controls-inner {
           backface-visibility: hidden;
           display: grid;
           gap: 10px;
+          min-height: 0;
+          overflow: visible;
           will-change: opacity, transform;
         }
 
         .humidifier-card__controls-shell--entering {
           animation: humidifier-card-controls-expand var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--humidifier-card-controls-delay, 0ms) both;
-          overflow: visible;
+          overflow: hidden;
           transform-origin: top;
         }
 
         .humidifier-card__controls-shell--entering .humidifier-card__controls-inner {
           animation: humidifier-card-controls-content-in var(--humidifier-card-controls-duration) cubic-bezier(0.22, 0.84, 0.26, 1) var(--humidifier-card-controls-delay, 0ms) both;
+          overflow: hidden;
           transform-origin: top;
         }
 
@@ -3135,6 +3158,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card__controls-shell--leaving .humidifier-card__controls-inner {
           animation: humidifier-card-controls-content-out var(--humidifier-card-controls-duration) cubic-bezier(0.38, 0, 0.24, 1) var(--humidifier-card-controls-delay, 0ms) both;
+          overflow: hidden;
           transform-origin: top;
         }
 
@@ -3461,13 +3485,13 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         @keyframes humidifier-card-controls-expand {
           0% {
+            grid-template-rows: 0fr;
             margin-top: 0;
-            max-height: 0;
             opacity: 0;
           }
           100% {
+            grid-template-rows: 1fr;
             margin-top: var(--humidifier-card-controls-gap);
-            max-height: var(--humidifier-card-controls-max-height);
             opacity: 1;
           }
         }
@@ -3492,13 +3516,13 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         @keyframes humidifier-card-controls-collapse {
           0% {
+            grid-template-rows: 1fr;
             margin-top: var(--humidifier-card-controls-gap);
-            max-height: var(--humidifier-card-controls-max-height);
             opacity: 1;
           }
           100% {
+            grid-template-rows: 0fr;
             margin-top: 0;
-            max-height: 0;
             opacity: 0;
           }
         }
@@ -5038,6 +5062,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
           <div class="editor-grid">
             ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_humidity", "haptics.scrolls.humidity", config.haptics.scrolls?.humidity !== false)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.1.3-alpha.8";
+const CARD_VERSION = "2.2.0-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -89,6 +89,16 @@ const DEFAULT_CONFIG = {
     show_graphs: false,
     graph_hours: 24,
     graph_points: 96,
+    graph_series: {
+      pm1: true,
+      pm25: true,
+      pm4: true,
+      pm10: true,
+      tvoc: true,
+      co2: true,
+      temperature: true,
+      humidity: true,
+    },
     graph_colors: {
       pm1: "#f29f05",
       pm25: "#42a5f5",
@@ -99,6 +109,12 @@ const DEFAULT_CONFIG = {
       temperature: "#d4783a",
       humidity: "#3f9d7a",
     },
+  },
+  battery: {
+    entities: [],
+  },
+  network: {
+    entities: [],
   },
   quick_actions: [],
   language: "auto",
@@ -401,6 +417,7 @@ function normalizeAirQualityBlock(raw) {
   const source = isObject(raw) ? raw : {};
   const hours = Number(source.graph_hours);
   const points = Number(source.graph_points);
+  const graphSeries = isObject(source.graph_series) ? source.graph_series : {};
   const graphColors = isObject(source.graph_colors) ? source.graph_colors : {};
   return {
     pm1: entityScalar(source.pm1),
@@ -415,6 +432,10 @@ function normalizeAirQualityBlock(raw) {
     show_graphs: source.show_graphs === true,
     graph_hours: Number.isFinite(hours) ? clamp(Math.round(hours), 1, 168) : 24,
     graph_points: Number.isFinite(points) ? clamp(Math.round(points), 8, 96) : 96,
+    graph_series: Object.fromEntries(AIR_QUALITY_METRIC_KEYS.map(kind => [
+      kind,
+      graphSeries[kind] !== false,
+    ])),
     graph_colors: Object.fromEntries(AIR_QUALITY_METRIC_KEYS.map(kind => [
       kind,
       sanitizeCssValue(graphColors[kind], AIR_QUALITY_GRAPH_SERIES_COLORS[kind]),
@@ -424,6 +445,39 @@ function normalizeAirQualityBlock(raw) {
 
 const AIR_QUALITY_COMFORT_KEYS = new Set(["temperature", "humidity"]);
 const AIR_QUALITY_HISTORY_REFRESH_MS = 180000;
+const OVERVIEW_LAYOUTS = new Set(["battery", "network"]);
+const NETWORK_ROLES = new Set(["auto", "status", "download", "upload", "latency", "signal", "traffic"]);
+
+function normalizeOverviewEntities(raw, options = {}) {
+  const entries = Array.isArray(raw) ? raw : [];
+  return entries
+    .filter(item => typeof item === "string" || isObject(item))
+    .map(item => {
+      const source = typeof item === "string" ? { entity: item } : item;
+      const normalized = {
+        entity: entityScalar(source.entity),
+        name: String(source.name ?? "").trim(),
+        icon: String(source.icon ?? "").trim(),
+      };
+      if (options.network === true) {
+        const role = String(source.role ?? "auto").trim().toLowerCase();
+        normalized.role = NETWORK_ROLES.has(role) ? role : "auto";
+      }
+      return normalized;
+    })
+    .filter(item => item.entity || item.name || item.icon)
+    .slice(0, 16);
+}
+
+function normalizeBatteryBlock(raw) {
+  const source = isObject(raw) ? raw : {};
+  return { entities: normalizeOverviewEntities(source.entities) };
+}
+
+function normalizeNetworkBlock(raw) {
+  const source = isObject(raw) ? raw : {};
+  return { entities: normalizeOverviewEntities(source.entities, { network: true }) };
+}
 
 function parseAirQualityHistoryTimestamp(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -1084,8 +1138,10 @@ function normalizeConfig(rawConfig) {
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   const layoutKey = String(config.layout ?? "default").trim().toLowerCase();
-  config.layout = layoutKey === "air_quality" ? "air_quality" : "default";
+  config.layout = layoutKey === "air_quality" || OVERVIEW_LAYOUTS.has(layoutKey) ? layoutKey : "default";
   config.air_quality = normalizeAirQualityBlock(config.air_quality);
+  config.battery = normalizeBatteryBlock(config.battery);
+  config.network = normalizeNetworkBlock(config.network);
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
@@ -1275,11 +1331,15 @@ class NodaliaEntityCard extends HTMLElement {
     if (this._config?.layout === "air_quality") {
       return this._config?.air_quality?.show_graphs === true ? 5 : 3;
     }
+    if (OVERVIEW_LAYOUTS.has(this._config?.layout)) {
+      const count = this._config?.[this._config.layout]?.entities?.length || 0;
+      return Math.max(3, 2 + Math.ceil(count / 2));
+    }
     return 3;
   }
 
   getGridOptions() {
-    if (this._config?.layout === "air_quality") {
+    if (this._config?.layout === "air_quality" || OVERVIEW_LAYOUTS.has(this._config?.layout)) {
       return {
         rows: "auto",
         columns: 12,
@@ -1314,6 +1374,22 @@ class NodaliaEntityCard extends HTMLElement {
         String(metricState?.last_updated || metricState?.last_changed || ""),
       ].join("=");
     });
+    const overviewParts = ["battery", "network"].flatMap(layout => (
+      (this._config?.[layout]?.entities || []).map((item, index) => {
+        const overviewState = item.entity ? hass?.states?.[item.entity] : null;
+        return [
+          layout,
+          index,
+          item.entity,
+          item.name,
+          item.icon,
+          item.role || "",
+          String(overviewState?.state ?? ""),
+          getValueSignature(overviewState?.attributes || {}),
+          String(overviewState?.last_updated || overviewState?.last_changed || ""),
+        ].join("=");
+      })
+    ));
     return [
       `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
       `e:${entityId}`,
@@ -1355,10 +1431,12 @@ class NodaliaEntityCard extends HTMLElement {
       `aqg:${String(aq.guidelines || "who")}`,
       `aqs:${aq.show_graphs === true ? 1 : 0}`,
       `aqh:${Number(aq.graph_hours) || 24}`,
+      `aqsr:${AIR_QUALITY_METRIC_KEYS.map(key => aq.graph_series?.[key] === false ? 0 : 1).join("")}`,
       `aqcl:${AIR_QUALITY_METRIC_KEYS.map(key => String(aq.graph_colors?.[key] || "")).join(",")}`,
       `aqv:${[...this._aqHiddenSeries].sort().join(",")}`,
       `aq:${aqParts.join(";")}`,
       `aqc:${this._aqHistoryCache ? 1 : 0}`,
+      `ov:${overviewParts.join(";")}`,
     ].join("|");
   }
 
@@ -2995,6 +3073,287 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
+  _overviewTitle(layout) {
+    const fallback = layout === "battery" ? "Batteries" : "Network";
+    return String(this._config?.name || "").trim()
+      || this._entityCardUi(`${layout}.title`, fallback);
+  }
+
+  _overviewIcon(layout) {
+    return String(this._config?.icon || "").trim()
+      || (layout === "battery" ? "mdi:battery-multiple" : "mdi:lan");
+  }
+
+  _resolveBatteryPercent(state) {
+    const candidates = [
+      state?.state,
+      state?.attributes?.battery_level,
+      state?.attributes?.battery,
+      state?.attributes?.percentage,
+    ];
+    for (const candidate of candidates) {
+      const numeric = parseAirQualityNumeric(candidate);
+      if (Number.isFinite(numeric)) {
+        return clamp(numeric, 0, 100);
+      }
+    }
+    return null;
+  }
+
+  _batteryIcon(percent, state) {
+    const charging = String(state?.state || "").toLowerCase() === "charging"
+      || state?.attributes?.battery_charging === true
+      || String(state?.attributes?.charging || "").toLowerCase() === "true";
+    if (!Number.isFinite(percent)) {
+      return charging ? "mdi:battery-charging" : "mdi:battery-unknown";
+    }
+    const level = Math.max(10, Math.min(100, Math.round(percent / 10) * 10));
+    return charging ? `mdi:battery-charging-${level}` : level === 100 ? "mdi:battery" : `mdi:battery-${level}`;
+  }
+
+  _batteryColor(percent) {
+    if (!Number.isFinite(percent)) {
+      return "var(--secondary-text-color)";
+    }
+    if (percent <= 15) {
+      return "var(--error-color, #ef5350)";
+    }
+    if (percent <= 35) {
+      return "var(--warning-color, #f9a825)";
+    }
+    return "var(--success-color, #55b77e)";
+  }
+
+  _networkRole(item, state) {
+    if (item.role && item.role !== "auto") {
+      return item.role;
+    }
+    const deviceClass = String(state?.attributes?.device_class || "").toLowerCase();
+    const unit = String(state?.attributes?.unit_of_measurement || "").toLowerCase();
+    const key = `${item.entity} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
+    if (/latency|ping|round.trip|retardo/.test(key) || unit === "ms") return "latency";
+    if (/signal|rssi|wifi.signal/.test(key) || unit === "dbm") return "signal";
+    if (/upload|subida|tx\b|outbound/.test(key)) return "upload";
+    if (/download|descarga|rx\b|inbound/.test(key)) return "download";
+    if (/traffic|tr[aá]fico|data/.test(key) || deviceClass === "data_size") return "traffic";
+    if (deviceClass === "data_rate") return "download";
+    return "status";
+  }
+
+  _networkIcon(role, state) {
+    const value = String(state?.state || "").trim().toLowerCase();
+    if (role === "download") return "mdi:download-network-outline";
+    if (role === "upload") return "mdi:upload-network-outline";
+    if (role === "latency") return "mdi:timer-outline";
+    if (role === "signal") return "mdi:wifi-strength-3";
+    if (role === "traffic") return "mdi:chart-areaspline";
+    return ["on", "online", "connected", "home", "true"].includes(value)
+      ? "mdi:lan-connect"
+      : "mdi:lan-disconnect";
+  }
+
+  _networkColor(role, state) {
+    if (!state || isUnavailableState(state)) {
+      return "var(--secondary-text-color)";
+    }
+    if (role === "status") {
+      const value = normalizeTextKey(state.state);
+      return ["on", "online", "connected", "home", "true", "ok"].includes(value)
+        ? "var(--success-color, #55b77e)"
+        : "var(--error-color, #ef5350)";
+    }
+    if (role === "download") return "var(--info-color, #42a5f5)";
+    if (role === "upload") return "#a78bfa";
+    if (role === "latency") return "var(--warning-color, #f6b73c)";
+    if (role === "signal") return "#45c4a0";
+    return "#e879b7";
+  }
+
+  _formatOverviewState(state) {
+    const numeric = parseAirQualityNumeric(state?.state);
+    const unit = String(state?.attributes?.unit_of_measurement || "").trim();
+    if (Number.isFinite(numeric) && unit) {
+      return formatNumericValueWithUnit(numeric, unit, this._getNumberDecimals());
+    }
+    return this._translateStateValue(state);
+  }
+
+  _renderOverviewLayout(layout) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    const config = this._config || DEFAULT_CONFIG;
+    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const entries = config?.[layout]?.entities || [];
+    const title = this._overviewTitle(layout);
+    const icon = this._overviewIcon(layout);
+    const available = entries.map((item, index) => ({
+      item,
+      index,
+      state: this._hass?.states?.[item.entity] || null,
+    }));
+    const batteryValues = layout === "battery"
+      ? available.map(({ state }) => this._resolveBatteryPercent(state)).filter(Number.isFinite)
+      : [];
+    const average = batteryValues.length
+      ? batteryValues.reduce((sum, value) => sum + value, 0) / batteryValues.length
+      : null;
+    const lowest = batteryValues.length ? Math.min(...batteryValues) : null;
+    const lowCount = batteryValues.filter(value => value <= 35).length;
+    const networkEntries = layout === "network"
+      ? available.map(entry => ({ ...entry, role: this._networkRole(entry.item, entry.state) }))
+      : [];
+    const statusEntry = networkEntries.find(entry => entry.role === "status");
+    const accent = layout === "battery"
+      ? this._batteryColor(Number.isFinite(lowest) ? lowest : average)
+      : statusEntry ? this._networkColor("status", statusEntry.state) : "var(--info-color, #42a5f5)";
+    const animations = this._getAnimationSettings();
+    const insightMarkup = layout === "battery"
+      ? `
+        <span class="entity-card__overview-chip"><ha-icon icon="mdi:battery-multiple"></ha-icon><strong>${available.length}</strong><span>${escapeHtml(this._entityCardUi("battery.devices", "devices"))}</span></span>
+        ${Number.isFinite(average) ? `<span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-donut"></ha-icon><strong>${Math.round(average)}%</strong><span>${escapeHtml(this._entityCardUi("battery.average", "average"))}</span></span>` : ""}
+        ${lowCount ? `<span class="entity-card__overview-chip entity-card__overview-chip--alert"><ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon><strong>${lowCount}</strong><span>${escapeHtml(this._entityCardUi("battery.low", "low"))}</span></span>` : ""}
+      `
+      : `
+        ${statusEntry ? `<span class="entity-card__overview-chip" style="--overview-chip-accent:${escapeHtml(this._networkColor("status", statusEntry.state))};"><span class="entity-card__overview-live-dot"></span><strong>${escapeHtml(statusEntry.state ? this._formatOverviewState(statusEntry.state) : this._entityCardUi("overview.unavailable", "Unavailable"))}</strong></span>` : ""}
+        <span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-box-outline"></ha-icon><strong>${available.length}</strong><span>${escapeHtml(this._entityCardUi("network.metrics", "metrics"))}</span></span>
+      `;
+    const rowSource = layout === "network" ? networkEntries : available;
+    const rows = rowSource.map(({ item, state, index, role: configuredRole }) => {
+      const name = item.name || state?.attributes?.friendly_name || item.entity || this._entityCardUi("overview.unconfigured", "Not configured");
+      const unavailable = !state || isUnavailableState(state);
+      if (layout === "battery") {
+        const percent = this._resolveBatteryPercent(state);
+        const value = unavailable
+          ? this._entityCardUi("overview.unavailable", "Unavailable")
+          : Number.isFinite(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
+        const color = this._batteryColor(percent);
+        const rowIcon = item.icon || this._batteryIcon(percent, state);
+        const batteryStatus = unavailable
+          ? this._entityCardUi("overview.unavailable", "Unavailable")
+          : !Number.isFinite(percent)
+            ? this._entityCardUi("overview.unconfigured", "Not configured")
+            : percent <= 15
+              ? this._entityCardUi("battery.critical", "Critical")
+              : percent <= 35
+                ? this._entityCardUi("battery.low", "Low")
+                : this._entityCardUi("battery.good", "Good");
+        return `
+          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-index:${index};--battery-level:${Number.isFinite(percent) ? percent : 0};">
+            <span class="entity-card__battery-gauge" aria-hidden="true">
+              <span class="entity-card__battery-gauge-inner"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
+            </span>
+            <span class="entity-card__overview-copy"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(batteryStatus)}</span></span>
+            <strong class="entity-card__overview-value">${escapeHtml(value)}</strong>
+          </button>`;
+      }
+      const role = configuredRole || this._networkRole(item, state);
+      const value = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : this._formatOverviewState(state);
+      const rowIcon = item.icon || this._networkIcon(role, state);
+      const color = this._networkColor(role, state);
+      const roleLabel = this._entityCardUi(`network.roles.${role}`, role);
+      return `
+        <button type="button" class="entity-card__overview-item entity-card__overview-item--network entity-card__overview-item--${escapeHtml(role)}${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-index:${index};">
+          <span class="entity-card__overview-icon"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
+          <span class="entity-card__overview-copy"><span class="entity-card__overview-role">${escapeHtml(roleLabel)}</span><strong>${escapeHtml(name)}</strong></span>
+          <strong class="entity-card__overview-value">${escapeHtml(value)}</strong>
+          <span class="entity-card__network-decoration" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>`;
+    }).join("");
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { --entity-card-overview-duration:${animations.enabled ? animations.contentDuration : 0}ms; display:block; position:relative; }
+        * { box-sizing:border-box; }
+        ha-card { --nodalia-entity-surface-base:${styles.card.background}; background:var(--nodalia-entity-surface-base); border:1px solid color-mix(in srgb,${accent} 28%,var(--divider-color)); border-radius:${styles.card.border_radius}; box-shadow:${styles.card.box_shadow},0 16px 36px color-mix(in srgb,${accent} 12%,rgba(0,0,0,.16)); color:var(--primary-text-color); isolation:isolate; overflow:hidden; position:relative; }
+        ha-card::before {
+          background:linear-gradient(180deg,color-mix(in srgb,${accent} 16%,color-mix(in srgb,var(--primary-text-color) 5%,transparent)),transparent 48%);
+          content:"";
+          inset:0;
+          pointer-events:none;
+          position:absolute;
+          z-index:0;
+        }
+        ha-card::after {
+          background:radial-gradient(circle at 14% 8%,color-mix(in srgb,${accent} 28%,transparent),transparent 48%),radial-gradient(circle at 96% 92%,color-mix(in srgb,${accent} 12%,transparent),transparent 42%);
+          content:"";
+          inset:0;
+          pointer-events:none;
+          position:absolute;
+          z-index:0;
+        }
+        .entity-card__overview { display:grid; gap:${styles.card.gap}; padding:${styles.card.padding}; position:relative; z-index:1; }
+        .entity-card__overview.entity-card__content--entering { animation:entity-card-overview-enter var(--entity-card-overview-duration) cubic-bezier(.22,.84,.26,1) both; }
+        .entity-card__overview-header { align-items:center; display:grid; gap:12px; grid-template-columns:54px minmax(0,1fr) minmax(0,auto); }
+        .entity-card__overview-main-icon { align-items:center; background:radial-gradient(circle at 30% 24%,color-mix(in srgb,${accent} 38%,transparent),transparent 64%),color-mix(in srgb,${accent} 14%,color-mix(in srgb,var(--primary-text-color) 7%,transparent)); border:1px solid color-mix(in srgb,${accent} 32%,color-mix(in srgb,var(--primary-text-color) 9%,transparent)); border-radius:999px; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 10%,transparent),0 10px 24px color-mix(in srgb,${accent} 18%,rgba(0,0,0,.14)); color:${accent}; display:flex; height:54px; justify-content:center; position:relative; width:54px; }
+        .entity-card__overview-main-icon::after { background:${accent}; border:2px solid var(--nodalia-entity-surface-base); border-radius:999px; bottom:2px; box-shadow:0 0 0 3px color-mix(in srgb,${accent} 12%,transparent); content:""; height:8px; position:absolute; right:1px; width:8px; }
+        .entity-card__overview-main-icon ha-icon { --mdc-icon-size:27px; }
+        .entity-card__overview-title { display:grid; gap:3px; min-width:0; }
+        .entity-card__overview-title strong { font-size:${styles.title_size}; font-weight:800; letter-spacing:-.025em; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .entity-card__overview-title span { color:var(--secondary-text-color); font-size:11px; font-weight:600; letter-spacing:.01em; }
+        .entity-card__overview-insights { align-items:center; display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; min-width:0; }
+        .entity-card__overview-chip { --overview-chip-accent:${accent}; align-items:center; background:color-mix(in srgb,var(--overview-chip-accent) 9%,color-mix(in srgb,var(--primary-text-color) 5%,transparent)); border:1px solid color-mix(in srgb,var(--overview-chip-accent) 20%,color-mix(in srgb,var(--primary-text-color) 8%,transparent)); border-radius:${escapeHtml(String(styles.chip_border_radius || "999px"))}; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 7%,transparent),0 5px 14px rgba(0,0,0,.08); display:inline-flex; font-size:${styles.chip_font_size}; gap:5px; height:${styles.chip_height}; padding:${styles.chip_padding}; white-space:nowrap; }
+        .entity-card__overview-chip ha-icon { --mdc-icon-size:13px; color:var(--overview-chip-accent); }
+        .entity-card__overview-chip strong { font-weight:800; }
+        .entity-card__overview-chip span { color:var(--secondary-text-color); font-weight:650; }
+        .entity-card__overview-chip--alert { --overview-chip-accent:var(--error-color,#ef5350); }
+        .entity-card__overview-live-dot { animation:entity-card-network-pulse 1.9s ease-in-out infinite; background:var(--overview-chip-accent); border-radius:999px; box-shadow:0 0 0 4px color-mix(in srgb,var(--overview-chip-accent) 12%,transparent); height:7px; width:7px; }
+        .entity-card__overview-grid { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .entity-card__overview-item { -webkit-tap-highlight-color:transparent; align-items:center; appearance:none; background:radial-gradient(circle at 8% 12%,color-mix(in srgb,var(--overview-accent) 15%,transparent),transparent 52%),color-mix(in srgb,var(--primary-text-color) 4%,transparent); border:1px solid color-mix(in srgb,var(--overview-accent) 25%,color-mix(in srgb,var(--primary-text-color) 7%,transparent)); border-radius:18px; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 7%,transparent),0 10px 22px rgba(0,0,0,.09); color:inherit; cursor:pointer; font:inherit; min-width:0; overflow:hidden; position:relative; text-align:left; transform-origin:center; transition:transform 160ms ease,background 180ms ease,border-color 180ms ease,box-shadow 180ms ease; }
+        .entity-card__overview-item::before { background:linear-gradient(125deg,color-mix(in srgb,var(--primary-text-color) 8%,transparent),transparent 42%); content:""; inset:0; pointer-events:none; position:absolute; }
+        .entity-card__overview-item:hover { border-color:color-mix(in srgb,var(--overview-accent) 42%,transparent); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 9%,transparent),0 14px 28px color-mix(in srgb,var(--overview-accent) 12%,rgba(0,0,0,.12)); transform:translateY(-2px); }
+        .entity-card__overview-item:active { transform:scale(.975); }
+        .entity-card__overview-item:focus-visible { outline:2px solid var(--overview-accent); outline-offset:2px; }
+        .entity-card__overview-item.is-unavailable { opacity:.62; }
+        .entity-card__overview-item--battery { display:grid; gap:10px; grid-template-columns:58px minmax(0,1fr) auto; min-height:84px; padding:11px 13px 11px 11px; }
+        .entity-card__battery-gauge { align-items:center; background:conic-gradient(var(--overview-accent) calc(var(--battery-level) * 1%),color-mix(in srgb,var(--primary-text-color) 8%,transparent) 0); border-radius:999px; box-shadow:0 8px 18px color-mix(in srgb,var(--overview-accent) 14%,rgba(0,0,0,.1)); display:flex; height:56px; justify-content:center; padding:4px; position:relative; width:56px; z-index:1; }
+        .entity-card__battery-gauge-inner { align-items:center; background:color-mix(in srgb,var(--nodalia-entity-surface-base) 92%,var(--overview-accent)); border:1px solid color-mix(in srgb,var(--overview-accent) 18%,transparent); border-radius:inherit; color:var(--overview-accent); display:flex; height:100%; justify-content:center; width:100%; }
+        .entity-card__battery-gauge-inner ha-icon { --mdc-icon-size:25px; }
+        .entity-card__overview-copy { display:grid; gap:4px; min-width:0; position:relative; z-index:1; }
+        .entity-card__overview-copy strong,.entity-card__overview-copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .entity-card__overview-copy strong { font-size:12px; font-weight:750; }
+        .entity-card__overview-copy > span:not(.entity-card__overview-role) { color:color-mix(in srgb,var(--overview-accent) 72%,var(--secondary-text-color)); font-size:10px; font-weight:700; }
+        .entity-card__overview-value { font-size:17px; font-variant-numeric:tabular-nums; font-weight:800; letter-spacing:-.025em; max-width:120px; overflow:hidden; position:relative; text-overflow:ellipsis; white-space:nowrap; z-index:1; }
+        .entity-card__overview-item--network { display:grid; gap:7px 10px; grid-template-columns:42px minmax(0,1fr); min-height:82px; padding:11px 13px; }
+        .entity-card__overview-item--network .entity-card__overview-value { grid-column:2; line-height:1; }
+        .entity-card__overview-grid--has-status .entity-card__overview-item--status { grid-column:1 / -1; grid-template-columns:42px minmax(0,1fr) auto; min-height:72px; }
+        .entity-card__overview-grid--has-status .entity-card__overview-item--status .entity-card__overview-value { align-self:center; grid-column:3; grid-row:1 / span 2; padding-right:20px; }
+        .entity-card__overview-grid--has-status .entity-card__overview-item--network:last-child:nth-child(even) { grid-column:1 / -1; }
+        .entity-card__overview-item--download,.entity-card__overview-item--upload { min-height:94px; }
+        .entity-card__overview-item--download .entity-card__overview-value,.entity-card__overview-item--upload .entity-card__overview-value { font-size:20px; }
+        .entity-card__overview-icon { align-items:center; align-self:center; background:radial-gradient(circle at 30% 24%,color-mix(in srgb,var(--overview-accent) 32%,transparent),transparent 62%),color-mix(in srgb,var(--overview-accent) 14%,transparent); border:1px solid color-mix(in srgb,var(--overview-accent) 24%,transparent); border-radius:14px; box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent),0 8px 18px color-mix(in srgb,var(--overview-accent) 12%,rgba(0,0,0,.08)); color:var(--overview-accent); display:flex; grid-row:1 / span 2; height:42px; justify-content:center; position:relative; width:42px; z-index:1; }
+        .entity-card__overview-icon ha-icon { --mdc-icon-size:22px; }
+        .entity-card__overview-role { color:color-mix(in srgb,var(--overview-accent) 82%,var(--primary-text-color)); font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+        .entity-card__network-decoration { align-items:end; bottom:9px; display:flex; gap:3px; height:18px; opacity:.24; position:absolute; right:11px; }
+        .entity-card__network-decoration i { background:var(--overview-accent); border-radius:999px; display:block; width:3px; }
+        .entity-card__network-decoration i:nth-child(1) { height:7px; }
+        .entity-card__network-decoration i:nth-child(2) { height:12px; }
+        .entity-card__network-decoration i:nth-child(3) { height:18px; }
+        .entity-card__overview-item--download .entity-card__network-decoration i,.entity-card__overview-item--upload .entity-card__network-decoration i { animation:entity-card-network-bars 1.35s ease-in-out infinite alternate; }
+        .entity-card__overview-item--download .entity-card__network-decoration i:nth-child(2),.entity-card__overview-item--upload .entity-card__network-decoration i:nth-child(2) { animation-delay:.18s; }
+        .entity-card__overview-item--download .entity-card__network-decoration i:nth-child(3),.entity-card__overview-item--upload .entity-card__network-decoration i:nth-child(3) { animation-delay:.36s; }
+        .entity-card__overview-empty { background:color-mix(in srgb,var(--primary-text-color) 4%,transparent); border:1px dashed color-mix(in srgb,${accent} 28%,var(--divider-color)); border-radius:18px; color:var(--secondary-text-color); font-size:12px; padding:24px 12px; text-align:center; }
+        @keyframes entity-card-overview-enter { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes entity-card-network-pulse { 50% { box-shadow:0 0 0 7px color-mix(in srgb,var(--overview-chip-accent) 4%,transparent); transform:scale(.92); } }
+        @keyframes entity-card-network-bars { from { transform:scaleY(.55); transform-origin:bottom; } to { transform:scaleY(1); transform-origin:bottom; } }
+        @media (prefers-reduced-motion:reduce) { .entity-card__overview-live-dot,.entity-card__network-decoration i { animation:none !important; } }
+        @media (max-width:520px) { .entity-card__overview-header { grid-template-columns:48px minmax(0,1fr); } .entity-card__overview-main-icon { height:48px; width:48px; } .entity-card__overview-insights { grid-column:1 / -1; justify-content:flex-start; } .entity-card__overview-grid { grid-template-columns:1fr; } }
+      </style>
+      <ha-card class="entity-card entity-card--${escapeHtml(layout)}">
+        <div class="entity-card__overview${animations.enabled && this._animateContentOnNextRender ? " entity-card__content--entering" : ""}">
+          <div class="entity-card__overview-header">
+            <span class="entity-card__overview-main-icon"><ha-icon icon="${escapeHtml(icon)}"></ha-icon></span>
+            <span class="entity-card__overview-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(this._entityCardUi(`${layout}.subtitle`, layout === "battery" ? "Battery overview" : "Connection overview"))}</span></span>
+            <span class="entity-card__overview-insights">${insightMarkup}</span>
+          </div>
+          ${rows ? `<div class="entity-card__overview-grid${statusEntry ? " entity-card__overview-grid--has-status" : ""}">${rows}</div>` : `<div class="entity-card__overview-empty">${escapeHtml(this._entityCardUi("overview.empty", "Add entities in the visual editor."))}</div>`}
+        </div>
+      </ha-card>`;
+    if (animations.enabled && this._animateContentOnNextRender) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
+  }
+
   _clearAirQualityHistory() {
     if (this._aqHistoryTimer) {
       window.clearTimeout(this._aqHistoryTimer);
@@ -3017,7 +3376,7 @@ class NodaliaEntityCard extends HTMLElement {
       return [];
     }
     return metrics
-      .filter(metric => metric?.entityId)
+      .filter(metric => metric?.entityId && aq.graph_series?.[metric.kind] !== false)
       .slice(0, 8)
       .map(metric => ({
         kind: metric.kind,
@@ -3213,10 +3572,12 @@ class NodaliaEntityCard extends HTMLElement {
   _getAirQualityChartEntries(graphSeries = this._getAirQualityGraphSeries(this._collectAirQualityMetrics(this._getState()).metrics)) {
     const cached = Array.isArray(this._aqHistoryCache?.entries) ? this._aqHistoryCache.entries : [];
     const currentByKind = new Map(graphSeries.map(entry => [entry.kind, entry]));
-    return cached.map(entry => ({
-      ...entry,
-      color: currentByKind.get(entry.kind)?.color || entry.color,
-    }));
+    return cached
+      .filter(entry => currentByKind.has(entry.kind))
+      .map(entry => ({
+        ...entry,
+        color: currentByKind.get(entry.kind)?.color || entry.color,
+      }));
   }
 
   _clearAirQualityHoverPreview() {
@@ -4010,6 +4371,11 @@ class NodaliaEntityCard extends HTMLElement {
 
     if (String(this._config?.layout || "").toLowerCase() === "air_quality") {
       this._renderAirQualityLayout();
+      return;
+    }
+
+    if (OVERVIEW_LAYOUTS.has(String(this._config?.layout || "").toLowerCase())) {
+      this._renderOverviewLayout(this._config.layout);
       return;
     }
 
@@ -5010,6 +5376,30 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._config.quick_actions.splice(nextIndex, 0, action);
   }
 
+  _moveOverviewEntity(layout, index, direction) {
+    const entries = this._config?.[layout]?.entities;
+    const nextIndex = index + direction;
+    if (!Array.isArray(entries) || nextIndex < 0 || nextIndex >= entries.length) {
+      return;
+    }
+    const [entry] = entries.splice(index, 1);
+    entries.splice(nextIndex, 0, entry);
+  }
+
+  _findOverviewDefaultEntity(layout) {
+    const states = Object.entries(this._hass?.states || {});
+    const match = states.find(([entityId, state]) => {
+      const deviceClass = String(state?.attributes?.device_class || "").toLowerCase();
+      const key = `${entityId} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
+      if (layout === "battery") {
+        return deviceClass === "battery" || /battery|bater[ií]a|akku/.test(key);
+      }
+      return /network|internet|router|wifi|speedtest|download|upload|latency|ping|signal|rssi|red\b/.test(key)
+        || ["data_rate", "signal_strength"].includes(deviceClass);
+    });
+    return match?.[0] || states[0]?.[0] || "sensor.entity";
+  }
+
   _onShadowInput(event) {
     const input = event
       .composedPath()
@@ -5099,6 +5489,39 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
 
     switch (action) {
+      case "add-battery-entity":
+      case "add-network-entity": {
+        const layout = action === "add-battery-entity" ? "battery" : "network";
+        const firstEntity = this._findOverviewDefaultEntity(layout);
+        if (!Array.isArray(this._config?.[layout]?.entities)) {
+          this._config[layout] = { entities: [] };
+        }
+        this._config[layout].entities.push({
+          entity: firstEntity,
+          name: "",
+          icon: "",
+          ...(layout === "network" ? { role: "auto" } : {}),
+        });
+        this._emitConfig();
+        break;
+      }
+      case "remove-overview-entity": {
+        const layout = String(button.dataset.layout || "");
+        if (OVERVIEW_LAYOUTS.has(layout) && Number.isInteger(index)) {
+          this._config[layout].entities.splice(index, 1);
+          this._emitConfig();
+        }
+        break;
+      }
+      case "move-overview-entity-up":
+      case "move-overview-entity-down": {
+        const layout = String(button.dataset.layout || "");
+        if (OVERVIEW_LAYOUTS.has(layout) && Number.isInteger(index)) {
+          this._moveOverviewEntity(layout, index, action.endsWith("up") ? -1 : 1);
+          this._emitConfig();
+        }
+        break;
+      }
       case "add-action":
         this._config.quick_actions.push({
           icon: "mdi:flash",
@@ -5374,12 +5797,46 @@ class NodaliaEntityCardEditor extends HTMLElement {
       .join("");
   }
 
+  _renderOverviewEntities(layout, config) {
+    const entries = config?.[layout]?.entities || [];
+    if (!entries.length) {
+      return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.entity.overview_entities_empty"))}</div>`;
+    }
+    return entries.map((entry, index) => `
+      <div class="editor-action">
+        <div class="editor-action__header">
+          <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.entity.entity_main"))} ${index + 1}</div>
+          <div class="editor-action__buttons">
+            <button type="button" data-editor-action="move-overview-entity-up" data-layout="${layout}" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("ed.notifications.move_up"))}">${escapeHtml(this._editorLabel("ed.notifications.move_up"))}</button>
+            <button type="button" data-editor-action="move-overview-entity-down" data-layout="${layout}" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("ed.notifications.move_down"))}">${escapeHtml(this._editorLabel("ed.notifications.move_down"))}</button>
+            <button type="button" data-editor-action="remove-overview-entity" data-layout="${layout}" data-index="${index}" aria-label="${escapeHtml(this._editorLabel("ed.notifications.remove"))}">${escapeHtml(this._editorLabel("ed.notifications.remove"))}</button>
+          </div>
+        </div>
+        <div class="editor-grid">
+          ${this._renderEntityPickerField("ed.entity.entity_main", `${layout}.entities.${index}.entity`, entry.entity, { fullWidth: true })}
+          ${this._renderTextField("ed.entity.name", `${layout}.entities.${index}.name`, entry.name, { placeholder: this._editorLabel("ed.entity.name_placeholder") })}
+          ${this._renderIconPickerField("ed.entity.icon", `${layout}.entities.${index}.icon`, entry.icon, { placeholder: layout === "battery" ? "mdi:battery" : "mdi:lan" })}
+          ${layout === "network" ? this._renderSelectField(
+            "ed.entity.network_role",
+            `${layout}.entities.${index}.role`,
+            entry.role || "auto",
+            ["auto", "status", "download", "upload", "latency", "signal", "traffic"].map(role => ({ value: role, label: `ed.entity.network_role_${role}` })),
+            { fullWidth: true },
+          ) : ""}
+        </div>
+      </div>
+    `).join("");
+  }
+
   _render() {
     if (!this.shadowRoot) {
       return;
     }
 
     const config = this._config || normalizeConfig({});
+    const isDefaultLayout = config.layout === "default";
+    const isAirQualityLayout = config.layout === "air_quality";
+    const isOverviewLayout = OVERVIEW_LAYOUTS.has(config.layout);
     const hapticStyle = config.haptics?.style || "medium";
     const tapAction = config.tap_action || "auto";
     const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
@@ -5768,9 +6225,6 @@ class NodaliaEntityCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.general_section_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
-              fullWidth: true,
-            })}
             ${this._renderSelectField(
               "ed.entity.layout",
               "layout",
@@ -5778,9 +6232,14 @@ class NodaliaEntityCardEditor extends HTMLElement {
               [
                 { value: "default", label: "ed.entity.layout_default" },
                 { value: "air_quality", label: "ed.entity.layout_air_quality" },
+                { value: "battery", label: "ed.entity.layout_battery" },
+                { value: "network", label: "ed.entity.layout_network" },
               ],
               { fullWidth: true },
             )}
+            ${!isOverviewLayout ? this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
+              fullWidth: true,
+            }) : ""}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:tune",
               fullWidth: true,
@@ -5789,28 +6248,28 @@ class NodaliaEntityCardEditor extends HTMLElement {
               placeholder: this._editorLabel("ed.entity.name_placeholder"),
               fullWidth: true,
             })}
-            ${this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true)}
-            ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
-            ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
+            ${!isOverviewLayout ? this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true) : ""}
+            ${isDefaultLayout ? this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true) : ""}
+            ${isDefaultLayout ? this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
               placeholder: "/local/ikea_gu10_bulb.png",
               fullWidth: true,
-            })}
-            ${this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
+            }) : ""}
+            ${!isOverviewLayout ? this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
               placeholder: "mdi:door-open",
               fullWidth: true,
-            })}
-            ${this._renderIconPickerField("ed.entity.icon_inactive", "icon_inactive", config.icon_inactive, {
+            }) : ""}
+            ${!isOverviewLayout ? this._renderIconPickerField("ed.entity.icon_inactive", "icon_inactive", config.icon_inactive, {
               placeholder: "mdi:door-closed",
               fullWidth: true,
-            })}
-            <div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
+            }) : ""}
+            ${!isOverviewLayout ? `<div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
               ${escapeHtml(this._editorLabel("ed.entity.icons_state_hint"))}
-            </div>
+            </div>` : ""}
           </div>
         </section>
 
         ${
-          config.layout === "air_quality"
+          isAirQualityLayout
             ? `
         <section class="editor-section">
           <div class="editor-section__header">
@@ -5843,6 +6302,15 @@ class NodaliaEntityCardEditor extends HTMLElement {
                     { placeholder: "24", type: "number" },
                   )}
                   <div class="editor-field editor-field--full">
+                    <span>${escapeHtml(this._editorLabel("ed.entity.air_quality_graph_series"))}</span>
+                    <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.air_quality_graph_series_hint"))}</div>
+                  </div>
+                  ${AIR_QUALITY_METRIC_KEYS.map(kind => this._renderCheckboxField(
+                    `ed.entity.air_quality_${kind}`,
+                    `air_quality.graph_series.${kind}`,
+                    config.air_quality?.graph_series?.[kind] !== false,
+                  )).join("")}
+                  <div class="editor-field editor-field--full">
                     <span>${escapeHtml(this._editorLabel("ed.entity.air_quality_graph_colors"))}</span>
                     <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.air_quality_graph_colors_hint"))}</div>
                   </div>
@@ -5869,6 +6337,22 @@ class NodaliaEntityCardEditor extends HTMLElement {
             : ""
         }
 
+        ${isOverviewLayout ? `
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel(config.layout === "battery" ? "ed.entity.battery_section_title" : "ed.entity.network_section_title"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel(config.layout === "battery" ? "ed.entity.battery_section_hint" : "ed.entity.network_section_hint"))}</div>
+            <div class="editor-section__actions">
+              <button type="button" class="editor-section__toggle-button" data-editor-action="add-${escapeHtml(config.layout)}-entity">
+                <ha-icon icon="mdi:plus"></ha-icon>
+                <span>${escapeHtml(this._editorLabel("ed.room_summary.add_entity"))}</span>
+              </button>
+            </div>
+          </div>
+          ${this._renderOverviewEntities(config.layout, config)}
+        </section>` : ""}
+
+        ${!isOverviewLayout ? `
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
@@ -6123,7 +6607,9 @@ class NodaliaEntityCardEditor extends HTMLElement {
               : ""
           }
         </section>
+        ` : ""}
 
+        ${isDefaultLayout ? `
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.entity.content_section_title"))}</div>
@@ -6178,6 +6664,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
           </div>
           ${this._renderQuickActions(config)}
         </section>
+        ` : ""}
 
         <section class="editor-section">
           <div class="editor-section__header">
@@ -6258,7 +6745,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
               ? `
                 <div class="editor-grid">
                   ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
+                  ${isDefaultLayout ? this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border) : ""}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
                     escapeHtml,
                     field: "styles.card.border_radius",
@@ -6275,27 +6762,27 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size)}
-                  ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
+                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size) : ""}
+                  ${isDefaultLayout ? this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
                     fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-                  })}
-                  ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color, {
+                  }) : ""}
+                  ${isDefaultLayout ? this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles.icon.on_color, {
                     fallbackValue: "var(--info-color, #71c0ff)",
-                  })}
-                  ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color, {
+                  }) : ""}
+                  ${isDefaultLayout ? this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles.icon.off_color, {
                     fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
-                  })}
-                  ${this._renderTextField("ed.entity.style_aux_button_size", "styles.control.size", config.styles.control.size)}
-                  ${this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
+                  }) : ""}
+                  ${isDefaultLayout ? this._renderTextField("ed.entity.style_aux_button_size", "styles.control.size", config.styles.control.size) : ""}
+                  ${isDefaultLayout ? this._renderColorField("ed.entity.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
                     fallbackValue: "rgba(113, 192, 255, 0.18)",
-                  })}
-                  ${this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
+                  }) : ""}
+                  ${isDefaultLayout ? this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
                     fallbackValue: "var(--primary-text-color)",
-                  })}
-                  ${this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height)}
-                  ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
-                  ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
-                  ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                  }) : ""}
+                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height) : ""}
+                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size) : ""}
+                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding) : ""}
+                  ${!isOverviewLayout ? window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
                     escapeHtml,
                     field: "styles.chip_border_radius",
                     value: config.styles?.chip_border_radius,
@@ -6306,7 +6793,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
                       round: this._editorLabel("ed.entity.chip_radius_round"),
                       square: this._editorLabel("ed.entity.chip_radius_square"),
                     },
-                  })}
+                  }) : ""}
                   ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
                 </div>
               `

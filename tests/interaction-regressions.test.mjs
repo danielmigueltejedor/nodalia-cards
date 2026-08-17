@@ -1963,6 +1963,13 @@ test("entity person weather and alarm use deferred press timers", () => {
   }
 });
 
+test("person card focus feedback follows the actual rounded card surface", () => {
+  const source = read("nodalia-person-card.js");
+  assert.match(source, /ha-card\[data-person-action="primary"\]:focus-visible/);
+  assert.match(source, /<ha-card class="person-card[^>]*data-person-action="primary"/);
+  assert.doesNotMatch(source, /<div class="person-card__content[^>]*data-person-action="primary"/);
+});
+
 test("notifications tracked entity stamp is cached between hass updates", () => {
   const source = read("nodalia-notifications-card.js");
   assert.match(source, /_syncTrackedEntitiesStamp\(hass\)/);
@@ -2167,4 +2174,43 @@ test("climate humidifier fan and light fire selection haptics on scroll step cha
   const light = read("nodalia-light-card.js");
   assert.match(light, /_lightSliderHapticStep\(/);
   assert.match(light, /kind === "color"[\s\S]*Math\.round\(numeric \/ 5\) \* 5/);
+});
+
+test("visual editors expose individual haptic controls for every slider and dial", () => {
+  const expectations = [
+    ["nodalia-light-card.js", ["brightness", "temperature", "color"]],
+    ["nodalia-fan-card.js", ["percentage"]],
+    ["nodalia-humidifier-card.js", ["humidity"]],
+    ["nodalia-climate-card.js", ["temperature_dial"]],
+    ["nodalia-cover-card.js", ["position", "tilt"]],
+  ];
+
+  for (const [file, scrolls] of expectations) {
+    const source = read(file);
+    for (const scroll of scrolls) {
+      assert.match(source, new RegExp(`${scroll}: true`), `${file} should enable ${scroll} haptics by default`);
+      assert.match(
+        source,
+        new RegExp(`haptics\\.scrolls\\.${scroll}`),
+        `${file} editor should expose ${scroll} haptics`,
+      );
+    }
+  }
+
+  assert.match(read("nodalia-light-card.js"), /haptics\?\.scrolls\?\.\[kind\] === false/);
+  assert.match(read("nodalia-fan-card.js"), /haptics\?\.scrolls\?\.percentage === false/);
+  assert.match(read("nodalia-humidifier-card.js"), /haptics\?\.scrolls\?\.humidity === false/);
+  assert.match(read("nodalia-climate-card.js"), /haptics\?\.scrolls\?\.temperature_dial === false/);
+  assert.match(read("nodalia-cover-card.js"), /haptics\?\.scrolls\?\.\[sliderKind\] !== false/);
+});
+
+test("device control expansion uses Gecko-safe grid tracks and commits its final DOM state", () => {
+  for (const file of ["nodalia-light-card.js", "nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
+    const source = read(file);
+    assert.match(source, /grid-template-rows: 1fr/);
+    assert.match(source, /grid-template-rows: 0fr/);
+    assert.match(source, /will-change: grid-template-rows, margin-top, opacity/);
+    assert.match(source, /const shouldFinalizeRender = Boolean/);
+    assert.match(source, /this\._lastRenderSignature = "";\s*this\._render\(\);/);
+  }
 });

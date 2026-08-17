@@ -260,7 +260,7 @@ test("Cards documentation exposes the optional Engine HACS installer", () => {
   assert.match(readme, /Nodalia Cards Engine is optional/);
   assert.ok(engineGuide.includes(engineHacsUrl));
   assert.ok(climateGuide.includes(engineHacsUrl));
-  assert.match(engineGuide, /Cards `2\.1\.2` and Engine `2\.0\.0`/);
+  assert.match(engineGuide, /Cards `2\.2\.0-alpha\.2` and Engine `2\.0\.1`/);
 });
 
 test("repository workflows pin audited external actions by immutable commit", () => {
@@ -1006,7 +1006,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_forceNextBackgroundMobileSync/);
   assert.match(source, /_scheduleBackgroundMobileSyncFromEditor/);
   assert.match(source, /_syncBackgroundMobileConfigFromEditor/);
-  assert.match(source, /buildBackgroundMobileWebhookPayload\(normalized\)/);
+  assert.match(source, /buildBackgroundMobileWebhookPayload\(normalized, this\._hass, \{ enabled: true \}\)/);
+  assert.match(source, /_syncLegacyBackgroundMobileFallback(?:FromEditor)?\([^)]*false/);
   assert.match(source, /await post\(webhookId, payload, this\._hass\)/);
   assert.match(source, /callService\("notify", "send_message"/);
   assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
