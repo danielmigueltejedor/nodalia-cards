@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-alpha.2] - 2026-08-17
+
+Second **`2.2.0`** alpha: Engine-first background notifications with an automatic legacy-package fallback.
+
+### Changed
+
+- The Notifications Card sends its resolved UI language with native Engine profiles, keeping background copy aligned with the active Home Assistant user locale.
+- A configured legacy notification package is put in standby after a successful Engine sync and reactivated when the periodic native health check fails.
+- The legacy package uses localized Spanish default copy instead of mixing Spanish titles with English messages.
+
+### Fixed
+
+- Engine and package delivery no longer remain active at the same time after migration, preventing duplicate mobile notifications such as localized and English temperature alerts for one threshold crossing.
+
+### Validation
+
+- Full validation covers 431 Node tests, synchronized versions, editor/runtime locale catalogs and generated production/release bundles.
+- Dedicated notification policy tests cover Engine ownership, package standby, fallback activation and language propagation.
+
 ## [2.2.0-alpha.1] - 2026-08-15
 
 First **`2.2.0`** alpha: cross-browser device motion, granular haptics and the completed Nodalia overview-layout redesigns move into a new minor preview line.

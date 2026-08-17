@@ -17,10 +17,10 @@ Current stable release:
 Current preview release:
 
 ```text
-2.2.0-alpha.1
+2.2.0-alpha.2
 ```
 
-Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-alpha.1`** starts the next preview line with the expanded Air Quality / battery / network Entity Card layouts, cross-browser device-panel animation cleanup and individually configurable slider / dial haptics. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-alpha.2`** adds Engine-first notification ownership, automatic legacy-package standby/failover and consistent background localization to the expanded Air Quality / battery / network Entity Card layouts, cross-browser device-panel animation cleanup and individually configurable slider / dial haptics. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 

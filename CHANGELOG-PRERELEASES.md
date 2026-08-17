@@ -10,6 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.2] - 2026-08-17
+
+Second **`2.2.0`** alpha: Engine-first background notifications with an automatic legacy-package fallback.
+
+### Changed
+
+- Native Engine profiles now carry the resolved Notifications Card language.
+- A retained legacy webhook package enters standby while Engine delivery is healthy and is reactivated when the native health check fails.
+- Spanish fallback copy no longer mixes localized titles with English measurement messages.
+
+### Fixed
+
+- One threshold crossing no longer produces both an Engine notification and a legacy package notification after migration.
+
+### Validation
+
+- 431/431 Node tests pass with version, syntax, editor/runtime i18n and production bundle validation.
+- Notification regressions cover Engine ownership, legacy standby, failover and locale propagation.
+
+---
+
 ## [2.2.0-alpha.1] - 2026-08-15
 
 First **`2.2.0`** alpha: the expanded Entity Card layout work, cross-browser device motion and granular control haptics graduate into a new minor preview line.
