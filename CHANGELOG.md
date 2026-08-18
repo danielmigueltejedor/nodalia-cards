@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-alpha.3] - 2026-08-18
+
+Third **`2.2.0`** alpha: Engine and Cards now pause an installed legacy notification helper even without its webhook, and reactivate it only when native delivery is unavailable.
+
+### Fixed
+
+- Old packages that generated Spanish titles with English bodies no longer keep sending alongside Engine.
+- The legacy notification package is now a true fallback instead of a concurrent sender.
+
 ## [2.2.0-alpha.2] - 2026-08-17
 
 Second **`2.2.0`** alpha: Engine-first background notifications with an automatic legacy-package fallback.

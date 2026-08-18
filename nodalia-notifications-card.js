@@ -1,8 +1,9 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.2.0-alpha.2";
+const CARD_VERSION = "2.2.0-alpha.3";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS = 30_000;
+const LEGACY_BACKGROUND_MOBILE_TOGGLE = "input_boolean.nodalia_background_mobile_notifications";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1331,6 +1332,36 @@ async function syncBackgroundMobileNative(hass, rawConfig) {
   }
 }
 
+async function setLegacyBackgroundMobileFallback(hass, enabled) {
+  const state = hass?.states?.[LEGACY_BACKGROUND_MOBILE_TOGGLE];
+  if (!state) {
+    return true;
+  }
+  if (typeof hass?.callService !== "function") {
+    return false;
+  }
+  const desiredState = enabled ? "on" : "off";
+  if (String(state.state || "").toLowerCase() === desiredState) {
+    return true;
+  }
+  try {
+    await hass.callService(
+      "input_boolean",
+      enabled ? "turn_on" : "turn_off",
+      { entity_id: LEGACY_BACKGROUND_MOBILE_TOGGLE },
+    );
+    return true;
+  } catch (error) {
+    if (typeof console !== "undefined" && typeof console.warn === "function") {
+      console.warn(
+        `Nodalia Notifications Card: could not ${enabled ? "activate" : "pause"} the legacy background package.`,
+        error,
+      );
+    }
+    return false;
+  }
+}
+
 class NodaliaNotificationsCard extends HTMLElement {
   static getStubConfig(hass) {
     const first = prefix => Object.keys(hass?.states || {}).find(entityId => entityId.startsWith(`${prefix}.`)) || "";
@@ -1691,9 +1722,11 @@ class NodaliaNotificationsCard extends HTMLElement {
       && nativeRecentlyChecked
       && (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`)
     ) {
-      const legacyStandby = webhookId
+      const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
+      const webhookStandby = webhookId
         ? await this._syncLegacyBackgroundMobileFallback(webhookId, false)
         : true;
+      const legacyStandby = helperStandby && webhookStandby;
       this._pendingBackgroundMobileSync = !legacyStandby;
       return true;
     }
@@ -1702,9 +1735,11 @@ class NodaliaNotificationsCard extends HTMLElement {
     if (native.synced) {
       const dismissalsChanged = this._mergeNativeDismissed(native.dismissed);
       this._lastBackgroundMobileNativeSignature = native.signature;
-      const legacyStandby = webhookId
+      const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
+      const webhookStandby = webhookId
         ? await this._syncLegacyBackgroundMobileFallback(webhookId, false, force)
         : true;
+      const legacyStandby = helperStandby && webhookStandby;
       this._pendingBackgroundMobileSync = !legacyStandby;
       void this._loadEngineInbox();
       if (dismissalsChanged) {
@@ -1714,6 +1749,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     this._lastBackgroundMobileNativeSignature = "";
     if (!webhookId) {
+      await setLegacyBackgroundMobileFallback(this._hass, true);
       this._pendingBackgroundMobileSync = true;
       return false;
     }
@@ -1724,6 +1760,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
       }
+      await setLegacyBackgroundMobileFallback(this._hass, true);
       return false;
     }
     const payload = this._buildBackgroundMobileWebhookPayload({ enabled: true });
@@ -1735,10 +1772,12 @@ class NodaliaNotificationsCard extends HTMLElement {
       }
       this._lastBackgroundMobileSyncSignature = "";
       this._pendingBackgroundMobileSync = true;
+      await setLegacyBackgroundMobileFallback(this._hass, true);
       return false;
     }
     const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
     if (!force && signature === this._lastBackgroundMobileSyncSignature) {
+      await setLegacyBackgroundMobileFallback(this._hass, true);
       return true;
     }
     const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
@@ -1751,6 +1790,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       if (ok) {
         this._lastBackgroundMobileSyncSignature = signature;
         this._pendingBackgroundMobileSync = false;
+        await setLegacyBackgroundMobileFallback(this._hass, true);
       } else {
         this._pendingBackgroundMobileSync = true;
       }

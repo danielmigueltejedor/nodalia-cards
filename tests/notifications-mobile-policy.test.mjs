@@ -388,6 +388,37 @@ test("successful Engine sync puts the configured legacy package in standby", asy
   assert.equal(postedProfiles[0].language, "es");
 });
 
+test("successful Engine sync pauses an installed legacy package without requiring its webhook", async () => {
+  const { CardClass, sandbox } = loadNotificationsRuntime();
+  const serviceCalls = [];
+  sandbox.NodaliaBackend = {
+    status: async () => ({ available: true, capabilities: ["notifications_background"] }),
+    setNotificationProfile: async (_hass, profile) => ({ profile, dismissed: [] }),
+  };
+  const instance = new CardClass();
+  instance._hass = {
+    user: { is_admin: true },
+    locale: { language: "es-ES" },
+    states: {
+      "input_boolean.nodalia_background_mobile_notifications": { state: "on" },
+    },
+    callService: async (...args) => serviceCalls.push(args),
+  };
+  instance.setConfig({
+    background_mobile: { enabled: true },
+    mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+  });
+  clearTimeout(instance._backgroundMobileSyncTimer);
+  instance._backgroundMobileSyncTimer = 0;
+
+  assert.equal(await instance._syncBackgroundMobileConfig(), true);
+  assert.deepEqual(JSON.parse(JSON.stringify(serviceCalls)), [[
+    "input_boolean",
+    "turn_off",
+    { entity_id: "input_boolean.nodalia_background_mobile_notifications" },
+  ]]);
+});
+
 test("failed Engine sync activates the configured legacy fallback", async () => {
   const { CardClass, sandbox } = loadNotificationsRuntime();
   const postedProfiles = [];
@@ -411,6 +442,36 @@ test("failed Engine sync activates the configured legacy fallback", async () => 
   assert.equal(postedProfiles.length, 1);
   assert.equal(postedProfiles[0].enabled, true);
   assert.equal(postedProfiles[0].language, "es");
+});
+
+test("failed Engine sync reactivates the installed legacy package", async () => {
+  const { CardClass, sandbox } = loadNotificationsRuntime();
+  const serviceCalls = [];
+  sandbox.NodaliaBackend = {
+    status: async () => ({ available: false, capabilities: [] }),
+  };
+  const instance = new CardClass();
+  instance._hass = {
+    user: { is_admin: true },
+    locale: { language: "es-ES" },
+    states: {
+      "input_boolean.nodalia_background_mobile_notifications": { state: "off" },
+    },
+    callService: async (...args) => serviceCalls.push(args),
+  };
+  instance.setConfig({
+    background_mobile: { enabled: true },
+    mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+  });
+  clearTimeout(instance._backgroundMobileSyncTimer);
+  instance._backgroundMobileSyncTimer = 0;
+
+  assert.equal(await instance._syncBackgroundMobileConfig(), false);
+  assert.deepEqual(JSON.parse(JSON.stringify(serviceCalls)), [[
+    "input_boolean",
+    "turn_on",
+    { entity_id: "input_boolean.nodalia_background_mobile_notifications" },
+  ]]);
 });
 
 test("editor sends a disabled native profile so background delivery can be stopped", () => {

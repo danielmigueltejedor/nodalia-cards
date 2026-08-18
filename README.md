@@ -130,7 +130,7 @@ That single file includes both the cards and their visual editors. Existing Dash
 
 ### Optional companion: Nodalia Cards Engine
 
-Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.1` is the recommended companion for Nodalia Cards `2.2.0-alpha.2`.
+Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.2` is the recommended companion for Nodalia Cards `2.2.0-alpha.3`.
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
@@ -159,7 +159,7 @@ Type: module
 
 - Update Nodalia Cards from HACS and perform a hard browser refresh so the self-contained `nodalia-cards.js` resource is replaced in the frontend cache.
 - Existing card YAML and Lovelace resources remain compatible; no Dashboard-to-Integration migration is required.
-- If you use the optional Engine, keep it on stable `2.0.1`, restart Home Assistant after installing or updating it, and confirm the editor shows **Engine active**.
+- If you use the optional Engine, keep it on stable `2.0.2`, restart Home Assistant after installing or updating it, and confirm the editor shows **Engine active**.
 - Climate `heat_cool` holds preserve both low and high setpoints, and Engine inbox dismissals now match the corresponding foreground comfort, humidity, door, window, motion, vacuum, rain, media and outdoor alerts.
 
 ## Quick start

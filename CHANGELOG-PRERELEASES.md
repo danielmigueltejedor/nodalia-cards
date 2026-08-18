@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.3] - 2026-08-18
+
+Third **`2.2.0`** alpha: reliable Engine ownership of legacy notification packages.
+
+### Fixed
+
+- A successfully synchronized Engine now pauses the installed legacy notification helper even when the old webhook is no longer configured in the card.
+- If native synchronization becomes unavailable, the card reactivates the legacy helper so the package remains a real fallback instead of a concurrent sender.
+- Legacy packages that produced Spanish titles with English measurement bodies no longer remain active alongside Engine delivery.
+
+### Validation
+
+- Notification policy regressions cover helper standby and failover both with and without a configured legacy webhook.
+
+---
+
 ## [2.2.0-alpha.2] - 2026-08-17
 
 Second **`2.2.0`** alpha: Engine-first background notifications with an automatic legacy-package fallback.
