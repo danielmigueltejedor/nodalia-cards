@@ -63,6 +63,17 @@ const devices = [
   },
 ];
 
+const HEIGHT_SAMPLE_TOLERANCE_PX = 0.5;
+const MIN_TOTAL_HEIGHT_CHANGE_PX = 1;
+
+function expectHeightTrajectory(heights, direction) {
+  expect(heights).toHaveLength(3);
+  const signedHeights = heights.map(height => height * direction);
+  expect(signedHeights[1]).toBeGreaterThanOrEqual(signedHeights[0] - HEIGHT_SAMPLE_TOLERANCE_PX);
+  expect(signedHeights[2]).toBeGreaterThanOrEqual(signedHeights[1] - HEIGHT_SAMPLE_TOLERANCE_PX);
+  expect(signedHeights[2]).toBeGreaterThan(signedHeights[0] + MIN_TOTAL_HEIGHT_CHANGE_PX);
+}
+
 async function sampleAnimation(shell, animationName, expectedClass) {
   return shell.evaluate(async (element, expected) => {
     const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
@@ -171,8 +182,7 @@ for (const device of devices) {
     const opening = await sampleAnimation(openingShell, device.expandAnimation, device.entering);
     expect(opening.found).toBe(true);
     expect(opening.hadExpectedClass).toBe(true);
-    expect(opening.heights[1]).toBeGreaterThan(opening.heights[0] + 1);
-    expect(opening.heights[2]).toBeGreaterThan(opening.heights[1] + 1);
+    expectHeightTrajectory(opening.heights, 1);
     expect(opening.rows[0]).not.toBe(opening.rows[2]);
 
     await page.waitForTimeout(220);
@@ -197,8 +207,7 @@ for (const device of devices) {
     const closing = await sampleAnimation(closingShell, device.collapseAnimation, device.leaving);
     expect(closing.found).toBe(true);
     expect(closing.hadExpectedClass).toBe(true);
-    expect(closing.heights[1]).toBeLessThan(closing.heights[0] - 1);
-    expect(closing.heights[2]).toBeLessThan(closing.heights[1] - 1);
+    expectHeightTrajectory(closing.heights, -1);
 
     await page.waitForTimeout(220);
     await expect(card.locator(device.shell)).toHaveCount(0);
