@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Notifications no longer re-enable the leftover legacy package after a transient Engine websocket error. Failover now requires the Engine to be confirmed missing, so a dashboard reconnect cannot duplicate every background alert.
+
 ## [2.2.0-alpha.3] - 2026-08-18
 
 Third **`2.2.0`** alpha: Engine and Cards now pause an installed legacy notification helper even without its webhook, and reactivate it only when native delivery is unavailable.
