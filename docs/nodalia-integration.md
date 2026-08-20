@@ -121,7 +121,7 @@ When the Engine reports the override capability and the entity has a stored sche
 
 ## Recovery
 
-If the Engine is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their webhook paths as optional fallbacks when those fields are configured. The Notifications Card rechecks native delivery periodically; a failed check activates the synchronized package profile, while a recovered Engine returns that profile to standby. Reloading or removing the Engine does not alter dashboard YAML or the Cards plugin resource.
+If the Engine is temporarily unavailable, ordinary card controls continue to work. Notifications and Climate retain their webhook paths as optional fallbacks when those fields are configured. The Notifications Card rechecks native delivery periodically; it activates the synchronized package profile only when the Engine is confirmed missing (not after a transient websocket error), and a recovered Engine returns that profile to standby. Reloading or removing the Engine does not alter dashboard YAML or the Cards plugin resource.
 
 ## Support boundaries
 
