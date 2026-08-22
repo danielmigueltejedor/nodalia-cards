@@ -1299,11 +1299,16 @@ function getBackgroundMobileNativeSignature(rawConfig, hass = null) {
 async function syncBackgroundMobileNative(hass, rawConfig) {
   const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
   if (!backend || !hass) {
-    return { available: false, synced: false, signature: "" };
+    return { available: false, synced: false, signature: "", transient: false };
   }
   const status = await backend.status(hass, { silent: true });
   if (!status?.available || !status.capabilities?.includes("notifications_background")) {
-    return { available: false, synced: false, signature: "" };
+    return {
+      available: false,
+      synced: false,
+      signature: "",
+      transient: status?.transient === true,
+    };
   }
   const { profile, profileId, signature } = getBackgroundMobileNativeSignature(rawConfig, hass);
   try {
@@ -1326,9 +1331,10 @@ async function syncBackgroundMobileNative(hass, rawConfig) {
     };
   } catch (error) {
     if (typeof console !== "undefined" && typeof console.warn === "function") {
-      console.warn("Nodalia Notifications Card: native background synchronization failed; trying the legacy webhook.", error);
+      console.warn("Nodalia Notifications Card: native background synchronization failed; keeping Engine ownership.", error);
     }
-    return { available: true, synced: false, signature: "" };
+    // Engine is loaded; a write/read failure is not proof it stopped delivering.
+    return { available: true, synced: false, signature: "", transient: true };
   }
 }
 
@@ -1746,6 +1752,12 @@ class NodaliaNotificationsCard extends HTMLElement {
         this._renderIfChanged(true);
       }
       return true;
+    }
+    // A websocket timeout or profile write error is not Engine-down. Waking the
+    // leftover package while Engine is still delivering duplicates every alert.
+    if (native.transient === true || native.available === true) {
+      this._pendingBackgroundMobileSync = true;
+      return false;
     }
     this._lastBackgroundMobileNativeSignature = "";
     if (!webhookId) {
@@ -4794,6 +4806,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         await this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false);
       }
       return true;
+    }
+    if (native.transient === true || native.available === true) {
+      return false;
     }
     this._lastBackgroundMobileNativeSignature = "";
     if (background.enabled !== true) {

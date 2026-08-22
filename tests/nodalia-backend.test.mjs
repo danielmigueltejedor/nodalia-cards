@@ -63,7 +63,50 @@ test("backend bridge treats missing commands as an optional unavailable backend"
     },
   });
   assert.equal(status.available, false);
+  assert.equal(status.transient, false);
   assert.deepEqual(JSON.parse(JSON.stringify(status.health)), {});
+});
+
+test("backend bridge does not cache transient websocket errors as Engine-missing", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const hass = {
+    async callWS() {
+      calls.push(true);
+      throw Object.assign(new Error("WebSocket timeout"), { code: "timeout" });
+    },
+  };
+  const first = await backend.status(hass, { silent: true });
+  const second = await backend.status(hass, { silent: true });
+  assert.equal(first.available, false);
+  assert.equal(first.transient, true);
+  assert.equal(second.transient, true);
+  assert.equal(calls.length, 2, "transient failures must be retried instead of cached as unavailable");
+});
+
+test("backend bridge does not treat command-name timeouts as Engine-missing", async () => {
+  const backend = loadBackend();
+  const status = await backend.status({
+    async callWS() {
+      throw Object.assign(new Error("Timeout waiting for nodalia/status"), { code: "timeout" });
+    },
+  }, { silent: true });
+  assert.equal(status.available, false);
+  assert.equal(status.transient, true);
+});
+
+test("backend bridge caches a confirmed missing Engine", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const hass = {
+    callWS() {
+      calls.push(true);
+      return Promise.reject(Object.assign(new Error("Unknown command nodalia/status"), { code: "unknown_command" }));
+    },
+  };
+  await backend.status(hass, { silent: true });
+  await backend.status(hass, { silent: true });
+  assert.equal(calls.length, 1);
 });
 
 test("backend bridge sends versioned profile and schedule mutations", async () => {

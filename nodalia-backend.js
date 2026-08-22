@@ -20,10 +20,11 @@
   function isUnavailableError(error) {
     const code = String(error?.code || "").toLowerCase();
     const message = String(error?.message || error || "").toLowerCase();
+    // Only treat a confirmed missing integration as Engine-down. A timeout
+    // whose message happens to mention `nodalia/status` is still transient.
     return code === "unknown_command"
       || code === "not_found"
-      || message.includes("unknown command")
-      || message.includes("nodalia/status");
+      || message.includes("unknown command");
   }
 
   async function status(hass, options = {}) {
@@ -55,7 +56,8 @@
       statusCache = { connection, checkedAt: now, value };
       return value;
     } catch (error) {
-      if (!isUnavailableError(error) && options.silent !== true && typeof console?.warn === "function") {
+      const engineMissing = isUnavailableError(error);
+      if (!engineMissing && options.silent !== true && typeof console?.warn === "function") {
         console.warn("Nodalia Cards: could not query the Nodalia integration.", error);
       }
       const value = {
@@ -67,8 +69,13 @@
         capabilities: [],
         limits: {},
         health: {},
+        transient: !engineMissing,
       };
-      statusCache = { connection, checkedAt: now, value };
+      // unknown_command means the integration is not loaded. Cache that. A timeout
+      // or websocket blip is not proof the Engine stopped; do not poison the cache.
+      if (engineMissing) {
+        statusCache = { connection, checkedAt: now, value };
+      }
       return value;
     }
   }

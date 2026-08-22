@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Notifications no longer re-enable the leftover legacy package after a transient Engine websocket error. Failover now requires the Engine to be confirmed missing, so a dashboard reconnect cannot duplicate every background alert.
+
 ## [2.2.0-alpha.4] - 2026-08-22
 
 Fourth **`2.2.0`** alpha: reliable multi-player selection and visual-editor persistence.
