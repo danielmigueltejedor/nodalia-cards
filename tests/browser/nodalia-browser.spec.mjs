@@ -175,10 +175,10 @@ test("device and Climate layout variants render and keep their native controls",
     const hass = window.makeHass(states);
     hass.callService = async (domain, service, data) => calls.push({ domain, service, data });
     const configs = [
-      ["nodalia-fan-card", { entity: "fan.test", layout: "circular" }],
-      ["nodalia-humidifier-card", { entity: "humidifier.test", layout: "circular" }],
-      ["nodalia-cover-card", { entity: "cover.test", layout: "circular" }],
-      ["nodalia-climate-card", { entity: "climate.test", layout: "compact" }],
+      ["nodalia-fan-card", { entity: "fan.test", layout: "circular", animations: { enabled: false } }],
+      ["nodalia-humidifier-card", { entity: "humidifier.test", layout: "circular", animations: { enabled: false } }],
+      ["nodalia-cover-card", { entity: "cover.test", layout: "circular", animations: { enabled: false } }],
+      ["nodalia-climate-card", { entity: "climate.test", layout: "compact", animations: { enabled: false } }],
     ];
     const cards = {};
     for (const [tag, config] of configs) {
@@ -188,6 +188,14 @@ test("device and Climate layout variants render and keep their native controls",
       document.querySelector("#fixture").append(card);
       cards[tag] = card;
     }
+    const fanCompact = document.createElement("nodalia-fan-card");
+    fanCompact.setConfig({ entity: "fan.test", layout: "compact", animations: { enabled: false } });
+    fanCompact.hass = hass;
+    document.querySelector("#fixture").append(fanCompact);
+    const climateCircular = document.createElement("nodalia-climate-card");
+    climateCircular.setConfig({ entity: "climate.test", layout: "circular", animations: { enabled: false } });
+    climateCircular.hass = hass;
+    document.querySelector("#fixture").append(climateCircular);
     await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
     cards["nodalia-fan-card"].shadowRoot.querySelector('[data-fan-action="increase-percentage"]')?.click();
@@ -211,6 +219,81 @@ test("device and Climate layout variants render and keep their native controls",
     }
     await new Promise(resolve => window.setTimeout(resolve, 30));
 
+    const visual = element => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return {
+        width: Math.round(rect.width * 100) / 100,
+        height: Math.round(rect.height * 100) / 100,
+        borderRadius: style.borderRadius,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        padding: style.padding,
+        backdropFilter: style.backdropFilter || style.webkitBackdropFilter,
+        strokeWidth: style.strokeWidth,
+      };
+    };
+    const fanCompactRoot = fanCompact.shadowRoot;
+    const climateCompactRoot = cards["nodalia-climate-card"].shadowRoot;
+    const climateCircularRoot = climateCircular.shadowRoot;
+    const compactMetrics = {
+      fanCard: visual(fanCompactRoot.querySelector("ha-card")),
+      climateCard: visual(climateCompactRoot.querySelector("ha-card")),
+      fanContentPadding: getComputedStyle(fanCompactRoot.querySelector("ha-card")).padding,
+      climateContentPadding: getComputedStyle(climateCompactRoot.querySelector(".climate-card__content")).padding,
+      fanIcon: visual(fanCompactRoot.querySelector(".fan-card__icon")),
+      climateIcon: visual(climateCompactRoot.querySelector(".climate-card__icon")),
+      fanTitle: visual(fanCompactRoot.querySelector(".fan-card__title")),
+      climateTitle: visual(climateCompactRoot.querySelector(".climate-card__title")),
+      fanChip: visual(fanCompactRoot.querySelector(".fan-card__chip")),
+      climateChip: visual(climateCompactRoot.querySelector(".climate-card__chip")),
+      fanSliderWrap: visual(fanCompactRoot.querySelector(".fan-card__slider-wrap")),
+      climateSliderWrap: visual(climateCompactRoot.querySelector(".climate-card__compact-slider-shell")),
+      fanSliderTrack: visual(fanCompactRoot.querySelector(".fan-card__slider-track")),
+      climateSliderTrack: visual(climateCompactRoot.querySelector(".climate-card__compact-slider-track")),
+      fanControl: visual(fanCompactRoot.querySelector(".fan-card__control")),
+      climateControl: visual(climateCompactRoot.querySelector(".climate-card__compact-step")),
+    };
+    const climateDial = climateCircularRoot.querySelector(".climate-card__dial");
+    const circularMetrics = {
+      climate: {
+        card: visual(climateCircularRoot.querySelector("ha-card")),
+        icon: visual(climateCircularRoot.querySelector(".climate-card__icon")),
+        title: visual(climateCircularRoot.querySelector(".climate-card__title")),
+        dial: visual(climateDial),
+        track: visual(climateCircularRoot.querySelector(".climate-card__dial-track")),
+        thumb: visual(climateCircularRoot.querySelector(".climate-card__dial-thumb")),
+        primary: visual(climateCircularRoot.querySelector(".climate-card__target")),
+      },
+      fan: {
+        card: visual(cards["nodalia-fan-card"].shadowRoot.querySelector("ha-card")),
+        icon: visual(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__icon")),
+        title: visual(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__title")),
+        dial: visual(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-dial")),
+        track: visual(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-track")),
+        thumb: visual(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-thumb")),
+        primary: visual(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-center strong")),
+      },
+      humidifier: {
+        card: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector("ha-card")),
+        icon: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__icon")),
+        title: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__title")),
+        dial: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-dial")),
+        track: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-track")),
+        thumb: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-thumb")),
+        primary: visual(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-center strong")),
+      },
+      cover: {
+        card: visual(cards["nodalia-cover-card"].shadowRoot.querySelector("ha-card")),
+        icon: visual(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__icon")),
+        title: visual(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__title")),
+        dial: visual(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__circular-dial")),
+        track: visual(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__circular-track")),
+        thumb: visual(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__circular-thumb")),
+        primary: visual(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__circular-center strong")),
+      },
+    };
+
     return {
       fanCircular: Boolean(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card--circular .fan-card__circular-dial")),
       humidifierCircular: Boolean(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card--circular .humidifier-card__circular-dial")),
@@ -218,6 +301,8 @@ test("device and Climate layout variants render and keep their native controls",
       climateCompact: Boolean(cards["nodalia-climate-card"].shadowRoot.querySelector(".climate-card--layout-compact .climate-card__compact-slider")),
       climateHasCircularDial: Boolean(cards["nodalia-climate-card"].shadowRoot.querySelector(".climate-card__dial")),
       editorLayouts,
+      compactMetrics,
+      circularMetrics,
       calls,
     };
   });
@@ -229,6 +314,27 @@ test("device and Climate layout variants render and keep their native controls",
   expect(result.climateHasCircularDial).toBe(false);
   expect(Object.values(result.editorLayouts).every(item => item.exists)).toBe(true);
   expect(result.editorLayouts["nodalia-climate-card"].value).toBe("compact");
+  expect(result.compactMetrics.climateCard.borderRadius).toBe(result.compactMetrics.fanCard.borderRadius);
+  expect(result.compactMetrics.climateContentPadding).toBe(result.compactMetrics.fanContentPadding);
+  for (const part of ["Icon", "Title", "Chip", "SliderWrap", "SliderTrack", "Control"]) {
+    expect(result.compactMetrics[`climate${part}`].height, part).toBe(result.compactMetrics[`fan${part}`].height);
+  }
+  expect(result.compactMetrics.climateTitle.fontSize).toBe(result.compactMetrics.fanTitle.fontSize);
+  expect(result.compactMetrics.climateChip.fontSize).toBe(result.compactMetrics.fanChip.fontSize);
+  for (const name of ["fan", "humidifier", "cover"]) {
+    const actual = result.circularMetrics[name];
+    const climate = result.circularMetrics.climate;
+    expect(actual.card.borderRadius, `${name} card radius`).toBe(climate.card.borderRadius);
+    expect(actual.icon.width, `${name} icon`).toBe(climate.icon.width);
+    expect(actual.title.fontSize, `${name} title`).toBe(climate.title.fontSize);
+    expect(actual.dial.width, `${name} dial`).toBe(climate.dial.width);
+    expect(actual.dial.borderRadius, `${name} dial radius`).toBe(climate.dial.borderRadius);
+    expect(actual.dial.backdropFilter, `${name} dial glass`).toBe(climate.dial.backdropFilter);
+    expect(actual.track.strokeWidth, `${name} ring`).toBe(climate.track.strokeWidth);
+    expect(actual.thumb.width, `${name} thumb`).toBe(climate.thumb.width);
+    expect(actual.primary.fontSize, `${name} primary`).toBe(climate.primary.fontSize);
+    expect(actual.primary.fontWeight, `${name} primary weight`).toBe(climate.primary.fontWeight);
+  }
   expect(result.calls).toEqual(expect.arrayContaining([
     expect.objectContaining({ domain: "fan", service: "set_percentage" }),
     expect.objectContaining({ domain: "humidifier", service: "set_humidity" }),

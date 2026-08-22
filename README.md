@@ -126,7 +126,7 @@ That is the only generated runtime distributed by the repository. It includes bo
 
 ### Optional companion: Nodalia Cards Engine
 
-Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.2` is the recommended companion for Nodalia Cards `2.2.0-alpha.4`.
+Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.2` is the recommended companion for Nodalia Cards `2.2.0-alpha.5`.
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 

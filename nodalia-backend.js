@@ -22,8 +22,7 @@
     const message = String(error?.message || error || "").toLowerCase();
     return code === "unknown_command"
       || code === "not_found"
-      || message.includes("unknown command")
-      || message.includes("nodalia/status");
+      || message.includes("unknown command");
   }
 
   async function status(hass, options = {}) {
@@ -55,7 +54,8 @@
       statusCache = { connection, checkedAt: now, value };
       return value;
     } catch (error) {
-      if (!isUnavailableError(error) && options.silent !== true && typeof console?.warn === "function") {
+      const engineMissing = isUnavailableError(error);
+      if (!engineMissing && options.silent !== true && typeof console?.warn === "function") {
         console.warn("Nodalia Cards: could not query the Nodalia integration.", error);
       }
       const value = {
@@ -67,8 +67,14 @@
         capabilities: [],
         limits: {},
         health: {},
+        transient: !engineMissing,
       };
-      statusCache = { connection, checkedAt: now, value };
+      // Only a confirmed missing command proves that Engine is absent. Timeouts
+      // and websocket interruptions must be retried instead of poisoning the
+      // negative cache for STATUS_TTL_MS.
+      if (engineMissing) {
+        statusCache = { connection, checkedAt: now, value };
+      }
       return value;
     }
   }

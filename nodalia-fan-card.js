@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.2.0-alpha.4";
+const CARD_VERSION = "2.2.0-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2655,6 +2655,7 @@ class NodaliaFanCard extends HTMLElement {
           <span class="fan-card__circular-thumb" aria-hidden="true"></span>
           <div class="fan-card__circular-center">
             <strong data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</strong>
+            <span class="fan-card__circular-divider" aria-hidden="true"></span>
             <span>${escapeHtml(this._fanAria("speedSlider", "Speed"))}</span>
             <div class="fan-card__circular-actions">
               ${supportsOscillation ? `<button type="button" class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}" data-fan-action="oscillate" aria-label="${escapeHtml(this._fanAria(this._isOscillating(state) ? "oscillationOff" : "oscillationOn", "Oscillation"))}"><ha-icon icon="mdi:rotate-360"></ha-icon></button>` : ""}
@@ -3294,8 +3295,30 @@ class NodaliaFanCard extends HTMLElement {
           gap: 14px;
         }
 
+        ha-card.fan-card--circular {
+          border-radius: 30px;
+          padding: 16px;
+        }
+
         .fan-card--circular .fan-card__hero {
           align-items: center;
+          gap: 16px;
+          grid-template-columns: 58px minmax(0, 1fr);
+        }
+
+        .fan-card--circular .fan-card__icon {
+          height: 58px;
+          width: 58px;
+        }
+
+        .fan-card--circular .fan-card__icon ha-icon {
+          --mdc-icon-size: 25.52px;
+          height: 25.52px;
+          width: 25.52px;
+        }
+
+        .fan-card--circular .fan-card__title {
+          font-size: 16px;
         }
 
         .fan-card__circular-layout {
@@ -3306,17 +3329,25 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__circular-dial {
+          -webkit-backdrop-filter: blur(18px);
+          backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 31%),
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 15%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), color-mix(in srgb, var(--primary-text-color) 4%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+            radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 30%),
+            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, color-mix(in srgb, ${accentColor} 8%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 60%, color-mix(in srgb, var(--primary-text-color) 5%, transparent) 100%);
+          border: 1px solid color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           border-radius: 50%;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent), 0 20px 38px rgba(0, 0, 0, 0.18);
-          height: min(280px, 72vw);
-          max-height: 280px;
-          max-width: 280px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 18px 38px rgba(0, 0, 0, 0.16);
+          aspect-ratio: 1;
+          box-sizing: border-box;
+          max-width: 100%;
           position: relative;
-          width: min(280px, 72vw);
+          transform: translateZ(0);
+          width: min(280px, 100%);
+        }
+
+        @supports (width: 1cqw) {
+          .fan-card__circular-dial { width: min(280px, 100%, 94cqw); }
         }
 
         .fan-card__circular-dial svg {
@@ -3331,57 +3362,90 @@ class NodaliaFanCard extends HTMLElement {
           fill: none;
           stroke-dasharray: 75 25;
           stroke-linecap: round;
-          stroke-width: 16;
+          stroke-width: 18;
           transform: rotate(135deg);
           transform-origin: 120px 120px;
         }
 
         .fan-card__circular-track {
-          stroke: color-mix(in srgb, var(--primary-text-color) 25%, var(--divider-color));
+          stroke: color-mix(in srgb, color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color)) 52%, var(--primary-text-color) 48%);
         }
 
         .fan-card__circular-progress {
-          filter: drop-shadow(0 0 7px color-mix(in srgb, ${accentColor} 24%, transparent));
+          filter: drop-shadow(0 0 0 transparent);
+          opacity: 0.94;
           stroke: ${accentColor};
           stroke-dasharray: var(--circular-progress, 0) 100;
           transition: stroke-dasharray 240ms ease-out;
         }
 
         .fan-card__circular-thumb {
-          background: rgba(255, 255, 255, 0.96);
-          border: 5px solid color-mix(in srgb, ${accentColor} 28%, rgba(255, 255, 255, 0.96));
+          background: transparent;
           border-radius: 50%;
-          box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 8px 20px rgba(0, 0, 0, 0.22);
-          height: 22px;
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 0 0 6px color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
+          height: 24px;
           left: var(--circular-marker-left);
           position: absolute;
           top: var(--circular-marker-top);
           transform: translate(-50%, -50%);
           transition: left 240ms ease-out, top 240ms ease-out;
-          width: 22px;
+          width: 24px;
+          z-index: 2;
+        }
+
+        .fan-card__circular-thumb::before {
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
+          background: radial-gradient(circle, color-mix(in srgb, var(--primary-text-color) 14%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 8%, transparent) 38%, color-mix(in srgb, var(--primary-text-color) 3%, transparent) 58%, transparent 76%);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 50%;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          content: "";
+          inset: 0;
+          position: absolute;
+        }
+
+        .fan-card__circular-thumb::after {
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 50%;
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          content: "";
+          height: 82%;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 82%;
         }
 
         .fan-card__circular-center {
           align-content: center;
           display: grid;
-          gap: 8px;
-          inset: 21%;
+          gap: 11px;
+          inset: 19%;
           justify-items: center;
           position: absolute;
           text-align: center;
         }
 
         .fan-card__circular-center strong {
-          font-size: clamp(38px, 12vw, 52px);
+          font-size: clamp(42px, 12vw, 50px);
           font-weight: 500;
           letter-spacing: -0.055em;
           line-height: 1;
         }
 
-        .fan-card__circular-center > span {
+        .fan-card__circular-divider {
+          background: color-mix(in srgb, var(--primary-text-color) 18%, transparent);
+          border-radius: 999px;
+          height: 1px;
+          width: clamp(84px, 72%, 148px);
+        }
+
+        .fan-card__circular-center > span:not(.fan-card__circular-divider) {
           color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 500;
         }
 
         .fan-card__circular-actions,

@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.5] - 2026-08-22
+
+Fifth **`2.2.0`** alpha: unified device layouts and fail-safe Engine notification ownership.
+
+### Changed
+
+- Climate's compact layout now uses the same card padding, hero, chips, slider track and control sizing as Fan, Cover and Humidifier.
+- Fan, Cover and Humidifier circular layouts now closely match Climate's glass dial, 18 px arc, luminous thumb, typography, spacing and header proportions.
+
+### Fixed
+
+- Transient Engine status timeouts, websocket reconnects and native profile write errors no longer reactivate a leftover legacy notification package. Failover now occurs only after the Engine command is confirmed missing, preventing duplicate mobile alerts while preserving foreground suppression.
+
+### Validation
+
+- 441/441 Node tests pass, including five new transient-versus-confirmed Engine failover regressions.
+- Chromium verifies compact-family geometry, Climate-style circular geometry and native controls; the single HACS production bundle is rebuilt from the validated sources.
+
+---
+
 ## [2.2.0-alpha.4] - 2026-08-22
 
 Fourth **`2.2.0`** alpha: reliable multi-player selection and visual-editor persistence.

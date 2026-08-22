@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.0-alpha.4";
+const CARD_VERSION = "2.2.0-alpha.5";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -5372,8 +5372,10 @@ class NodaliaClimateCard extends HTMLElement {
         : getModeMeta(mode).label
     );
     const climateOffModeLabel = escapeHtml(translateClimateMode("off"));
-    const cardPaddingY = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
-    const cardPaddingX = tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
+    // The compact Climate layout deliberately uses the same visual primitives as
+    // Fan, Cover and Humidifier: 14px card padding, 38px hero bubble and 12px copy.
+    const cardPaddingY = isCompactCardLayout ? 14 : tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
+    const cardPaddingX = isCompactCardLayout ? 14 : tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
     const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
     const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
     const supportsNullSetpointCreation = this._supportsNullSetpointCreation(state);
@@ -5383,15 +5385,19 @@ class NodaliaClimateCard extends HTMLElement {
     const contentColumnGap = showStepControls
       ? (tightLayout ? "8px" : compactLayout ? "9px" : "10px")
       : effectiveCardGap;
-    const effectiveIconSizePx = Math.max(
-      48,
-      Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58),
-    );
+    const effectiveIconSizePx = isCompactCardLayout
+      ? 38
+      : Math.max(
+        48,
+        Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58),
+      );
     const effectiveIconSize = `${effectiveIconSizePx}px`;
-    const effectiveTitleSize = `${Math.max(
-      14,
-      Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
-    )}px`;
+    const effectiveTitleSize = isCompactCardLayout
+      ? "12px"
+      : `${Math.max(
+        14,
+        Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
+      )}px`;
     const effectiveCurrentSize = `${Math.max(
       14,
       Math.min(parseSizeToPixels(styles.current_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
@@ -5466,10 +5472,18 @@ class NodaliaClimateCard extends HTMLElement {
     const overrideBlockPx = showEngineOverride
       ? overrideChipPx + overrideStatusPx + interBlockGapPx
       : 0;
+    const compactSliderCount = isRangeMode ? 2 : (supportsTargetTemperature && Number.isFinite(targetFin) ? 1 : 0);
+    const compactControlRowCount = compactSliderCount || showStepControls ? Math.max(1, compactSliderCount) : 0;
     const climateCardMinHeightPx = isCompactCardLayout
       ? Math.max(
-        170,
-        Math.round(cardPaddingY * 2 + effectiveIconSizePx + overrideBlockPx + 116),
+        94,
+        Math.round(
+          cardPaddingY * 2 +
+            effectiveIconSizePx +
+            (compactControlRowCount ? 16 + (compactControlRowCount * 48) + ((compactControlRowCount - 1) * 8) : 0) +
+            (modeDialButtonCount || config.show_schedule_button !== false ? 10 + 36 : 0) +
+            overrideBlockPx,
+        ),
       )
       : Math.max(
         220,
@@ -5758,23 +5772,35 @@ class NodaliaClimateCard extends HTMLElement {
     const compactTargetReadout = isRangeMode
       ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))
       : `<span data-climate-readout="compact-target">${dialPrimaryReadoutHtml}</span><span class="climate-card__compact-degree">°${escapeHtml(tempScale)}</span>`;
+    if (isCompactCardLayout && (isRangeMode || Number.isFinite(dialPrimaryReadoutValue))) {
+      chips.push(`<div class="climate-card__chip climate-card__chip--target">${compactTargetReadout}</div>`);
+    }
+    const compactStepActionsMarkup = showStepControls
+      ? `
+        <div class="climate-card__compact-slider-actions">
+          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="decrease" aria-label="Decrease temperature"><span>&minus;</span></button>
+          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="increase" aria-label="Increase temperature"><span>+</span></button>
+        </div>`
+      : "";
+    const compactScheduleButtonMarkup = showScheduleButton
+      ? this._renderSetpointScheduleButtonHtml({ placement: "steps" })
+      : "";
     const compactControlsMarkup = `
-      <div class="climate-card__compact-panel" data-nodalia-tap-shield="true">
-        <div class="climate-card__compact-summary">
-          <strong>${compactTargetReadout}</strong>
-          <span>${dialMetaHtml}${dialActionHtml}</span>
+      <div class="climate-card__compact-controls-shell" data-nodalia-tap-shield="true">
+        <div class="climate-card__compact-controls-inner">
+          ${compactSlidersMarkup || compactStepActionsMarkup ? `
+            <div class="climate-card__compact-slider-row">
+              <div class="climate-card__compact-sliders climate-card__compact-sliders--${compactSliderCount <= 1 ? "single" : "range"}">${compactSlidersMarkup}</div>
+              ${compactStepActionsMarkup}
+            </div>` : ""}
+          ${dialModeButtonFragments.length || compactScheduleButtonMarkup ? `
+            <div class="climate-card__compact-modes">
+              ${dialControlsMarkup}
+              ${compactScheduleButtonMarkup}
+            </div>` : ""}
         </div>
-        ${compactSlidersMarkup ? `<div class="climate-card__compact-sliders">${compactSlidersMarkup}</div>` : ""}
-        ${dialControlsMarkup}
       </div>
       ${engineOverrideMarkup}
-      ${showStepControls ? `
-        <div class="climate-card__steps climate-card__steps--compact ${shouldAnimateEntrance ? "climate-card__steps--entering" : ""}">
-          <button type="button" class="climate-card__step-button" data-climate-action="decrease" aria-label="Decrease temperature"><span>&minus;</span></button>
-          ${scheduleButtonStepsMarkup}
-          <button type="button" class="climate-card__step-button" data-climate-action="increase" aria-label="Increase temperature"><span>+</span></button>
-        </div>
-      ` : scheduleButtonDialMarkup}
     `;
 
     this.shadowRoot.innerHTML = `
@@ -5804,13 +5830,14 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 34%, transparent) 0%, transparent 60%),
-            radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 64%),
-            linear-gradient(180deg, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
-            ${cardBackground};
+          background: ${isCompactCardLayout
+            ? cardBackground
+            : `radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 34%, transparent) 0%, transparent 60%),
+              radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 64%),
+              linear-gradient(180deg, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+              ${cardBackground}`};
           border: ${cardBorder};
-          border-radius: ${styles.card.border_radius};
+          border-radius: ${isCompactCardLayout ? "var(--nodalia-card-border-radius, 28px)" : styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
           container-name: nodalia-climate;
@@ -6008,67 +6035,87 @@ class NodaliaClimateCard extends HTMLElement {
           white-space: nowrap;
         }
 
-        .climate-card--layout-compact .climate-card__content { gap: 12px; }
-        .climate-card__compact-panel {
-          backdrop-filter: blur(18px);
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border-radius: ${styles.card.border_radius};
-          display: grid;
-          gap: 13px;
-          min-width: 0;
-          padding: 14px;
+        .climate-card--layout-compact {
+          border-radius: var(--nodalia-card-border-radius, 28px);
         }
-        .climate-card__compact-summary {
-          align-items: center;
-          display: flex;
+        .climate-card--layout-compact .climate-card__content { gap: 0; }
+        .climate-card--layout-compact .climate-card__hero {
           gap: 12px;
-          justify-content: space-between;
-          min-width: 0;
+          grid-template-columns: 38px minmax(0, 1fr);
         }
-        .climate-card__compact-summary > strong {
-          color: var(--primary-text-color);
-          font-size: clamp(25px, 7cqw, 36px);
-          font-weight: 760;
-          letter-spacing: -0.04em;
-          line-height: 1;
-          min-width: 0;
-          white-space: nowrap;
+        .climate-card--layout-compact .climate-card__icon {
+          background: ${isOff
+            ? "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
+            : `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`};
+          border-radius: 999px;
+          height: 38px;
+          width: 38px;
+        }
+        .climate-card--layout-compact .climate-card__copy { gap: 10px; }
+        .climate-card--layout-compact .climate-card__headline { gap: 10px; }
+        .climate-card--layout-compact .climate-card__title { font-size: 12px; line-height: 1.15; }
+        .climate-card--layout-compact .climate-card__chips { gap: 10px; }
+        .climate-card--layout-compact .climate-card__chip {
+          font-size: 11px;
+          height: 24px;
+          padding: 0 9px;
         }
         .climate-card__compact-degree { font-size: .42em; font-weight: 600; margin-left: 2px; vertical-align: top; }
-        .climate-card__compact-summary > span {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          flex-wrap: wrap;
-          font-size: ${effectiveCurrentSize};
-          gap: 8px;
-          justify-content: flex-end;
+        .climate-card__chip--target .climate-card__compact-degree { font-size: 1em; margin-left: 1px; vertical-align: baseline; }
+        .climate-card__compact-controls-shell {
+          display: grid;
+          grid-template-rows: 1fr;
+          margin-top: 16px;
           min-width: 0;
-          text-align: right;
+          overflow: visible;
         }
-        .climate-card__compact-sliders { display: grid; gap: 9px; min-width: 0; }
+        .climate-card__compact-controls-inner { display: grid; gap: 10px; min-width: 0; }
+        .climate-card__compact-slider-row {
+          align-items: center;
+          display: grid;
+          gap: 14px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+          overflow: visible;
+          padding-inline: 4px;
+        }
+        .climate-card__compact-sliders { display: grid; gap: 8px; min-width: 0; }
         .climate-card__compact-slider {
           align-items: center;
           display: grid;
-          gap: 10px;
-          grid-template-columns: auto minmax(80px, 1fr) auto;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
           min-width: 0;
         }
         .climate-card__compact-slider-label,
         .climate-card__compact-slider > strong {
           color: var(--secondary-text-color);
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           white-space: nowrap;
         }
-        .climate-card__compact-slider > strong { color: var(--primary-text-color); min-width: 46px; text-align: right; }
-        .climate-card__compact-slider-shell { height: 42px; min-width: 0; position: relative; }
+        .climate-card__compact-sliders--single :is(.climate-card__compact-slider-label, .climate-card__compact-slider > strong) { display: none; }
+        .climate-card__compact-sliders--range .climate-card__compact-slider {
+          grid-template-columns: auto minmax(80px, 1fr) auto;
+        }
+        .climate-card__compact-slider > strong { color: var(--primary-text-color); min-width: 42px; text-align: right; }
+        .climate-card__compact-slider-shell {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          display: flex;
+          height: 48px;
+          min-width: 0;
+          padding: 0 14px;
+          position: relative;
+        }
         .climate-card__compact-slider-track {
           background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           border-radius: 999px;
-          height: 7px;
-          inset: 50% 0 auto;
+          height: 22px;
+          inset: 50% 14px auto;
           overflow: hidden;
           pointer-events: none;
           position: absolute;
@@ -6087,16 +6134,47 @@ class NodaliaClimateCard extends HTMLElement {
           appearance: none;
           background: transparent;
           cursor: pointer;
-          height: 42px;
-          inset: 0;
+          height: 48px;
+          inset: 0 14px;
           margin: 0;
           opacity: 0;
           position: absolute;
           touch-action: pan-y;
-          width: 100%;
+          width: calc(100% - 28px);
         }
-        .climate-card__compact-panel .climate-card__dial-controls { margin-top: 0; padding-top: 1px; }
-        .climate-card__steps--compact { margin-top: 0; }
+        .climate-card__compact-slider-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 12px;
+          justify-content: flex-end;
+          padding-block: 4px;
+        }
+        .climate-card--layout-compact .climate-card__compact-step {
+          font-size: 20px;
+          height: 36px;
+          width: 36px;
+        }
+        .climate-card__compact-modes {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+          min-width: 0;
+          padding-inline: 4px;
+        }
+        .climate-card__compact-modes .climate-card__dial-controls { margin-top: 0; padding-top: 0; width: auto; }
+        .climate-card__compact-modes .climate-card__mode-button { height: 36px; width: 36px; }
+        .climate-card__compact-modes .climate-card__schedule-button {
+          height: 36px;
+          position: static;
+          width: 36px;
+        }
+        .climate-card__compact-modes .climate-card__schedule-button ha-icon {
+          --mdc-icon-size: 17px;
+          height: 17px;
+          width: 17px;
+        }
 
         .climate-card__dial-wrap {
           align-items: center;

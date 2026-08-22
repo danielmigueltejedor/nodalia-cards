@@ -444,6 +444,87 @@ test("failed Engine sync activates the configured legacy fallback", async () => 
   assert.equal(postedProfiles[0].language, "es");
 });
 
+test("transient Engine health failures keep the legacy package in standby", async () => {
+  const { CardClass, sandbox } = loadNotificationsRuntime();
+  const serviceCalls = [];
+  const postedProfiles = [];
+  sandbox.NodaliaBackend = {
+    status: async () => ({ available: true, capabilities: ["notifications_background"] }),
+    setNotificationProfile: async (_hass, profile) => ({ profile, dismissed: [] }),
+  };
+  sandbox.NodaliaUtils.postHomeAssistantWebhook = async (_webhookId, payload) => {
+    postedProfiles.push(JSON.parse(payload.chunks.join("")));
+    return true;
+  };
+  const instance = new CardClass();
+  instance._hass = {
+    user: { is_admin: true },
+    locale: { language: "es-ES" },
+    states: {
+      "input_boolean.nodalia_background_mobile_notifications": { state: "off" },
+    },
+    callService: async (...args) => serviceCalls.push(args),
+  };
+  instance.setConfig({
+    background_mobile: { enabled: true, webhook: "nodalia_notifications_background_sync" },
+    mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+  });
+  clearTimeout(instance._backgroundMobileSyncTimer);
+  instance._backgroundMobileSyncTimer = 0;
+
+  assert.equal(await instance._syncBackgroundMobileConfig(), true);
+  assert.equal(postedProfiles.at(-1)?.enabled, false);
+
+  sandbox.NodaliaBackend.status = async () => ({ available: false, capabilities: [], transient: true });
+  instance._lastBackgroundMobileNativeCheckAt = 0;
+  instance._forceNextBackgroundMobileSync = true;
+  assert.equal(await instance._syncBackgroundMobileConfig(), false);
+  assert.equal(serviceCalls.some(call => call[1] === "turn_on"), false);
+  assert.equal(postedProfiles.every(profile => profile.enabled === false), true);
+  assert.ok(instance._lastBackgroundMobileNativeSignature);
+});
+
+test("Engine profile write errors keep the legacy package in standby", async () => {
+  const { CardClass, sandbox } = loadNotificationsRuntime();
+  const serviceCalls = [];
+  const postedProfiles = [];
+  sandbox.NodaliaBackend = {
+    status: async () => ({ available: true, capabilities: ["notifications_background"] }),
+    setNotificationProfile: async (_hass, profile) => ({ profile, dismissed: [] }),
+  };
+  sandbox.NodaliaUtils.postHomeAssistantWebhook = async (_webhookId, payload) => {
+    postedProfiles.push(JSON.parse(payload.chunks.join("")));
+    return true;
+  };
+  const instance = new CardClass();
+  instance._hass = {
+    user: { is_admin: true },
+    locale: { language: "es-ES" },
+    states: {
+      "input_boolean.nodalia_background_mobile_notifications": { state: "off" },
+    },
+    callService: async (...args) => serviceCalls.push(args),
+  };
+  instance.setConfig({
+    background_mobile: { enabled: true, webhook: "nodalia_notifications_background_sync" },
+    mobile_notifications: { enabled: true, entities: ["notify.phone"] },
+  });
+  clearTimeout(instance._backgroundMobileSyncTimer);
+  instance._backgroundMobileSyncTimer = 0;
+
+  assert.equal(await instance._syncBackgroundMobileConfig(), true);
+  assert.equal(postedProfiles.at(-1)?.enabled, false);
+  sandbox.NodaliaBackend.setNotificationProfile = async () => {
+    throw new Error("websocket timeout");
+  };
+  instance._lastBackgroundMobileNativeCheckAt = 0;
+  instance._forceNextBackgroundMobileSync = true;
+  assert.equal(await instance._syncBackgroundMobileConfig(), false);
+  assert.equal(serviceCalls.some(call => call[1] === "turn_on"), false);
+  assert.equal(postedProfiles.every(profile => profile.enabled === false), true);
+  assert.ok(instance._lastBackgroundMobileNativeSignature);
+});
+
 test("failed Engine sync reactivates the installed legacy package", async () => {
   const { CardClass, sandbox } = loadNotificationsRuntime();
   const serviceCalls = [];

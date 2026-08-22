@@ -63,7 +63,58 @@ test("backend bridge treats missing commands as an optional unavailable backend"
     },
   });
   assert.equal(status.available, false);
+  assert.equal(status.transient, false);
   assert.deepEqual(JSON.parse(JSON.stringify(status.health)), {});
+});
+
+test("backend bridge retries transient websocket timeouts instead of caching Engine-missing", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const hass = {
+    async callWS() {
+      calls.push(true);
+      throw Object.assign(new Error("WebSocket timeout"), { code: "timeout" });
+    },
+  };
+  const first = await backend.status(hass, { silent: true });
+  const second = await backend.status(hass, { silent: true });
+  assert.equal(first.available, false);
+  assert.equal(first.transient, true);
+  assert.equal(second.transient, true);
+  assert.equal(calls.length, 2, "transient failures must be retried instead of cached as unavailable");
+});
+
+test("backend bridge keeps command-name timeouts transient", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const hass = {
+    async callWS() {
+      calls.push(true);
+      throw Object.assign(new Error("Timeout while calling nodalia/status"), { code: "timeout" });
+    },
+  };
+  const first = await backend.status(hass, { silent: true });
+  const second = await backend.status(hass, { silent: true });
+  assert.equal(first.available, false);
+  assert.equal(first.transient, true);
+  assert.equal(second.transient, true);
+  assert.equal(calls.length, 2, "mentioning nodalia/status must not make a timeout look like unknown_command");
+});
+
+test("backend bridge caches a confirmed missing Engine", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const hass = {
+    callWS() {
+      calls.push(true);
+      return Promise.reject(Object.assign(new Error("Unknown command nodalia/status"), { code: "unknown_command" }));
+    },
+  };
+  const first = await backend.status(hass, { silent: true });
+  const second = await backend.status(hass, { silent: true });
+  assert.equal(first.transient, false);
+  assert.equal(second.transient, false);
+  assert.equal(calls.length, 1);
 });
 
 test("backend bridge sends versioned profile and schedule mutations", async () => {
