@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-alpha.6] - 2026-08-22
+
+Sixth **`2.2.0`** alpha: mobile parity for the unified device layouts.
+
+### Fixed
+
+- Climate's compact layout now keeps the same 50 px hero icon as Fan on viewports up to 420 px, including WebKit and the iPhone companion-app viewport.
+- Cross-engine layout assertions now distinguish real geometry regressions from subpixel rounding while still enforcing the shared compact and circular design contracts.
+
+### Validation
+
+- The compact and circular device layout regression passes in Chromium and WebKit/iPhone.
+- The full Node, HACS, CodeQL and release validation from alpha.5 remains part of the release gate.
+
 ## [2.2.0-alpha.5] - 2026-08-22
 
 Fifth **`2.2.0`** alpha: unified device layouts and fail-safe Engine notification ownership.

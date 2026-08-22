@@ -17,10 +17,10 @@ Current stable release:
 Current preview release:
 
 ```text
-2.2.0-alpha.5
+2.2.0-alpha.6
 ```
 
-Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-alpha.5`** unifies the compact and circular Climate, Fan, Cover and Humidifier layouts and hardens Engine-first notification ownership against transient connection and profile-write failures. It also retains the multi-player, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics work from the earlier previews. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-alpha.6`** completes mobile parity for the unified compact and circular Climate, Fan, Cover and Humidifier layouts and retains the Engine-first notification failover hardening from alpha.5. It also includes the multi-player, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics work from the earlier previews. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -42,7 +42,7 @@ The project currently includes:
 The current maintenance stage focuses on:
 
 - Regression-free mobile and desktop behavior
-- Final stable-release validation of `2.2.0-alpha.5`
+- Final stable-release validation of `2.2.0-alpha.6`
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.0-alpha.5";
+const CARD_VERSION = "2.2.0-alpha.6";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -7423,6 +7423,23 @@ class NodaliaClimateCard extends HTMLElement {
 
           .climate-card__chips {
             justify-content: flex-start;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .climate-card--layout-compact .climate-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .climate-card--layout-compact .climate-card__icon {
+            height: 50px;
+            width: 50px;
+          }
+
+          .climate-card--layout-compact .climate-card__icon ha-icon {
+            --mdc-icon-size: 23px;
+            height: 23px;
+            width: 23px;
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}

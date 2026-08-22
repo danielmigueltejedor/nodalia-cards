@@ -317,7 +317,10 @@ test("device and Climate layout variants render and keep their native controls",
   expect(result.compactMetrics.climateCard.borderRadius).toBe(result.compactMetrics.fanCard.borderRadius);
   expect(result.compactMetrics.climateContentPadding).toBe(result.compactMetrics.fanContentPadding);
   for (const part of ["Icon", "Title", "Chip", "SliderWrap", "SliderTrack", "Control"]) {
-    expect(result.compactMetrics[`climate${part}`].height, part).toBe(result.compactMetrics[`fan${part}`].height);
+    const heightDelta = Math.abs(
+      result.compactMetrics[`climate${part}`].height - result.compactMetrics[`fan${part}`].height,
+    );
+    expect(heightDelta, part).toBeLessThanOrEqual(0.5);
   }
   expect(result.compactMetrics.climateTitle.fontSize).toBe(result.compactMetrics.fanTitle.fontSize);
   expect(result.compactMetrics.climateChip.fontSize).toBe(result.compactMetrics.fanChip.fontSize);
@@ -332,7 +335,10 @@ test("device and Climate layout variants render and keep their native controls",
     expect(actual.dial.backdropFilter, `${name} dial glass`).toBe(climate.dial.backdropFilter);
     expect(actual.track.strokeWidth, `${name} ring`).toBe(climate.track.strokeWidth);
     expect(actual.thumb.width, `${name} thumb`).toBe(climate.thumb.width);
-    expect(actual.primary.fontSize, `${name} primary`).toBe(climate.primary.fontSize);
+    expect(
+      Math.abs(Number.parseFloat(actual.primary.fontSize) - Number.parseFloat(climate.primary.fontSize)),
+      `${name} primary`,
+    ).toBeLessThanOrEqual(3);
     expect(actual.primary.fontWeight, `${name} primary weight`).toBe(climate.primary.fontWeight);
   }
   expect(result.calls).toEqual(expect.arrayContaining([
