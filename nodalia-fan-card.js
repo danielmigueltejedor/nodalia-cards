@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.2.0-alpha.3";
+const CARD_VERSION = "2.2.0-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -19,6 +19,7 @@ const ALLOWED_DOUBLE_TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "serv
 const DEFAULT_CONFIG = {
   entity: "",
   name: "",
+  layout: "compact",
   icon: "",
   entity_picture: "",
   show_entity_picture: false,
@@ -324,6 +325,21 @@ function getRangeValueFromGeometry(geometry, currentValue, clientX) {
   return clamp(nextValue, geometry.min, geometry.max);
 }
 
+function getCircularLayoutDialModel(value, min = 0, max = 100) {
+  const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
+  const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : 100;
+  const safeValue = clamp(Number(value), safeMin, safeMax);
+  const ratio = clamp((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
+  const angle = 135 + (ratio * 270);
+  const radians = angle * (Math.PI / 180);
+  const markerRadius = 86;
+  return {
+    progress: Number((ratio * 75).toFixed(3)),
+    markerLeft: Number((((120 + (Math.cos(radians) * markerRadius)) / 240) * 100).toFixed(3)),
+    markerTop: Number((((120 + (Math.sin(radians) * markerRadius)) / 240) * 100).toFixed(3)),
+  };
+}
+
 function translatePresetLabel(value) {
   const normalized = normalizeTextKey(value);
 
@@ -390,6 +406,7 @@ function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
   const normalizeList = value => (
     Array.isArray(value)
       ? value
@@ -688,15 +705,15 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3;
+    return this._config?.layout === "circular" ? 5 : 3;
   }
 
   getGridOptions() {
     return {
       rows: "auto",
       columns: "full",
-      min_rows: 2,
-      min_columns: 2,
+      min_rows: this._config?.layout === "circular" ? 5 : 2,
+      min_columns: this._config?.layout === "circular" ? 7 : 2,
     };
   }
 
@@ -720,6 +737,7 @@ class NodaliaFanCard extends HTMLElement {
       Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
       String(attrs.oscillating ?? ""),
       String(attrs.direction || ""),
+      String(this._config?.layout || "compact"),
       Boolean(this._isCompactLayout),
       Boolean(this._presetPanelOpen),
       `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
@@ -1682,6 +1700,16 @@ class NodaliaFanCard extends HTMLElement {
     });
   }
 
+  _changePercentageBy(direction, state = this._getState()) {
+    if (!state || !this._supportsPercentage(state)) {
+      return;
+    }
+    const configuredStep = Number(state.attributes?.percentage_step);
+    const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
+    const current = this._getPercentage(state);
+    this._commitPercentage(current + (Number(direction) * step));
+  }
+
   _toggleOscillation(state) {
     if (!this._supportsOscillation(state)) {
       return;
@@ -2258,6 +2286,14 @@ class NodaliaFanCard extends HTMLElement {
     this._triggerHaptic();
 
     switch (fanAction) {
+      case "decrease-percentage":
+        this._triggerButtonBounce(actionButton);
+        this._changePercentageBy(-1, state);
+        break;
+      case "increase-percentage":
+        this._triggerButtonBounce(actionButton);
+        this._changePercentageBy(1, state);
+        break;
       case "oscillate":
         this._triggerButtonBounce(actionButton);
         this._toggleOscillation(state);
@@ -2331,6 +2367,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const isOn = this._isOn(state);
+    const isCircularLayout = config.layout === "circular";
     const title = this._getFanName(state);
     const icon = this._getFanIcon(state);
     const entityPicture = this._getEntityPicture(state);
@@ -2607,6 +2644,32 @@ class NodaliaFanCard extends HTMLElement {
         </div>
       `
       : "";
+    const circularDial = getCircularLayoutDialModel(currentPercentage, 0, 100);
+    const circularControlsMarkup = `
+      <div class="fan-card__circular-layout" data-nodalia-tap-shield="true">
+        <div class="fan-card__circular-dial" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
+          <svg viewBox="0 0 240 240" aria-hidden="true">
+            <circle class="fan-card__circular-track" cx="120" cy="120" r="86" pathLength="100"></circle>
+            <circle class="fan-card__circular-progress" cx="120" cy="120" r="86" pathLength="100"></circle>
+          </svg>
+          <span class="fan-card__circular-thumb" aria-hidden="true"></span>
+          <div class="fan-card__circular-center">
+            <strong data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</strong>
+            <span>${escapeHtml(this._fanAria("speedSlider", "Speed"))}</span>
+            <div class="fan-card__circular-actions">
+              ${supportsOscillation ? `<button type="button" class="fan-card__control ${this._isOscillating(state) ? "fan-card__control--active" : ""}" data-fan-action="oscillate" aria-label="${escapeHtml(this._fanAria(this._isOscillating(state) ? "oscillationOff" : "oscillationOn", "Oscillation"))}"><ha-icon icon="mdi:rotate-360"></ha-icon></button>` : ""}
+              ${presetModes.length ? `<button type="button" class="fan-card__control ${this._presetPanelOpen ? "fan-card__control--active" : ""}" data-fan-action="toggle-preset-panel" aria-label="${escapeHtml(this._fanAria("showModes", "Show modes"))}"><ha-icon icon="mdi:tune-variant"></ha-icon></button>` : ""}
+            </div>
+          </div>
+        </div>
+        <div class="fan-card__circular-steps">
+          <button type="button" class="fan-card__circular-step" data-fan-action="decrease-percentage" ${supportsPercentage ? "" : "disabled"} aria-label="${escapeHtml(this._fanAria("speedDown", "Decrease speed"))}">&minus;</button>
+          <button type="button" class="fan-card__circular-power ${isOn ? "is-active" : ""}" data-fan-action="icon" aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"><ha-icon icon="mdi:power"></ha-icon></button>
+          <button type="button" class="fan-card__circular-step" data-fan-action="increase-percentage" ${supportsPercentage ? "" : "disabled"} aria-label="${escapeHtml(this._fanAria("speedUp", "Increase speed"))}">+</button>
+        </div>
+        <div class="fan-card__controls-inner">${presetPanelShellMarkup}</div>
+      </div>
+    `;
     const powerAnimationRemaining = powerAnimationState && this._powerTransition
       ? Math.max(0, this._powerTransition.endsAt - now)
       : 0;
@@ -3227,6 +3290,147 @@ class NodaliaFanCard extends HTMLElement {
           color: ${styles.control.accent_color};
         }
 
+        .fan-card--circular .fan-card__content {
+          gap: 14px;
+        }
+
+        .fan-card--circular .fan-card__hero {
+          align-items: center;
+        }
+
+        .fan-card__circular-layout {
+          display: grid;
+          gap: 14px;
+          justify-items: center;
+          min-width: 0;
+        }
+
+        .fan-card__circular-dial {
+          background:
+            radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 31%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 15%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border: 1px solid color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 50%;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent), 0 20px 38px rgba(0, 0, 0, 0.18);
+          height: min(280px, 72vw);
+          max-height: 280px;
+          max-width: 280px;
+          position: relative;
+          width: min(280px, 72vw);
+        }
+
+        .fan-card__circular-dial svg {
+          display: block;
+          height: 100%;
+          overflow: visible;
+          width: 100%;
+        }
+
+        .fan-card__circular-track,
+        .fan-card__circular-progress {
+          fill: none;
+          stroke-dasharray: 75 25;
+          stroke-linecap: round;
+          stroke-width: 16;
+          transform: rotate(135deg);
+          transform-origin: 120px 120px;
+        }
+
+        .fan-card__circular-track {
+          stroke: color-mix(in srgb, var(--primary-text-color) 25%, var(--divider-color));
+        }
+
+        .fan-card__circular-progress {
+          filter: drop-shadow(0 0 7px color-mix(in srgb, ${accentColor} 24%, transparent));
+          stroke: ${accentColor};
+          stroke-dasharray: var(--circular-progress, 0) 100;
+          transition: stroke-dasharray 240ms ease-out;
+        }
+
+        .fan-card__circular-thumb {
+          background: rgba(255, 255, 255, 0.96);
+          border: 5px solid color-mix(in srgb, ${accentColor} 28%, rgba(255, 255, 255, 0.96));
+          border-radius: 50%;
+          box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 8px 20px rgba(0, 0, 0, 0.22);
+          height: 22px;
+          left: var(--circular-marker-left);
+          position: absolute;
+          top: var(--circular-marker-top);
+          transform: translate(-50%, -50%);
+          transition: left 240ms ease-out, top 240ms ease-out;
+          width: 22px;
+        }
+
+        .fan-card__circular-center {
+          align-content: center;
+          display: grid;
+          gap: 8px;
+          inset: 21%;
+          justify-items: center;
+          position: absolute;
+          text-align: center;
+        }
+
+        .fan-card__circular-center strong {
+          font-size: clamp(38px, 12vw, 52px);
+          font-weight: 500;
+          letter-spacing: -0.055em;
+          line-height: 1;
+        }
+
+        .fan-card__circular-center > span {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .fan-card__circular-actions,
+        .fan-card__circular-steps {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+        }
+
+        .fan-card__circular-actions .fan-card__control {
+          height: 34px;
+          min-width: 34px;
+          width: 34px;
+        }
+
+        .fan-card__circular-step,
+        .fan-card__circular-power {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 9%, transparent);
+          border-radius: 50%;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          font-size: 24px;
+          height: 50px;
+          justify-content: center;
+          padding: 0;
+          width: 50px;
+        }
+
+        .fan-card__circular-power.is-active {
+          background: color-mix(in srgb, ${accentColor} 22%, ${styles.control.accent_background});
+          border-color: color-mix(in srgb, ${accentColor} 50%, transparent);
+        }
+
+        .fan-card__circular-power ha-icon {
+          --mdc-icon-size: 22px;
+        }
+
+        .fan-card__circular-step:disabled {
+          cursor: default;
+          opacity: 0.4;
+        }
+
         :is(.fan-card__icon, .fan-card__control, .fan-card__preset):active:not(:disabled),
         :is(.fan-card__icon, .fan-card__control, .fan-card__preset).is-pressing:not(:disabled) {
           animation: fan-card-button-bounce var(--fan-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
@@ -3480,8 +3684,8 @@ class NodaliaFanCard extends HTMLElement {
         }
       </style>
       <ha-card
-        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""} ${powerAnimationState ? `fan-card--${powerAnimationState}` : ""}"
         data-fan-action="body"
+        class="fan-card ${isOn ? "is-on" : "is-off"} ${isCircularLayout ? "fan-card--circular" : ""} ${!isCircularLayout && isCompactLayout ? "fan-card--compact" : ""} ${showCopyBlock ? "fan-card--with-copy" : ""} ${powerAnimationState ? `fan-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="fan-card__content">
@@ -3501,14 +3705,14 @@ class NodaliaFanCard extends HTMLElement {
               ? `
                 <div class="fan-card__copy">
                   <div class="fan-card__headline">
-                    ${isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                    ${!isCircularLayout && isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
                     ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 </div>
               `
               : ""}
           </div>
-          ${controlsShellMarkup}
+          ${isCircularLayout ? circularControlsMarkup : controlsShellMarkup}
         </div>
       </ha-card>
     `;
@@ -4402,6 +4606,10 @@ class NodaliaFanCardEditor extends HTMLElement {
               placeholder: "fan.salon",
               fullWidth: true,
             })}
+            ${this._renderSelectField("ed.entity.layout", "layout", config.layout || "compact", [
+              { value: "compact", label: "ed.shared.layout_compact" },
+              { value: "circular", label: "ed.shared.layout_circular" },
+            ])}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
               placeholder: "mdi:fan",
               fullWidth: true,

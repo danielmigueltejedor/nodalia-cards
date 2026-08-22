@@ -17,10 +17,10 @@ Current stable release:
 Current preview release:
 
 ```text
-2.2.0-alpha.3
+2.2.0-alpha.4
 ```
 
-Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-alpha.3`** makes Engine ownership explicit even for legacy packages without a configured webhook, while retaining localized background alerts, the expanded Air Quality / battery / network Entity Card layouts, cross-browser device-panel animation cleanup and individually configurable slider / dial haptics. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-alpha.4`** fixes multi-player selection, custom Media Player power actions and Navigation Bar secondary-player editing while retaining the Engine ownership, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics from the earlier previews. Nodalia Cards is now listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -37,11 +37,13 @@ The project currently includes:
 
 ---
 
-# 🎯 Current focus (post-`2.1.2` maintenance)
+# 🎯 Current focus (`2.2.0` stabilization)
 
 The current maintenance stage focuses on:
 
 - Regression-free mobile and desktop behavior
+- Final stable-release validation of `2.2.0-alpha.4`
+- Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
 - Bundle startup and render performance

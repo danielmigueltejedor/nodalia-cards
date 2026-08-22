@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-weather-card";
 const EDITOR_TAG = "nodalia-weather-card-editor";
-const CARD_VERSION = "2.2.0-alpha.3";
+const CARD_VERSION = "2.2.0-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2081,6 +2081,9 @@ class NodaliaWeatherCard extends HTMLElement {
     const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance, shouldAnimateForecast);
     const meteoalarmChipRowMarkup = this._renderMeteoalarmChipRow(shouldAnimateEntrance);
     const meteoalarmPopupMarkup = this._renderMeteoalarmPopup();
+    const hasElevatedOverlay = Boolean(
+      this._meteoalarmPopupOpen || this._forecastPopup || this._forecastHoverPreview,
+    );
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -2090,6 +2093,8 @@ class NodaliaWeatherCard extends HTMLElement {
           --weather-card-popover-surface: color-mix(in srgb, var(--primary-background-color, #111318) 88%, var(--primary-text-color, #ffffff) 12%);
           --weather-card-popover-surface-strong: color-mix(in srgb, var(--primary-background-color, #111318) 78%, var(--primary-text-color, #ffffff) 22%);
           display: block;
+          position: relative;
+          z-index: ${hasElevatedOverlay ? "2147483000" : "auto"};
         }
 
         * {

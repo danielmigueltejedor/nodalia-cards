@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Meer info",
   "ed.scenes.use_entity_icon": "Entiteitsicoon gebruiken",
   "ed.shared.hide_tap_action_settings": "Tikacties verbergen",
+  "ed.shared.layout_circular": "Cirkelvormig",
+  "ed.shared.layout_compact": "Compact",
   "ed.shared.show_tap_action_settings": "Tikacties tonen",
   "ed.vacuum.animations_section_hint": "Visuele feedback voor robotknoppen en panelen.",
   "ed.vacuum.aux_section_hint": "Optionele sensoren en selecteurs voor status en bediening.",

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.2.0-alpha.3";
+const CARD_VERSION = "2.2.0-alpha.4";
 const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
@@ -175,7 +175,9 @@ const DEFAULT_CONFIG = {
     button_bounce_duration: 320,
   },
   security: {
-    strict_service_actions: true,
+    // Custom actions configured in the visual editor must work out of the box.
+    // Users can still opt into an allowlist by enabling strict mode explicitly.
+    strict_service_actions: false,
     allowed_services: [],
     allowed_service_domains: [],
   },
@@ -792,6 +794,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._mediaBrowserScrollPositions = new Map();
     this._mediaBrowserRequestToken = 0;
     this._activePlayerIndex = 0;
+    this._activePlayerEntity = "";
     this._mediaTicker = null;
     this._lastRenderSignature = "";
     this._draftVolume = new Map();
@@ -1275,6 +1278,24 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _getConfiguredPlayers() {
     return Array.isArray(this._config?.players) ? this._config.players : [];
+  }
+
+  _resolveActivePlayerIndex(players) {
+    if (!Array.isArray(players) || players.length === 0) {
+      this._activePlayerIndex = 0;
+      return 0;
+    }
+
+    const entityIndex = this._activePlayerEntity
+      ? players.findIndex(player => player?.entity === this._activePlayerEntity)
+      : -1;
+    const nextIndex = entityIndex >= 0
+      ? entityIndex
+      : clamp(this._activePlayerIndex ?? 0, 0, players.length - 1);
+
+    this._activePlayerIndex = nextIndex;
+    this._activePlayerEntity = String(players[nextIndex]?.entity || "");
+    return nextIndex;
   }
 
   _findPlayerConfig(entityId) {
@@ -1960,7 +1981,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return false;
     }
 
-    const activeIndex = clamp(this._activePlayerIndex ?? 0, 0, players.length - 1);
+    const activeIndex = this._resolveActivePlayerIndex(players);
     const player = players[activeIndex];
     if (!player?.entity) {
       return false;
@@ -3005,7 +3026,9 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.stopPropagation();
       this._triggerHaptic();
       this._triggerButtonBounce(mediaDotButton);
-      this._activePlayerIndex = Number(mediaDotButton.dataset.mediaIndex);
+      const visiblePlayers = this._getVisiblePlayers();
+      this._activePlayerIndex = clamp(Number(mediaDotButton.dataset.mediaIndex), 0, visiblePlayers.length - 1);
+      this._activePlayerEntity = String(visiblePlayers[this._activePlayerIndex]?.entity || "");
       this._animateContentOnNextRender = true;
       this._render();
       return;
@@ -3241,7 +3264,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       };
     }
 
-    this._activePlayerIndex = clamp(this._activePlayerIndex, 0, players.length - 1);
+    this._resolveActivePlayerIndex(players);
 
     const player = players[this._activePlayerIndex];
     const state = this._hass?.states?.[player.entity];
@@ -3531,7 +3554,7 @@ class NodaliaMediaPlayer extends HTMLElement {
               .map(
                 chip => `
                   <span class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}">
-                    ${escapeHtml(chip.label)}
+                    <span class="media-player__chip-label">${escapeHtml(chip.label)}</span>
                   </span>
                 `,
               )
@@ -3543,15 +3566,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     const infoRailItems = [
       showTopChip
         ? `
-          <span class="media-player__chip media-player__chip--device media-player__chip--top">
-            ${escapeHtml(playerLabel)}
+          <span class="media-player__chip media-player__chip--device media-player__chip--top" title="${escapeHtml(playerLabel)}">
+            <span class="media-player__chip-label">${escapeHtml(playerLabel)}</span>
           </span>
         `
         : "",
       showStateLabel
         ? `
           <span class="media-player__chip media-player__chip--${escapeHtml(state.state || "default")} media-player__chip--status">
-            ${escapeHtml(statusLabel)}
+            <span class="media-player__chip-label">${escapeHtml(statusLabel)}</span>
           </span>
         `
         : "",
@@ -4751,6 +4774,15 @@ class NodaliaMediaPlayer extends HTMLElement {
           min-height: 26px;
           overflow: hidden;
           padding: 0 9px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .media-player__chip-label {
+          display: block;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }

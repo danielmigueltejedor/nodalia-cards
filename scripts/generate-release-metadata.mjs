@@ -14,12 +14,6 @@ if (manifest?.pkgVersion !== pkg.version) {
 }
 
 const distributedFiles = [
-  manifest.loaderFile,
-  `nodalia-cards-${pkg.version}.js`,
-  manifest.splitCoreFile,
-  manifest.splitSuiteFile,
-  manifest.editorFile,
-  ...(manifest.compatLoaderFiles || []),
   manifest.file,
   "nodalia-cards.manifest.js",
   "LICENSE",

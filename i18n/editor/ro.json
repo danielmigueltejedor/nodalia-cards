@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Mai multe informații",
   "ed.scenes.use_entity_icon": "Folosește pictograma entității",
   "ed.shared.hide_tap_action_settings": "Ascunde acțiuni la atingere",
+  "ed.shared.layout_circular": "Circular",
+  "ed.shared.layout_compact": "Compact",
   "ed.shared.show_tap_action_settings": "Afișează acțiuni la atingere",
   "ed.vacuum.animations_section_hint": "Feedback vizual pentru butoanele și panourile robotului.",
   "ed.vacuum.aux_section_hint": "Senzori și selectoare opționale pentru a îmbogăți starea și comenzile.",

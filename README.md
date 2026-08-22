@@ -6,7 +6,7 @@
     <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases/latest"><img src="https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable&sort=semver" alt="Latest stable release"></a>
     <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases"><img src="https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=preview" alt="Latest preview release"></a>
     <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant&logoColor=white" alt="Home Assistant 2025.1 or newer">
-    <img src="https://img.shields.io/badge/HACS-listing%20in%20progress-F59E0B" alt="Default HACS listing in progress">
+    <a href="https://github.com/hacs/default/blob/master/plugin"><img src="https://img.shields.io/badge/HACS-default%20repository-41BDF5?logo=home-assistant&logoColor=white" alt="Available in the default HACS catalogue"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/github/license/danielmigueltejedor/nodalia-cards" alt="MIT license"></a>
   </p>
 
@@ -25,7 +25,7 @@
 Nodalia Cards is a custom Home Assistant frontend card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
 
 > [!IMPORTANT]
-> Inclusion in the default HACS catalogue is currently in progress. Until it is approved, install Nodalia Cards through HACS as a custom **Dashboard** repository using the steps below.
+> Nodalia Cards is available directly from the official HACS catalogue as a **Dashboard** plugin. A custom repository is no longer required.
 
 > [!TIP]
 > **Nodalia Cards Engine is optional.** Install it when you want background notifications, shared dismissals, a notification inbox or native Climate schedules. The cards and visual editors continue to work without it.
@@ -107,16 +107,12 @@ Only settings that differ from the defaults are written to YAML, keeping dashboa
 
 ## Installation
 
-### HACS custom Dashboard — recommended
-
-Until the default HACS listing is approved:
+### HACS Dashboard — recommended
 
 1. Open **HACS**.
-2. Open the three-dot menu and choose **Custom repositories**.
-3. Add `https://github.com/danielmigueltejedor/nodalia-cards`.
-4. Select category **Dashboard**.
-5. Open **Nodalia Cards** and choose **Download**.
-6. Reload your browser (or perform a hard refresh).
+2. Search for **Nodalia Cards** in the Dashboard category.
+3. Open it and choose **Download**.
+4. Reload your browser (or perform a hard refresh).
 
 [![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
@@ -126,11 +122,11 @@ If a card does not appear immediately after installation or an update, perform a
 /hacsfiles/nodalia-cards/nodalia-cards.js
 ```
 
-That single file includes both the cards and their visual editors. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
+That is the only generated runtime distributed by the repository. It includes both the cards and their visual editors, keeping HACS installs and updates lightweight. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
 
 ### Optional companion: Nodalia Cards Engine
 
-Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.2` is the recommended companion for Nodalia Cards `2.2.0-alpha.3`.
+Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine `2.0.2` is the recommended companion for Nodalia Cards `2.2.0-alpha.4`.
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
@@ -155,7 +151,7 @@ Type: module
 
 3. Reload your browser.
 
-### Updating to 2.1.2
+### Updating Nodalia Cards
 
 - Update Nodalia Cards from HACS and perform a hard browser refresh so the self-contained `nodalia-cards.js` resource is replaced in the frontend cache.
 - Existing card YAML and Lovelace resources remain compatible; no Dashboard-to-Integration migration is required.
@@ -192,6 +188,18 @@ calibration_source:
   camera: true
 ```
 
+### Compact and circular device layouts
+
+Fan, Humidifier and Cover keep their compact layout by default and can use the Climate-style circular surface with `layout: circular`. Climate keeps its circular layout by default and can use the horizontal device-card surface with `layout: compact`.
+
+```yaml
+type: custom:nodalia-fan-card
+entity: fan.living_room
+layout: circular
+```
+
+The layout selector is also available in each card's visual editor. Existing YAML remains unchanged; see [Device and Climate layouts](./docs/cards/device-climate-layouts.md) for controls, defaults and examples.
+
 ## Advanced guides
 
 | Feature | Documentation |
@@ -200,6 +208,7 @@ calibration_source:
 | Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
 | Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
+| Device and Climate layouts | [Compact and circular variants](./docs/cards/device-climate-layouts.md) |
 | Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |
 | Background mobile notifications | [Native delivery and legacy fallback](./docs/nodalia-integration.md#background-mobile-notifications) |
 | Translations | [Contributor guide](./docs/TRANSLATIONS.md) |

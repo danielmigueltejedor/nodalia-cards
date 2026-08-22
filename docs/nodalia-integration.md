@@ -11,15 +11,15 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
-## Compatibility for Nodalia Cards 2.2.0-alpha.3
+## Compatibility for Nodalia Cards 2.2.0-alpha.4
 
-| Component | Supported baseline | Recommended for 2.2.0-alpha.3 |
+| Component | Supported baseline | Recommended for 2.2.0-alpha.4 |
 |---|---|---|
 | Home Assistant | `2025.1.0` or newer | Current supported stable release |
-| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.0-alpha.3` |
+| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.0-alpha.4` |
 | Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.2` |
 
-Cards `2.2.0-alpha.3` and Engine `2.0.2` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `2.2.0-alpha.4` and Engine `2.0.2` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## What the optional Engine makes native
 
@@ -46,7 +46,7 @@ Packages, webhooks and `input_text` helpers are therefore a fallback rather than
 
 ### 1. Keep or install the Cards plugin
 
-Add `https://github.com/danielmigueltejedor/nodalia-cards` to HACS as a **Dashboard** custom repository and download **Nodalia Cards**. Existing users do not need to remove or reinstall it.
+Open HACS, search for **Nodalia Cards** in the Dashboard category and download it from the official catalogue. A custom repository is no longer required, and existing users do not need to remove or reinstall the plugin.
 
 [![Add Nodalia Cards to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
 
@@ -64,7 +64,7 @@ The plugin resource remains:
 4. Search for **Nodalia Cards Engine** and confirm setup.
 5. Reload the browser once so open cards discover its capabilities.
 
-Both custom repositories can coexist in HACS because they use different repository URLs and categories.
+The official Cards plugin and the optional custom Engine repository can coexist in HACS because they use different repository URLs and categories.
 
 ## Migrating advanced features safely
 

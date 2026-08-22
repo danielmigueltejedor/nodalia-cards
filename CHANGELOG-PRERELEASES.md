@@ -10,6 +10,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.4] - 2026-08-22
+
+Fourth **`2.2.0`** alpha: reliable multi-player selection and visual-editor persistence.
+
+### Added
+
+- Nodalia Cards is now available directly from the official HACS Dashboard catalogue.
+- Fan, Humidifier and Cover can opt into a Climate-style circular layout; Climate can opt into the compact horizontal device layout. All four choices are available in the visual editor and preserve the previous per-card defaults.
+
+### Changed
+
+- HACS and GitHub releases now ship `nodalia-cards.js` as the single generated runtime, removing the redundant `.bundle`, versioned full bundle and core/suite/editor copies from the repository root.
+- Installation and compatibility documentation now uses the official HACS flow and positions this alpha for final `2.2.0` stabilization.
+
+### Fixed
+
+- Media Player keeps the selected player by entity when visibility or ordering changes, preventing intermittent jumps to another configured player.
+- Custom Media Player power actions work by default; strict service allowlisting remains available as an explicit opt-in.
+- Long Media Player device names now end with an ellipsis inside the name chip instead of being abruptly clipped.
+- Navigation Bar now persists secondary media-player entity changes made with Home Assistant's visual entity picker.
+- Weather forecast popups now elevate the whole card stacking context while open, keeping the popup above neighbouring card artwork.
+
+### Validation
+
+- Regression coverage verifies entity-based player selection, custom power-action defaults, secondary-player picker commits, compact/circular layout normalization and the single-bundle publishing contract.
+
+---
+
 ## [2.2.0-alpha.3] - 2026-08-18
 
 Third **`2.2.0`** alpha: reliable Engine ownership of legacy notification packages.

@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Más información",
   "ed.scenes.use_entity_icon": "Usar icono de entidad",
   "ed.shared.hide_tap_action_settings": "Ocultar acciones al pulsar",
+  "ed.shared.layout_circular": "Circular",
+  "ed.shared.layout_compact": "Compacto",
   "ed.shared.show_tap_action_settings": "Mostrar acciones al pulsar",
   "ed.vacuum.animations_section_hint": "Feedback visual para botones y paneles del robot.",
   "ed.vacuum.aux_section_hint": "Sensores y selectores opcionales para enriquecer el estado y los controles.",

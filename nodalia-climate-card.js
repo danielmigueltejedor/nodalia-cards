@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.0-alpha.3";
+const CARD_VERSION = "2.2.0-alpha.4";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -42,6 +42,7 @@ const DRAFT_CONFIRMATION_RETRY_LIMIT = 1;
 const DEFAULT_CONFIG = {
   entity: "",
   name: "",
+  layout: "circular",
   icon: "",
   entity_picture: "",
   show_entity_picture: false,
@@ -1245,6 +1246,7 @@ function normalizeConfig(rawConfig) {
   config.tap_action = norm(config.tap_action, "more-info");
   config.hold_action = norm(config.hold_action, "more-info");
   config.double_tap_action = norm(config.double_tap_action, "none");
+  config.layout = normalizeTextKey(config.layout) === "compact" ? "compact" : "circular";
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
   migrateLegacyClimateOffColors(config.styles);
@@ -1556,6 +1558,9 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   getCardSize() {
+    if (this._config?.layout === "compact") {
+      return this._engineOverride?.available === true ? 3 : 2;
+    }
     return this._engineOverride?.available === true ? 5 : 4;
   }
 
@@ -1582,6 +1587,7 @@ class NodaliaClimateCard extends HTMLElement {
       attrs.preset_mode || "",
       attrs.fan_mode || "",
       attrs.swing_mode || "",
+      this._config?.layout || "circular",
       `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}|${this._config?.double_tap_action || ""}`,
       Boolean(entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))),
       this._scheduleComposerOpen === true,
@@ -2652,6 +2658,14 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   getGridOptions() {
+    if (this._config?.layout === "compact") {
+      return {
+        rows: "auto",
+        columns: "full",
+        min_rows: this._engineOverride?.available === true ? 3 : 2,
+        min_columns: 2,
+      };
+    }
     return {
       rows: "auto",
       columns: "full",
@@ -4808,6 +4822,70 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _onShadowInput(event) {
+    const compactInput = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement && node.dataset?.climateCompactField);
+
+    if (compactInput) {
+      event.stopPropagation();
+      const state = this._getState();
+      const field = compactInput.dataset.climateCompactField;
+      let value = Number(compactInput.value);
+      if (!state || !Number.isFinite(value)) {
+        return;
+      }
+
+      const range = this._getTemperatureRange(state);
+      const step = this._getTemperatureStep(state);
+      const ratio = clamp((value - range.min) / Math.max(range.max - range.min, step), 0, 1);
+      compactInput.closest(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(ratio));
+      const valueNode = compactInput.closest(".climate-card__compact-slider")?.querySelector("[data-climate-compact-value]");
+      if (valueNode instanceof HTMLElement) {
+        valueNode.textContent = formatTemperature(value, step, true, this._hass);
+      }
+
+      if (field === "temperature") {
+        const targetNode = this.shadowRoot?.querySelector('[data-climate-readout="compact-target"]');
+        if (targetNode instanceof HTMLElement) {
+          targetNode.textContent = formatTemperature(value, step, false, this._hass);
+        }
+        this._queueTemperatureCommit(value, {
+          immediate: event.type === "change",
+          render: event.type === "change",
+        });
+        return;
+      }
+
+      const pair = this._getEffectiveTargetLowHigh(state);
+      if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+        return;
+      }
+      this._selectedRangeThumb = field === "low" ? "low" : "high";
+      const constrainedValue = field === "low"
+        ? this._clampRangeLowCandidate(value, pair.high, state)
+        : this._clampRangeHighCandidate(value, pair.low, state);
+      if (!Number.isFinite(constrainedValue)) {
+        return;
+      }
+      if (constrainedValue !== value) {
+        value = constrainedValue;
+        compactInput.value = String(value);
+        const constrainedRatio = clamp((value - range.min) / Math.max(range.max - range.min, step), 0, 1);
+        compactInput.closest(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(constrainedRatio));
+        if (valueNode instanceof HTMLElement) {
+          valueNode.textContent = formatTemperature(value, step, true, this._hass);
+        }
+      }
+      const nextPair = field === "low"
+        ? { low: value, high: pair.high }
+        : { low: pair.low, high: value };
+      this._queueRangeCommit(nextPair, {
+        immediate: event.type === "change",
+        render: event.type === "change",
+      });
+      return;
+    }
+
     const input = event
       .composedPath()
       .find(node => (
@@ -5201,6 +5279,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     const config = this._config || normalizeConfig({});
     const styles = config.styles || DEFAULT_CONFIG.styles;
+    const isCompactCardLayout = config.layout === "compact";
 
     const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
       this._hass,
@@ -5387,17 +5466,22 @@ class NodaliaClimateCard extends HTMLElement {
     const overrideBlockPx = showEngineOverride
       ? overrideChipPx + overrideStatusPx + interBlockGapPx
       : 0;
-    const climateCardMinHeightPx = Math.max(
-      220,
-      Math.round(
-        cardPaddingY * 2 +
-          effectiveIconSizePx +
-          dialSizePx +
-          overrideBlockPx +
-          (showStepControls ? stepControlSize : 0) +
-          interBlockGapPx,
-      ),
-    );
+    const climateCardMinHeightPx = isCompactCardLayout
+      ? Math.max(
+        170,
+        Math.round(cardPaddingY * 2 + effectiveIconSizePx + overrideBlockPx + 116),
+      )
+      : Math.max(
+        220,
+        Math.round(
+          cardPaddingY * 2 +
+            effectiveIconSizePx +
+            dialSizePx +
+            overrideBlockPx +
+            (showStepControls ? stepControlSize : 0) +
+            interBlockGapPx,
+        ),
+      );
     const dialCenterGridGap =
       modeDialButtonCount >= 5
         ? (tightLayout ? "6px" : compactLayout ? "7px" : "8px")
@@ -5644,6 +5728,55 @@ class NodaliaClimateCard extends HTMLElement {
                   ${dialModeButtonFragments.join("")}
                 </div>`;
 
+    const compactSlider = ({ field, label, value, color = accentColor }) => {
+      if (!Number.isFinite(value)) {
+        return "";
+      }
+      const compactRatio = clamp(
+        (value - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep),
+        0,
+        1,
+      );
+      return `
+        <label class="climate-card__compact-slider" style="--compact-progress:${compactRatio};--compact-slider-color:${escapeHtml(color)};">
+          <span class="climate-card__compact-slider-label">${escapeHtml(label)}</span>
+          <span class="climate-card__compact-slider-shell">
+            <span class="climate-card__compact-slider-track" aria-hidden="true"></span>
+            <input type="range" min="${temperatureRange.min}" max="${temperatureRange.max}" step="${temperatureStep}" value="${value}" data-climate-compact-field="${escapeHtml(field)}" aria-label="${escapeHtml(label)}" />
+          </span>
+          <strong data-climate-compact-value>${escapeHtml(formatTemperature(value, temperatureStep, true, hass))}</strong>
+        </label>`;
+    };
+    const compactSlidersMarkup = isRangeMode
+      ? `
+          ${compactSlider({ field: "low", label: translateClimateMode("heat"), value: rangeBand.low, color: dialHeatStroke })}
+          ${compactSlider({ field: "high", label: translateClimateMode("cool"), value: rangeBand.high, color: dialCoolStroke })}
+        `
+      : (supportsTargetTemperature && Number.isFinite(targetFin)
+        ? compactSlider({ field: "temperature", label: dialAriaLabel, value: targetFin })
+        : "");
+    const compactTargetReadout = isRangeMode
+      ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))
+      : `<span data-climate-readout="compact-target">${dialPrimaryReadoutHtml}</span><span class="climate-card__compact-degree">°${escapeHtml(tempScale)}</span>`;
+    const compactControlsMarkup = `
+      <div class="climate-card__compact-panel" data-nodalia-tap-shield="true">
+        <div class="climate-card__compact-summary">
+          <strong>${compactTargetReadout}</strong>
+          <span>${dialMetaHtml}${dialActionHtml}</span>
+        </div>
+        ${compactSlidersMarkup ? `<div class="climate-card__compact-sliders">${compactSlidersMarkup}</div>` : ""}
+        ${dialControlsMarkup}
+      </div>
+      ${engineOverrideMarkup}
+      ${showStepControls ? `
+        <div class="climate-card__steps climate-card__steps--compact ${shouldAnimateEntrance ? "climate-card__steps--entering" : ""}">
+          <button type="button" class="climate-card__step-button" data-climate-action="decrease" aria-label="Decrease temperature"><span>&minus;</span></button>
+          ${scheduleButtonStepsMarkup}
+          <button type="button" class="climate-card__step-button" data-climate-action="increase" aria-label="Increase temperature"><span>+</span></button>
+        </div>
+      ` : scheduleButtonDialMarkup}
+    `;
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -5874,6 +6007,96 @@ class NodaliaClimateCard extends HTMLElement {
           transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
           white-space: nowrap;
         }
+
+        .climate-card--layout-compact .climate-card__content { gap: 12px; }
+        .climate-card__compact-panel {
+          backdrop-filter: blur(18px);
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border-radius: ${styles.card.border_radius};
+          display: grid;
+          gap: 13px;
+          min-width: 0;
+          padding: 14px;
+        }
+        .climate-card__compact-summary {
+          align-items: center;
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+          min-width: 0;
+        }
+        .climate-card__compact-summary > strong {
+          color: var(--primary-text-color);
+          font-size: clamp(25px, 7cqw, 36px);
+          font-weight: 760;
+          letter-spacing: -0.04em;
+          line-height: 1;
+          min-width: 0;
+          white-space: nowrap;
+        }
+        .climate-card__compact-degree { font-size: .42em; font-weight: 600; margin-left: 2px; vertical-align: top; }
+        .climate-card__compact-summary > span {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: flex;
+          flex-wrap: wrap;
+          font-size: ${effectiveCurrentSize};
+          gap: 8px;
+          justify-content: flex-end;
+          min-width: 0;
+          text-align: right;
+        }
+        .climate-card__compact-sliders { display: grid; gap: 9px; min-width: 0; }
+        .climate-card__compact-slider {
+          align-items: center;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: auto minmax(80px, 1fr) auto;
+          min-width: 0;
+        }
+        .climate-card__compact-slider-label,
+        .climate-card__compact-slider > strong {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .climate-card__compact-slider > strong { color: var(--primary-text-color); min-width: 46px; text-align: right; }
+        .climate-card__compact-slider-shell { height: 42px; min-width: 0; position: relative; }
+        .climate-card__compact-slider-track {
+          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 999px;
+          height: 7px;
+          inset: 50% 0 auto;
+          overflow: hidden;
+          pointer-events: none;
+          position: absolute;
+          transform: translateY(-50%);
+        }
+        .climate-card__compact-slider-track::before {
+          background: var(--compact-slider-color, ${accentColor});
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          position: absolute;
+          transform: scaleX(var(--compact-progress, 0));
+          transform-origin: left center;
+        }
+        .climate-card__compact-slider input {
+          appearance: none;
+          background: transparent;
+          cursor: pointer;
+          height: 42px;
+          inset: 0;
+          margin: 0;
+          opacity: 0;
+          position: absolute;
+          touch-action: pan-y;
+          width: 100%;
+        }
+        .climate-card__compact-panel .climate-card__dial-controls { margin-top: 0; padding-top: 1px; }
+        .climate-card__steps--compact { margin-top: 0; }
 
         .climate-card__dial-wrap {
           align-items: center;
@@ -7126,7 +7349,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
-      <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)}" style="--accent-color:${escapeHtml(accentColor)};">
+      <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)} ${isCompactCardLayout ? "climate-card--layout-compact" : "climate-card--layout-circular"}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="climate-card__content" data-climate-card="root">
           <div class="climate-card__hero ${shouldAnimateEntrance ? "climate-card__hero--entering" : ""}">
             <button
@@ -7148,6 +7371,7 @@ class NodaliaClimateCard extends HTMLElement {
             </div>
           </div>
 
+          ${isCompactCardLayout ? compactControlsMarkup : `
           <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
             ${scheduleButtonDialMarkup}
             <div
@@ -7205,6 +7429,7 @@ class NodaliaClimateCard extends HTMLElement {
               `
               : ""
           }
+          `}
         </div>
       </ha-card>
       ${scheduleComposerMarkup}
@@ -7853,6 +8078,10 @@ class NodaliaClimateCardEditorLegacy extends HTMLElement {
             ${this._renderTextField("ed.entity.entity_main", "entity", config.entity, {
               placeholder: "climate.salon",
             })}
+            ${this._renderSelectField("ed.entity.layout", "layout", config.layout || "circular", [
+              { value: "compact", label: "ed.shared.layout_compact" },
+              { value: "circular", label: "ed.shared.layout_circular" },
+            ])}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: "Salon",
             })}
@@ -8896,6 +9125,10 @@ class NodaliaClimateCardEditor extends HTMLElement {
               placeholder: "climate.salon",
               fullWidth: true,
             })}
+            ${this._renderSelectField("ed.entity.layout", "layout", config.layout || "circular", [
+              { value: "compact", label: "ed.shared.layout_compact" },
+              { value: "circular", label: "ed.shared.layout_circular" },
+            ])}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
               placeholder: "Salon",
               fullWidth: true,

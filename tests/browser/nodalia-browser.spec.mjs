@@ -137,6 +137,107 @@ test("every published card mounts from its stub configuration", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("device and Climate layout variants render and keep their native controls", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const result = await page.evaluate(async () => {
+    const states = {
+      "fan.test": {
+        entity_id: "fan.test",
+        state: "on",
+        attributes: { friendly_name: "Fan", percentage: 40, percentage_step: 5, supported_features: 11, preset_modes: ["Auto"] },
+      },
+      "humidifier.test": {
+        entity_id: "humidifier.test",
+        state: "on",
+        attributes: { friendly_name: "Humidifier", humidity: 55, min_humidity: 30, max_humidity: 80, supported_features: 1, available_modes: ["auto"] },
+      },
+      "cover.test": {
+        entity_id: "cover.test",
+        state: "open",
+        attributes: { friendly_name: "Cover", current_position: 45, supported_features: 143 },
+      },
+      "climate.test": {
+        entity_id: "climate.test",
+        state: "heat",
+        attributes: {
+          friendly_name: "Climate",
+          current_temperature: 20,
+          temperature: 21,
+          min_temp: 10,
+          max_temp: 30,
+          target_temp_step: 0.5,
+          supported_features: 1,
+          hvac_modes: ["off", "heat", "cool"],
+        },
+      },
+    };
+    const calls = [];
+    const hass = window.makeHass(states);
+    hass.callService = async (domain, service, data) => calls.push({ domain, service, data });
+    const configs = [
+      ["nodalia-fan-card", { entity: "fan.test", layout: "circular" }],
+      ["nodalia-humidifier-card", { entity: "humidifier.test", layout: "circular" }],
+      ["nodalia-cover-card", { entity: "cover.test", layout: "circular" }],
+      ["nodalia-climate-card", { entity: "climate.test", layout: "compact" }],
+    ];
+    const cards = {};
+    for (const [tag, config] of configs) {
+      const card = document.createElement(tag);
+      card.setConfig(config);
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      cards[tag] = card;
+    }
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
+
+    cards["nodalia-fan-card"].shadowRoot.querySelector('[data-fan-action="increase-percentage"]')?.click();
+    cards["nodalia-humidifier-card"].shadowRoot.querySelector('[data-humidifier-action="increase-humidity"]')?.click();
+    cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="increase-position"]')?.click();
+    const climateSlider = cards["nodalia-climate-card"].shadowRoot.querySelector('[data-climate-compact-field="temperature"]');
+    if (climateSlider) {
+      climateSlider.value = "22";
+      climateSlider.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+      climateSlider.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+    }
+
+    const editorLayouts = {};
+    for (const [tag, config] of configs) {
+      const editor = await customElements.get(tag).getConfigElement();
+      editor.hass = hass;
+      editor.setConfig(config);
+      document.querySelector("#fixture").append(editor);
+      const selector = editor.shadowRoot.querySelector('select[data-field="layout"]');
+      editorLayouts[tag] = { exists: Boolean(selector), value: selector?.value || "" };
+    }
+    await new Promise(resolve => window.setTimeout(resolve, 30));
+
+    return {
+      fanCircular: Boolean(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card--circular .fan-card__circular-dial")),
+      humidifierCircular: Boolean(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card--circular .humidifier-card__circular-dial")),
+      coverCircular: Boolean(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card--circular .fan-card__circular-dial")),
+      climateCompact: Boolean(cards["nodalia-climate-card"].shadowRoot.querySelector(".climate-card--layout-compact .climate-card__compact-slider")),
+      climateHasCircularDial: Boolean(cards["nodalia-climate-card"].shadowRoot.querySelector(".climate-card__dial")),
+      editorLayouts,
+      calls,
+    };
+  });
+
+  expect(result.fanCircular).toBe(true);
+  expect(result.humidifierCircular).toBe(true);
+  expect(result.coverCircular).toBe(true);
+  expect(result.climateCompact).toBe(true);
+  expect(result.climateHasCircularDial).toBe(false);
+  expect(Object.values(result.editorLayouts).every(item => item.exists)).toBe(true);
+  expect(result.editorLayouts["nodalia-climate-card"].value).toBe("compact");
+  expect(result.calls).toEqual(expect.arrayContaining([
+    expect.objectContaining({ domain: "fan", service: "set_percentage" }),
+    expect.objectContaining({ domain: "humidifier", service: "set_humidity" }),
+    expect.objectContaining({ domain: "cover", service: "set_cover_position" }),
+    expect.objectContaining({ domain: "climate", service: "set_temperature" }),
+  ]));
+  expect(errors).toEqual([]);
+});
+
 test("entity-first picker receives relevant Nodalia card suggestions", async ({ page }) => {
   const errors = await loadBundle(page);
   const suggestions = await page.evaluate(() => {

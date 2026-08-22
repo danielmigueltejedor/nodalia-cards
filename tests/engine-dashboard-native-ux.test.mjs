@@ -74,7 +74,9 @@ test("climate card exposes Engine override chips on the live card", () => {
   assert.match(climate, /\$\{engineOverrideMarkup\}/);
   assert.match(climate, /overrideBlockPx/);
   assert.match(climate, /min_rows: this\._engineOverride\?\.available === true \? 6 : 5/);
-  assert.match(climate, /getCardSize\(\) \{\s*return this\._engineOverride\?\.available === true \? 5 : 4;/);
+  assert.match(climate, /this\._config\?\.layout === "compact"/);
+  assert.match(climate, /return this\._engineOverride\?\.available === true \? 3 : 2/);
+  assert.match(climate, /return this\._engineOverride\?\.available === true \? 5 : 4/);
 });
 
 test("Engine editor and runtime strings exist in the base catalogs", () => {

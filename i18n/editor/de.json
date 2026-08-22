@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Mehr Infos",
   "ed.scenes.use_entity_icon": "Entitäts-Icon verwenden",
   "ed.shared.hide_tap_action_settings": "Tippaktionen ausblenden",
+  "ed.shared.layout_circular": "Kreisförmig",
+  "ed.shared.layout_compact": "Kompakt",
   "ed.shared.show_tap_action_settings": "Tippaktionen anzeigen",
   "ed.vacuum.animations_section_hint": "Visuelles Feedback für Roboter-Tasten und Panels.",
   "ed.vacuum.aux_section_hint": "Optionale Sensoren und Selektoren für Status und Steuerung.",

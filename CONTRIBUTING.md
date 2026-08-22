@@ -366,7 +366,7 @@ nodalia-camera-stream-model.js
 card files...
 ```
 
-The self-contained HACS distribution appends `nodalia-editor-ui.js`; the optional core/suite build lazy-loads the editor only when Home Assistant opens a visual editor. If changing dependencies or adding modules, preserve this initialization order and keep support models ahead of their cards.
+The self-contained HACS distribution appends `nodalia-editor-ui.js` to the same `nodalia-cards.js` runtime. If changing dependencies or adding modules, preserve this initialization order and keep support models ahead of their cards. Do not add versioned, `.bundle`, core/suite or editor copies at the repository root: HACS should download one generated runtime only.
 
 ---
 
@@ -374,7 +374,7 @@ The self-contained HACS distribution appends `nodalia-editor-ui.js`; the optiona
 
 Lovelace helpers (`escapeLovelaceWarningText`, entity guards, editor collapsibles, zone tap scheduling, etc.) live only in **`nodalia-utils.js`** and are exposed as **`window.NodaliaUtils`**. Card sources call those APIs; they do not duplicate the implementations.
 
-The bundle loads **`nodalia-utils.js` once** before card modules (see order above). After editing **`nodalia-utils.js`**, run **`pnpm run bundle`** and commit the updated **`nodalia-cards*.js`** artifact.
+The bundle loads **`nodalia-utils.js` once** before card modules (see order above). After editing **`nodalia-utils.js`**, run **`pnpm run bundle`** and commit the updated **`nodalia-cards.js`** artifact and its small manifest.
 
 For a **single-file** Lovelace resource (one card JS without the full bundle), run **`node scripts/sync-standalone-embed.mjs`** locally to inline utils into that file; do not commit those embed blocks to the repo.
 

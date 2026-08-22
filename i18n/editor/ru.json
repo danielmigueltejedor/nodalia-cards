@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Подробнее",
   "ed.scenes.use_entity_icon": "Использовать иконку сущности",
   "ed.shared.hide_tap_action_settings": "Скрыть действия по нажатию",
+  "ed.shared.layout_circular": "Круговой",
+  "ed.shared.layout_compact": "Компактный",
   "ed.shared.show_tap_action_settings": "Показать действия по нажатию",
   "ed.vacuum.animations_section_hint": "Визуальная обратная связь для кнопок и панелей робота.",
   "ed.vacuum.aux_section_hint": "Дополнительные датчики и селекторы для улучшения состояния и элементов управления.",

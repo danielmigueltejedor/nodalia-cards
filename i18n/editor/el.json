@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Περισσότερες πληροφορίες",
   "ed.scenes.use_entity_icon": "Χρήση εικονιδίου οντότητας",
   "ed.shared.hide_tap_action_settings": "Απόκρυψη ενεργειών πατήματος",
+  "ed.shared.layout_circular": "Κυκλική",
+  "ed.shared.layout_compact": "Συμπαγής",
   "ed.shared.show_tap_action_settings": "Εμφάνιση ενεργειών πατήματος",
   "ed.vacuum.animations_section_hint": "Οπτική ανατροφοδότηση για κουμπιά και πίνακες ρομπότ.",
   "ed.vacuum.aux_section_hint": "Προαιρετικοί αισθητήρες και επιλογείς για εμπλουτισμό κατάστασης και χειριστηρίων.",

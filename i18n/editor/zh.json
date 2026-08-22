@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "更多信息",
   "ed.scenes.use_entity_icon": "使用实体图标",
   "ed.shared.hide_tap_action_settings": "隐藏点击操作",
+  "ed.shared.layout_circular": "圆形",
+  "ed.shared.layout_compact": "紧凑",
   "ed.shared.show_tap_action_settings": "显示点击操作",
   "ed.vacuum.animations_section_hint": "机器人按钮与面板的视觉反馈。",
   "ed.vacuum.aux_section_hint": "用于丰富状态与控件的可选传感器和选择器。",

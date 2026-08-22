@@ -360,6 +360,32 @@ test("media player editor rejects invalid service data without emitting it", () 
   assert.match(inputBlock, /if \(nextValue === INVALID_EDITOR_VALUE\) \{\s*return;/);
 });
 
+test("media player custom power actions work by default and player selection follows the entity", () => {
+  const source = read("nodalia-media-player.js");
+  const configStart = source.indexOf("const DEFAULT_CONFIG");
+  const securityStart = source.indexOf("  security:", configStart);
+  const defaultSecurity = source.slice(securityStart, source.indexOf("  layout:", securityStart));
+
+  assert.match(defaultSecurity, /strict_service_actions: false/);
+  assert.match(source, /this\._activePlayerEntity = String\(visiblePlayers\[this\._activePlayerIndex\]\?\.entity \|\| ""\)/);
+  assert.match(source, /_resolveActivePlayerIndex\(players\)/);
+  assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activePlayerEntity\)/);
+});
+
+test("navigation editor persists secondary media-player picker changes", () => {
+  const source = read("nodalia-navigation-bar.js");
+  const inputStart = source.indexOf("  _onShadowInput(event)", source.indexOf("class NodaliaNavigationBarEditor"));
+  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowClick(event)", inputStart));
+  const playerBranch = inputBlock.indexOf("const playerField");
+  const genericBranch = inputBlock.indexOf("const field");
+
+  assert.ok(playerBranch >= 0 && genericBranch > playerBranch, "player picker metadata must win over the generic field added by the HA picker");
+  assert.match(inputBlock, /event\.type === "value-changed" && eventValue !== undefined/);
+  assert.match(inputBlock, /playerField\.value = eventValue \?\? ""/);
+  assert.match(inputBlock, /this\._applyFieldValue\(player, playerField\.dataset\.playerField, playerField\)/);
+  assert.match(source, /`media_player\.players\.\$\{playerIndex\}\.\$\{playerField\}`/);
+});
+
 test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /const mediaToggleBackgroundBase = sanitizeCssRuntimeValue\(config\.styles\.media_player\.background\)[\s\S]*"var\(--ha-card-background, var\(--card-background-color\)\)"/);
@@ -2213,4 +2239,38 @@ test("device control expansion uses Gecko-safe grid tracks and commits its final
     assert.match(source, /const shouldFinalizeRender = Boolean/);
     assert.match(source, /this\._lastRenderSignature = "";\s*this\._render\(\);/);
   }
+});
+
+test("device and climate cards normalize interoperable compact and circular layouts", () => {
+  const deviceCards = [
+    ["nodalia-fan-card.js", "NodaliaFanCard"],
+    ["nodalia-humidifier-card.js", "NodaliaHumidifierCard"],
+    ["nodalia-cover-card.js", "NodaliaCoverCard"],
+  ];
+
+  for (const [file, className] of deviceCards) {
+    const normalize = loadCardNormalizeConfig(file, className);
+    assert.equal(normalize({}).layout, "compact", `${file} should preserve its compact default`);
+    assert.equal(normalize({ layout: "circular" }).layout, "circular");
+    assert.equal(normalize({ layout: "unsupported" }).layout, "compact");
+
+    const source = read(file);
+    assert.match(source, /ed\.shared\.layout_compact/);
+    assert.match(source, /ed\.shared\.layout_circular/);
+    assert.match(source, /__circular-dial/);
+  }
+
+  const normalizeClimate = loadCardNormalizeConfig("nodalia-climate-card.js", "NodaliaClimateCard");
+  assert.equal(normalizeClimate({}).layout, "circular", "climate should preserve its circular default");
+  assert.equal(normalizeClimate({ layout: "compact" }).layout, "compact");
+  assert.equal(normalizeClimate({ layout: "unsupported" }).layout, "circular");
+
+  const climate = read("nodalia-climate-card.js");
+  assert.match(climate, /compactSlider\(\{ field: "temperature"/);
+  assert.match(climate, /data-climate-compact-field="\$\{escapeHtml\(field\)\}"/);
+  assert.match(climate, /_queueTemperatureCommit\(value/);
+  assert.match(climate, /_queueRangeCommit\(nextPair/);
+  assert.match(climate, /climate-card--layout-compact/);
+  assert.match(climate, /ed\.shared\.layout_compact/);
+  assert.match(climate, /ed\.shared\.layout_circular/);
 });

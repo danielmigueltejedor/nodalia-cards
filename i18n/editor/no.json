@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "More info",
   "ed.scenes.use_entity_icon": "Use entity icon",
   "ed.shared.hide_tap_action_settings": "Skjul trykkhandlinger",
+  "ed.shared.layout_circular": "Sirkulær",
+  "ed.shared.layout_compact": "Kompakt",
   "ed.shared.show_tap_action_settings": "Vis trykkhandlinger",
   "ed.vacuum.animations_section_hint": "Visual feedback for robot buttons and panels.",
   "ed.vacuum.aux_section_hint": "Optional sensors and selectors to enrich state and controls.",

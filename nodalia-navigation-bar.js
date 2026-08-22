@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.2.0-alpha.3";
+const CARD_VERSION = "2.2.0-alpha.4";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4461,9 +4461,15 @@ class NodaliaNavigationBarEditor extends HTMLElement {
   }
 
   _mountEntityPicker(host) {
+    const playerField = host.dataset.playerField;
+    const playerIndex = host.dataset.playerIndex;
+    const field = host.dataset.field
+      || (playerField && playerIndex !== undefined
+        ? `media_player.players.${playerIndex}.${playerField}`
+        : "entity");
     window.NodaliaUtils.mountEntityPickerHost(host, {
       hass: this._hass,
-      field: host.dataset.field || "entity",
+      field,
       value: host.dataset.value || "",
       placeholder: host.dataset.placeholder || "",
       onShadowInput: this._onShadowInput,
@@ -4689,26 +4695,6 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
   _onShadowInput(event) {
     const shouldEmit = event.type === "change" || event.type === "value-changed";
-    const field = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
-
-    if (field) {
-      const nextConfig = deepClone(this._config);
-      const value = field.type === "checkbox" ? field.checked : field.value;
-
-      if (value === "" && field.dataset.optional === "true") {
-        deleteByPath(nextConfig, field.dataset.field);
-      } else if (field.type === "number") {
-        setByPath(nextConfig, field.dataset.field, Number(value));
-      } else {
-        setByPath(nextConfig, field.dataset.field, value);
-      }
-
-      this._commitEditorConfig(nextConfig, shouldEmit);
-      return;
-    }
-
     const playerField = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.playerField);
@@ -4731,7 +4717,36 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         delete player.media_browser_path;
       }
 
+      const eventValue = event.detail?.value;
+      if (event.type === "value-changed" && eventValue !== undefined) {
+        playerField.value = eventValue ?? "";
+      }
       this._applyFieldValue(player, playerField.dataset.playerField, playerField);
+      this._commitEditorConfig(nextConfig, shouldEmit);
+      return;
+    }
+
+    const field = event
+      .composedPath()
+      .find(node => node instanceof HTMLElement && node.dataset?.field);
+
+    if (field) {
+      const nextConfig = deepClone(this._config);
+      const eventValue = event.detail?.value;
+      const value = field.type === "checkbox"
+        ? field.checked
+        : event.type === "value-changed" && eventValue !== undefined
+          ? eventValue ?? ""
+          : field.value;
+
+      if (value === "" && field.dataset.optional === "true") {
+        deleteByPath(nextConfig, field.dataset.field);
+      } else if (field.type === "number") {
+        setByPath(nextConfig, field.dataset.field, Number(value));
+      } else {
+        setByPath(nextConfig, field.dataset.field, value);
+      }
+
       this._commitEditorConfig(nextConfig, shouldEmit);
       return;
     }

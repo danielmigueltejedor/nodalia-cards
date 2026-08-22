@@ -1250,6 +1250,8 @@
   "ed.scenes.tap_more_info": "Maggiori info",
   "ed.scenes.use_entity_icon": "Usa icona entità",
   "ed.shared.hide_tap_action_settings": "Nascondi azioni al tocco",
+  "ed.shared.layout_circular": "Circolare",
+  "ed.shared.layout_compact": "Compatto",
   "ed.shared.show_tap_action_settings": "Mostra azioni al tocco",
   "ed.vacuum.animations_section_hint": "Feedback visivo per pulsanti e pannelli robot.",
   "ed.vacuum.aux_section_hint": "Sensori e selettori opzionali per arricchire stato e controlli.",
