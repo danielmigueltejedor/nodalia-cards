@@ -578,6 +578,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._mediaBrowserRequestToken = 0;
     this._popupPositionFrame = null;
     this._activeMediaPlayerIndex = 0;
+    this._activeMediaPlayerEntity = "";
     this._mediaPlayerExpanded = false;
     this._mediaTicker = null;
     this._lastRenderSignature = "";
@@ -869,7 +870,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
-      this._activeMediaPlayerIndex = Number(mediaDotButton.dataset.mediaIndex);
+      const visiblePlayers = this._getVisibleMediaPlayers();
+      this._activeMediaPlayerIndex = clamp(
+        Number(mediaDotButton.dataset.mediaIndex),
+        0,
+        Math.max(0, visiblePlayers.length - 1),
+      );
+      this._activeMediaPlayerEntity = String(visiblePlayers[this._activeMediaPlayerIndex]?.entity || "");
       this._render();
       return;
     }
@@ -1592,6 +1599,24 @@ class NodaliaNavigationBarCard extends HTMLElement {
     });
   }
 
+  _resolveActiveMediaPlayerIndex(players) {
+    if (!Array.isArray(players) || players.length === 0) {
+      this._activeMediaPlayerIndex = 0;
+      return 0;
+    }
+
+    const entityIndex = this._activeMediaPlayerEntity
+      ? players.findIndex(player => player?.entity === this._activeMediaPlayerEntity)
+      : -1;
+    const nextIndex = entityIndex >= 0
+      ? entityIndex
+      : clamp(this._activeMediaPlayerIndex ?? 0, 0, players.length - 1);
+
+    this._activeMediaPlayerIndex = nextIndex;
+    this._activeMediaPlayerEntity = String(players[nextIndex]?.entity || "");
+    return nextIndex;
+  }
+
   _getMediaPlayerTitle(player, state) {
     if (player.title) {
       return player.title;
@@ -2290,13 +2315,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
-    this._activeMediaPlayerIndex = clamp(
-      this._activeMediaPlayerIndex,
-      0,
-      visiblePlayers.length - 1,
-    );
-
-    const player = visiblePlayers[this._activeMediaPlayerIndex];
+    const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
     const state = this._hass?.states?.[player.entity];
     const progress = state ? this._getMediaPlayerProgress(state) : null;
     if (!progress) {
@@ -2322,7 +2341,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     let nextVolume = Number(volumeLevel);
     if (!targetEntityId || !Number.isFinite(nextVolume)) {
       const visiblePlayers = this._getVisibleMediaPlayers();
-      const player = visiblePlayers[this._activeMediaPlayerIndex];
+      const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
       targetEntityId = String(player?.entity || "").trim();
       nextVolume = Number(this._hass?.states?.[targetEntityId]?.attributes?.volume_level);
     }
@@ -2630,13 +2649,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return "";
     }
 
-    this._activeMediaPlayerIndex = clamp(
-      this._activeMediaPlayerIndex,
-      0,
-      visiblePlayers.length - 1,
-    );
-
-    const player = visiblePlayers[this._activeMediaPlayerIndex];
+    const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
     const state = this._hass?.states?.[player.entity];
 
     if (!state) {
@@ -2864,13 +2877,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return "";
     }
 
-    this._activeMediaPlayerIndex = clamp(
-      this._activeMediaPlayerIndex,
-      0,
-      visiblePlayers.length - 1,
-    );
-
-    const player = visiblePlayers[this._activeMediaPlayerIndex];
+    const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
     const state = this._hass?.states?.[player.entity];
 
     if (!state) {
