@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.2.0-alpha.7";
+const CARD_VERSION = "2.2.0-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -325,12 +325,16 @@ function getRangeValueFromGeometry(geometry, currentValue, clientX) {
   return clamp(nextValue, geometry.min, geometry.max);
 }
 
+const CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
+const CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
+const CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+
 function getCircularLayoutDialModel(value, min = 0, max = 100) {
   const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
   const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : 100;
   const safeValue = clamp(Number(value), safeMin, safeMax);
   const ratio = clamp((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
-  const angle = 135 + (ratio * 270);
+  const angle = CIRCULAR_LAYOUT_DIAL_START_ANGLE + (ratio * CIRCULAR_LAYOUT_DIAL_SWEEP);
   const radians = angle * (Math.PI / 180);
   const markerRadius = 86;
   return {
@@ -338,6 +342,40 @@ function getCircularLayoutDialModel(value, min = 0, max = 100) {
     markerLeft: Number((((120 + (Math.cos(radians) * markerRadius)) / 240) * 100).toFixed(3)),
     markerTop: Number((((120 + (Math.sin(radians) * markerRadius)) / 240) * 100).toFixed(3)),
   };
+}
+
+function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
+  const rect = geometry || dial?.getBoundingClientRect?.();
+  const safeMin = Number.isFinite(Number(range?.min)) ? Number(range.min) : 0;
+  const safeMax = Number.isFinite(Number(range?.max)) && Number(range.max) > safeMin ? Number(range.max) : 100;
+  if (!rect?.width || !rect?.height) {
+    return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : safeMin;
+  }
+
+  const centerX = rect.left + (rect.width / 2);
+  const centerY = rect.top + (rect.height / 2);
+  const dx = clientX - centerX;
+  const dy = clientY - centerY;
+  const distance = Math.sqrt((dx ** 2) + (dy ** 2));
+  const outerRadius = Math.min(rect.width, rect.height) / 2;
+  const innerDeadZone = outerRadius * 0.42;
+
+  if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
+    return Number(fallbackValue);
+  }
+
+  const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+  let normalizedAngle = angle < 0 ? angle + 360 : angle;
+  if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
+    normalizedAngle += 360;
+  }
+  normalizedAngle = clamp(normalizedAngle, CIRCULAR_LAYOUT_DIAL_START_ANGLE, CIRCULAR_LAYOUT_DIAL_END_ANGLE);
+
+  const ratio = (normalizedAngle - CIRCULAR_LAYOUT_DIAL_START_ANGLE) / CIRCULAR_LAYOUT_DIAL_SWEEP;
+  const rawValue = safeMin + ((safeMax - safeMin) * ratio);
+  const safeStep = Number.isFinite(step) && step > 0 ? step : 1;
+  const rounded = safeMin + (Math.round((rawValue - safeMin) / safeStep) * safeStep);
+  return clamp(rounded, safeMin, safeMax);
 }
 
 function translatePresetLabel(value) {
@@ -1707,7 +1745,10 @@ class NodaliaFanCard extends HTMLElement {
     const configuredStep = Number(state.attributes?.percentage_step);
     const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
     const current = this._getPercentage(state);
-    this._commitPercentage(current + (Number(direction) * step));
+    const nextValue = clamp(current + (Number(direction) * step), 0, 100);
+    this._draftPercentage.set(this._config.entity, nextValue);
+    this._updatePercentagePreview(nextValue);
+    this._commitPercentage(nextValue);
   }
 
   _toggleOscillation(state) {
@@ -1896,12 +1937,25 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _updatePercentagePreview(value) {
-    const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
     const nextValue = clamp(Number(value), 0, 100);
+    const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--percentage", String(nextValue));
       slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+    }
+
+    const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
+    if (dial instanceof HTMLElement) {
+      const model = getCircularLayoutDialModel(nextValue, 0, 100);
+      dial.style.setProperty("--circular-progress", String(model.progress));
+      dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
+      dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
+    }
+
+    const chip = this.shadowRoot?.querySelector('[data-fan-chip="percentage"]');
+    if (chip instanceof HTMLElement) {
+      chip.textContent = `${Math.round(nextValue)}%`;
     }
   }
 
@@ -1942,11 +1996,24 @@ class NodaliaFanCard extends HTMLElement {
     this._draftPercentage.set(this._config.entity, nextValue);
     this._updatePercentagePreview(nextValue);
 
-    const chip = this.shadowRoot?.querySelector('[data-fan-chip="percentage"]');
-    if (chip instanceof HTMLElement) {
-      chip.textContent = `${stepped}%`;
+    this._hapticOnSliderStep(stepped, { commit });
+    if (commit) {
+      this._commitPercentage(nextValue);
     }
+  }
 
+  _getCircularDialStep(state = this._getState()) {
+    const configuredStep = Number(state?.attributes?.percentage_step);
+    return Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
+  }
+
+  _applyCircularDialValue(value, options = {}) {
+    const commit = options.commit === true;
+    const nextValue = clamp(Number(value), 0, 100);
+    const stepped = Math.round(nextValue);
+
+    this._draftPercentage.set(this._config.entity, nextValue);
+    this._updatePercentagePreview(nextValue);
     this._hapticOnSliderStep(stepped, { commit });
     if (commit) {
       this._commitPercentage(nextValue);
@@ -1954,25 +2021,108 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.fanControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(node =>
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.fanControl,
+    );
 
-    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
+    if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
+      this._startSliderDrag(slider, event.clientX, event, event.pointerId);
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+    if (this._activeSliderDrag || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    if (!dial || !this._supportsPercentage(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
   }
 
-  _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
+  _queueSliderDragUpdate(slider, clientX, clientY = null) {
+    const drag = this._activeSliderDrag;
+    if (drag?.kind === "circular") {
+      const nextValue = getCircularLayoutDialValueFromPoint(
+        drag.dial,
+        clientX,
+        clientY ?? drag.lastClientY,
+        drag.range,
+        drag.step,
+        drag.lastValue,
+        drag.geometry,
+      );
+      drag.lastValue = nextValue;
+      drag.lastClientY = clientY ?? drag.lastClientY;
+      this._applyCircularDialValue(nextValue, { commit: false });
+      return;
+    }
+
+    const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    const state = this._getState();
+    if (!state || !this._supportsPercentage(state)) {
+      return;
+    }
+
+    const step = this._getCircularDialStep(state);
+    const seedValue = this._getPercentage(state);
+    this._activeSliderDrag = {
+      kind: "circular",
+      dial,
+      geometry: dial.getBoundingClientRect(),
+      range: { min: 0, max: 100 },
+      step,
+      pointerId,
+      lastValue: seedValue,
+      lastClientY: clientY,
+      lastHapticValue: Math.round(seedValue),
+    };
+    dial.classList.add("is-dragging");
+    this._attachWindowDragListeners();
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
+    const nextValue = getCircularLayoutDialValueFromPoint(
+      dial,
+      clientX,
+      clientY,
+      this._activeSliderDrag.range,
+      step,
+      seedValue,
+      this._activeSliderDrag.geometry,
+    );
+    this._activeSliderDrag.lastValue = nextValue;
+    this._applyCircularDialValue(nextValue, { commit: false });
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
@@ -1981,6 +2131,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     this._activeSliderDrag = {
+      kind: "linear",
       pointerId,
       slider,
       geometry: getSliderDragGeometry(slider),
@@ -2004,7 +2155,7 @@ class NodaliaFanCard extends HTMLElement {
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
+  _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -2018,6 +2169,28 @@ class NodaliaFanCard extends HTMLElement {
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
+    }
+
+    if (drag.kind === "circular") {
+      const nextValue = getCircularLayoutDialValueFromPoint(
+        drag.dial,
+        clientX,
+        clientY ?? drag.lastClientY,
+        drag.range,
+        drag.step,
+        drag.lastValue,
+        drag.geometry,
+      );
+      drag.dial?.classList?.remove("is-dragging");
+      this._applyCircularDialValue(nextValue, { commit: true });
+      this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
+      this._suppressNextFanTap = true;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
+      return;
     }
 
     const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
@@ -2036,35 +2209,67 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _onShadowMouseDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.fanControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(node =>
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.fanControl,
+    );
 
-    if (this._activeSliderDrag || !slider || event.button !== 0) {
+    if (!this._activeSliderDrag && slider && event.button === 0) {
+      this._startSliderDrag(slider, event.clientX, event);
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event);
+    if (this._activeSliderDrag || event.button !== 0) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    if (!dial || !this._supportsPercentage(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
   }
 
   _onShadowTouchStart(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.fanControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(node =>
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.fanControl,
+    );
 
-    if (this._activeSliderDrag || !slider || !event.touches?.length) {
+    if (!this._activeSliderDrag && slider && event.touches?.length) {
+      this._startSliderDrag(slider, event.touches[0].clientX, event);
       return;
     }
 
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
+    if (this._activeSliderDrag || !event.touches?.length) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    if (!dial || !this._supportsPercentage(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
   }
 
   _onWindowPointerMove(event) {
@@ -2074,7 +2279,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(drag.slider, event.clientX);
+    this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
   }
 
   _onWindowPointerUp(event) {
@@ -2083,7 +2288,7 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    this._commitSliderDrag(event.clientX, event, event.pointerId);
+    this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
   }
 
   _onWindowMouseMove(event) {
@@ -2092,7 +2297,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
   }
 
   _onWindowMouseUp(event) {
@@ -2100,7 +2305,7 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    this._commitSliderDrag(event.clientX, event);
+    this._commitSliderDrag(event.clientX, event, null, event.clientY);
   }
 
   _onWindowTouchMove(event) {
@@ -2109,7 +2314,11 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+    this._queueSliderDragUpdate(
+      this._activeSliderDrag.slider,
+      event.touches[0].clientX,
+      event.touches[0].clientY,
+    );
   }
 
   _onWindowTouchStartCapture(event) {
@@ -2119,10 +2328,11 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    if (path.includes(drag.slider)) {
+    if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
       return;
     }
 
+    drag.dial?.classList?.remove("is-dragging");
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
     this._pendingDragUpdate = null;
@@ -2142,8 +2352,10 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    const clientX = event.changedTouches?.[0]?.clientX;
+    const touch = event.changedTouches?.[0];
+    const clientX = touch?.clientX;
     if (!Number.isFinite(clientX)) {
+      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
       this._activeSliderDrag = null;
       this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
@@ -2152,8 +2364,7 @@ class NodaliaFanCard extends HTMLElement {
       }
       return;
     }
-
-    this._commitSliderDrag(clientX, event);
+    this._commitSliderDrag(clientX, event, null, touch?.clientY);
   }
 
   _attachWindowDragListeners() {
@@ -2647,12 +2858,13 @@ class NodaliaFanCard extends HTMLElement {
     const circularDial = getCircularLayoutDialModel(currentPercentage, 0, 100);
     const circularControlsMarkup = `
       <div class="fan-card__circular-layout">
-        <div class="fan-card__circular-dial" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
+        <div class="fan-card__circular-dial" data-nodalia-tap-shield="true" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
             <circle class="fan-card__circular-track" cx="120" cy="120" r="86" pathLength="100"></circle>
+            <circle class="fan-card__circular-hit" cx="120" cy="120" r="86" pathLength="100" data-fan-control="circular-dial"></circle>
             <circle class="fan-card__circular-progress" cx="120" cy="120" r="86" pathLength="100"></circle>
           </svg>
-          <span class="fan-card__circular-thumb" aria-hidden="true"></span>
+          <span class="fan-card__circular-thumb" data-fan-control="circular-dial" aria-hidden="true"></span>
           <div class="fan-card__circular-center">
             <strong data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</strong>
             <span class="fan-card__circular-divider" aria-hidden="true"></span>
@@ -2664,9 +2876,9 @@ class NodaliaFanCard extends HTMLElement {
           </div>
         </div>
         <div class="fan-card__circular-steps">
-          <button type="button" class="fan-card__circular-step" data-fan-action="decrease-percentage" ${supportsPercentage ? "" : "disabled"} aria-label="${escapeHtml(this._fanAria("speedDown", "Decrease speed"))}">&minus;</button>
+          <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-fan-action="decrease-percentage" ${supportsPercentage ? "" : "disabled"} aria-label="${escapeHtml(this._fanAria("speedDown", "Decrease speed"))}">&minus;</button>
           <button type="button" class="fan-card__circular-power ${isOn ? "is-active" : ""}" data-fan-action="icon" aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"><ha-icon icon="mdi:power"></ha-icon></button>
-          <button type="button" class="fan-card__circular-step" data-fan-action="increase-percentage" ${supportsPercentage ? "" : "disabled"} aria-label="${escapeHtml(this._fanAria("speedUp", "Increase speed"))}">+</button>
+          <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-fan-action="increase-percentage" ${supportsPercentage ? "" : "disabled"} aria-label="${escapeHtml(this._fanAria("speedUp", "Increase speed"))}">+</button>
         </div>
         <div class="fan-card__controls-inner">${presetPanelShellMarkup}</div>
       </div>
@@ -3340,8 +3552,10 @@ class NodaliaFanCard extends HTMLElement {
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 18px 38px rgba(0, 0, 0, 0.16);
           aspect-ratio: 1;
           box-sizing: border-box;
+          cursor: pointer;
           max-width: 100%;
           position: relative;
+          touch-action: none;
           transform: translateZ(0);
           width: min(280px, 100%);
         }
@@ -3358,6 +3572,7 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__circular-track,
+        .fan-card__circular-hit,
         .fan-card__circular-progress {
           fill: none;
           stroke-dasharray: 75 25;
@@ -3371,9 +3586,16 @@ class NodaliaFanCard extends HTMLElement {
           stroke: color-mix(in srgb, color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color)) 52%, var(--primary-text-color) 48%);
         }
 
+        .fan-card__circular-hit {
+          pointer-events: stroke;
+          stroke: transparent;
+          stroke-width: 28;
+        }
+
         .fan-card__circular-progress {
           filter: drop-shadow(0 0 0 transparent);
           opacity: 0.94;
+          pointer-events: none;
           stroke: ${accentColor};
           stroke-dasharray: var(--circular-progress, 0) 100;
           transition: stroke-dasharray 240ms ease-out;
@@ -3385,12 +3607,18 @@ class NodaliaFanCard extends HTMLElement {
           box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 0 0 6px color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
           height: 24px;
           left: var(--circular-marker-left);
+          pointer-events: auto;
           position: absolute;
           top: var(--circular-marker-top);
           transform: translate(-50%, -50%);
           transition: left 240ms ease-out, top 240ms ease-out;
           width: 24px;
           z-index: 2;
+        }
+
+        .fan-card__circular-dial.is-dragging .fan-card__circular-progress,
+        .fan-card__circular-dial.is-dragging .fan-card__circular-thumb {
+          transition: none;
         }
 
         .fan-card__circular-thumb::before {
@@ -3424,6 +3652,7 @@ class NodaliaFanCard extends HTMLElement {
           gap: 11px;
           inset: 19%;
           justify-items: center;
+          pointer-events: none;
           position: absolute;
           text-align: center;
         }
@@ -3454,6 +3683,10 @@ class NodaliaFanCard extends HTMLElement {
           display: flex;
           gap: 10px;
           justify-content: center;
+        }
+
+        .fan-card__circular-actions {
+          pointer-events: auto;
         }
 
         .fan-card__circular-actions .fan-card__control {

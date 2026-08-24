@@ -10,6 +10,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-alpha.8] - 2026-08-24
+
+Eighth **`2.2.0`** alpha: interactive circular device dials and stronger Nodalia styling for Climate hold and Entity overviews.
+
+### Added
+
+- Fan, Humidifier and Cover circular layouts now drag the 270° value ring like Climate, with step buttons that change percentage, humidity or position without firing card taps.
+
+### Changed
+
+- Climate's two-hour hold control uses glass pill styling with an icon bubble, active glow and status capsule while keeping the compact 36 px rhythm.
+- Entity Card battery and network layouts use a glass hero metric, ring gauges with level tracks, and denser metric tiles aligned with the rest of the suite.
+- CodeQL `init` and `analyze` are bumped together to `4.37.8` so Dependabot's split updates no longer leave mismatched Action pins.
+
+### Fixed
+
+- Cover circular `−` / `+` steps work when `current_position` is missing by using the same open/closed fallback as the dial display.
+
+### Validation
+
+- Circular dial drag, step isolation, power taps and Entity overview markup are covered by Node regressions.
+- Compact Climate hold height and ellipsis contracts remain locked for Chromium and WebKit.
+
+---
+
 ## [2.2.0-alpha.7] - 2026-08-23
 
 Seventh **`2.2.0`** alpha: reliable circular power actions and a polished compact Climate hold control.

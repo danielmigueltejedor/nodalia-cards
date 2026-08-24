@@ -1332,6 +1332,9 @@
     "__active-chip-shell",
     "__controls-shell",
     "__controls-inner",
+    "__circular-dial",
+    "__circular-hit",
+    "__circular-step",
   ];
 
   /** Slider / controls chrome must not trigger card-body tap (toggle). */

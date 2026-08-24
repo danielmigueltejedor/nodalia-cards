@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.0-alpha.7";
+const CARD_VERSION = "2.2.0-alpha.8";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -434,18 +434,57 @@ function getRangeValueFromGeometry(geometry, currentValue, clientX) {
   return clamp(nextValue, geometry.min, geometry.max);
 }
 
+const CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
+const CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
+const CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+
 function getCircularLayoutDialModel(value, min = 0, max = 100) {
   const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
   const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : 100;
   const safeValue = clamp(Number(value), safeMin, safeMax);
   const ratio = clamp((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
-  const angle = 135 + (ratio * 270);
+  const angle = CIRCULAR_LAYOUT_DIAL_START_ANGLE + (ratio * CIRCULAR_LAYOUT_DIAL_SWEEP);
   const radians = angle * (Math.PI / 180);
+  const markerRadius = 86;
   return {
     progress: Number((ratio * 75).toFixed(3)),
-    markerLeft: Number((((120 + (Math.cos(radians) * 86)) / 240) * 100).toFixed(3)),
-    markerTop: Number((((120 + (Math.sin(radians) * 86)) / 240) * 100).toFixed(3)),
+    markerLeft: Number((((120 + (Math.cos(radians) * markerRadius)) / 240) * 100).toFixed(3)),
+    markerTop: Number((((120 + (Math.sin(radians) * markerRadius)) / 240) * 100).toFixed(3)),
   };
+}
+
+function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
+  const rect = geometry || dial?.getBoundingClientRect?.();
+  const safeMin = Number.isFinite(Number(range?.min)) ? Number(range.min) : 0;
+  const safeMax = Number.isFinite(Number(range?.max)) && Number(range.max) > safeMin ? Number(range.max) : 100;
+  if (!rect?.width || !rect?.height) {
+    return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : safeMin;
+  }
+
+  const centerX = rect.left + (rect.width / 2);
+  const centerY = rect.top + (rect.height / 2);
+  const dx = clientX - centerX;
+  const dy = clientY - centerY;
+  const distance = Math.sqrt((dx ** 2) + (dy ** 2));
+  const outerRadius = Math.min(rect.width, rect.height) / 2;
+  const innerDeadZone = outerRadius * 0.42;
+
+  if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
+    return Number(fallbackValue);
+  }
+
+  const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+  let normalizedAngle = angle < 0 ? angle + 360 : angle;
+  if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
+    normalizedAngle += 360;
+  }
+  normalizedAngle = clamp(normalizedAngle, CIRCULAR_LAYOUT_DIAL_START_ANGLE, CIRCULAR_LAYOUT_DIAL_END_ANGLE);
+
+  const ratio = (normalizedAngle - CIRCULAR_LAYOUT_DIAL_START_ANGLE) / CIRCULAR_LAYOUT_DIAL_SWEEP;
+  const rawValue = safeMin + ((safeMax - safeMin) * ratio);
+  const safeStep = Number.isFinite(step) && step > 0 ? step : 1;
+  const rounded = safeMin + (Math.round((rawValue - safeMin) / safeStep) * safeStep);
+  return clamp(rounded, safeMin, safeMax);
 }
 
 function parseServiceData(value) {
@@ -1050,17 +1089,25 @@ class NodaliaCoverCard extends HTMLElement {
     const state = this._getState();
     switch (coverAction) {
       case "decrease-position": {
-        const current = parseNumber(state?.attributes?.current_position);
-        if (current !== null && this._supports(COVER_FEATURES.SET_POSITION, state)) {
-          this._callCover("set_cover_position", { position: clamp(Math.round(current - 5), 0, 100) });
+        if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
+          break;
         }
+        const current = parseNumber(state?.attributes?.current_position);
+        const base = current ?? (this._isActive(state) ? 100 : 0);
+        const nextValue = clamp(Math.round(base - 5), 0, 100);
+        this._updatePositionPreview(nextValue);
+        this._callCover("set_cover_position", { position: nextValue });
         break;
       }
       case "increase-position": {
-        const current = parseNumber(state?.attributes?.current_position);
-        if (current !== null && this._supports(COVER_FEATURES.SET_POSITION, state)) {
-          this._callCover("set_cover_position", { position: clamp(Math.round(current + 5), 0, 100) });
+        if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
+          break;
         }
+        const current = parseNumber(state?.attributes?.current_position);
+        const base = current ?? (this._isActive(state) ? 100 : 0);
+        const nextValue = clamp(Math.round(base + 5), 0, 100);
+        this._updatePositionPreview(nextValue);
+        this._callCover("set_cover_position", { position: nextValue });
         break;
       }
       case "toggle_controls_view":
@@ -1148,58 +1195,210 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _onPointerDown(event) {
-    const slider = event
-      .composedPath()
-      .find(
-        node =>
-          node instanceof HTMLInputElement &&
-          node.type === "range" &&
-          node.dataset?.coverControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(
+      node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+    );
 
-    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
+    if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
+      this._startSliderDrag(slider, event.clientX, event, event.pointerId);
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+    if (this._activeSliderDrag || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    if (!dial || !this._canSetPosition(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
   }
 
   _onMouseDown(event) {
-    const slider = event
-      .composedPath()
-      .find(
-        node =>
-          node instanceof HTMLInputElement &&
-          node.type === "range" &&
-          node.dataset?.coverControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(
+      node =>
+        node instanceof HTMLInputElement &&
+        node.type === "range" &&
+        node.dataset?.coverControl,
+    );
 
-    if (this._activeSliderDrag || !slider || event.button !== 0) {
+    if (!this._activeSliderDrag && slider && event.button === 0) {
+      this._startSliderDrag(slider, event.clientX, event);
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event);
+    if (this._activeSliderDrag || event.button !== 0) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    if (!dial || !this._canSetPosition(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
   }
 
   _onTouchStart(event) {
     const path = event.composedPath();
     const slider = path.find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.coverControl,
-      );
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.coverControl,
+    );
 
-    if (slider) {
-      if (!this._activeSliderDrag && event.touches?.length) {
-        this._startSliderDrag(slider, event.touches[0].clientX, event);
-      }
+    if (!this._activeSliderDrag && slider && event.touches?.length) {
+      this._startSliderDrag(slider, event.touches[0].clientX, event);
       return;
     }
+
+    if (this._activeSliderDrag || !event.touches?.length) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    if (!dial || !this._canSetPosition(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+  }
+
+  _canSetPosition(state = this._getState()) {
+    return this._config?.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state);
+  }
+
+  _getDisplayPosition(state = this._getState()) {
+    const position = parseNumber(state?.attributes?.current_position);
+    return position ?? (this._isActive(state) ? 100 : 0);
+  }
+
+  _updatePositionPreview(value) {
+    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+    if (!Number.isFinite(nextValue)) {
+      return;
+    }
+
+    const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-cover-control="position"]');
+    if (slider instanceof HTMLInputElement) {
+      slider.value = String(nextValue);
+      slider.style.setProperty("--percentage", String(nextValue));
+      slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+    }
+
+    const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
+    if (dial instanceof HTMLElement) {
+      const model = getCircularLayoutDialModel(nextValue, 0, 100);
+      dial.style.setProperty("--circular-progress", String(model.progress));
+      dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
+      dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
+    }
+
+    this.shadowRoot
+      ?.querySelectorAll('[data-cover-chip="position"]')
+      .forEach(chip => {
+        if (chip instanceof HTMLElement) {
+          chip.textContent = `${nextValue}%`;
+        }
+      });
+  }
+
+  _getCircularDialStep() {
+    return 5;
+  }
+
+  _applyCircularDialValue(value, options = {}) {
+    const commit = options.commit === true;
+    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+    if (!Number.isFinite(nextValue)) {
+      return;
+    }
+
+    this._updatePositionPreview(nextValue);
+    if (commit) {
+      if (this._config?.haptics?.scrolls?.position !== false) {
+        this._triggerHaptic("selection");
+      }
+      this._callCover("set_cover_position", { position: nextValue });
+    }
+  }
+
+  _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    const state = this._getState();
+    if (!state || !this._canSetPosition(state)) {
+      return;
+    }
+
+    const step = this._getCircularDialStep();
+    const seedValue = this._getDisplayPosition(state);
+    this._activeSliderDrag = {
+      kind: "circular",
+      dial,
+      geometry: dial.getBoundingClientRect(),
+      range: { min: 0, max: 100 },
+      step,
+      pointerId,
+      lastValue: seedValue,
+      lastClientY: clientY,
+      lastHapticValue: Math.round(seedValue),
+    };
+    dial.classList.add("is-dragging");
+    this._attachWindowDragListeners();
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const nextValue = getCircularLayoutDialValueFromPoint(
+      dial,
+      clientX,
+      clientY,
+      this._activeSliderDrag.range,
+      step,
+      seedValue,
+      this._activeSliderDrag.geometry,
+    );
+    this._activeSliderDrag.lastValue = nextValue;
+    this._applyCircularDialValue(nextValue, { commit: false });
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
     if (!slider) return;
     this._activeSliderDrag = {
+      kind: "linear",
       pointerId,
       slider,
       geometry: getSliderDragGeometry(slider),
@@ -1214,18 +1413,58 @@ class NodaliaCoverCard extends HTMLElement {
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
+  _queueSliderDragUpdate(slider, clientX, clientY = null) {
+    const drag = this._activeSliderDrag;
+    if (drag?.kind === "circular") {
+      const nextValue = getCircularLayoutDialValueFromPoint(
+        drag.dial,
+        clientX,
+        clientY ?? drag.lastClientY,
+        drag.range,
+        drag.step,
+        drag.lastValue,
+        drag.geometry,
+      );
+      drag.lastValue = nextValue;
+      drag.lastClientY = clientY ?? drag.lastClientY;
+      this._applyCircularDialValue(nextValue, { commit: false });
+      return;
+    }
+
+    const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
+  _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
     const drag = this._activeSliderDrag;
     if (!drag || (pointerId !== null && drag.pointerId !== pointerId)) return;
     if (event) {
       event.preventDefault();
     }
+
+    if (drag.kind === "circular") {
+      const nextValue = getCircularLayoutDialValueFromPoint(
+        drag.dial,
+        clientX,
+        clientY ?? drag.lastClientY,
+        drag.range,
+        drag.step,
+        drag.lastValue,
+        drag.geometry,
+      );
+      drag.dial?.classList?.remove("is-dragging");
+      this._applyCircularDialValue(nextValue, { commit: true });
+      this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
+      this._suppressNextCoverTap = true;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
+      return;
+    }
+
     const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
     drag.slider.value = String(nextValue);
     this._skipNextSliderChange = drag.slider;
@@ -1243,30 +1482,34 @@ class NodaliaCoverCard extends HTMLElement {
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) return;
     event.preventDefault();
-    this._queueSliderDragUpdate(drag.slider, event.clientX);
+    this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
   }
 
   _onWindowPointerUp(event) {
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    this._commitSliderDrag(event.clientX, event, event.pointerId);
+    this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
   }
 
   _onWindowMouseMove(event) {
     if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) return;
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
   }
 
   _onWindowMouseUp(event) {
     if (!this._activeSliderDrag) return;
-    this._commitSliderDrag(event.clientX, event);
+    this._commitSliderDrag(event.clientX, event, null, event.clientY);
   }
 
   _onWindowTouchMove(event) {
     if (!this._activeSliderDrag || !event.touches?.length) return;
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+    this._queueSliderDragUpdate(
+      this._activeSliderDrag.slider,
+      event.touches[0].clientX,
+      event.touches[0].clientY,
+    );
   }
 
   _onWindowTouchStartCapture(event) {
@@ -1276,10 +1519,11 @@ class NodaliaCoverCard extends HTMLElement {
     }
 
     const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    if (path.includes(drag.slider)) {
+    if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
       return;
     }
 
+    drag.dial?.classList?.remove("is-dragging");
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
 
@@ -1291,8 +1535,10 @@ class NodaliaCoverCard extends HTMLElement {
 
   _onWindowTouchEnd(event) {
     if (!this._activeSliderDrag) return;
-    const clientX = event.changedTouches?.[0]?.clientX;
+    const touch = event.changedTouches?.[0];
+    const clientX = touch?.clientX;
     if (!Number.isFinite(clientX)) {
+      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
       this._activeSliderDrag = null;
       this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
@@ -1301,7 +1547,7 @@ class NodaliaCoverCard extends HTMLElement {
       }
       return;
     }
-    this._commitSliderDrag(clientX, event);
+    this._commitSliderDrag(clientX, event, null, touch?.clientY);
   }
 
   _attachWindowDragListeners() {
@@ -1443,7 +1689,8 @@ class NodaliaCoverCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const position = parseNumber(state.attributes?.current_position);
     const tilt = parseNumber(state.attributes?.current_tilt_position);
-    const supportsPosition = config.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state) && position !== null;
+    const canSetPosition = this._canSetPosition(state);
+    const supportsPosition = canSetPosition && position !== null;
     const supportsTilt = config.show_tilt_slider !== false && this._supports(COVER_FEATURES.SET_TILT_POSITION, state) && tilt !== null;
     const supportsStop = config.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
     const showCopyBlock = !this._isCompactLayout() || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
@@ -1497,12 +1744,13 @@ class NodaliaCoverCard extends HTMLElement {
     const circularDial = getCircularLayoutDialModel(circularPosition, 0, 100);
     const circularControlsMarkup = `
       <div class="fan-card__circular-layout">
-        <div class="fan-card__circular-dial" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
+        <div class="fan-card__circular-dial" data-nodalia-tap-shield="true" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
             <circle class="fan-card__circular-track" cx="120" cy="120" r="86" pathLength="100"></circle>
+            <circle class="fan-card__circular-hit" cx="120" cy="120" r="86" pathLength="100" data-cover-control="circular-dial"></circle>
             <circle class="fan-card__circular-progress" cx="120" cy="120" r="86" pathLength="100"></circle>
           </svg>
-          <span class="fan-card__circular-thumb" aria-hidden="true"></span>
+          <span class="fan-card__circular-thumb" data-cover-control="circular-dial" aria-hidden="true"></span>
           <div class="fan-card__circular-center">
             <strong data-cover-chip="position">${position === null ? "—" : `${Math.round(position)}%`}</strong>
             <span class="fan-card__circular-divider" aria-hidden="true"></span>
@@ -1510,10 +1758,10 @@ class NodaliaCoverCard extends HTMLElement {
             <div class="fan-card__circular-actions">${arrowButtonsHtml}</div>
           </div>
         </div>
-        ${supportsPosition ? `
+        ${canSetPosition ? `
           <div class="fan-card__circular-steps">
-            <button type="button" class="fan-card__circular-step" data-cover-action="decrease-position" aria-label="Decrease position">&minus;</button>
-            <button type="button" class="fan-card__circular-step" data-cover-action="increase-position" aria-label="Increase position">+</button>
+            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="decrease-position" aria-label="Decrease position">&minus;</button>
+            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="increase-position" aria-label="Increase position">+</button>
           </div>
         ` : ""}
         ${supportsTilt ? `<div class="fan-card__circular-secondary">${this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" })}</div>` : ""}
@@ -1694,8 +1942,10 @@ class NodaliaCoverCard extends HTMLElement {
           border-radius: 50%;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 18px 38px rgba(0, 0, 0, 0.16);
           box-sizing: border-box;
+          cursor: pointer;
           max-width: 100%;
           position: relative;
+          touch-action: none;
           transform: translateZ(0);
           width: min(280px, 100%);
         }
@@ -1706,24 +1956,33 @@ class NodaliaCoverCard extends HTMLElement {
           display: block;
           height: 100%;
           overflow: visible;
-          transform: rotate(135deg);
           width: 100%;
         }
         .fan-card__circular-track,
+        .fan-card__circular-hit,
         .fan-card__circular-progress {
           fill: none;
+          stroke-dasharray: 75 25;
           stroke-linecap: round;
           stroke-width: 18;
+          transform: rotate(135deg);
+          transform-origin: 120px 120px;
         }
         .fan-card__circular-track {
           stroke: color-mix(in srgb, color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color)) 52%, var(--primary-text-color) 48%);
-          stroke-dasharray: 75 25;
+        }
+        .fan-card__circular-hit {
+          pointer-events: stroke;
+          stroke: transparent;
+          stroke-width: 28;
         }
         .fan-card__circular-progress {
           filter: drop-shadow(0 0 0 transparent);
           opacity: 0.94;
+          pointer-events: none;
           stroke: ${styles.slider_color};
-          stroke-dasharray: var(--circular-progress) 100;
+          stroke-dasharray: var(--circular-progress, 0) 100;
+          transition: stroke-dasharray 240ms ease-out;
         }
         .fan-card__circular-thumb {
           background: transparent;
@@ -1731,11 +1990,17 @@ class NodaliaCoverCard extends HTMLElement {
           box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 0 0 6px color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
           height: 24px;
           left: var(--circular-marker-left);
+          pointer-events: auto;
           position: absolute;
           top: var(--circular-marker-top);
           transform: translate(-50%, -50%);
+          transition: left 240ms ease-out, top 240ms ease-out;
           width: 24px;
           z-index: 2;
+        }
+        .fan-card__circular-dial.is-dragging .fan-card__circular-progress,
+        .fan-card__circular-dial.is-dragging .fan-card__circular-thumb {
+          transition: none;
         }
         .fan-card__circular-thumb::before {
           -webkit-backdrop-filter: blur(16px);
@@ -1766,6 +2031,7 @@ class NodaliaCoverCard extends HTMLElement {
           gap: 11px;
           inset: 19%;
           justify-items: center;
+          pointer-events: none;
           position: absolute;
           text-align: center;
         }
@@ -1792,6 +2058,7 @@ class NodaliaCoverCard extends HTMLElement {
           display: flex;
           justify-content: center;
           margin-top: 10px;
+          pointer-events: auto;
         }
         .fan-card__circular-actions .fan-card__controls { margin: 0; padding: 0; }
         .fan-card__circular-actions .fan-card__transport { padding: 5px 7px; }

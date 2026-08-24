@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.2.0-alpha.7";
+const CARD_VERSION = "2.2.0-alpha.8";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -310,18 +310,57 @@ function getRangeValueFromGeometry(geometry, currentValue, clientX) {
   return clamp(nextValue, geometry.min, geometry.max);
 }
 
+const CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
+const CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
+const CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+
 function getCircularLayoutDialModel(value, min = 0, max = 100) {
   const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
   const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : 100;
   const safeValue = clamp(Number(value), safeMin, safeMax);
   const ratio = clamp((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
-  const angle = 135 + (ratio * 270);
+  const angle = CIRCULAR_LAYOUT_DIAL_START_ANGLE + (ratio * CIRCULAR_LAYOUT_DIAL_SWEEP);
   const radians = angle * (Math.PI / 180);
+  const markerRadius = 86;
   return {
     progress: Number((ratio * 75).toFixed(3)),
-    markerLeft: Number((((120 + (Math.cos(radians) * 86)) / 240) * 100).toFixed(3)),
-    markerTop: Number((((120 + (Math.sin(radians) * 86)) / 240) * 100).toFixed(3)),
+    markerLeft: Number((((120 + (Math.cos(radians) * markerRadius)) / 240) * 100).toFixed(3)),
+    markerTop: Number((((120 + (Math.sin(radians) * markerRadius)) / 240) * 100).toFixed(3)),
   };
+}
+
+function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
+  const rect = geometry || dial?.getBoundingClientRect?.();
+  const safeMin = Number.isFinite(Number(range?.min)) ? Number(range.min) : 0;
+  const safeMax = Number.isFinite(Number(range?.max)) && Number(range.max) > safeMin ? Number(range.max) : 100;
+  if (!rect?.width || !rect?.height) {
+    return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : safeMin;
+  }
+
+  const centerX = rect.left + (rect.width / 2);
+  const centerY = rect.top + (rect.height / 2);
+  const dx = clientX - centerX;
+  const dy = clientY - centerY;
+  const distance = Math.sqrt((dx ** 2) + (dy ** 2));
+  const outerRadius = Math.min(rect.width, rect.height) / 2;
+  const innerDeadZone = outerRadius * 0.42;
+
+  if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
+    return Number(fallbackValue);
+  }
+
+  const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+  let normalizedAngle = angle < 0 ? angle + 360 : angle;
+  if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
+    normalizedAngle += 360;
+  }
+  normalizedAngle = clamp(normalizedAngle, CIRCULAR_LAYOUT_DIAL_START_ANGLE, CIRCULAR_LAYOUT_DIAL_END_ANGLE);
+
+  const ratio = (normalizedAngle - CIRCULAR_LAYOUT_DIAL_START_ANGLE) / CIRCULAR_LAYOUT_DIAL_SWEEP;
+  const rawValue = safeMin + ((safeMax - safeMin) * ratio);
+  const safeStep = Number.isFinite(step) && step > 0 ? step : 1;
+  const rounded = safeMin + (Math.round((rawValue - safeMin) / safeStep) * safeStep);
+  return clamp(rounded, safeMin, safeMax);
 }
 
 
@@ -1775,7 +1814,11 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
     const step = 1;
-    this._commitHumidity(this._getTargetHumidity(state) + (Number(direction) * step));
+    const range = this._getHumidityRange(state);
+    const nextValue = clamp(this._getTargetHumidity(state) + (Number(direction) * step), range.min, range.max);
+    this._draftHumidity.set(this._config.entity, nextValue);
+    this._updateHumidityPreview(nextValue);
+    this._commitHumidity(nextValue);
   }
 
   _commitMode(mode) {
@@ -2055,6 +2098,19 @@ class NodaliaHumidifierCard extends HTMLElement {
       slider.style.setProperty("--humidity", String(clamp(progress, 0, 100)));
       slider.closest(".humidifier-card__slider-shell")?.style.setProperty("--humidity", String(clamp(progress, 0, 100)));
     }
+
+    const dial = this.shadowRoot?.querySelector(".humidifier-card__circular-dial");
+    if (dial instanceof HTMLElement) {
+      const model = getCircularLayoutDialModel(nextValue, range.min, range.max);
+      dial.style.setProperty("--circular-progress", String(model.progress));
+      dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
+      dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
+    }
+
+    const chip = this.shadowRoot?.querySelector('[data-humidifier-chip="humidity"]');
+    if (chip instanceof HTMLElement) {
+      chip.textContent = `${Math.round(nextValue)}%`;
+    }
   }
 
   _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
@@ -2096,11 +2152,25 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._draftHumidity.set(this._config.entity, nextValue);
     this._updateHumidityPreview(nextValue);
 
-    const chip = this.shadowRoot?.querySelector('[data-humidifier-chip="humidity"]');
-    if (chip instanceof HTMLElement) {
-      chip.textContent = `${stepped}%`;
+    this._hapticOnSliderStep(stepped, { commit });
+    if (commit) {
+      this._commitHumidity(nextValue);
     }
+  }
 
+  _getCircularDialStep() {
+    return 1;
+  }
+
+  _applyCircularDialValue(value, options = {}) {
+    const commit = options.commit === true;
+    const state = this._getState();
+    const range = this._getHumidityRange(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
+    const stepped = Math.round(nextValue);
+
+    this._draftHumidity.set(this._config.entity, nextValue);
+    this._updateHumidityPreview(nextValue);
     this._hapticOnSliderStep(stepped, { commit });
     if (commit) {
       this._commitHumidity(nextValue);
@@ -2108,25 +2178,109 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _onShadowPointerDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.humidifierControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(node =>
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.humidifierControl,
+    );
 
-    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
+    if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
+      this._startSliderDrag(slider, event.clientX, event, event.pointerId);
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+    if (this._activeSliderDrag || (typeof event.button === "number" && event.button !== 0)) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.humidifierAction && node.dataset.humidifierAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("humidifier-card__circular-dial"));
+    if (!dial || !this._supportsTargetHumidity(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
   }
 
-  _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
+  _queueSliderDragUpdate(slider, clientX, clientY = null) {
+    const drag = this._activeSliderDrag;
+    if (drag?.kind === "circular") {
+      const nextValue = getCircularLayoutDialValueFromPoint(
+        drag.dial,
+        clientX,
+        clientY ?? drag.lastClientY,
+        drag.range,
+        drag.step,
+        drag.lastValue,
+        drag.geometry,
+      );
+      drag.lastValue = nextValue;
+      drag.lastClientY = clientY ?? drag.lastClientY;
+      this._applyCircularDialValue(nextValue, { commit: false });
+      return;
+    }
+
+    const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
+  }
+
+  _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    const state = this._getState();
+    if (!state || !this._supportsTargetHumidity(state)) {
+      return;
+    }
+
+    const step = this._getCircularDialStep();
+    const range = this._getHumidityRange(state);
+    const seedValue = this._getTargetHumidity(state);
+    this._activeSliderDrag = {
+      kind: "circular",
+      dial,
+      geometry: dial.getBoundingClientRect(),
+      range,
+      step,
+      pointerId,
+      lastValue: seedValue,
+      lastClientY: clientY,
+      lastHapticValue: Math.round(seedValue),
+    };
+    dial.classList.add("is-dragging");
+    this._attachWindowDragListeners();
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    this._pendingDragUpdate = null;
+    if (this._dragFrame) {
+      window.cancelAnimationFrame(this._dragFrame);
+      this._dragFrame = 0;
+    }
+
+    const nextValue = getCircularLayoutDialValueFromPoint(
+      dial,
+      clientX,
+      clientY,
+      this._activeSliderDrag.range,
+      step,
+      seedValue,
+      this._activeSliderDrag.geometry,
+    );
+    this._activeSliderDrag.lastValue = nextValue;
+    this._applyCircularDialValue(nextValue, { commit: false });
   }
 
   _startSliderDrag(slider, clientX, event = null, pointerId = null) {
@@ -2135,6 +2289,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     this._activeSliderDrag = {
+      kind: "linear",
       pointerId,
       slider,
       geometry: getSliderDragGeometry(slider),
@@ -2158,7 +2313,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
+  _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -2172,6 +2327,28 @@ class NodaliaHumidifierCard extends HTMLElement {
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
       this._dragFrame = 0;
+    }
+
+    if (drag.kind === "circular") {
+      const nextValue = getCircularLayoutDialValueFromPoint(
+        drag.dial,
+        clientX,
+        clientY ?? drag.lastClientY,
+        drag.range,
+        drag.step,
+        drag.lastValue,
+        drag.geometry,
+      );
+      drag.dial?.classList?.remove("is-dragging");
+      this._applyCircularDialValue(nextValue, { commit: true });
+      this._activeSliderDrag = null;
+      this._detachWindowDragListeners();
+      this._suppressNextHumidifierTap = true;
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
+      return;
     }
 
     const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
@@ -2190,35 +2367,67 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _onShadowMouseDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.humidifierControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(node =>
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.humidifierControl,
+    );
 
-    if (this._activeSliderDrag || !slider || event.button !== 0) {
+    if (!this._activeSliderDrag && slider && event.button === 0) {
+      this._startSliderDrag(slider, event.clientX, event);
       return;
     }
 
-    this._startSliderDrag(slider, event.clientX, event);
+    if (this._activeSliderDrag || event.button !== 0) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.humidifierAction && node.dataset.humidifierAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("humidifier-card__circular-dial"));
+    if (!dial || !this._supportsTargetHumidity(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
   }
 
   _onShadowTouchStart(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.humidifierControl,
-      );
+    const path = event.composedPath();
+    const slider = path.find(node =>
+      node instanceof HTMLInputElement &&
+      node.type === "range" &&
+      node.dataset?.humidifierControl,
+    );
 
-    if (this._activeSliderDrag || !slider || !event.touches?.length) {
+    if (!this._activeSliderDrag && slider && event.touches?.length) {
+      this._startSliderDrag(slider, event.touches[0].clientX, event);
       return;
     }
 
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
+    if (this._activeSliderDrag || !event.touches?.length) {
+      return;
+    }
+
+    const controlAction = path.find(
+      node => node instanceof HTMLElement && node.dataset?.humidifierAction && node.dataset.humidifierAction !== "body",
+    );
+    if (controlAction) {
+      return;
+    }
+
+    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("humidifier-card__circular-dial"));
+    if (!dial || !this._supportsTargetHumidity(this._getState())) {
+      return;
+    }
+
+    this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
   }
 
   _onWindowPointerMove(event) {
@@ -2228,7 +2437,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(drag.slider, event.clientX);
+    this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
   }
 
   _onWindowPointerUp(event) {
@@ -2237,7 +2446,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
-    this._commitSliderDrag(event.clientX, event, event.pointerId);
+    this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
   }
 
   _onWindowMouseMove(event) {
@@ -2246,7 +2455,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
   }
 
   _onWindowMouseUp(event) {
@@ -2254,7 +2463,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
-    this._commitSliderDrag(event.clientX, event);
+    this._commitSliderDrag(event.clientX, event, null, event.clientY);
   }
 
   _onWindowTouchMove(event) {
@@ -2263,7 +2472,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+    this._queueSliderDragUpdate(
+      this._activeSliderDrag.slider,
+      event.touches[0].clientX,
+      event.touches[0].clientY,
+    );
   }
 
   _onWindowTouchStartCapture(event) {
@@ -2273,10 +2486,11 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    if (path.includes(drag.slider)) {
+    if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
       return;
     }
 
+    drag.dial?.classList?.remove("is-dragging");
     this._activeSliderDrag = null;
     this._detachWindowDragListeners();
     this._pendingDragUpdate = null;
@@ -2296,8 +2510,10 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
-    const clientX = event.changedTouches?.[0]?.clientX;
+    const touch = event.changedTouches?.[0];
+    const clientX = touch?.clientX;
     if (!Number.isFinite(clientX)) {
+      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
       this._activeSliderDrag = null;
       this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
@@ -2306,8 +2522,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       }
       return;
     }
-
-    this._commitSliderDrag(clientX, event);
+    this._commitSliderDrag(clientX, event, null, touch?.clientY);
   }
 
   _attachWindowDragListeners() {
@@ -2818,14 +3033,15 @@ class NodaliaHumidifierCard extends HTMLElement {
     const circularDial = getCircularLayoutDialModel(currentHumidity, humidityRange.min, humidityRange.max);
     const circularControlsMarkup = `
       <div class="humidifier-card__circular-layout">
-        <div class="humidifier-card__circular-dial" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
+        <div class="humidifier-card__circular-dial" data-nodalia-tap-shield="true" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
             <circle class="humidifier-card__circular-track" cx="120" cy="120" r="86" pathLength="100"></circle>
+            <circle class="humidifier-card__circular-hit" cx="120" cy="120" r="86" pathLength="100" data-humidifier-control="circular-dial"></circle>
             <circle class="humidifier-card__circular-progress" cx="120" cy="120" r="86" pathLength="100"></circle>
           </svg>
-          <span class="humidifier-card__circular-thumb" aria-hidden="true"></span>
+          <span class="humidifier-card__circular-thumb" data-humidifier-control="circular-dial" aria-hidden="true"></span>
           <div class="humidifier-card__circular-center">
-            <strong>${escapeHtml(`${Math.round(currentHumidity)}%`)}</strong>
+            <strong data-humidifier-chip="humidity">${escapeHtml(`${Math.round(currentHumidity)}%`)}</strong>
             <span class="humidifier-card__circular-divider" aria-hidden="true"></span>
             <span>${escapeHtml(this._humidifierAria("targetHumidity", "Target humidity"))}</span>
             <div class="humidifier-card__circular-actions">
@@ -2835,9 +3051,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           </div>
         </div>
         <div class="humidifier-card__circular-steps">
-          <button type="button" class="humidifier-card__circular-step" data-humidifier-action="decrease-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="Decrease humidity">&minus;</button>
+          <button type="button" class="humidifier-card__circular-step" data-nodalia-tap-shield="true" data-humidifier-action="decrease-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="Decrease humidity">&minus;</button>
           <button type="button" class="humidifier-card__circular-power ${isOn ? "is-active" : ""}" data-humidifier-action="icon" aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"><ha-icon icon="mdi:power"></ha-icon></button>
-          <button type="button" class="humidifier-card__circular-step" data-humidifier-action="increase-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="Increase humidity">+</button>
+          <button type="button" class="humidifier-card__circular-step" data-nodalia-tap-shield="true" data-humidifier-action="increase-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="Increase humidity">+</button>
         </div>
         <div class="humidifier-card__controls-inner">${panelShellMarkup}</div>
       </div>
@@ -3228,8 +3444,10 @@ class NodaliaHumidifierCard extends HTMLElement {
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 18px 38px rgba(0, 0, 0, 0.16);
           aspect-ratio: 1;
           box-sizing: border-box;
+          cursor: pointer;
           max-width: 100%;
           position: relative;
+          touch-action: none;
           transform: translateZ(0);
           width: min(280px, 100%);
         }
@@ -3246,6 +3464,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__circular-track,
+        .humidifier-card__circular-hit,
         .humidifier-card__circular-progress {
           fill: none;
           stroke-dasharray: 75 25;
@@ -3259,9 +3478,16 @@ class NodaliaHumidifierCard extends HTMLElement {
           stroke: color-mix(in srgb, color-mix(in srgb, var(--primary-text-color) 32%, var(--divider-color)) 52%, var(--primary-text-color) 48%);
         }
 
+        .humidifier-card__circular-hit {
+          pointer-events: stroke;
+          stroke: transparent;
+          stroke-width: 28;
+        }
+
         .humidifier-card__circular-progress {
           filter: drop-shadow(0 0 0 transparent);
           opacity: 0.94;
+          pointer-events: none;
           stroke: ${accentColor};
           stroke-dasharray: var(--circular-progress, 0) 100;
           transition: stroke-dasharray 240ms ease-out;
@@ -3273,12 +3499,18 @@ class NodaliaHumidifierCard extends HTMLElement {
           box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 0 0 6px color-mix(in srgb, var(--primary-text-color) 5%, transparent), 0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
           height: 24px;
           left: var(--circular-marker-left);
+          pointer-events: auto;
           position: absolute;
           top: var(--circular-marker-top);
           transform: translate(-50%, -50%);
           transition: left 240ms ease-out, top 240ms ease-out;
           width: 24px;
           z-index: 2;
+        }
+
+        .humidifier-card__circular-dial.is-dragging .humidifier-card__circular-progress,
+        .humidifier-card__circular-dial.is-dragging .humidifier-card__circular-thumb {
+          transition: none;
         }
 
         .humidifier-card__circular-thumb::before {
@@ -3312,6 +3544,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           gap: 11px;
           inset: 19%;
           justify-items: center;
+          pointer-events: none;
           position: absolute;
           text-align: center;
         }
@@ -3342,6 +3575,10 @@ class NodaliaHumidifierCard extends HTMLElement {
           display: flex;
           gap: 10px;
           justify-content: center;
+        }
+
+        .humidifier-card__circular-actions {
+          pointer-events: auto;
         }
 
         .humidifier-card__circular-actions .humidifier-card__control {

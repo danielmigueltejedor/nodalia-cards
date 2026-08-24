@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.2.0-alpha.7";
+const CARD_VERSION = "2.2.0-alpha.8";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS = 30_000;
 const LEGACY_BACKGROUND_MOBILE_TOGGLE = "input_boolean.nodalia_background_mobile_notifications";

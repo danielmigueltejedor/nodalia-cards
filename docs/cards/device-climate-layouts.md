@@ -48,6 +48,8 @@ The circular variants retain the entity-specific controls:
 - Humidifier shows target humidity, power, modes and fan modes when supported.
 - Cover shows position, open/stop/close, position steps and tilt when supported.
 
+The 270° value ring is interactive: drag the arc or thumb to set the value, or use the − / + step buttons. Power stays on the centre control (Fan and Humidifier) so card taps outside the dial and steps still toggle when configured.
+
 Unsupported controls are omitted using the same Home Assistant feature checks as the compact layouts.
 
 ## Compact Climate card

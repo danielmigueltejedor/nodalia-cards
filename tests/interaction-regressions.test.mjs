@@ -1573,18 +1573,50 @@ test("slider bubble chrome does not trigger card body tap", () => {
 
 test("circular device surfaces and power buttons keep their card tap actions", () => {
   const contracts = [
-    ["nodalia-fan-card.js", "fan", "fan-card__circular-layout"],
-    ["nodalia-humidifier-card.js", "humidifier", "humidifier-card__circular-layout"],
-    ["nodalia-cover-card.js", "cover", "fan-card__circular-layout"],
+    ["nodalia-fan-card.js", "fan", "fan-card__circular-layout", "fan-card__circular-power"],
+    ["nodalia-humidifier-card.js", "humidifier", "humidifier-card__circular-layout", "humidifier-card__circular-power"],
+    ["nodalia-cover-card.js", "cover", "fan-card__circular-layout", null],
   ];
 
-  for (const [file, actionPrefix, circularClass] of contracts) {
+  for (const [file, actionPrefix, circularClass, powerClass] of contracts) {
     const source = read(file);
     assert.doesNotMatch(
       source,
       new RegExp(`class="${circularClass}"\\s+data-nodalia-tap-shield`),
       `${file} should not shield the complete circular surface`,
     );
+    assert.match(
+      source,
+      /circular-dial" data-nodalia-tap-shield="true"/,
+      `${file} should shield the circular dial from body taps`,
+    );
+    assert.match(
+      source,
+      /circular-step" data-nodalia-tap-shield="true"/,
+      `${file} should shield circular step buttons from body taps`,
+    );
+    assert.match(
+      source,
+      /_startCircularDialDrag\(/,
+      `${file} should support circular dial dragging`,
+    );
+    assert.match(
+      source,
+      /getCircularLayoutDialValueFromPoint\(/,
+      `${file} should map dial pointer geometry to values`,
+    );
+    if (powerClass) {
+      assert.match(
+        source,
+        new RegExp(`${powerClass}[\\s\\S]{0,120}data-${actionPrefix}-action="icon"`),
+        `${file} power button should keep icon tap action without a layout-wide shield`,
+      );
+      assert.doesNotMatch(
+        source,
+        new RegExp(`${powerClass}[^\"]*"\\s+data-nodalia-tap-shield`),
+        `${file} power button should remain unshielded so icon taps still work`,
+      );
+    }
     assert.match(
       source,
       new RegExp(`${actionPrefix}Action === "body"[\\s\\S]{0,240}isNodaliaSliderChromeHit`),

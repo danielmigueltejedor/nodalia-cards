@@ -638,7 +638,7 @@ test("entity card network layout keeps a network accent without a status entity"
     },
   };
 
-  assert.match(String(card.shadowRoot.innerHTML), /border:1px solid color-mix\(in srgb,var\(--info-color, #42a5f5\) 28%/);
+  assert.match(String(card.shadowRoot.innerHTML), /border:1px solid color-mix\(in srgb,var\(--info-color, #42a5f5\) 24%/);
 });
 
 test("entity card air quality demo package and example exist", () => {

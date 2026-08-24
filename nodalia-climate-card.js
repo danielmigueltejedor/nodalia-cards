@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.0-alpha.7";
+const CARD_VERSION = "2.2.0-alpha.8";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1866,16 +1866,20 @@ class NodaliaClimateCard extends HTMLElement {
     const busy = this._engineOverrideBusy === true ? "disabled" : "";
 
     return `
-      <div class="climate-card__override">
+      <div class="climate-card__override${until ? " climate-card__override--active" : ""}">
         <button
           type="button"
-          class="climate-card__override-chip"
+          class="climate-card__override-chip${until ? " is-active" : ""}"
           data-climate-action="override-hold"
           title="${escapeHtml(holdLabel)}"
           ${busy}
         >
-          <ha-icon icon="mdi:timer-sand"></ha-icon>
-          <span>${escapeHtml(holdLabel)}</span>
+          <span class="climate-card__override-chip-icon" aria-hidden="true">
+            <ha-icon icon="mdi:timer-sand"></ha-icon>
+          </span>
+          <span class="climate-card__override-chip-copy">
+            <span class="climate-card__override-chip-label">${escapeHtml(holdLabel)}</span>
+          </span>
         </button>
         ${
           until
@@ -1887,13 +1891,17 @@ class NodaliaClimateCard extends HTMLElement {
                 title="${escapeHtml(clearLabel)}"
                 ${busy}
               >
-                <ha-icon icon="mdi:calendar-refresh-outline"></ha-icon>
-                <span>${escapeHtml(clearLabel)}</span>
+                <span class="climate-card__override-chip-icon" aria-hidden="true">
+                  <ha-icon icon="mdi:calendar-refresh-outline"></ha-icon>
+                </span>
+                <span class="climate-card__override-chip-copy">
+                  <span class="climate-card__override-chip-label">${escapeHtml(clearLabel)}</span>
+                </span>
               </button>
             `
             : ""
         }
-        ${statusText ? `<span class="climate-card__override-status">${escapeHtml(statusText)}</span>` : ""}
+        ${statusText ? `<span class="climate-card__override-status"><span class="climate-card__override-status-dot" aria-hidden="true"></span>${escapeHtml(statusText)}</span>` : ""}
       </div>
     `;
   }
@@ -5464,10 +5472,10 @@ class NodaliaClimateCard extends HTMLElement {
     // reserve their row or Sections clips the step controls (overflow: hidden).
     const showEngineOverride = this._engineOverride?.available === true;
     const overrideChipPx = showEngineOverride
-      ? (isCompactCardLayout ? 36 : Math.max(22, parseSizeToPixels(effectiveChipHeight, 24)))
+      ? (isCompactCardLayout ? 36 : Math.max(40, parseSizeToPixels(effectiveChipHeight, 24) + 12))
       : 0;
     const overrideStatusPx = showEngineOverride && this._engineOverride?.until
-      ? (tightLayout ? 14 : 16)
+      ? (tightLayout ? 18 : 20)
       : 0;
     const overrideBlockPx = showEngineOverride
       ? overrideChipPx + overrideStatusPx + interBlockGapPx
@@ -6250,33 +6258,77 @@ class NodaliaClimateCard extends HTMLElement {
           display: flex;
           flex: 0 0 auto;
           flex-wrap: wrap;
-          gap: 6px;
+          gap: 8px;
           justify-content: center;
           min-height: 0;
         }
 
         .climate-card__override-chip {
+          -webkit-backdrop-filter: blur(18px);
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color));
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, ${accentColor} 22%, transparent), transparent 58%),
+            linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 8%, transparent), color-mix(in srgb, var(--primary-text-color) 3%, transparent));
+          border: 1px solid color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
           border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 12px 28px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16));
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
           font-family: inherit;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 700;
-          gap: 4px;
-          height: ${effectiveChipHeight};
+          gap: 8px;
+          height: 40px;
+          justify-content: center;
+          letter-spacing: -0.01em;
           max-width: 100%;
-          padding: ${effectiveChipPadding};
-          transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+          padding: 0 14px 0 6px;
+          position: relative;
+          transform: translateZ(0);
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+          white-space: nowrap;
+        }
+
+        .climate-card__override-chip-icon {
+          align-items: center;
+          background:
+            radial-gradient(circle at 30% 24%, color-mix(in srgb, ${accentColor} 34%, transparent), transparent 64%),
+            color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          border: 1px solid color-mix(in srgb, ${accentColor} 34%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
+          border-radius: 50%;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          color: color-mix(in srgb, ${accentColor} 82%, var(--primary-text-color));
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 28px;
+          justify-content: center;
+          width: 28px;
+        }
+
+        .climate-card__override-chip-copy {
+          align-items: center;
+          display: inline-flex;
+          min-width: 0;
+        }
+
+        .climate-card__override-chip-label {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
 
         .climate-card__override-chip:hover:not(:disabled) {
+          border-color: color-mix(in srgb, ${accentColor} 46%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+            0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18));
           transform: translateY(-1px);
         }
 
@@ -6286,14 +6338,36 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__override-chip ha-icon {
-          --mdc-icon-size: 14px;
-          height: 14px;
-          width: 14px;
+          --mdc-icon-size: 15px;
+          display: inline-flex;
+          height: 15px;
+          width: 15px;
+        }
+
+        .climate-card__override-chip.is-active {
+          background:
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, ${accentColor} 30%, transparent), transparent 58%),
+            color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 52%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 14px 30px color-mix(in srgb, ${accentColor} 22%, rgba(0, 0, 0, 0.18));
         }
 
         .climate-card__override-chip--clear {
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          background:
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--primary-text-color) 10%, transparent), transparent 58%),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent),
+            0 10px 22px rgba(0, 0, 0, 0.12);
+        }
+
+        .climate-card__override-chip--clear .climate-card__override-chip-icon {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          color: var(--primary-text-color);
         }
 
         .climate-card--layout-compact .climate-card__override {
@@ -6309,9 +6383,15 @@ class NodaliaClimateCard extends HTMLElement {
           height: 36px;
           justify-content: center;
           min-width: 0;
-          padding: 0 12px;
+          padding: 0 12px 0 5px;
         }
 
+        .climate-card--layout-compact .climate-card__override-chip-icon {
+          height: 26px;
+          width: 26px;
+        }
+
+        .climate-card--layout-compact .climate-card__override-chip-label,
         .climate-card--layout-compact .climate-card__override-chip span {
           min-width: 0;
           overflow: hidden;
@@ -6321,14 +6401,34 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card--layout-compact .climate-card__override-status {
           flex: 1 0 100%;
+          justify-content: center;
           text-align: center;
         }
 
         .climate-card__override-status {
+          align-items: center;
+          background: color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           color: var(--secondary-text-color);
+          display: inline-flex;
           font-size: 11px;
+          font-weight: 650;
+          gap: 7px;
           line-height: 1.3;
+          max-width: 100%;
           overflow-wrap: anywhere;
+          padding: 5px 10px;
+        }
+
+        .climate-card__override-status-dot {
+          background: ${accentColor};
+          border-radius: 50%;
+          box-shadow: 0 0 0 4px color-mix(in srgb, ${accentColor} 14%, transparent);
+          flex: 0 0 auto;
+          height: 7px;
+          width: 7px;
         }
 
         .climate-schedule-expanded {

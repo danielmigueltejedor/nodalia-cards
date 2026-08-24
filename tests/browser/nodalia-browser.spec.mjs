@@ -264,7 +264,7 @@ test("device and Climate layout variants render and keep their native controls",
       climateControl: visual(climateCompactRoot.querySelector(".climate-card__compact-step")),
       climateOverride: visual(climateCompactRoot.querySelector(".climate-card__override-chip")),
       climateOverrideBoxSizing: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip")).boxSizing,
-      climateOverrideLabelOverflow: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip span")).textOverflow,
+      climateOverrideLabelOverflow: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip-label")).textOverflow,
     };
     const climateDial = climateCircularRoot.querySelector(".climate-card__dial");
     const circularMetrics = {
