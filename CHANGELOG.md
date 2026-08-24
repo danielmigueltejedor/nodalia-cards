@@ -10,6 +10,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-rc.1] - 2026-08-24
+
+First **`2.2.0`** release candidate: interactive circular dials, tighter Entity overviews, and dial/draft lifecycle hardening.
+
+### Added
+
+- Fan, Humidifier and Cover circular layouts support dial drag and isolated `−` / `+` steps (from alpha.8).
+
+### Changed
+
+- Entity battery and network headers drop the nested title card; overview typography is denser and chips stay inline with the title row.
+- Climate hold control keeps the Nodalia glass treatment from alpha.8.
+- CodeQL `init` and `analyze` remain pinned together on `4.37.8`.
+
+### Fixed
+
+- Fan and Humidifier clear optimistic percentage/humidity drafts once Home Assistant confirms the value, so external updates are no longer stuck behind a draft.
+- Disconnecting mid-drag clears active dial/slider state so reconnects can render and accept new gestures.
+- Climate Engine override chips queue a re-render when they update during dial or schedule drag.
+- Circular dial open-arc pointer hits keep the previous value instead of snapping to an endpoint.
+- PointerEvent browsers no longer attach duplicate mouse move listeners during dial/slider drags.
+- Cover slider `change` races detach window drag listeners correctly.
+- Entity overview signatures hash only state keys needed for battery/network instead of every attribute bag.
+
+### Validation
+
+- Node regressions cover draft sync, circular dial contracts, Entity battery/network markup and Climate hold geometry.
+
 ## [2.2.0-alpha.8] - 2026-08-24
 
 Eighth **`2.2.0`** alpha: interactive circular device dials and stronger Nodalia styling for Climate hold and Entity overviews.

@@ -11,15 +11,15 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
-## Compatibility for Nodalia Cards 2.2.0-alpha.8
+## Compatibility for Nodalia Cards 2.2.0-rc.1
 
-| Component | Supported baseline | Recommended for 2.2.0-alpha.8 |
+| Component | Supported baseline | Recommended for 2.2.0-rc.1 |
 |---|---|---|
 | Home Assistant | `2025.1.0` or newer | Current supported stable release |
-| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.0-alpha.8` |
+| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.0-rc.1` |
 | Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.2` |
 
-Cards `2.2.0-alpha.8` and Engine `2.0.2` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `2.2.0-rc.1` and Engine `2.0.2` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## What the optional Engine makes native
 

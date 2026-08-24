@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.2.0-alpha.8";
+const CARD_VERSION = "2.2.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -351,6 +351,15 @@ function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step
 
   const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
   let normalizedAngle = angle < 0 ? angle + 360 : angle;
+  const gapStart = CIRCULAR_LAYOUT_DIAL_END_ANGLE % 360;
+  const gapEnd = CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+  if (
+    normalizedAngle > gapStart
+    && normalizedAngle < gapEnd
+    && Number.isFinite(Number(fallbackValue))
+  ) {
+    return Number(fallbackValue);
+  }
   if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
     normalizedAngle += 360;
   }
@@ -650,6 +659,10 @@ class NodaliaHumidifierCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     this._resizeObserver?.disconnect();
+    if (this._activeSliderDrag) {
+      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+      this._activeSliderDrag = null;
+    }
     this._detachWindowDragListeners();
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
@@ -715,8 +728,11 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    const actualState = this._getActualState();
     const entityId = this._config?.entity || "";
+    if (entityId && this._draftHumidity.has(entityId) && !this._activeSliderDrag) {
+      this._syncDraftWithState();
+    }
+    const actualState = this._getActualState();
     const entityRevision = entityId && actualState
       ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}`
       : "";
@@ -1306,6 +1322,28 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const range = this._getHumidityRange(state);
     return clamp(Math.round((range.min + range.max) / 2), range.min, range.max);
+  }
+
+  _syncDraftWithState() {
+    const state = this._getActualState();
+    const entityId = this._config?.entity;
+    if (!entityId || !state || !this._draftHumidity.has(entityId)) {
+      return;
+    }
+
+    const rawHumidity = Number(state.attributes?.humidity);
+    const rawTargetHumidity = Number(state.attributes?.target_humidity);
+    const actualHumidity = Number.isFinite(rawHumidity) ? rawHumidity : rawTargetHumidity;
+    const draftHumidity = Number(this._draftHumidity.get(entityId));
+    const tolerance = Math.max(1, 1 / 2);
+
+    if (
+      Number.isFinite(actualHumidity)
+      && Number.isFinite(draftHumidity)
+      && Math.abs(actualHumidity - draftHumidity) <= tolerance
+    ) {
+      this._draftHumidity.delete(entityId);
+    }
   }
 
   _getHumidifierName(state) {
@@ -2533,9 +2571,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     window.addEventListener("pointermove", this._onWindowPointerMove);
     window.addEventListener("pointerup", this._onWindowPointerUp);
     window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("mousemove", this._onWindowMouseMove);
+      window.addEventListener("mouseup", this._onWindowMouseUp);
       window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
       window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
@@ -2551,9 +2589,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("mousemove", this._onWindowMouseMove);
+      window.removeEventListener("mouseup", this._onWindowMouseUp);
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
       window.removeEventListener("touchmove", this._onWindowTouchMove);
       window.removeEventListener("touchend", this._onWindowTouchEnd);

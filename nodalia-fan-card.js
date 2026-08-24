@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.2.0-alpha.8";
+const CARD_VERSION = "2.2.0-rc.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -366,6 +366,15 @@ function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step
 
   const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
   let normalizedAngle = angle < 0 ? angle + 360 : angle;
+  const gapStart = CIRCULAR_LAYOUT_DIAL_END_ANGLE % 360;
+  const gapEnd = CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+  if (
+    normalizedAngle > gapStart
+    && normalizedAngle < gapEnd
+    && Number.isFinite(Number(fallbackValue))
+  ) {
+    return Number(fallbackValue);
+  }
   if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
     normalizedAngle += 360;
   }
@@ -644,6 +653,10 @@ class NodaliaFanCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     this._resizeObserver?.disconnect();
+    if (this._activeSliderDrag) {
+      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+      this._activeSliderDrag = null;
+    }
     this._detachWindowDragListeners();
     if (this._dragFrame) {
       window.cancelAnimationFrame(this._dragFrame);
@@ -681,8 +694,11 @@ class NodaliaFanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    const actualState = this._getActualState();
     const entityId = this._config?.entity || "";
+    if (entityId && this._draftPercentage.has(entityId) && !this._activeSliderDrag) {
+      this._syncDraftWithState();
+    }
+    const actualState = this._getActualState();
     const entityRevision = entityId && actualState
       ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}`
       : "";
@@ -1285,6 +1301,28 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     return this._isOn(state) ? 100 : 0;
+  }
+
+  _syncDraftWithState() {
+    const state = this._getActualState();
+    const entityId = this._config?.entity;
+    if (!entityId || !state || !this._draftPercentage.has(entityId)) {
+      return;
+    }
+
+    const actualPercentage = Number(state.attributes?.percentage);
+    const draftPercentage = Number(this._draftPercentage.get(entityId));
+    const configuredStep = Number(state.attributes?.percentage_step);
+    const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 1;
+    const tolerance = Math.max(1, step / 2);
+
+    if (
+      Number.isFinite(actualPercentage)
+      && Number.isFinite(draftPercentage)
+      && Math.abs(actualPercentage - draftPercentage) <= tolerance
+    ) {
+      this._draftPercentage.delete(entityId);
+    }
   }
 
   _supportsOscillation(state) {
@@ -2375,9 +2413,9 @@ class NodaliaFanCard extends HTMLElement {
     window.addEventListener("pointermove", this._onWindowPointerMove);
     window.addEventListener("pointerup", this._onWindowPointerUp);
     window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("mousemove", this._onWindowMouseMove);
+      window.addEventListener("mouseup", this._onWindowMouseUp);
       window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
       window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
@@ -2393,9 +2431,9 @@ class NodaliaFanCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("mousemove", this._onWindowMouseMove);
+      window.removeEventListener("mouseup", this._onWindowMouseUp);
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
       window.removeEventListener("touchmove", this._onWindowTouchMove);
       window.removeEventListener("touchend", this._onWindowTouchEnd);

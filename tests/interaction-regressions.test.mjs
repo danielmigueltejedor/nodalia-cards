@@ -1899,6 +1899,11 @@ test("fan and humidifier re-render when optimistic toggle is confirmed during an
   }
 });
 
+test("fan and humidifier clear drafts when HA confirms setpoint", () => {
+  assert.match(read("nodalia-fan-card.js"), /_syncDraftWithState\(\)/);
+  assert.match(read("nodalia-humidifier-card.js"), /_syncDraftWithState\(\)/);
+});
+
 test("fan and humidifier visual settle waits for non-zero published values", () => {
   const fan = read("nodalia-fan-card.js");
   const humidifier = read("nodalia-humidifier-card.js");

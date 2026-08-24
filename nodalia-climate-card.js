@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.0-alpha.8";
+const CARD_VERSION = "2.2.0-rc.1";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -1465,6 +1465,11 @@ class NodaliaClimateCard extends HTMLElement {
     this._activeScheduleDrag = null;
     this._scheduleBlockDragPending = null;
 
+    if (this._activeDialDrag) {
+      this._setDialDraggingState(false, this._activeDialDrag.dial);
+      this._activeDialDrag = null;
+    }
+
     if (this._draftResetTimer) {
       window.clearTimeout(this._draftResetTimer);
       this._draftResetTimer = 0;
@@ -1783,6 +1788,12 @@ class NodaliaClimateCard extends HTMLElement {
     this._engineOverrideSignature = signature;
     this._engineOverride = next?.available === true ? next : null;
     if (this._activeDialDrag || this._activeScheduleDrag) {
+      if (this._activeDialDrag) {
+        this._pendingRenderAfterDrag = true;
+      }
+      if (this._activeScheduleDrag) {
+        this._pendingRenderAfterScheduleDrag = true;
+      }
       return true;
     }
     this._lastRenderSignature = "";

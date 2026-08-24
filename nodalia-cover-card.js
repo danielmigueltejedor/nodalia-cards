@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.0-alpha.8";
+const CARD_VERSION = "2.2.0-rc.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -475,6 +475,15 @@ function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step
 
   const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
   let normalizedAngle = angle < 0 ? angle + 360 : angle;
+  const gapStart = CIRCULAR_LAYOUT_DIAL_END_ANGLE % 360;
+  const gapEnd = CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+  if (
+    normalizedAngle > gapStart
+    && normalizedAngle < gapEnd
+    && Number.isFinite(Number(fallbackValue))
+  ) {
+    return Number(fallbackValue);
+  }
   if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
     normalizedAngle += 360;
   }
@@ -659,6 +668,10 @@ class NodaliaCoverCard extends HTMLElement {
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
     this._detachHostHold?.();
+    if (this._activeSliderDrag) {
+      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+      this._activeSliderDrag = null;
+    }
     this._detachWindowDragListeners();
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
@@ -1556,9 +1569,9 @@ class NodaliaCoverCard extends HTMLElement {
     window.addEventListener("pointermove", this._onWindowPointerMove);
     window.addEventListener("pointerup", this._onWindowPointerUp);
     window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.addEventListener("mousemove", this._onWindowMouseMove);
+      window.addEventListener("mouseup", this._onWindowMouseUp);
       window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
       window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
@@ -1572,9 +1585,9 @@ class NodaliaCoverCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("mousemove", this._onWindowMouseMove);
+      window.removeEventListener("mouseup", this._onWindowMouseUp);
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
       window.removeEventListener("touchmove", this._onWindowTouchMove);
       window.removeEventListener("touchend", this._onWindowTouchEnd);
@@ -1602,6 +1615,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     this._applySliderValue(slider, slider.value, { commit: true });
     this._activeSliderDrag = null;
+    this._detachWindowDragListeners?.();
   }
 
   _applySliderValue(slider, rawValue, options = {}) {
