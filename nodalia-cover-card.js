@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.0-alpha.6";
+const CARD_VERSION = "2.2.0-alpha.7";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -1033,7 +1033,7 @@ class NodaliaCoverCard extends HTMLElement {
     const coverAction = button.dataset.coverAction;
     if (this._isCardTapAction(coverAction)) {
       if (coverAction === "body" || coverAction === "icon") {
-        if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+        if (coverAction === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
           return;
         }
         if (this._suppressNextCoverTap) {
@@ -1496,7 +1496,7 @@ class NodaliaCoverCard extends HTMLElement {
     const circularPosition = position ?? (isActive ? 100 : 0);
     const circularDial = getCircularLayoutDialModel(circularPosition, 0, 100);
     const circularControlsMarkup = `
-      <div class="fan-card__circular-layout" data-nodalia-tap-shield="true">
+      <div class="fan-card__circular-layout">
         <div class="fan-card__circular-dial" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
             <circle class="fan-card__circular-track" cx="120" cy="120" r="86" pathLength="100"></circle>

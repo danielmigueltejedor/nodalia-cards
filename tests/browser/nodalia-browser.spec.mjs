@@ -201,6 +201,9 @@ test("device and Climate layout variants render and keep their native controls",
     cards["nodalia-fan-card"].shadowRoot.querySelector('[data-fan-action="increase-percentage"]')?.click();
     cards["nodalia-humidifier-card"].shadowRoot.querySelector('[data-humidifier-action="increase-humidity"]')?.click();
     cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="increase-position"]')?.click();
+    cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-power")?.click();
+    cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-power")?.click();
+    cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__circular-dial")?.click();
     const climateSlider = cards["nodalia-climate-card"].shadowRoot.querySelector('[data-climate-compact-field="temperature"]');
     if (climateSlider) {
       climateSlider.value = "22";
@@ -218,6 +221,12 @@ test("device and Climate layout variants render and keep their native controls",
       editorLayouts[tag] = { exists: Boolean(selector), value: selector?.value || "" };
     }
     await new Promise(resolve => window.setTimeout(resolve, 30));
+
+    const compactClimate = cards["nodalia-climate-card"];
+    compactClimate._engineOverride = { available: true, until: "" };
+    compactClimate._lastRenderSignature = "";
+    compactClimate._render();
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
     const visual = element => {
       const style = getComputedStyle(element);
@@ -253,6 +262,9 @@ test("device and Climate layout variants render and keep their native controls",
       climateSliderTrack: visual(climateCompactRoot.querySelector(".climate-card__compact-slider-track")),
       fanControl: visual(fanCompactRoot.querySelector(".fan-card__control")),
       climateControl: visual(climateCompactRoot.querySelector(".climate-card__compact-step")),
+      climateOverride: visual(climateCompactRoot.querySelector(".climate-card__override-chip")),
+      climateOverrideBoxSizing: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip")).boxSizing,
+      climateOverrideLabelOverflow: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip span")).textOverflow,
     };
     const climateDial = climateCircularRoot.querySelector(".climate-card__dial");
     const circularMetrics = {
@@ -324,6 +336,9 @@ test("device and Climate layout variants render and keep their native controls",
   }
   expect(result.compactMetrics.climateTitle.fontSize).toBe(result.compactMetrics.fanTitle.fontSize);
   expect(result.compactMetrics.climateChip.fontSize).toBe(result.compactMetrics.fanChip.fontSize);
+  expect(result.compactMetrics.climateOverride.height).toBe(36);
+  expect(result.compactMetrics.climateOverrideBoxSizing).toBe("border-box");
+  expect(result.compactMetrics.climateOverrideLabelOverflow).toBe("ellipsis");
   for (const name of ["fan", "humidifier", "cover"]) {
     const actual = result.circularMetrics[name];
     const climate = result.circularMetrics.climate;
@@ -346,6 +361,9 @@ test("device and Climate layout variants render and keep their native controls",
     expect.objectContaining({ domain: "humidifier", service: "set_humidity" }),
     expect.objectContaining({ domain: "cover", service: "set_cover_position" }),
     expect.objectContaining({ domain: "climate", service: "set_temperature" }),
+    expect.objectContaining({ domain: "fan", service: "turn_off" }),
+    expect.objectContaining({ domain: "humidifier", service: "turn_off" }),
+    expect.objectContaining({ domain: "cover", service: "close_cover" }),
   ]));
   expect(errors).toEqual([]);
 });

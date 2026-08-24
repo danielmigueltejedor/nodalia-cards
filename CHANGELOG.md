@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0-alpha.7] - 2026-08-23
+
+Seventh **`2.2.0`** alpha: reliable circular power actions and a polished compact Climate hold control.
+
+### Fixed
+
+- Fan, Humidifier and Cover circular layouts no longer shield the complete dial from card actions, so their power controls and non-control card taps toggle the entity like the compact layout while sliders and dedicated controls remain isolated.
+- Climate's compact two-hour hold control now uses the same 36 px control rhythm, responsive width and safe ellipsis as the rest of the compact layout, with enough reserved height to avoid clipping in Sections.
+
+### Validation
+
+- Circular power and card-tap actions, slider isolation and the compact Climate hold geometry are covered by Node and browser regressions.
+- Chromium and WebKit/iPhone pass the combined device-layout interaction contract.
+
 ## [2.2.0-alpha.6] - 2026-08-22
 
 Sixth **`2.2.0`** alpha: mobile parity for the unified device layouts.

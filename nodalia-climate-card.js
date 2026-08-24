@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.0-alpha.6";
+const CARD_VERSION = "2.2.0-alpha.7";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -5464,7 +5464,7 @@ class NodaliaClimateCard extends HTMLElement {
     // reserve their row or Sections clips the step controls (overflow: hidden).
     const showEngineOverride = this._engineOverride?.available === true;
     const overrideChipPx = showEngineOverride
-      ? Math.max(22, parseSizeToPixels(effectiveChipHeight, 24))
+      ? (isCompactCardLayout ? 36 : Math.max(22, parseSizeToPixels(effectiveChipHeight, 24)))
       : 0;
     const overrideStatusPx = showEngineOverride && this._engineOverride?.until
       ? (tightLayout ? 14 : 16)
@@ -6294,6 +6294,34 @@ class NodaliaClimateCard extends HTMLElement {
         .climate-card__override-chip--clear {
           background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
           border-color: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+        }
+
+        .climate-card--layout-compact .climate-card__override {
+          box-sizing: border-box;
+          margin-top: 10px;
+          padding-inline: 4px;
+          width: 100%;
+        }
+
+        .climate-card--layout-compact .climate-card__override-chip {
+          box-sizing: border-box;
+          flex: 1 1 132px;
+          height: 36px;
+          justify-content: center;
+          min-width: 0;
+          padding: 0 12px;
+        }
+
+        .climate-card--layout-compact .climate-card__override-chip span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-card--layout-compact .climate-card__override-status {
+          flex: 1 0 100%;
+          text-align: center;
         }
 
         .climate-card__override-status {

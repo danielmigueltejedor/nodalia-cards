@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.2.0-alpha.6";
+const CARD_VERSION = "2.2.0-alpha.7";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2407,7 +2407,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     if (humidifierAction === "body" || humidifierAction === "icon") {
       const zone = humidifierAction;
-      if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+      if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
         return;
       }
       if (this._suppressNextHumidifierTap) {
@@ -2817,7 +2817,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       : "";
     const circularDial = getCircularLayoutDialModel(currentHumidity, humidityRange.min, humidityRange.max);
     const circularControlsMarkup = `
-      <div class="humidifier-card__circular-layout" data-nodalia-tap-shield="true">
+      <div class="humidifier-card__circular-layout">
         <div class="humidifier-card__circular-dial" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
             <circle class="humidifier-card__circular-track" cx="120" cy="120" r="86" pathLength="100"></circle>

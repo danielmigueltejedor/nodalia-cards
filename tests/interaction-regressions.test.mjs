@@ -1571,6 +1571,28 @@ test("slider bubble chrome does not trigger card body tap", () => {
   }
 });
 
+test("circular device surfaces and power buttons keep their card tap actions", () => {
+  const contracts = [
+    ["nodalia-fan-card.js", "fan", "fan-card__circular-layout"],
+    ["nodalia-humidifier-card.js", "humidifier", "humidifier-card__circular-layout"],
+    ["nodalia-cover-card.js", "cover", "fan-card__circular-layout"],
+  ];
+
+  for (const [file, actionPrefix, circularClass] of contracts) {
+    const source = read(file);
+    assert.doesNotMatch(
+      source,
+      new RegExp(`class="${circularClass}"\\s+data-nodalia-tap-shield`),
+      `${file} should not shield the complete circular surface`,
+    );
+    assert.match(
+      source,
+      new RegExp(`${actionPrefix}Action === "body"[\\s\\S]{0,240}isNodaliaSliderChromeHit`),
+      `${file} should shield slider chrome only from body taps`,
+    );
+  }
+});
+
 test("fav card matches entity cover lock toggle and tap action parsing", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /applyCardTapActionField/);
