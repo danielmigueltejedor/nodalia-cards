@@ -203,7 +203,7 @@ test("device and Climate layout variants render and keep their native controls",
     cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="increase-position"]')?.click();
     cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-power")?.click();
     cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-power")?.click();
-    cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card__circular-dial")?.click();
+    cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="icon"]')?.click();
     const climateSlider = cards["nodalia-climate-card"].shadowRoot.querySelector('[data-climate-compact-field="temperature"]');
     if (climateSlider) {
       climateSlider.value = "22";

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "2.2.0-rc.1";
+const CARD_VERSION = "2.2.0-rc.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3745,8 +3745,9 @@ class NodaliaLightCard extends HTMLElement {
           display: grid;
           grid-template-rows: 1fr;
           margin-top: var(--light-card-controls-gap);
+          max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, margin-top, opacity;
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .light-card__controls-inner {
@@ -4231,11 +4232,13 @@ class NodaliaLightCard extends HTMLElement {
         @keyframes light-card-controls-expand {
           0% {
             grid-template-rows: 0fr;
+            max-height: 0;
             margin-top: 0;
             opacity: 0;
           }
           100% {
             grid-template-rows: 1fr;
+            max-height: 320px;
             margin-top: var(--light-card-controls-gap);
             opacity: 1;
           }
@@ -4244,11 +4247,13 @@ class NodaliaLightCard extends HTMLElement {
         @keyframes light-card-controls-collapse {
           0% {
             grid-template-rows: 1fr;
+            max-height: 320px;
             margin-top: var(--light-card-controls-gap);
             opacity: 1;
           }
           100% {
             grid-template-rows: 0fr;
+            max-height: 0;
             margin-top: 0;
             opacity: 0;
           }

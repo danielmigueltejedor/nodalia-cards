@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.2.0-rc.1";
+const CARD_VERSION = "2.2.0-rc.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3486,7 +3486,14 @@ class NodaliaHumidifierCard extends HTMLElement {
           max-width: 100%;
           position: relative;
           touch-action: none;
-          transform: translateZ(0);
+          transform: translateZ(0) scale(1);
+          transform-origin: center;
+          transition:
+            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          will-change: transform, box-shadow;
           width: min(280px, 100%);
         }
 
@@ -3551,6 +3558,29 @@ class NodaliaHumidifierCard extends HTMLElement {
           transition: none;
         }
 
+        .humidifier-card__circular-dial.is-dragging {
+          border-color: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 24px 44px rgba(0, 0, 0, 0.2);
+          transform: translateZ(0) scale(1.03);
+        }
+
+        .humidifier-card__circular-dial.is-dragging .humidifier-card__circular-progress {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${accentColor} 24%, transparent));
+          opacity: 1;
+        }
+
+        .humidifier-card__circular-dial.is-dragging .humidifier-card__circular-thumb {
+          animation: humidifier-card-circular-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 0 0 7px color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)),
+            0 0 22px color-mix(in srgb, ${accentColor} 18%, transparent),
+            0 18px 34px rgba(0, 0, 0, 0.24);
+          transform: translate(-50%, -50%) scale(1.15);
+        }
+
         .humidifier-card__circular-thumb::before {
           -webkit-backdrop-filter: blur(16px);
           backdrop-filter: blur(16px);
@@ -3585,6 +3615,14 @@ class NodaliaHumidifierCard extends HTMLElement {
           pointer-events: none;
           position: absolute;
           text-align: center;
+          transform: scale(1);
+          transition:
+            opacity 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .humidifier-card__circular-dial.is-dragging .humidifier-card__circular-center {
+          transform: scale(1.02);
         }
 
         .humidifier-card__circular-center strong {
@@ -3663,8 +3701,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           display: grid;
           grid-template-rows: 1fr;
           margin-top: var(--humidifier-card-controls-gap);
+          max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, margin-top, opacity;
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .humidifier-card__controls-inner {
@@ -4025,11 +4064,13 @@ class NodaliaHumidifierCard extends HTMLElement {
         @keyframes humidifier-card-controls-expand {
           0% {
             grid-template-rows: 0fr;
+            max-height: 0;
             margin-top: 0;
             opacity: 0;
           }
           100% {
             grid-template-rows: 1fr;
+            max-height: 320px;
             margin-top: var(--humidifier-card-controls-gap);
             opacity: 1;
           }
@@ -4056,11 +4097,13 @@ class NodaliaHumidifierCard extends HTMLElement {
         @keyframes humidifier-card-controls-collapse {
           0% {
             grid-template-rows: 1fr;
+            max-height: 320px;
             margin-top: var(--humidifier-card-controls-gap);
             opacity: 1;
           }
           100% {
             grid-template-rows: 0fr;
+            max-height: 0;
             margin-top: 0;
             opacity: 0;
           }
@@ -4178,6 +4221,21 @@ class NodaliaHumidifierCard extends HTMLElement {
           100% {
             opacity: 1;
             transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes humidifier-card-circular-dial-thumb-pop {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          48% {
+            transform: translate(-50%, -50%) scale(1.24);
+          }
+          72% {
+            transform: translate(-50%, -50%) scale(1.09);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.15);
           }
         }
 

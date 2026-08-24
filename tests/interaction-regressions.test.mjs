@@ -1484,8 +1484,15 @@ test("scenes card empty state uses unified render signature", () => {
 test("power flow applies per-node bubble icon contrast", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /_getNodeIconGlyphColor\(node\)/);
-  assert.match(source, /--node-icon-glyph:/);
   assert.match(source, /shouldDarkenBubbleIconGlyph/);
+  assert.match(source, /--node-icon-glyph:/);
+});
+
+test("entity overview layouts apply bubble icon contrast to header and row glyphs", () => {
+  const source = read("nodalia-entity-card.js");
+  assert.match(source, /resolveEntityBubbleIconGlyphColor/);
+  assert.match(source, /--overview-glyph:/);
+  assert.match(source, /overviewIconGlyphColor/);
 });
 
 test("notifications async refresh guards disconnected lifecycle in finally", () => {
@@ -1605,6 +1612,16 @@ test("circular device surfaces and power buttons keep their card tap actions", (
       /getCircularLayoutDialValueFromPoint\(/,
       `${file} should map dial pointer geometry to values`,
     );
+    assert.match(
+      source,
+      /circular-dial\.is-dragging[\s\S]{0,480}scale\(1\.03\)/,
+      `${file} should expand the circular dial while dragging`,
+    );
+    assert.match(
+      source,
+      /circular-dial\.is-dragging[\s\S]{0,720}circular-center[\s\S]{0,160}scale\(1\.02\)/,
+      `${file} should subtly scale dial readout while dragging`,
+    );
     if (powerClass) {
       assert.match(
         source,
@@ -1623,6 +1640,13 @@ test("circular device surfaces and power buttons keep their card tap actions", (
       `${file} should shield slider chrome only from body taps`,
     );
   }
+
+  const coverSource = read("nodalia-cover-card.js");
+  assert.match(
+    coverSource,
+    /_hapticOnPositionStep\([\s\S]{0,420}lastHapticValue/,
+    "cover card should emit step haptics while dragging the circular dial",
+  );
 });
 
 test("fav card matches entity cover lock toggle and tap action parsing", () => {
@@ -2294,7 +2318,7 @@ test("device control expansion uses Gecko-safe grid tracks and commits its final
     const source = read(file);
     assert.match(source, /grid-template-rows: 1fr/);
     assert.match(source, /grid-template-rows: 0fr/);
-    assert.match(source, /will-change: grid-template-rows, margin-top, opacity/);
+    assert.match(source, /will-change: grid-template-rows, max-height, margin-top, opacity/);
     assert.match(source, /const shouldFinalizeRender = Boolean/);
     assert.match(source, /this\._lastRenderSignature = "";\s*this\._render\(\);/);
   }

@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0-rc.2] - 2026-08-24
+
+Second **`2.2.0`** release candidate: circular dial drag polish, Entity overview contrast, and browser CI fixes.
+
+### Changed
+
+- Fan, Humidifier and Cover circular dials scale up during drag with Climate-style glow, thumb pop and step haptics (Cover included).
+- Entity battery and network overviews apply bubble icon contrast to the header, row gauges and insight chips so icons stay readable on accent-tinted glass.
+
+### Fixed
+
+- Playwright layout-variant checks toggle Cover via the icon action instead of the drag dial.
+- Light, Fan and Humidifier control expansion animates `max-height` as well as grid tracks so WebKit reports measurable height during open/close.
+
+### Validation
+
+- Node and browser regressions cover overview glyph contrast, circular dial drag contracts and cross-engine expansion sampling.
+
 ## [2.2.0-rc.1] - 2026-08-24
 
 First **`2.2.0`** release candidate: interactive circular dials, tighter Entity overviews, and dial/draft lifecycle hardening.

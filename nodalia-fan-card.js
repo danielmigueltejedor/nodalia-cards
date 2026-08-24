@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.2.0-rc.1";
+const CARD_VERSION = "2.2.0-rc.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3238,8 +3238,9 @@ class NodaliaFanCard extends HTMLElement {
           display: grid;
           grid-template-rows: 1fr;
           margin-top: var(--fan-card-controls-gap);
+          max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, margin-top, opacity;
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .fan-card__controls-inner {
@@ -3594,7 +3595,14 @@ class NodaliaFanCard extends HTMLElement {
           max-width: 100%;
           position: relative;
           touch-action: none;
-          transform: translateZ(0);
+          transform: translateZ(0) scale(1);
+          transform-origin: center;
+          transition:
+            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          will-change: transform, box-shadow;
           width: min(280px, 100%);
         }
 
@@ -3659,6 +3667,29 @@ class NodaliaFanCard extends HTMLElement {
           transition: none;
         }
 
+        .fan-card__circular-dial.is-dragging {
+          border-color: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 24px 44px rgba(0, 0, 0, 0.2);
+          transform: translateZ(0) scale(1.03);
+        }
+
+        .fan-card__circular-dial.is-dragging .fan-card__circular-progress {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${accentColor} 24%, transparent));
+          opacity: 1;
+        }
+
+        .fan-card__circular-dial.is-dragging .fan-card__circular-thumb {
+          animation: fan-card-circular-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 0 0 7px color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)),
+            0 0 22px color-mix(in srgb, ${accentColor} 18%, transparent),
+            0 18px 34px rgba(0, 0, 0, 0.24);
+          transform: translate(-50%, -50%) scale(1.15);
+        }
+
         .fan-card__circular-thumb::before {
           -webkit-backdrop-filter: blur(16px);
           backdrop-filter: blur(16px);
@@ -3693,6 +3724,14 @@ class NodaliaFanCard extends HTMLElement {
           pointer-events: none;
           position: absolute;
           text-align: center;
+          transform: scale(1);
+          transition:
+            opacity 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .fan-card__circular-dial.is-dragging .fan-card__circular-center {
+          transform: scale(1.02);
         }
 
         .fan-card__circular-center strong {
@@ -3826,11 +3865,13 @@ class NodaliaFanCard extends HTMLElement {
         @keyframes fan-card-controls-expand {
           0% {
             grid-template-rows: 0fr;
+            max-height: 0;
             margin-top: 0;
             opacity: 0;
           }
           100% {
             grid-template-rows: 1fr;
+            max-height: 320px;
             margin-top: var(--fan-card-controls-gap);
             opacity: 1;
           }
@@ -3857,11 +3898,13 @@ class NodaliaFanCard extends HTMLElement {
         @keyframes fan-card-controls-collapse {
           0% {
             grid-template-rows: 1fr;
+            max-height: 320px;
             margin-top: var(--fan-card-controls-gap);
             opacity: 1;
           }
           100% {
             grid-template-rows: 0fr;
+            max-height: 0;
             margin-top: 0;
             opacity: 0;
           }
@@ -3954,6 +3997,21 @@ class NodaliaFanCard extends HTMLElement {
           }
           to {
             transform: translate3d(-50%, -50%, 0) rotate(360deg);
+          }
+        }
+
+        @keyframes fan-card-circular-dial-thumb-pop {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          48% {
+            transform: translate(-50%, -50%) scale(1.24);
+          }
+          72% {
+            transform: translate(-50%, -50%) scale(1.09);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.15);
           }
         }
 

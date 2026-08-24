@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.2.0-rc.1";
+const CARD_VERSION = "2.2.0-rc.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -791,6 +791,18 @@ function getEditorColorFallbackValue(field) {
 
 function shouldDarkenEntityBubbleIconGlyph(state, accentColor) {
   return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+}
+
+function resolveEntityBubbleIconGlyphColor(accentColor, state) {
+  const accent = String(accentColor || "").trim() || "var(--primary-color)";
+  try {
+    if (state && shouldDarkenEntityBubbleIconGlyph(state, accent)) {
+      return `color-mix(in srgb, var(--primary-text-color) 56%, ${accent})`;
+    }
+  } catch (_error) {
+    // resolveEditorColorValue needs a DOM probe; keep the raw accent in sandboxes.
+  }
+  return accent;
 }
 
 function isUnavailableState(state) {
@@ -3209,6 +3221,13 @@ class NodaliaEntityCard extends HTMLElement {
     const accent = layout === "battery"
       ? this._batteryColor(Number.isFinite(lowest) ? lowest : average)
       : statusEntry ? this._networkColor("status", statusEntry.state) : "var(--info-color, #42a5f5)";
+    const contrastReferenceState = available.find(entry => entry.state)?.state
+      || {
+        entity_id: layout === "battery" ? "sensor.battery" : "binary_sensor.network",
+        attributes: layout === "battery" ? { device_class: "battery" } : {},
+      };
+    const overviewIconGlyphColor = resolveEntityBubbleIconGlyphColor(accent, contrastReferenceState);
+    const overviewChipGlyphColor = overviewIconGlyphColor;
     const animations = this._getAnimationSettings();
     const insightMarkup = layout === "battery"
       ? `
@@ -3231,6 +3250,7 @@ class NodaliaEntityCard extends HTMLElement {
           : Number.isFinite(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
         const color = this._batteryColor(percent);
         const rowIcon = item.icon || this._batteryIcon(percent, state);
+        const rowGlyphColor = resolveEntityBubbleIconGlyphColor(color, state || contrastReferenceState);
         const batteryStatus = unavailable
           ? this._entityCardUi("overview.unavailable", "Unavailable")
           : !Number.isFinite(percent)
@@ -3241,7 +3261,7 @@ class NodaliaEntityCard extends HTMLElement {
                 ? this._entityCardUi("battery.low", "Low")
                 : this._entityCardUi("battery.good", "Good");
         return `
-          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-index:${index};--battery-level:${Number.isFinite(percent) ? percent : 0};">
+          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-glyph:${escapeHtml(rowGlyphColor)};--overview-index:${index};--battery-level:${Number.isFinite(percent) ? percent : 0};">
             <span class="entity-card__battery-gauge" aria-hidden="true">
               <span class="entity-card__battery-gauge-ring"></span>
               <span class="entity-card__battery-gauge-inner"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
@@ -3258,9 +3278,10 @@ class NodaliaEntityCard extends HTMLElement {
       const value = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : this._formatOverviewState(state);
       const rowIcon = item.icon || this._networkIcon(role, state);
       const color = this._networkColor(role, state);
+      const rowGlyphColor = resolveEntityBubbleIconGlyphColor(color, state || contrastReferenceState);
       const roleLabel = this._entityCardUi(`network.roles.${role}`, role);
       return `
-        <button type="button" class="entity-card__overview-item entity-card__overview-item--network entity-card__overview-item--${escapeHtml(role)}${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-index:${index};">
+        <button type="button" class="entity-card__overview-item entity-card__overview-item--network entity-card__overview-item--${escapeHtml(role)}${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-glyph:${escapeHtml(rowGlyphColor)};--overview-index:${index};">
           <span class="entity-card__overview-icon"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
           <span class="entity-card__overview-copy"><span class="entity-card__overview-role">${escapeHtml(roleLabel)}</span><strong>${escapeHtml(name)}</strong></span>
           <strong class="entity-card__overview-value">${escapeHtml(value)}</strong>
@@ -3319,7 +3340,7 @@ class NodaliaEntityCard extends HTMLElement {
           border:1px solid color-mix(in srgb,${accent} 30%,color-mix(in srgb,var(--primary-text-color) 9%,transparent));
           border-radius:999px;
           box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 10%,transparent),0 8px 18px color-mix(in srgb,${accent} 16%,rgba(0,0,0,.12));
-          color:${accent};
+          color:${overviewIconGlyphColor};
           display:flex;
           height:44px;
           justify-content:center;
@@ -3342,7 +3363,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__overview-title { display:grid; gap:2px; min-width:0; }
         .entity-card__overview-title strong { font-size:13px; font-weight:750; letter-spacing:-.02em; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .entity-card__overview-title span { color:var(--secondary-text-color); font-size:10px; font-weight:600; letter-spacing:.01em; }
-        .entity-card__overview-insights { align-items:center; display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end; min-width:0; }
+        .entity-card__overview-insights { align-items:center; display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end; min-width:0; --overview-chip-glyph:${overviewChipGlyphColor}; }
         .entity-card__overview-chip {
           --overview-chip-accent:${accent};
           align-items:center;
@@ -3357,10 +3378,10 @@ class NodaliaEntityCard extends HTMLElement {
           padding:0 8px;
           white-space:nowrap;
         }
-        .entity-card__overview-chip ha-icon { --mdc-icon-size:12px; color:var(--overview-chip-accent); }
+        .entity-card__overview-chip ha-icon { --mdc-icon-size:12px; color:var(--overview-chip-glyph,var(--overview-chip-accent)); }
         .entity-card__overview-chip strong { font-weight:750; }
         .entity-card__overview-chip span { color:var(--secondary-text-color); font-weight:600; }
-        .entity-card__overview-chip--alert { --overview-chip-accent:var(--error-color,#ef5350); }
+        .entity-card__overview-chip--alert { --overview-chip-accent:var(--error-color,#ef5350); --overview-chip-glyph:color-mix(in srgb,var(--primary-text-color) 52%,var(--error-color,#ef5350)); }
         .entity-card__overview-live-dot { animation:entity-card-network-pulse 1.9s ease-in-out infinite; background:var(--overview-chip-accent, var(--overview-accent, ${accent})); border-radius:999px; box-shadow:0 0 0 3px color-mix(in srgb,var(--overview-chip-accent, var(--overview-accent, ${accent})) 12%,transparent); height:6px; width:6px; }
         .entity-card__overview-grid { display:grid; gap:8px; grid-template-columns:repeat(2,minmax(0,1fr)); }
         .entity-card__overview-item {
@@ -3427,7 +3448,7 @@ class NodaliaEntityCard extends HTMLElement {
           border:1px solid color-mix(in srgb,var(--overview-accent) 20%,transparent);
           border-radius:999px;
           box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          color:var(--overview-accent);
+          color:var(--overview-glyph,var(--overview-accent));
           display:flex;
           height:32px;
           justify-content:center;
@@ -3477,7 +3498,7 @@ class NodaliaEntityCard extends HTMLElement {
           border:1px solid color-mix(in srgb,var(--overview-accent) 24%,transparent);
           border-radius:999px;
           box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 7%,transparent),0 6px 14px color-mix(in srgb,var(--overview-accent) 12%,rgba(0,0,0,.08));
-          color:var(--overview-accent);
+          color:var(--overview-glyph,var(--overview-accent));
           display:flex;
           grid-row:1 / span 2;
           height:38px;

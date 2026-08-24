@@ -17,10 +17,10 @@ Current stable release:
 Current preview release:
 
 ```text
-2.2.0-rc.1
+2.2.0-rc.2
 ```
 
-Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-rc.1`** is the first release candidate for the `2.2.0` line: interactive circular device dials, denser Entity battery/network overviews without a nested title card, Climate hold glass styling, dial/draft lifecycle hardening and CodeQL `init`/`analyze` pinned together on `4.37.8`. It retains the unified device layouts, Engine-first notification failover hardening, multi-player fixes, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics work from the earlier previews. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-rc.2`** is the current release candidate for the `2.2.0` line: Climate-parity circular dial drag feedback, Entity battery/network icon contrast, browser CI fixes for Cover toggles and WebKit control expansion, plus everything from **`2.2.0-rc.1`** (interactive dials, denser Entity overviews, Climate hold glass styling, dial/draft lifecycle hardening and CodeQL `init`/`analyze` pinned together on `4.37.8`). It retains the unified device layouts, Engine-first notification failover hardening, multi-player fixes, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics work from the earlier previews. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -42,7 +42,7 @@ The project currently includes:
 The current maintenance stage focuses on:
 
 - Regression-free mobile and desktop behavior
-- Final stable-release validation of `2.2.0-rc.1`
+- Final stable-release validation of `2.2.0-rc.2`
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
