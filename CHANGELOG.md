@@ -10,6 +10,47 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-08-24
+
+Stable **`2.2.0`**: unified compact and circular device layouts, interactive dials with Climate-parity drag feedback, denser Entity battery/network overviews, and hardened notification failover — shipped as one self-contained HACS bundle.
+
+### Highlights
+
+- **Unified device layouts:** Fan, Humidifier, Cover and Climate share compact horizontal and circular surfaces with aligned padding, hero, chips, sliders, glass dials and step controls.
+- **Interactive circular dials:** drag the 270° value ring, use isolated `−` / `+` steps, feel step haptics and see the dial expand with glow while dragging — including Cover position control.
+- **Entity overviews:** battery and network layouts use inline insight chips, ring gauges, level tracks and bubble icon contrast so header and row icons stay readable on accent-tinted glass.
+- **Engine resilience:** notification failover activates only after a confirmed Engine command miss, avoiding duplicate mobile alerts while preserving foreground suppression.
+- **Official HACS catalogue:** Dashboard installs use `/hacsfiles/nodalia-cards/nodalia-cards.js` as the single generated runtime.
+
+### Added
+
+- Fan, Humidifier and Cover optional `layout: circular`; Climate optional `layout: compact`, all selectable in visual editors.
+- Entity Card battery and network overview layouts with multi-entity gauges, status chips and per-metric actions.
+- Stepped selection haptics on Fan, Humidifier, Cover, Climate, Light and Humidifier circular/linear controls.
+- Climate compact two-hour hold with Nodalia glass styling.
+
+### Changed
+
+- Media Player keeps the selected player by entity; Navigation Bar persists secondary player picker changes.
+- GitHub releases ship one bundle (`nodalia-cards.js`) instead of redundant full-bundle copies.
+- CodeQL `init` and `analyze` stay pinned together on `4.37.8`.
+
+### Fixed
+
+- Fan and Humidifier clear optimistic drafts once Home Assistant confirms the value.
+- Disconnecting mid-drag clears active dial/slider state across Fan, Humidifier, Cover and Climate.
+- Climate Engine override chips queue re-render during dial or schedule drag.
+- Circular dial open-arc hits keep the previous value; PointerEvent browsers skip duplicate mouse listeners.
+- Cover circular steps and drag work when `current_position` is missing; step haptics fire during dial drag.
+- Entity overview render signatures hash only battery/network keys needed for updates.
+- Light, Fan and Humidifier control expansion animates `max-height` for reliable WebKit sampling.
+- Transient Engine timeouts no longer reactivate legacy notification packages.
+
+### Security and validation
+
+- Strict service allowlists, sanitized navigation URLs and configuration path hardening remain default.
+- **444** Node tests, Chromium/WebKit/iPhone Playwright regressions, HACS validation and CodeQL scanning gate the stable bundle.
+
 ## [2.2.0-rc.2] - 2026-08-24
 
 Second **`2.2.0`** release candidate: circular dial drag polish, Entity overview contrast, and browser CI fixes.

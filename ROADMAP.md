@@ -11,16 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-2.1.2
+2.2.0
 ```
 
-Current preview release:
-
-```text
-2.2.0-rc.2
-```
-
-Stable **`2.1.2`** remains the recommended daily-driver release. **`2.2.0-rc.2`** is the current release candidate for the `2.2.0` line: Climate-parity circular dial drag feedback, Entity battery/network icon contrast, browser CI fixes for Cover toggles and WebKit control expansion, plus everything from **`2.2.0-rc.1`** (interactive dials, denser Entity overviews, Climate hold glass styling, dial/draft lifecycle hardening and CodeQL `init`/`analyze` pinned together on `4.37.8`). It retains the unified device layouts, Engine-first notification failover hardening, multi-player fixes, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics work from the earlier previews. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.0`** is the recommended daily-driver release: unified compact and circular device layouts, interactive dials with Climate-parity drag feedback and haptics, denser Entity battery/network overviews with bubble icon contrast, Climate hold glass styling, Engine-first notification failover hardening, multi-player fixes, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -37,18 +31,18 @@ The project currently includes:
 
 ---
 
-# 🎯 Current focus (`2.2.0` stabilization)
+# 🎯 Current focus (`2.2.x` maintenance)
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior
-- Final stable-release validation of `2.2.0-rc.2`
+- Regression-free mobile and desktop behavior on stable **`2.2.0`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
 - Bundle startup and render performance
 - Documentation and release automation parity
 - Ongoing cross-browser and Home Assistant compatibility testing
+- i18n and editor maturity (Phase 2)
 
 The goal is no longer “making cards exist”.
 
@@ -58,6 +52,12 @@ The goal is making the entire system feel:
 - reliable
 - scalable
 - premium
+
+---
+
+# ✅ Phase 1.5 — 2.2 stabilization (completed)
+
+Completed in stable **`2.2.0`**: unified device layouts, interactive circular dials, Entity battery/network overviews, notification failover hardening and single-bundle HACS publishing validated across Node and browser CI.
 
 ---
 

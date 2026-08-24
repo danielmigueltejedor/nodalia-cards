@@ -10,6 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.0] - 2026-08-24
+
+Stable **`2.2.0`**: unified compact and circular device layouts, interactive dials with Climate-parity drag feedback, denser Entity battery/network overviews, and hardened notification failover — shipped as one self-contained HACS bundle.
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for the consolidated stable summary. Prerelease notes for **`2.2.0-alpha.1`** through **`2.2.0-rc.2`** remain below.
+
 ## [2.2.0-rc.2] - 2026-08-24
 
 Second **`2.2.0`** release candidate: circular dial drag polish, Entity overview contrast, and browser CI fixes.
