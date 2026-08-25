@@ -372,6 +372,99 @@ test("media player custom power actions work by default and player selection fol
   assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activePlayerEntity\)/);
 });
 
+function loadNavigationBarCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+      this.shadowRoot = null;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        removeEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return true; }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      addEventListener() {},
+      removeEventListener() {},
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+      visibilityState: "visible",
+    },
+    HTMLElement: FakeHTMLElement,
+    MutationObserver: class { observe() {} disconnect() {} },
+    ResizeObserver: class { observe() {} disconnect() {} },
+    IntersectionObserver: class { observe() {} disconnect() {} },
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-i18n.js"), sandbox);
+  vm.runInContext(read("nodalia-render-signature.js"), sandbox);
+  vm.runInContext(read("nodalia-navigation-bar.js"), sandbox);
+  return registry.get("nodalia-navigation-bar");
+}
+
+test("navigation media player selection follows the entity when visibility changes", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /_resolveActiveMediaPlayerIndex\(players\)/);
+  assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activeMediaPlayerEntity\)/);
+  assert.match(
+    source,
+    /this\._activeMediaPlayerEntity = String\(visiblePlayers\[this\._activeMediaPlayerIndex\]\?\.entity \|\| ""\)/,
+  );
+
+  const CardClass = loadNavigationBarCardClass();
+  assert.ok(CardClass, "NodaliaNavigationBarCard should register");
+  const card = new CardClass();
+  const kitchen = { entity: "media_player.kitchen" };
+  const living = { entity: "media_player.living_room" };
+  const bedroom = { entity: "media_player.bedroom" };
+
+  card._activeMediaPlayerIndex = 1;
+  card._activeMediaPlayerEntity = living.entity;
+
+  // An earlier configured player dropping out used to leave the stored index
+  // pointing at a different device (living -> bedroom).
+  assert.equal(card._resolveActiveMediaPlayerIndex([living, bedroom]), 0);
+  assert.equal(card._activeMediaPlayerIndex, 0);
+  assert.equal(card._activeMediaPlayerEntity, living.entity);
+
+  assert.equal(card._resolveActiveMediaPlayerIndex([kitchen, living, bedroom]), 1);
+  assert.equal(card._activeMediaPlayerIndex, 1);
+  assert.equal(card._activeMediaPlayerEntity, living.entity);
+});
+
 test("navigation editor persists secondary media-player picker changes", () => {
   const source = read("nodalia-navigation-bar.js");
   const inputStart = source.indexOf("  _onShadowInput(event)", source.indexOf("class NodaliaNavigationBarEditor"));
