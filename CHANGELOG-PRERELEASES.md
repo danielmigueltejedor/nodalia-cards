@@ -4,17 +4,9 @@ This file archives detailed per-build notes for all alpha, beta and release-cand
 
 Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is not part of the active `2.0.0` preview line — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
 
-For **stable** releases see [`CHANGELOG.md`](./CHANGELOG.md).
-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
-
-## [2.2.0] - 2026-08-24
-
-Stable **`2.2.0`**: unified compact and circular device layouts, interactive dials with Climate-parity drag feedback, denser Entity battery/network overviews, and hardened notification failover — shipped as one self-contained HACS bundle.
-
-See [`CHANGELOG.md`](./CHANGELOG.md) for the consolidated stable summary. Prerelease notes for **`2.2.0-alpha.1`** through **`2.2.0-rc.2`** remain below.
 
 ## [2.2.0-rc.2] - 2026-08-24
 
