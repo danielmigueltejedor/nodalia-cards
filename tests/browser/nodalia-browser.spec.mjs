@@ -1043,62 +1043,93 @@ test("Navigation keeps media controls on the selected entity when visible player
   ]);
 });
 
-test("Entity and Fav use Light surface shadows and Fav applies tint contrast to its glyph", async ({ page }) => {
+test("Entity, Fav, and Vacuum bubbles match Light chrome and tint contrast", async ({ page }) => {
   await loadBundle(page);
   const visuals = await page.evaluate(() => {
     document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
     document.documentElement.style.setProperty("--primary-text-color", "#1b1d22");
     document.documentElement.style.setProperty("--divider-color", "#d7dbe2");
     document.documentElement.style.setProperty("--ha-card-box-shadow", "0 8px 24px rgba(0, 0, 0, 0.14)");
-    const accent = "#71c0ff";
+    const accent = "#f29a63";
     const states = {
-      "light.reference": { entity_id: "light.reference", state: "on", attributes: { friendly_name: "Light", rgb_color: [113, 192, 255] } },
-      "switch.entity": { entity_id: "switch.entity", state: "on", attributes: { friendly_name: "Entity" } },
-      "switch.fav": { entity_id: "switch.fav", state: "on", attributes: { friendly_name: "Fav" } },
+      "light.neutral": { entity_id: "light.neutral", state: "off", attributes: { friendly_name: "Light neutral" } },
+      "sensor.entity": { entity_id: "sensor.entity", state: "idle", attributes: { friendly_name: "Entity neutral" } },
+      "input_boolean.fav_neutral": { entity_id: "input_boolean.fav_neutral", state: "off", attributes: { friendly_name: "Fav neutral" } },
+      "light.warm": { entity_id: "light.warm", state: "on", attributes: { friendly_name: "Light warm", rgb_color: [242, 154, 99] } },
+      "input_boolean.fav_warm": { entity_id: "input_boolean.fav_warm", state: "on", attributes: { friendly_name: "Fav warm" } },
+      "vacuum.warm": { entity_id: "vacuum.warm", state: "cleaning", attributes: { friendly_name: "Vacuum warm" } },
     };
     const hass = window.makeHass(states);
-    const mount = (tag, config) => {
+    const mount = (tag, config, iconStyles = {}) => {
       const card = document.createElement(tag);
       card.setConfig({
         ...config,
         animations: { enabled: false },
-        styles: { icon: { on_color: accent } },
+        styles: { icon: iconStyles },
       });
       card.hass = hass;
       document.querySelector("#fixture").append(card);
       return card;
     };
-    const light = mount("nodalia-light-card", { entity: "light.reference" });
-    const entity = mount("nodalia-entity-card", { entity: "switch.entity" });
-    const fav = mount("nodalia-fav-card", { entity: "switch.fav" });
     const read = (card, bubbleSelector) => {
       const surface = getComputedStyle(card.shadowRoot.querySelector("ha-card"));
       const bubble = getComputedStyle(card.shadowRoot.querySelector(bubbleSelector));
       const glyph = getComputedStyle(card.shadowRoot.querySelector(`${bubbleSelector} ha-icon`));
       return {
         surfaceShadow: surface.boxShadow,
+        bubbleBackground: bubble.backgroundColor,
+        bubbleBackgroundImage: bubble.backgroundImage,
+        bubbleBorder: bubble.border,
         bubbleShadow: bubble.boxShadow,
         bubbleColor: bubble.color,
         glyphColor: glyph.color,
       };
     };
+    const lightNeutral = mount("nodalia-light-card", { entity: "light.neutral" });
+    const entityNeutral = mount(
+      "nodalia-entity-card",
+      { entity: "sensor.entity" },
+      { background: "var(--ha-card-background)" },
+    );
+    const favNeutral = mount(
+      "nodalia-fav-card",
+      { entity: "input_boolean.fav_neutral" },
+      { background: "rgba(255, 255, 255, 0.08)" },
+    );
+    const lightWarm = mount("nodalia-light-card", { entity: "light.warm" });
+    const favWarm = mount("nodalia-fav-card", { entity: "input_boolean.fav_warm" }, { on_color: accent });
+    const vacuumWarm = mount("nodalia-vacuum-card", { entity: "vacuum.warm" }, { active_color: accent });
     return {
-      accent: "rgb(113, 192, 255)",
-      light: read(light, ".light-card__icon"),
-      entity: read(entity, ".entity-card__icon"),
-      fav: read(fav, ".fav-card__icon"),
+      accent: "rgb(242, 154, 99)",
+      lightNeutral: read(lightNeutral, ".light-card__icon"),
+      entityNeutral: read(entityNeutral, ".entity-card__icon"),
+      favNeutral: read(favNeutral, ".fav-card__icon"),
+      lightWarm: read(lightWarm, ".light-card__icon"),
+      favWarm: read(favWarm, ".fav-card__icon"),
+      vacuumWarm: read(vacuumWarm, ".vacuum-card__icon-button"),
     };
   });
 
-  expect(visuals.entity.surfaceShadow).toBe(visuals.light.surfaceShadow);
-  expect(visuals.fav.surfaceShadow).toBe(visuals.light.surfaceShadow);
-  expect(visuals.entity.bubbleShadow).toBe(visuals.light.bubbleShadow);
-  expect(visuals.fav.bubbleShadow).toBe(visuals.light.bubbleShadow);
-  expect(visuals.fav.glyphColor).toBe(visuals.fav.bubbleColor);
-  expect(visuals.fav.glyphColor).not.toBe(visuals.accent);
+  for (const card of [visuals.entityNeutral, visuals.favNeutral]) {
+    expect(card.surfaceShadow).toBe(visuals.lightNeutral.surfaceShadow);
+    expect(card.bubbleBackground).toBe(visuals.lightNeutral.bubbleBackground);
+    expect(card.bubbleBackgroundImage).toBe(visuals.lightNeutral.bubbleBackgroundImage);
+    expect(card.bubbleBorder).toBe(visuals.lightNeutral.bubbleBorder);
+    expect(card.bubbleShadow).toBe(visuals.lightNeutral.bubbleShadow);
+  }
+  expect(visuals.favWarm.bubbleBackground).toBe(visuals.lightWarm.bubbleBackground);
+  expect(visuals.favWarm.bubbleShadow).toBe(visuals.lightWarm.bubbleShadow);
+  expect(visuals.favWarm.glyphColor).toBe(visuals.lightWarm.glyphColor);
+  expect(visuals.favWarm.glyphColor).toBe(visuals.favWarm.bubbleColor);
+  expect(visuals.favWarm.glyphColor).not.toBe(visuals.accent);
+  expect(visuals.vacuumWarm.bubbleBackground).toBe(visuals.lightWarm.bubbleBackground);
+  expect(visuals.vacuumWarm.bubbleShadow).toBe(visuals.lightWarm.bubbleShadow);
+  expect(visuals.vacuumWarm.glyphColor).toBe(visuals.lightWarm.glyphColor);
+  expect(visuals.vacuumWarm.glyphColor).toBe(visuals.vacuumWarm.bubbleColor);
+  expect(visuals.vacuumWarm.glyphColor).not.toBe(visuals.accent);
 });
 
-test("Graph renders its main primitives as glass bubbles", async ({ page }) => {
+test("Graph keeps glass chrome while value and plot remain open and edge-to-edge", async ({ page }) => {
   await loadBundle(page);
   const visuals = await page.evaluate(async () => {
     document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
@@ -1121,35 +1152,58 @@ test("Graph renders its main primitives as glass bubbles", async ({ page }) => {
     card.hass = hass;
     document.querySelector("#fixture").append(card);
     await new Promise(resolve => requestAnimationFrame(() => resolve()));
-    const read = selector => {
-      const style = getComputedStyle(card.shadowRoot.querySelector(selector));
+    const read = element => {
+      const style = getComputedStyle(element);
       return {
         backdrop: style.backdropFilter || style.webkitBackdropFilter,
         background: style.backgroundImage,
         backgroundColor: style.backgroundColor,
         borderRadius: style.borderRadius,
         boxShadow: style.boxShadow,
+        padding: style.padding,
       };
     };
+    const surfaceNode = card.shadowRoot.querySelector("ha-card");
+    const valueNode = card.shadowRoot.querySelector(".graph-card__value");
+    const chartNode = card.shadowRoot.querySelector(".graph-card__chart-wrap");
+    const svgNode = card.shadowRoot.querySelector(".graph-card__chart");
+    const rect = element => {
+      const box = element.getBoundingClientRect();
+      return { top: box.top, left: box.left, right: box.right, bottom: box.bottom, width: box.width, height: box.height };
+    };
     return {
-      surface: read("ha-card"),
-      icon: read(".graph-card__icon"),
-      value: read(".graph-card__value"),
-      legend: read(".graph-card__legend-item"),
-      chart: read(".graph-card__chart-wrap"),
+      surface: read(surfaceNode),
+      icon: read(card.shadowRoot.querySelector(".graph-card__icon")),
+      value: read(valueNode),
+      legend: read(card.shadowRoot.querySelector(".graph-card__legend-item")),
+      chart: read(chartNode),
+      surfaceRect: rect(surfaceNode),
+      chartRect: rect(chartNode),
+      svgRect: rect(svgNode),
     };
   });
 
   expect(visuals.surface.background).toContain("linear-gradient");
   expect(visuals.surface.boxShadow).not.toBe("none");
   expect(visuals.icon.borderRadius).toBe("999px");
-  for (const primitive of [visuals.icon, visuals.value, visuals.legend, visuals.chart]) {
+  for (const primitive of [visuals.icon, visuals.legend, visuals.chart]) {
     expect(
       /gradient/.test(primitive.background) || primitive.backgroundColor !== "rgba(0, 0, 0, 0)",
     ).toBe(true);
     expect(primitive.boxShadow).not.toBe("none");
     expect(primitive.backdrop).toMatch(/blur/);
   }
+  expect(visuals.value.background).toBe("none");
+  expect(visuals.value.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(visuals.value.boxShadow).toBe("none");
+  expect(visuals.value.backdrop).toBe("none");
+  expect(visuals.value.padding).toBe("0px");
+  expect(Math.abs(visuals.chartRect.left - visuals.surfaceRect.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(visuals.chartRect.right - visuals.surfaceRect.right)).toBeLessThanOrEqual(1);
+  expect(Math.abs(visuals.chartRect.bottom - visuals.surfaceRect.bottom)).toBeLessThanOrEqual(1);
+  expect(Math.abs(visuals.svgRect.left - visuals.chartRect.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(visuals.svgRect.right - visuals.chartRect.right)).toBeLessThanOrEqual(1);
+  expect(visuals.chart.padding).toBe("0px");
 });
 
 test("Person, Fav and single-scene mode share the Nodalia visual family", async ({ page }) => {

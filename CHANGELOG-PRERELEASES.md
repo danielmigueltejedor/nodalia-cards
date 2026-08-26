@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-alpha.3] - 2026-08-26
+
+Third **`2.2.1`** alpha: restored Graph density, consistent icon bubbles and contrast-safe device tints.
+
+### Changed
+
+- Graph Card returns the primary number to unboxed typography and restores the plot as a full-width, edge-to-edge glass surface without internal chart padding.
+- Stable release publishing now builds curated notes from the matching `CHANGELOG.md` section and adds practical HACS update, cache, integrity and support guidance; prereleases keep GitHub-generated notes.
+
+### Fixed
+
+- Entity and Fav normalize legacy white or flat icon-bubble backgrounds to the same neutral surface used by Light Card, keeping fill, border and shadow aligned in light themes.
+- Fav applies the shared Light-style contrast mix to its rendered glyph for warm orange and peach tints.
+- Vacuum applies the same shared contrast-aware tint to its main glyph across cleaning, returning, maintenance and error states.
+
+### Validation
+
+- All 453 Node regressions pass, including the new stable-release-note and Vacuum contrast contracts.
+- Computed-style browser checks pass in Chromium, WebKit and WebKit iPhone for neutral bubble parity, warm Fav/Vacuum tint contrast and the restored edge-to-edge Graph layout.
+
 ## [2.2.1-alpha.2] - 2026-08-26
 
 Second **`2.2.1`** alpha: stable media-player identity and stricter visual-family parity.

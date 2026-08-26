@@ -573,6 +573,14 @@ test("fav active state matches Light surfaces and applies tint contrast to icons
   assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);
 });
 
+test("vacuum tinted states apply the shared bubble icon contrast", () => {
+  const source = read("nodalia-vacuum-card.js");
+  assert.match(source, /resolveBubbleIconGlyphColor\?\.\(state, accentColor\)/);
+  assert.match(source, /const iconGlyphColor = isTintedState/);
+  assert.match(source, /\.vacuum-card__icon-button \{[\s\S]*color: \$\{iconGlyphColor\};/);
+  assert.match(source, /\.vacuum-card__icon-button ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
+});
+
 test("scenes supports a dedicated single-scene surface and visual-editor option", () => {
   const source = read("nodalia-scenes-card.js");
   const labels = JSON.parse(read("i18n/editor/en.json"));
@@ -2102,8 +2110,12 @@ test("advance vacuum map display follows cleaning session mode", () => {
   );
 });
 
-test("graph card uses the shared glass surface language throughout", () => {
+test("graph card keeps glass chrome while value and plot stay visually open", () => {
   const source = read("nodalia-graph-card.js");
+  const valueStart = source.indexOf("        .graph-card__value {");
+  const valueBlock = source.slice(valueStart, source.indexOf("\n        }", valueStart) + 10);
+  const chartStart = source.indexOf("        .graph-card__chart-wrap {");
+  const chartBlock = source.slice(chartStart, source.indexOf("\n        }", chartStart) + 10);
   assert.match(source, /border_radius: "var\(--nodalia-card-border-radius, 28px\)"/);
   assert.match(source, /padding: "14px",[\s\S]*gap: "12px"/);
   assert.match(source, /const cardBackground = `linear-gradient\(135deg, color-mix\(in srgb, \$\{accentColor\} 18%/);
@@ -2111,9 +2123,13 @@ test("graph card uses the shared glass surface language throughout", () => {
   assert.match(source, /\.graph-card::before \{[\s\S]*color-mix\(in srgb, \$\{accentColor\} 22%/);
   assert.match(source, /\.graph-card__icon \{[\s\S]*backdrop-filter: blur\(14px\);[\s\S]*border-radius: 999px;[\s\S]*0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
   assert.match(source, /\.graph-card__icon ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
-  assert.match(source, /\.graph-card__value \{[\s\S]*backdrop-filter: blur\(14px\);[\s\S]*border-radius: 18px;/);
+  assert.match(valueBlock, /display: flex;/);
+  assert.doesNotMatch(valueBlock, /backdrop-filter|background:|border:|box-shadow|padding:/);
   assert.match(source, /\.graph-card__legend-item \{[\s\S]*backdrop-filter: blur\(12px\);[\s\S]*inset 0 1px 0/);
-  assert.match(source, /\.graph-card__chart-wrap \{[\s\S]*backdrop-filter: blur\(18px\);[\s\S]*0 12px 30px rgba\(0, 0, 0, 0\.1\)/);
+  assert.match(chartBlock, /backdrop-filter: blur\(18px\);/);
+  assert.match(chartBlock, /margin: 4px -\$\{chartBleedRight\}px -\$\{chartBleedBottom\}px -\$\{chartBleedLeft\}px;/);
+  assert.match(chartBlock, /padding: 0;/);
+  assert.match(chartBlock, /width: calc\(100% \+ \$\{chartBleedLeft \+ chartBleedRight\}px\);/);
 });
 
 test("fan off-state memory ignores zero percentage", () => {

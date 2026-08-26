@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.2.1-alpha.2";
+const CARD_VERSION = "2.2.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -146,14 +146,17 @@ function shouldDarkenFavBubbleIconGlyph(state, accentColor) {
 
 function resolveFavBubbleIconGlyphColor(accentColor, state) {
   const accent = String(accentColor || "").trim() || "var(--primary-color)";
+  let accentWeight = 72;
   try {
-    if (state && shouldDarkenFavBubbleIconGlyph(state, accent)) {
-      return `color-mix(in srgb, var(--primary-text-color) 56%, ${accent})`;
+    const resolver = window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor;
+    if (typeof resolver === "function") {
+      return resolver(state, accent);
     }
+    accentWeight = shouldDarkenFavBubbleIconGlyph(state, accent) ? 42 : 72;
   } catch (_error) {
-    // Theme variables may need a live DOM probe; retain the configured accent in sandboxes.
+    // Theme variables may need a live DOM probe; use the same safe mix as Light Card.
   }
-  return accent;
+  return `color-mix(in srgb, ${accent} ${accentWeight}%, var(--primary-text-color))`;
 }
 
 function formatEditorHexChannel(value) {
@@ -481,6 +484,10 @@ function getDynamicEntityIcon(state) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
+    config.styles.icon.background,
+    DEFAULT_CONFIG.styles.icon.background,
+  ) || config.styles.icon.background;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "2.2.1-alpha.2";
+const CARD_VERSION = "2.2.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2241,7 +2241,11 @@ class NodaliaGraphCard extends HTMLElement {
     const legendSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.legend_size, 12), compactLayout ? 10 : 11))}px`;
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const lineWidth = `${Math.max(1.6, Math.min(parseSizeToPixels(styles.line_width, 2.2), compactLayout ? 1.9 : 2.2))}`;
-    const chartBleed = 0;
+    const padEdges = parsePaddingEdges(styles.card.padding, 14);
+    const chartBleed = Math.round(Math.max(padEdges.left, padEdges.right) * 0.98);
+    const chartBleedLeft = Math.round(padEdges.left);
+    const chartBleedRight = Math.round(padEdges.right);
+    const chartBleedBottom = Math.round(padEdges.bottom);
     const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
     const computedCardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const cardBorder = String(styles.card.border || "").trim() && styles.card.border !== DEFAULT_CONFIG.styles.card.border
@@ -2306,6 +2310,7 @@ class NodaliaGraphCard extends HTMLElement {
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
+          display: block;
           position: relative;
         }
 
@@ -2466,22 +2471,12 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__value {
-          -webkit-backdrop-filter: blur(14px);
           align-items: baseline;
-          backdrop-filter: blur(14px);
-          background:
-            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), color-mix(in srgb, var(--primary-text-color) 4%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
-          border-radius: 18px;
-          box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent),
-            0 10px 24px rgba(0, 0, 0, 0.12);
           display: flex;
           flex-wrap: nowrap;
           gap: 4px;
           line-height: 0.9;
           min-width: 0;
-          padding: 8px 11px 9px;
         }
 
         .graph-card__content--entering > .graph-card__value,
@@ -2592,23 +2587,24 @@ class NodaliaGraphCard extends HTMLElement {
           background:
             radial-gradient(circle at 18% 16%, color-mix(in srgb, ${accentColor} 18%, transparent), transparent 48%),
             linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), color-mix(in srgb, var(--primary-text-color) 2%, transparent));
-          border: 1px solid color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
-          border-radius: calc(${styles.card.border_radius} - 8px);
+          border: 0;
+          border-radius: ${styles.card.border_radius};
           box-shadow:
+            inset 0 0 0 1px color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)),
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent),
             0 12px 30px rgba(0, 0, 0, 0.1);
           flex: 1 1 auto;
-          margin: 4px 0 0;
+          margin: 4px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
           max-width: none;
           min-height: ${chartHeight};
           min-width: 0;
           overflow: hidden;
-          padding: 10px 8px 12px;
+          padding: 0;
           position: relative;
           touch-action: pan-y;
           user-select: none;
           -webkit-user-select: none;
-          width: 100%;
+          width: calc(100% + ${chartBleedLeft + chartBleedRight}px);
         }
 
         .graph-card__chart-wrap--entering {
@@ -2616,13 +2612,13 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__hover-points-layer {
-          bottom: 12px;
-          left: 8px;
+          bottom: 0;
+          left: 0;
           overflow: hidden;
           pointer-events: none;
           position: absolute;
-          right: 8px;
-          top: 10px;
+          right: 0;
+          top: 0;
           z-index: 2;
         }
 

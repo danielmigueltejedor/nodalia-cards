@@ -59,8 +59,16 @@ jobs:
         run: |
           mapfile -t assets < release/release-assets.txt
           release_title="${GITHUB_REF_NAME#v}"
-          prerelease_args=()
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then
-            prerelease_args+=(--prerelease)
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+              --verify-tag \
+              --generate-notes \
+              --title "$release_title" \
+              --prerelease
+          else
+            node scripts/generate-stable-release-notes.mjs "$release_title" release/release-notes.md
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+              --verify-tag \
+              --notes-file release/release-notes.md \
+              --title "Nodalia Cards $release_title"
           fi
-          gh release create "$GITHUB_REF_NAME" "${assets[@]}" --verify-tag --generate-notes --title "$release_title" "${prerelease_args[@]}"

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.2.1-alpha.2";
+const CARD_VERSION = "2.2.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -795,14 +795,17 @@ function shouldDarkenEntityBubbleIconGlyph(state, accentColor) {
 
 function resolveEntityBubbleIconGlyphColor(accentColor, state) {
   const accent = String(accentColor || "").trim() || "var(--primary-color)";
+  let accentWeight = 72;
   try {
-    if (state && shouldDarkenEntityBubbleIconGlyph(state, accent)) {
-      return `color-mix(in srgb, var(--primary-text-color) 56%, ${accent})`;
+    const resolver = window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor;
+    if (typeof resolver === "function") {
+      return resolver(state, accent);
     }
+    accentWeight = shouldDarkenEntityBubbleIconGlyph(state, accent) ? 42 : 72;
   } catch (_error) {
-    // resolveEditorColorValue needs a DOM probe; keep the raw accent in sandboxes.
+    // resolveEditorColorValue may need a DOM probe; use the Light Card mix below.
   }
-  return accent;
+  return `color-mix(in srgb, ${accent} ${accentWeight}%, var(--primary-text-color))`;
 }
 
 function isUnavailableState(state) {
@@ -1010,6 +1013,10 @@ function getDynamicEntityIcon(state) {
 
 function normalizeConfig(rawConfig) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  config.styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
+    config.styles.icon.background,
+    DEFAULT_CONFIG.styles.icon.background,
+  ) || config.styles.icon.background;
   const normalizedStatePosition = String(config.state_position || "").toLowerCase();
   if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
     config.state_position = normalizedStatePosition;
@@ -4648,7 +4655,9 @@ class NodaliaEntityCard extends HTMLElement {
     const canRunIconTap = this._canRunTapAction(state, "icon");
     const isSelectEntity = this._isSelectEntity(state);
     const isActive = this._isActiveState(state);
-    const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
+    const entityBubbleIconGlyphColor = isActive
+      ? resolveEntityBubbleIconGlyphColor(accentColor, state)
+      : styles.icon.off_color;
     const surfaceBase = styles.card.background;
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${surfaceBase}) 0%, color-mix(in srgb, ${accentColor} 10%, ${surfaceBase}) 52%, ${surfaceBase} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
@@ -4783,7 +4792,7 @@ class NodaliaEntityCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
             0 10px 24px rgba(0, 0, 0, 0.16);
-          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
+          color: ${entityBubbleIconGlyphColor};
           cursor: ${canRunIconTap || canRunBodyTap ? "pointer" : "default"};
           display: inline-flex;
           flex: 0 0 auto;
@@ -4812,13 +4821,7 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__icon ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
-          color: ${
-            !isActive
-              ? styles.icon.off_color
-              : darkenBubbleIconGlyph
-                ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
-                : styles.icon.on_color
-          };
+          color: ${entityBubbleIconGlyphColor};
           display: inline-flex;
           height: calc(${effectiveIconSize} * 0.44);
           left: 50%;

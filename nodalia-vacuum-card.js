@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.2.1-alpha.2";
+const CARD_VERSION = "2.2.1-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2718,6 +2718,14 @@ class NodaliaVacuumCard extends HTMLElement {
     const shouldAnimateActiveIcon = animations.enabled && animations.iconAnimation && this._isCleaning(state);
     const controls = this._getControls(state);
     const isTintedState = this._shouldTintCard(state);
+    const shouldDarkenBubbleIconGlyph =
+      isTintedState && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
+    const iconGlyphColor = isTintedState
+      ? (
+          window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor?.(state, accentColor)
+          || `color-mix(in srgb, ${accentColor} ${shouldDarkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))`
+        )
+      : styles.icon.color;
     const roomMappings = this._getRoomMappings(state);
     const chips = [];
     const batteryChipColor = this._getBatteryColor(batteryLevel);
@@ -2897,7 +2905,7 @@ class NodaliaVacuumCard extends HTMLElement {
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
-          color: ${isTintedState ? accentColor : styles.icon.color};
+          color: ${iconGlyphColor};
           cursor: pointer;
           display: inline-flex;
           height: ${styles.icon.size};
@@ -2913,6 +2921,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
         .vacuum-card__icon-button ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
+          color: ${iconGlyphColor};
           display: inline-flex;
           height: calc(${styles.icon.size} * 0.46);
           left: 50%;

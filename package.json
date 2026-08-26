@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "2.2.1-alpha.2",
+  "version": "2.2.1-alpha.3",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -14,6 +14,7 @@
     "version:check": "node scripts/sync-card-version.mjs --check",
     "bundle": "pnpm run version:check && node scripts/build-bundle.mjs",
     "release:metadata": "node scripts/generate-release-metadata.mjs",
+    "release:notes": "node scripts/generate-stable-release-notes.mjs",
     "i18n:validate-editor": "node scripts/validate-editor-i18n.mjs",
     "i18n:gen-editor": "node scripts/gen-editor-ui.mjs",
     "i18n:validate-runtime": "node scripts/validate-runtime-i18n.mjs",

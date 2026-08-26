@@ -1,6 +1,11 @@
 (function initNodaliaBubbleContrast() {
   const existing = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
-  if (existing && typeof existing.shouldDarkenBubbleIconGlyph === "function") {
+  if (
+    existing
+    && typeof existing.shouldDarkenBubbleIconGlyph === "function"
+    && typeof existing.resolveBubbleIconGlyphColor === "function"
+    && typeof existing.normalizeNeutralBubbleBackground === "function"
+  ) {
     return;
   }
 
@@ -184,11 +189,36 @@
     return inferCoolTintFromEntity(state);
   }
 
+  function resolveBubbleIconGlyphColor(state, accentColor) {
+    const accent = String(accentColor || "").trim() || "var(--primary-color)";
+    const accentWeight = shouldDarkenBubbleIconGlyph(state, accent) ? 42 : 72;
+    return `color-mix(in srgb, ${accent} ${accentWeight}%, var(--primary-text-color))`;
+  }
+
+  function normalizeNeutralBubbleBackground(value, fallback = "color-mix(in srgb, var(--primary-text-color) 6%, transparent)") {
+    const raw = String(value ?? "").trim();
+    const compact = raw.toLowerCase().replace(/\s+/g, "");
+    const legacyFlatBackgrounds = new Set([
+      "var(--ha-card-background)",
+      "var(--card-background-color)",
+      "var(--paper-card-background-color)",
+      "#fff",
+      "#ffffff",
+      "rgb(255,255,255)",
+      "rgba(255,255,255,1)",
+      "rgba(255,255,255,0.08)",
+      "rgba(255,255,255,.08)",
+    ]);
+    return !raw || legacyFlatBackgrounds.has(compact) ? fallback : raw;
+  }
+
   if (typeof window !== "undefined") {
     window.NodaliaBubbleContrast = {
       resolveEditorColorValue,
       parseCssColorHue,
       shouldDarkenBubbleIconGlyph,
+      resolveBubbleIconGlyphColor,
+      normalizeNeutralBubbleBackground,
     };
   }
 })();

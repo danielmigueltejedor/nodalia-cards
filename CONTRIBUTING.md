@@ -86,6 +86,21 @@ Ideally both results should be empty except for explicitly documented prerelease
 
 ---
 
+# 🚀 Release notes
+
+Preview tags (alpha, beta and release candidates) use GitHub's automatically generated notes and keep their detailed archive in `CHANGELOG-PRERELEASES.md`.
+
+Stable tags use the matching `CHANGELOG.md` section as their public release notes. Before creating a stable tag:
+
+1. Replace `Unreleased` work with a `## [x.y.z] - YYYY-MM-DD` section.
+2. Start with a short, user-facing summary of the release.
+3. Include at least one structured subsection such as `Highlights`, `Added`, `Changed`, `Fixed`, `Breaking changes`, `Migration` or `Validation`.
+4. Explain dashboard impact and migration steps in plain language; avoid presenting the commit list as release notes.
+
+The release workflow refuses to publish a stable tag without that curated changelog section, then appends HACS update, integrity and support guidance automatically.
+
+---
+
 # 🐛 Reporting bugs
 
 If you find a bug:

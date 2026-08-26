@@ -589,7 +589,7 @@ test("entity card battery layout renders multiple entity levels and entity-speci
   assert.match(html, /--battery-level:82/);
   assert.match(html, /entity-card__overview-chip--alert/);
   assert.match(html, /entity-card__overview-item--battery/);
-  assert.match(html, /--overview-glyph:color-mix\(in srgb, var\(--primary-text-color\) 56%/);
+  assert.match(html, /--overview-glyph:color-mix\(in srgb, var\(--error-color, #ef5350\) 42%, var\(--primary-text-color\)\)/);
   assert.equal(card.getGridOptions().columns, 12);
 });
 

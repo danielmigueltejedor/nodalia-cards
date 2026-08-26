@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.1-alpha.2
+2.2.1-alpha.3
 ```
 
-Preview **`2.2.1-alpha.2`** keeps Navigation Bar media controls bound to the selected entity when the visible-player list changes, applies Fav tint contrast directly to its glyph, locks Entity/Fav shadow parity to Light, gives Graph the suite-wide glass language and removes the isolated icon from Advance Vacuum's **Go to point** mode. It also includes the Notifications, Climate and Weather fixes from alpha.1. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Preview **`2.2.1-alpha.3`** restores Graph's unboxed value and edge-to-edge plot, aligns legacy Entity/Fav icon bubbles with Light, and applies the shared contrast-aware glyph tint to Fav and Vacuum. It also improves stable-release notes while retaining all Navigation, Notifications, Climate, Weather and Advance Vacuum fixes from the earlier alphas. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
