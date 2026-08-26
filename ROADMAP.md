@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.1-alpha.3
+2.2.1-alpha.4
 ```
 
-Preview **`2.2.1-alpha.3`** restores Graph's unboxed value and edge-to-edge plot, aligns legacy Entity/Fav icon bubbles with Light, and applies the shared contrast-aware glyph tint to Fav and Vacuum. It also improves stable-release notes while retaining all Navigation, Notifications, Climate, Weather and Advance Vacuum fixes from the earlier alphas. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Preview **`2.2.1-alpha.4`** restores Graph's unboxed value and edge-to-edge plot, aligns legacy Entity/Fav icon bubbles with Light, and applies the shared contrast-aware glyph tint to Fav and Vacuum. It also improves stable-release notes while retaining all Navigation, Notifications, Climate, Weather and Advance Vacuum fixes from the earlier alphas. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 

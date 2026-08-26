@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-alpha.4] - 2026-08-26
+
+Fourth **`2.2.1`** alpha: CI-qualified republish of the Graph and icon-contrast polish from alpha.3.
+
+### Fixed
+
+- Graph's edge-to-edge computed-style regression now tolerates Firefox's fractional `1.000015px` border rounding while still enforcing visually flush plot geometry.
+
+### Validation
+
+- All 453 Node regressions pass. The GitHub runner remains the source of truth for the full Chromium, Firefox and WebKit matrix.
+
 ## [2.2.1-alpha.3] - 2026-08-26
 
 Third **`2.2.1`** alpha: restored Graph density, consistent icon bubbles and contrast-safe device tints.

@@ -1198,11 +1198,12 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
   expect(visuals.value.boxShadow).toBe("none");
   expect(visuals.value.backdrop).toBe("none");
   expect(visuals.value.padding).toBe("0px");
-  expect(Math.abs(visuals.chartRect.left - visuals.surfaceRect.left)).toBeLessThanOrEqual(1);
-  expect(Math.abs(visuals.chartRect.right - visuals.surfaceRect.right)).toBeLessThanOrEqual(1);
-  expect(Math.abs(visuals.chartRect.bottom - visuals.surfaceRect.bottom)).toBeLessThanOrEqual(1);
-  expect(Math.abs(visuals.svgRect.left - visuals.chartRect.left)).toBeLessThanOrEqual(1);
-  expect(Math.abs(visuals.svgRect.right - visuals.chartRect.right)).toBeLessThanOrEqual(1);
+  const edgeTolerance = 1.1;
+  expect(Math.abs(visuals.chartRect.left - visuals.surfaceRect.left)).toBeLessThanOrEqual(edgeTolerance);
+  expect(Math.abs(visuals.chartRect.right - visuals.surfaceRect.right)).toBeLessThanOrEqual(edgeTolerance);
+  expect(Math.abs(visuals.chartRect.bottom - visuals.surfaceRect.bottom)).toBeLessThanOrEqual(edgeTolerance);
+  expect(Math.abs(visuals.svgRect.left - visuals.chartRect.left)).toBeLessThanOrEqual(edgeTolerance);
+  expect(Math.abs(visuals.svgRect.right - visuals.chartRect.right)).toBeLessThanOrEqual(edgeTolerance);
   expect(visuals.chart.padding).toBe("0px");
 });
 
