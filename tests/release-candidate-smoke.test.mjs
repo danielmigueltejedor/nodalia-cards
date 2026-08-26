@@ -658,6 +658,13 @@ test("graph unavailable badge keeps help icon centered and dark", () => {
   assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
 });
 
+test("weather unavailable badge keeps help icon centered and dark", () => {
+  const source = read("nodalia-weather-card.js");
+  assert.match(source, /\.weather-card__unavailable-badge \{[\s\S]*?color: #1f2330;/);
+  assert.match(source, /\.weather-card__unavailable-badge ha-icon \{[\s\S]*?position: static;/);
+  assert.match(source, /\.weather-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
+});
+
 test("graph mobile legend chips avoid clipped active shadows", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /@media \(max-width: 640px\) \{[\s\S]*?\.graph-card__primary-row \.graph-card__legend \{[\s\S]*?overflow-x: auto;/);

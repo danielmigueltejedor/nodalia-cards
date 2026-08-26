@@ -73,10 +73,23 @@ test("climate card exposes Engine override chips on the live card", () => {
   assert.match(climate, /override\.activeUntil/);
   assert.match(climate, /\$\{engineOverrideMarkup\}/);
   assert.match(climate, /overrideBlockPx/);
-  assert.match(climate, /min_rows: this\._engineOverride\?\.available === true \? 6 : 5/);
+  assert.match(climate, /min_rows: showEngineOverride \? 6 : 5/);
   assert.match(climate, /this\._config\?\.layout === "compact"/);
-  assert.match(climate, /return this\._engineOverride\?\.available === true \? 3 : 2/);
-  assert.match(climate, /return this\._engineOverride\?\.available === true \? 5 : 4/);
+  assert.match(climate, /return showEngineOverride \? 3 : 2/);
+  assert.match(climate, /return showEngineOverride \? 5 : 4/);
+});
+
+test("climate schedule visibility also owns the Engine hold controls", () => {
+  assert.match(
+    climate,
+    /this\._engineOverride\?\.available !== true[\s\S]*?this\._config\?\.show_schedule_button === false/,
+  );
+  assert.match(
+    climate,
+    /const showEngineOverride = this\._engineOverride\?\.available === true && showScheduleButton/,
+  );
+  assert.match(climate, /flex: 0 0 36px/);
+  assert.match(climate, /width: 36px/);
 });
 
 test("Engine editor and runtime strings exist in the base catalogs", () => {

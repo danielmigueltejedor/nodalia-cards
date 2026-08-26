@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-notifications-card";
 const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.2.0";
+const CARD_VERSION = "2.2.1-alpha.1";
 const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
 const BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS = 30_000;
 const LEGACY_BACKGROUND_MOBILE_TOGGLE = "input_boolean.nodalia_background_mobile_notifications";
@@ -1427,11 +1427,13 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._engineInbox = [];
     this._animateContentOnNextRender = true;
     this._entranceAnimationTimer = 0;
+    this._renderPendingAfterEntrance = false;
     this._stackTransition = "";
     this._stackCollapseTimer = 0;
     this._collapsingStack = false;
     this._viewportResizeTimer = 0;
     this._viewVisibilityObserver = null;
+    this._hasObservedViewport = false;
     this._wasInViewport = false;
     this._wasHiddenByLayout = false;
     this._lastEntranceReplayAt = 0;
@@ -1508,6 +1510,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationTimer);
       this._entranceAnimationTimer = 0;
     }
+    this._renderPendingAfterEntrance = false;
     this._calendarRefreshInFlight = false;
     this._weatherRefreshInFlight = false;
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -1531,6 +1534,10 @@ class NodaliaNotificationsCard extends HTMLElement {
         return;
       }
       this._animateContentOnNextRender = false;
+      if (this._renderPendingAfterEntrance) {
+        this._renderPendingAfterEntrance = false;
+        this._renderIfChanged(true);
+      }
     }, safeDelay);
   }
 
@@ -1545,6 +1552,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationTimer);
       this._entranceAnimationTimer = 0;
     }
+    this._renderPendingAfterEntrance = false;
     this._animateContentOnNextRender = true;
     this._lastNotificationIdsSignature = "";
     this._lastRenderSignature = "";
@@ -1578,6 +1586,8 @@ class NodaliaNotificationsCard extends HTMLElement {
           return;
         }
         const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
+        const hadViewportObservation = this._hasObservedViewport;
+        this._hasObservedViewport = true;
         if (visible === this._wasInViewport) {
           return;
         }
@@ -1590,6 +1600,11 @@ class NodaliaNotificationsCard extends HTMLElement {
           return;
         }
         this._wasHiddenByLayout = false;
+        // The first visible observation belongs to the normal initial paint, which
+        // already carries the entrance class. Replaying here restarts that animation.
+        if (!hadViewportObservation) {
+          return;
+        }
         this._replayEntranceAnimation();
       },
       { threshold: [0, 0.01] },
@@ -1603,6 +1618,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     this._viewVisibilityObserver.disconnect();
     this._viewVisibilityObserver = null;
+    this._hasObservedViewport = false;
     this._wasInViewport = false;
     this._wasHiddenByLayout = false;
   }
@@ -3588,6 +3604,16 @@ class NodaliaNotificationsCard extends HTMLElement {
     }
     const next = this._getRenderSignature();
     if (!force && next === this._lastRenderSignature) {
+      return;
+    }
+    // Calendar/weather hydration can finish while the entrance animation is still
+    // running. Replacing shadow DOM during that window restarts the same CSS
+    // animation, so coalesce those rapid updates into one post-entrance render.
+    if (
+      this._entranceAnimationTimer
+      && this.shadowRoot?.querySelector?.(".notifications-card--enter")
+    ) {
+      this._renderPendingAfterEntrance = true;
       return;
     }
     this._lastRenderSignature = next;

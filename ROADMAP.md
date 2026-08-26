@@ -6,15 +6,15 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
-## Stable release
+## Preview release
 
-Current stable release:
+Current preview release:
 
 ```text
-2.2.0
+2.2.1-alpha.1
 ```
 
-Stable **`2.2.0`** is the recommended daily-driver release: unified compact and circular device layouts, interactive dials with Climate-parity drag feedback and haptics, denser Entity battery/network overviews with bubble icon contrast, Climate hold glass styling, Engine-first notification failover hardening, multi-player fixes, editor persistence, expanded Entity Card layouts, cross-browser animation cleanup and granular haptics. Nodalia Cards is listed in the official HACS catalogue, and the release pipeline ships one self-contained runtime instead of redundant full-bundle copies. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Preview **`2.2.1-alpha.1`** fixes the Notifications double entrance, links Climate schedule visibility to the two-hour Engine hold, aligns Entity and Fav surfaces in light themes, adds Fav tint-aware icon contrast and centers Weather's unavailable badge. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 

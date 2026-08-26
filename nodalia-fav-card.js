@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.2.0";
+const CARD_VERSION = "2.2.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -138,6 +138,22 @@ function resolveEditorColorValue(value) {
     return resolver(value);
   }
   return String(value ?? "").trim();
+}
+
+function shouldDarkenFavBubbleIconGlyph(state, accentColor) {
+  return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+}
+
+function resolveFavBubbleIconGlyphColor(accentColor, state) {
+  const accent = String(accentColor || "").trim() || "var(--primary-color)";
+  try {
+    if (state && shouldDarkenFavBubbleIconGlyph(state, accent)) {
+      return `color-mix(in srgb, var(--primary-text-color) 56%, ${accent})`;
+    }
+  } catch (_error) {
+    // Theme variables may need a live DOM probe; retain the configured accent in sandboxes.
+  }
+  return accent;
 }
 
 function formatEditorHexChannel(value) {
@@ -1637,7 +1653,8 @@ class NodaliaFavCard extends HTMLElement {
     `;
   }
 
-  _renderAlarmActionButton(mode, accentColor) {
+  _renderAlarmActionButton(mode, accentColor, state) {
+    const iconColor = resolveFavBubbleIconGlyphColor(accentColor, state);
     return `
       <button
         type="button"
@@ -1645,6 +1662,7 @@ class NodaliaFavCard extends HTMLElement {
         data-fav-alarm-action="${escapeHtml(mode.service)}"
         style="
           --fav-alarm-accent:${escapeHtml(accentColor)};
+          --fav-alarm-glyph:${escapeHtml(iconColor)};
         "
         aria-label="${escapeHtml(mode.label)}"
       >
@@ -1713,18 +1731,18 @@ class NodaliaFavCard extends HTMLElement {
     const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 18 : 24));
     const chipFontSizePx = Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 9.5 : 12));
     const iconColor = isActive
-      ? accentColor
+      ? resolveFavBubbleIconGlyphColor(accentColor, state)
       : (this._usesCustomOffColor()
         ? styles.icon.off_color
         : "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))");
     const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
       : styles.card.background;
     const cardBorder = isActive
-      ? `1px solid color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+      ? `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`
       : styles.card.border;
     const cardShadow = isActive
-      ? `${styles.card.box_shadow}, 0 16px 30px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.18))`
+      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`
       : styles.card.box_shadow;
     const showTitle = config.show_name !== false && !isMini;
     const showValue = Boolean(displayValue) && !isMini;
@@ -1761,8 +1779,8 @@ class NodaliaFavCard extends HTMLElement {
 
         ha-card::before {
           background: ${isActive
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 3.5%, transparent), rgba(255, 255, 255, 0))"};
+            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
+            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -1774,7 +1792,6 @@ class NodaliaFavCard extends HTMLElement {
           background:
             radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 52%),
             linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, transparent 66%);
-          border-radius: inherit;
           content: "";
           inset: 0;
           opacity: ${isActive ? "1" : "0"};
@@ -1842,17 +1859,13 @@ class NodaliaFavCard extends HTMLElement {
           align-items: center;
           appearance: none;
           background: ${isActive
-            ? `radial-gradient(circle at 30% 24%, color-mix(in srgb, ${accentColor} 34%, transparent), transparent 64%), color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
+            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
             : styles.icon.background};
-          border: 1px solid ${isActive
-            ? `color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
-            : "color-mix(in srgb, var(--primary-text-color) 8%, transparent)"};
-          border-radius: ${isSingleRow ? "18px" : (isMini ? "22px" : "24px")};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
           box-shadow:
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
-            ${isActive
-              ? `0 12px 30px color-mix(in srgb, ${accentColor} 20%, rgba(0, 0, 0, 0.18))`
-              : "0 12px 30px rgba(0, 0, 0, 0.18)"};
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${iconColor};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -1977,6 +1990,7 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card__alarm-button ha-icon {
           --mdc-icon-size: 14px;
+          color: var(--fav-alarm-glyph, var(--fav-alarm-accent));
           height: 14px;
           width: 14px;
         }
@@ -2109,7 +2123,7 @@ class NodaliaFavCard extends HTMLElement {
             ? `
               <div class="fav-card__alarm-panel">
                 <div class="fav-card__alarm-actions">
-                  ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor)).join("")}
+                  ${alarmModes.map(mode => this._renderAlarmActionButton(mode, accentColor, state)).join("")}
                 </div>
                 ${showAlarmCodeInput
                   ? `

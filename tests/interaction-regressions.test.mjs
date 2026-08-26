@@ -462,10 +462,17 @@ test("person defaults to the family card proportions and keeps compact mode expl
   assert.match(source, /title_size: "12px",\s*subtitle_size: "9px"/);
 });
 
-test("fav active state tints both the card surface and icon bubble", () => {
+test("fav active state matches Light surfaces and applies tint contrast to icons", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /const cardBackground = isActive[\s\S]*linear-gradient/);
-  assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*radial-gradient/);
+  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 10%, \$\{styles\.card\.background\}\) 52%/);
+  assert.match(source, /0 16px 32px color-mix\(in srgb, \$\{accentColor\} 18%/);
+  assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*color-mix/);
+  assert.match(source, /\.fav-card__icon \{[\s\S]*border-radius: 999px;/);
+  assert.match(source, /0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
+  assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
+  assert.match(source, /--fav-alarm-glyph:/);
+  assert.match(source, /color: var\(--fav-alarm-glyph, var\(--fav-alarm-accent\)\);/);
   assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);
 });
 
@@ -2100,6 +2107,9 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
     source,
     /\/\/ Match entity\/weather cards: do not render \(or consume entrance\) before hass/,
   );
+  assert.match(source, /this\._renderPendingAfterEntrance = true/);
+  assert.match(source, /this\.shadowRoot\?\.querySelector\?\.\("\.notifications-card--enter"\)/);
+  assert.match(source, /if \(!hadViewportObservation\) \{/);
 });
 
 test("NodaliaUtils renders card empty state shell for missing entity state", () => {
@@ -2207,6 +2217,14 @@ test("visual family tokens stay aligned without changing notifications", () => {
   }
 
   assert.match(read("nodalia-entity-card.js"), /control:\s*\{[\s\S]*?size: "36px"/);
+  assert.match(
+    read("nodalia-entity-card.js"),
+    /const surfaceBase = styles\.card\.background;[\s\S]*?const onCardBackground = `linear-gradient\(135deg, color-mix\(in srgb, \$\{accentColor\} 18%, \$\{surfaceBase\}\)/,
+  );
+  assert.match(
+    read("nodalia-entity-card.js"),
+    /const cardBackground = isActive\s*\? onCardBackground\s*:\s*surfaceBase;/,
+  );
   assert.match(
     read("nodalia-cover-card.js"),
     /on_color: "var\(--warning-color, #fec700\)"[\s\S]*slider_color: "var\(--warning-color, #fec700\)"/,

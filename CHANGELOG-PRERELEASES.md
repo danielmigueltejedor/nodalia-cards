@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-alpha.1] - 2026-08-26
+
+First **`2.2.1`** alpha: entrance stability and light-theme visual alignment.
+
+### Changed
+
+- Climate's two-hour Engine hold uses the same circular glass-button rhythm as the calendar and mode controls, and follows the visual editor's schedule-button visibility toggle.
+- Entity Card uses the same direct base-surface composition as Light Card, removing the slight body and icon-bubble tint mismatch visible in light themes.
+- Fav Card now shares Light/Entity surface and bubble shadows, circular bubble geometry and tint-aware icon contrast, including alarm action icons.
+
+### Fixed
+
+- Notifications Card coalesces calendar and weather hydration renders until its initial entrance finishes and ignores the observer's first visible callback, preventing the rapid double entrance on dashboard open.
+- Weather Card pins the unavailable help glyph inside its orange badge and uses contrast-safe dark glyph color.
+
+### Validation
+
+- Node regressions cover Notifications entrance coalescing, Climate schedule/hold visibility, circular hold geometry, Entity surface composition and Weather unavailable-badge centering.
+
 ## [2.2.0-rc.2] - 2026-08-24
 
 Second **`2.2.0`** release candidate: circular dial drag polish, Entity overview contrast, and browser CI fixes.

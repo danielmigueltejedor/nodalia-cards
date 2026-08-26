@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.2.0";
+const CARD_VERSION = "2.2.1-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4002,8 +4002,8 @@ class NodaliaEntityCard extends HTMLElement {
     const iconSize = escapeHtml(String(styles.icon?.size ?? "38px"));
     const titleSize = escapeHtml(String(styles.title_size ?? "12px"));
     const surfaceBase = styles.card.background;
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-entity-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-entity-surface-base)) 52%, var(--nodalia-entity-surface-base) 100%)`;
-    const cardBackground = `${onCardBackground}, var(--nodalia-entity-surface-base)`;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${surfaceBase}) 0%, color-mix(in srgb, ${accentColor} 10%, ${surfaceBase}) 52%, ${surfaceBase} 100%)`;
+    const cardBackground = onCardBackground;
     const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
     const surfaceGlaze = `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`;
@@ -4649,12 +4649,13 @@ class NodaliaEntityCard extends HTMLElement {
     const isSelectEntity = this._isSelectEntity(state);
     const isActive = this._isActiveState(state);
     const darkenBubbleIconGlyph = isActive && shouldDarkenEntityBubbleIconGlyph(state, accentColor);
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-entity-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-entity-surface-base)) 52%, var(--nodalia-entity-surface-base) 100%)`;
+    const surfaceBase = styles.card.background;
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${surfaceBase}) 0%, color-mix(in srgb, ${accentColor} 10%, ${surfaceBase}) 52%, ${surfaceBase} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
     const cardBackground = isActive
-      ? `${onCardBackground}, var(--nodalia-entity-surface-base)`
-      : "var(--nodalia-entity-surface-base)";
+      ? onCardBackground
+      : surfaceBase;
     const cardBorder = isActive ? `1px solid ${onCardBorder}` : styles.card.border;
     const cardShadow = isActive ? `${styles.card.box_shadow}, ${onCardShadow}` : styles.card.box_shadow;
     const surfaceGlaze = isActive
