@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.2.1-alpha.5";
+const CARD_VERSION = "2.2.1-beta.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -65,8 +65,8 @@ const DEFAULT_CONFIG = {
       gap: "10px",
     },
     icon: {
-      size: "42px",
-      background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      size: "38px",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
     },
@@ -1716,7 +1716,6 @@ class NodaliaFavCard extends HTMLElement {
       (configuredRows !== null && configuredRows <= 1) ||
       (configuredColumns !== null && configuredColumns <= 6);
     const isCompactInline = !isMini && usesCompactRowMetrics;
-    const isCompactMini = isMini && usesCompactRowMetrics;
     const isTightInline = isCompactInline && (configuredColumns === null || configuredColumns >= 4);
     const singleRowHeightPx = usesCompactRowMetrics ? 68 : 0;
     const icon = this._getIcon(state);
@@ -1733,7 +1732,7 @@ class NodaliaFavCard extends HTMLElement {
     const showAlarmCodeInput = showAlarmPanel && this._shouldShowAlarmCodeInput(state);
     const canRunPrimaryAction = this._canRunTapAction(state);
     const isActive = this._isDomainOn(state);
-    const iconSizePx = Math.max(32, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? (isCompactMini ? 34 : 40) : (isCompactInline ? 36 : 56)));
+    const iconSizePx = Math.max(32, Math.min(parseSizeToPixels(styles.icon.size, 52), isMini ? 38 : (isCompactInline ? 38 : 56)));
     const titleSizePx = Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 13), isMini ? 0 : (isCompactInline ? 11 : 14)));
     const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 18 : 24));
     const chipFontSizePx = Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 9.5 : 12));
@@ -1872,7 +1871,7 @@ class NodaliaFavCard extends HTMLElement {
           border-radius: 999px;
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, ${isActive ? "0.16" : "0.18"});
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${iconColor};
           cursor: ${canRunPrimaryAction ? "pointer" : "default"};
           display: inline-flex;
@@ -1894,15 +1893,15 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card__icon ha-icon {
-          --mdc-icon-size: calc(${iconSizePx}px * 0.45);
+          --mdc-icon-size: calc(${iconSizePx}px * 0.46);
           color: ${iconColor};
           display: inline-flex;
-          height: calc(${iconSizePx}px * 0.45);
+          height: calc(${iconSizePx}px * 0.46);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${iconSizePx}px * 0.45);
+          width: calc(${iconSizePx}px * 0.46);
         }
 
         .fav-card__unavailable-badge {
@@ -2100,6 +2099,19 @@ class NodaliaFavCard extends HTMLElement {
           gap: 8px;
           padding: 14px;
         }
+
+        @media (max-width: 420px) {
+          .fav-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .fav-card__icon {
+            height: 50px;
+            min-width: 50px;
+            width: 50px;
+          }
+        }
+
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card

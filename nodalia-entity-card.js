@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.2.1-alpha.5";
+const CARD_VERSION = "2.2.1-beta.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -144,7 +144,7 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "38px",
-      background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       color: "var(--primary-text-color)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--primary-text-color)",
@@ -4211,15 +4211,15 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__icon ha-icon {
-          --mdc-icon-size: calc(${iconSize} * 0.44);
+          --mdc-icon-size: calc(${iconSize} * 0.46);
           color: ${iconGlyphColor};
           display: inline-flex;
-          height: calc(${iconSize} * 0.44);
+          height: calc(${iconSize} * 0.46);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${iconSize} * 0.44);
+          width: calc(${iconSize} * 0.46);
         }
 
         .entity-card__copy {
@@ -4615,7 +4615,7 @@ class NodaliaEntityCard extends HTMLElement {
     const singleRowPaddingX = singleRowLayout ? 9 : 0;
     const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : compactMetrics ? "10px 12px" : styles.card.padding;
     const effectiveGap = singleRowLayout ? "2px" : compactMetrics ? "8px" : styles.card.gap;
-    const effectiveIconSizePx = Math.max(30, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 32 : compactMetrics ? 46 : 58));
+    const effectiveIconSizePx = Math.max(30, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 38 : compactMetrics ? 46 : 58));
     const effectiveIconSize = `${effectiveIconSizePx}px`;
     const effectiveIconTrackSize = `${effectiveIconSizePx + (singleRowLayout ? 7 : 10)}px`;
     const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
@@ -4791,7 +4791,7 @@ class NodaliaEntityCard extends HTMLElement {
           border-radius: 999px;
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-            0 10px 24px rgba(0, 0, 0, ${isActive ? "0.16" : "0.18"});
+            0 10px 24px rgba(0, 0, 0, 0.16);
           color: ${entityBubbleIconGlyphColor};
           cursor: ${canRunIconTap || canRunBodyTap ? "pointer" : "default"};
           display: inline-flex;
@@ -4820,15 +4820,15 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__icon ha-icon {
-          --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
+          --mdc-icon-size: calc(${effectiveIconSize} * 0.46);
           color: ${entityBubbleIconGlyphColor};
           display: inline-flex;
-          height: calc(${effectiveIconSize} * 0.44);
+          height: calc(${effectiveIconSize} * 0.46);
           left: 50%;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${effectiveIconSize} * 0.44);
+          width: calc(${effectiveIconSize} * 0.46);
         }
 
         .entity-card__picture {
@@ -5256,12 +5256,12 @@ class NodaliaEntityCard extends HTMLElement {
         @media (max-width: 420px) {
           .entity-card__hero {
             gap: 10px;
-            grid-template-columns: min(${effectiveIconSize}, 52px) minmax(0, 1fr);
+            grid-template-columns: 50px minmax(0, 1fr);
           }
 
           .entity-card__icon {
-            height: min(${effectiveIconSize}, 52px);
-            width: min(${effectiveIconSize}, 52px);
+            height: 50px;
+            width: 50px;
           }
         }
 

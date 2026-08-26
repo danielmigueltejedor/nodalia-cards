@@ -195,7 +195,7 @@
     return `color-mix(in srgb, ${accent} ${accentWeight}%, var(--primary-text-color))`;
   }
 
-  function normalizeNeutralBubbleBackground(value, fallback = "color-mix(in srgb, var(--primary-text-color) 8%, transparent)") {
+  function normalizeNeutralBubbleBackground(value, fallback = "color-mix(in srgb, var(--primary-text-color) 6%, transparent)") {
     const raw = String(value ?? "").trim();
     const compact = raw.toLowerCase().replace(/\s+/g, "");
     const legacyFlatBackgrounds = new Set([
@@ -210,6 +210,7 @@
       "rgba(255,255,255,.08)",
       "color-mix(insrgb,var(--primary-text-color)5%,transparent)",
       "color-mix(insrgb,var(--primary-text-color)6%,transparent)",
+      "color-mix(insrgb,var(--primary-text-color)8%,transparent)",
     ]);
     return !raw || legacyFlatBackgrounds.has(compact) ? fallback : raw;
   }

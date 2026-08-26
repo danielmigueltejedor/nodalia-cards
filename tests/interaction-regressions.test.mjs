@@ -557,17 +557,26 @@ test("person defaults to the family card proportions and keeps compact mode expl
   assert.match(source, /title_size: "12px",\s*subtitle_size: "9px"/);
 });
 
-test("fav active state matches Light surfaces and applies tint contrast to icons", () => {
+test("entity and fav icon bubbles match Light metrics and preserve tint contrast", () => {
   const source = read("nodalia-fav-card.js");
+  const entitySource = read("nodalia-entity-card.js");
   assert.match(source, /const cardBackground = isActive[\s\S]*linear-gradient/);
   assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 10%, \$\{styles\.card\.background\}\) 52%/);
   assert.match(source, /0 16px 32px color-mix\(in srgb, \$\{accentColor\} 18%/);
   assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*color-mix/);
   assert.match(source, /\.fav-card__icon \{[\s\S]*border-radius: 999px;/);
-  assert.match(source, /0 10px 24px rgba\(0, 0, 0, \$\{isActive \? "0\.16" : "0\.18"\}\)/);
+  assert.match(source, /0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
   assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
   assert.match(source, /\.fav-card__icon ha-icon \{[\s\S]*color: \$\{iconColor\};/);
-  assert.match(source, /background: "color-mix\(in srgb, var\(--primary-text-color\) 8%, transparent\)"/);
+  assert.match(source, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
+  assert.match(source, /const iconSizePx = [^;]*isMini \? 38 : \(isCompactInline \? 38 : 56\)/);
+  assert.match(source, /--mdc-icon-size: calc\(\$\{iconSizePx\}px \* 0\.46\)/);
+  assert.match(source, /@media \(max-width: 420px\) \{[\s\S]*\.fav-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
+  assert.match(entitySource, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
+  assert.match(entitySource, /singleRowLayout \? 38 : compactMetrics \? 46 : 58/);
+  assert.match(entitySource, /\.entity-card__icon \{[\s\S]*0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
+  assert.match(entitySource, /--mdc-icon-size: calc\(\$\{effectiveIconSize\} \* 0\.46\)/);
+  assert.match(entitySource, /@media \(max-width: 420px\) \{[\s\S]*\.entity-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
   assert.match(source, /--fav-alarm-glyph:/);
   assert.match(source, /color: var\(--fav-alarm-glyph, var\(--fav-alarm-accent\)\);/);
   assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);

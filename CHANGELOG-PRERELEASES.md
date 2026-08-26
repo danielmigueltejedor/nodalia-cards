@@ -8,6 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-beta.1] - 2026-08-26
+
+First **`2.2.1`** beta: exact icon-bubble parity for Entity and Fav.
+
+### Fixed
+
+- Entity and Fav now share Light and Humidifier's complete neutral icon-bubble construction: 38px on regular viewports, 50px at the mobile breakpoint, a 6% neutral surface, the same border and 0.16 shadow, and a 46% glyph.
+- Existing configurations carrying a flat white background or the short-lived 8% alpha tint migrate to the shared 6% surface automatically without changing active tint contrast.
+
+### Validation
+
+- All 453 Node regressions pass.
+- Computed-style parity for fill, border, shadow, outer size and glyph size passes against both Light and Humidifier in Chromium, WebKit and WebKit iPhone.
+
 ## [2.2.1-alpha.5] - 2026-08-26
 
 Fifth **`2.2.1`** alpha: cleaner edge-to-edge graphs and stronger neutral icon bubbles.

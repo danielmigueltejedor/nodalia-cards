@@ -1043,7 +1043,7 @@ test("Navigation keeps media controls on the selected entity when visible player
   ]);
 });
 
-test("Entity and Fav use the stronger neutral bubble while tinted glyphs retain contrast", async ({ page }) => {
+test("Entity and Fav match the shared neutral icon bubble while tinted glyphs retain contrast", async ({ page }) => {
   await loadBundle(page);
   const visuals = await page.evaluate(() => {
     document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
@@ -1053,6 +1053,11 @@ test("Entity and Fav use the stronger neutral bubble while tinted glyphs retain 
     const accent = "#f29a63";
     const states = {
       "light.neutral": { entity_id: "light.neutral", state: "off", attributes: { friendly_name: "Light neutral" } },
+      "humidifier.neutral": {
+        entity_id: "humidifier.neutral",
+        state: "off",
+        attributes: { friendly_name: "Humidifier neutral", humidity: 50, current_humidity: 45, available_modes: ["normal"] },
+      },
       "sensor.entity": { entity_id: "sensor.entity", state: "idle", attributes: { friendly_name: "Entity neutral" } },
       "input_boolean.fav_neutral": { entity_id: "input_boolean.fav_neutral", state: "off", attributes: { friendly_name: "Fav neutral" } },
       "light.warm": { entity_id: "light.warm", state: "on", attributes: { friendly_name: "Light warm", rgb_color: [242, 154, 99] } },
@@ -1082,38 +1087,32 @@ test("Entity and Fav use the stronger neutral bubble while tinted glyphs retain 
         bubbleBorder: bubble.border,
         bubbleShadow: bubble.boxShadow,
         bubbleColor: bubble.color,
+        bubbleWidth: bubble.width,
+        bubbleHeight: bubble.height,
         glyphColor: glyph.color,
+        glyphWidth: glyph.width,
+        glyphHeight: glyph.height,
       };
     };
-    const neutralReference = document.createElement("span");
-    neutralReference.style.background = "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
-    neutralReference.style.border = "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
-    neutralReference.style.boxShadow = "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18)";
-    document.querySelector("#fixture").append(neutralReference);
-    const neutralReferenceStyle = getComputedStyle(neutralReference);
     const lightNeutral = mount("nodalia-light-card", { entity: "light.neutral" });
+    const humidifierNeutral = mount("nodalia-humidifier-card", { entity: "humidifier.neutral" });
     const entityNeutral = mount(
       "nodalia-entity-card",
-      { entity: "sensor.entity" },
-      { background: "var(--ha-card-background)" },
+      { entity: "sensor.entity", grid_options: { columns: 12, rows: 1 } },
+      { background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)" },
     );
     const favNeutral = mount(
       "nodalia-fav-card",
-      { entity: "input_boolean.fav_neutral" },
-      { background: "rgba(255, 255, 255, 0.08)" },
+      { entity: "input_boolean.fav_neutral", grid_options: { columns: 12, rows: 1 } },
+      { background: "var(--ha-card-background)" },
     );
     const lightWarm = mount("nodalia-light-card", { entity: "light.warm" });
     const favWarm = mount("nodalia-fav-card", { entity: "input_boolean.fav_warm" }, { on_color: accent });
     const vacuumWarm = mount("nodalia-vacuum-card", { entity: "vacuum.warm" }, { active_color: accent });
     return {
       accent: "rgb(242, 154, 99)",
-      neutralReference: {
-        bubbleBackground: neutralReferenceStyle.backgroundColor,
-        bubbleBackgroundImage: neutralReferenceStyle.backgroundImage,
-        bubbleBorder: neutralReferenceStyle.border,
-        bubbleShadow: neutralReferenceStyle.boxShadow,
-      },
       lightNeutral: read(lightNeutral, ".light-card__icon"),
+      humidifierNeutral: read(humidifierNeutral, ".humidifier-card__icon"),
       entityNeutral: read(entityNeutral, ".entity-card__icon"),
       favNeutral: read(favNeutral, ".fav-card__icon"),
       lightWarm: read(lightWarm, ".light-card__icon"),
@@ -1124,11 +1123,16 @@ test("Entity and Fav use the stronger neutral bubble while tinted glyphs retain 
 
   for (const card of [visuals.entityNeutral, visuals.favNeutral]) {
     expect(card.surfaceShadow).toBe(visuals.lightNeutral.surfaceShadow);
-    expect(card.bubbleBackground).toBe(visuals.neutralReference.bubbleBackground);
-    expect(card.bubbleBackgroundImage).toBe(visuals.neutralReference.bubbleBackgroundImage);
-    expect(card.bubbleBorder).toBe(visuals.neutralReference.bubbleBorder);
-    expect(card.bubbleShadow).toBe(visuals.neutralReference.bubbleShadow);
-    expect(card.bubbleBackground).not.toBe(visuals.lightNeutral.bubbleBackground);
+    for (const reference of [visuals.lightNeutral, visuals.humidifierNeutral]) {
+      expect(card.bubbleBackground).toBe(reference.bubbleBackground);
+      expect(card.bubbleBackgroundImage).toBe(reference.bubbleBackgroundImage);
+      expect(card.bubbleBorder).toBe(reference.bubbleBorder);
+      expect(card.bubbleShadow).toBe(reference.bubbleShadow);
+      expect(card.bubbleWidth).toBe(reference.bubbleWidth);
+      expect(card.bubbleHeight).toBe(reference.bubbleHeight);
+      expect(card.glyphWidth).toBe(reference.glyphWidth);
+      expect(card.glyphHeight).toBe(reference.glyphHeight);
+    }
   }
   expect(visuals.favWarm.bubbleBackground).toBe(visuals.lightWarm.bubbleBackground);
   expect(visuals.favWarm.bubbleShadow).toBe(visuals.lightWarm.bubbleShadow);
