@@ -338,3 +338,166 @@ test("Engine inbox dismissals map onto foreground smart alert ids", () => {
   assert.equal(card._isDismissed({ id: "door:binary_sensor.front:on" }), true);
   assert.equal(card._isDismissed({ id: "comfort:cold:sensor.living_room:18" }), false);
 });
+
+function loadCoverCard() {
+  const registry = new Map();
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+        this.bubbles = Boolean(init.bubbles);
+        this.cancelable = Boolean(init.cancelable);
+        this.composed = Boolean(init.composed);
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    HTMLElement: class {
+      constructor() {
+        this.isConnected = true;
+        this.clientWidth = 420;
+        this.shadowRoot = null;
+        this.dataset = {};
+        this.classList = { add() {}, remove() {}, contains() { return false; }, toggle() {} };
+      }
+
+      attachShadow() {
+        this.shadowRoot = {
+          addEventListener() {},
+          removeEventListener() {},
+          innerHTML: "",
+          querySelector() { return null; },
+          querySelectorAll() { return []; },
+        };
+        return this.shadowRoot;
+      }
+
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() { return true; }
+      getBoundingClientRect() {
+        return { left: 0, top: 0, width: 200, height: 200 };
+      }
+    },
+    HTMLInputElement: class {},
+    PointerEvent: class {},
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.HTMLInputElement = class extends sandbox.HTMLElement {};
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-cover-card.js"), sandbox);
+  const CardClass = registry.get("nodalia-cover-card");
+  assert.ok(CardClass, "NodaliaCoverCard should register");
+  return { CardClass, sandbox };
+}
+
+function makeCoverFixture(CardClass, sandbox, { state, attributes = {} } = {}) {
+  const calls = [];
+  const card = new CardClass();
+  card.setConfig({ entity: "cover.blind", layout: "circular" });
+  card._hass = {
+    language: "en",
+    callService(domain, service, data) {
+      calls.push({ domain, service, data });
+    },
+    states: {
+      "cover.blind": {
+        entity_id: "cover.blind",
+        state,
+        attributes: {
+          friendly_name: "Blind",
+          supported_features: 15,
+          ...attributes,
+        },
+      },
+    },
+  };
+  card._triggerHaptic = () => {};
+  card._triggerButtonBounce = () => {};
+  card._updatePositionPreview = () => {};
+  return { card, calls, sandbox };
+}
+
+function clickCoverAction(card, sandbox, action) {
+  const button = Object.assign(new sandbox.HTMLElement(), {
+    dataset: { coverAction: action },
+  });
+  card._onShadowClick({
+    composedPath: () => [button],
+    preventDefault() {},
+    stopPropagation() {},
+  });
+}
+
+test("circular cover position commands require a settled or reported position", () => {
+  const { CardClass, sandbox } = loadCoverCard();
+
+  for (const motion of ["closing", "opening"]) {
+    const { card, calls } = makeCoverFixture(CardClass, sandbox, { state: motion });
+    assert.equal(card._getCommandablePosition(card._getState()), null);
+    clickCoverAction(card, sandbox, "decrease-position");
+    clickCoverAction(card, sandbox, "increase-position");
+    const dial = Object.assign(new sandbox.HTMLElement(), {
+      classList: { add() {}, remove() {} },
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 200, height: 200 }),
+      style: { setProperty() {} },
+    });
+    card._startCircularDialDrag(dial, 10, 10);
+    assert.equal(card._activeSliderDrag, null);
+    assert.equal(calls.length, 0, `${motion} without current_position must not command set_cover_position`);
+  }
+
+  {
+    const { card, calls } = makeCoverFixture(CardClass, sandbox, { state: "open" });
+    assert.equal(card._getCommandablePosition(card._getState()), 100);
+    clickCoverAction(card, sandbox, "decrease-position");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].domain, "cover");
+    assert.equal(calls[0].service, "set_cover_position");
+    assert.equal(calls[0].data.entity_id, "cover.blind");
+    assert.equal(calls[0].data.position, 95);
+  }
+
+  {
+    const { card, calls } = makeCoverFixture(CardClass, sandbox, { state: "closed" });
+    assert.equal(card._getCommandablePosition(card._getState()), 0);
+    clickCoverAction(card, sandbox, "increase-position");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].service, "set_cover_position");
+    assert.equal(calls[0].data.position, 5);
+  }
+
+  {
+    const { card, calls } = makeCoverFixture(CardClass, sandbox, {
+      state: "closing",
+      attributes: { current_position: 40 },
+    });
+    assert.equal(card._getCommandablePosition(card._getState()), 40);
+    clickCoverAction(card, sandbox, "decrease-position");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].service, "set_cover_position");
+    assert.equal(calls[0].data.position, 35);
+  }
+});

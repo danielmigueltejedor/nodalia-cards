@@ -1771,6 +1771,21 @@ test("circular device surfaces and power buttons keep their card tap actions", (
     /_hapticOnPositionStep\([\s\S]{0,420}lastHapticValue/,
     "cover card should emit step haptics while dragging the circular dial",
   );
+  assert.match(
+    coverSource,
+    /_getCommandablePosition\([\s\S]{0,220}_getSettledPositionFallback/,
+    "cover circular steps should only infer position for settled open/closed states",
+  );
+  assert.match(
+    coverSource,
+    /seedValue === null[\s\S]{0,40}return;/,
+    "cover circular dial drag should refuse motion without a reported or settled position",
+  );
+  assert.doesNotMatch(
+    coverSource,
+    /current_position[\s\S]{0,80}_isActive\(state\) \? 100/,
+    "cover must not treat opening/closing as fully open when current_position is missing",
+  );
 });
 
 test("fav card matches entity cover lock toggle and tap action parsing", () => {

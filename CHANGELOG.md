@@ -10,19 +10,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-08-26
+
+Stable **`2.2.1`**: Entity/Fav Light-parity icon bubbles, edge-to-edge Graph plots, circular Cover position safety without a reported position, and curated stable release notes — shipped as one self-contained HACS bundle.
+
+### Highlights
+
+- **Icon bubble parity:** Entity and Fav match Light/Humidifier neutral bubbles (38px / 50px mobile), including light-theme legacy migration and centered Fav icon-only layout with contrast-aware active glyphs.
+- **Graph surfaces:** plot chrome stays for sizing while the chart flows edge to edge with color-matched under-line gradients.
+- **Cover safety:** circular − / + and dial drag only command a position for settled open/closed or a reported `current_position`, so MQTT covers without feedback no longer reverse while opening or closing.
+- **Release notes:** stable GitHub releases publish curated `CHANGELOG.md` guidance; prereleases keep generated notes.
+
 ### Changed
 
-- Graph Card keeps its plot wrapper structurally available for sizing and interaction but removes its visible glass panel, letting each line and its new color-matched under-fill gradient flow edge to edge across the card.
-- Stable GitHub releases now publish the curated matching `CHANGELOG.md` section with practical HACS update, cache, integrity and support guidance. Alpha, beta and release-candidate tags keep GitHub's automatically generated notes.
-- Graph Card keeps its glass header and legend while returning the primary value to clean typography and restoring the plot as a full-width, edge-to-edge surface without internal chart padding.
+- Graph Card keeps its plot wrapper for sizing and interaction but removes the visible glass panel so each series and under-fill can run edge to edge.
+- Graph Card restores the primary value as clean typography and keeps the glass header/legend.
+- Stable GitHub releases publish the matching `CHANGELOG.md` section with HACS update, cache, integrity and support guidance.
 
 ### Fixed
 
-- Entity and Fav now use the exact same 38px neutral icon bubble as Light and Humidifier: 6% surface tint, shared border and shadow, and a 46% glyph. Configurations carrying historical 5–6% white RGBA backgrounds or the short-lived 8% alpha tint migrate automatically.
-- Fav icon-only keeps its 38px bubble centered while regular mobile cards retain the shared 50px responsive bubble.
-- Vacuum Card now applies the shared contrast-aware tint to its main icon glyph, keeping cleaning, returning, maintenance, and error accents readable across light and dark themes.
-- Entity and Fav normalize legacy flat/white icon-bubble backgrounds to the same neutral surface used by Light Card, so their visible size, shadow, border and fill remain aligned in light themes.
-- Fav uses the shared Light-style tint contrast mix for the rendered icon glyph, including warm orange and peach tints.
+- Entity and Fav migrate historical white/`8%` icon backgrounds to the shared 6% neutral surface used by Light and Humidifier.
+- Fav icon-only keeps a centered 38px bubble; inline mobile cards keep the shared 50px responsive bubble.
+- Vacuum applies shared contrast-aware tint to its main glyph across cleaning, returning, maintenance and error states.
+- Circular Cover no longer treats `opening` / `closing` as fully open when `current_position` is missing, so step and dial gestures do not reverse a moving blind.
+- Browser expansion samples fall back to interpolated `max-height` when WebKit reports zero layout height during Fan/Humidifier control animations.
+
+### Security and validation
+
+- Strict service allowlists, sanitized navigation URLs and configuration path hardening remain default.
+- **454** Node tests, Chromium/WebKit/iPhone Playwright regressions, HACS validation and CodeQL scanning gate the stable bundle.
+
+Per-build notes for **`2.2.1-alpha.*`** and **`2.2.1-beta.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 ## [2.2.0] - 2026-08-24
 

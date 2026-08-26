@@ -74,6 +74,15 @@ function expectHeightTrajectory(heights, direction) {
   expect(signedHeights[2]).toBeGreaterThan(signedHeights[0] + MIN_TOTAL_HEIGHT_CHANGE_PX);
 }
 
+function pickTrajectoryValues(sample) {
+  const heightsNearZero = sample.heights.every(height => height < 1);
+  const maxHeightsGrow = sample.maxHeights.some(height => height > 1);
+  if (heightsNearZero && maxHeightsGrow) {
+    return sample.maxHeights;
+  }
+  return sample.heights;
+}
+
 async function sampleAnimation(shell, animationName, expectedClass) {
   return shell.evaluate(async (element, expected) => {
     const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
@@ -92,6 +101,7 @@ async function sampleAnimation(shell, animationName, expectedClass) {
         found: false,
         hadExpectedClass: element.classList.contains(expected.className),
         heights: [],
+        maxHeights: [],
         rows: [],
       };
     }
@@ -111,10 +121,15 @@ async function sampleAnimation(shell, animationName, expectedClass) {
 
     for (const progress of [0.15, 0.5, 0.85]) {
       animation.currentTime = delay + duration * progress;
+      // Force layout so WebKit applies interpolated max-height / grid tracks.
+      void element.offsetHeight;
       await nextFrame();
+      void element.offsetHeight;
+      const styles = getComputedStyle(element);
       samples.push({
         height: element.getBoundingClientRect().height,
-        row: getComputedStyle(element).gridTemplateRows,
+        maxHeight: Number.parseFloat(styles.maxHeight) || 0,
+        row: styles.gridTemplateRows,
       });
     }
 
@@ -123,6 +138,7 @@ async function sampleAnimation(shell, animationName, expectedClass) {
       found: true,
       hadExpectedClass: element.classList.contains(expected.className),
       heights: samples.map(sample => sample.height),
+      maxHeights: samples.map(sample => sample.maxHeight),
       rows: samples.map(sample => sample.row),
     };
   }, { name: animationName, className: expectedClass });
@@ -182,7 +198,7 @@ for (const device of devices) {
     const opening = await sampleAnimation(openingShell, device.expandAnimation, device.entering);
     expect(opening.found).toBe(true);
     expect(opening.hadExpectedClass).toBe(true);
-    expectHeightTrajectory(opening.heights, 1);
+    expectHeightTrajectory(pickTrajectoryValues(opening), 1);
     expect(opening.rows[0]).not.toBe(opening.rows[2]);
 
     await page.waitForTimeout(220);
@@ -207,7 +223,7 @@ for (const device of devices) {
     const closing = await sampleAnimation(closingShell, device.collapseAnimation, device.leaving);
     expect(closing.found).toBe(true);
     expect(closing.hadExpectedClass).toBe(true);
-    expectHeightTrajectory(closing.heights, -1);
+    expectHeightTrajectory(pickTrajectoryValues(closing), -1);
 
     await page.waitForTimeout(220);
     await expect(card.locator(device.shell)).toHaveCount(0);

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.2.1-alpha.6";
+const CARD_VERSION = "2.2.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1814,20 +1814,30 @@ class NodaliaFavCard extends HTMLElement {
           touch-action: manipulation;
         }
 
+        .fav-card--mini {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+          min-height: 100%;
+        }
+
         .fav-card__content {
           align-content: ${showAlarmPanel ? "start" : "center"};
           display: grid;
           gap: ${showAlarmPanel ? "10px" : (isCompactInline ? "6px" : (isMini ? "0" : styles.card.gap))};
           height: ${showAlarmPanel ? "auto" : (usesCompactRowMetrics ? "100%" : "auto")};
           min-width: 0;
-          padding: ${showAlarmPanel ? "8px 10px 10px" : (isCompactInline ? "6px 10px" : (isMini ? "6px" : styles.card.padding))};
+          padding: ${showAlarmPanel ? "8px 10px 10px" : (isCompactInline ? "6px 10px" : (isMini ? "0" : styles.card.padding))};
           position: relative;
           overflow: hidden;
           z-index: 1;
         }
 
         .fav-card--mini .fav-card__content {
+          align-content: center;
           justify-items: center;
+          min-height: 100%;
+          width: 100%;
         }
 
         .fav-card--single-row .fav-card__content {

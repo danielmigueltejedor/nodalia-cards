@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.1-alpha.6";
+const CARD_VERSION = "2.2.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -781,6 +781,25 @@ class NodaliaCoverCard extends HTMLElement {
     return ["open", "opening", "closing"].includes(key);
   }
 
+  _getSettledPositionFallback(state = this._getState()) {
+    const key = normalizeTextKey(state?.state);
+    if (key === "open") {
+      return 100;
+    }
+    if (key === "closed") {
+      return 0;
+    }
+    return null;
+  }
+
+  _getCommandablePosition(state = this._getState()) {
+    const position = parseNumber(state?.attributes?.current_position);
+    if (position !== null) {
+      return position;
+    }
+    return this._getSettledPositionFallback(state);
+  }
+
   _coverCardUi(key, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
@@ -1105,8 +1124,10 @@ class NodaliaCoverCard extends HTMLElement {
         if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
           break;
         }
-        const current = parseNumber(state?.attributes?.current_position);
-        const base = current ?? (this._isActive(state) ? 100 : 0);
+        const base = this._getCommandablePosition(state);
+        if (base === null) {
+          break;
+        }
         const nextValue = clamp(Math.round(base - 5), 0, 100);
         this._updatePositionPreview(nextValue);
         this._callCover("set_cover_position", { position: nextValue });
@@ -1116,8 +1137,10 @@ class NodaliaCoverCard extends HTMLElement {
         if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
           break;
         }
-        const current = parseNumber(state?.attributes?.current_position);
-        const base = current ?? (this._isActive(state) ? 100 : 0);
+        const base = this._getCommandablePosition(state);
+        if (base === null) {
+          break;
+        }
         const nextValue = clamp(Math.round(base + 5), 0, 100);
         this._updatePositionPreview(nextValue);
         this._callCover("set_cover_position", { position: nextValue });
@@ -1310,8 +1333,7 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _getDisplayPosition(state = this._getState()) {
-    const position = parseNumber(state?.attributes?.current_position);
-    return position ?? (this._isActive(state) ? 100 : 0);
+    return this._getCommandablePosition(state) ?? 0;
   }
 
   _updatePositionPreview(value) {
@@ -1394,8 +1416,12 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
+    const seedValue = this._getCommandablePosition(state);
+    if (seedValue === null) {
+      return;
+    }
+
     const step = this._getCircularDialStep();
-    const seedValue = this._getDisplayPosition(state);
     this._activeSliderDrag = {
       kind: "circular",
       dial,
@@ -1774,8 +1800,8 @@ class NodaliaCoverCard extends HTMLElement {
         </div>
       `
       : `<div class="fan-card__controls">${arrowTransportHtml}</div>`;
-    const circularPosition = position ?? (isActive ? 100 : 0);
-    const circularDial = getCircularLayoutDialModel(circularPosition, 0, 100);
+    const circularPosition = position ?? this._getSettledPositionFallback(state);
+    const circularDial = getCircularLayoutDialModel(circularPosition ?? 0, 0, 100);
     const circularControlsMarkup = `
       <div class="fan-card__circular-layout">
         <div class="fan-card__circular-dial" data-nodalia-tap-shield="true" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">

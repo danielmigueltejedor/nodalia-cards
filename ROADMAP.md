@@ -6,15 +6,15 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
-## Preview release
+## Current stable release
 
-Current preview release:
+Current stable release:
 
 ```text
-2.2.1-alpha.6
+2.2.1
 ```
 
-Preview **`2.2.1-alpha.6`** makes Entity/Fav icon bubbles match Light/Humidifier (including light-theme legacy migration and centered Fav icon-only), removes the visible Graph plot panel and adds color-matched under-line gradients while preserving contrast-aware active glyphs. It also retains all Navigation, Notifications, Climate, Weather, Vacuum and stable-release-note improvements from the earlier alphas. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.1`** makes Entity/Fav icon bubbles match Light/Humidifier (including light-theme legacy migration and centered Fav icon-only), restores edge-to-edge Graph plots with under-line gradients, hardens circular Cover position commands when `current_position` is missing during motion, and keeps Navigation, Notifications, Climate, Weather, Vacuum and curated stable-release-note improvements from the 2.2.1 preview line. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -35,7 +35,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.0`**
+- Regression-free mobile and desktop behavior on stable **`2.2.1`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
