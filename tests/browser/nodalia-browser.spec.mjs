@@ -1043,7 +1043,7 @@ test("Navigation keeps media controls on the selected entity when visible player
   ]);
 });
 
-test("Entity, Fav, and Vacuum bubbles match Light chrome and tint contrast", async ({ page }) => {
+test("Entity and Fav use the stronger neutral bubble while tinted glyphs retain contrast", async ({ page }) => {
   await loadBundle(page);
   const visuals = await page.evaluate(() => {
     document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
@@ -1085,6 +1085,12 @@ test("Entity, Fav, and Vacuum bubbles match Light chrome and tint contrast", asy
         glyphColor: glyph.color,
       };
     };
+    const neutralReference = document.createElement("span");
+    neutralReference.style.background = "color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    neutralReference.style.border = "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+    neutralReference.style.boxShadow = "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18)";
+    document.querySelector("#fixture").append(neutralReference);
+    const neutralReferenceStyle = getComputedStyle(neutralReference);
     const lightNeutral = mount("nodalia-light-card", { entity: "light.neutral" });
     const entityNeutral = mount(
       "nodalia-entity-card",
@@ -1101,6 +1107,12 @@ test("Entity, Fav, and Vacuum bubbles match Light chrome and tint contrast", asy
     const vacuumWarm = mount("nodalia-vacuum-card", { entity: "vacuum.warm" }, { active_color: accent });
     return {
       accent: "rgb(242, 154, 99)",
+      neutralReference: {
+        bubbleBackground: neutralReferenceStyle.backgroundColor,
+        bubbleBackgroundImage: neutralReferenceStyle.backgroundImage,
+        bubbleBorder: neutralReferenceStyle.border,
+        bubbleShadow: neutralReferenceStyle.boxShadow,
+      },
       lightNeutral: read(lightNeutral, ".light-card__icon"),
       entityNeutral: read(entityNeutral, ".entity-card__icon"),
       favNeutral: read(favNeutral, ".fav-card__icon"),
@@ -1112,10 +1124,11 @@ test("Entity, Fav, and Vacuum bubbles match Light chrome and tint contrast", asy
 
   for (const card of [visuals.entityNeutral, visuals.favNeutral]) {
     expect(card.surfaceShadow).toBe(visuals.lightNeutral.surfaceShadow);
-    expect(card.bubbleBackground).toBe(visuals.lightNeutral.bubbleBackground);
-    expect(card.bubbleBackgroundImage).toBe(visuals.lightNeutral.bubbleBackgroundImage);
-    expect(card.bubbleBorder).toBe(visuals.lightNeutral.bubbleBorder);
-    expect(card.bubbleShadow).toBe(visuals.lightNeutral.bubbleShadow);
+    expect(card.bubbleBackground).toBe(visuals.neutralReference.bubbleBackground);
+    expect(card.bubbleBackgroundImage).toBe(visuals.neutralReference.bubbleBackgroundImage);
+    expect(card.bubbleBorder).toBe(visuals.neutralReference.bubbleBorder);
+    expect(card.bubbleShadow).toBe(visuals.neutralReference.bubbleShadow);
+    expect(card.bubbleBackground).not.toBe(visuals.lightNeutral.bubbleBackground);
   }
   expect(visuals.favWarm.bubbleBackground).toBe(visuals.lightWarm.bubbleBackground);
   expect(visuals.favWarm.bubbleShadow).toBe(visuals.lightWarm.bubbleShadow);
@@ -1142,7 +1155,16 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
       attributes: { friendly_name: "Power", unit_of_measurement: "W", device_class: "power" },
     };
     const hass = window.makeHass({ "sensor.power": state });
-    hass.callApi = async () => [];
+    const now = Date.now();
+    hass.callWS = async message => (
+      message?.type === "history/history_during_period"
+        ? [[
+            { entity_id: "sensor.power", state: "28", last_changed: new Date(now - 7_200_000).toISOString() },
+            { entity_id: "sensor.power", state: "52", last_changed: new Date(now - 3_600_000).toISOString() },
+            { entity_id: "sensor.power", state: "42", last_changed: new Date(now - 600_000).toISOString() },
+          ]]
+        : {}
+    );
     const card = document.createElement("nodalia-graph-card");
     card.setConfig({
       name: "Power",
@@ -1151,7 +1173,9 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
     });
     card.hass = hass;
     document.querySelector("#fixture").append(card);
-    await new Promise(resolve => requestAnimationFrame(() => resolve()));
+    for (let attempt = 0; attempt < 30 && !card.shadowRoot.querySelector(".graph-card__chart-series-fill"); attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
     const read = element => {
       const style = getComputedStyle(element);
       return {
@@ -1167,6 +1191,7 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
     const valueNode = card.shadowRoot.querySelector(".graph-card__value");
     const chartNode = card.shadowRoot.querySelector(".graph-card__chart-wrap");
     const svgNode = card.shadowRoot.querySelector(".graph-card__chart");
+    const fillNode = card.shadowRoot.querySelector(".graph-card__chart-series-fill");
     const rect = element => {
       const box = element.getBoundingClientRect();
       return { top: box.top, left: box.left, right: box.right, bottom: box.bottom, width: box.width, height: box.height };
@@ -1177,6 +1202,13 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
       value: read(valueNode),
       legend: read(card.shadowRoot.querySelector(".graph-card__legend-item")),
       chart: read(chartNode),
+      fill: {
+        paint: getComputedStyle(fillNode).fill,
+        opacity: getComputedStyle(fillNode).opacity,
+        stops: [...card.shadowRoot.querySelectorAll('linearGradient[id^="graph-fill-"] stop')]
+          .slice(0, 3)
+          .map(stop => stop.getAttribute("stop-opacity")),
+      },
       surfaceRect: rect(surfaceNode),
       chartRect: rect(chartNode),
       svgRect: rect(svgNode),
@@ -1186,7 +1218,7 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
   expect(visuals.surface.background).toContain("linear-gradient");
   expect(visuals.surface.boxShadow).not.toBe("none");
   expect(visuals.icon.borderRadius).toBe("999px");
-  for (const primitive of [visuals.icon, visuals.legend, visuals.chart]) {
+  for (const primitive of [visuals.icon, visuals.legend]) {
     expect(
       /gradient/.test(primitive.background) || primitive.backgroundColor !== "rgba(0, 0, 0, 0)",
     ).toBe(true);
@@ -1198,6 +1230,14 @@ test("Graph keeps glass chrome while value and plot remain open and edge-to-edge
   expect(visuals.value.boxShadow).toBe("none");
   expect(visuals.value.backdrop).toBe("none");
   expect(visuals.value.padding).toBe("0px");
+  expect(visuals.chart.background).toBe("none");
+  expect(visuals.chart.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(visuals.chart.boxShadow).toBe("none");
+  expect(visuals.chart.backdrop).toBe("none");
+  expect(visuals.chart.borderRadius).toBe("0px");
+  expect(visuals.fill.paint).toContain("url");
+  expect(visuals.fill.opacity).toBe("1");
+  expect(visuals.fill.stops).toEqual(["0.3", "0.12", "0"]);
   const edgeTolerance = 1.1;
   expect(Math.abs(visuals.chartRect.left - visuals.surfaceRect.left)).toBeLessThanOrEqual(edgeTolerance);
   expect(Math.abs(visuals.chartRect.right - visuals.surfaceRect.right)).toBeLessThanOrEqual(edgeTolerance);

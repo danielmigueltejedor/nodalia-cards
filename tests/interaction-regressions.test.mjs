@@ -564,10 +564,10 @@ test("fav active state matches Light surfaces and applies tint contrast to icons
   assert.match(source, /0 16px 32px color-mix\(in srgb, \$\{accentColor\} 18%/);
   assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*color-mix/);
   assert.match(source, /\.fav-card__icon \{[\s\S]*border-radius: 999px;/);
-  assert.match(source, /0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
+  assert.match(source, /0 10px 24px rgba\(0, 0, 0, \$\{isActive \? "0\.16" : "0\.18"\}\)/);
   assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
   assert.match(source, /\.fav-card__icon ha-icon \{[\s\S]*color: \$\{iconColor\};/);
-  assert.match(source, /background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
+  assert.match(source, /background: "color-mix\(in srgb, var\(--primary-text-color\) 8%, transparent\)"/);
   assert.match(source, /--fav-alarm-glyph:/);
   assert.match(source, /color: var\(--fav-alarm-glyph, var\(--fav-alarm-accent\)\);/);
   assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);
@@ -2126,10 +2126,14 @@ test("graph card keeps glass chrome while value and plot stay visually open", ()
   assert.match(valueBlock, /display: flex;/);
   assert.doesNotMatch(valueBlock, /backdrop-filter|background:|border:|box-shadow|padding:/);
   assert.match(source, /\.graph-card__legend-item \{[\s\S]*backdrop-filter: blur\(12px\);[\s\S]*inset 0 1px 0/);
-  assert.match(chartBlock, /backdrop-filter: blur\(18px\);/);
+  assert.match(chartBlock, /backdrop-filter: none;/);
+  assert.match(chartBlock, /background: transparent;/);
+  assert.match(chartBlock, /box-shadow: none;/);
   assert.match(chartBlock, /margin: 4px -\$\{chartBleedRight\}px -\$\{chartBleedBottom\}px -\$\{chartBleedLeft\}px;/);
   assert.match(chartBlock, /padding: 0;/);
   assert.match(chartBlock, /width: calc\(100% \+ \$\{chartBleedLeft \+ chartBleedRight\}px\);/);
+  assert.match(source, /\.graph-card__chart-series-fill \{[\s\S]*opacity: 1;/);
+  assert.match(source, /stop-opacity="0\.3"[\s\S]*stop-opacity="0\.12"[\s\S]*stop-opacity="0"/);
 });
 
 test("fan off-state memory ignores zero percentage", () => {

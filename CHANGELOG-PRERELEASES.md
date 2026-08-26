@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-alpha.5] - 2026-08-26
+
+Fifth **`2.2.1`** alpha: cleaner edge-to-edge graphs and stronger neutral icon bubbles.
+
+### Changed
+
+- Graph Card keeps its plot wrapper for sizing, clipping and interaction but removes every visible panel layer, so the chart flows directly across the card.
+- Each Graph series now paints a color-matched gradient beneath its line, fading smoothly toward the bottom and animating with the line entrance.
+
+### Fixed
+
+- Entity and Fav use the same 8% neutral icon-bubble tint and stronger neutral shadow as Media Player artwork in light themes.
+- Existing Entity/Fav configurations using the former 5–6% defaults or legacy white backgrounds migrate automatically to the new neutral surface without changing active tint contrast.
+
+### Validation
+
+- All 453 Node regressions pass.
+- Computed-style checks for neutral bubbles, invisible Graph chrome and visible per-series fills pass in Chromium, WebKit and WebKit iPhone.
+
 ## [2.2.1-alpha.4] - 2026-08-26
 
 Fourth **`2.2.1`** alpha: CI-qualified republish of the Graph and icon-contrast polish from alpha.3.

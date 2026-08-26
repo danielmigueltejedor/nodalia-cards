@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "2.2.1-alpha.4";
+const CARD_VERSION = "2.2.1-alpha.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2582,17 +2582,12 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-wrap {
-          -webkit-backdrop-filter: blur(18px);
-          backdrop-filter: blur(18px);
-          background:
-            radial-gradient(circle at 18% 16%, color-mix(in srgb, ${accentColor} 18%, transparent), transparent 48%),
-            linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), color-mix(in srgb, var(--primary-text-color) 2%, transparent));
+          -webkit-backdrop-filter: none;
+          backdrop-filter: none;
+          background: transparent;
           border: 0;
-          border-radius: ${styles.card.border_radius};
-          box-shadow:
-            inset 0 0 0 1px color-mix(in srgb, ${accentColor} 20%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)),
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent),
-            0 12px 30px rgba(0, 0, 0, 0.1);
+          border-radius: 0;
+          box-shadow: none;
           flex: 1 1 auto;
           margin: 4px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
           max-width: none;
@@ -2770,8 +2765,13 @@ class NodaliaGraphCard extends HTMLElement {
         }
 
         .graph-card__chart-series-fill {
-          opacity: 0;
+          opacity: 1;
           transform-origin: center bottom;
+        }
+
+        .graph-card__chart-series-fill--entering {
+          animation: graph-card-area-in var(--graph-card-line-draw-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(40ms + var(--series-delay, 0ms));
         }
 
         .graph-card__chart-series-glow {
@@ -2881,7 +2881,7 @@ class NodaliaGraphCard extends HTMLElement {
             transform: scaleY(0.74);
           }
           100% {
-            opacity: 0;
+            opacity: 1;
             transform: scaleY(1);
           }
         }
@@ -3103,8 +3103,8 @@ class NodaliaGraphCard extends HTMLElement {
                 </filter>
                 ${chart.entries.map((entry, index) => `
                   <linearGradient id="graph-fill-${index}" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.22"></stop>
-                    <stop offset="54%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.07"></stop>
+                    <stop offset="0%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.3"></stop>
+                    <stop offset="52%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0.12"></stop>
                     <stop offset="100%" stop-color="${escapeHtml(entry.color)}" stop-opacity="0"></stop>
                   </linearGradient>
                 `).join("")}
@@ -3117,7 +3117,7 @@ class NodaliaGraphCard extends HTMLElement {
               ${chart.entries.map((entry, index) => `
                 ${
                   config.show_fill !== false
-                    ? `<path class="graph-card__chart-series-fill" style="--series-delay:${Math.min(index, 8) * 42}ms;" d="${entry.fillPath}" fill="url(#graph-fill-${index})"></path>`
+                    ? `<path class="graph-card__chart-series-fill ${shouldAnimateChart ? "graph-card__chart-series-fill--entering" : ""}" style="--series-delay:${Math.min(index, 8) * 42}ms;" d="${entry.fillPath}" fill="url(#graph-fill-${index})"></path>`
                     : ""
                 }
                 <path class="graph-card__chart-series-glow ${shouldAnimateChart ? "graph-card__chart-series-glow--entering" : ""}" style="--series-delay:${Math.min(index, 8) * 42}ms;" pathLength="1" d="${entry.linePath}" stroke="${escapeHtml(entry.color)}"></path>

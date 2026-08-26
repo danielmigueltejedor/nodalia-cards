@@ -12,11 +12,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Graph Card keeps its plot wrapper structurally available for sizing and interaction but removes its visible glass panel, letting each line and its new color-matched under-fill gradient flow edge to edge across the card.
 - Stable GitHub releases now publish the curated matching `CHANGELOG.md` section with practical HACS update, cache, integrity and support guidance. Alpha, beta and release-candidate tags keep GitHub's automatically generated notes.
 - Graph Card keeps its glass header and legend while returning the primary value to clean typography and restoring the plot as a full-width, edge-to-edge surface without internal chart padding.
 
 ### Fixed
 
+- Entity and Fav use the same stronger neutral icon-bubble tint as the Media Player artwork in light themes, and automatically migrate their former 5–6% neutral defaults.
 - Vacuum Card now applies the shared contrast-aware tint to its main icon glyph, keeping cleaning, returning, maintenance, and error accents readable across light and dark themes.
 - Entity and Fav normalize legacy flat/white icon-bubble backgrounds to the same neutral surface used by Light Card, so their visible bubble shadow, border and fill remain aligned in light themes.
 - Fav uses the shared Light-style tint contrast mix for the rendered icon glyph, including warm orange and peach tints.
