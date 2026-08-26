@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "2.2.1-beta.1";
+const CARD_VERSION = "2.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

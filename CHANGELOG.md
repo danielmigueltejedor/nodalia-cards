@@ -18,7 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- Entity and Fav now use the exact same 38px neutral icon bubble as Light and Humidifier: 6% surface tint, shared border and shadow, and a 46% glyph. Configurations carrying the short-lived 8% alpha tint migrate automatically.
+- Entity and Fav now use the exact same 38px neutral icon bubble as Light and Humidifier: 6% surface tint, shared border and shadow, and a 46% glyph. Configurations carrying historical 5–6% white RGBA backgrounds or the short-lived 8% alpha tint migrate automatically.
+- Fav icon-only keeps its 38px bubble centered while regular mobile cards retain the shared 50px responsive bubble.
 - Vacuum Card now applies the shared contrast-aware tint to its main icon glyph, keeping cleaning, returning, maintenance, and error accents readable across light and dark themes.
 - Entity and Fav normalize legacy flat/white icon-bubble backgrounds to the same neutral surface used by Light Card, so their visible size, shadow, border and fill remain aligned in light themes.
 - Fav uses the shared Light-style tint contrast mix for the rendered icon glyph, including warm orange and peach tints.

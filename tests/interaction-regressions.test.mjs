@@ -571,12 +571,15 @@ test("entity and fav icon bubbles match Light metrics and preserve tint contrast
   assert.match(source, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
   assert.match(source, /const iconSizePx = [^;]*isMini \? 38 : \(isCompactInline \? 38 : 56\)/);
   assert.match(source, /--mdc-icon-size: calc\(\$\{iconSizePx\}px \* 0\.46\)/);
-  assert.match(source, /@media \(max-width: 420px\) \{[\s\S]*\.fav-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
+  assert.match(source, /@media \(max-width: 420px\) \{[\s\S]*\.fav-card--inline \.fav-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
   assert.match(entitySource, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
   assert.match(entitySource, /singleRowLayout \? 38 : compactMetrics \? 46 : 58/);
   assert.match(entitySource, /\.entity-card__icon \{[\s\S]*0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
   assert.match(entitySource, /--mdc-icon-size: calc\(\$\{effectiveIconSize\} \* 0\.46\)/);
   assert.match(entitySource, /@media \(max-width: 420px\) \{[\s\S]*\.entity-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
+  const contrastSource = read("nodalia-bubble-contrast.js");
+  assert.match(contrastSource, /"rgba\(255,255,255,0\.05\)"/);
+  assert.match(contrastSource, /"rgba\(255,255,255,0\.06\)"/);
   assert.match(source, /--fav-alarm-glyph:/);
   assert.match(source, /color: var\(--fav-alarm-glyph, var\(--fav-alarm-accent\)\);/);
   assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);

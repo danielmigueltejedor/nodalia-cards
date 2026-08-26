@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.2.1-beta.1";
+const CARD_VERSION = "2.2.1-beta.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2101,11 +2101,11 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .fav-card__hero {
+          .fav-card--inline .fav-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .fav-card__icon {
+          .fav-card--inline .fav-card__icon {
             height: 50px;
             min-width: 50px;
             width: 50px;

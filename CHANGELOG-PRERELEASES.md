@@ -8,6 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-beta.2] - 2026-08-26
+
+Second **`2.2.1`** beta: light-theme legacy migration and centered Fav icon-only layout.
+
+### Fixed
+
+- Entity and Fav now migrate the historical `rgba(255,255,255,0.06)` and `rgba(255,255,255,0.05)` icon backgrounds to the shared theme-aware neutral surface, removing the remaining white cast in light themes.
+- Fav's 50px mobile bubble rule now applies only to inline cards. Icon-only/mini cards retain Light mini's 38px bubble and remain centered on both axes.
+
+### Validation
+
+- All 453 Node regressions pass.
+- Legacy light-background parity and Fav icon-only center/size checks pass in Chromium, WebKit and WebKit iPhone.
+
 ## [2.2.1-beta.1] - 2026-08-26
 
 First **`2.2.1`** beta: exact icon-bubble parity for Entity and Fav.

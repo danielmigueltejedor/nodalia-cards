@@ -1043,7 +1043,7 @@ test("Navigation keeps media controls on the selected entity when visible player
   ]);
 });
 
-test("Entity and Fav match the shared neutral icon bubble while tinted glyphs retain contrast", async ({ page }) => {
+test("Entity and Fav migrate light-theme bubbles and keep icon-only centered", async ({ page }) => {
   await loadBundle(page);
   const visuals = await page.evaluate(() => {
     document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
@@ -1101,11 +1101,43 @@ test("Entity and Fav match the shared neutral icon bubble while tinted glyphs re
       { entity: "sensor.entity", grid_options: { columns: 12, rows: 1 } },
       { background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)" },
     );
+    const entityLegacyWhite = mount(
+      "nodalia-entity-card",
+      { entity: "sensor.entity", grid_options: { columns: 12, rows: 1 } },
+      { background: "rgba(255, 255, 255, 0.06)" },
+    );
     const favNeutral = mount(
       "nodalia-fav-card",
       { entity: "input_boolean.fav_neutral", grid_options: { columns: 12, rows: 1 } },
       { background: "var(--ha-card-background)" },
     );
+    const favLegacyWhite = mount(
+      "nodalia-fav-card",
+      { entity: "input_boolean.fav_neutral", grid_options: { columns: 12, rows: 1 } },
+      { background: "rgba(255, 255, 255, 0.05)" },
+    );
+    const lightIconOnly = mount("nodalia-light-card", {
+      entity: "light.neutral",
+      grid_options: { columns: 2, rows: 1 },
+    });
+    const favIconOnly = mount("nodalia-fav-card", {
+      entity: "input_boolean.fav_neutral",
+      grid_options: { columns: 2, rows: 1 },
+      layout_mode: "mini",
+      show_name: false,
+      show_state: false,
+    });
+    lightIconOnly.style.width = "68px";
+    favIconOnly.style.width = "68px";
+    const readIconOnly = (card, bubbleSelector) => {
+      const surfaceRect = card.shadowRoot.querySelector("ha-card").getBoundingClientRect();
+      const bubbleRect = card.shadowRoot.querySelector(bubbleSelector).getBoundingClientRect();
+      return {
+        bubbleWidth: bubbleRect.width,
+        offsetX: (bubbleRect.left + (bubbleRect.width / 2)) - (surfaceRect.left + (surfaceRect.width / 2)),
+        offsetY: (bubbleRect.top + (bubbleRect.height / 2)) - (surfaceRect.top + (surfaceRect.height / 2)),
+      };
+    };
     const lightWarm = mount("nodalia-light-card", { entity: "light.warm" });
     const favWarm = mount("nodalia-fav-card", { entity: "input_boolean.fav_warm" }, { on_color: accent });
     const vacuumWarm = mount("nodalia-vacuum-card", { entity: "vacuum.warm" }, { active_color: accent });
@@ -1114,14 +1146,18 @@ test("Entity and Fav match the shared neutral icon bubble while tinted glyphs re
       lightNeutral: read(lightNeutral, ".light-card__icon"),
       humidifierNeutral: read(humidifierNeutral, ".humidifier-card__icon"),
       entityNeutral: read(entityNeutral, ".entity-card__icon"),
+      entityLegacyWhite: read(entityLegacyWhite, ".entity-card__icon"),
       favNeutral: read(favNeutral, ".fav-card__icon"),
+      favLegacyWhite: read(favLegacyWhite, ".fav-card__icon"),
+      lightIconOnly: readIconOnly(lightIconOnly, ".light-card__icon"),
+      favIconOnly: readIconOnly(favIconOnly, ".fav-card__icon"),
       lightWarm: read(lightWarm, ".light-card__icon"),
       favWarm: read(favWarm, ".fav-card__icon"),
       vacuumWarm: read(vacuumWarm, ".vacuum-card__icon-button"),
     };
   });
 
-  for (const card of [visuals.entityNeutral, visuals.favNeutral]) {
+  for (const card of [visuals.entityNeutral, visuals.entityLegacyWhite, visuals.favNeutral, visuals.favLegacyWhite]) {
     expect(card.surfaceShadow).toBe(visuals.lightNeutral.surfaceShadow);
     for (const reference of [visuals.lightNeutral, visuals.humidifierNeutral]) {
       expect(card.bubbleBackground).toBe(reference.bubbleBackground);
@@ -1134,6 +1170,11 @@ test("Entity and Fav match the shared neutral icon bubble while tinted glyphs re
       expect(card.glyphHeight).toBe(reference.glyphHeight);
     }
   }
+  expect(visuals.favIconOnly.bubbleWidth).toBe(visuals.lightIconOnly.bubbleWidth);
+  expect(Math.abs(visuals.favIconOnly.offsetX)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(visuals.favIconOnly.offsetY)).toBeLessThanOrEqual(0.5);
+  expect(visuals.favIconOnly.offsetX).toBeCloseTo(visuals.lightIconOnly.offsetX, 1);
+  expect(visuals.favIconOnly.offsetY).toBeCloseTo(visuals.lightIconOnly.offsetY, 1);
   expect(visuals.favWarm.bubbleBackground).toBe(visuals.lightWarm.bubbleBackground);
   expect(visuals.favWarm.bubbleShadow).toBe(visuals.lightWarm.bubbleShadow);
   expect(visuals.favWarm.glyphColor).toBe(visuals.lightWarm.glyphColor);
