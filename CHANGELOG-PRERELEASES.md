@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-alpha.2] - 2026-08-26
+
+Second **`2.2.1`** alpha: stable media-player identity and stricter visual-family parity.
+
+### Changed
+
+- Fav Card applies tint-aware contrast directly to the rendered bubble glyph instead of relying on `ha-icon` inheritance, and its neutral bubble tint now matches Light, Entity and Humidifier.
+- Entity and Fav surface and bubble shadows are protected by computed-style browser regression coverage against Light Card.
+- Graph Card now uses the shared tinted surface and glass-bubble language across its icon, value, legend, plot and tooltip layers.
+- Advance Vacuum's cleaning-mode selector keeps every option text-only, including **Go to point**, for one consistent identity.
+
+### Fixed
+
+- Navigation Bar remembers the selected media-player entity as well as its visible index. If an earlier configured player appears or disappears, render, collapsed dock, progress refresh, volume patching, browse and transport controls stay attached to the selected device.
+
+### Validation
+
+- Runtime and browser regressions cover the three-player Kitchen/Living Room/Bedroom visibility shift, fallback when the selected entity actually disappears, computed surface-shadow parity, Fav glyph contrast, text-only vacuum modes and Graph's glass primitives.
+
 ## [2.2.1-alpha.1] - 2026-08-26
 
 First **`2.2.1`** alpha: entrance stability and light-theme visual alignment.

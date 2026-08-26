@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fav-card";
 const EDITOR_TAG = "nodalia-fav-card-editor";
-const CARD_VERSION = "2.2.1-alpha.1";
+const CARD_VERSION = "2.2.1-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -66,7 +66,7 @@ const DEFAULT_CONFIG = {
     },
     icon: {
       size: "42px",
-      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
       on_color: "var(--info-color, #71c0ff)",
       off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
     },
@@ -1888,6 +1888,7 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card__icon ha-icon {
           --mdc-icon-size: calc(${iconSizePx}px * 0.45);
+          color: ${iconColor};
           display: inline-flex;
           height: calc(${iconSizePx}px * 0.45);
           left: 50%;

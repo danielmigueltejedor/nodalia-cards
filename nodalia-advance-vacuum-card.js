@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.2.1-alpha.1";
+const CARD_VERSION = "2.2.1-alpha.2";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -8748,7 +8748,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
                 ${modes.map(mode => `
                   <button type="button" class="advance-vacuum-card__mode-button ${mode.id === this._activeMode ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === this._activeMode ? "true" : "false"}">
-                    ${["all", "rooms", "zone", "routines"].includes(mode.id) ? "" : `<ha-icon icon="${escapeHtml(mode.icon)}"></ha-icon>`}
                     <span>${escapeHtml(mode.label)}</span>
                   </button>
                 `).join("")}

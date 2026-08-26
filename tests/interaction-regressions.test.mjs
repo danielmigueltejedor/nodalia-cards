@@ -216,6 +216,101 @@ test("navigation volume changes patch controls without rebuilding the card", () 
   assert.doesNotMatch(source, /Number\(attrs\.volume_level \?\? -1\)/);
 });
 
+function loadNavigationBarCardClass() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+      this.shadowRoot = null;
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        removeEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return true; }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      addEventListener() {},
+      removeEventListener() {},
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+      visibilityState: "visible",
+    },
+    HTMLElement: FakeHTMLElement,
+    MutationObserver: class { observe() {} disconnect() {} },
+    ResizeObserver: class { observe() {} disconnect() {} },
+    IntersectionObserver: class { observe() {} disconnect() {} },
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  loadNodaliaUtils(sandbox);
+  vm.runInContext(read("nodalia-i18n.js"), sandbox);
+  vm.runInContext(read("nodalia-render-signature.js"), sandbox);
+  vm.runInContext(read("nodalia-navigation-bar.js"), sandbox);
+  return registry.get("nodalia-navigation-bar");
+}
+
+test("navigation media player selection follows the entity when visibility changes", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /_resolveActiveMediaPlayerIndex\(players\)/);
+  assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activeMediaPlayerEntity\)/);
+  assert.match(
+    source,
+    /this\._activeMediaPlayerEntity = String\(visiblePlayers\[this\._activeMediaPlayerIndex\]\?\.entity \|\| ""\)/,
+  );
+
+  const CardClass = loadNavigationBarCardClass();
+  assert.ok(CardClass, "NodaliaNavigationBarCard should register");
+  const card = new CardClass();
+  const kitchen = { entity: "media_player.kitchen" };
+  const living = { entity: "media_player.living_room" };
+  const bedroom = { entity: "media_player.bedroom" };
+
+  card._activeMediaPlayerIndex = 1;
+  card._activeMediaPlayerEntity = living.entity;
+
+  assert.equal(card._resolveActiveMediaPlayerIndex([living, bedroom]), 0);
+  assert.equal(card._activeMediaPlayerIndex, 0);
+  assert.equal(card._activeMediaPlayerEntity, living.entity);
+
+  assert.equal(card._resolveActiveMediaPlayerIndex([kitchen, living, bedroom]), 1);
+  assert.equal(card._activeMediaPlayerIndex, 1);
+  assert.equal(card._activeMediaPlayerEntity, living.entity);
+
+  assert.equal(card._resolveActiveMediaPlayerIndex([kitchen, bedroom]), 1);
+  assert.equal(card._activeMediaPlayerIndex, 1);
+  assert.equal(card._activeMediaPlayerEntity, bedroom.entity);
+});
+
 test("visual editors reattach shadow listeners on reconnect", () => {
   const editorFiles = [
     ["nodalia-light-card.js", "NodaliaLightCardEditor"],
@@ -471,6 +566,8 @@ test("fav active state matches Light surfaces and applies tint contrast to icons
   assert.match(source, /\.fav-card__icon \{[\s\S]*border-radius: 999px;/);
   assert.match(source, /0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
   assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
+  assert.match(source, /\.fav-card__icon ha-icon \{[\s\S]*color: \$\{iconColor\};/);
+  assert.match(source, /background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
   assert.match(source, /--fav-alarm-glyph:/);
   assert.match(source, /color: var\(--fav-alarm-glyph, var\(--fav-alarm-accent\)\);/);
   assert.match(source, /class="fav-card \$\{isActive \? "is-on" : "is-off"\}/);
@@ -1998,6 +2095,25 @@ test("advance vacuum map display follows cleaning session mode", () => {
   assert.match(source, /const currentMode = this\._resolveDisplayMode\(modes, advanceVacuumStrings\)/);
   assert.match(source, /\$\{currentMode\.id === "rooms" \? rooms\.map/);
   assert.match(source, /advance-vacuum-card__mode-button \$\{mode\.id === this\._activeMode/);
+  assert.doesNotMatch(
+    source,
+    /data-mode-id="\$\{escapeHtml\(mode\.id\)\}"[\s\S]{0,240}<ha-icon/,
+    "cleaning mode tabs, including go to point, should keep a text-only identity",
+  );
+});
+
+test("graph card uses the shared glass surface language throughout", () => {
+  const source = read("nodalia-graph-card.js");
+  assert.match(source, /border_radius: "var\(--nodalia-card-border-radius, 28px\)"/);
+  assert.match(source, /padding: "14px",[\s\S]*gap: "12px"/);
+  assert.match(source, /const cardBackground = `linear-gradient\(135deg, color-mix\(in srgb, \$\{accentColor\} 18%/);
+  assert.match(source, /const cardShadow = `\$\{styles\.card\.box_shadow\}, 0 16px 32px color-mix\(in srgb, \$\{accentColor\} 18%/);
+  assert.match(source, /\.graph-card::before \{[\s\S]*color-mix\(in srgb, \$\{accentColor\} 22%/);
+  assert.match(source, /\.graph-card__icon \{[\s\S]*backdrop-filter: blur\(14px\);[\s\S]*border-radius: 999px;[\s\S]*0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
+  assert.match(source, /\.graph-card__icon ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
+  assert.match(source, /\.graph-card__value \{[\s\S]*backdrop-filter: blur\(14px\);[\s\S]*border-radius: 18px;/);
+  assert.match(source, /\.graph-card__legend-item \{[\s\S]*backdrop-filter: blur\(12px\);[\s\S]*inset 0 1px 0/);
+  assert.match(source, /\.graph-card__chart-wrap \{[\s\S]*backdrop-filter: blur\(18px\);[\s\S]*0 12px 30px rgba\(0, 0, 0, 0\.1\)/);
 });
 
 test("fan off-state memory ignores zero percentage", () => {

@@ -966,6 +966,192 @@ test("Navigation volume updates preserve the mounted media card", async ({ page 
   });
 });
 
+test("Navigation keeps media controls on the selected entity when visible players change", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const playerState = (entityId, state) => ({
+      entity_id: entityId,
+      state,
+      attributes: {
+        friendly_name: entityId.split(".")[1],
+        media_title: `${entityId} track`,
+        volume_level: 0.5,
+        supported_features: 1,
+      },
+    });
+    const initialStates = {
+      "media_player.kitchen": playerState("media_player.kitchen", "playing"),
+      "media_player.living_room": playerState("media_player.living_room", "playing"),
+      "media_player.bedroom": playerState("media_player.bedroom", "playing"),
+    };
+    const calls = [];
+    const card = document.createElement("nodalia-navigation-bar");
+    card.setConfig({
+      layout: { fixed: false, show_desktop: true },
+      routes: [{ icon: "mdi:home", label: "Home", path: "/" }],
+      media_player: {
+        show_desktop: true,
+        players: [
+          { entity: "media_player.kitchen", browse_path: "/media-browser/browser" },
+          { entity: "media_player.living_room", browse_path: "/media-browser/browser" },
+          { entity: "media_player.bedroom", browse_path: "/media-browser/browser" },
+        ],
+      },
+    });
+    const makeHass = states => {
+      const hass = window.makeHass(states);
+      hass.callService = async (domain, service, data) => calls.push({ domain, service, data });
+      return hass;
+    };
+    card.hass = makeHass(initialStates);
+    document.querySelector("#fixture").append(card);
+    window.navigationIdentityFixture = { card, calls, initialStates, makeHass, playerState };
+  });
+
+  const nav = page.locator("nodalia-navigation-bar");
+  await nav.locator('[data-media-toggle="expand"]').click();
+  await nav.locator('[data-media-index="1"]').click();
+  await expect(nav.locator('[data-media-control="play-pause"]')).toHaveAttribute("data-entity", "media_player.living_room");
+
+  await page.evaluate(() => {
+    const fixture = window.navigationIdentityFixture;
+    fixture.card.hass = fixture.makeHass({
+      ...fixture.initialStates,
+      "media_player.kitchen": fixture.playerState("media_player.kitchen", "idle"),
+    });
+  });
+
+  await expect(nav.locator('[data-media-index="0"]')).toHaveClass(/active/);
+  await expect(nav.locator('[data-media-control="play-pause"]')).toHaveAttribute("data-entity", "media_player.living_room");
+  await expect(nav.locator('[data-media-control="volume-up"]')).toHaveAttribute("data-entity", "media_player.living_room");
+  await expect(nav.locator('[data-media-control="browse-media"]')).toHaveCount(1);
+  await expect(nav.locator('[data-media-control="browse-media"]')).toHaveAttribute("data-entity", "media_player.living_room");
+
+  await nav.locator('[data-media-control="play-pause"]').click();
+  await nav.locator('[data-media-control="volume-up"]').click();
+  await expect.poll(() => page.evaluate(() => window.navigationIdentityFixture.calls)).toEqual([
+    {
+      domain: "media_player",
+      service: "media_play_pause",
+      data: { entity_id: "media_player.living_room" },
+    },
+    {
+      domain: "media_player",
+      service: "volume_set",
+      data: { entity_id: "media_player.living_room", volume_level: 0.58 },
+    },
+  ]);
+});
+
+test("Entity and Fav use Light surface shadows and Fav applies tint contrast to its glyph", async ({ page }) => {
+  await loadBundle(page);
+  const visuals = await page.evaluate(() => {
+    document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
+    document.documentElement.style.setProperty("--primary-text-color", "#1b1d22");
+    document.documentElement.style.setProperty("--divider-color", "#d7dbe2");
+    document.documentElement.style.setProperty("--ha-card-box-shadow", "0 8px 24px rgba(0, 0, 0, 0.14)");
+    const accent = "#71c0ff";
+    const states = {
+      "light.reference": { entity_id: "light.reference", state: "on", attributes: { friendly_name: "Light", rgb_color: [113, 192, 255] } },
+      "switch.entity": { entity_id: "switch.entity", state: "on", attributes: { friendly_name: "Entity" } },
+      "switch.fav": { entity_id: "switch.fav", state: "on", attributes: { friendly_name: "Fav" } },
+    };
+    const hass = window.makeHass(states);
+    const mount = (tag, config) => {
+      const card = document.createElement(tag);
+      card.setConfig({
+        ...config,
+        animations: { enabled: false },
+        styles: { icon: { on_color: accent } },
+      });
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      return card;
+    };
+    const light = mount("nodalia-light-card", { entity: "light.reference" });
+    const entity = mount("nodalia-entity-card", { entity: "switch.entity" });
+    const fav = mount("nodalia-fav-card", { entity: "switch.fav" });
+    const read = (card, bubbleSelector) => {
+      const surface = getComputedStyle(card.shadowRoot.querySelector("ha-card"));
+      const bubble = getComputedStyle(card.shadowRoot.querySelector(bubbleSelector));
+      const glyph = getComputedStyle(card.shadowRoot.querySelector(`${bubbleSelector} ha-icon`));
+      return {
+        surfaceShadow: surface.boxShadow,
+        bubbleShadow: bubble.boxShadow,
+        bubbleColor: bubble.color,
+        glyphColor: glyph.color,
+      };
+    };
+    return {
+      accent: "rgb(113, 192, 255)",
+      light: read(light, ".light-card__icon"),
+      entity: read(entity, ".entity-card__icon"),
+      fav: read(fav, ".fav-card__icon"),
+    };
+  });
+
+  expect(visuals.entity.surfaceShadow).toBe(visuals.light.surfaceShadow);
+  expect(visuals.fav.surfaceShadow).toBe(visuals.light.surfaceShadow);
+  expect(visuals.entity.bubbleShadow).toBe(visuals.light.bubbleShadow);
+  expect(visuals.fav.bubbleShadow).toBe(visuals.light.bubbleShadow);
+  expect(visuals.fav.glyphColor).toBe(visuals.fav.bubbleColor);
+  expect(visuals.fav.glyphColor).not.toBe(visuals.accent);
+});
+
+test("Graph renders its main primitives as glass bubbles", async ({ page }) => {
+  await loadBundle(page);
+  const visuals = await page.evaluate(async () => {
+    document.documentElement.style.setProperty("--ha-card-background", "#f7f8fa");
+    document.documentElement.style.setProperty("--primary-text-color", "#1b1d22");
+    document.documentElement.style.setProperty("--divider-color", "#d7dbe2");
+    document.documentElement.style.setProperty("--ha-card-box-shadow", "0 8px 24px rgba(0, 0, 0, 0.14)");
+    const state = {
+      entity_id: "sensor.power",
+      state: "42",
+      attributes: { friendly_name: "Power", unit_of_measurement: "W", device_class: "power" },
+    };
+    const hass = window.makeHass({ "sensor.power": state });
+    hass.callApi = async () => [];
+    const card = document.createElement("nodalia-graph-card");
+    card.setConfig({
+      name: "Power",
+      entities: [{ entity: "sensor.power", color: "#71c0ff" }],
+      animations: { enabled: false },
+    });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
+    const read = selector => {
+      const style = getComputedStyle(card.shadowRoot.querySelector(selector));
+      return {
+        backdrop: style.backdropFilter || style.webkitBackdropFilter,
+        background: style.backgroundImage,
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius,
+        boxShadow: style.boxShadow,
+      };
+    };
+    return {
+      surface: read("ha-card"),
+      icon: read(".graph-card__icon"),
+      value: read(".graph-card__value"),
+      legend: read(".graph-card__legend-item"),
+      chart: read(".graph-card__chart-wrap"),
+    };
+  });
+
+  expect(visuals.surface.background).toContain("linear-gradient");
+  expect(visuals.surface.boxShadow).not.toBe("none");
+  expect(visuals.icon.borderRadius).toBe("999px");
+  for (const primitive of [visuals.icon, visuals.value, visuals.legend, visuals.chart]) {
+    expect(
+      /gradient/.test(primitive.background) || primitive.backgroundColor !== "rgba(0, 0, 0, 0)",
+    ).toBe(true);
+    expect(primitive.boxShadow).not.toBe("none");
+    expect(primitive.backdrop).toMatch(/blur/);
+  }
+});
+
 test("Person, Fav and single-scene mode share the Nodalia visual family", async ({ page }) => {
   await loadBundle(page);
   const initial = await page.evaluate(async () => {
@@ -1021,7 +1207,7 @@ test("Person, Fav and single-scene mode share the Nodalia visual family", async 
       personSubtitleSize: getComputedStyle(person.shadowRoot.querySelector(".person-card__state-chip")).fontSize,
       favClass: fav.shadowRoot.querySelector("ha-card")?.className,
       favCardBackground: getComputedStyle(fav.shadowRoot.querySelector("ha-card")).backgroundImage,
-      favBubbleBackground: getComputedStyle(fav.shadowRoot.querySelector(".fav-card__icon")).backgroundImage,
+      favBubbleBackground: getComputedStyle(fav.shadowRoot.querySelector(".fav-card__icon")).backgroundColor,
       sceneTiles: scenes.shadowRoot.querySelectorAll("[data-scene-entity]").length,
       hasSceneGrid: Boolean(scenes.shadowRoot.querySelector(".scenes-card__grid")),
       singleLabel: scenes.shadowRoot.querySelector(".scenes-card__tile-label")?.textContent,
@@ -1038,7 +1224,7 @@ test("Person, Fav and single-scene mode share the Nodalia visual family", async 
   expect(initial.personSubtitleSize).toBe("9px");
   expect(initial.favClass).toContain("is-on");
   expect(initial.favCardBackground).toContain("linear-gradient");
-  expect(initial.favBubbleBackground).toContain("radial-gradient");
+  expect(initial.favBubbleBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(initial.sceneTiles).toBe(1);
   expect(initial.hasSceneGrid).toBe(false);
   expect(initial.singleLabel).toBe("Cinema");
