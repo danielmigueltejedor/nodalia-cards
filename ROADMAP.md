@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.1-beta.2
+2.2.1-alpha.6
 ```
 
-Preview **`2.2.1-beta.2`** removes the visible Graph plot panel, adds color-matched under-line gradients and makes Entity/Fav icon bubbles exactly match Light/Humidifier across regular, mobile and icon-only layouts while preserving contrast-aware active glyphs. It also retains all Navigation, Notifications, Climate, Weather, Vacuum and stable-release-note improvements from the earlier alphas. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Preview **`2.2.1-alpha.6`** makes Entity/Fav icon bubbles match Light/Humidifier (including light-theme legacy migration and centered Fav icon-only), removes the visible Graph plot panel and adds color-matched under-line gradients while preserving contrast-aware active glyphs. It also retains all Navigation, Notifications, Climate, Weather, Vacuum and stable-release-note improvements from the earlier alphas. Stable **`2.2.0`** remains the recommended daily-driver release. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 

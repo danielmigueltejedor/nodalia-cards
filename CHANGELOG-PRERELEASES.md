@@ -8,6 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.1-alpha.6] - 2026-08-26
+
+Sixth **`2.2.1`** alpha: Entity/Fav Light-parity icon bubbles with light-theme legacy migration and centered Fav icon-only layout.
+
+### Fixed
+
+- Entity and Fav now use the exact same 38px neutral icon bubble as Light and Humidifier: 6% surface tint, shared border and shadow, and a 46% glyph. Historical `rgba(255,255,255,0.06)` / `0.05` backgrounds and the short-lived 8% alpha tint migrate automatically.
+- Fav's 50px mobile bubble rule applies only to inline cards. Icon-only/mini cards keep Light mini's 38px bubble and stay centered on both axes.
+
+### Validation
+
+- All 453 Node regressions pass.
+- Computed-style parity, legacy light-background migration and Fav icon-only center/size checks pass in Chromium, WebKit and WebKit iPhone.
+
 ## [2.2.1-beta.2] - 2026-08-26
 
 Second **`2.2.1`** beta: light-theme legacy migration and centered Fav icon-only layout.
