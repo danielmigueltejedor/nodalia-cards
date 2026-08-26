@@ -1105,9 +1105,11 @@ class NodaliaCoverCard extends HTMLElement {
         if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
           break;
         }
-        const current = parseNumber(state?.attributes?.current_position);
-        const base = current ?? (this._isActive(state) ? 100 : 0);
-        const nextValue = clamp(Math.round(base - 5), 0, 100);
+        const current = this._getKnownPosition(state);
+        if (current === null) {
+          break;
+        }
+        const nextValue = clamp(Math.round(current - 5), 0, 100);
         this._updatePositionPreview(nextValue);
         this._callCover("set_cover_position", { position: nextValue });
         break;
@@ -1116,9 +1118,11 @@ class NodaliaCoverCard extends HTMLElement {
         if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
           break;
         }
-        const current = parseNumber(state?.attributes?.current_position);
-        const base = current ?? (this._isActive(state) ? 100 : 0);
-        const nextValue = clamp(Math.round(base + 5), 0, 100);
+        const current = this._getKnownPosition(state);
+        if (current === null) {
+          break;
+        }
+        const nextValue = clamp(Math.round(current + 5), 0, 100);
         this._updatePositionPreview(nextValue);
         this._callCover("set_cover_position", { position: nextValue });
         break;
@@ -1309,9 +1313,32 @@ class NodaliaCoverCard extends HTMLElement {
     return this._config?.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state);
   }
 
-  _getDisplayPosition(state = this._getState()) {
+  /**
+   * Position used for circular − / + and dial commits when `current_position` is
+   * missing. Only settled open/closed may be inferred; opening/closing are in
+   * motion, so guessing 100% would reverse a closing cover.
+   */
+  _getSettledPositionFallback(state = this._getState()) {
+    const key = normalizeTextKey(state?.state);
+    if (key === "open") {
+      return 100;
+    }
+    if (key === "closed") {
+      return 0;
+    }
+    return null;
+  }
+
+  _getKnownPosition(state = this._getState()) {
     const position = parseNumber(state?.attributes?.current_position);
-    return position ?? (this._isActive(state) ? 100 : 0);
+    if (position !== null) {
+      return position;
+    }
+    return this._getSettledPositionFallback(state);
+  }
+
+  _getDisplayPosition(state = this._getState()) {
+    return this._getKnownPosition(state) ?? 0;
   }
 
   _updatePositionPreview(value) {
@@ -1394,8 +1421,12 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
+    const seedValue = this._getKnownPosition(state);
+    if (seedValue === null) {
+      return;
+    }
+
     const step = this._getCircularDialStep();
-    const seedValue = this._getDisplayPosition(state);
     this._activeSliderDrag = {
       kind: "circular",
       dial,
@@ -1774,7 +1805,7 @@ class NodaliaCoverCard extends HTMLElement {
         </div>
       `
       : `<div class="fan-card__controls">${arrowTransportHtml}</div>`;
-    const circularPosition = position ?? (isActive ? 100 : 0);
+    const circularPosition = this._getDisplayPosition(state);
     const circularDial = getCircularLayoutDialModel(circularPosition, 0, 100);
     const circularControlsMarkup = `
       <div class="fan-card__circular-layout">

@@ -118,6 +118,71 @@ function loadClimateCard() {
   return { CardClass, sandbox };
 }
 
+function loadCoverCard() {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+      this.dataset = {};
+      this.classList = {
+        add() {},
+        remove() {},
+        contains() { return false; },
+      };
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+
+    dispatchEvent() { return true; }
+    addEventListener() {}
+    removeEventListener() {}
+    getBoundingClientRect() {
+      return { left: 0, top: 0, width: 240, height: 240 };
+    }
+  }
+
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    HTMLInputElement: class FakeHTMLInputElement {},
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-cover-card.js"), sandbox);
+  const CardClass = registry.get("nodalia-cover-card");
+  assert.ok(CardClass, "NodaliaCoverCard should register");
+  return { CardClass, sandbox };
+}
+
 test("fav card routes cover and lock auto taps through domain services", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /applyCardTapActionField/);
@@ -337,4 +402,93 @@ test("Engine inbox dismissals map onto foreground smart alert ids", () => {
   assert.equal(card._isDismissed({ id: "humidity:sensor.bath:high:80" }), true);
   assert.equal(card._isDismissed({ id: "door:binary_sensor.front:on" }), true);
   assert.equal(card._isDismissed({ id: "comfort:cold:sensor.living_room:18" }), false);
+});
+
+test("cover circular steps do not invent 100% while opening or closing without current_position", () => {
+  const { CardClass, sandbox } = loadCoverCard();
+
+  function clickAction(card, action) {
+    const button = new sandbox.HTMLElement();
+    button.dataset = { coverAction: action };
+    card._onShadowClick({
+      composedPath: () => [button],
+      preventDefault() {},
+      stopPropagation() {},
+    });
+  }
+
+  function buildCard(stateValue, attributes = {}) {
+    const calls = [];
+    const card = new CardClass();
+    card.setConfig({
+      entity: "cover.mqtt_blind",
+      layout: "circular",
+      animations: { enabled: false },
+      haptics: { enabled: false },
+    });
+    card.hass = {
+      callService: (...args) => {
+        calls.push(args);
+      },
+      states: {
+        "cover.mqtt_blind": {
+          entity_id: "cover.mqtt_blind",
+          state: stateValue,
+          attributes: {
+            friendly_name: "MQTT blind",
+            supported_features: 15,
+            ...attributes,
+          },
+        },
+      },
+    };
+    return { card, calls };
+  }
+
+  const snapshot = calls => JSON.parse(JSON.stringify(calls));
+
+  const closing = buildCard("closing");
+  clickAction(closing.card, "decrease-position");
+  assert.deepEqual(
+    snapshot(closing.calls),
+    [],
+    "closing without current_position must not send set_cover_position 95",
+  );
+
+  const opening = buildCard("opening");
+  clickAction(opening.card, "increase-position");
+  assert.deepEqual(
+    snapshot(opening.calls),
+    [],
+    "opening without current_position must not guess a position",
+  );
+
+  const openSettled = buildCard("open");
+  clickAction(openSettled.card, "decrease-position");
+  assert.deepEqual(snapshot(openSettled.calls), [
+    ["cover", "set_cover_position", { entity_id: "cover.mqtt_blind", position: 95 }],
+  ]);
+
+  const closedSettled = buildCard("closed");
+  clickAction(closedSettled.card, "increase-position");
+  assert.deepEqual(snapshot(closedSettled.calls), [
+    ["cover", "set_cover_position", { entity_id: "cover.mqtt_blind", position: 5 }],
+  ]);
+
+  const closingWithPosition = buildCard("closing", { current_position: 40 });
+  clickAction(closingWithPosition.card, "decrease-position");
+  assert.deepEqual(snapshot(closingWithPosition.calls), [
+    ["cover", "set_cover_position", { entity_id: "cover.mqtt_blind", position: 35 }],
+  ]);
+
+  const closingDial = buildCard("closing");
+  const dial = new sandbox.HTMLElement();
+  dial.classList = {
+    add() {},
+    remove() {},
+    contains(name) { return name === "fan-card__circular-dial"; },
+  };
+  closingDial.card._startCircularDialDrag(dial, 120, 40);
+  assert.equal(closingDial.card._activeSliderDrag, null);
+  assert.deepEqual(closingDial.calls, []);
 });
