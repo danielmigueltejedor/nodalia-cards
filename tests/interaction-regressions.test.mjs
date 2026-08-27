@@ -593,6 +593,16 @@ test("vacuum tinted states apply the shared bubble icon contrast", () => {
   assert.match(source, /\.vacuum-card__icon-button ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
 });
 
+test("alarm panel uses shared tint contrast for its icon and state chip", () => {
+  const source = read("nodalia-alarm-panel-card.js");
+  assert.match(source, /resolveBubbleIconGlyphColor\?\.\(state, accentColor\)/);
+  assert.match(source, /configuredOnIconColor !== defaultOnIconColor[\s\S]*accentForegroundColor/);
+  assert.match(source, /\.alarm-card__icon \{[\s\S]*color: \$\{iconColor\};/);
+  assert.match(source, /\.alarm-card__chip--state \{[\s\S]*color: \$\{accentForegroundColor\};/);
+  assert.match(source, /--error-color, #ff6b6b\) 72%, var\(--primary-text-color\)/);
+  assert.doesNotMatch(source, /var\(--chip-accent\) 72%, white/);
+});
+
 test("scenes supports a dedicated single-scene surface and visual-editor option", () => {
   const source = read("nodalia-scenes-card.js");
   const labels = JSON.parse(read("i18n/editor/en.json"));

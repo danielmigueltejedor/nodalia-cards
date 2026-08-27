@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.2-alpha.1] - 2026-08-27
+
+First **`2.2.2`** alpha: contrast-safe Alarm Panel state tinting.
+
+### Fixed
+
+- Alarm Panel's active main icon now follows the current alarm-state tint and the same shared contrast resolver used by Light, while preserving an explicitly customized active icon color.
+- Alarm Panel's tinted state chip and PIN-error chip now mix their foreground with the theme text color instead of fixed white, keeping their labels readable in both light and dark themes.
+
+### Validation
+
+- All 455 Node regressions pass, including coverage for shared icon tint resolution, custom-color preservation and theme-aware chip foregrounds.
+
 ## [2.2.1-alpha.6] - 2026-08-26
 
 Sixth **`2.2.1`** alpha: Entity/Fav Light-parity icon bubbles with light-theme legacy migration and centered Fav icon-only layout.

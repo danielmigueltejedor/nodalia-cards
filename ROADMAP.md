@@ -6,6 +6,16 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
+## Current preview release
+
+Current preview release:
+
+```text
+2.2.2-alpha.1
+```
+
+Preview **`2.2.2-alpha.1`** starts the next maintenance line by making Alarm Panel icon and chip foregrounds follow the shared state-tint contrast system in light and dark themes. Stable **`2.2.1`** remains the recommended daily-driver release.
+
 ## Current stable release
 
 Current stable release:

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "2.2.1";
+const CARD_VERSION = "2.2.2-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1181,10 +1181,23 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const icon = this._getIcon();
     const entityPicture = this._getEntityPicture(state);
     const accentColor = this._getAccentColor(state);
+    const darkenAccentForeground = Boolean(
+      window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor),
+    );
+    const accentForegroundColor =
+      window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor?.(state, accentColor)
+      || `color-mix(in srgb, ${accentColor} ${darkenAccentForeground ? 42 : 72}%, var(--primary-text-color))`;
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const showUnavailableBadge = isUnavailableState(state);
     const isCompactLayout = this._isCompactLayout;
     const isActive = this._isActiveState(state);
+    const configuredOnIconColor = String(styles?.icon?.on_color ?? "").trim();
+    const defaultOnIconColor = String(DEFAULT_CONFIG.styles.icon.on_color).trim();
+    const iconColor = isActive
+      ? (configuredOnIconColor && configuredOnIconColor !== defaultOnIconColor
+          ? configuredOnIconColor
+          : accentForegroundColor)
+      : styles.icon.off_color;
     const stateLabel = config.show_state !== false ? this._translateState(state) : null;
     const countdownLabel = this._formatCountdownLabel(this._getCountdownSecondsRemaining(state));
     const pinErrorLabel = this._pinErrorVisible ? this._nativePinErrorLabel() : null;
@@ -1299,7 +1312,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           box-shadow:
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent),
             0 12px 30px rgba(0, 0, 0, 0.18);
-          color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
+          color: ${iconColor};
           cursor: pointer;
           display: inline-flex;
           height: ${styles.icon.size};
@@ -1424,13 +1437,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         .alarm-card__chip--state {
           background: color-mix(in srgb, var(--chip-accent) 16%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
           border-color: color-mix(in srgb, var(--chip-accent) 40%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
-          color: color-mix(in srgb, var(--chip-accent) 72%, white);
+          color: ${accentForegroundColor};
         }
 
         .alarm-card__chip--pin-error {
           background: color-mix(in srgb, var(--error-color, #ff6b6b) 22%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
           border-color: color-mix(in srgb, var(--error-color, #ff6b6b) 48%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
-          color: color-mix(in srgb, var(--error-color, #ff6b6b) 88%, white);
+          color: color-mix(in srgb, var(--error-color, #ff6b6b) 72%, var(--primary-text-color));
         }
 
         .alarm-card__code {
