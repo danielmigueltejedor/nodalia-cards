@@ -6,25 +6,15 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
-## Current preview release
-
-Current preview release:
-
-```text
-2.2.2-alpha.2
-```
-
-Preview **`2.2.2-alpha.2`** adds a bundle-wide render audit: Camera avoids repeated config serialization, while News, Gauge, Alarm, Person and Vacuum correctly invalidate stale views for helper, attribute, locale and zone changes. Stable **`2.2.1`** remains the recommended daily-driver release.
-
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.1
+2.2.2
 ```
 
-Stable **`2.2.1`** makes Entity/Fav icon bubbles match Light/Humidifier (including light-theme legacy migration and centered Fav icon-only), restores edge-to-edge Graph plots with under-line gradients, hardens circular Cover position commands when `current_position` is missing during motion, and keeps Navigation, Notifications, Climate, Weather, Vacuum and curated stable-release-note improvements from the 2.2.1 preview line. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.2`** makes Alarm Panel tints contrast-safe and completes a bundle-wide render audit: Camera and Vacuum reduce hot-path work, while News, Gauge, Alarm, Person and Vacuum no longer retain stale helper, attribute, locale or zone output. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -45,7 +35,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.1`**
+- Regression-free mobile and desktop behavior on stable **`2.2.2`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

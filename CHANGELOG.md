@@ -10,6 +10,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-08-28
+
+Stable **`2.2.2`**: contrast-safe Alarm Panel tinting and a bundle-wide render audit that removes repeated hot-path serialization and prevents stale helper, attribute, locale and zone output.
+
+### Highlights
+
+- **Alarm contrast:** active Alarm Panel icons and tinted state/PIN chips use the shared Light-style contrast resolver in light and dark themes while preserving explicit custom icon colors.
+- **Reliable live updates:** News, Circular Gauge, Alarm Panel, Person and Vacuum now repaint when the exact helper, attribute, locale or zone data they display changes without a primary state-string change.
+- **Lower dashboard overhead:** Camera serializes static stream/action configuration once, and Vacuum discovers all related helper entities in one cached catalog pass instead of repeating full entity scans.
+
+### Performance
+
+- Camera Card precomputes one static stamp for stream and action configuration in `setConfig` rather than running four `JSON.stringify` operations on every Home Assistant state event.
+- Vacuum Card resolves its state, error, battery, room mapping and suction/mop select helpers in one cached entity-catalog pass per configuration.
+- Additional render-signature fields remain compact and limited to values actually consumed by Gauge, Alarm, Person and Vacuum.
+
+### Fixed
+
+- Alarm Panel applies theme-aware contrast to the active main glyph, state chip and PIN-error chip.
+- News Card observes the current Home Assistant snapshot before helper-backed article-history loading or persistence.
+- Circular Gauge refreshes for `native_value`, inferred min/max inputs, device class and locale changes.
+- Alarm Panel refreshes customized friendly names and translated labels without requiring an alarm-state transition.
+- Person Card refreshes local pictures, translated labels and zone names, and retries zone matching after an earlier miss.
+- Vacuum Card refreshes status, battery, room mapping and suction/mop controls when their auxiliary sensors or select entities change, with discovery evaluated against the current snapshot.
+
+### Security and validation
+
+- Strict service allowlists, sanitized navigation URLs and configuration-path hardening remain enabled by default.
+- **461** Node regressions, **26** Chromium interaction/accessibility checks, HACS artifact validation, build provenance and SBOM generation gate the stable bundle.
+
+Per-build notes for **`2.2.2-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
 ## [2.2.1] - 2026-08-26
 
 Stable **`2.2.1`**: Entity/Fav Light-parity icon bubbles, edge-to-edge Graph plots, circular Cover position safety without a reported position, and curated stable release notes — shipped as one self-contained HACS bundle.

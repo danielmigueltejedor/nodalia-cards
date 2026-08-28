@@ -10,7 +10,7 @@
 
 ---
 
-## Current audit — 2.2.2-alpha.2 (2026-08-28)
+## Current audit — 2.2.2 (2026-08-28)
 
 The complete 24-card source set and generated HACS bundle were re-scanned for render-signature coverage, repeated serialization, auxiliary-entity invalidation, locale-dependent output and lifecycle cleanup. The current pass found and fixed the following regressions without changing the visual design:
 
