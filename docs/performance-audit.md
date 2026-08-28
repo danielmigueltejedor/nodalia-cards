@@ -10,6 +10,23 @@
 
 ---
 
+## Current audit — 2.2.2-alpha.2 (2026-08-28)
+
+The complete 24-card source set and generated HACS bundle were re-scanned for render-signature coverage, repeated serialization, auxiliary-entity invalidation, locale-dependent output and lifecycle cleanup. The current pass found and fixed the following regressions without changing the visual design:
+
+| Area | Finding | Resolution |
+|------|---------|------------|
+| Camera | Four action/stream arrays were serialized on every global `hass` update | Precompute one static configuration stamp in `setConfig` |
+| Vacuum | Render output consumed helper sensors and mode selects that were absent from its signature; related-entity discovery repeated full catalog scans | Track the consumed helper revisions and resolve all related entities in one cached catalog pass |
+| News | Helper-history work inside signature computation could observe the previous `hass` snapshot | Install the current snapshot before computing the signature |
+| Gauge | `native_value`, inferred min/max inputs, device class and locale could change without repainting | Add only those consumed values to the compact signature |
+| Alarm | Friendly-name and automatic-language changes could leave stale labels | Track the resolved language and entity friendly name |
+| Person | Local pictures and zone labels could stay stale; a missing zone match was cached forever | Track the consumed picture/zone/language values and retry unresolved matches |
+
+Validation: all **461 Node regressions** pass, including six focused audit contracts. Generated bundle: approximately **4.0 MB** minified.
+
+---
+
 ## Executive summary
 
 Nodalia Cards already uses **render signatures** on almost every dashboard card to avoid repainting on unrelated `hass` updates — the right architecture for heavy dashboards. The main costs on a busy system are:

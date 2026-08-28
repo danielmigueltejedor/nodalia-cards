@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.2-alpha.1
+2.2.2-alpha.2
 ```
 
-Preview **`2.2.2-alpha.1`** starts the next maintenance line by making Alarm Panel icon and chip foregrounds follow the shared state-tint contrast system in light and dark themes. Stable **`2.2.1`** remains the recommended daily-driver release.
+Preview **`2.2.2-alpha.2`** adds a bundle-wide render audit: Camera avoids repeated config serialization, while News, Gauge, Alarm, Person and Vacuum correctly invalidate stale views for helper, attribute, locale and zone changes. Stable **`2.2.1`** remains the recommended daily-driver release.
 
 ## Current stable release
 

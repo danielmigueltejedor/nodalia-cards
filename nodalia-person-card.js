@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "2.2.2-alpha.1";
+const CARD_VERSION = "2.2.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -599,10 +599,12 @@ class NodaliaPersonCard extends HTMLElement {
     }
 
     if (this._cachedZoneTarget === target) {
-      if (!this._cachedZoneEntityId) {
-        return null;
+      if (this._cachedZoneEntityId) {
+        const cachedZone = this._hass.states[this._cachedZoneEntityId] || null;
+        if (cachedZone) {
+          return cachedZone;
+        }
       }
-      return this._hass.states[this._cachedZoneEntityId] || null;
     }
 
     const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
@@ -694,11 +696,14 @@ class NodaliaPersonCard extends HTMLElement {
       String(state.state || ""),
       String(attrs.friendly_name || this._config.name || ""),
       this._config.show_state !== false ? String(state.state || "") : "",
+      String(attrs.entity_picture_local || ""),
       String(attrs.entity_picture || ""),
       String(attrs.icon || this._config.icon || ""),
       String(state.state || ""),
       zoneState?.entity_id || "",
+      zoneState?.attributes?.friendly_name || "",
       zoneState?.attributes?.icon || "",
+      String(window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en"),
       this._config.show_state !== false,
       this._config.show_name !== false,
       this._config.show_zone_badge !== false,

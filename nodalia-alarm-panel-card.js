@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "2.2.2-alpha.1";
+const CARD_VERSION = "2.2.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -524,6 +524,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const values = [
       entityId,
       String(state?.state || ""),
+      String(attrs.friendly_name || ""),
       Number(attrs.supported_features ?? 0),
       String(attrs.code_format || ""),
       this._config?.show_entity_picture === true,
@@ -539,6 +540,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       this._config?.show_state !== false ? 1 : 0,
       this._pinErrorVisible === true ? 1 : 0,
       String(this._config?.name || ""),
+      String(window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en"),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "alarm:", values }]);

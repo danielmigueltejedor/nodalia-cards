@@ -8,6 +8,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.2-alpha.2] - 2026-08-28
+
+Second **`2.2.2`** alpha: bundle-wide render invalidation and hot-path performance audit.
+
+### Performance
+
+- Camera Card now serializes its stream and action configuration once in `setConfig` instead of repeating four `JSON.stringify` calls for every Home Assistant state event.
+- Render signatures stay compact while following the additional attributes and helper entities consumed by Gauge, Alarm, Person and Vacuum.
+
+### Fixed
+
+- News Card now installs the current Home Assistant snapshot before loading or persisting helper-backed article history, preventing first-update history from using stale state.
+- Circular Gauge now refreshes when `native_value`, inferred range inputs, device class or locale changes without a primary state-string change.
+- Alarm Panel now refreshes customized entity names and translated labels immediately when the entity state itself is unchanged.
+- Person Card now refreshes local pictures, translated labels and zone friendly names, and retries a zone lookup after an earlier miss instead of caching that miss forever.
+- Vacuum Card now refreshes status, battery, room mapping and suction/mop controls when their auxiliary sensors or select entities change; auto-discovery also evaluates against the current Home Assistant snapshot and resolves its related entities in one cached catalog pass.
+
+### Validation
+
+- All 461 Node regressions pass, including focused coverage for every audited invalidation, catalog-cache and serialization path.
+
 ## [2.2.2-alpha.1] - 2026-08-27
 
 First **`2.2.2`** alpha: contrast-safe Alarm Panel state tinting.

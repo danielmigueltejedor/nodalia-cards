@@ -11,15 +11,15 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
-## Compatibility for Nodalia Cards 2.2.2-alpha.1
+## Compatibility for Nodalia Cards 2.2.2-alpha.2
 
-| Component | Supported baseline | Recommended for 2.2.2-alpha.1 |
+| Component | Supported baseline | Recommended for 2.2.2-alpha.2 |
 |---|---|---|
 | Home Assistant | `2025.1.0` or newer | Current supported stable release |
-| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.2-alpha.1` |
+| Nodalia Cards | `2.0.2` or newer for Engine discovery | `2.2.2-alpha.2` |
 | Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.2` |
 
-Cards `2.2.2-alpha.1` and Engine `2.0.2` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `2.2.2-alpha.2` and Engine `2.0.2` use the same API generation. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## What the optional Engine makes native
 
@@ -98,7 +98,7 @@ Use the `nodalia.test_notification` action from Developer Tools to test a stored
 
 ### Notification inbox
 
-When the Engine reports the inbox capability, the card reads the delivered-alert history for its profile after each successful sync and applies the dismissals recorded there. Dismissing an alert on one device therefore keeps it dismissed on the others without an `input_text` helper. Cards `2.2.2-alpha.1` normalize Engine identities against foreground comfort, humidity, door, window, motion, vacuum, rain, media and outdoor alerts, so the same alert stays dismissed across devices. The inbox stores alert identities and dismissal state, not notification text or targets.
+When the Engine reports the inbox capability, the card reads the delivered-alert history for its profile after each successful sync and applies the dismissals recorded there. Dismissing an alert on one device therefore keeps it dismissed on the others without an `input_text` helper. Cards `2.2.2-alpha.2` normalize Engine identities against foreground comfort, humidity, door, window, motion, vacuum, rain, media and outdoor alerts, so the same alert stays dismissed across devices. The inbox stores alert identities and dismissal state, not notification text or targets.
 
 ## Climate schedules
 

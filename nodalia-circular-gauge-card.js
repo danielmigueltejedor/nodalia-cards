@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "2.2.2-alpha.1";
+const CARD_VERSION = "2.2.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -711,9 +711,14 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const values = [
       entityId,
       String(state?.state || ""),
+      String(attrs.native_value ?? ""),
       String(attrs.friendly_name || ""),
       String(attrs.icon || ""),
       String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+      String(attrs.device_class || ""),
+      String(attrs.min ?? ""),
+      String(attrs.max ?? ""),
+      String(getHassLocaleTag(hass, this._config?.language ?? "auto") || ""),
       Number(this._config?.grid_options?.rows || 0),
       Number(this._config?.grid_options?.columns || 0),
     ];

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.2.2-alpha.1";
+const CARD_VERSION = "2.2.2-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -428,6 +428,7 @@ class NodaliaVacuumCard extends HTMLElement {
       suction: 0,
       mop: 0,
     };
+    this._relatedEntityCache = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -519,6 +520,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._relatedEntityCache = null;
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
@@ -529,8 +531,8 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    const nextSignature = this._getRenderSignature(hass);
     const pendingChanged = this._syncPendingModeSelections();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
@@ -642,11 +644,19 @@ class NodaliaVacuumCard extends HTMLElement {
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const errorEntityId = this._config?.error_entity || this._guessRelatedErrorEntity();
     const errorState = errorEntityId ? hass?.states?.[errorEntityId] || null : null;
+    const auxiliaryState = this._getAuxiliaryState();
+    const batteryState = this._getAuxiliaryBatteryState();
+    const mappingState = this._getRoomMappingSourceState();
+    const suctionSelectEntity = this._config?.suction_select_entity || this._guessRelatedSelectEntity("suction");
+    const suctionSelectState = suctionSelectEntity ? hass?.states?.[suctionSelectEntity] || null : null;
+    const mopSelectEntity = this._config?.mop_select_entity || this._guessRelatedSelectEntity("mop");
+    const mopSelectState = mopSelectEntity ? hass?.states?.[mopSelectEntity] || null : null;
     const attrs = state?.attributes || {};
     const joinParts = window.NodaliaRenderSignature?.joinParts;
     const values = [
       entityId,
       state?.state || "",
+      state?.last_updated || "",
       attrs.friendly_name || "",
       attrs.icon || "",
       this._config?.show_entity_picture === true,
@@ -658,6 +668,23 @@ class NodaliaVacuumCard extends HTMLElement {
       attrs.current_room || attrs.current_segment || "",
       errorEntityId,
       errorState?.state || "",
+      errorState?.last_updated || "",
+      auxiliaryState?.entity_id || this._config?.state_entity || "",
+      auxiliaryState?.state || "",
+      auxiliaryState?.last_updated || "",
+      batteryState?.entity_id || this._config?.battery_entity || "",
+      batteryState?.state || "",
+      batteryState?.last_updated || "",
+      mappingState?.entity_id || this._config?.room_mapping_entity || "",
+      mappingState?.state || "",
+      mappingState?.last_updated || "",
+      suctionSelectEntity,
+      suctionSelectState?.state || "",
+      suctionSelectState?.last_updated || "",
+      mopSelectEntity,
+      mopSelectState?.state || "",
+      mopSelectState?.last_updated || "",
+      window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en",
       this._isCompactLayout,
       this._activeModePanel || "",
       this._roomPanelOpen === true,
@@ -929,24 +956,79 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._hass.states[this._config.entity] || null;
   }
 
-  _guessRelatedStateEntity() {
+  _getRelatedEntityCache() {
     if (!this._hass?.states || !this._config?.entity) {
-      return "";
+      return null;
     }
 
     const objectId = String(this._config.entity).split(".")[1] || "";
     if (!objectId) {
-      return "";
+      return null;
+    }
+
+    if (this._relatedEntityCache?.objectId === objectId) {
+      return this._relatedEntityCache;
     }
 
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("sensor."))
-      .filter(entityId => entityId.includes(objectId))
-      .filter(entityId => ["estado", "status", "state"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
+    const candidates = {
+      state: [],
+      error: [],
+      battery: [],
+      roomMapping: [],
+      suctionSelect: [],
+      mopSelect: [],
+    };
+    const suctionPatterns = ["fan_speed", "fan_power", "suction", "cleaning_mode"];
+    const mopPatterns = ["mop", "water", "water_level", "water_volume", "scrub"];
 
-    return candidates[0] || "";
+    Object.keys(this._hass.states).forEach(entityId => {
+      if (entityId.startsWith("sensor.")) {
+        const related = entityId.includes(objectId);
+        if (related && ["estado", "status", "state"].some(pattern => entityId.includes(pattern))) {
+          candidates.state.push(entityId);
+        }
+        if (
+          (related || entityId.includes("roborock"))
+          && ["error", "fault", "fallo", "erro"].some(pattern => entityId.includes(pattern))
+        ) {
+          candidates.error.push(entityId);
+        }
+        if (related && ["battery", "bateria"].some(pattern => entityId.includes(pattern))) {
+          candidates.battery.push(entityId);
+        }
+        if (related && ["room_mapping", "rooms", "segments", "habitaciones"].some(pattern => entityId.includes(pattern))) {
+          candidates.roomMapping.push(entityId);
+        }
+        return;
+      }
+
+      if (!entityId.startsWith("select.") || !entityId.includes(objectId)) {
+        return;
+      }
+      if (suctionPatterns.some(pattern => entityId.includes(pattern))) {
+        candidates.suctionSelect.push(entityId);
+      }
+      if (mopPatterns.some(pattern => entityId.includes(pattern))) {
+        candidates.mopSelect.push(entityId);
+      }
+    });
+
+    Object.values(candidates).forEach(items => items.sort((left, right) => left.localeCompare(right, sortLoc)));
+    this._relatedEntityCache = {
+      objectId,
+      state: candidates.state[0] || "",
+      error: candidates.error[0] || "",
+      battery: candidates.battery[0] || "",
+      roomMapping: candidates.roomMapping[0] || "",
+      suctionSelect: candidates.suctionSelect[0] || "",
+      mopSelect: candidates.mopSelect[0] || "",
+    };
+    return this._relatedEntityCache;
+  }
+
+  _guessRelatedStateEntity() {
+    return this._getRelatedEntityCache()?.state || "";
   }
 
   _getAuxiliaryState() {
@@ -955,20 +1037,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _guessRelatedErrorEntity() {
-    if (!this._hass?.states || !this._config?.entity) {
-      return "";
-    }
-    const objectId = String(this._config.entity).split(".")[1] || "";
-    if (!objectId) {
-      return "";
-    }
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("sensor."))
-      .filter(entityId => entityId.includes(objectId) || entityId.includes("roborock"))
-      .filter(entityId => ["error", "fault", "fallo", "erro"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
-    return candidates[0] || "";
+    return this._getRelatedEntityCache()?.error || "";
   }
 
   _getErrorState() {
@@ -991,23 +1060,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _guessRelatedBatteryEntity() {
-    if (!this._hass?.states || !this._config?.entity) {
-      return "";
-    }
-
-    const objectId = String(this._config.entity).split(".")[1] || "";
-    if (!objectId) {
-      return "";
-    }
-
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("sensor."))
-      .filter(entityId => entityId.includes(objectId))
-      .filter(entityId => ["battery", "bateria"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
-
-    return candidates[0] || "";
+    return this._getRelatedEntityCache()?.battery || "";
   }
 
   _getAuxiliaryBatteryState() {
@@ -1016,23 +1069,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _guessRelatedRoomMappingEntity() {
-    if (!this._hass?.states || !this._config?.entity) {
-      return "";
-    }
-
-    const objectId = String(this._config.entity).split(".")[1] || "";
-    if (!objectId) {
-      return "";
-    }
-
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("sensor."))
-      .filter(entityId => entityId.includes(objectId))
-      .filter(entityId => ["room_mapping", "rooms", "segments", "habitaciones"].some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
-
-    return candidates[0] || "";
+    return this._getRelatedEntityCache()?.roomMapping || "";
   }
 
   _getRoomMappingSourceState() {
@@ -1651,27 +1688,8 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _guessRelatedSelectEntity(kind) {
-    if (!this._hass?.states || !this._config?.entity) {
-      return "";
-    }
-
-    const objectId = String(this._config.entity).split(".")[1] || "";
-    if (!objectId) {
-      return "";
-    }
-
-    const patterns = kind === "mop"
-      ? ["mop", "water", "water_level", "water_volume", "scrub"]
-      : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
-
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("select."))
-      .filter(entityId => entityId.includes(objectId))
-      .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
-
-    return candidates[0] || "";
+    const cache = this._getRelatedEntityCache();
+    return kind === "mop" ? (cache?.mopSelect || "") : (cache?.suctionSelect || "");
   }
 
   _categorizeModeOption(value) {

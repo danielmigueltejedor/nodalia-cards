@@ -2,7 +2,7 @@ import { NodaliaGo2RTCPlayer } from "./nodalia-go2rtc-player.js";
 
 const CARD_TAG = "nodalia-camera-card";
 const EDITOR_TAG = "nodalia-camera-card-editor";
-const CARD_VERSION = "2.2.2-alpha.1";
+const CARD_VERSION = "2.2.2-alpha.2";
 const CAMERA_LAYOUT = "mosaic";
 const CAMERA_PRESENTATION = "feed";
 const MAX_CAMERAS = 4;
@@ -679,6 +679,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
+    this._staticRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._expandedOpen = false;
     this._expandedEntityId = "";
@@ -731,6 +732,12 @@ class NodaliaCameraCard extends HTMLElement {
 
   setConfig(config) {
     this._config = normalizeConfig(config || {});
+    this._staticRenderSignature = JSON.stringify([
+      this._config.camera_streams || [],
+      this._config.camera_tap_actions || [],
+      this._config.camera_actions || [],
+      this._config.expanded_actions || [],
+    ]);
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
     this._go2rtcPrefetchSignature = "";
@@ -841,10 +848,7 @@ class NodaliaCameraCard extends HTMLElement {
       String(this._config?.show_status_chips),
       String(this._config?.show_last_changed),
       String(this._config?.show_preview_age),
-      JSON.stringify(this._config?.camera_streams || []),
-      JSON.stringify(this._config?.camera_tap_actions || []),
-      JSON.stringify(this._config?.camera_actions || []),
-      JSON.stringify(this._config?.expanded_actions || []),
+      this._staticRenderSignature || "",
       this._config?.tap_action || "",
       this._config?.hold_action || "",
       String(this._expandedOpen),
