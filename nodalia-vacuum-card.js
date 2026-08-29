@@ -429,6 +429,7 @@ class NodaliaVacuumCard extends HTMLElement {
       mop: 0,
     };
     this._relatedEntityCache = null;
+    this._relatedEntityCacheGeneration = 0;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -532,6 +533,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this._relatedEntityCacheGeneration += 1;
     const nextSignature = this._getRenderSignature(hass);
     const pendingChanged = this._syncPendingModeSelections();
 
@@ -966,7 +968,10 @@ class NodaliaVacuumCard extends HTMLElement {
       return null;
     }
 
-    if (this._relatedEntityCache?.objectId === objectId) {
+    if (
+      this._relatedEntityCache?.objectId === objectId
+      && this._relatedEntityCache?.generation === this._relatedEntityCacheGeneration
+    ) {
       return this._relatedEntityCache;
     }
 
@@ -1017,6 +1022,7 @@ class NodaliaVacuumCard extends HTMLElement {
     Object.values(candidates).forEach(items => items.sort((left, right) => left.localeCompare(right, sortLoc)));
     this._relatedEntityCache = {
       objectId,
+      generation: this._relatedEntityCacheGeneration,
       state: candidates.state[0] || "",
       error: candidates.error[0] || "",
       battery: candidates.battery[0] || "",
