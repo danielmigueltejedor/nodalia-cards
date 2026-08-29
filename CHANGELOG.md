@@ -10,6 +10,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.3] - 2026-08-30
+
+Stable **`2.2.3`**: complete translation parity across every runtime and visual-editor catalog, plus purpose-built circular Cover controls and compact unavailable badges across device cards.
+
+### Highlights
+
+- **Complete localization:** all runtime and editor catalogs now stay synchronized across English, German, Greek, Spanish, French, Italian, Dutch, Norwegian, Portuguese, Romanian, Russian and Chinese.
+- **Native Cover controls:** the circular Cover layout replaces redundant position `−` / `+` buttons with dedicated open, stop and close commands below the dial.
+- **Consistent unavailable state:** Cover, Fan and Humidifier keep the question mark at 11px inside the shared 18px status badge in circular layouts.
+
+### Changed
+
+- Cover's lower circular control row uses three 50px Nodalia glass buttons, respects automatic vertical/horizontal arrow selection and highlights stop while the cover is moving.
+- The interactive position dial remains the single direct position control; compact layout sliders and its alternate open/stop/close view remain unchanged.
+- Validation now includes an offline translated-value audit in addition to catalog shape and placeholder checks.
+
+### Fixed
+
+- Cover's entity selector and position-chip, tilt-chip, position-slider, tilt-slider and stop-button options no longer bypass the editor catalog with English literals.
+- Calendar's remaining English `Title` field now uses the shared translated title label.
+- Added 1,158 missing editor translations and 24 runtime keys across the supported locale set, including the previously incomplete Norwegian editor catalog.
+- Power Flow defaults, Cover/Climate/Humidifier accessibility labels and Advance Vacuum map controls no longer fall back to embedded English or Spanish text.
+- Circular device selectors now target only the main glyph, preventing them from enlarging the nested unavailable badge icon in Cover, Fan and Humidifier.
+
+### Security and validation
+
+- Strict service allowlists, sanitized navigation URLs and configuration-path hardening remain enabled by default.
+- All 1,419 editor keys are synchronized across 12 locales; runtime and editor audits report zero untranslated gaps across all 11 translated locales.
+- **464** Node regressions and **34** Chromium browser, editor and accessibility checks gate the stable bundle, including rendered Cover editor checks in every language and computed-style coverage for all three circular unavailable badges.
+
+Per-build notes for **`2.2.3-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
 ## [2.2.2] - 2026-08-28
 
 Stable **`2.2.2`**: contrast-safe Alarm Panel tinting and a bundle-wide render audit that removes repeated hot-path serialization and prevents stale helper, attribute, locale and zone output.

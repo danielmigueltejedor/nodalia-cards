@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.2.3-alpha.2";
+const CARD_VERSION = "2.2.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3453,7 +3453,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           width: 58px;
         }
 
-        .humidifier-card--circular .humidifier-card__icon ha-icon {
+        .humidifier-card--circular .humidifier-card__icon > ha-icon {
           --mdc-icon-size: 25.52px;
           height: 25.52px;
           width: 25.52px;

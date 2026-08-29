@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.2.3-alpha.2";
+const CARD_VERSION = "2.2.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3562,7 +3562,7 @@ class NodaliaFanCard extends HTMLElement {
           width: 58px;
         }
 
-        .fan-card--circular .fan-card__icon ha-icon {
+        .fan-card--circular .fan-card__icon > ha-icon {
           --mdc-icon-size: 25.52px;
           height: 25.52px;
           width: 25.52px;

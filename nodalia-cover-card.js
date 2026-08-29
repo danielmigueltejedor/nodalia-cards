@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.3-alpha.2";
+const CARD_VERSION = "2.2.3";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -1118,34 +1118,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
     this._triggerHaptic();
     this._triggerButtonBounce(button);
-    const state = this._getState();
     switch (coverAction) {
-      case "decrease-position": {
-        if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
-          break;
-        }
-        const base = this._getCommandablePosition(state);
-        if (base === null) {
-          break;
-        }
-        const nextValue = clamp(Math.round(base - 5), 0, 100);
-        this._updatePositionPreview(nextValue);
-        this._callCover("set_cover_position", { position: nextValue });
-        break;
-      }
-      case "increase-position": {
-        if (!this._supports(COVER_FEATURES.SET_POSITION, state)) {
-          break;
-        }
-        const base = this._getCommandablePosition(state);
-        if (base === null) {
-          break;
-        }
-        const nextValue = clamp(Math.round(base + 5), 0, 100);
-        this._updatePositionPreview(nextValue);
-        this._callCover("set_cover_position", { position: nextValue });
-        break;
-      }
       case "toggle_controls_view":
         this._coverControlsViewMode = this._coverControlsViewMode === "arrows" ? "slider" : "arrows";
         this._syncCoverControlsViewDom();
@@ -1759,8 +1732,6 @@ class NodaliaCoverCard extends HTMLElement {
     const tStop = this._coverCardUi("stop", "Stop");
     const tPosSlider = this._coverCardUi("positionSlider", "Position");
     const tTiltSlider = this._coverCardUi("tiltSlider", "Tilt");
-    const tDecreasePosition = this._coverCardUi("decreasePosition", "Decrease position");
-    const tIncreasePosition = this._coverCardUi("increasePosition", "Increase position");
     const tToggleCover = this._coverCardUi("toggleCover", "Toggle cover");
     const openCloseIcons = resolveOpenCloseControlIcons(config.open_close_icons, state.attributes?.device_class);
     const chips = [];
@@ -1785,6 +1756,11 @@ class NodaliaCoverCard extends HTMLElement {
         <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="close" aria-label="${escapeHtml(tClose)}"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
       `;
     const arrowTransportHtml = `<div class="fan-card__transport">${arrowButtonsHtml}</div>`;
+    const circularCommandButtonsHtml = `
+      <button type="button" class="fan-card__circular-command" data-nodalia-tap-shield="true" data-cover-action="open" aria-label="${escapeHtml(tOpen)}"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
+      ${supportsStop ? `<button type="button" class="fan-card__circular-command fan-card__circular-command--stop${isMoving ? " is-active" : ""}" data-nodalia-tap-shield="true" data-cover-action="stop" aria-label="${escapeHtml(tStop)}"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
+      <button type="button" class="fan-card__circular-command" data-nodalia-tap-shield="true" data-cover-action="close" aria-label="${escapeHtml(tClose)}"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
+    `;
     const controlsMarkup = hasSliders
       ? `
         <div class="fan-card__slider-row">
@@ -1818,15 +1794,9 @@ class NodaliaCoverCard extends HTMLElement {
             <strong data-cover-chip="position">${position === null ? "—" : `${Math.round(position)}%`}</strong>
             <span class="fan-card__circular-divider" aria-hidden="true"></span>
             <span>${escapeHtml(tPosSlider)}</span>
-            <div class="fan-card__circular-actions">${arrowButtonsHtml}</div>
           </div>
         </div>
-        ${canSetPosition ? `
-          <div class="fan-card__circular-steps">
-            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="decrease-position" aria-label="${escapeHtml(tDecreasePosition)}">&minus;</button>
-            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="increase-position" aria-label="${escapeHtml(tIncreasePosition)}">+</button>
-          </div>
-        ` : ""}
+        <div class="fan-card__circular-commands">${circularCommandButtonsHtml}</div>
         ${supportsTilt ? `<div class="fan-card__circular-secondary">${this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" })}</div>` : ""}
       </div>
     `;
@@ -1929,7 +1899,13 @@ class NodaliaCoverCard extends HTMLElement {
           top: -2px;
           width: 18px;
         }
-        .fan-card__unavailable-badge ha-icon { --mdc-icon-size: 11px; }
+        .fan-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          height: 11px;
+          position: static;
+          transform: none;
+          width: 11px;
+        }
         .fan-card__copy { display: grid; gap: 10px; min-width: 0; }
         .fan-card__headline {
           align-items: start;
@@ -1979,7 +1955,7 @@ class NodaliaCoverCard extends HTMLElement {
           grid-template-columns: 58px minmax(0, 1fr);
         }
         .fan-card--circular .fan-card__icon { height: 58px; width: 58px; }
-        .fan-card--circular .fan-card__icon ha-icon {
+        .fan-card--circular .fan-card__icon > ha-icon {
           --mdc-icon-size: 25.52px;
           height: 25.52px;
           width: 25.52px;
@@ -2150,38 +2126,32 @@ class NodaliaCoverCard extends HTMLElement {
           font-size: 16px;
           font-weight: 500;
         }
-        .fan-card__circular-actions {
+        .fan-card__circular-commands {
           align-items: center;
           display: flex;
-          justify-content: center;
-          margin-top: 10px;
-          pointer-events: auto;
-        }
-        .fan-card__circular-actions .fan-card__controls { margin: 0; padding: 0; }
-        .fan-card__circular-actions .fan-card__transport { padding: 5px 7px; }
-        .fan-card__circular-actions .fan-card__control { height: 38px; min-width: 38px; width: 38px; }
-        .fan-card__circular-steps {
-          align-items: center;
-          display: flex;
-          gap: 12px;
+          gap: 10px;
           justify-content: center;
         }
-        .fan-card__circular-step {
+        .fan-card__circular-command {
           align-items: center;
           appearance: none;
-          backdrop-filter: blur(18px);
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 9%, transparent);
-          border-radius: 999px;
+          border-radius: 50%;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
           font: inherit;
-          font-size: 24px;
-          font-weight: 600;
-          height: 46px;
+          height: 50px;
           justify-content: center;
-          width: 58px;
+          padding: 0;
+          width: 50px;
+        }
+        .fan-card__circular-command ha-icon { --mdc-icon-size: 22px; }
+        .fan-card__circular-command--stop.is-active {
+          background: color-mix(in srgb, ${accentColor} 22%, ${styles.control.accent_background});
+          border-color: color-mix(in srgb, ${accentColor} 50%, transparent);
         }
         .fan-card__circular-secondary { min-width: 0; width: 100%; }
         .fan-card__circular-secondary .fan-card__slider-row { padding-inline: 0; }

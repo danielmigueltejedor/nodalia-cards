@@ -1733,8 +1733,8 @@ test("circular device surfaces and power buttons keep their card tap actions", (
     );
     assert.match(
       source,
-      /circular-step" data-nodalia-tap-shield="true"/,
-      `${file} should shield circular step buttons from body taps`,
+      /circular-(?:step|command)" data-nodalia-tap-shield="true"/,
+      `${file} should shield circular control buttons from body taps`,
     );
     assert.match(
       source,
@@ -1778,13 +1778,23 @@ test("circular device surfaces and power buttons keep their card tap actions", (
   const coverSource = read("nodalia-cover-card.js");
   assert.match(
     coverSource,
+    /const circularCommandButtonsHtml = `[\s\S]{0,900}data-cover-action="open"[\s\S]{0,900}data-cover-action="stop"[\s\S]{0,900}data-cover-action="close"[\s\S]{0,2800}fan-card__circular-commands[^>]*>\$\{circularCommandButtonsHtml\}/,
+    "cover circular layout should place open, stop and close commands in the lower control row",
+  );
+  assert.doesNotMatch(
+    coverSource,
+    /data-cover-action="(?:decrease|increase)-position"/,
+    "cover circular layout should not duplicate its dial with minus/plus position buttons",
+  );
+  assert.match(
+    coverSource,
     /_hapticOnPositionStep\([\s\S]{0,420}lastHapticValue/,
     "cover card should emit step haptics while dragging the circular dial",
   );
   assert.match(
     coverSource,
     /_getCommandablePosition\([\s\S]{0,220}_getSettledPositionFallback/,
-    "cover circular steps should only infer position for settled open/closed states",
+    "cover circular dial should only infer position for settled open/closed states",
   );
   assert.match(
     coverSource,

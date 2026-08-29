@@ -242,7 +242,8 @@ test("device and Climate layout variants render and keep their native controls",
 
     cards["nodalia-fan-card"].shadowRoot.querySelector('[data-fan-action="increase-percentage"]')?.click();
     cards["nodalia-humidifier-card"].shadowRoot.querySelector('[data-humidifier-action="increase-humidity"]')?.click();
-    cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="increase-position"]')?.click();
+    const coverCircularCommands = [...cards["nodalia-cover-card"].shadowRoot.querySelectorAll(".fan-card__circular-commands [data-cover-action]")];
+    coverCircularCommands.forEach(button => button.click());
     cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card__circular-power")?.click();
     cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card__circular-power")?.click();
     cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="icon"]')?.click();
@@ -352,6 +353,8 @@ test("device and Climate layout variants render and keep their native controls",
       fanCircular: Boolean(cards["nodalia-fan-card"].shadowRoot.querySelector(".fan-card--circular .fan-card__circular-dial")),
       humidifierCircular: Boolean(cards["nodalia-humidifier-card"].shadowRoot.querySelector(".humidifier-card--circular .humidifier-card__circular-dial")),
       coverCircular: Boolean(cards["nodalia-cover-card"].shadowRoot.querySelector(".fan-card--circular .fan-card__circular-dial")),
+      coverCircularActions: coverCircularCommands.map(button => button.dataset.coverAction),
+      coverHasPositionSteps: Boolean(cards["nodalia-cover-card"].shadowRoot.querySelector('[data-cover-action="decrease-position"], [data-cover-action="increase-position"]')),
       climateCompact: Boolean(cards["nodalia-climate-card"].shadowRoot.querySelector(".climate-card--layout-compact .climate-card__compact-slider")),
       climateHasCircularDial: Boolean(cards["nodalia-climate-card"].shadowRoot.querySelector(".climate-card__dial")),
       editorLayouts,
@@ -364,6 +367,8 @@ test("device and Climate layout variants render and keep their native controls",
   expect(result.fanCircular).toBe(true);
   expect(result.humidifierCircular).toBe(true);
   expect(result.coverCircular).toBe(true);
+  expect(result.coverCircularActions).toEqual(["open", "stop", "close"]);
+  expect(result.coverHasPositionSteps).toBe(false);
   expect(result.climateCompact).toBe(true);
   expect(result.climateHasCircularDial).toBe(false);
   expect(Object.values(result.editorLayouts).every(item => item.exists)).toBe(true);
@@ -401,12 +406,55 @@ test("device and Climate layout variants render and keep their native controls",
   expect(result.calls).toEqual(expect.arrayContaining([
     expect.objectContaining({ domain: "fan", service: "set_percentage" }),
     expect.objectContaining({ domain: "humidifier", service: "set_humidity" }),
-    expect.objectContaining({ domain: "cover", service: "set_cover_position" }),
+    expect.objectContaining({ domain: "cover", service: "open_cover" }),
+    expect.objectContaining({ domain: "cover", service: "stop_cover" }),
     expect.objectContaining({ domain: "climate", service: "set_temperature" }),
     expect.objectContaining({ domain: "fan", service: "turn_off" }),
     expect.objectContaining({ domain: "humidifier", service: "turn_off" }),
     expect.objectContaining({ domain: "cover", service: "close_cover" }),
   ]));
+  expect(errors).toEqual([]);
+});
+
+test("circular unavailable badges keep a compact question mark", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const metrics = await page.evaluate(async () => {
+    const definitions = [
+      ["nodalia-fan-card", "fan.unavailable", "fan-card__unavailable-badge"],
+      ["nodalia-humidifier-card", "humidifier.unavailable", "humidifier-card__unavailable-badge"],
+      ["nodalia-cover-card", "cover.unavailable", "fan-card__unavailable-badge"],
+    ];
+    const states = Object.fromEntries(definitions.map(([, entity]) => [entity, {
+      entity_id: entity,
+      state: "unavailable",
+      attributes: { friendly_name: "Unavailable", supported_features: 143 },
+    }]));
+    const hass = window.makeHass(states);
+    const result = {};
+    for (const [tag, entity, badgeClass] of definitions) {
+      const card = document.createElement(tag);
+      card.setConfig({ entity, layout: "circular", animations: { enabled: false } });
+      card.hass = hass;
+      document.querySelector("#fixture").append(card);
+      await new Promise(resolve => requestAnimationFrame(() => resolve()));
+      const badge = card.shadowRoot.querySelector(`.${badgeClass}`);
+      const icon = badge?.querySelector("ha-icon");
+      const badgeRect = badge?.getBoundingClientRect();
+      const iconRect = icon?.getBoundingClientRect();
+      result[tag] = {
+        badge: [badgeRect?.width || 0, badgeRect?.height || 0],
+        icon: [iconRect?.width || 0, iconRect?.height || 0],
+        iconSize: icon ? getComputedStyle(icon).getPropertyValue("--mdc-icon-size").trim() : "",
+      };
+    }
+    return result;
+  });
+
+  for (const [tag, value] of Object.entries(metrics)) {
+    expect(value.badge, `${tag} badge`).toEqual([18, 18]);
+    expect(value.icon, `${tag} question mark`).toEqual([11, 11]);
+    expect(value.iconSize, `${tag} icon variable`).toBe("11px");
+  }
   expect(errors).toEqual([]);
 });
 

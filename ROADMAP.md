@@ -6,25 +6,15 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
-## Current preview release
-
-Current preview release:
-
-```text
-2.2.3-alpha.2
-```
-
-Preview **`2.2.3-alpha.2`** completes Cover visual-editor localization in every supported language, fixes Calendar's remaining English title field and strengthens source-level translation regressions. Stable **`2.2.2`** remains the recommended daily-driver release.
-
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.2
+2.2.3
 ```
 
-Stable **`2.2.2`** makes Alarm Panel tints contrast-safe and completes a bundle-wide render audit: Camera and Vacuum reduce hot-path work, while News, Gauge, Alarm, Person and Vacuum no longer retain stale helper, attribute, locale or zone output. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.3`** completes runtime/editor localization across all 12 supported languages, gives circular Cover a dedicated open/stop/close command row and keeps unavailable badges compact in Cover, Fan and Humidifier. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -45,7 +35,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.2`**
+- Regression-free mobile and desktop behavior on stable **`2.2.3`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

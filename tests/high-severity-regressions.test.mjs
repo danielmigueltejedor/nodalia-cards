@@ -440,25 +440,12 @@ function makeCoverFixture(CardClass, sandbox, { state, attributes = {} } = {}) {
   return { card, calls, sandbox };
 }
 
-function clickCoverAction(card, sandbox, action) {
-  const button = Object.assign(new sandbox.HTMLElement(), {
-    dataset: { coverAction: action },
-  });
-  card._onShadowClick({
-    composedPath: () => [button],
-    preventDefault() {},
-    stopPropagation() {},
-  });
-}
-
-test("circular cover position commands require a settled or reported position", () => {
+test("circular cover dial requires a settled or reported position", () => {
   const { CardClass, sandbox } = loadCoverCard();
 
   for (const motion of ["closing", "opening"]) {
     const { card, calls } = makeCoverFixture(CardClass, sandbox, { state: motion });
     assert.equal(card._getCommandablePosition(card._getState()), null);
-    clickCoverAction(card, sandbox, "decrease-position");
-    clickCoverAction(card, sandbox, "increase-position");
     const dial = Object.assign(new sandbox.HTMLElement(), {
       classList: { add() {}, remove() {} },
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 200, height: 200 }),
@@ -472,21 +459,13 @@ test("circular cover position commands require a settled or reported position", 
   {
     const { card, calls } = makeCoverFixture(CardClass, sandbox, { state: "open" });
     assert.equal(card._getCommandablePosition(card._getState()), 100);
-    clickCoverAction(card, sandbox, "decrease-position");
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].domain, "cover");
-    assert.equal(calls[0].service, "set_cover_position");
-    assert.equal(calls[0].data.entity_id, "cover.blind");
-    assert.equal(calls[0].data.position, 95);
+    assert.equal(calls.length, 0);
   }
 
   {
     const { card, calls } = makeCoverFixture(CardClass, sandbox, { state: "closed" });
     assert.equal(card._getCommandablePosition(card._getState()), 0);
-    clickCoverAction(card, sandbox, "increase-position");
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].service, "set_cover_position");
-    assert.equal(calls[0].data.position, 5);
+    assert.equal(calls.length, 0);
   }
 
   {
@@ -495,9 +474,6 @@ test("circular cover position commands require a settled or reported position", 
       attributes: { current_position: 40 },
     });
     assert.equal(card._getCommandablePosition(card._getState()), 40);
-    clickCoverAction(card, sandbox, "decrease-position");
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].service, "set_cover_position");
-    assert.equal(calls[0].data.position, 35);
+    assert.equal(calls.length, 0);
   }
 });

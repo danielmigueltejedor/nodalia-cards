@@ -27,7 +27,7 @@ test("runtime and editor catalogs contain no untranslated English gaps", () => {
 
 test("runtime cards route audited accessibility labels through i18n", () => {
   const cases = [
-    ["nodalia-cover-card.js", /_coverCardUi\("decreasePosition"/, /aria-label="Decrease position"/],
+    ["nodalia-cover-card.js", /_coverCardUi\("open"/, /aria-label="Open"/],
     ["nodalia-humidifier-card.js", /_humidifierAria\("decreaseHumidity"/, /aria-label="Decrease humidity"/],
     ["nodalia-climate-card.js", /_climateCardAria\("decreaseTemperature"/, /aria-label="Decrease temperature"/],
     ["nodalia-power-flow-card.js", /_powerFlowUi\("consumptionTotals"/, /aria-label="Consumption totals"/],
