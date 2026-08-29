@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.3-alpha.1
+2.2.3-alpha.2
 ```
 
-Preview **`2.2.3-alpha.1`** completes translation parity across all supported runtime and editor catalogs, localizes remaining visible strings in five cards and adds an offline gap audit to prevent regressions. Stable **`2.2.2`** remains the recommended daily-driver release.
+Preview **`2.2.3-alpha.2`** completes Cover visual-editor localization in every supported language, fixes Calendar's remaining English title field and strengthens source-level translation regressions. Stable **`2.2.2`** remains the recommended daily-driver release.
 
 ## Current stable release
 

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.3-alpha.1";
+const CARD_VERSION = "2.2.3-alpha.2";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -3147,7 +3147,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
             </div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderCoverEntityField("Cover entity", "entity", config.entity, { placeholder: "cover.salon", fullWidth: true })}
+            ${this._renderCoverEntityField("ed.cover.entity", "entity", config.entity, { placeholder: "cover.salon", fullWidth: true })}
             ${this._renderSelectField("ed.entity.layout", "layout", config.layout || "compact", [
               { value: "compact", label: "ed.shared.layout_compact" },
               { value: "circular", label: "ed.shared.layout_circular" },
@@ -3245,11 +3245,11 @@ class NodaliaCoverCardEditor extends HTMLElement {
               { value: "horizontal", label: "ed.cover.open_close_icons_horizontal" },
             ])}
             ${this._renderCheckboxField("ed.fan.show_state_bubble", "show_state", config.show_state === true)}
-            ${this._renderCheckboxField("Show position chip", "show_position_chip", config.show_position_chip !== false)}
-            ${this._renderCheckboxField("Show tilt chip", "show_tilt_chip", config.show_tilt_chip !== false)}
-            ${this._renderCheckboxField("Show position slider", "show_position_slider", config.show_position_slider !== false)}
-            ${this._renderCheckboxField("Show tilt slider", "show_tilt_slider", config.show_tilt_slider !== false)}
-            ${this._renderCheckboxField("Show stop button", "show_stop", config.show_stop !== false)}
+            ${this._renderCheckboxField("ed.cover.show_position_chip", "show_position_chip", config.show_position_chip !== false)}
+            ${this._renderCheckboxField("ed.cover.show_tilt_chip", "show_tilt_chip", config.show_tilt_chip !== false)}
+            ${this._renderCheckboxField("ed.cover.show_position_slider", "show_position_slider", config.show_position_slider !== false)}
+            ${this._renderCheckboxField("ed.cover.show_tilt_slider", "show_tilt_slider", config.show_tilt_slider !== false)}
+            ${this._renderCheckboxField("ed.cover.show_stop_button", "show_stop", config.show_stop !== false)}
           </div>
         </section>
         <section class="editor-section">

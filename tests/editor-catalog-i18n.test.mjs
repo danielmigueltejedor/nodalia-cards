@@ -41,6 +41,26 @@ test("runtime cards route audited accessibility labels through i18n", () => {
   }
 });
 
+test("Cover and Calendar visual editors do not bypass catalog keys with English labels", () => {
+  const cover = fs.readFileSync(path.join(root, "nodalia-cover-card.js"), "utf8");
+  const calendar = fs.readFileSync(path.join(root, "nodalia-calendar-card.js"), "utf8");
+  const forbiddenCoverLabels = [
+    "Cover entity",
+    "Show position chip",
+    "Show tilt chip",
+    "Show position slider",
+    "Show tilt slider",
+    "Show stop button",
+  ];
+
+  for (const label of forbiddenCoverLabels) {
+    assert.doesNotMatch(cover, new RegExp(`_render[A-Za-z]+Field\\(${JSON.stringify(label)}`));
+  }
+  assert.doesNotMatch(calendar, /_renderTextField\("Title",\s*"title"/);
+  assert.match(cover, /_renderCheckboxField\("ed\.cover\.show_position_chip"/);
+  assert.match(calendar, /_renderTextField\("ed\.nav\.title",\s*"title"/);
+});
+
 test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   const src = fs.readFileSync(path.join(root, "nodalia-editor-ui.js"), "utf8");
   assert.match(src, /window\.NodaliaI18n\.editorCatalog\s*=/);

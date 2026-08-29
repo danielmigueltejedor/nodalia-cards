@@ -8,6 +8,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.3-alpha.2] - 2026-08-29
+
+Second **`2.2.3`** alpha: complete Cover visual-editor localization.
+
+### Fixed
+
+- Cover's entity selector and the position chip, tilt chip, position slider, tilt slider and stop-button toggles now use dedicated `ed.cover.*` catalog keys instead of English literals.
+- All six Cover labels are translated in German, Greek, Spanish, French, Italian, Dutch, Norwegian, Portuguese, Romanian, Russian and Chinese.
+- Calendar's remaining English `Title` field now reuses the translated shared title key.
+
+### Validation
+
+- All 1,419 editor keys stay synchronized across 12 locale catalogs and the generated editor bundle.
+- Runtime and editor audits report zero untranslated English gaps across all 11 translated locales.
+- A source regression prevents Cover and Calendar from bypassing catalog keys with these English literals.
+- All 464 Node regressions and 33 Chromium browser, editor and accessibility checks pass, including a rendered Cover editor check in every supported language.
+
 ## [2.2.3-alpha.1] - 2026-08-29
 
 First **`2.2.3`** alpha: complete editor/runtime translation parity audit across every supported language.

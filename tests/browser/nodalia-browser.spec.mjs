@@ -73,6 +73,48 @@ test("HACS entrypoint creates every visual editor without requesting a sidecar",
   expect(errors).toEqual([]);
 });
 
+test("Cover visual-editor visibility controls render in every supported language", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const expected = {
+    en: ["Show position chip", "Show tilt chip", "Show position slider", "Show tilt slider", "Show stop button"],
+    es: ["Mostrar chip de posición", "Mostrar chip de inclinación", "Mostrar deslizador de posición", "Mostrar deslizador de inclinación", "Mostrar botón de parada"],
+    de: ["Positions-Chip anzeigen", "Neigungs-Chip anzeigen", "Positionsregler anzeigen", "Neigungsregler anzeigen", "Stopp-Taste anzeigen"],
+    fr: ["Afficher la puce de position", "Afficher la puce d’inclinaison", "Afficher le curseur de position", "Afficher le curseur d’inclinaison", "Afficher le bouton d’arrêt"],
+    it: ["Mostra chip posizione", "Mostra chip inclinazione", "Mostra cursore posizione", "Mostra cursore inclinazione", "Mostra pulsante di arresto"],
+    nl: ["Positiechip tonen", "Kantelchip tonen", "Positieschuifregelaar tonen", "Kantelschuifregelaar tonen", "Stopknop tonen"],
+    no: ["Vis posisjonsbrikke", "Vis vippebrikke", "Vis posisjonsglidebryter", "Vis vippeglidebryter", "Vis stoppknapp"],
+    pt: ["Mostrar chip de posição", "Mostrar chip de inclinação", "Mostrar controlo deslizante de posição", "Mostrar controlo deslizante de inclinação", "Mostrar botão de paragem"],
+    ru: ["Показывать чип положения", "Показывать чип наклона", "Показывать ползунок положения", "Показывать ползунок наклона", "Показывать кнопку остановки"],
+    el: ["Εμφάνιση chip θέσης", "Εμφάνιση chip κλίσης", "Εμφάνιση ρυθμιστικού θέσης", "Εμφάνιση ρυθμιστικού κλίσης", "Εμφάνιση κουμπιού διακοπής"],
+    zh: ["显示位置芯片", "显示倾斜芯片", "显示位置滑块", "显示倾斜滑块", "显示停止按钮"],
+    ro: ["Afișează cipul poziției", "Afișează cipul înclinării", "Afișează glisorul poziției", "Afișează glisorul înclinării", "Afișează butonul de oprire"],
+  };
+
+  const rendered = await page.evaluate(async translations => {
+    const output = {};
+    for (const lang of Object.keys(translations)) {
+      const editor = document.createElement("nodalia-cover-card-editor");
+      const hass = window.makeHass({
+        "cover.test": { entity_id: "cover.test", state: "closed", attributes: { friendly_name: "Cover" } },
+      });
+      hass.locale.language = lang;
+      hass.language = lang;
+      editor.hass = hass;
+      editor.setConfig({ type: "custom:nodalia-cover-card", entity: "cover.test", language: lang });
+      document.querySelector("#fixture").append(editor);
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      output[lang] = ["show_position_chip", "show_tilt_chip", "show_position_slider", "show_tilt_slider", "show_stop"]
+        .map(field => editor.shadowRoot.querySelector(`.editor-toggle input[data-field="${field}"]`)
+          ?.closest(".editor-toggle")?.querySelector(".editor-toggle__label")?.textContent?.trim());
+      editor.remove();
+    }
+    return output;
+  }, expected);
+
+  expect(rendered).toEqual(expected);
+  expect(errors).toEqual([]);
+});
+
 test("every published card mounts from its stub configuration", async ({ page }) => {
   const errors = await loadBundle(page);
   const tags = await page.evaluate(() => [...new Set([

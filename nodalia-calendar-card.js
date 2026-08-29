@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-calendar-card";
 const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.2.3-alpha.1";
+const CARD_VERSION = "2.2.3-alpha.2";
 const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 const HAPTIC_PATTERNS = {
   selection: 8,
@@ -5516,7 +5516,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.general_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("Title", "title", config.title, { fullWidth: true, placeholder: "Calendar" })}
+            ${this._renderTextField("ed.nav.title", "title", config.title, { fullWidth: true, placeholder: "Calendar" })}
             ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG.icon, {
               fullWidth: true,
               placeholder: "mdi:calendar-month",
