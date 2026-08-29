@@ -8,6 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.3-alpha.1] - 2026-08-29
+
+First **`2.2.3`** alpha: complete editor/runtime translation parity audit across every supported language.
+
+### Changed
+
+- Completed 1,158 editor translations across German, Greek, Spanish, French, Italian, Dutch, Norwegian, Portuguese, Romanian, Russian and Chinese; the previously incomplete Norwegian catalog receives 746 translated labels and hints.
+- Added 24 runtime keys to all 12 locale catalogs for Power Flow defaults, Cover/Climate/Humidifier accessibility controls and Advance Vacuum map UI.
+- Added an offline catalog audit to validation and CI so missing keys or suspicious English copies fail before release, with explicit allowlists for universal technical terms and genuine cognates.
+
+### Fixed
+
+- Cover, Climate and Humidifier no longer expose English-only step-control accessibility labels.
+- Power Flow now localizes its default node names, energy and consumption labels, device count, popup actions and accessibility text.
+- Advance Vacuum now localizes numbered zone editing, map alternative/fallback text and the return-to-panel action instead of embedding Spanish text in every locale.
+- News Card documentation now reflects runtime support for every Nodalia language.
+
+### Validation
+
+- Runtime and editor locale trees match their English source catalogs, preserve placeholders and report zero untranslated gaps across all 11 translated locales.
+- Focused translation regressions verify that audited runtime labels remain routed through i18n.
+- All 463 Node regressions pass.
+- All 32 Chromium browser, interaction and accessibility checks pass.
+
 ## [2.2.2-alpha.2] - 2026-08-28
 
 Second **`2.2.2`** alpha: bundle-wide render invalidation and hot-path performance audit.

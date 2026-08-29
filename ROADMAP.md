@@ -6,6 +6,16 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
+## Current preview release
+
+Current preview release:
+
+```text
+2.2.3-alpha.1
+```
+
+Preview **`2.2.3-alpha.1`** completes translation parity across all supported runtime and editor catalogs, localizes remaining visible strings in five cards and adds an offline gap audit to prevent regressions. Stable **`2.2.2`** remains the recommended daily-driver release.
+
 ## Current stable release
 
 Current stable release:

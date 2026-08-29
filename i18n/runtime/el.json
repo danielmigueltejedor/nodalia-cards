@@ -123,7 +123,9 @@
       "zoneTool": "Ζώνη",
       "routineDefault": "Ρουτίνα",
       "customMenuDefault": "Βάση",
-      "modesFallbackTitle": "Λειτουργίες σκουπίσματος και σφουγγαρίσματος"
+      "modesFallbackTitle": "Λειτουργίες σκουπίσματος και σφουγγαρίσματος",
+      "mapImageAlt": "Χάρτης ρομπότ",
+      "mapUnavailable": "Ο χάρτης δεν είναι διαθέσιμος"
     },
     "actions": {
       "returnToBase": "Επιστροφή στη βάση",
@@ -142,7 +144,8 @@
       "editZone": "Επεξεργασία ζώνης",
       "backPanel": "Πίσω στο κύριο πάνελ",
       "addZone": "Προσθήκη ζώνης",
-      "gotoFallback": "Σημείο"
+      "gotoFallback": "Σημείο",
+      "editZoneNumber": "Επεξεργασία ζώνης {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Κλίση",
     "tiltChip": "Κλίση {value}%",
     "toggleShowButtons": "Εμφάνιση άνοιγμα, στάση και κλείσιμο",
-    "toggleShowSliders": "Εμφάνιση ρυθμιστικών"
+    "toggleShowSliders": "Εμφάνιση ρυθμιστικών",
+    "decreasePosition": "Μείωση θέσης",
+    "increasePosition": "Αύξηση θέσης",
+    "toggleCover": "Εναλλαγή καλύμματος"
   },
   "person": {
     "home": "Σπίτι",
@@ -370,7 +376,7 @@
     "closeCovers": "Κλείσιμο ρολών",
     "openCamera": "Ανοίξτε την κάμερα",
     "climateDetails": "Λεπτομέρειες για το κλίμα",
-    "mediaPlayer": "Media player",
+    "mediaPlayer": "Αναπαραγωγή πολυμέσων",
     "vacuum": "Ηλεκτρική σκούπα",
     "fans": "Ανεμιστήρες",
     "hubHome": "Αρχική",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Φόρτωση ιστορικού…",
       "emptyGraphs": "Δεν υπάρχει ακόμα ιστορικό"
     },
-    "battery": { "title": "Μπαταρίες", "subtitle": "Επισκόπηση μπαταριών", "average": "μέσος όρος", "devices": "συσκευές", "good": "Καλή", "low": "Χαμηλή", "critical": "Κρίσιμη" },
-    "network": { "title": "Δίκτυο", "subtitle": "Επισκόπηση σύνδεσης", "metrics": "μετρήσεις", "roles": { "status": "Κατάσταση", "download": "Λήψη", "upload": "Μεταφόρτωση", "latency": "Καθυστέρηση", "signal": "Σήμα", "traffic": "Κίνηση" } },
-    "overview": { "empty": "Προσθέστε οντότητες στον οπτικό επεξεργαστή.", "unavailable": "Μη διαθέσιμο", "unconfigured": "Δεν έχει ρυθμιστεί" }
+    "battery": {
+      "title": "Μπαταρίες",
+      "subtitle": "Επισκόπηση μπαταριών",
+      "average": "μέσος όρος",
+      "devices": "συσκευές",
+      "good": "Καλή",
+      "low": "Χαμηλή",
+      "critical": "Κρίσιμη"
+    },
+    "network": {
+      "title": "Δίκτυο",
+      "subtitle": "Επισκόπηση σύνδεσης",
+      "metrics": "μετρήσεις",
+      "roles": {
+        "status": "Κατάσταση",
+        "download": "Λήψη",
+        "upload": "Μεταφόρτωση",
+        "latency": "Καθυστέρηση",
+        "signal": "Σήμα",
+        "traffic": "Κίνηση"
+      }
+    },
+    "overview": {
+      "empty": "Προσθέστε οντότητες στον οπτικό επεξεργαστή.",
+      "unavailable": "Μη διαθέσιμο",
+      "unconfigured": "Δεν έχει ρυθμιστεί"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Στόχος υγρασίας",
       "showModes": "Εμφάνιση τρόπων λειτουργίας",
-      "showSpeeds": "Εμφάνιση ταχυτήτων"
+      "showSpeeds": "Εμφάνιση ταχυτήτων",
+      "decreaseHumidity": "Μείωση υγρασίας",
+      "increaseHumidity": "Αύξηση υγρασίας"
     },
     "modes": {
       "auto": "Αυτόματο",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Εύρος άνεσης και εσωτερική θερμοκρασία",
       "dialTargetSlider": "Θερμοκρασία στόχος",
       "dialNoSetpoint": "Εσωτερική θερμοκρασία· ο θερμοστάτης δεν έχει ενεργό στόχο",
-      "togglePower": "Ενεργοποίηση ή απενεργοποίηση"
+      "togglePower": "Ενεργοποίηση ή απενεργοποίηση",
+      "decreaseTemperature": "Μείωση θερμοκρασίας",
+      "increaseTemperature": "Αύξηση θερμοκρασίας"
     },
     "dialNoSetpointHint": "Χωρίς ενεργό στόχο",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Ελέγξτε το καρουζέλ καθαρισμού",
     "audio_error": "Σφάλμα ήχου",
     "water_empty": "Άδειο δοχείο νερού"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Δίκτυο",
+      "home": "Σπίτι",
+      "solar": "Ηλιακή ενέργεια",
+      "battery": "Μπαταρία",
+      "water": "Νερό",
+      "gas": "Αέριο"
+    },
+    "energy": "Ενέργεια",
+    "today": "Σήμερα",
+    "month": "Μήνας",
+    "consumptionTotals": "Σύνολα κατανάλωσης",
+    "device": "συσκευή",
+    "devices": "συσκευές",
+    "close": "Κλείσιμο",
+    "moreInfo": "Περισσότερες πληροφορίες"
   }
 }

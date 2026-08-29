@@ -123,7 +123,9 @@
       "zoneTool": "Зона",
       "routineDefault": "Сценарий",
       "customMenuDefault": "База",
-      "modesFallbackTitle": "Режимы пылесоса и мытья"
+      "modesFallbackTitle": "Режимы пылесоса и мытья",
+      "mapImageAlt": "Карта робота",
+      "mapUnavailable": "Карта недоступна"
     },
     "actions": {
       "returnToBase": "На базу",
@@ -142,7 +144,8 @@
       "editZone": "Редактировать зону",
       "backPanel": "К основной панели",
       "addZone": "Добавить зону",
-      "gotoFallback": "Точка"
+      "gotoFallback": "Точка",
+      "editZoneNumber": "Изменить зону {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Наклон",
     "tiltChip": "Наклон {value}%",
     "toggleShowButtons": "Показать открыть, стоп и закрыть",
-    "toggleShowSliders": "Показать ползунки"
+    "toggleShowSliders": "Показать ползунки",
+    "decreasePosition": "Уменьшить положение",
+    "increasePosition": "Увеличить положение",
+    "toggleCover": "Переключить штору"
   },
   "person": {
     "home": "Дома",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Загрузка истории…",
       "emptyGraphs": "Истории пока нет"
     },
-    "battery": { "title": "Батареи", "subtitle": "Обзор батарей", "average": "в среднем", "devices": "устройства", "good": "Норма", "low": "Низкий", "critical": "Критический" },
-    "network": { "title": "Сеть", "subtitle": "Обзор подключения", "metrics": "показатели", "roles": { "status": "Состояние", "download": "Загрузка", "upload": "Отдача", "latency": "Задержка", "signal": "Сигнал", "traffic": "Трафик" } },
-    "overview": { "empty": "Добавьте объекты в визуальном редакторе.", "unavailable": "Недоступно", "unconfigured": "Не настроено" }
+    "battery": {
+      "title": "Батареи",
+      "subtitle": "Обзор батарей",
+      "average": "в среднем",
+      "devices": "устройства",
+      "good": "Норма",
+      "low": "Низкий",
+      "critical": "Критический"
+    },
+    "network": {
+      "title": "Сеть",
+      "subtitle": "Обзор подключения",
+      "metrics": "показатели",
+      "roles": {
+        "status": "Состояние",
+        "download": "Загрузка",
+        "upload": "Отдача",
+        "latency": "Задержка",
+        "signal": "Сигнал",
+        "traffic": "Трафик"
+      }
+    },
+    "overview": {
+      "empty": "Добавьте объекты в визуальном редакторе.",
+      "unavailable": "Недоступно",
+      "unconfigured": "Не настроено"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Целевая влажность",
       "showModes": "Показать режимы",
-      "showSpeeds": "Показать скорости"
+      "showSpeeds": "Показать скорости",
+      "decreaseHumidity": "Уменьшить влажность",
+      "increaseHumidity": "Увеличить влажность"
     },
     "modes": {
       "auto": "Авто",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Диапазон комфорта и температура в помещении",
       "dialTargetSlider": "Заданная температура",
       "dialNoSetpoint": "Комнатная температура; на термостате нет активной уставки",
-      "togglePower": "Включить или выключить"
+      "togglePower": "Включить или выключить",
+      "decreaseTemperature": "Уменьшить температуру",
+      "increaseTemperature": "Увеличить температуру"
     },
     "dialNoSetpointHint": "Нет активной уставки",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Проверьте карусель очистки",
     "audio_error": "Ошибка звука",
     "water_empty": "Бак для воды пуст"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Электросеть",
+      "home": "Дом",
+      "solar": "Солнечная энергия",
+      "battery": "Аккумулятор",
+      "water": "Вода",
+      "gas": "Газ"
+    },
+    "energy": "Энергия",
+    "today": "Сегодня",
+    "month": "Месяц",
+    "consumptionTotals": "Итоги потребления",
+    "device": "устройство",
+    "devices": "устройства",
+    "close": "Закрыть",
+    "moreInfo": "Подробнее"
   }
 }

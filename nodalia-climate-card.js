@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.2";
+const CARD_VERSION = "2.2.3-alpha.1";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -5283,6 +5283,15 @@ class NodaliaClimateCard extends HTMLElement {
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
+  _climateCardAria(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard?.aria;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard?.aria;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _renderEmptyState() {
     const title = escapeHtml(this._climateCardUi("emptyTitle", "Nodalia Climate Card"));
     const body = escapeHtml(
@@ -5804,8 +5813,8 @@ class NodaliaClimateCard extends HTMLElement {
     const compactStepActionsMarkup = showStepControls
       ? `
         <div class="climate-card__compact-slider-actions">
-          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="decrease" aria-label="Decrease temperature"><span>&minus;</span></button>
-          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="increase" aria-label="Increase temperature"><span>+</span></button>
+          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="decrease" aria-label="${escapeHtml(this._climateCardAria("decreaseTemperature", "Decrease temperature"))}"><span>&minus;</span></button>
+          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="increase" aria-label="${escapeHtml(this._climateCardAria("increaseTemperature", "Increase temperature"))}"><span>+</span></button>
         </div>`
       : "";
     const compactScheduleButtonMarkup = showScheduleButton
@@ -7643,7 +7652,7 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__step-button"
                     data-climate-action="decrease"
-                    aria-label="Decrease temperature"
+                    aria-label="${escapeHtml(this._climateCardAria("decreaseTemperature", "Decrease temperature"))}"
                   >
                     <span>&minus;</span>
                   </button>
@@ -7652,7 +7661,7 @@ class NodaliaClimateCard extends HTMLElement {
                     type="button"
                     class="climate-card__step-button"
                     data-climate-action="increase"
-                    aria-label="Increase temperature"
+                    aria-label="${escapeHtml(this._climateCardAria("increaseTemperature", "Increase temperature"))}"
                   >
                     <span>+</span>
                   </button>

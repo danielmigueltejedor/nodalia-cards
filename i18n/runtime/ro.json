@@ -123,7 +123,9 @@
       "zoneTool": "Zonă",
       "routineDefault": "Rutină",
       "customMenuDefault": "Bază",
-      "modesFallbackTitle": "Moduri aspirare și mop"
+      "modesFallbackTitle": "Moduri aspirare și mop",
+      "mapImageAlt": "Harta robotului",
+      "mapUnavailable": "Harta nu este disponibilă"
     },
     "actions": {
       "returnToBase": "Înapoi la bază",
@@ -142,7 +144,8 @@
       "editZone": "Editează zona",
       "backPanel": "Înapoi la panoul principal",
       "addZone": "Adaugă zonă",
-      "gotoFallback": "Punct"
+      "gotoFallback": "Punct",
+      "editZoneNumber": "Editează zona {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Înclinare",
     "tiltChip": "Înclinare {value}%",
     "toggleShowButtons": "Afișează deschide, stop și închide",
-    "toggleShowSliders": "Afișează glisoarele"
+    "toggleShowSliders": "Afișează glisoarele",
+    "decreasePosition": "Micșorează poziția",
+    "increasePosition": "Mărește poziția",
+    "toggleCover": "Acționează jaluzeaua"
   },
   "person": {
     "home": "Acasă",
@@ -319,7 +325,7 @@
     "cardDescription": "Previzualizarea camerei în stil Nodalia cu cipuri de stare și vizualizare extinsă.",
     "live": "Trăi",
     "snapshot": "Instantaneu",
-    "offline": "Offline",
+    "offline": "Deconectat",
     "unknown": "Necunoscut",
     "unavailable": "Indisponibil",
     "recording": "Înregistrare",
@@ -345,7 +351,7 @@
     "humidity": "Umiditate",
     "climateLabel": "Clima",
     "occupied": "Ocupată",
-    "vacant": "Vacant",
+    "vacant": "Liber",
     "comfortable": "Confortabil",
     "hot": "Fierbinte",
     "cold": "Rece",
@@ -370,7 +376,7 @@
     "closeCovers": "Închide jaluzelele",
     "openCamera": "Deschideți camera",
     "climateDetails": "Detalii climatice",
-    "mediaPlayer": "Media player",
+    "mediaPlayer": "Player media",
     "vacuum": "Aspirator",
     "fans": "Ventilatoare",
     "hubHome": "Acasă",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Se încarcă istoricul…",
       "emptyGraphs": "Încă nu există istoric"
     },
-    "battery": { "title": "Baterii", "subtitle": "Prezentare baterii", "average": "medie", "devices": "dispozitive", "good": "Bună", "low": "Scăzută", "critical": "Critică" },
-    "network": { "title": "Rețea", "subtitle": "Prezentare conexiune", "metrics": "valori", "roles": { "status": "Stare", "download": "Descărcare", "upload": "Încărcare", "latency": "Latență", "signal": "Semnal", "traffic": "Trafic" } },
-    "overview": { "empty": "Adăugați entități în editorul vizual.", "unavailable": "Indisponibil", "unconfigured": "Neconfigurat" }
+    "battery": {
+      "title": "Baterii",
+      "subtitle": "Prezentare baterii",
+      "average": "medie",
+      "devices": "dispozitive",
+      "good": "Bună",
+      "low": "Scăzută",
+      "critical": "Critică"
+    },
+    "network": {
+      "title": "Rețea",
+      "subtitle": "Prezentare conexiune",
+      "metrics": "valori",
+      "roles": {
+        "status": "Stare",
+        "download": "Descărcare",
+        "upload": "Încărcare",
+        "latency": "Latență",
+        "signal": "Semnal",
+        "traffic": "Trafic"
+      }
+    },
+    "overview": {
+      "empty": "Adăugați entități în editorul vizual.",
+      "unavailable": "Indisponibil",
+      "unconfigured": "Neconfigurat"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Umiditatea țintă",
       "showModes": "Afișați moduri",
-      "showSpeeds": "Arată viteze"
+      "showSpeeds": "Arată viteze",
+      "decreaseHumidity": "Scade umiditatea",
+      "increaseHumidity": "Crește umiditatea"
     },
     "modes": {
       "auto": "Automat",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Interval de confort și temperatura interioară",
       "dialTargetSlider": "Temperatura țintă",
       "dialNoSetpoint": "Temperatură interioară; termostatul nu are țintă activă",
-      "togglePower": "Pornește sau oprește"
+      "togglePower": "Pornește sau oprește",
+      "decreaseTemperature": "Scade temperatura",
+      "increaseTemperature": "Crește temperatura"
     },
     "dialNoSetpointHint": "Fără țintă activă",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Verificați caruselul de curățare",
     "audio_error": "Eroare audio",
     "water_empty": "Rezervorul de apă este gol"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Rețea",
+      "home": "Acasă",
+      "solar": "Solar",
+      "battery": "Baterie",
+      "water": "Apă",
+      "gas": "Gaz"
+    },
+    "energy": "Energie",
+    "today": "Astăzi",
+    "month": "Lună",
+    "consumptionTotals": "Totaluri consum",
+    "device": "dispozitiv",
+    "devices": "dispozitive",
+    "close": "Închide",
+    "moreInfo": "Mai multe informații"
   }
 }

@@ -123,7 +123,9 @@
       "zoneTool": "Zona",
       "routineDefault": "Routine",
       "customMenuDefault": "Base",
-      "modesFallbackTitle": "Modalità aspirazione e lavaggio"
+      "modesFallbackTitle": "Modalità aspirazione e lavaggio",
+      "mapImageAlt": "Mappa del robot",
+      "mapUnavailable": "Mappa non disponibile"
     },
     "actions": {
       "returnToBase": "Torna alla base",
@@ -142,7 +144,8 @@
       "editZone": "Modifica zona",
       "backPanel": "Torna al pannello",
       "addZone": "Aggiungi zona",
-      "gotoFallback": "Punto"
+      "gotoFallback": "Punto",
+      "editZoneNumber": "Modifica zona {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Inclinazione",
     "tiltChip": "Inclinazione {value}%",
     "toggleShowButtons": "Mostra apri, stop e chiudi",
-    "toggleShowSliders": "Mostra cursori"
+    "toggleShowSliders": "Mostra cursori",
+    "decreasePosition": "Diminuisci posizione",
+    "increasePosition": "Aumenta posizione",
+    "toggleCover": "Aziona copertura"
   },
   "person": {
     "home": "A casa",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Caricamento cronologia…",
       "emptyGraphs": "Nessuna cronologia ancora"
     },
-    "battery": { "title": "Batterie", "subtitle": "Panoramica batterie", "average": "media", "devices": "dispositivi", "good": "Buona", "low": "Bassa", "critical": "Critica" },
-    "network": { "title": "Rete", "subtitle": "Panoramica connessione", "metrics": "metriche", "roles": { "status": "Stato", "download": "Download", "upload": "Upload", "latency": "Latenza", "signal": "Segnale", "traffic": "Traffico" } },
-    "overview": { "empty": "Aggiungi entità nell’editor visuale.", "unavailable": "Non disponibile", "unconfigured": "Non configurato" }
+    "battery": {
+      "title": "Batterie",
+      "subtitle": "Panoramica batterie",
+      "average": "media",
+      "devices": "dispositivi",
+      "good": "Buona",
+      "low": "Bassa",
+      "critical": "Critica"
+    },
+    "network": {
+      "title": "Rete",
+      "subtitle": "Panoramica connessione",
+      "metrics": "metriche",
+      "roles": {
+        "status": "Stato",
+        "download": "Scaricamento",
+        "upload": "Caricamento",
+        "latency": "Latenza",
+        "signal": "Segnale",
+        "traffic": "Traffico"
+      }
+    },
+    "overview": {
+      "empty": "Aggiungi entità nell’editor visuale.",
+      "unavailable": "Non disponibile",
+      "unconfigured": "Non configurato"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Umidità target",
       "showModes": "Mostra modalità",
-      "showSpeeds": "Mostra velocità"
+      "showSpeeds": "Mostra velocità",
+      "decreaseHumidity": "Diminuisci umidità",
+      "increaseHumidity": "Aumenta umidità"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Fascia di comfort e temperatura interna",
       "dialTargetSlider": "Temperatura target",
       "dialNoSetpoint": "Temperatura interna; nessun setpoint attivo sul termostato",
-      "togglePower": "Accendi o spegni"
+      "togglePower": "Accendi o spegni",
+      "decreaseTemperature": "Diminuisci temperatura",
+      "increaseTemperature": "Aumenta temperatura"
     },
     "dialNoSetpointHint": "Nessun setpoint attivo",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Controllare il carosello di pulizia",
     "audio_error": "Errore audio",
     "water_empty": "Serbatoio dell’acqua vuoto"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Rete",
+      "home": "Casa",
+      "solar": "Solare",
+      "battery": "Batteria",
+      "water": "Acqua",
+      "gas": "Gas"
+    },
+    "energy": "Energia",
+    "today": "Oggi",
+    "month": "Mese",
+    "consumptionTotals": "Totali dei consumi",
+    "device": "dispositivo",
+    "devices": "dispositivi",
+    "close": "Chiudi",
+    "moreInfo": "Maggiori informazioni"
   }
 }

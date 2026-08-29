@@ -146,7 +146,7 @@ Items are sorted by published date descending.
 
 ## Localization
 
-Runtime strings are available in English and Spanish via `newsCard.*` i18n keys. Set `language: auto` to follow the dashboard locale.
+Runtime strings are available in every supported Nodalia language via `newsCard.*` i18n keys. Set `language: auto` to follow the dashboard locale.
 
 ## Article history
 

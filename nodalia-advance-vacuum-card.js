@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.2.2";
+const CARD_VERSION = "2.2.3-alpha.1";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -7188,7 +7188,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           class="advance-vacuum-card__goto-marker ${selected ? "is-selected" : ""}"
           style="left:${percent.left}%; top:${percent.top}%;"
           data-goto-id="${escapeHtml(point.id)}"
-          title="${escapeHtml(point.label || "Punto")}"
+          title="${escapeHtml(point.label || this._advanceVacuumStrings()?.titles?.gotoFallback || "Point")}"
         >
           <ha-icon icon="${escapeHtml(point.icon || "mdi:map-marker")}"></ha-icon>
         </button>
@@ -7203,6 +7203,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     this._sanitizeSelectedManualZoneIndex();
 
+    const editZoneTemplate = this._advanceVacuumStrings()?.titles?.editZoneNumber || "Edit zone {index}";
     return this._manualZones.map((zone, index) => {
       const { rect, handles } = this._getZoneHandlePoints(zone);
       const selected = index === this._selectedManualZoneIndex;
@@ -7234,7 +7235,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           class="advance-vacuum-card__zone-hitbox ${selected ? "is-selected" : ""}"
           style="left:${left}%; top:${top}%; width:${width}%; height:${height}%;"
           data-manual-zone-index="${index}"
-          title="Editar zona ${index + 1}"
+          title="${escapeHtml(editZoneTemplate.replace(/\{index\}/g, String(index + 1)))}"
         ></button>
         ${handleMarkup}
       `;
@@ -7258,7 +7259,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
             class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--back"
             data-map-back="true"
             data-control-action="clear"
-            title="Volver al panel principal"
+            title="${escapeHtml(advanceVacuumStrings?.titles?.backPanel || "Back to main panel")}"
           >
             <ha-icon icon="mdi:arrow-left"></ha-icon>
           </button>
@@ -8651,8 +8652,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
                 ${
                   mapImageUrl
-                    ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="Mapa del robot" />`
-                    : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">Mapa no disponible</div>`
+                    ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="${escapeHtml(advanceVacuumStrings?.utility?.mapImageAlt || "Robot map")}" />`
+                    : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">${escapeHtml(advanceVacuumStrings?.utility?.mapUnavailable || "Map unavailable")}</div>`
                 }
                 ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
                 ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, this._activeMode) : ""}

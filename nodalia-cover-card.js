@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.2";
+const CARD_VERSION = "2.2.3-alpha.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -1759,6 +1759,9 @@ class NodaliaCoverCard extends HTMLElement {
     const tStop = this._coverCardUi("stop", "Stop");
     const tPosSlider = this._coverCardUi("positionSlider", "Position");
     const tTiltSlider = this._coverCardUi("tiltSlider", "Tilt");
+    const tDecreasePosition = this._coverCardUi("decreasePosition", "Decrease position");
+    const tIncreasePosition = this._coverCardUi("increasePosition", "Increase position");
+    const tToggleCover = this._coverCardUi("toggleCover", "Toggle cover");
     const openCloseIcons = resolveOpenCloseControlIcons(config.open_close_icons, state.attributes?.device_class);
     const chips = [];
     if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
@@ -1820,8 +1823,8 @@ class NodaliaCoverCard extends HTMLElement {
         </div>
         ${canSetPosition ? `
           <div class="fan-card__circular-steps">
-            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="decrease-position" aria-label="Decrease position">&minus;</button>
-            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="increase-position" aria-label="Increase position">+</button>
+            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="decrease-position" aria-label="${escapeHtml(tDecreasePosition)}">&minus;</button>
+            <button type="button" class="fan-card__circular-step" data-nodalia-tap-shield="true" data-cover-action="increase-position" aria-label="${escapeHtml(tIncreasePosition)}">+</button>
           </div>
         ` : ""}
         ${supportsTilt ? `<div class="fan-card__circular-secondary">${this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" })}</div>` : ""}
@@ -2443,7 +2446,7 @@ class NodaliaCoverCard extends HTMLElement {
       >
         <div class="fan-card__content">
           <div class="fan-card__hero">
-            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="Toggle cover">
+            <button type="button" class="fan-card__icon ${animations.enabled && animations.iconAnimation && isMoving ? "fan-card__icon--active-motion" : ""}" data-cover-action="icon" aria-label="${escapeHtml(tToggleCover)}">
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
               ${isUnavailableState(state) ? `<span class="fan-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>

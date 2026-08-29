@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.2.2";
+const CARD_VERSION = "2.2.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3089,9 +3089,9 @@ class NodaliaHumidifierCard extends HTMLElement {
           </div>
         </div>
         <div class="humidifier-card__circular-steps">
-          <button type="button" class="humidifier-card__circular-step" data-nodalia-tap-shield="true" data-humidifier-action="decrease-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="Decrease humidity">&minus;</button>
+          <button type="button" class="humidifier-card__circular-step" data-nodalia-tap-shield="true" data-humidifier-action="decrease-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="${escapeHtml(this._humidifierAria("decreaseHumidity", "Decrease humidity"))}">&minus;</button>
           <button type="button" class="humidifier-card__circular-power ${isOn ? "is-active" : ""}" data-humidifier-action="icon" aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"><ha-icon icon="mdi:power"></ha-icon></button>
-          <button type="button" class="humidifier-card__circular-step" data-nodalia-tap-shield="true" data-humidifier-action="increase-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="Increase humidity">+</button>
+          <button type="button" class="humidifier-card__circular-step" data-nodalia-tap-shield="true" data-humidifier-action="increase-humidity" ${supportsHumidity ? "" : "disabled"} aria-label="${escapeHtml(this._humidifierAria("increaseHumidity", "Increase humidity"))}">+</button>
         </div>
         <div class="humidifier-card__controls-inner">${panelShellMarkup}</div>
       </div>

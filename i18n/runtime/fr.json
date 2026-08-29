@@ -123,7 +123,9 @@
       "zoneTool": "Zone",
       "routineDefault": "Routine",
       "customMenuDefault": "Station",
-      "modesFallbackTitle": "Modes aspiration et lavage"
+      "modesFallbackTitle": "Modes aspiration et lavage",
+      "mapImageAlt": "Carte du robot",
+      "mapUnavailable": "Carte indisponible"
     },
     "actions": {
       "returnToBase": "Retour station",
@@ -142,7 +144,8 @@
       "editZone": "Modifier zone",
       "backPanel": "Retour au panneau",
       "addZone": "Ajouter zone",
-      "gotoFallback": "Indiquer"
+      "gotoFallback": "Indiquer",
+      "editZoneNumber": "Modifier la zone {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Inclinaison",
     "tiltChip": "Inclinaison {value} %",
     "toggleShowButtons": "Afficher ouvrir, arrêt et fermer",
-    "toggleShowSliders": "Afficher les curseurs"
+    "toggleShowSliders": "Afficher les curseurs",
+    "decreasePosition": "Diminuer la position",
+    "increasePosition": "Augmenter la position",
+    "toggleCover": "Actionner le volet"
   },
   "person": {
     "home": "À la maison",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Chargement de l'historique…",
       "emptyGraphs": "Pas encore d'historique"
     },
-    "battery": { "title": "Batteries", "subtitle": "Vue d’ensemble des batteries", "average": "en moyenne", "devices": "appareils", "good": "Bonne", "low": "Faible", "critical": "Critique" },
-    "network": { "title": "Réseau", "subtitle": "Vue d’ensemble de la connexion", "metrics": "mesures", "roles": { "status": "État", "download": "Téléchargement", "upload": "Envoi", "latency": "Latence", "signal": "Signal", "traffic": "Trafic" } },
-    "overview": { "empty": "Ajoutez des entités dans l’éditeur visuel.", "unavailable": "Indisponible", "unconfigured": "Non configuré" }
+    "battery": {
+      "title": "Batteries",
+      "subtitle": "Vue d’ensemble des batteries",
+      "average": "en moyenne",
+      "devices": "appareils",
+      "good": "Bonne",
+      "low": "Faible",
+      "critical": "Critique"
+    },
+    "network": {
+      "title": "Réseau",
+      "subtitle": "Vue d’ensemble de la connexion",
+      "metrics": "mesures",
+      "roles": {
+        "status": "État",
+        "download": "Téléchargement",
+        "upload": "Envoi",
+        "latency": "Latence",
+        "signal": "Signal",
+        "traffic": "Trafic"
+      }
+    },
+    "overview": {
+      "empty": "Ajoutez des entités dans l’éditeur visuel.",
+      "unavailable": "Indisponible",
+      "unconfigured": "Non configuré"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Humidité cible",
       "showModes": "Afficher les modes",
-      "showSpeeds": "Afficher les vitesses"
+      "showSpeeds": "Afficher les vitesses",
+      "decreaseHumidity": "Diminuer l’humidité",
+      "increaseHumidity": "Augmenter l’humidité"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Plage de confort et température intérieure",
       "dialTargetSlider": "Température cible",
       "dialNoSetpoint": "Température intérieure ; pas de consigne active sur le thermostat",
-      "togglePower": "Allumer ou éteindre"
+      "togglePower": "Allumer ou éteindre",
+      "decreaseTemperature": "Diminuer la température",
+      "increaseTemperature": "Augmenter la température"
     },
     "dialNoSetpointHint": "Pas de consigne active",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Vérifier le carrousel de nettoyage",
     "audio_error": "Erreur audio",
     "water_empty": "Réservoir d’eau vide"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Réseau",
+      "home": "Maison",
+      "solar": "Solaire",
+      "battery": "Batterie",
+      "water": "Eau",
+      "gas": "Gaz"
+    },
+    "energy": "Énergie",
+    "today": "Aujourd’hui",
+    "month": "Mois",
+    "consumptionTotals": "Totaux de consommation",
+    "device": "appareil",
+    "devices": "appareils",
+    "close": "Fermer",
+    "moreInfo": "Plus d’informations"
   }
 }

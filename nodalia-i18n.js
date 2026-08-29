@@ -345,7 +345,9 @@
           zoneTool: "Zone",
           routineDefault: "Routine",
           customMenuDefault: "Dock",
-          modesFallbackTitle: "Vacuum & mop modes"
+          modesFallbackTitle: "Vacuum & mop modes",
+          mapImageAlt: "Robot map",
+          mapUnavailable: "Map unavailable"
         },
         actions: {
           returnToBase: "Return to dock",
@@ -364,7 +366,8 @@
           editZone: "Edit zone",
           backPanel: "Back to main panel",
           addZone: "Add zone",
-          gotoFallback: "Point"
+          gotoFallback: "Point",
+          editZoneNumber: "Edit zone {index}"
         }
       },
       navigationMusicAssist: {
@@ -523,7 +526,10 @@
         tiltSlider: "Tilt",
         tiltChip: "Tilt {value}%",
         toggleShowButtons: "Show open, stop, and close",
-        toggleShowSliders: "Show sliders"
+        toggleShowSliders: "Show sliders",
+        decreasePosition: "Decrease position",
+        increasePosition: "Increase position",
+        toggleCover: "Toggle cover"
       },
       person: {
         home: "Home",
@@ -841,7 +847,9 @@
         aria: {
           targetHumidity: "Target humidity",
           showModes: "Show modes",
-          showSpeeds: "Show speeds"
+          showSpeeds: "Show speeds",
+          decreaseHumidity: "Decrease humidity",
+          increaseHumidity: "Increase humidity"
         },
         modes: {
           auto: "Auto",
@@ -903,7 +911,9 @@
           dialRangeGroup: "Comfort range and indoor temperature",
           dialTargetSlider: "Target temperature",
           dialNoSetpoint: "Indoor temperature; thermostat has no active target yet",
-          togglePower: "Turn on or off"
+          togglePower: "Turn on or off",
+          decreaseTemperature: "Decrease temperature",
+          increaseTemperature: "Increase temperature"
         },
         dialNoSetpointHint: "No active setpoint",
         schedule: {
@@ -1242,6 +1252,24 @@
         check_clean_carouse: "Check cleaning carousel",
         audio_error: "Audio error",
         water_empty: "Water tank empty"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Grid",
+          home: "Home",
+          solar: "Solar",
+          battery: "Battery",
+          water: "Water",
+          gas: "Gas"
+        },
+        energy: "Energy",
+        today: "Today",
+        month: "Month",
+        consumptionTotals: "Consumption totals",
+        device: "device",
+        devices: "devices",
+        close: "Close",
+        moreInfo: "More info"
       }
     },
     de: {
@@ -1369,7 +1397,9 @@
           zoneTool: "Zone",
           routineDefault: "Routine",
           customMenuDefault: "Dock",
-          modesFallbackTitle: "Saug- und Wischmodi"
+          modesFallbackTitle: "Saug- und Wischmodi",
+          mapImageAlt: "Roboterkarte",
+          mapUnavailable: "Karte nicht verfügbar"
         },
         actions: {
           returnToBase: "Zur Station",
@@ -1388,7 +1418,8 @@
           editZone: "Zone bearbeiten",
           backPanel: "Zurück zum Hauptpanel",
           addZone: "Zone hinzufügen",
-          gotoFallback: "Punkt"
+          gotoFallback: "Punkt",
+          editZoneNumber: "Zone {index} bearbeiten"
         }
       },
       navigationMusicAssist: {
@@ -1547,7 +1578,10 @@
         tiltSlider: "Neigung",
         tiltChip: "Neigung {value} %",
         toggleShowButtons: "Öffnen, Stopp und Schließen anzeigen",
-        toggleShowSliders: "Schieberegler anzeigen"
+        toggleShowSliders: "Schieberegler anzeigen",
+        decreasePosition: "Position verringern",
+        increasePosition: "Position erhöhen",
+        toggleCover: "Abdeckung umschalten"
       },
       person: {
         home: "Zuhause",
@@ -1745,7 +1779,7 @@
             pm10: "PM10",
             tvoc: "TVOC",
             co2: "CO₂",
-            temperature: "Temp",
+            temperature: "Temperatur",
             humidity: "Feuchte"
           },
           loadingGraphs: "Verlauf wird geladen…",
@@ -1865,7 +1899,9 @@
         aria: {
           targetHumidity: "Zielfeuchtigkeit",
           showModes: "Modi anzeigen",
-          showSpeeds: "Geschwindigkeiten anzeigen"
+          showSpeeds: "Geschwindigkeiten anzeigen",
+          decreaseHumidity: "Luftfeuchtigkeit senken",
+          increaseHumidity: "Luftfeuchtigkeit erhöhen"
         },
         modes: {
           auto: "Auto",
@@ -1927,7 +1963,9 @@
           dialRangeGroup: "Komfortbereich und Raumtemperatur",
           dialTargetSlider: "Solltemperatur",
           dialNoSetpoint: "Raumtemperatur; kein aktives Soll am Thermostat",
-          togglePower: "Ein- oder ausschalten"
+          togglePower: "Ein- oder ausschalten",
+          decreaseTemperature: "Temperatur senken",
+          increaseTemperature: "Temperatur erhöhen"
         },
         dialNoSetpointHint: "Kein aktives Soll",
         schedule: {
@@ -1974,7 +2012,7 @@
         emptyTitle: "Nodalia Graph Card",
         emptyBody: "Lege `entities` auf eine oder mehrere numerische Entitäten fest, um das Diagramm anzuzeigen.",
         emptyHistory: "Kein Verlauf verfügbar",
-        defaultTitle: "Graph"
+        defaultTitle: "Diagramm"
       },
       newsCard: {
         title: "Nachricht",
@@ -2266,6 +2304,24 @@
         check_clean_carouse: "Reinigungskarussell prüfen",
         audio_error: "Audiofehler",
         water_empty: "Wassertank leer"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Stromnetz",
+          home: "Zuhause",
+          solar: "Solar",
+          battery: "Batterie",
+          water: "Wasser",
+          gas: "Gas"
+        },
+        energy: "Energie",
+        today: "Heute",
+        month: "Monat",
+        consumptionTotals: "Verbrauchssummen",
+        device: "Gerät",
+        devices: "Geräte",
+        close: "Schließen",
+        moreInfo: "Mehr Informationen"
       }
     },
     el: {
@@ -2393,7 +2449,9 @@
           zoneTool: "Ζώνη",
           routineDefault: "Ρουτίνα",
           customMenuDefault: "Βάση",
-          modesFallbackTitle: "Λειτουργίες σκουπίσματος και σφουγγαρίσματος"
+          modesFallbackTitle: "Λειτουργίες σκουπίσματος και σφουγγαρίσματος",
+          mapImageAlt: "Χάρτης ρομπότ",
+          mapUnavailable: "Ο χάρτης δεν είναι διαθέσιμος"
         },
         actions: {
           returnToBase: "Επιστροφή στη βάση",
@@ -2412,7 +2470,8 @@
           editZone: "Επεξεργασία ζώνης",
           backPanel: "Πίσω στο κύριο πάνελ",
           addZone: "Προσθήκη ζώνης",
-          gotoFallback: "Σημείο"
+          gotoFallback: "Σημείο",
+          editZoneNumber: "Επεξεργασία ζώνης {index}"
         }
       },
       navigationMusicAssist: {
@@ -2571,7 +2630,10 @@
         tiltSlider: "Κλίση",
         tiltChip: "Κλίση {value}%",
         toggleShowButtons: "Εμφάνιση άνοιγμα, στάση και κλείσιμο",
-        toggleShowSliders: "Εμφάνιση ρυθμιστικών"
+        toggleShowSliders: "Εμφάνιση ρυθμιστικών",
+        decreasePosition: "Μείωση θέσης",
+        increasePosition: "Αύξηση θέσης",
+        toggleCover: "Εναλλαγή καλύμματος"
       },
       person: {
         home: "Σπίτι",
@@ -2640,7 +2702,7 @@
         closeCovers: "Κλείσιμο ρολών",
         openCamera: "Ανοίξτε την κάμερα",
         climateDetails: "Λεπτομέρειες για το κλίμα",
-        mediaPlayer: "Media player",
+        mediaPlayer: "Αναπαραγωγή πολυμέσων",
         vacuum: "Ηλεκτρική σκούπα",
         fans: "Ανεμιστήρες",
         hubHome: "Αρχική",
@@ -2889,7 +2951,9 @@
         aria: {
           targetHumidity: "Στόχος υγρασίας",
           showModes: "Εμφάνιση τρόπων λειτουργίας",
-          showSpeeds: "Εμφάνιση ταχυτήτων"
+          showSpeeds: "Εμφάνιση ταχυτήτων",
+          decreaseHumidity: "Μείωση υγρασίας",
+          increaseHumidity: "Αύξηση υγρασίας"
         },
         modes: {
           auto: "Αυτόματο",
@@ -2951,7 +3015,9 @@
           dialRangeGroup: "Εύρος άνεσης και εσωτερική θερμοκρασία",
           dialTargetSlider: "Θερμοκρασία στόχος",
           dialNoSetpoint: "Εσωτερική θερμοκρασία· ο θερμοστάτης δεν έχει ενεργό στόχο",
-          togglePower: "Ενεργοποίηση ή απενεργοποίηση"
+          togglePower: "Ενεργοποίηση ή απενεργοποίηση",
+          decreaseTemperature: "Μείωση θερμοκρασίας",
+          increaseTemperature: "Αύξηση θερμοκρασίας"
         },
         dialNoSetpointHint: "Χωρίς ενεργό στόχο",
         schedule: {
@@ -3290,6 +3356,24 @@
         check_clean_carouse: "Ελέγξτε το καρουζέλ καθαρισμού",
         audio_error: "Σφάλμα ήχου",
         water_empty: "Άδειο δοχείο νερού"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Δίκτυο",
+          home: "Σπίτι",
+          solar: "Ηλιακή ενέργεια",
+          battery: "Μπαταρία",
+          water: "Νερό",
+          gas: "Αέριο"
+        },
+        energy: "Ενέργεια",
+        today: "Σήμερα",
+        month: "Μήνας",
+        consumptionTotals: "Σύνολα κατανάλωσης",
+        device: "συσκευή",
+        devices: "συσκευές",
+        close: "Κλείσιμο",
+        moreInfo: "Περισσότερες πληροφορίες"
       }
     },
     es: {
@@ -3417,7 +3501,9 @@
           zoneTool: "Zona",
           routineDefault: "Rutina",
           customMenuDefault: "Base",
-          modesFallbackTitle: "Modos de aspirado y fregado"
+          modesFallbackTitle: "Modos de aspirado y fregado",
+          mapImageAlt: "Mapa del robot",
+          mapUnavailable: "Mapa no disponible"
         },
         actions: {
           returnToBase: "Volver a base",
@@ -3436,7 +3522,8 @@
           editZone: "Editar zona",
           backPanel: "Volver al panel principal",
           addZone: "Añadir zona",
-          gotoFallback: "Punto"
+          gotoFallback: "Punto",
+          editZoneNumber: "Editar zona {index}"
         }
       },
       navigationMusicAssist: {
@@ -3595,7 +3682,10 @@
         tiltSlider: "Inclinación",
         tiltChip: "Inclinación {value}%",
         toggleShowButtons: "Mostrar abrir, parar y cerrar",
-        toggleShowSliders: "Mostrar deslizadores"
+        toggleShowSliders: "Mostrar deslizadores",
+        decreasePosition: "Disminuir posición",
+        increasePosition: "Aumentar posición",
+        toggleCover: "Accionar persiana"
       },
       person: {
         home: "En casa",
@@ -3913,7 +4003,9 @@
         aria: {
           targetHumidity: "Humedad objetivo",
           showModes: "Mostrar modos",
-          showSpeeds: "Mostrar velocidades"
+          showSpeeds: "Mostrar velocidades",
+          decreaseHumidity: "Disminuir humedad",
+          increaseHumidity: "Aumentar humedad"
         },
         modes: {
           auto: "Auto",
@@ -3975,7 +4067,9 @@
           dialRangeGroup: "Temperatura interior y consigna",
           dialTargetSlider: "Temperatura objetivo",
           dialNoSetpoint: "Temperatura interior; el termostato no tiene consigna activa",
-          togglePower: "Encender o apagar"
+          togglePower: "Encender o apagar",
+          decreaseTemperature: "Disminuir temperatura",
+          increaseTemperature: "Aumentar temperatura"
         },
         dialNoSetpointHint: "Sin consigna activa",
         schedule: {
@@ -4314,6 +4408,24 @@
         check_clean_carouse: "Revisa el carrusel de limpieza",
         audio_error: "Error de audio",
         water_empty: "Depósito de agua vacío"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Red",
+          home: "Hogar",
+          solar: "Solar",
+          battery: "Batería",
+          water: "Agua",
+          gas: "Gas"
+        },
+        energy: "Energía",
+        today: "Hoy",
+        month: "Mes",
+        consumptionTotals: "Totales de consumo",
+        device: "dispositivo",
+        devices: "dispositivos",
+        close: "Cerrar",
+        moreInfo: "Más información"
       }
     },
     fr: {
@@ -4441,7 +4553,9 @@
           zoneTool: "Zone",
           routineDefault: "Routine",
           customMenuDefault: "Station",
-          modesFallbackTitle: "Modes aspiration et lavage"
+          modesFallbackTitle: "Modes aspiration et lavage",
+          mapImageAlt: "Carte du robot",
+          mapUnavailable: "Carte indisponible"
         },
         actions: {
           returnToBase: "Retour station",
@@ -4460,7 +4574,8 @@
           editZone: "Modifier zone",
           backPanel: "Retour au panneau",
           addZone: "Ajouter zone",
-          gotoFallback: "Indiquer"
+          gotoFallback: "Indiquer",
+          editZoneNumber: "Modifier la zone {index}"
         }
       },
       navigationMusicAssist: {
@@ -4619,7 +4734,10 @@
         tiltSlider: "Inclinaison",
         tiltChip: "Inclinaison {value} %",
         toggleShowButtons: "Afficher ouvrir, arrêt et fermer",
-        toggleShowSliders: "Afficher les curseurs"
+        toggleShowSliders: "Afficher les curseurs",
+        decreasePosition: "Diminuer la position",
+        increasePosition: "Augmenter la position",
+        toggleCover: "Actionner le volet"
       },
       person: {
         home: "À la maison",
@@ -4937,7 +5055,9 @@
         aria: {
           targetHumidity: "Humidité cible",
           showModes: "Afficher les modes",
-          showSpeeds: "Afficher les vitesses"
+          showSpeeds: "Afficher les vitesses",
+          decreaseHumidity: "Diminuer l’humidité",
+          increaseHumidity: "Augmenter l’humidité"
         },
         modes: {
           auto: "Auto",
@@ -4999,7 +5119,9 @@
           dialRangeGroup: "Plage de confort et température intérieure",
           dialTargetSlider: "Température cible",
           dialNoSetpoint: "Température intérieure ; pas de consigne active sur le thermostat",
-          togglePower: "Allumer ou éteindre"
+          togglePower: "Allumer ou éteindre",
+          decreaseTemperature: "Diminuer la température",
+          increaseTemperature: "Augmenter la température"
         },
         dialNoSetpointHint: "Pas de consigne active",
         schedule: {
@@ -5338,6 +5460,24 @@
         check_clean_carouse: "Vérifier le carrousel de nettoyage",
         audio_error: "Erreur audio",
         water_empty: "Réservoir d’eau vide"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Réseau",
+          home: "Maison",
+          solar: "Solaire",
+          battery: "Batterie",
+          water: "Eau",
+          gas: "Gaz"
+        },
+        energy: "Énergie",
+        today: "Aujourd’hui",
+        month: "Mois",
+        consumptionTotals: "Totaux de consommation",
+        device: "appareil",
+        devices: "appareils",
+        close: "Fermer",
+        moreInfo: "Plus d’informations"
       }
     },
     it: {
@@ -5465,7 +5605,9 @@
           zoneTool: "Zona",
           routineDefault: "Routine",
           customMenuDefault: "Base",
-          modesFallbackTitle: "Modalità aspirazione e lavaggio"
+          modesFallbackTitle: "Modalità aspirazione e lavaggio",
+          mapImageAlt: "Mappa del robot",
+          mapUnavailable: "Mappa non disponibile"
         },
         actions: {
           returnToBase: "Torna alla base",
@@ -5484,7 +5626,8 @@
           editZone: "Modifica zona",
           backPanel: "Torna al pannello",
           addZone: "Aggiungi zona",
-          gotoFallback: "Punto"
+          gotoFallback: "Punto",
+          editZoneNumber: "Modifica zona {index}"
         }
       },
       navigationMusicAssist: {
@@ -5643,7 +5786,10 @@
         tiltSlider: "Inclinazione",
         tiltChip: "Inclinazione {value}%",
         toggleShowButtons: "Mostra apri, stop e chiudi",
-        toggleShowSliders: "Mostra cursori"
+        toggleShowSliders: "Mostra cursori",
+        decreasePosition: "Diminuisci posizione",
+        increasePosition: "Aumenta posizione",
+        toggleCover: "Aziona copertura"
       },
       person: {
         home: "A casa",
@@ -5862,8 +6008,8 @@
           metrics: "metriche",
           roles: {
             status: "Stato",
-            download: "Download",
-            upload: "Upload",
+            download: "Scaricamento",
+            upload: "Caricamento",
             latency: "Latenza",
             signal: "Segnale",
             traffic: "Traffico"
@@ -5961,7 +6107,9 @@
         aria: {
           targetHumidity: "Umidità target",
           showModes: "Mostra modalità",
-          showSpeeds: "Mostra velocità"
+          showSpeeds: "Mostra velocità",
+          decreaseHumidity: "Diminuisci umidità",
+          increaseHumidity: "Aumenta umidità"
         },
         modes: {
           auto: "Auto",
@@ -6023,7 +6171,9 @@
           dialRangeGroup: "Fascia di comfort e temperatura interna",
           dialTargetSlider: "Temperatura target",
           dialNoSetpoint: "Temperatura interna; nessun setpoint attivo sul termostato",
-          togglePower: "Accendi o spegni"
+          togglePower: "Accendi o spegni",
+          decreaseTemperature: "Diminuisci temperatura",
+          increaseTemperature: "Aumenta temperatura"
         },
         dialNoSetpointHint: "Nessun setpoint attivo",
         schedule: {
@@ -6362,6 +6512,24 @@
         check_clean_carouse: "Controllare il carosello di pulizia",
         audio_error: "Errore audio",
         water_empty: "Serbatoio dell’acqua vuoto"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Rete",
+          home: "Casa",
+          solar: "Solare",
+          battery: "Batteria",
+          water: "Acqua",
+          gas: "Gas"
+        },
+        energy: "Energia",
+        today: "Oggi",
+        month: "Mese",
+        consumptionTotals: "Totali dei consumi",
+        device: "dispositivo",
+        devices: "dispositivi",
+        close: "Chiudi",
+        moreInfo: "Maggiori informazioni"
       }
     },
     nl: {
@@ -6489,7 +6657,9 @@
           zoneTool: "Zone",
           routineDefault: "Routine",
           customMenuDefault: "Dock",
-          modesFallbackTitle: "Zuig- en dweilmodi"
+          modesFallbackTitle: "Zuig- en dweilmodi",
+          mapImageAlt: "Robotkaart",
+          mapUnavailable: "Kaart niet beschikbaar"
         },
         actions: {
           returnToBase: "Terug naar dock",
@@ -6508,7 +6678,8 @@
           editZone: "Zone bewerken",
           backPanel: "Terug naar hoofdpaneel",
           addZone: "Zone toevoegen",
-          gotoFallback: "Punt"
+          gotoFallback: "Punt",
+          editZoneNumber: "Zone {index} bewerken"
         }
       },
       navigationMusicAssist: {
@@ -6619,7 +6790,7 @@
           playPause: "Afspelen of pauzeren",
           volumeDown: "Volume lager",
           volumeUp: "Volume omhoog",
-          openMedia: "Open media",
+          openMedia: "Media openen",
           navigationBar: "Navigatiebalk",
           mediaPlayers: "Mediaspelers",
           primaryAction: "Primaire actie"
@@ -6667,7 +6838,10 @@
         tiltSlider: "Kantelen",
         tiltChip: "Kanteling {value}%",
         toggleShowButtons: "Openen, stop en sluiten tonen",
-        toggleShowSliders: "Schuifregelaars tonen"
+        toggleShowSliders: "Schuifregelaars tonen",
+        decreasePosition: "Positie verlagen",
+        increasePosition: "Positie verhogen",
+        toggleCover: "Afdekking bedienen"
       },
       person: {
         home: "Thuis",
@@ -6985,7 +7159,9 @@
         aria: {
           targetHumidity: "Doelvochtigheid",
           showModes: "Toon modi",
-          showSpeeds: "Laat snelheden zien"
+          showSpeeds: "Laat snelheden zien",
+          decreaseHumidity: "Luchtvochtigheid verlagen",
+          increaseHumidity: "Luchtvochtigheid verhogen"
         },
         modes: {
           auto: "Auto",
@@ -7047,7 +7223,9 @@
           dialRangeGroup: "Comfortbereik en binnentemperatuur",
           dialTargetSlider: "Doeltemperatuur",
           dialNoSetpoint: "Kamertemperatuur; thermostaat heeft geen actieve setpoint",
-          togglePower: "In- of uitschakelen"
+          togglePower: "In- of uitschakelen",
+          decreaseTemperature: "Temperatuur verlagen",
+          increaseTemperature: "Temperatuur verhogen"
         },
         dialNoSetpointHint: "Geen actieve setpoint",
         schedule: {
@@ -7386,6 +7564,24 @@
         check_clean_carouse: "Controleer de schoonmaakcarrousel",
         audio_error: "Audiofout",
         water_empty: "Watertank leeg"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Net",
+          home: "Huis",
+          solar: "Zonne-energie",
+          battery: "Batterij",
+          water: "Water",
+          gas: "Gas"
+        },
+        energy: "Energie",
+        today: "Vandaag",
+        month: "Maand",
+        consumptionTotals: "Verbruikstotalen",
+        device: "apparaat",
+        devices: "apparaten",
+        close: "Sluiten",
+        moreInfo: "Meer informatie"
       }
     },
     no: {
@@ -7513,7 +7709,9 @@
           zoneTool: "Zone",
           routineDefault: "Routine",
           customMenuDefault: "Dock",
-          modesFallbackTitle: "Zuig- en dweilmodi"
+          modesFallbackTitle: "Zuig- en dweilmodi",
+          mapImageAlt: "Robotkart",
+          mapUnavailable: "Kart utilgjengelig"
         },
         actions: {
           returnToBase: "Terug naar dock",
@@ -7532,7 +7730,8 @@
           editZone: "Zone bewerken",
           backPanel: "Terug naar hoofdpaneel",
           addZone: "Zone toevoegen",
-          gotoFallback: "Punt"
+          gotoFallback: "Punt",
+          editZoneNumber: "Rediger sone {index}"
         }
       },
       navigationMusicAssist: {
@@ -7691,7 +7890,10 @@
         tiltSlider: "Vipp",
         tiltChip: "Kanteling {value}%",
         toggleShowButtons: "Openen, stop en sluiten tonen",
-        toggleShowSliders: "Schuifregelaars tonen"
+        toggleShowSliders: "Schuifregelaars tonen",
+        decreasePosition: "Reduser posisjon",
+        increasePosition: "Øk posisjon",
+        toggleCover: "Betjen dekselet"
       },
       person: {
         home: "Hjemme",
@@ -8009,7 +8211,9 @@
         aria: {
           targetHumidity: "Mål fuktighet",
           showModes: "Vis moduser",
-          showSpeeds: "Vis hastigheter"
+          showSpeeds: "Vis hastigheter",
+          decreaseHumidity: "Reduser luftfuktigheten",
+          increaseHumidity: "Øk luftfuktigheten"
         },
         modes: {
           auto: "Auto",
@@ -8071,7 +8275,9 @@
           dialRangeGroup: "Comfortbereik en binnentemperatuur",
           dialTargetSlider: "Doeltemperatuur",
           dialNoSetpoint: "Kamertemperatuur; thermostaat heeft geen actieve setpoint",
-          togglePower: "In- of uitschakelen"
+          togglePower: "In- of uitschakelen",
+          decreaseTemperature: "Senk temperaturen",
+          increaseTemperature: "Øk temperaturen"
         },
         dialNoSetpointHint: "Geen actieve setpoint",
         schedule: {
@@ -8410,6 +8616,24 @@
         check_clean_carouse: "Sjekk rengjøringskarusellen",
         audio_error: "Lydfeil",
         water_empty: "Vanntank tom"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Strømnett",
+          home: "Hjem",
+          solar: "Solenergi",
+          battery: "Batteri",
+          water: "Vann",
+          gas: "Gass"
+        },
+        energy: "Energi",
+        today: "I dag",
+        month: "Måned",
+        consumptionTotals: "Forbrukstotaler",
+        device: "enhet",
+        devices: "enheter",
+        close: "Lukk",
+        moreInfo: "Mer informasjon"
       }
     },
     pt: {
@@ -8537,7 +8761,9 @@
           zoneTool: "Zona",
           routineDefault: "Rotina",
           customMenuDefault: "Base",
-          modesFallbackTitle: "Modos de aspiração e esfregão"
+          modesFallbackTitle: "Modos de aspiração e esfregão",
+          mapImageAlt: "Mapa do robô",
+          mapUnavailable: "Mapa indisponível"
         },
         actions: {
           returnToBase: "Regressar à base",
@@ -8556,7 +8782,8 @@
           editZone: "Editar zona",
           backPanel: "Voltar ao painel principal",
           addZone: "Adicionar zona",
-          gotoFallback: "Ponto"
+          gotoFallback: "Ponto",
+          editZoneNumber: "Editar zona {index}"
         }
       },
       navigationMusicAssist: {
@@ -8715,7 +8942,10 @@
         tiltSlider: "Inclinação",
         tiltChip: "Inclinação {value}%",
         toggleShowButtons: "Mostrar abrir, parar e fechar",
-        toggleShowSliders: "Mostrar controlos deslizantes"
+        toggleShowSliders: "Mostrar controlos deslizantes",
+        decreasePosition: "Diminuir posição",
+        increasePosition: "Aumentar posição",
+        toggleCover: "Acionar cobertura"
       },
       person: {
         home: "Em casa",
@@ -8934,8 +9164,8 @@
           metrics: "métricas",
           roles: {
             status: "Estado",
-            download: "Download",
-            upload: "Upload",
+            download: "Transferência",
+            upload: "Envio",
             latency: "Latência",
             signal: "Sinal",
             traffic: "Tráfego"
@@ -9033,7 +9263,9 @@
         aria: {
           targetHumidity: "Umidade alvo",
           showModes: "Mostrar modos",
-          showSpeeds: "Mostrar velocidades"
+          showSpeeds: "Mostrar velocidades",
+          decreaseHumidity: "Diminuir humidade",
+          increaseHumidity: "Aumentar humidade"
         },
         modes: {
           auto: "Automático",
@@ -9095,7 +9327,9 @@
           dialRangeGroup: "Faixa de conforto e temperatura interior",
           dialTargetSlider: "Temperatura alvo",
           dialNoSetpoint: "Temperatura interior; o termostato não tem setpoint ativo",
-          togglePower: "Ligar ou desligar"
+          togglePower: "Ligar ou desligar",
+          decreaseTemperature: "Diminuir temperatura",
+          increaseTemperature: "Aumentar temperatura"
         },
         dialNoSetpointHint: "Sem setpoint ativo",
         schedule: {
@@ -9434,6 +9668,24 @@
         check_clean_carouse: "Verifique o carrossel de limpeza",
         audio_error: "Erro de áudio",
         water_empty: "Depósito de água vazio"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Rede",
+          home: "Casa",
+          solar: "Solar",
+          battery: "Bateria",
+          water: "Água",
+          gas: "Gás"
+        },
+        energy: "Energia",
+        today: "Hoje",
+        month: "Mês",
+        consumptionTotals: "Totais de consumo",
+        device: "dispositivo",
+        devices: "dispositivos",
+        close: "Fechar",
+        moreInfo: "Mais informações"
       }
     },
     ro: {
@@ -9561,7 +9813,9 @@
           zoneTool: "Zonă",
           routineDefault: "Rutină",
           customMenuDefault: "Bază",
-          modesFallbackTitle: "Moduri aspirare și mop"
+          modesFallbackTitle: "Moduri aspirare și mop",
+          mapImageAlt: "Harta robotului",
+          mapUnavailable: "Harta nu este disponibilă"
         },
         actions: {
           returnToBase: "Înapoi la bază",
@@ -9580,7 +9834,8 @@
           editZone: "Editează zona",
           backPanel: "Înapoi la panoul principal",
           addZone: "Adaugă zonă",
-          gotoFallback: "Punct"
+          gotoFallback: "Punct",
+          editZoneNumber: "Editează zona {index}"
         }
       },
       navigationMusicAssist: {
@@ -9739,7 +9994,10 @@
         tiltSlider: "Înclinare",
         tiltChip: "Înclinare {value}%",
         toggleShowButtons: "Afișează deschide, stop și închide",
-        toggleShowSliders: "Afișează glisoarele"
+        toggleShowSliders: "Afișează glisoarele",
+        decreasePosition: "Micșorează poziția",
+        increasePosition: "Mărește poziția",
+        toggleCover: "Acționează jaluzeaua"
       },
       person: {
         home: "Acasă",
@@ -9757,7 +10015,7 @@
         cardDescription: "Previzualizarea camerei în stil Nodalia cu cipuri de stare și vizualizare extinsă.",
         live: "Trăi",
         snapshot: "Instantaneu",
-        offline: "Offline",
+        offline: "Deconectat",
         unknown: "Necunoscut",
         unavailable: "Indisponibil",
         recording: "Înregistrare",
@@ -9783,7 +10041,7 @@
         humidity: "Umiditate",
         climateLabel: "Clima",
         occupied: "Ocupată",
-        vacant: "Vacant",
+        vacant: "Liber",
         comfortable: "Confortabil",
         hot: "Fierbinte",
         cold: "Rece",
@@ -9808,7 +10066,7 @@
         closeCovers: "Închide jaluzelele",
         openCamera: "Deschideți camera",
         climateDetails: "Detalii climatice",
-        mediaPlayer: "Media player",
+        mediaPlayer: "Player media",
         vacuum: "Aspirator",
         fans: "Ventilatoare",
         hubHome: "Acasă",
@@ -10057,7 +10315,9 @@
         aria: {
           targetHumidity: "Umiditatea țintă",
           showModes: "Afișați moduri",
-          showSpeeds: "Arată viteze"
+          showSpeeds: "Arată viteze",
+          decreaseHumidity: "Scade umiditatea",
+          increaseHumidity: "Crește umiditatea"
         },
         modes: {
           auto: "Automat",
@@ -10119,7 +10379,9 @@
           dialRangeGroup: "Interval de confort și temperatura interioară",
           dialTargetSlider: "Temperatura țintă",
           dialNoSetpoint: "Temperatură interioară; termostatul nu are țintă activă",
-          togglePower: "Pornește sau oprește"
+          togglePower: "Pornește sau oprește",
+          decreaseTemperature: "Scade temperatura",
+          increaseTemperature: "Crește temperatura"
         },
         dialNoSetpointHint: "Fără țintă activă",
         schedule: {
@@ -10458,6 +10720,24 @@
         check_clean_carouse: "Verificați caruselul de curățare",
         audio_error: "Eroare audio",
         water_empty: "Rezervorul de apă este gol"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Rețea",
+          home: "Acasă",
+          solar: "Solar",
+          battery: "Baterie",
+          water: "Apă",
+          gas: "Gaz"
+        },
+        energy: "Energie",
+        today: "Astăzi",
+        month: "Lună",
+        consumptionTotals: "Totaluri consum",
+        device: "dispozitiv",
+        devices: "dispozitive",
+        close: "Închide",
+        moreInfo: "Mai multe informații"
       }
     },
     ru: {
@@ -10585,7 +10865,9 @@
           zoneTool: "Зона",
           routineDefault: "Сценарий",
           customMenuDefault: "База",
-          modesFallbackTitle: "Режимы пылесоса и мытья"
+          modesFallbackTitle: "Режимы пылесоса и мытья",
+          mapImageAlt: "Карта робота",
+          mapUnavailable: "Карта недоступна"
         },
         actions: {
           returnToBase: "На базу",
@@ -10604,7 +10886,8 @@
           editZone: "Редактировать зону",
           backPanel: "К основной панели",
           addZone: "Добавить зону",
-          gotoFallback: "Точка"
+          gotoFallback: "Точка",
+          editZoneNumber: "Изменить зону {index}"
         }
       },
       navigationMusicAssist: {
@@ -10763,7 +11046,10 @@
         tiltSlider: "Наклон",
         tiltChip: "Наклон {value}%",
         toggleShowButtons: "Показать открыть, стоп и закрыть",
-        toggleShowSliders: "Показать ползунки"
+        toggleShowSliders: "Показать ползунки",
+        decreasePosition: "Уменьшить положение",
+        increasePosition: "Увеличить положение",
+        toggleCover: "Переключить штору"
       },
       person: {
         home: "Дома",
@@ -11081,7 +11367,9 @@
         aria: {
           targetHumidity: "Целевая влажность",
           showModes: "Показать режимы",
-          showSpeeds: "Показать скорости"
+          showSpeeds: "Показать скорости",
+          decreaseHumidity: "Уменьшить влажность",
+          increaseHumidity: "Увеличить влажность"
         },
         modes: {
           auto: "Авто",
@@ -11143,7 +11431,9 @@
           dialRangeGroup: "Диапазон комфорта и температура в помещении",
           dialTargetSlider: "Заданная температура",
           dialNoSetpoint: "Комнатная температура; на термостате нет активной уставки",
-          togglePower: "Включить или выключить"
+          togglePower: "Включить или выключить",
+          decreaseTemperature: "Уменьшить температуру",
+          increaseTemperature: "Увеличить температуру"
         },
         dialNoSetpointHint: "Нет активной уставки",
         schedule: {
@@ -11482,6 +11772,24 @@
         check_clean_carouse: "Проверьте карусель очистки",
         audio_error: "Ошибка звука",
         water_empty: "Бак для воды пуст"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "Электросеть",
+          home: "Дом",
+          solar: "Солнечная энергия",
+          battery: "Аккумулятор",
+          water: "Вода",
+          gas: "Газ"
+        },
+        energy: "Энергия",
+        today: "Сегодня",
+        month: "Месяц",
+        consumptionTotals: "Итоги потребления",
+        device: "устройство",
+        devices: "устройства",
+        close: "Закрыть",
+        moreInfo: "Подробнее"
       }
     },
     zh: {
@@ -11609,7 +11917,9 @@
           zoneTool: "区域",
           routineDefault: "例行程序",
           customMenuDefault: "基站",
-          modesFallbackTitle: "吸尘与拖地模式"
+          modesFallbackTitle: "吸尘与拖地模式",
+          mapImageAlt: "机器人地图",
+          mapUnavailable: "地图不可用"
         },
         actions: {
           returnToBase: "返回基站",
@@ -11628,7 +11938,8 @@
           editZone: "编辑区域",
           backPanel: "返回主面板",
           addZone: "添加区域",
-          gotoFallback: "点"
+          gotoFallback: "点",
+          editZoneNumber: "编辑区域 {index}"
         }
       },
       navigationMusicAssist: {
@@ -11787,7 +12098,10 @@
         tiltSlider: "倾斜",
         tiltChip: "倾斜 {value}%",
         toggleShowButtons: "显示打开、停止和关闭",
-        toggleShowSliders: "显示滑块"
+        toggleShowSliders: "显示滑块",
+        decreasePosition: "降低位置",
+        increasePosition: "提高位置",
+        toggleCover: "切换遮盖"
       },
       person: {
         home: "在家",
@@ -12105,7 +12419,9 @@
         aria: {
           targetHumidity: "目标湿度",
           showModes: "显示模式",
-          showSpeeds: "显示速度"
+          showSpeeds: "显示速度",
+          decreaseHumidity: "降低湿度",
+          increaseHumidity: "提高湿度"
         },
         modes: {
           auto: "自动",
@@ -12167,7 +12483,9 @@
           dialRangeGroup: "舒适区间与室内温度",
           dialTargetSlider: "目标温度",
           dialNoSetpoint: "室内温度；恒温器尚无生效目标温度",
-          togglePower: "开或关"
+          togglePower: "开或关",
+          decreaseTemperature: "降低温度",
+          increaseTemperature: "提高温度"
         },
         dialNoSetpointHint: "尚无生效设定",
         schedule: {
@@ -12506,6 +12824,24 @@
         check_clean_carouse: "检查清洁转盘",
         audio_error: "音频错误",
         water_empty: "水箱为空"
+      },
+      powerFlowCard: {
+        nodes: {
+          grid: "电网",
+          home: "家庭",
+          solar: "太阳能",
+          battery: "电池",
+          water: "水",
+          gas: "燃气"
+        },
+        energy: "能源",
+        today: "今天",
+        month: "本月",
+        consumptionTotals: "用量汇总",
+        device: "设备",
+        devices: "设备",
+        close: "关闭",
+        moreInfo: "更多信息"
       }
     }
   };

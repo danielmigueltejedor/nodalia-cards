@@ -123,7 +123,9 @@
       "zoneTool": "Zona",
       "routineDefault": "Rutina",
       "customMenuDefault": "Base",
-      "modesFallbackTitle": "Modos de aspirado y fregado"
+      "modesFallbackTitle": "Modos de aspirado y fregado",
+      "mapImageAlt": "Mapa del robot",
+      "mapUnavailable": "Mapa no disponible"
     },
     "actions": {
       "returnToBase": "Volver a base",
@@ -142,7 +144,8 @@
       "editZone": "Editar zona",
       "backPanel": "Volver al panel principal",
       "addZone": "Añadir zona",
-      "gotoFallback": "Punto"
+      "gotoFallback": "Punto",
+      "editZoneNumber": "Editar zona {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Inclinación",
     "tiltChip": "Inclinación {value}%",
     "toggleShowButtons": "Mostrar abrir, parar y cerrar",
-    "toggleShowSliders": "Mostrar deslizadores"
+    "toggleShowSliders": "Mostrar deslizadores",
+    "decreasePosition": "Disminuir posición",
+    "increasePosition": "Aumentar posición",
+    "toggleCover": "Accionar persiana"
   },
   "person": {
     "home": "En casa",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Cargando historial…",
       "emptyGraphs": "Aún no hay historial"
     },
-    "battery": { "title": "Baterías", "subtitle": "Vista general de baterías", "average": "de media", "devices": "dispositivos", "good": "Correcta", "low": "Baja", "critical": "Crítica" },
-    "network": { "title": "Red", "subtitle": "Vista general de la conexión", "metrics": "métricas", "roles": { "status": "Estado", "download": "Descarga", "upload": "Subida", "latency": "Latencia", "signal": "Señal", "traffic": "Tráfico" } },
-    "overview": { "empty": "Añade entidades desde el editor visual.", "unavailable": "No disponible", "unconfigured": "Sin configurar" }
+    "battery": {
+      "title": "Baterías",
+      "subtitle": "Vista general de baterías",
+      "average": "de media",
+      "devices": "dispositivos",
+      "good": "Correcta",
+      "low": "Baja",
+      "critical": "Crítica"
+    },
+    "network": {
+      "title": "Red",
+      "subtitle": "Vista general de la conexión",
+      "metrics": "métricas",
+      "roles": {
+        "status": "Estado",
+        "download": "Descarga",
+        "upload": "Subida",
+        "latency": "Latencia",
+        "signal": "Señal",
+        "traffic": "Tráfico"
+      }
+    },
+    "overview": {
+      "empty": "Añade entidades desde el editor visual.",
+      "unavailable": "No disponible",
+      "unconfigured": "Sin configurar"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Humedad objetivo",
       "showModes": "Mostrar modos",
-      "showSpeeds": "Mostrar velocidades"
+      "showSpeeds": "Mostrar velocidades",
+      "decreaseHumidity": "Disminuir humedad",
+      "increaseHumidity": "Aumentar humedad"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Temperatura interior y consigna",
       "dialTargetSlider": "Temperatura objetivo",
       "dialNoSetpoint": "Temperatura interior; el termostato no tiene consigna activa",
-      "togglePower": "Encender o apagar"
+      "togglePower": "Encender o apagar",
+      "decreaseTemperature": "Disminuir temperatura",
+      "increaseTemperature": "Aumentar temperatura"
     },
     "dialNoSetpointHint": "Sin consigna activa",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Revisa el carrusel de limpieza",
     "audio_error": "Error de audio",
     "water_empty": "Depósito de agua vacío"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Red",
+      "home": "Hogar",
+      "solar": "Solar",
+      "battery": "Batería",
+      "water": "Agua",
+      "gas": "Gas"
+    },
+    "energy": "Energía",
+    "today": "Hoy",
+    "month": "Mes",
+    "consumptionTotals": "Totales de consumo",
+    "device": "dispositivo",
+    "devices": "dispositivos",
+    "close": "Cerrar",
+    "moreInfo": "Más información"
   }
 }

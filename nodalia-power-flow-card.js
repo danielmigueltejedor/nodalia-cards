@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "2.2.2";
+const CARD_VERSION = "2.2.3-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1146,6 +1146,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
   }
 
+  _powerFlowUi(path, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const readPath = pack => String(path || "").split(".").reduce((value, key) => value?.[key], pack);
+    const raw = readPath(window.NodaliaI18n?.strings?.(lang)?.powerFlowCard)
+      ?? readPath(window.NodaliaI18n?.strings?.("en")?.powerFlowCard);
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
   _triggerHaptic(styleOverride = null) {
     const haptics = this._config?.haptics || {};
     if (haptics.enabled !== true) {
@@ -1427,7 +1436,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
     const state = sourceResult.state;
     const unavailable = Boolean(nodeConfig.entity || nodeConfig.export_entity) && (!state || isUnavailableState(state));
-    const label = nodeConfig.name || state?.attributes?.friendly_name || NODE_DEFAULTS[kind]?.name || kind;
+    const defaultNodeName = NODE_DEFAULTS[kind]?.name || kind;
+    const label = kind !== "individual" && nodeConfig.name === defaultNodeName
+      ? this._powerFlowUi(`nodes.${kind}`, defaultNodeName)
+      : (nodeConfig.name || state?.attributes?.friendly_name || defaultNodeName);
     let icon = nodeConfig.icon || state?.attributes?.icon || NODE_DEFAULTS[kind]?.icon || "mdi:flash";
     const color = gridExport
       ? (nodeConfig.export_color || NODE_DEFAULTS.grid.export_color)
@@ -2455,7 +2467,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     ).trim();
     const parsed = parseNumber(state?.state);
     const display = this._formatConsumptionChipValue(parsed, unit);
-    const defaultLabel = period === "day" ? "Today" : "Month";
+    const defaultLabel = period === "day"
+      ? this._powerFlowUi("today", "Today")
+      : this._powerFlowUi("month", "Month");
     const label = String(chips[`${period}_label`] || "").trim() || defaultLabel;
     const icon = period === "day" ? "mdi:calendar-today" : "mdi:calendar-month";
 
@@ -2481,7 +2495,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     return `
-      <div class="power-flow-card__status-chips" role="group" aria-label="Consumption totals">
+      <div class="power-flow-card__status-chips" role="group" aria-label="${escapeHtml(this._powerFlowUi("consumptionTotals", "Consumption totals"))}">
         ${chips.map(chip => `
           <span
             class="power-flow-card__chip power-flow-card__chip--stat ${chip.clickable ? "is-clickable" : ""}"
@@ -2579,7 +2593,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       this._toFlowMagnitude(home.value, home.unit),
       ...popupIndividuals.map(node => this._toFlowMagnitude(node.value, node.unit)),
     );
-    const deviceCountLabel = `${popupIndividuals.length} ${popupIndividuals.length === 1 ? "device" : "devices"}`;
+    const deviceCountLabel = `${popupIndividuals.length} ${this._powerFlowUi(popupIndividuals.length === 1 ? "device" : "devices", popupIndividuals.length === 1 ? "device" : "devices")}`;
+    const closeLabel = this._powerFlowUi("close", "Close");
+    const moreInfoLabel = this._powerFlowUi("moreInfo", "More info");
     const consumptionChips = this._renderConsumptionChips();
     const homeSummaryValue = this._config?.show_values === false
       ? ""
@@ -2598,7 +2614,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         style="--home-popup-accent:${escapeHtml(home.color)};"
         aria-hidden="false"
       >
-        <button type="button" class="power-flow-card__home-popup-backdrop" data-home-popup-action="close" aria-label="Close"></button>
+        <button type="button" class="power-flow-card__home-popup-backdrop" data-home-popup-action="close" aria-label="${escapeHtml(closeLabel)}"></button>
         <div
           class="power-flow-card__home-popup-panel ${animations.enabled ? "power-flow-card__home-popup-panel--entrance" : ""}"
           role="dialog"
@@ -2619,14 +2635,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
                       class="power-flow-card__home-popup-icon-button"
                       data-node-entity="${escapeHtml(home.entityId)}"
                       data-node-action="more-info"
-                      title="More info"
+                      title="${escapeHtml(moreInfoLabel)}"
                     >
                       <ha-icon icon="mdi:information-outline"></ha-icon>
                     </button>
                   `
                   : ""
               }
-              <button type="button" class="power-flow-card__home-popup-icon-button" data-home-popup-action="close" title="Close">
+              <button type="button" class="power-flow-card__home-popup-icon-button" data-home-popup-action="close" title="${escapeHtml(closeLabel)}">
                 <ha-icon icon="mdi:close"></ha-icon>
               </button>
             </div>
@@ -2695,7 +2711,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
-    const dashboardLabel = this._config?.dashboard_link_label || "Energy";
+    const dashboardLabel = this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label
+      ? this._config.dashboard_link_label
+      : this._powerFlowUi("energy", "Energy");
 
     return `
       <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""} ${animateEntrance ? "power-flow-card__simple-layout--entering" : ""}">
@@ -4190,9 +4208,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
                   ${
                     showDashboardButton && layoutPreset !== "simple"
                       ? `
-                        <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label || "Energy")}">
+                        <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}">
                           <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
-                          <span>${escapeHtml(this._config?.dashboard_link_label || "Energy")}</span>
+                          <span>${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}</span>
                         </button>
                       `
                       : ""
@@ -4203,7 +4221,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             `
             : ""
         }
-        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || "Energy")}"` : ""}>
+        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
           ${
             layoutPreset === "simple"
               ? this._renderSimpleLayout(nodes, lines, {

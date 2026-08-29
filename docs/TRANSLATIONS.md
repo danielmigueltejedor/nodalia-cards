@@ -39,13 +39,14 @@ sv
 
 ## 3. Runtime translation keys
 
-Runtime strings use nested JSON objects per language under `i18n/runtime/`. The canonical file is `i18n/runtime/en.json`. Other locales may omit keys: missing branches inherit from English when the card resolves text (`deepMergeLocale`).
+Runtime strings use nested JSON objects per language under `i18n/runtime/`. The canonical file is `i18n/runtime/en.json`. Every supported locale must keep the same tree shape; runtime fallback to English remains a defensive safeguard.
 
 After editing any `i18n/runtime/*.json` file, regenerate the embedded pack in `nodalia-i18n.js`:
 
 ```bash
 pnpm run i18n:gen-runtime
 pnpm run i18n:validate-runtime
+pnpm run i18n:audit
 ```
 
 The `nodalia-i18n.js` file contains a generated `const PACK = { ... }` block between `// <nodalia-runtime-i18n-pack>` and `// </nodalia-runtime-i18n-pack>` — do not hand-edit that block; change the JSON sources instead.
@@ -108,6 +109,7 @@ pnpm run bundle
 
 ```bash
 pnpm run i18n:validate-editor
+pnpm run i18n:audit
 ```
 
 6. Regenerate the embedded editor catalog:
@@ -143,6 +145,7 @@ pnpm run i18n:validate-editor
 pnpm run i18n:gen-editor
 pnpm run i18n:validate-runtime
 pnpm run i18n:gen-runtime
+pnpm run i18n:audit
 pnpm run bundle
 pnpm test
 ```
@@ -151,7 +154,7 @@ pnpm test
 
 Add new keys to **`i18n/runtime/en.json`** first (same nested shape as sibling keys). Mirror the key path in other `i18n/runtime/<lang>.json` files when you have a translation.
 
-Then run `pnpm run i18n:validate-runtime` and `pnpm run i18n:gen-runtime` so the `const PACK` block in `nodalia-i18n.js` is regenerated.
+Then run `pnpm run i18n:validate-runtime`, `pnpm run i18n:audit` and `pnpm run i18n:gen-runtime` so the `const PACK` block in `nodalia-i18n.js` is regenerated. The audit runs fully offline and fails when a locale is missing a key or still contains a suspicious copy of its English source value. Intentional universal terms and true cognates are explicitly allowlisted in the audit script.
 
 English should stay complete: locales with missing branches inherit from English via `deepMergeLocale`.
 
@@ -218,6 +221,7 @@ pnpm run i18n:validate-editor
 pnpm run i18n:gen-editor
 pnpm run i18n:validate-runtime
 pnpm run i18n:gen-runtime
+pnpm run i18n:audit
 pnpm run bundle
 pnpm test
 ```

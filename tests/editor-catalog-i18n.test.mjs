@@ -19,6 +19,28 @@ test("runtime locale JSON trees stay valid (run scripts/validate-runtime-i18n.mj
   assert.equal(res.status, 0, res.stderr || res.stdout);
 });
 
+test("runtime and editor catalogs contain no untranslated English gaps", () => {
+  const script = path.join(root, "scripts", "translate-all-locale-gaps.mjs");
+  const res = spawnSync(process.execPath, [script, "--offline", "--check"], { encoding: "utf8" });
+  assert.equal(res.status, 0, res.stderr || res.stdout);
+});
+
+test("runtime cards route audited accessibility labels through i18n", () => {
+  const cases = [
+    ["nodalia-cover-card.js", /_coverCardUi\("decreasePosition"/, /aria-label="Decrease position"/],
+    ["nodalia-humidifier-card.js", /_humidifierAria\("decreaseHumidity"/, /aria-label="Decrease humidity"/],
+    ["nodalia-climate-card.js", /_climateCardAria\("decreaseTemperature"/, /aria-label="Decrease temperature"/],
+    ["nodalia-power-flow-card.js", /_powerFlowUi\("consumptionTotals"/, /aria-label="Consumption totals"/],
+    ["nodalia-advance-vacuum-card.js", /utility\?\.mapUnavailable/, />Mapa no disponible</],
+  ];
+
+  for (const [file, translatedPattern, hardcodedPattern] of cases) {
+    const src = fs.readFileSync(path.join(root, file), "utf8");
+    assert.match(src, translatedPattern, `${file} must resolve its audited label through i18n`);
+    assert.doesNotMatch(src, hardcodedPattern, `${file} must not keep the audited visible literal`);
+  }
+});
+
 test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   const src = fs.readFileSync(path.join(root, "nodalia-editor-ui.js"), "utf8");
   assert.match(src, /window\.NodaliaI18n\.editorCatalog\s*=/);

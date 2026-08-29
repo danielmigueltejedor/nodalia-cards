@@ -1,6 +1,7 @@
 /**
- * Fills editor + runtime locale files where values still match English.
- * Uses Google Translate (gtx) with a local cache. Preserves `code`, {placeholders}.
+ * Audits or fills editor + runtime locale files where values still match English.
+ * Fill mode uses Google Translate (gtx) with a local cache. Audit mode is offline.
+ * Preserves `code` and {placeholders}.
  *
  * Usage: node scripts/translate-all-locale-gaps.mjs
  * Then:  npm run i18n:gen-runtime && npm run i18n:gen-editor && npm run i18n:validate-*
@@ -31,6 +32,10 @@ const GTX_TL = {
 };
 
 const CACHE_PATH = path.join(__dirname, ".translate-all-locale-gaps-cache.json");
+const OFFLINE = process.argv.includes("--offline");
+const REPORT_GAPS = process.argv.includes("--report-gaps");
+const CHECK_GAPS = process.argv.includes("--check");
+let offlineMissingPairs = 0;
 
 /** Strings that are intentionally identical in every locale (brand / universal tokens). */
 const GLOBAL_IDENTICAL = new Set([
@@ -109,8 +114,34 @@ const GLOBAL_IDENTICAL = new Set([
   "Person",
   "Start",
   "Optional",
+  "HLS",
+  "MJPEG",
+  "MSE",
+  "WebRTC",
+  "Home Assistant",
+  "AQI",
+  "WHO 24h AQG",
+  "PM1",
+  "PM2.5",
+  "PM4",
+  "PM10",
+  "TVOC",
+  "CO₂",
+  "Temp",
   "{name}: {state}.",
 ]);
+
+/** Correct translations/cognates that intentionally match English in one locale. */
+const LOCALE_IDENTICAL = {
+  es: new Set(["Circular", "Error", "No", "Horizontal", "Vertical"]),
+  de: new Set(["Live", "Offline", "Pause", "Status", "Download", "Upload", "Signal", "Version {version}", "Warm", "Neutral", "Name", "Minimum", "Horizontal", "Horizontal (← →)", "Service", "Sofa", "Popup (ms)", "Route", "Radius"]),
+  fr: new Set(["Vacant", "Pause", "Batteries", "Signal", "Sources", "Volume", "Compact", "Version {version}", "Routines", "Intense", "zones", "Albums", "Excellent", "Description", "Possible", "Notification", "Date", "Animations", "Routines (JSON)", "Style", "Modes", "Action", "Maximum", "Minimum", "Styles", "Capsule", "Service", "Justification", "Message", "Horizontal"]),
+  it: new Set(["Volume", "Popup (ms)", "Media"]),
+  nl: new Set(["Live", "Offline", "Camera", "Camera offline", "Status", "Download", "Upload", "Volume", "Compact", "Context", "zones", "Stop", "Albums", "Item", "Warm", "School", "Open", "Week", "Type", "Boost", "1 week", "Platform", "Routines (JSON)", "Icon", "Label", "Minimum", "Capsule", "Route", "Routes", "Media", "Tank", "Medium", "Water", "Radius"]),
+  no: new Set(["Pause", "Status", "Signal", "Glass", "Type", "Minimum", "Sofa", "Popup (ms)", "Tank", "Radius"]),
+  pt: new Set(["Volume", "Circular", "Item", "Horizontal", "Vertical"]),
+  ro: new Set(["Compact", "Context", "Circular", "Mop", "Stop", "Minor", "Boost", "Popup (ms)", "Vertical", "Media", "Metric"]),
+};
 
 function loadJson(p, fallback = {}) {
   try {
@@ -174,7 +205,7 @@ async function gtxTranslate(text, lang) {
   return text;
 }
 
-function shouldTranslate(enValue) {
+function shouldTranslate(enValue, lang) {
   if (typeof enValue !== "string") {
     return false;
   }
@@ -183,6 +214,9 @@ function shouldTranslate(enValue) {
     return false;
   }
   if (GLOBAL_IDENTICAL.has(t)) {
+    return false;
+  }
+  if (LOCALE_IDENTICAL[lang]?.has(t)) {
     return false;
   }
   if (/^[\d\s,.\-–—%()+]+$/.test(t)) {
@@ -245,7 +279,7 @@ function collectGaps(enFlat, locFlat, lang) {
     if (!missing && locVal !== enVal) {
       continue;
     }
-    if (!shouldTranslate(enVal)) {
+    if (!shouldTranslate(enVal, lang)) {
       continue;
     }
     gaps.push({ key, en: enVal, lang, missing });
@@ -254,6 +288,13 @@ function collectGaps(enFlat, locFlat, lang) {
 }
 
 async function translateGaps(gaps, cache) {
+  if (CHECK_GAPS) {
+    offlineMissingPairs += gaps.length;
+    if (REPORT_GAPS) {
+      gaps.forEach(gap => console.log(`    GAP\t${gap.lang}\t${gap.key}\t${JSON.stringify(gap.en)}`));
+    }
+    return;
+  }
   const unique = new Map();
   for (const g of gaps) {
     const ck = cacheKey(g.en, g.lang);
@@ -266,6 +307,15 @@ async function translateGaps(gaps, cache) {
   }
   const entries = [...unique.values()];
   console.log(`  pending gtx pairs: ${entries.length}`);
+  if (OFFLINE) {
+    offlineMissingPairs += entries.length;
+    if (REPORT_GAPS) {
+      gaps
+        .filter(gap => !cache[cacheKey(gap.en, gap.lang)])
+        .forEach(gap => console.log(`    GAP\t${gap.lang}\t${gap.key}\t${JSON.stringify(gap.en)}`));
+    }
+    return;
+  }
   let i = 0;
   for (const { en, lang } of entries) {
     const ck = cacheKey(en, lang);
@@ -280,6 +330,9 @@ async function translateGaps(gaps, cache) {
 }
 
 function applyGapsToFile(filePath, enFlat, gaps, cache, flatKeys = false) {
+  if (CHECK_GAPS) {
+    return 0;
+  }
   const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
   let n = 0;
   for (const g of gaps) {
@@ -316,7 +369,9 @@ async function processEditor() {
     await translateGaps(gaps, cache);
     total += applyGapsToFile(filePath, enFlat, gaps, cache, true);
   }
-  saveCache(cache);
+  if (!CHECK_GAPS) {
+    saveCache(cache);
+  }
   console.log(`editor: applied ${total} translations`);
 }
 
@@ -337,10 +392,18 @@ async function processRuntime() {
     await translateGaps(gaps, cache);
     total += applyGapsToFile(filePath, enFlat, gaps, cache);
   }
-  saveCache(cache);
+  if (!CHECK_GAPS) {
+    saveCache(cache);
+  }
   console.log(`runtime: applied ${total} translations`);
 }
 
 await processRuntime();
 await processEditor();
+if (OFFLINE) {
+  console.log(`offline cache misses: ${offlineMissingPairs}`);
+}
+if (CHECK_GAPS && offlineMissingPairs > 0) {
+  process.exitCode = 1;
+}
 console.log("translate-all-locale-gaps: done");

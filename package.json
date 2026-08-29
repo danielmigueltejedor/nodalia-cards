@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "2.2.2",
+  "version": "2.2.3-alpha.1",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -19,9 +19,10 @@
     "i18n:gen-editor": "node scripts/gen-editor-ui.mjs",
     "i18n:validate-runtime": "node scripts/validate-runtime-i18n.mjs",
     "i18n:gen-runtime": "node scripts/gen-runtime-i18n.mjs",
+    "i18n:audit": "node scripts/translate-all-locale-gaps.mjs --offline --check",
     "test": "node --test tests/**/*.test.mjs",
     "test:browser": "pnpm run bundle && playwright test",
-    "validate": "pnpm run version:check && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm run bundle && pnpm test"
+    "validate": "pnpm run version:check && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm run i18n:audit && pnpm run bundle && pnpm test"
   },
   "files": [
     "nodalia-i18n.js",

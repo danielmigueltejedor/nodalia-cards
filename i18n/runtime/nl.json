@@ -123,7 +123,9 @@
       "zoneTool": "Zone",
       "routineDefault": "Routine",
       "customMenuDefault": "Dock",
-      "modesFallbackTitle": "Zuig- en dweilmodi"
+      "modesFallbackTitle": "Zuig- en dweilmodi",
+      "mapImageAlt": "Robotkaart",
+      "mapUnavailable": "Kaart niet beschikbaar"
     },
     "actions": {
       "returnToBase": "Terug naar dock",
@@ -142,7 +144,8 @@
       "editZone": "Zone bewerken",
       "backPanel": "Terug naar hoofdpaneel",
       "addZone": "Zone toevoegen",
-      "gotoFallback": "Punt"
+      "gotoFallback": "Punt",
+      "editZoneNumber": "Zone {index} bewerken"
     }
   },
   "navigationMusicAssist": {
@@ -253,7 +256,7 @@
       "playPause": "Afspelen of pauzeren",
       "volumeDown": "Volume lager",
       "volumeUp": "Volume omhoog",
-      "openMedia": "Open media",
+      "openMedia": "Media openen",
       "navigationBar": "Navigatiebalk",
       "mediaPlayers": "Mediaspelers",
       "primaryAction": "Primaire actie"
@@ -301,7 +304,10 @@
     "tiltSlider": "Kantelen",
     "tiltChip": "Kanteling {value}%",
     "toggleShowButtons": "Openen, stop en sluiten tonen",
-    "toggleShowSliders": "Schuifregelaars tonen"
+    "toggleShowSliders": "Schuifregelaars tonen",
+    "decreasePosition": "Positie verlagen",
+    "increasePosition": "Positie verhogen",
+    "toggleCover": "Afdekking bedienen"
   },
   "person": {
     "home": "Thuis",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Geschiedenis laden…",
       "emptyGraphs": "Nog geen geschiedenis"
     },
-    "battery": { "title": "Batterijen", "subtitle": "Batterijoverzicht", "average": "gemiddeld", "devices": "apparaten", "good": "Goed", "low": "Laag", "critical": "Kritiek" },
-    "network": { "title": "Netwerk", "subtitle": "Verbindingsoverzicht", "metrics": "metingen", "roles": { "status": "Status", "download": "Download", "upload": "Upload", "latency": "Latentie", "signal": "Signaal", "traffic": "Verkeer" } },
-    "overview": { "empty": "Voeg entiteiten toe in de visuele editor.", "unavailable": "Niet beschikbaar", "unconfigured": "Niet geconfigureerd" }
+    "battery": {
+      "title": "Batterijen",
+      "subtitle": "Batterijoverzicht",
+      "average": "gemiddeld",
+      "devices": "apparaten",
+      "good": "Goed",
+      "low": "Laag",
+      "critical": "Kritiek"
+    },
+    "network": {
+      "title": "Netwerk",
+      "subtitle": "Verbindingsoverzicht",
+      "metrics": "metingen",
+      "roles": {
+        "status": "Status",
+        "download": "Download",
+        "upload": "Upload",
+        "latency": "Latentie",
+        "signal": "Signaal",
+        "traffic": "Verkeer"
+      }
+    },
+    "overview": {
+      "empty": "Voeg entiteiten toe in de visuele editor.",
+      "unavailable": "Niet beschikbaar",
+      "unconfigured": "Niet geconfigureerd"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Doelvochtigheid",
       "showModes": "Toon modi",
-      "showSpeeds": "Laat snelheden zien"
+      "showSpeeds": "Laat snelheden zien",
+      "decreaseHumidity": "Luchtvochtigheid verlagen",
+      "increaseHumidity": "Luchtvochtigheid verhogen"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Comfortbereik en binnentemperatuur",
       "dialTargetSlider": "Doeltemperatuur",
       "dialNoSetpoint": "Kamertemperatuur; thermostaat heeft geen actieve setpoint",
-      "togglePower": "In- of uitschakelen"
+      "togglePower": "In- of uitschakelen",
+      "decreaseTemperature": "Temperatuur verlagen",
+      "increaseTemperature": "Temperatuur verhogen"
     },
     "dialNoSetpointHint": "Geen actieve setpoint",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Controleer de schoonmaakcarrousel",
     "audio_error": "Audiofout",
     "water_empty": "Watertank leeg"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Net",
+      "home": "Huis",
+      "solar": "Zonne-energie",
+      "battery": "Batterij",
+      "water": "Water",
+      "gas": "Gas"
+    },
+    "energy": "Energie",
+    "today": "Vandaag",
+    "month": "Maand",
+    "consumptionTotals": "Verbruikstotalen",
+    "device": "apparaat",
+    "devices": "apparaten",
+    "close": "Sluiten",
+    "moreInfo": "Meer informatie"
   }
 }

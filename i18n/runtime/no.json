@@ -123,7 +123,9 @@
       "zoneTool": "Zone",
       "routineDefault": "Routine",
       "customMenuDefault": "Dock",
-      "modesFallbackTitle": "Zuig- en dweilmodi"
+      "modesFallbackTitle": "Zuig- en dweilmodi",
+      "mapImageAlt": "Robotkart",
+      "mapUnavailable": "Kart utilgjengelig"
     },
     "actions": {
       "returnToBase": "Terug naar dock",
@@ -142,7 +144,8 @@
       "editZone": "Zone bewerken",
       "backPanel": "Terug naar hoofdpaneel",
       "addZone": "Zone toevoegen",
-      "gotoFallback": "Punt"
+      "gotoFallback": "Punt",
+      "editZoneNumber": "Rediger sone {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Vipp",
     "tiltChip": "Kanteling {value}%",
     "toggleShowButtons": "Openen, stop en sluiten tonen",
-    "toggleShowSliders": "Schuifregelaars tonen"
+    "toggleShowSliders": "Schuifregelaars tonen",
+    "decreasePosition": "Reduser posisjon",
+    "increasePosition": "Øk posisjon",
+    "toggleCover": "Betjen dekselet"
   },
   "person": {
     "home": "Hjemme",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Laster historikk…",
       "emptyGraphs": "Ingen historikk ennå"
     },
-    "battery": { "title": "Batterier", "subtitle": "Batterioversikt", "average": "gjennomsnitt", "devices": "enheter", "good": "God", "low": "Lav", "critical": "Kritisk" },
-    "network": { "title": "Nettverk", "subtitle": "Tilkoblingsoversikt", "metrics": "målinger", "roles": { "status": "Status", "download": "Nedlasting", "upload": "Opplasting", "latency": "Ventetid", "signal": "Signal", "traffic": "Trafikk" } },
-    "overview": { "empty": "Legg til enheter i det visuelle redigeringsverktøyet.", "unavailable": "Utilgjengelig", "unconfigured": "Ikke konfigurert" }
+    "battery": {
+      "title": "Batterier",
+      "subtitle": "Batterioversikt",
+      "average": "gjennomsnitt",
+      "devices": "enheter",
+      "good": "God",
+      "low": "Lav",
+      "critical": "Kritisk"
+    },
+    "network": {
+      "title": "Nettverk",
+      "subtitle": "Tilkoblingsoversikt",
+      "metrics": "målinger",
+      "roles": {
+        "status": "Status",
+        "download": "Nedlasting",
+        "upload": "Opplasting",
+        "latency": "Ventetid",
+        "signal": "Signal",
+        "traffic": "Trafikk"
+      }
+    },
+    "overview": {
+      "empty": "Legg til enheter i det visuelle redigeringsverktøyet.",
+      "unavailable": "Utilgjengelig",
+      "unconfigured": "Ikke konfigurert"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Mål fuktighet",
       "showModes": "Vis moduser",
-      "showSpeeds": "Vis hastigheter"
+      "showSpeeds": "Vis hastigheter",
+      "decreaseHumidity": "Reduser luftfuktigheten",
+      "increaseHumidity": "Øk luftfuktigheten"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Comfortbereik en binnentemperatuur",
       "dialTargetSlider": "Doeltemperatuur",
       "dialNoSetpoint": "Kamertemperatuur; thermostaat heeft geen actieve setpoint",
-      "togglePower": "In- of uitschakelen"
+      "togglePower": "In- of uitschakelen",
+      "decreaseTemperature": "Senk temperaturen",
+      "increaseTemperature": "Øk temperaturen"
     },
     "dialNoSetpointHint": "Geen actieve setpoint",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Sjekk rengjøringskarusellen",
     "audio_error": "Lydfeil",
     "water_empty": "Vanntank tom"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Strømnett",
+      "home": "Hjem",
+      "solar": "Solenergi",
+      "battery": "Batteri",
+      "water": "Vann",
+      "gas": "Gass"
+    },
+    "energy": "Energi",
+    "today": "I dag",
+    "month": "Måned",
+    "consumptionTotals": "Forbrukstotaler",
+    "device": "enhet",
+    "devices": "enheter",
+    "close": "Lukk",
+    "moreInfo": "Mer informasjon"
   }
 }

@@ -123,7 +123,9 @@
       "zoneTool": "区域",
       "routineDefault": "例行程序",
       "customMenuDefault": "基站",
-      "modesFallbackTitle": "吸尘与拖地模式"
+      "modesFallbackTitle": "吸尘与拖地模式",
+      "mapImageAlt": "机器人地图",
+      "mapUnavailable": "地图不可用"
     },
     "actions": {
       "returnToBase": "返回基站",
@@ -142,7 +144,8 @@
       "editZone": "编辑区域",
       "backPanel": "返回主面板",
       "addZone": "添加区域",
-      "gotoFallback": "点"
+      "gotoFallback": "点",
+      "editZoneNumber": "编辑区域 {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "倾斜",
     "tiltChip": "倾斜 {value}%",
     "toggleShowButtons": "显示打开、停止和关闭",
-    "toggleShowSliders": "显示滑块"
+    "toggleShowSliders": "显示滑块",
+    "decreasePosition": "降低位置",
+    "increasePosition": "提高位置",
+    "toggleCover": "切换遮盖"
   },
   "person": {
     "home": "在家",
@@ -505,9 +511,33 @@
       "loadingGraphs": "正在加载历史…",
       "emptyGraphs": "暂无历史"
     },
-    "battery": { "title": "电池", "subtitle": "电池概览", "average": "平均", "devices": "设备", "good": "良好", "low": "电量低", "critical": "严重不足" },
-    "network": { "title": "网络", "subtitle": "连接概览", "metrics": "指标", "roles": { "status": "状态", "download": "下载", "upload": "上传", "latency": "延迟", "signal": "信号", "traffic": "流量" } },
-    "overview": { "empty": "请在可视化编辑器中添加实体。", "unavailable": "不可用", "unconfigured": "未配置" }
+    "battery": {
+      "title": "电池",
+      "subtitle": "电池概览",
+      "average": "平均",
+      "devices": "设备",
+      "good": "良好",
+      "low": "电量低",
+      "critical": "严重不足"
+    },
+    "network": {
+      "title": "网络",
+      "subtitle": "连接概览",
+      "metrics": "指标",
+      "roles": {
+        "status": "状态",
+        "download": "下载",
+        "upload": "上传",
+        "latency": "延迟",
+        "signal": "信号",
+        "traffic": "流量"
+      }
+    },
+    "overview": {
+      "empty": "请在可视化编辑器中添加实体。",
+      "unavailable": "不可用",
+      "unconfigured": "未配置"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "目标湿度",
       "showModes": "显示模式",
-      "showSpeeds": "显示速度"
+      "showSpeeds": "显示速度",
+      "decreaseHumidity": "降低湿度",
+      "increaseHumidity": "提高湿度"
     },
     "modes": {
       "auto": "自动",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "舒适区间与室内温度",
       "dialTargetSlider": "目标温度",
       "dialNoSetpoint": "室内温度；恒温器尚无生效目标温度",
-      "togglePower": "开或关"
+      "togglePower": "开或关",
+      "decreaseTemperature": "降低温度",
+      "increaseTemperature": "提高温度"
     },
     "dialNoSetpointHint": "尚无生效设定",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "检查清洁转盘",
     "audio_error": "音频错误",
     "water_empty": "水箱为空"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "电网",
+      "home": "家庭",
+      "solar": "太阳能",
+      "battery": "电池",
+      "water": "水",
+      "gas": "燃气"
+    },
+    "energy": "能源",
+    "today": "今天",
+    "month": "本月",
+    "consumptionTotals": "用量汇总",
+    "device": "设备",
+    "devices": "设备",
+    "close": "关闭",
+    "moreInfo": "更多信息"
   }
 }

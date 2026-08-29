@@ -123,7 +123,9 @@
       "zoneTool": "Zone",
       "routineDefault": "Routine",
       "customMenuDefault": "Dock",
-      "modesFallbackTitle": "Saug- und Wischmodi"
+      "modesFallbackTitle": "Saug- und Wischmodi",
+      "mapImageAlt": "Roboterkarte",
+      "mapUnavailable": "Karte nicht verfügbar"
     },
     "actions": {
       "returnToBase": "Zur Station",
@@ -142,7 +144,8 @@
       "editZone": "Zone bearbeiten",
       "backPanel": "Zurück zum Hauptpanel",
       "addZone": "Zone hinzufügen",
-      "gotoFallback": "Punkt"
+      "gotoFallback": "Punkt",
+      "editZoneNumber": "Zone {index} bearbeiten"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Neigung",
     "tiltChip": "Neigung {value} %",
     "toggleShowButtons": "Öffnen, Stopp und Schließen anzeigen",
-    "toggleShowSliders": "Schieberegler anzeigen"
+    "toggleShowSliders": "Schieberegler anzeigen",
+    "decreasePosition": "Position verringern",
+    "increasePosition": "Position erhöhen",
+    "toggleCover": "Abdeckung umschalten"
   },
   "person": {
     "home": "Zuhause",
@@ -499,15 +505,39 @@
         "pm10": "PM10",
         "tvoc": "TVOC",
         "co2": "CO₂",
-        "temperature": "Temp",
+        "temperature": "Temperatur",
         "humidity": "Feuchte"
       },
       "loadingGraphs": "Verlauf wird geladen…",
       "emptyGraphs": "Noch kein Verlauf"
     },
-    "battery": { "title": "Batterien", "subtitle": "Batterieübersicht", "average": "Durchschnitt", "devices": "Geräte", "good": "Gut", "low": "Niedrig", "critical": "Kritisch" },
-    "network": { "title": "Netzwerk", "subtitle": "Verbindungsübersicht", "metrics": "Messwerte", "roles": { "status": "Status", "download": "Download", "upload": "Upload", "latency": "Latenz", "signal": "Signal", "traffic": "Datenverkehr" } },
-    "overview": { "empty": "Füge Entitäten im visuellen Editor hinzu.", "unavailable": "Nicht verfügbar", "unconfigured": "Nicht konfiguriert" }
+    "battery": {
+      "title": "Batterien",
+      "subtitle": "Batterieübersicht",
+      "average": "Durchschnitt",
+      "devices": "Geräte",
+      "good": "Gut",
+      "low": "Niedrig",
+      "critical": "Kritisch"
+    },
+    "network": {
+      "title": "Netzwerk",
+      "subtitle": "Verbindungsübersicht",
+      "metrics": "Messwerte",
+      "roles": {
+        "status": "Status",
+        "download": "Download",
+        "upload": "Upload",
+        "latency": "Latenz",
+        "signal": "Signal",
+        "traffic": "Datenverkehr"
+      }
+    },
+    "overview": {
+      "empty": "Füge Entitäten im visuellen Editor hinzu.",
+      "unavailable": "Nicht verfügbar",
+      "unconfigured": "Nicht konfiguriert"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Zielfeuchtigkeit",
       "showModes": "Modi anzeigen",
-      "showSpeeds": "Geschwindigkeiten anzeigen"
+      "showSpeeds": "Geschwindigkeiten anzeigen",
+      "decreaseHumidity": "Luftfeuchtigkeit senken",
+      "increaseHumidity": "Luftfeuchtigkeit erhöhen"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Komfortbereich und Raumtemperatur",
       "dialTargetSlider": "Solltemperatur",
       "dialNoSetpoint": "Raumtemperatur; kein aktives Soll am Thermostat",
-      "togglePower": "Ein- oder ausschalten"
+      "togglePower": "Ein- oder ausschalten",
+      "decreaseTemperature": "Temperatur senken",
+      "increaseTemperature": "Temperatur erhöhen"
     },
     "dialNoSetpointHint": "Kein aktives Soll",
     "schedule": {
@@ -704,7 +738,7 @@
     "emptyTitle": "Nodalia Graph Card",
     "emptyBody": "Lege `entities` auf eine oder mehrere numerische Entitäten fest, um das Diagramm anzuzeigen.",
     "emptyHistory": "Kein Verlauf verfügbar",
-    "defaultTitle": "Graph"
+    "defaultTitle": "Diagramm"
   },
   "newsCard": {
     "title": "Nachricht",
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Reinigungskarussell prüfen",
     "audio_error": "Audiofehler",
     "water_empty": "Wassertank leer"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Stromnetz",
+      "home": "Zuhause",
+      "solar": "Solar",
+      "battery": "Batterie",
+      "water": "Wasser",
+      "gas": "Gas"
+    },
+    "energy": "Energie",
+    "today": "Heute",
+    "month": "Monat",
+    "consumptionTotals": "Verbrauchssummen",
+    "device": "Gerät",
+    "devices": "Geräte",
+    "close": "Schließen",
+    "moreInfo": "Mehr Informationen"
   }
 }

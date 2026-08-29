@@ -123,7 +123,9 @@
       "zoneTool": "Zone",
       "routineDefault": "Routine",
       "customMenuDefault": "Dock",
-      "modesFallbackTitle": "Vacuum & mop modes"
+      "modesFallbackTitle": "Vacuum & mop modes",
+      "mapImageAlt": "Robot map",
+      "mapUnavailable": "Map unavailable"
     },
     "actions": {
       "returnToBase": "Return to dock",
@@ -142,7 +144,8 @@
       "editZone": "Edit zone",
       "backPanel": "Back to main panel",
       "addZone": "Add zone",
-      "gotoFallback": "Point"
+      "gotoFallback": "Point",
+      "editZoneNumber": "Edit zone {index}"
     }
   },
   "navigationMusicAssist": {
@@ -301,7 +304,10 @@
     "tiltSlider": "Tilt",
     "tiltChip": "Tilt {value}%",
     "toggleShowButtons": "Show open, stop, and close",
-    "toggleShowSliders": "Show sliders"
+    "toggleShowSliders": "Show sliders",
+    "decreasePosition": "Decrease position",
+    "increasePosition": "Increase position",
+    "toggleCover": "Toggle cover"
   },
   "person": {
     "home": "Home",
@@ -505,9 +511,33 @@
       "loadingGraphs": "Loading history…",
       "emptyGraphs": "No history yet"
     },
-    "battery": { "title": "Batteries", "subtitle": "Battery overview", "average": "average", "devices": "devices", "good": "Good", "low": "Low", "critical": "Critical" },
-    "network": { "title": "Network", "subtitle": "Connection overview", "metrics": "metrics", "roles": { "status": "Status", "download": "Download", "upload": "Upload", "latency": "Latency", "signal": "Signal", "traffic": "Traffic" } },
-    "overview": { "empty": "Add entities in the visual editor.", "unavailable": "Unavailable", "unconfigured": "Not configured" }
+    "battery": {
+      "title": "Batteries",
+      "subtitle": "Battery overview",
+      "average": "average",
+      "devices": "devices",
+      "good": "Good",
+      "low": "Low",
+      "critical": "Critical"
+    },
+    "network": {
+      "title": "Network",
+      "subtitle": "Connection overview",
+      "metrics": "metrics",
+      "roles": {
+        "status": "Status",
+        "download": "Download",
+        "upload": "Upload",
+        "latency": "Latency",
+        "signal": "Signal",
+        "traffic": "Traffic"
+      }
+    },
+    "overview": {
+      "empty": "Add entities in the visual editor.",
+      "unavailable": "Unavailable",
+      "unconfigured": "Not configured"
+    }
   },
   "weatherCard": {
     "emptyTitle": "Nodalia Weather Card",
@@ -595,7 +625,9 @@
     "aria": {
       "targetHumidity": "Target humidity",
       "showModes": "Show modes",
-      "showSpeeds": "Show speeds"
+      "showSpeeds": "Show speeds",
+      "decreaseHumidity": "Decrease humidity",
+      "increaseHumidity": "Increase humidity"
     },
     "modes": {
       "auto": "Auto",
@@ -657,7 +689,9 @@
       "dialRangeGroup": "Comfort range and indoor temperature",
       "dialTargetSlider": "Target temperature",
       "dialNoSetpoint": "Indoor temperature; thermostat has no active target yet",
-      "togglePower": "Turn on or off"
+      "togglePower": "Turn on or off",
+      "decreaseTemperature": "Decrease temperature",
+      "increaseTemperature": "Increase temperature"
     },
     "dialNoSetpointHint": "No active setpoint",
     "schedule": {
@@ -996,5 +1030,23 @@
     "check_clean_carouse": "Check cleaning carousel",
     "audio_error": "Audio error",
     "water_empty": "Water tank empty"
+  },
+  "powerFlowCard": {
+    "nodes": {
+      "grid": "Grid",
+      "home": "Home",
+      "solar": "Solar",
+      "battery": "Battery",
+      "water": "Water",
+      "gas": "Gas"
+    },
+    "energy": "Energy",
+    "today": "Today",
+    "month": "Month",
+    "consumptionTotals": "Consumption totals",
+    "device": "device",
+    "devices": "devices",
+    "close": "Close",
+    "moreInfo": "More info"
   }
 }
