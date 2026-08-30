@@ -45,7 +45,7 @@ test("person retries unresolved zone matches instead of caching misses forever",
 
 test("vacuum signature follows auxiliary state, battery, mapping and mode selects", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /set hass\(hass\) \{\n\s*this\._hass = hass;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
+  assert.match(source, /set hass\(hass\) \{\n\s*this\._hass = hass;\n\s*this\._relatedEntityCacheGeneration \+= 1;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
   const signature = renderSignature("nodalia-vacuum-card.js");
   for (const token of [
     "auxiliaryState",
@@ -58,7 +58,9 @@ test("vacuum signature follows auxiliary state, battery, mapping and mode select
     assert.match(signature, new RegExp(token), `vacuum signature should include ${token}`);
   }
   assert.match(source, /_getRelatedEntityCache\(\)/);
+  assert.match(source, /this\._relatedEntityCacheGeneration \+= 1/);
   assert.match(source, /this\._relatedEntityCache\?\.objectId === objectId/);
+  assert.match(source, /this\._relatedEntityCache\?\.generation === this\._relatedEntityCacheGeneration/);
 });
 
 test("camera serializes static action configuration only when config changes", () => {
