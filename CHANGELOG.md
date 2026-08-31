@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.4] - 2026-08-31
+
+Stable **`2.2.4`** hotfix: Vacuum Card auto-discovery now follows each Home Assistant state snapshot, so helper entities that register after the vacuum are picked up without reloading the dashboard.
+
+### Fixed
+
+- Vacuum Card rebuilds its related-entity catalog once per `hass` snapshot while continuing to share that scan across battery, error, room-mapping and suction/mop lookups.
+- Late-arriving `sensor.*` and `select.*` helpers now invalidate the render signature and restore room cleaning and mode controls on already-mounted cards.
+
+### Validation
+
+- Added a behavioral regression covering helpers absent from the first snapshot and present in the second, including the one-scan-per-snapshot cache contract.
+- The complete Node suite now contains **465** tests.
+
 ## [2.2.3] - 2026-08-30
 
 Stable **`2.2.3`**: complete translation parity across every runtime and visual-editor catalog, plus purpose-built circular Cover controls and compact unavailable badges across device cards.

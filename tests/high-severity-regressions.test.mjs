@@ -477,3 +477,124 @@ test("circular cover dial requires a settled or reported position", () => {
     assert.equal(calls.length, 0);
   }
 });
+
+function loadVacuumCard() {
+  const registry = new Map();
+  const sandbox = {
+    clearTimeout,
+    console,
+    CustomEvent: class {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+      whenDefined() { return Promise.resolve(); },
+    },
+    document: {
+      createElement() { return {}; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    HTMLElement: class {
+      constructor() {
+        this.isConnected = true;
+        this.clientWidth = 420;
+        this.shadowRoot = null;
+      }
+
+      attachShadow() {
+        this.shadowRoot = {
+          addEventListener() {},
+          removeEventListener() {},
+          innerHTML: "",
+          querySelector() { return null; },
+          querySelectorAll() { return []; },
+        };
+        return this.shadowRoot;
+      }
+
+      addEventListener() {}
+      removeEventListener() {}
+      dispatchEvent() { return true; }
+    },
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    navigator: {},
+    setTimeout,
+    window: null,
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-vacuum-card.js"), sandbox);
+  const CardClass = registry.get("nodalia-vacuum-card");
+  assert.ok(CardClass, "NodaliaVacuumCard should register");
+  return CardClass;
+}
+
+test("vacuum auto-discovery picks up helper entities from a later hass snapshot", () => {
+  const CardClass = loadVacuumCard();
+  const card = new CardClass();
+  card._render = () => {};
+  card.setConfig({ entity: "vacuum.roborock_s7" });
+
+  const vacuumState = {
+    entity_id: "vacuum.roborock_s7",
+    state: "docked",
+    attributes: { friendly_name: "Roborock" },
+  };
+
+  card.hass = {
+    states: {
+      "vacuum.roborock_s7": vacuumState,
+    },
+  };
+
+  const firstCatalog = card._getRelatedEntityCache();
+  assert.strictEqual(card._getRelatedEntityCache(), firstCatalog, "one snapshot should reuse one catalog scan");
+  assert.equal(card._guessRelatedBatteryEntity(), "");
+  assert.equal(card._guessRelatedErrorEntity(), "");
+  assert.equal(card._guessRelatedRoomMappingEntity(), "");
+  assert.equal(card._guessRelatedSelectEntity("suction"), "");
+  assert.equal(card._guessRelatedSelectEntity("mop"), "");
+
+  card.hass = {
+    states: {
+      "vacuum.roborock_s7": vacuumState,
+      "sensor.roborock_s7_battery": { entity_id: "sensor.roborock_s7_battery", state: "82" },
+      "sensor.roborock_s7_error": { entity_id: "sensor.roborock_s7_error", state: "none" },
+      "sensor.roborock_s7_room_mapping": {
+        entity_id: "sensor.roborock_s7_room_mapping",
+        state: "kitchen",
+      },
+      "select.roborock_s7_fan_speed": {
+        entity_id: "select.roborock_s7_fan_speed",
+        state: "balanced",
+        attributes: { options: ["quiet", "balanced", "turbo"] },
+      },
+      "select.roborock_s7_water_level": {
+        entity_id: "select.roborock_s7_water_level",
+        state: "medium",
+        attributes: { options: ["low", "medium", "high"] },
+      },
+    },
+  };
+
+  const secondCatalog = card._getRelatedEntityCache();
+  assert.notStrictEqual(secondCatalog, firstCatalog, "a later snapshot should rebuild the catalog");
+  assert.strictEqual(card._getRelatedEntityCache(), secondCatalog, "the rebuilt catalog should be reused");
+  assert.equal(card._guessRelatedBatteryEntity(), "sensor.roborock_s7_battery");
+  assert.equal(card._guessRelatedErrorEntity(), "sensor.roborock_s7_error");
+  assert.equal(card._guessRelatedRoomMappingEntity(), "sensor.roborock_s7_room_mapping");
+  assert.equal(card._guessRelatedSelectEntity("suction"), "select.roborock_s7_fan_speed");
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s7_water_level");
+});

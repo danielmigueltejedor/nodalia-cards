@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-2.2.3
+2.2.4
 ```
 
-Stable **`2.2.3`** completes runtime/editor localization across all 12 supported languages, gives circular Cover a dedicated open/stop/close command row and keeps unavailable badges compact in Cover, Fan and Humidifier. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.4`** fixes Vacuum Card helper auto-discovery when Home Assistant or an integration adds related entities after the card is already mounted. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -35,7 +35,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.3`**
+- Regression-free mobile and desktop behavior on stable **`2.2.4`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
