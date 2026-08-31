@@ -528,6 +528,49 @@ test("Notifications keeps a new external-alert draft in the visual editor", asyn
   await expect(editor.locator('[data-editor-action="remove-external-alert"]')).toHaveCount(1);
 });
 
+test("Graph visual editor keeps a new series while its statistics entity is selected", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    const states = {
+      "sensor.temperature": {
+        entity_id: "sensor.temperature",
+        state: "21",
+        attributes: { friendly_name: "Temperature", unit_of_measurement: "°C" },
+      },
+      "sensor.humidity": {
+        entity_id: "sensor.humidity",
+        state: "48",
+        attributes: { friendly_name: "Humidity", unit_of_measurement: "%" },
+      },
+    };
+    const ctor = customElements.get("nodalia-graph-card");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      type: "custom:nodalia-graph-card",
+      entities: [{ entity: "sensor.temperature", name: "Temperature", color: "#f29f05" }],
+    });
+    window.graphEditorConfigs = [];
+    editor.addEventListener("config-changed", event => {
+      const config = JSON.parse(JSON.stringify(event.detail.config));
+      window.graphEditorConfigs.push(config);
+      editor.setConfig(config);
+    });
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-graph-card-editor");
+  await editor.locator('[data-action="add-series"]').click();
+  await expect(editor.locator(".series-editor-card")).toHaveCount(2);
+
+  const secondEntity = editor.locator('select[data-field="entities.1.entity"]');
+  await expect(secondEntity).toBeVisible();
+  await secondEntity.selectOption("sensor.humidity");
+  await expect(editor.locator('select[data-field="entities.1.entity"]')).toHaveValue("sensor.humidity");
+  await expect.poll(() => page.evaluate(() => window.graphEditorConfigs.at(-1)?.entities?.[1]?.entity))
+    .toBe("sensor.humidity");
+});
+
 test("Advanced Vacuum keeps its platform selector compact and contextual", async ({ page }) => {
   await loadBundle(page);
   await page.evaluate(async () => {

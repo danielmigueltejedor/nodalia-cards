@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current stable release:
 
 ```text
-2.2.4
+2.2.5
 ```
 
-Stable **`2.2.4`** fixes Vacuum Card helper auto-discovery when Home Assistant or an integration adds related entities after the card is already mounted. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.5`** fixes Graph Card's visual editor so newly added series remain available while selecting their statistics entity. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -35,7 +35,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.4`**
+- Regression-free mobile and desktop behavior on stable **`2.2.5`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

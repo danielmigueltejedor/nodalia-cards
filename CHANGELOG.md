@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.5] - 2026-08-31
+
+Stable **`2.2.5`** hotfix: Graph Card's visual editor now keeps newly added series visible while their statistics entity is selected.
+
+### Fixed
+
+- Graph Card's visual editor keeps a newly added empty series visible long enough to select its statistics entity instead of removing the row during config normalization.
+- Home Assistant's immediate `config-changed` feedback no longer collapses an incomplete editor row; runtime rendering still ignores incomplete series safely.
+
+### Validation
+
+- Added a behavioral Node regression for add, config feedback and entity selection, plus a real Chromium visual-editor regression.
+- The complete Node suite now contains **466** tests.
+
 ## [2.2.4] - 2026-08-31
 
 Stable **`2.2.4`** hotfix: Vacuum Card auto-discovery now follows each Home Assistant state snapshot, so helper entities that register after the vacuum are picked up without reloading the dashboard.

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "2.2.4";
+const CARD_VERSION = "2.2.5";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -381,7 +381,7 @@ function formatHoverTimestamp(value, locale = undefined) {
   });
 }
 
-function resolveEntityEntries(config) {
+function resolveEntityEntries(config, { preserveEmpty = false } = {}) {
   const source = Array.isArray(config?.entities) && config.entities.length
     ? config.entities
     : config?.entity
@@ -398,25 +398,29 @@ function resolveEntityEntries(config) {
         };
       }
 
-      if (!isObject(entry) || !entry.entity) {
+      if (!isObject(entry)) {
         return null;
       }
 
       return {
-        entity: String(entry.entity).trim(),
+        entity: String(entry.entity || "").trim(),
         name: String(entry.name || "").trim(),
         color: String(entry.color || SERIES_COLORS[index % SERIES_COLORS.length]).trim(),
       };
     })
-    .filter(entry => entry?.entity);
+    .filter(entry => entry && (preserveEmpty || entry.entity));
 }
 
-function normalizeConfig(rawConfig) {
+function normalizeConfig(rawConfig, { preserveEmptyEntities = false } = {}) {
   const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  merged.entities = resolveEntityEntries(merged);
+  merged.entities = resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities });
   merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
   return merged;
+}
+
+function normalizeEditorConfig(rawConfig) {
+  return normalizeConfig(rawConfig, { preserveEmptyEntities: true });
 }
 
 function buildSmoothPath(points) {
@@ -3796,7 +3800,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
+    this._config = normalizeEditorConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
@@ -3852,7 +3856,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
   setConfig(config) {
     const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
+    this._config = normalizeEditorConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
@@ -3951,7 +3955,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
 
     delete nextConfig.entity;
-    this._config = normalizeConfig(compactConfig(nextConfig));
+    this._config = normalizeEditorConfig(compactConfig(nextConfig));
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
@@ -3960,7 +3964,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
   }
 
   _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
+    this._config = normalizeEditorConfig(compactConfig(this._config));
   }
 
   _setFieldValue(path, value) {
