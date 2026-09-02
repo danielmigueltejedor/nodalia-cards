@@ -480,8 +480,10 @@ test("Graph unavailable badge keeps the question mark inside the orange chip", a
     document.querySelector("#fixture").append(card);
     await new Promise(resolve => requestAnimationFrame(() => resolve()));
     const badge = card.shadowRoot.querySelector(".graph-card__unavailable-badge");
+    const host = card.shadowRoot.querySelector(".graph-card__icon");
     const icon = badge?.querySelector("ha-icon");
     const badgeRect = badge?.getBoundingClientRect();
+    const hostRect = host?.getBoundingClientRect();
     const iconRect = icon?.getBoundingClientRect();
     return {
       badge: [badgeRect?.width || 0, badgeRect?.height || 0],
@@ -489,6 +491,7 @@ test("Graph unavailable badge keeps the question mark inside the orange chip", a
       icon: [iconRect?.width || 0, iconRect?.height || 0],
       iconSize: icon ? getComputedStyle(icon).getPropertyValue("--mdc-icon-size").trim() : "",
       overflow: badge ? getComputedStyle(badge).overflow : "",
+      hostOverflow: host ? getComputedStyle(host).overflow : "",
       contained: Boolean(
         badgeRect
         && iconRect
@@ -496,6 +499,14 @@ test("Graph unavailable badge keeps the question mark inside the orange chip", a
         && iconRect.right <= badgeRect.right + 0.5
         && iconRect.top >= badgeRect.top - 0.5
         && iconRect.bottom <= badgeRect.bottom + 0.5,
+      ),
+      insideHost: Boolean(
+        badgeRect
+        && hostRect
+        && badgeRect.left >= hostRect.left - 0.5
+        && badgeRect.right <= hostRect.right + 0.5
+        && badgeRect.top >= hostRect.top - 0.5
+        && badgeRect.bottom <= hostRect.bottom + 0.5,
       ),
     };
   });
@@ -505,7 +516,9 @@ test("Graph unavailable badge keeps the question mark inside the orange chip", a
   expect(geometry.icon).toEqual([11, 11]);
   expect(geometry.iconSize).toBe("11px");
   expect(geometry.overflow).toBe("hidden");
+  expect(geometry.hostOverflow).toBe("hidden");
   expect(geometry.contained).toBe(true);
+  expect(geometry.insideHost).toBe(true);
   expect(errors).toEqual([]);
 });
 

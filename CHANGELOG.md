@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.6] - 2026-09-02
+
+Stable **`2.2.6`**: Navigation Bar media-player editing stays reliable in the visual editor, Graph Card keeps its unavailable question mark inside the header icon, and orange unavailable badges use a consistent white glyph.
+
+### Fixed
+
+- Navigation Bar's visual editor keeps newly added media-player rows through Home Assistant config feedback, so the third player and every later player can be selected normally.
+- Replacing an existing Navigation Bar player no longer dies on entity-picker blur, so another media player, a light or an input_select can be chosen without editing YAML.
+- Graph Card's orange unavailable chip stays inside the 38px header icon, with the question-mark glyph clipped at 11px instead of inheriting the header icon size.
+- Entity Card clips the animated inline select panel with the same rounded geometry as its painted surface.
+- Every orange unavailable indicator now forces its question-mark glyph to white across Alarm, Gauge, Climate, Cover, Entity, Fan, Fav, Graph, Humidifier, Insignia, Light, Media Player, Person, Power Flow, Vacuum and Weather cards.
+
+### Validation
+
+- Node and Chromium regressions cover Navigation Bar player add/replace, Graph badge containment and the Entity select-panel clip.
+- The complete Node suite now contains **470** tests.
+
+Per-build notes for **`2.2.6-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
 ## [2.2.5] - 2026-08-31
 
 Stable **`2.2.5`** hotfix: Graph Card's visual editor now keeps newly added series visible while their statistics entity is selected.
