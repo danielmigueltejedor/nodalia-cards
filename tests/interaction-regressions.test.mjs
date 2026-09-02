@@ -479,6 +479,8 @@ test("navigation editor persists secondary media-player picker changes", () => {
   assert.match(inputBlock, /playerField\.value = eventValue \?\? ""/);
   assert.match(inputBlock, /this\._applyFieldValue\(player, playerField\.dataset\.playerField, playerField\)/);
   assert.match(source, /`media_player\.players\.\$\{playerIndex\}\.\$\{playerField\}`/);
+  assert.match(source, /dataset\.editorAction === "add-player"[\s\S]*?entity: ""/);
+  assert.doesNotMatch(source, /entity: "media_player\.nuevo"/);
 });
 
 test("navigation media player toggle keeps theme fallbacks after sanitized values", () => {
@@ -1889,6 +1891,7 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.doesNotMatch(source, /@keyframes entity-card-bubble-bounce[\s\S]{0,500}scale:\s*1\.12/);
   assert.match(source, /"entity-card__icon--entering"/);
   assert.match(source, /\.entity-card:not\(\.entity-card--select-open\) \.entity-card__select-picker-shell-host \{[\s\S]*display: none;/);
+  assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*?border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);/);
   assert.match(source, /\.entity-card__select-picker-shell \{[\s\S]*?overflow: hidden;/);
   assert.match(source, /\.entity-card__select-picker \{[\s\S]*?border-radius: calc\(\$\{styles\.card\.border_radius\} - 8px\);[\s\S]*?overflow: hidden;/);
   assert.doesNotMatch(source, /\.entity-card__select-picker-shell \{[^}]*border-radius:\s*inherit/);

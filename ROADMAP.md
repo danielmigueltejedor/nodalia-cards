@@ -6,6 +6,16 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 # 📍 Current status
 
+## Current preview release
+
+Current preview release:
+
+```text
+2.2.6-alpha.1
+```
+
+Preview **`2.2.6-alpha.1`** fixes third-and-later media-player selection in Navigation Bar's visual editor, removes square expansion artifacts from Entity select panels and makes every orange unavailable question mark consistently white. Stable **`2.2.5`** remains the recommended daily-driver release.
+
 ## Current stable release
 
 Current stable release:

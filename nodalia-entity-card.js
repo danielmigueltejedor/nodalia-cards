@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4846,7 +4846,6 @@ class NodaliaEntityCard extends HTMLElement {
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
           display: inline-flex;
           height: 18px;
           justify-content: center;
@@ -4860,6 +4859,7 @@ class NodaliaEntityCard extends HTMLElement {
 
         .entity-card__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
+          color:#fff;
           height: 11px;
           left: auto;
           position: static;
@@ -4975,9 +4975,8 @@ class NodaliaEntityCard extends HTMLElement {
           display: none;
         }
 
-        /* One clip owner for max-height; keep radius only on the painted panel so
-           Gecko does not compose square ears from nested overflow + scale. */
         .entity-card__select-picker-shell {
+          border-radius: calc(${styles.card.border_radius} - 8px);
           overflow: hidden;
         }
 

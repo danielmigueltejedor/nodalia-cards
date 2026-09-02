@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-climate-card";
 const EDITOR_TAG = "nodalia-climate-card-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,
@@ -5992,7 +5992,6 @@ class NodaliaClimateCard extends HTMLElement {
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
           display: inline-flex;
           height: 18px;
           justify-content: center;
@@ -6005,6 +6004,7 @@ class NodaliaClimateCard extends HTMLElement {
 
         .climate-card__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
+          color:#fff;
           height: 11px;
           left: auto;
           position: static;

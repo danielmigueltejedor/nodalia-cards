@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4944,7 +4944,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
     if (actionButton.dataset.editorAction === "add-player") {
       nextConfig.media_player.players.push({
-        entity: "media_player.nuevo",
+        entity: "",
       });
       this._emitConfig(nextConfig);
       return;

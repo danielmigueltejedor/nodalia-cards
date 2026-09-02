@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-circular-gauge-card";
 const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1379,7 +1379,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
           display: inline-flex;
           height: 18px;
           justify-content: center;
@@ -1392,6 +1391,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
 
         .gauge-card__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
+          color:#fff;
           height: 11px;
           width: 11px;
         }

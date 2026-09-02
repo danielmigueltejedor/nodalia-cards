@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.6-alpha.1] - 2026-09-02
+
+First **`2.2.6`** alpha: reliable Navigation Bar media-player editing and unified unavailable-state polish.
+
+### Fixed
+
+- Navigation Bar's visual editor keeps newly added media-player rows stable through Home Assistant config feedback, so the third player and every later player can be selected normally.
+- Entity Card clips the animated inline select panel with the same rounded geometry as its painted surface, removing the square image corners that could appear while expanding it.
+- Every orange unavailable indicator now forces its question-mark glyph to white across Alarm, Gauge, Climate, Cover, Entity, Fan, Fav, Graph, Humidifier, Insignia, Light, Media Player, Person, Power Flow, Vacuum and Weather cards.
+
+### Validation
+
+- Added a real Chromium visual-editor regression that adds and selects a third Navigation Bar media player after the emitted configuration is fed back into the editor.
+- Added source contracts for the Entity select-panel clip and all 16 unavailable indicators.
+
 ## [2.2.3-alpha.2] - 2026-08-29
 
 Second **`2.2.3`** alpha: complete Cover visual-editor localization.

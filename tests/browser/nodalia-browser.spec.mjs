@@ -443,6 +443,7 @@ test("circular unavailable badges keep a compact question mark", async ({ page }
       const iconRect = icon?.getBoundingClientRect();
       result[tag] = {
         badge: [badgeRect?.width || 0, badgeRect?.height || 0],
+        color: icon ? getComputedStyle(icon).color : "",
         icon: [iconRect?.width || 0, iconRect?.height || 0],
         iconSize: icon ? getComputedStyle(icon).getPropertyValue("--mdc-icon-size").trim() : "",
       };
@@ -452,9 +453,43 @@ test("circular unavailable badges keep a compact question mark", async ({ page }
 
   for (const [tag, value] of Object.entries(metrics)) {
     expect(value.badge, `${tag} badge`).toEqual([18, 18]);
+    expect(value.color, `${tag} question mark color`).toBe("rgb(255, 255, 255)");
     expect(value.icon, `${tag} question mark`).toEqual([11, 11]);
     expect(value.iconSize, `${tag} icon variable`).toBe("11px");
   }
+  expect(errors).toEqual([]);
+});
+
+test("Entity select expansion clips the animated shell to the panel radius", async ({ page }) => {
+  const errors = await loadBundle(page);
+  await page.evaluate(() => {
+    const entity = "select.washer_operation";
+    const card = document.createElement("nodalia-entity-card");
+    card.setConfig({ entity, name: "Washer operation" });
+    card.hass = window.makeHass({
+      [entity]: {
+        entity_id: entity,
+        state: "Start",
+        attributes: { friendly_name: "Washer operation", options: ["Start", "Stop", "Power Off", "Wake Up"] },
+      },
+    });
+    document.querySelector("#fixture").append(card);
+  });
+
+  const card = page.locator("nodalia-entity-card");
+  await card.locator('[data-entity-action="body"]').click();
+  const geometry = await card.evaluate(element => {
+    const shell = element.shadowRoot.querySelector(".entity-card__select-picker-shell");
+    const panel = element.shadowRoot.querySelector(".entity-card__select-picker");
+    return {
+      panelRadius: getComputedStyle(panel).borderRadius,
+      shellRadius: getComputedStyle(shell).borderRadius,
+      shellOverflow: getComputedStyle(shell).overflow,
+    };
+  });
+
+  expect(geometry.shellRadius).toBe(geometry.panelRadius);
+  expect(geometry.shellOverflow).toBe("hidden");
   expect(errors).toEqual([]);
 });
 
@@ -569,6 +604,52 @@ test("Graph visual editor keeps a new series while its statistics entity is sele
   await expect(editor.locator('select[data-field="entities.1.entity"]')).toHaveValue("sensor.humidity");
   await expect.poll(() => page.evaluate(() => window.graphEditorConfigs.at(-1)?.entities?.[1]?.entity))
     .toBe("sensor.humidity");
+});
+
+test("Navigation visual editor accepts a media player beyond the second row", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    const states = Object.fromEntries(["kitchen", "living_room", "office"].map(name => [
+      `media_player.${name}`,
+      {
+        entity_id: `media_player.${name}`,
+        state: "idle",
+        attributes: { friendly_name: name },
+      },
+    ]));
+    const ctor = customElements.get("nodalia-navigation-bar");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      type: "custom:nodalia-navigation-bar",
+      routes: [],
+      media_player: {
+        players: [
+          { entity: "media_player.kitchen" },
+          { entity: "media_player.living_room" },
+        ],
+      },
+    });
+    window.navigationEditorConfigs = [];
+    editor.addEventListener("config-changed", event => {
+      const config = JSON.parse(JSON.stringify(event.detail.config));
+      window.navigationEditorConfigs.push(config);
+      editor.setConfig(config);
+    });
+    document.querySelector("#fixture").append(editor);
+  });
+
+  const editor = page.locator("nodalia-navigation-bar-editor");
+  await editor.locator('[data-editor-action="add-player"]').click();
+  await expect(editor.locator('[data-editor-action="remove-player"]')).toHaveCount(3);
+
+  const thirdEntity = editor.locator('input[data-player-index="2"][data-player-field="entity"]');
+  await expect(thirdEntity).toBeVisible();
+  await thirdEntity.fill("media_player.office");
+  await thirdEntity.press("Tab");
+  await expect(editor.locator('[data-editor-action="remove-player"]')).toHaveCount(3);
+  await expect.poll(() => page.evaluate(() => window.navigationEditorConfigs.at(-1)?.media_player?.players?.[2]?.entity))
+    .toBe("media_player.office");
 });
 
 test("Advanced Vacuum keeps its platform selector compact and contextual", async ({ page }) => {

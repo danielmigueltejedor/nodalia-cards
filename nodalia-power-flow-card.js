@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-power-flow-card";
 const EDITOR_TAG = "nodalia-power-flow-card-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4062,7 +4062,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #fff;
           display: inline-flex;
           height: 18px;
           justify-content: center;
@@ -4075,6 +4074,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
         .power-flow-card__unavailable ha-icon {
           --mdc-icon-size: 11px;
+          color:#fff;
         }
 
         .power-flow-card__content.is-pressing {

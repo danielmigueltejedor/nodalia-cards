@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -1890,7 +1890,6 @@ class NodaliaCoverCard extends HTMLElement {
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
           border-radius: 999px;
-          color: #fff;
           display: inline-flex;
           height: 18px;
           justify-content: center;
@@ -1901,6 +1900,7 @@ class NodaliaCoverCard extends HTMLElement {
         }
         .fan-card__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
+          color:#fff;
           height: 11px;
           position: static;
           transform: none;

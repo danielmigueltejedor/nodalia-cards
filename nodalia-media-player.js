@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-media-player";
 const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 const HAPTIC_PATTERNS = {
@@ -4209,7 +4209,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-          color: #ffffff;
           display: inline-flex;
           height: 18px;
           justify-content: center;
@@ -4223,7 +4222,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
-          color: inherit;
+          color:#fff;
           height: 11px;
           left: auto;
           position: static;

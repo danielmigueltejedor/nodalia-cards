@@ -650,19 +650,49 @@ test("weather forecast condition icons use a contrast-safe color", () => {
   assert.match(source, /\.weather-card__forecast-rain ha-icon \{[\s\S]*?color: var\(--forecast-icon-color, var\(--forecast-accent\)\);/);
 });
 
-test("graph unavailable badge keeps help icon centered and dark", () => {
+test("graph unavailable badge keeps help icon centered and white", () => {
   const source = read("nodalia-graph-card.js");
-  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?color: #1f2330;/);
+  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?background: #ff9b4a;/);
   assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?display: inline-flex;[\s\S]*?justify-content: center;/);
-  assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?position: static;/);
+  assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?color:\s*#fff;[\s\S]*?position: static;/);
   assert.match(source, /\.graph-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
 });
 
-test("weather unavailable badge keeps help icon centered and dark", () => {
+test("weather unavailable badge keeps help icon centered and white", () => {
   const source = read("nodalia-weather-card.js");
-  assert.match(source, /\.weather-card__unavailable-badge \{[\s\S]*?color: #1f2330;/);
-  assert.match(source, /\.weather-card__unavailable-badge ha-icon \{[\s\S]*?position: static;/);
+  assert.match(source, /\.weather-card__unavailable-badge \{[\s\S]*?background: #ff9b4a;/);
+  assert.match(source, /\.weather-card__unavailable-badge ha-icon \{[\s\S]*?color:\s*#fff;[\s\S]*?position: static;/);
   assert.match(source, /\.weather-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
+});
+
+test("every orange unavailable indicator forces a white help glyph", () => {
+  const indicators = [
+    ["nodalia-alarm-panel-card.js", "alarm-card__unavailable-badge"],
+    ["nodalia-circular-gauge-card.js", "gauge-card__unavailable-badge"],
+    ["nodalia-climate-card.js", "climate-card__unavailable-badge"],
+    ["nodalia-cover-card.js", "fan-card__unavailable-badge"],
+    ["nodalia-entity-card.js", "entity-card__unavailable-badge"],
+    ["nodalia-fan-card.js", "fan-card__unavailable-badge"],
+    ["nodalia-fav-card.js", "fav-card__unavailable-badge"],
+    ["nodalia-graph-card.js", "graph-card__unavailable-badge"],
+    ["nodalia-humidifier-card.js", "humidifier-card__unavailable-badge"],
+    ["nodalia-insignia-card.js", "insignia-card__unavailable-badge"],
+    ["nodalia-light-card.js", "light-card__unavailable-badge"],
+    ["nodalia-media-player.js", "media-player__unavailable-badge"],
+    ["nodalia-person-card.js", "person-card__badge"],
+    ["nodalia-power-flow-card.js", "power-flow-card__unavailable"],
+    ["nodalia-vacuum-card.js", "vacuum-card__unavailable-badge"],
+    ["nodalia-weather-card.js", "weather-card__unavailable-badge"],
+  ];
+
+  for (const [file, className] of indicators) {
+    const source = read(file);
+    assert.match(
+      source,
+      new RegExp(`\\.${className} ha-icon \\{[\\s\\S]*?color:\\s*#fff;`),
+      `${file} should render the unavailable help glyph in white`,
+    );
+  }
 });
 
 test("graph mobile legend chips avoid clipped active shadows", () => {

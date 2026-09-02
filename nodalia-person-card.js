@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-person-card";
 const EDITOR_TAG = "nodalia-person-card-editor";
-const CARD_VERSION = "2.2.5";
+const CARD_VERSION = "2.2.6-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1301,7 +1301,6 @@ class NodaliaPersonCard extends HTMLElement {
           box-shadow:
             0 6px 14px rgba(0, 0, 0, 0.14),
             0 0 0 2px color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          color: #ffffff;
           display: inline-flex;
           height: ${badgeSize};
           justify-content: center;
@@ -1320,6 +1319,7 @@ class NodaliaPersonCard extends HTMLElement {
         .person-card__badge ha-icon {
           --mdc-icon-size: calc(${badgeSize} * 0.62);
           align-items: center;
+          color:#fff;
           display: inline-flex;
           height: calc(${badgeSize} * 0.62);
           justify-content: center;
