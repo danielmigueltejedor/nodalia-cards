@@ -11,20 +11,20 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.6
+2.2.7
 ```
 
-Preview **`2.2.6`** is the current recommended release: Navigation Bar media-player editing stays reliable in the visual editor and Graph Card keeps its unavailable question mark inside the header icon.
+Preview **`2.2.7`** is the current recommended release: Graph Card's unavailable badge sits on the corner of the header icon like other cards, with the question mark kept inside the orange chip.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.6
+2.2.7
 ```
 
-Stable **`2.2.6`** fixes Navigation Bar media-player editing in the visual editor, keeps Graph Card's unavailable question mark inside its header icon and unifies white unavailable glyphs. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.7`** places Graph Card's unavailable badge on the header-icon corner like other cards and keeps the question-mark glyph inside the orange chip. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -45,7 +45,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.6`**
+- Regression-free mobile and desktop behavior on stable **`2.2.7`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

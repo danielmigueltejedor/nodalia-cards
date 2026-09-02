@@ -653,14 +653,16 @@ test("weather forecast condition icons use a contrast-safe color", () => {
 test("graph unavailable badge keeps help icon centered and white", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /\.graph-card__icon > ha-icon \{/);
-  assert.match(source, /\.graph-card__icon \{[\s\S]*?overflow: hidden;/);
+  assert.doesNotMatch(source, /\.graph-card__icon \{[\s\S]*?overflow: hidden;[\s\S]*?width: 38px;/);
   assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?background: #ff9b4a;/);
   assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?overflow: hidden;/);
-  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?right: 3px;/);
-  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?top: 3px;/);
+  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?right: 0;/);
+  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?top: 0;/);
+  assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?transform: translate\(28%, -28%\);/);
   assert.match(source, /\.graph-card__unavailable-badge \{[\s\S]*?display: inline-flex;[\s\S]*?justify-content: center;/);
   assert.match(source, /\.graph-card__icon \.graph-card__unavailable-badge ha-icon \{[\s\S]*?--mdc-icon-size: 11px;/);
   assert.match(source, /\.graph-card__icon \.graph-card__unavailable-badge ha-icon \{[\s\S]*?color:\s*#fff;[\s\S]*?position: static;/);
+  assert.match(source, /\.graph-card__icon \.graph-card__unavailable-badge ha-icon \{[\s\S]*?margin-top: -1px;/);
   assert.match(source, /\.graph-card__icon \.graph-card__unavailable-badge ha-icon \{[\s\S]*?transform: none;/);
 });
 

@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.7] - 2026-09-02
+
+Stable **`2.2.7`** hotfix: Graph Card's unavailable badge sits on the corner of the header icon like other cards, and the question-mark glyph stays inside the orange chip.
+
+### Fixed
+
+- Graph Card's orange unavailable badge sits on the top-right corner of the 38px header icon, matching Entity Card, instead of being inset on the circular face.
+- The unavailable question-mark glyph is optically centered and clipped so it no longer overflows the orange chip from below.
+
+### Validation
+
+- Node and Chromium regressions now require corner placement and keep the help glyph inside the orange chip.
+- The complete Node suite now contains **470** tests.
+
 ## [2.2.6] - 2026-09-02
 
 Stable **`2.2.6`**: Navigation Bar media-player editing stays reliable in the visual editor, Graph Card keeps its unavailable question mark inside the header icon, and orange unavailable badges use a consistent white glyph.

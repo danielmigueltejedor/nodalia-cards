@@ -500,13 +500,11 @@ test("Graph unavailable badge keeps the question mark inside the orange chip", a
         && iconRect.top >= badgeRect.top - 0.5
         && iconRect.bottom <= badgeRect.bottom + 0.5,
       ),
-      insideHost: Boolean(
+      atCorner: Boolean(
         badgeRect
         && hostRect
-        && badgeRect.left >= hostRect.left - 0.5
-        && badgeRect.right <= hostRect.right + 0.5
-        && badgeRect.top >= hostRect.top - 0.5
-        && badgeRect.bottom <= hostRect.bottom + 0.5,
+        && badgeRect.right > hostRect.right + 1
+        && badgeRect.top < hostRect.top - 1,
       ),
     };
   });
@@ -516,9 +514,9 @@ test("Graph unavailable badge keeps the question mark inside the orange chip", a
   expect(geometry.icon).toEqual([11, 11]);
   expect(geometry.iconSize).toBe("11px");
   expect(geometry.overflow).toBe("hidden");
-  expect(geometry.hostOverflow).toBe("hidden");
+  expect(geometry.hostOverflow).not.toBe("hidden");
   expect(geometry.contained).toBe(true);
-  expect(geometry.insideHost).toBe(true);
+  expect(geometry.atCorner).toBe(true);
   expect(errors).toEqual([]);
 });
 
