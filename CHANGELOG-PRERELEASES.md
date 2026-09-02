@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.6-alpha.2] - 2026-09-02
+
+Second **`2.2.6`** alpha: Navigation Bar media-player entity replacement and Graph unavailable-badge clip.
+
+### Fixed
+
+- Navigation Bar's visual editor no longer treats Home Assistant entity-picker blur as a commit, so an existing player can be changed to another media player, a light or an input_select without falling back to YAML.
+- Graph Card's orange unavailable chip keeps the question-mark glyph at 11px inside the 18px badge instead of inheriting the header icon size and overflowing the circle.
+
+### Validation
+
+- Added Node and Chromium regressions that replay picker blur before `value-changed` and assert Graph's help glyph stays inside the orange chip.
+
 ## [2.2.6-alpha.1] - 2026-09-02
 
 First **`2.2.6`** alpha: reliable Navigation Bar media-player editing and unified unavailable-state polish.

@@ -460,6 +460,55 @@ test("circular unavailable badges keep a compact question mark", async ({ page }
   expect(errors).toEqual([]);
 });
 
+test("Graph unavailable badge keeps the question mark inside the orange chip", async ({ page }) => {
+  const errors = await loadBundle(page);
+  const geometry = await page.evaluate(async () => {
+    const entity = "sensor.unavailable";
+    const card = document.createElement("nodalia-graph-card");
+    card.setConfig({
+      entity,
+      name: "Graph",
+      animations: { enabled: false },
+    });
+    card.hass = window.makeHass({
+      [entity]: {
+        entity_id: entity,
+        state: "unavailable",
+        attributes: { friendly_name: "Graph", unit_of_measurement: "W" },
+      },
+    });
+    document.querySelector("#fixture").append(card);
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
+    const badge = card.shadowRoot.querySelector(".graph-card__unavailable-badge");
+    const icon = badge?.querySelector("ha-icon");
+    const badgeRect = badge?.getBoundingClientRect();
+    const iconRect = icon?.getBoundingClientRect();
+    return {
+      badge: [badgeRect?.width || 0, badgeRect?.height || 0],
+      color: icon ? getComputedStyle(icon).color : "",
+      icon: [iconRect?.width || 0, iconRect?.height || 0],
+      iconSize: icon ? getComputedStyle(icon).getPropertyValue("--mdc-icon-size").trim() : "",
+      overflow: badge ? getComputedStyle(badge).overflow : "",
+      contained: Boolean(
+        badgeRect
+        && iconRect
+        && iconRect.left >= badgeRect.left - 0.5
+        && iconRect.right <= badgeRect.right + 0.5
+        && iconRect.top >= badgeRect.top - 0.5
+        && iconRect.bottom <= badgeRect.bottom + 0.5,
+      ),
+    };
+  });
+
+  expect(geometry.badge).toEqual([18, 18]);
+  expect(geometry.color).toBe("rgb(255, 255, 255)");
+  expect(geometry.icon).toEqual([11, 11]);
+  expect(geometry.iconSize).toBe("11px");
+  expect(geometry.overflow).toBe("hidden");
+  expect(geometry.contained).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test("Entity select expansion clips the animated shell to the panel radius", async ({ page }) => {
   const errors = await loadBundle(page);
   await page.evaluate(() => {
@@ -650,6 +699,89 @@ test("Navigation visual editor accepts a media player beyond the second row", as
   await expect(editor.locator('[data-editor-action="remove-player"]')).toHaveCount(3);
   await expect.poll(() => page.evaluate(() => window.navigationEditorConfigs.at(-1)?.media_player?.players?.[2]?.entity))
     .toBe("media_player.office");
+});
+
+test("Navigation visual editor replaces an existing player entity from the HA picker", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(async () => {
+    class FakeEntityPicker extends HTMLElement {
+      constructor() {
+        super();
+        this._value = "";
+        this.allowCustomEntity = true;
+      }
+
+      get value() {
+        return this._value;
+      }
+
+      set value(next) {
+        this._value = String(next ?? "");
+      }
+    }
+    if (!customElements.get("ha-entity-picker")) {
+      customElements.define("ha-entity-picker", FakeEntityPicker);
+    }
+
+    const states = {
+      "media_player.dormitorio": {
+        entity_id: "media_player.dormitorio",
+        state: "idle",
+        attributes: { friendly_name: "Dormitorio" },
+      },
+      "media_player.salon": {
+        entity_id: "media_player.salon",
+        state: "playing",
+        attributes: { friendly_name: "Salón" },
+      },
+      "light.dormitorio": {
+        entity_id: "light.dormitorio",
+        state: "on",
+        attributes: { friendly_name: "Luz dormitorio" },
+      },
+      "input_select.source": {
+        entity_id: "input_select.source",
+        state: "TV",
+        attributes: { friendly_name: "Fuente", options: ["TV", "App"] },
+      },
+    };
+    const ctor = customElements.get("nodalia-navigation-bar");
+    const editor = await ctor.getConfigElement();
+    editor.hass = window.makeHass(states);
+    editor.setConfig({
+      type: "custom:nodalia-navigation-bar",
+      routes: [],
+      media_player: {
+        players: [{ entity: "media_player.dormitorio" }],
+      },
+    });
+    window.navigationEditorConfigs = [];
+    editor.addEventListener("config-changed", event => {
+      const config = JSON.parse(JSON.stringify(event.detail.config));
+      window.navigationEditorConfigs.push(config);
+      editor.setConfig(config);
+    });
+    document.querySelector("#fixture").append(editor);
+    window.navigationPlayerEditor = editor;
+  });
+
+  const selected = await page.evaluate(() => {
+    const results = [];
+    for (const entityId of ["media_player.salon", "light.dormitorio", "input_select.source"]) {
+      const picker = window.navigationPlayerEditor.shadowRoot.querySelector("ha-entity-picker");
+      picker.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+      picker.value = entityId;
+      picker.dispatchEvent(new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: entityId },
+      }));
+      results.push(window.navigationEditorConfigs.at(-1)?.media_player?.players?.[0]?.entity);
+    }
+    return results;
+  });
+
+  expect(selected).toEqual(["media_player.salon", "light.dormitorio", "input_select.source"]);
 });
 
 test("Advanced Vacuum keeps its platform selector compact and contextual", async ({ page }) => {

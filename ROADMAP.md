@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.6-alpha.1
+2.2.6-alpha.2
 ```
 
-Preview **`2.2.6-alpha.1`** fixes third-and-later media-player selection in Navigation Bar's visual editor, removes square expansion artifacts from Entity select panels and makes every orange unavailable question mark consistently white. Stable **`2.2.5`** remains the recommended daily-driver release.
+Preview **`2.2.6-alpha.2`** lets Navigation Bar's visual editor replace an existing media-player entity and keeps Graph Card's unavailable question mark inside its orange chip. Stable **`2.2.5`** remains the recommended daily-driver release.
 
 ## Current stable release
 

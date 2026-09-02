@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.2.6-alpha.1";
+const CARD_VERSION = "2.2.6-alpha.2";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4701,6 +4701,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     target[key] = field.value;
   }
 
+  _isHomeAssistantPicker(node) {
+    const tag = String(node?.tagName || "").toUpperCase();
+    return tag === "HA-ENTITY-PICKER" || tag === "HA-SELECTOR" || tag === "HA-ICON-PICKER";
+  }
+
   _onShadowInput(event) {
     const shouldEmit = event.type === "change" || event.type === "value-changed";
     const playerField = event
@@ -4708,6 +4713,12 @@ class NodaliaNavigationBarEditor extends HTMLElement {
       .find(node => node instanceof HTMLElement && node.dataset?.playerField);
 
     if (playerField) {
+      // Ignore picker blur/input; only value-changed has the committed entity.
+      if (this._isHomeAssistantPicker(playerField) && event.type !== "value-changed") {
+        return;
+      }
+
+      event.stopPropagation();
       const nextConfig = deepClone(this._config);
       this._prepareEditorConfig(nextConfig);
       const playerIndex = Number(playerField.dataset.playerIndex);
@@ -4728,6 +4739,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
       const eventValue = event.detail?.value;
       if (event.type === "value-changed" && eventValue !== undefined) {
         playerField.value = eventValue ?? "";
+        playerField.dataset.value = String(eventValue ?? "");
       }
       this._applyFieldValue(player, playerField.dataset.playerField, playerField);
       this._commitEditorConfig(nextConfig, shouldEmit);

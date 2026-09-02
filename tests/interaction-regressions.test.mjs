@@ -475,6 +475,7 @@ test("navigation editor persists secondary media-player picker changes", () => {
   const genericBranch = inputBlock.indexOf("const field");
 
   assert.ok(playerBranch >= 0 && genericBranch > playerBranch, "player picker metadata must win over the generic field added by the HA picker");
+  assert.match(inputBlock, /_isHomeAssistantPicker\(playerField\) && event\.type !== "value-changed"/);
   assert.match(inputBlock, /event\.type === "value-changed" && eventValue !== undefined/);
   assert.match(inputBlock, /playerField\.value = eventValue \?\? ""/);
   assert.match(inputBlock, /this\._applyFieldValue\(player, playerField\.dataset\.playerField, playerField\)/);
@@ -2172,7 +2173,7 @@ test("graph card keeps glass chrome while value and plot stay visually open", ()
   assert.match(source, /const cardShadow = `\$\{styles\.card\.box_shadow\}, 0 16px 32px color-mix\(in srgb, \$\{accentColor\} 18%/);
   assert.match(source, /\.graph-card::before \{[\s\S]*color-mix\(in srgb, \$\{accentColor\} 22%/);
   assert.match(source, /\.graph-card__icon \{[\s\S]*backdrop-filter: blur\(14px\);[\s\S]*border-radius: 999px;[\s\S]*0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
-  assert.match(source, /\.graph-card__icon ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
+  assert.match(source, /\.graph-card__icon > ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
   assert.match(valueBlock, /display: flex;/);
   assert.doesNotMatch(valueBlock, /backdrop-filter|background:|border:|box-shadow|padding:/);
   assert.match(source, /\.graph-card__legend-item \{[\s\S]*backdrop-filter: blur\(12px\);[\s\S]*inset 0 1px 0/);
