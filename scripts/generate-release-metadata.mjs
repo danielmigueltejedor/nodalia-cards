@@ -24,6 +24,8 @@ const distributedFiles = [
   "THIRD_PARTY_NOTICES.md",
 ];
 
+const githubReleaseAssets = [manifest.file];
+
 const distributedAssets = distributedFiles.map(name => {
   if (!name) {
     throw new Error("Required release asset is missing: <empty>");
@@ -96,8 +98,8 @@ const checksumLines = checksumAssets.map(({ filePath, contents }) => {
 const checksumPath = path.join(releaseDir, "SHA256SUMS");
 fs.writeFileSync(checksumPath, `${checksumLines.join("\n")}\n`);
 
-const releaseAssets = [...checksumAssets.map(asset => asset.filePath), checksumPath];
+const releaseAssets = githubReleaseAssets.map(name => path.join(root, name));
 const assetListPath = path.join(releaseDir, "release-assets.txt");
 fs.writeFileSync(assetListPath, `${releaseAssets.map(filePath => path.relative(root, filePath)).join("\n")}\n`);
 
-console.log(`Validated ${distributedFiles.length} required assets and wrote ${path.relative(root, checksumPath)}.`);
+console.log(`Validated ${distributedFiles.length} repository files, hashed provenance, and queued ${githubReleaseAssets.length} GitHub release asset(s).`);

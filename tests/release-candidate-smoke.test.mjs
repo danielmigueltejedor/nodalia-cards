@@ -64,11 +64,13 @@ test("bundle build validates card registrations before writing artifacts", () =>
 test("release metadata hashes the same buffers it validated", () => {
   const source = read("scripts/generate-release-metadata.mjs");
   assert.match(source, /const distributedFiles = \[\s*manifest\.file,/);
+  assert.match(source, /const githubReleaseAssets = \[manifest\.file\];/);
   assert.doesNotMatch(source, /manifest\.(?:loaderFile|splitCoreFile|splitSuiteFile|editorFile|compatLoaderFiles)/);
   assert.doesNotMatch(source, /`nodalia-cards-\$\{pkg\.version\}\.js`/);
   assert.match(source, /const distributedAssets = distributedFiles\.map/);
   assert.match(source, /contents: fs\.readFileSync\(filePath\)/);
   assert.match(source, /checksumAssets\.map\(\(\{ filePath, contents \}\)/);
+  assert.match(source, /const releaseAssets = githubReleaseAssets\.map/);
   assert.doesNotMatch(source, /existsSync\(/);
 });
 
@@ -84,8 +86,10 @@ test("HACS publishing contract includes license, information, images, and plugin
   assert.match(license, /Copyright \(c\) 2026 Daniel Miguel Tejedor/);
   assert.ok(pkg.files.includes("LICENSE"), "the published package must include its license explicitly");
   for (const file of ["LICENSE", "README.md", "hacs.json", "CHANGELOG.md", "CHANGELOG-PRERELEASES.md"]) {
-    assert.match(release, new RegExp(`${file.replaceAll(".", "\\.")}`), `${file} must ship as a release asset`);
+    assert.match(release, new RegExp(`${file.replaceAll(".", "\\.")}`), `${file} must remain in tagged repository provenance`);
+    assert.ok(fs.existsSync(path.join(root, file)), `${file} must exist in the repository for HACS installs`);
   }
+  assert.match(release, /const githubReleaseAssets = \[manifest\.file\];/);
   assert.equal(hacs.name, "Nodalia Cards");
   assert.equal(hacs.filename, "nodalia-cards.js");
   assert.equal(hacs.content_in_root, true);

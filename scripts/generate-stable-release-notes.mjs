@@ -55,7 +55,7 @@ Before updating a production dashboard, review any **Breaking changes** or **Mig
 
 ## Integrity and support
 
-- The release assets include \`SHA256SUMS\`, build provenance and an SBOM for download verification.
+- The countable GitHub release asset is \`nodalia-cards.js\`. Build provenance, \`SHA256SUMS\` and an SBOM are recorded as GitHub attestations.
 - For a reproducible problem, [open a bug report](${repositoryUrl}/issues/new?template=bug_report.yml) with your Home Assistant version, browser, card YAML and console errors.
 - Preview-by-preview development details remain in [CHANGELOG-PRERELEASES.md](${repositoryUrl}/blob/v${version}/CHANGELOG-PRERELEASES.md).
 `;

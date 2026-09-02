@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.8] - 2026-09-02
+
+Stable **`2.2.8`**: GitHub releases ship only `nodalia-cards.js`, so HACS and GitHub count the same plugin file as other Dashboard cards, and the README badge shows all-time downloads.
+
+### Changed
+
+- GitHub releases attach only `nodalia-cards.js`. License, README, changelog and provenance files stay in the tagged repository for HACS `content_in_root` installs instead of competing as extra downloadable assets.
+- The README downloads badge sums every GitHub release of `nodalia-cards.js`, so HACS information is not limited to the latest tag.
+
+### Validation
+
+- Release metadata now distinguishes repository provenance files from the single uploaded GitHub asset.
+- The complete Node suite now contains **470** tests.
+
 ## [2.2.7] - 2026-09-02
 
 Stable **`2.2.7`** hotfix: Graph Card's unavailable badge sits on the corner of the header icon like other cards, and the question-mark glyph stays inside the orange chip.

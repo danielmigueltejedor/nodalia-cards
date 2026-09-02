@@ -7,7 +7,7 @@
     <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases"><img src="https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=preview" alt="Latest preview release"></a>
     <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant&logoColor=white" alt="Home Assistant 2025.1 or newer">
     <a href="https://github.com/hacs/default/blob/master/plugin"><img src="https://img.shields.io/badge/HACS-default%20repository-41BDF5?logo=home-assistant&logoColor=white" alt="Available in the default HACS catalogue"></a>
-    <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases"><img src="https://img.shields.io/github/downloads/danielmigueltejedor/nodalia-cards/total" alt="Total GitHub release downloads"></a>
+    <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases"><img src="https://img.shields.io/github/downloads/danielmigueltejedor/nodalia-cards/total?label=downloads" alt="Total GitHub release downloads"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/github/license/danielmigueltejedor/nodalia-cards" alt="MIT license"></a>
   </p>
 

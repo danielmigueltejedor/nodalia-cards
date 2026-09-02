@@ -66,6 +66,7 @@ test("stable notes combine curated changes with practical HACS update and suppor
   assert.match(notes, /hacsfiles\/nodalia-cards\/nodalia-cards\.js/);
   assert.match(notes, /Breaking changes/);
   assert.match(notes, /SHA256SUMS/);
+  assert.match(notes, /countable GitHub release asset is `nodalia-cards\.js`/);
   assert.match(notes, /issues\/new\?template=bug_report\.yml/);
 });
 

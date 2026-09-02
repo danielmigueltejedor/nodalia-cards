@@ -11,20 +11,20 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.7
+2.2.8
 ```
 
-Preview **`2.2.7`** is the current recommended release: Graph Card's unavailable badge sits on the corner of the header icon like other cards, with the question mark kept inside the orange chip.
+Preview **`2.2.8`** is the current recommended release: GitHub releases ship only `nodalia-cards.js` so HACS can count the plugin file, and the README shows all-time downloads.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.7
+2.2.8
 ```
 
-Stable **`2.2.7`** places Graph Card's unavailable badge on the header-icon corner like other cards and keeps the question-mark glyph inside the orange chip. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.8`** publishes a single countable `nodalia-cards.js` GitHub asset and an all-time downloads badge. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -45,7 +45,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.7`**
+- Regression-free mobile and desktop behavior on stable **`2.2.8`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience
