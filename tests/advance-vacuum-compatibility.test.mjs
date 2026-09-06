@@ -330,6 +330,121 @@ test("advanced vacuum render signature tracks auxiliary live room entities", () 
   assert.match(source, /_callGotoService\(this\._gotoPoint\)/);
 });
 
+function createDockedVacuumCard({ entity, states = {}, entities = {} } = {}) {
+  const { card, calls } = createCard({
+    states: {
+      [entity]: {
+        entity_id: entity,
+        state: "docked",
+        attributes: { friendly_name: entity },
+      },
+      ...states,
+    },
+    entities,
+  });
+  card._config.entity = entity;
+  return { card, calls };
+}
+
+test("advanced vacuum dock controls stay on the configured vacuum when multiple robots exist", () => {
+  const states = {
+    "button.roborock_qrevo_start_emptying": { state: "unknown", attributes: {} },
+    "button.roborock_s8_start_emptying": { state: "unknown", attributes: {} },
+    "button.roborock_qrevo_start_wash_mop": { state: "unknown", attributes: {} },
+    "button.roborock_s8_start_wash_mop": { state: "unknown", attributes: {} },
+    "select.roborock_qrevo_empty_mode": {
+      state: "smart",
+      attributes: { options: ["smart", "fast", "max"] },
+    },
+    "select.roborock_s8_empty_mode": {
+      state: "smart",
+      attributes: { options: ["smart", "fast", "max"] },
+    },
+    "vacuum.roborock_qrevo": { state: "docked", attributes: {} },
+    "vacuum.roborock_s8": { state: "docked", attributes: {} },
+  };
+
+  const s8 = createDockedVacuumCard({ entity: "vacuum.roborock_s8", states });
+  s8.card._runDockControlAction("empty");
+  s8.card._runDockControlAction("wash");
+  s8.card._setDockSettingOption("empty_mode", "fast");
+
+  assert.deepEqual(s8.calls.map(call => [call.domain, call.service, call.data.entity_id, call.data.option]), [
+    ["button", "press", "button.roborock_s8_start_emptying", undefined],
+    ["button", "press", "button.roborock_s8_start_wash_mop", undefined],
+    ["select", "select_option", "select.roborock_s8_empty_mode", "fast"],
+  ]);
+
+  const qrevo = createDockedVacuumCard({ entity: "vacuum.roborock_qrevo", states });
+  qrevo.card._runDockControlAction("empty");
+  assert.equal(qrevo.calls[0]?.domain, "button");
+  assert.equal(qrevo.calls[0]?.service, "press");
+  assert.equal(qrevo.calls[0]?.data?.entity_id, "button.roborock_qrevo_start_emptying");
+});
+
+test("advanced vacuum dock discovery does not let a shorter vacuum id steal a longer sibling helper", () => {
+  const states = {
+    "button.roborock_s8_pro_start_emptying": { state: "unknown", attributes: {} },
+    "button.roborock_s8_start_emptying": { state: "unknown", attributes: {} },
+    "vacuum.roborock_s8": { state: "docked", attributes: {} },
+    "vacuum.roborock_s8_pro": { state: "docked", attributes: {} },
+  };
+
+  const s8 = createDockedVacuumCard({ entity: "vacuum.roborock_s8", states });
+  s8.card._runDockControlAction("empty");
+  assert.equal(s8.calls[0]?.data?.entity_id, "button.roborock_s8_start_emptying");
+
+  const s8Pro = createDockedVacuumCard({ entity: "vacuum.roborock_s8_pro", states });
+  s8Pro.card._runDockControlAction("empty");
+  assert.equal(s8Pro.calls[0]?.data?.entity_id, "button.roborock_s8_pro_start_emptying");
+});
+
+test("advanced vacuum dock discovery can use the vacuum device id when names do not include the object id", () => {
+  const { card, calls } = createDockedVacuumCard({
+    entity: "vacuum.roborock_s8",
+    states: {
+      "button.start_dust_collection": { state: "unknown", attributes: {} },
+      "vacuum.roborock_s8": { state: "docked", attributes: {} },
+      "vacuum.roborock_qrevo": { state: "docked", attributes: {} },
+    },
+    entities: {
+      "vacuum.roborock_s8": { device_id: "s8-device" },
+      "button.start_dust_collection": { device_id: "s8-device" },
+      "vacuum.roborock_qrevo": { device_id: "qrevo-device" },
+    },
+  });
+
+  card._runDockControlAction("empty");
+  assert.equal(calls[0]?.data?.entity_id, "button.start_dust_collection");
+});
+
+test("advanced vacuum dock discovery keeps a unique unscoped helper on a single-vacuum home", () => {
+  const { card, calls } = createDockedVacuumCard({
+    entity: "vacuum.roborock_s8",
+    states: {
+      "button.start_dust_collection": { state: "unknown", attributes: {} },
+      "vacuum.roborock_s8": { state: "docked", attributes: {} },
+    },
+  });
+
+  card._runDockControlAction("empty");
+  assert.equal(calls[0]?.data?.entity_id, "button.start_dust_collection");
+});
+
+test("advanced vacuum dock discovery does not press another robot's unscoped helper", () => {
+  const { card, calls } = createDockedVacuumCard({
+    entity: "vacuum.roborock_s8",
+    states: {
+      "button.start_dust_collection": { state: "unknown", attributes: {} },
+      "vacuum.roborock_s8": { state: "docked", attributes: {} },
+      "vacuum.roborock_qrevo": { state: "docked", attributes: {} },
+    },
+  });
+
+  card._runDockControlAction("empty");
+  assert.equal(calls.length, 0);
+});
+
 test("advanced vacuum editor keeps platform selection compact and Valetudo-specific", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /\.editor-grid \{\n\s+align-items: start;/);

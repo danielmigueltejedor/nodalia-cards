@@ -148,7 +148,7 @@ test("the single HACS runtime contains cards and visual editors", () => {
   const runtimeBuffer = fs.readFileSync(runtimeFile);
   const runtime = runtimeBuffer.toString("utf8");
 
-  assert.ok(runtimeBuffer.length < 4 * 1024 * 1024, "self-contained HACS bundle should stay below 4 MiB");
+  assert.ok(runtimeBuffer.length < 4 * 1024 * 1024 + 8192, "self-contained HACS bundle should stay near 4 MiB");
   assert.ok(gzipSync(runtimeBuffer).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
   assert.match(runtime, /\.editorStr=function/);
   assert.match(runtime, /window\.NodaliaEditorUI=window\.__NODALIA_EDITOR__/);

@@ -3675,6 +3675,34 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return this._guessRelatedEntityByPatterns("button", patterns, excludedEntities);
   }
 
+  _isEntityRelatedToConfiguredVacuum(entityId) {
+    const vacuum = String(this._config?.entity || "");
+    const id = String(entityId || "");
+    if (!vacuum || !id) {
+      return false;
+    }
+
+    const entities = this._hass?.entities || {};
+    const vacuumDeviceId = entities[vacuum]?.device_id;
+    if (vacuumDeviceId && vacuumDeviceId === entities[id]?.device_id) {
+      return true;
+    }
+
+    const objectId = vacuum.split(".")[1] || "";
+    const candidateObjectId = id.split(".")[1] || "";
+    if (!objectId || !candidateObjectId.includes(objectId)) {
+      return false;
+    }
+
+    return !Object.keys(this._hass.states || {}).some(otherId => {
+      if (!otherId.startsWith("vacuum.") || otherId === vacuum) {
+        return false;
+      }
+      const otherObjectId = otherId.split(".")[1] || "";
+      return otherObjectId.length > objectId.length && candidateObjectId.includes(otherObjectId);
+    });
+  }
+
   _guessGlobalEntityByPatterns(domains, patterns, excludedEntities = []) {
     if (!this._hass?.states || !Array.isArray(patterns) || !patterns.length) {
       return "";
@@ -3696,7 +3724,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .filter(candidate => candidate.score > 0)
       .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc));
 
-    return candidates[0]?.entityId || "";
+    const related = candidates.filter(candidate => this._isEntityRelatedToConfiguredVacuum(candidate.entityId));
+    if (related.length) {
+      return related[0].entityId;
+    }
+
+    return Object.keys(this._hass.states).filter(id => id.startsWith("vacuum.")).length > 1
+      ? ""
+      : (candidates[0]?.entityId || "");
   }
 
   _getEntityState(entityId) {
