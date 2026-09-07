@@ -2731,6 +2731,45 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return [...new Set(resolved.map(item => String(item || "").trim()).filter(Boolean))];
   }
 
+  _listVacuumObjectIds(states = this._hass?.states || {}) {
+    return Object.keys(states || {})
+      .filter(id => id.startsWith("vacuum."))
+      .map(id => normalizeTextKey(id.split(".").slice(1).join("_")))
+      .filter(Boolean);
+  }
+
+  /**
+   * Room/activity auto-detect must not treat `vacuum.roborock_s8_pro` helpers as
+   * belonging to `vacuum.roborock_s8`. Same `device_id` always wins; otherwise the
+   * longest matching vacuum object id in the candidate owns it.
+   */
+  _isHelperRelatedToConfiguredVacuum({
+    candidateId,
+    searchable,
+    isSameDevice,
+    objectId,
+    vacuumObjectIds,
+  }) {
+    if (isSameDevice) {
+      return true;
+    }
+    if (!objectId) {
+      return false;
+    }
+    const haystack = `${normalizeTextKey(candidateId)} ${searchable}`;
+    if (!haystack.includes(objectId)) {
+      return false;
+    }
+    const claimedByLongerSibling = (vacuumObjectIds || []).some(siblingId => (
+      siblingId
+      && siblingId !== objectId
+      && siblingId.length > objectId.length
+      && siblingId.includes(objectId)
+      && haystack.includes(siblingId)
+    ));
+    return !claimedByLongerSibling;
+  }
+
   _getRelatedVacuumEntityIds(hass = this._hass) {
     const entityId = String(this._config?.entity || "");
     const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
@@ -2770,6 +2809,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const vacuumRegistryEntry = registry[entityId] || null;
       const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
       const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
+      const vacuumObjectIds = this._listVacuumObjectIds(states);
       Object.keys(states).forEach(candidateId => {
         if (candidateId === entityId) {
           return;
@@ -2789,7 +2829,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           candidateRegistryEntry?.translation_key,
           candidateState?.attributes?.friendly_name,
         ].filter(Boolean).join(" "));
-        const resemblesVacuum = isSameDevice || (objectId && searchable.includes(objectId));
+        const resemblesVacuum = this._isHelperRelatedToConfiguredVacuum({
+          candidateId,
+          searchable,
+          isSameDevice,
+          objectId,
+          vacuumObjectIds,
+        });
         if (!resemblesVacuum) {
           return;
         }

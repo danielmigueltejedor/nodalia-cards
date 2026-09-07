@@ -330,6 +330,62 @@ test("advanced vacuum render signature tracks auxiliary live room entities", () 
   assert.match(source, /_callGotoService\(this\._gotoPoint\)/);
 });
 
+function createSiblingRoborockHome() {
+  const states = {
+    "vacuum.roborock_s8": { entity_id: "vacuum.roborock_s8", state: "docked", attributes: {} },
+    "vacuum.roborock_s8_pro": { entity_id: "vacuum.roborock_s8_pro", state: "cleaning", attributes: {} },
+    "camera.roborock_s8_map": { state: "idle", attributes: {} },
+    "sensor.roborock_s8_cleaning_status": {
+      state: "idle",
+      attributes: { friendly_name: "S8 cleaning status" },
+    },
+    "sensor.roborock_s8_pro_cleaning_status": {
+      state: "room_cleaning",
+      attributes: { friendly_name: "S8 Pro cleaning status" },
+    },
+    "sensor.roborock_s8_pro_current_room": {
+      state: "Kitchen",
+      attributes: { room_id: 22, friendly_name: "S8 Pro current room" },
+    },
+  };
+  const entities = {
+    "vacuum.roborock_s8": { device_id: "s8-device", platform: "roborock" },
+    "vacuum.roborock_s8_pro": { device_id: "s8-pro-device", platform: "roborock" },
+    "sensor.roborock_s8_cleaning_status": { device_id: "s8-device", platform: "roborock" },
+    "sensor.roborock_s8_pro_cleaning_status": { device_id: "s8-pro-device", platform: "roborock" },
+    "sensor.roborock_s8_pro_current_room": { device_id: "s8-pro-device", platform: "roborock" },
+  };
+  const { card, calls } = createCard({
+    platform: "Roborock",
+    states,
+    entities,
+  });
+  card._config.entity = "vacuum.roborock_s8";
+  card._config.map_source = { camera: "camera.roborock_s8_map" };
+  card._roomTrackingEntityCache = null;
+  return { card, calls, states };
+}
+
+test("advanced vacuum ignores a longer sibling robot's activity when starting rooms", async () => {
+  const { card, calls, states } = createSiblingRoborockHome();
+  const related = card._getRelatedVacuumEntityIds();
+
+  assert.deepEqual(JSON.parse(JSON.stringify(related.activityIds)), ["sensor.roborock_s8_cleaning_status"]);
+  assert.equal(related.roomIds.includes("sensor.roborock_s8_pro_current_room"), false);
+  assert.equal(card._isCleaning(states["vacuum.roborock_s8"]), false);
+  assert.equal(card._isPaused(states["vacuum.roborock_s8"]), false);
+
+  card._activeMode = "rooms";
+  card._selectedRoomIds = ["living_room"];
+  card._repeats = 1;
+  await card._runMapAction();
+
+  assert.equal(calls.length, 1, "docked S8 must not inherit S8 Pro cleaning and send pause");
+  assert.equal(calls[0].service, "send_command");
+  assert.equal(calls[0].data.command, "app_segment_clean");
+  assert.equal(calls[0].data.entity_id, "vacuum.roborock_s8");
+});
+
 test("advanced vacuum editor keeps platform selection compact and Valetudo-specific", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /\.editor-grid \{\n\s+align-items: start;/);
