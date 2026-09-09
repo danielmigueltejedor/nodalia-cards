@@ -382,7 +382,43 @@ const {
   fireEvent,
 } = window.NodaliaUtils;
 
+function listVacuumObjectIds(states = {}) {
+  return Object.keys(states || {})
+    .filter(id => id.startsWith("vacuum."))
+    .map(id => normalizeTextKey(id.split(".").slice(1).join("_")))
+    .filter(Boolean);
+}
 
+/**
+ * Helpers whose ids contain `vacuum.roborock_s8` also match `vacuum.roborock_s8_pro`.
+ * Same `device_id` always wins; otherwise the longest matching vacuum object id owns the helper.
+ */
+function isHelperRelatedToConfiguredVacuum({
+  candidateId,
+  searchable = "",
+  isSameDevice = false,
+  objectId,
+  vacuumObjectIds,
+}) {
+  if (isSameDevice) {
+    return true;
+  }
+  if (!objectId) {
+    return false;
+  }
+  const haystack = `${normalizeTextKey(candidateId)} ${normalizeTextKey(searchable)}`;
+  if (!haystack.includes(objectId)) {
+    return false;
+  }
+  const claimedByLongerSibling = (vacuumObjectIds || []).some(siblingId => (
+    siblingId
+    && siblingId !== objectId
+    && siblingId.length > objectId.length
+    && siblingId.includes(objectId)
+    && haystack.includes(siblingId)
+  ));
+  return !claimedByLongerSibling;
+}
 
 function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -3647,15 +3683,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const objectId = String(this._config.entity).split(".")[1] || "";
+    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
     if (!objectId) {
       return "";
     }
 
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
+    const candidates = Object.keys(states)
       .filter(entityId => entityId.startsWith(`${domain}.`))
-      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => isHelperRelatedToConfiguredVacuum({
+        candidateId: entityId,
+        searchable: states[entityId]?.attributes?.friendly_name || "",
+        isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+        objectId,
+        vacuumObjectIds,
+      }))
       .filter(entityId => !excludedEntities.includes(entityId))
       .map(entityId => ({
         entityId,

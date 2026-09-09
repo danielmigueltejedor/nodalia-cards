@@ -337,3 +337,119 @@ test("advanced vacuum editor keeps platform selection compact and Valetudo-speci
   assert.match(source, /"send_command", label: "Generic send_command" \},\n\s+\], \{ fullWidth: true \}\)/);
   assert.match(source, /normalizeTextKey\(config\.vacuum_platform \|\| "auto"\)\.includes\("valetudo"\)/);
 });
+
+function siblingRoborockStates(extra = {}) {
+  return {
+    "vacuum.roborock_s8": {
+      entity_id: "vacuum.roborock_s8",
+      state: "docked",
+      attributes: { friendly_name: "Roborock S8" },
+    },
+    "vacuum.roborock_s8_pro": {
+      entity_id: "vacuum.roborock_s8_pro",
+      state: "cleaning",
+      attributes: { friendly_name: "Roborock S8 Pro" },
+    },
+    "select.roborock_s8_water_level": {
+      entity_id: "select.roborock_s8_water_level",
+      state: "medium",
+      attributes: { options: ["off", "low", "medium", "high"] },
+    },
+    "select.roborock_s8_pro_water_level": {
+      entity_id: "select.roborock_s8_pro_water_level",
+      state: "low",
+      attributes: { options: ["off", "low", "medium", "high"] },
+    },
+    "select.roborock_s8_fan_speed": {
+      entity_id: "select.roborock_s8_fan_speed",
+      state: "balanced",
+      attributes: { options: ["quiet", "balanced", "turbo"] },
+    },
+    "select.roborock_s8_pro_fan_speed": {
+      entity_id: "select.roborock_s8_pro_fan_speed",
+      state: "turbo",
+      attributes: { options: ["quiet", "balanced", "turbo"] },
+    },
+    ...extra,
+  };
+}
+
+test("advance vacuum mop and suction selects stay on the configured robot when a sibling prefix exists", () => {
+  const { card, calls } = createCard({ states: siblingRoborockStates() });
+  card._config.entity = "vacuum.roborock_s8";
+
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+  assert.equal(card._guessRelatedSelectEntity("suction"), "select.roborock_s8_fan_speed");
+
+  card._setModeOption("mop", "high");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].domain, "select");
+  assert.equal(calls[0].service, "select_option");
+  assert.equal(calls[0].data.entity_id, "select.roborock_s8_water_level");
+  assert.equal(calls[0].data.option, "high");
+});
+
+test("advance vacuum mop-mode select stays on the configured robot when a sibling prefix exists", () => {
+  const { card, calls } = createCard({
+    states: siblingRoborockStates({
+      "select.roborock_s8_mop_intensity": {
+        entity_id: "select.roborock_s8_mop_intensity",
+        state: "medium",
+        attributes: { options: ["off", "low", "medium", "high"] },
+      },
+      "select.roborock_s8_mop_mode": {
+        entity_id: "select.roborock_s8_mop_mode",
+        state: "standard",
+        attributes: { options: ["standard", "deep"] },
+      },
+      "select.roborock_s8_pro_mop_mode": {
+        entity_id: "select.roborock_s8_pro_mop_mode",
+        state: "deep",
+        attributes: { options: ["standard", "deep"] },
+      },
+    }),
+  });
+  card._config.entity = "vacuum.roborock_s8";
+
+  assert.equal(
+    card._guessRelatedSelectEntityByPatterns(card._getMopModeEntityPatterns()),
+    "select.roborock_s8_mop_mode",
+  );
+
+  card._setModeOption("mop_mode", "deep");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].data.entity_id, "select.roborock_s8_mop_mode");
+  assert.equal(calls[0].data.option, "deep");
+});
+
+test("advance vacuum does not prefer a sibling's higher-scoring mop helper", () => {
+  const states = siblingRoborockStates();
+  delete states["select.roborock_s8_pro_water_level"];
+  states["select.roborock_s8_pro_mop_intensity"] = {
+    entity_id: "select.roborock_s8_pro_mop_intensity",
+    state: "high",
+    attributes: { options: ["off", "low", "medium", "high"] },
+  };
+  const { card, calls } = createCard({ states });
+  card._config.entity = "vacuum.roborock_s8";
+
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+  card._setModeOption("mop", "low");
+  assert.equal(calls[0]?.data?.entity_id, "select.roborock_s8_water_level");
+});
+
+test("advance vacuum still binds mop helpers that share the vacuum device_id", () => {
+  const states = siblingRoborockStates();
+  const entities = {
+    "vacuum.roborock_s8": { device_id: "s8-device" },
+    "vacuum.roborock_s8_pro": { device_id: "pro-device" },
+    "select.roborock_s8_water_level": { device_id: "s8-device" },
+    "select.roborock_s8_pro_water_level": { device_id: "pro-device" },
+  };
+  const { card } = createCard({ states, entities });
+  card._config.entity = "vacuum.roborock_s8";
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+
+  card._config.entity = "vacuum.roborock_s8_pro";
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_pro_water_level");
+});
