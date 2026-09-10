@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.8
+2.2.9-alpha.1
 ```
 
-Preview **`2.2.8`** is the current recommended release: GitHub releases ship only `nodalia-cards.js` so HACS can count the plugin file, and the README shows all-time downloads.
+Preview **`2.2.9-alpha.1`** keeps Vacuum and Advance Vacuum commands on the configured robot when sibling ids share a prefix (`vacuum.roborock_s8` vs `vacuum.roborock_s8_pro`). Stable **`2.2.8`** remains the recommended daily-driver release.
 
 ## Current stable release
 

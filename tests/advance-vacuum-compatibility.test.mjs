@@ -330,6 +330,293 @@ test("advanced vacuum render signature tracks auxiliary live room entities", () 
   assert.match(source, /_callGotoService\(this\._gotoPoint\)/);
 });
 
+function createDockedVacuumCard({ entity, states = {}, entities = {} } = {}) {
+  const { card, calls } = createCard({
+    states: {
+      [entity]: {
+        entity_id: entity,
+        state: "docked",
+        attributes: { friendly_name: entity },
+      },
+      ...states,
+    },
+    entities,
+  });
+  card._config.entity = entity;
+  return { card, calls };
+}
+
+test("advanced vacuum dock controls stay on the configured vacuum when multiple robots exist", () => {
+  const states = {
+    "button.roborock_qrevo_start_emptying": { state: "unknown", attributes: {} },
+    "button.roborock_s8_start_emptying": { state: "unknown", attributes: {} },
+    "button.roborock_qrevo_start_wash_mop": { state: "unknown", attributes: {} },
+    "button.roborock_s8_start_wash_mop": { state: "unknown", attributes: {} },
+    "select.roborock_qrevo_empty_mode": {
+      state: "smart",
+      attributes: { options: ["smart", "fast", "max"] },
+    },
+    "select.roborock_s8_empty_mode": {
+      state: "smart",
+      attributes: { options: ["smart", "fast", "max"] },
+    },
+    "vacuum.roborock_qrevo": { state: "docked", attributes: {} },
+    "vacuum.roborock_s8": { state: "docked", attributes: {} },
+  };
+
+  const s8 = createDockedVacuumCard({ entity: "vacuum.roborock_s8", states });
+  s8.card._runDockControlAction("empty");
+  s8.card._runDockControlAction("wash");
+  s8.card._setDockSettingOption("empty_mode", "fast");
+
+  assert.deepEqual(s8.calls.map(call => [call.domain, call.service, call.data.entity_id, call.data.option]), [
+    ["button", "press", "button.roborock_s8_start_emptying", undefined],
+    ["button", "press", "button.roborock_s8_start_wash_mop", undefined],
+    ["select", "select_option", "select.roborock_s8_empty_mode", "fast"],
+  ]);
+
+  const qrevo = createDockedVacuumCard({ entity: "vacuum.roborock_qrevo", states });
+  qrevo.card._runDockControlAction("empty");
+  assert.equal(qrevo.calls[0]?.domain, "button");
+  assert.equal(qrevo.calls[0]?.service, "press");
+  assert.equal(qrevo.calls[0]?.data?.entity_id, "button.roborock_qrevo_start_emptying");
+});
+
+test("advanced vacuum dock discovery does not let a shorter vacuum id steal a longer sibling helper", () => {
+  const states = {
+    "button.roborock_s8_pro_start_emptying": { state: "unknown", attributes: {} },
+    "button.roborock_s8_start_emptying": { state: "unknown", attributes: {} },
+    "vacuum.roborock_s8": { state: "docked", attributes: {} },
+    "vacuum.roborock_s8_pro": { state: "docked", attributes: {} },
+  };
+
+  const s8 = createDockedVacuumCard({ entity: "vacuum.roborock_s8", states });
+  s8.card._runDockControlAction("empty");
+  assert.equal(s8.calls[0]?.data?.entity_id, "button.roborock_s8_start_emptying");
+
+  const s8Pro = createDockedVacuumCard({ entity: "vacuum.roborock_s8_pro", states });
+  s8Pro.card._runDockControlAction("empty");
+  assert.equal(s8Pro.calls[0]?.data?.entity_id, "button.roborock_s8_pro_start_emptying");
+});
+
+test("advanced vacuum dock discovery can use the vacuum device id when names do not include the object id", () => {
+  const { card, calls } = createDockedVacuumCard({
+    entity: "vacuum.roborock_s8",
+    states: {
+      "button.start_dust_collection": { state: "unknown", attributes: {} },
+      "vacuum.roborock_s8": { state: "docked", attributes: {} },
+      "vacuum.roborock_qrevo": { state: "docked", attributes: {} },
+    },
+    entities: {
+      "vacuum.roborock_s8": { device_id: "s8-device" },
+      "button.start_dust_collection": { device_id: "s8-device" },
+      "vacuum.roborock_qrevo": { device_id: "qrevo-device" },
+    },
+  });
+
+  card._runDockControlAction("empty");
+  assert.equal(calls[0]?.data?.entity_id, "button.start_dust_collection");
+});
+
+test("advanced vacuum dock discovery keeps a unique unscoped helper on a single-vacuum home", () => {
+  const { card, calls } = createDockedVacuumCard({
+    entity: "vacuum.roborock_s8",
+    states: {
+      "button.start_dust_collection": { state: "unknown", attributes: {} },
+      "vacuum.roborock_s8": { state: "docked", attributes: {} },
+    },
+  });
+
+  card._runDockControlAction("empty");
+  assert.equal(calls[0]?.data?.entity_id, "button.start_dust_collection");
+});
+
+test("advanced vacuum dock discovery does not press another robot's unscoped helper", () => {
+  const { card, calls } = createDockedVacuumCard({
+    entity: "vacuum.roborock_s8",
+    states: {
+      "button.start_dust_collection": { state: "unknown", attributes: {} },
+      "vacuum.roborock_s8": { state: "docked", attributes: {} },
+      "vacuum.roborock_qrevo": { state: "docked", attributes: {} },
+    },
+  });
+
+  card._runDockControlAction("empty");
+  assert.equal(calls.length, 0);
+});
+
+function createSiblingRoborockHome() {
+  const states = {
+    "vacuum.roborock_s8": { entity_id: "vacuum.roborock_s8", state: "docked", attributes: {} },
+    "vacuum.roborock_s8_pro": { entity_id: "vacuum.roborock_s8_pro", state: "cleaning", attributes: {} },
+    "camera.roborock_s8_map": { state: "idle", attributes: {} },
+    "sensor.roborock_s8_cleaning_status": {
+      state: "idle",
+      attributes: { friendly_name: "S8 cleaning status" },
+    },
+    "sensor.roborock_s8_pro_cleaning_status": {
+      state: "room_cleaning",
+      attributes: { friendly_name: "S8 Pro cleaning status" },
+    },
+    "sensor.roborock_s8_pro_current_room": {
+      state: "Kitchen",
+      attributes: { room_id: 22, friendly_name: "S8 Pro current room" },
+    },
+  };
+  const entities = {
+    "vacuum.roborock_s8": { device_id: "s8-device", platform: "roborock" },
+    "vacuum.roborock_s8_pro": { device_id: "s8-pro-device", platform: "roborock" },
+    "sensor.roborock_s8_cleaning_status": { device_id: "s8-device", platform: "roborock" },
+    "sensor.roborock_s8_pro_cleaning_status": { device_id: "s8-pro-device", platform: "roborock" },
+    "sensor.roborock_s8_pro_current_room": { device_id: "s8-pro-device", platform: "roborock" },
+  };
+  const { card, calls } = createCard({
+    platform: "Roborock",
+    states,
+    entities,
+  });
+  card._config.entity = "vacuum.roborock_s8";
+  card._config.map_source = { camera: "camera.roborock_s8_map" };
+  card._roomTrackingEntityCache = null;
+  return { card, calls, states };
+}
+
+test("advanced vacuum ignores a longer sibling robot's activity when starting rooms", async () => {
+  const { card, calls, states } = createSiblingRoborockHome();
+  const related = card._getRelatedVacuumEntityIds();
+
+  assert.deepEqual(JSON.parse(JSON.stringify(related.activityIds)), ["sensor.roborock_s8_cleaning_status"]);
+  assert.equal(related.roomIds.includes("sensor.roborock_s8_pro_current_room"), false);
+  assert.equal(card._isCleaning(states["vacuum.roborock_s8"]), false);
+  assert.equal(card._isPaused(states["vacuum.roborock_s8"]), false);
+
+  card._activeMode = "rooms";
+  card._selectedRoomIds = ["living_room"];
+  card._repeats = 1;
+  await card._runMapAction();
+
+  assert.equal(calls.length, 1, "docked S8 must not inherit S8 Pro cleaning and send pause");
+  assert.equal(calls[0].service, "send_command");
+  assert.equal(calls[0].data.command, "app_segment_clean");
+  assert.equal(calls[0].data.entity_id, "vacuum.roborock_s8");
+});
+
+function siblingRoborockStates(extra = {}) {
+  return {
+    "vacuum.roborock_s8": {
+      entity_id: "vacuum.roborock_s8",
+      state: "docked",
+      attributes: { friendly_name: "Roborock S8" },
+    },
+    "vacuum.roborock_s8_pro": {
+      entity_id: "vacuum.roborock_s8_pro",
+      state: "cleaning",
+      attributes: { friendly_name: "Roborock S8 Pro" },
+    },
+    "select.roborock_s8_water_level": {
+      entity_id: "select.roborock_s8_water_level",
+      state: "medium",
+      attributes: { options: ["off", "low", "medium", "high"] },
+    },
+    "select.roborock_s8_pro_water_level": {
+      entity_id: "select.roborock_s8_pro_water_level",
+      state: "low",
+      attributes: { options: ["off", "low", "medium", "high"] },
+    },
+    "select.roborock_s8_fan_speed": {
+      entity_id: "select.roborock_s8_fan_speed",
+      state: "balanced",
+      attributes: { options: ["quiet", "balanced", "turbo"] },
+    },
+    "select.roborock_s8_pro_fan_speed": {
+      entity_id: "select.roborock_s8_pro_fan_speed",
+      state: "turbo",
+      attributes: { options: ["quiet", "balanced", "turbo"] },
+    },
+    ...extra,
+  };
+}
+
+test("advance vacuum mop and suction selects stay on the configured robot when a sibling prefix exists", () => {
+  const { card, calls } = createCard({ states: siblingRoborockStates() });
+  card._config.entity = "vacuum.roborock_s8";
+
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+  assert.equal(card._guessRelatedSelectEntity("suction"), "select.roborock_s8_fan_speed");
+
+  card._setModeOption("mop", "high");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].domain, "select");
+  assert.equal(calls[0].service, "select_option");
+  assert.equal(calls[0].data.entity_id, "select.roborock_s8_water_level");
+  assert.equal(calls[0].data.option, "high");
+});
+
+test("advance vacuum mop-mode select stays on the configured robot when a sibling prefix exists", () => {
+  const { card, calls } = createCard({
+    states: siblingRoborockStates({
+      "select.roborock_s8_mop_intensity": {
+        entity_id: "select.roborock_s8_mop_intensity",
+        state: "medium",
+        attributes: { options: ["off", "low", "medium", "high"] },
+      },
+      "select.roborock_s8_mop_mode": {
+        entity_id: "select.roborock_s8_mop_mode",
+        state: "standard",
+        attributes: { options: ["standard", "deep"] },
+      },
+      "select.roborock_s8_pro_mop_mode": {
+        entity_id: "select.roborock_s8_pro_mop_mode",
+        state: "deep",
+        attributes: { options: ["standard", "deep"] },
+      },
+    }),
+  });
+  card._config.entity = "vacuum.roborock_s8";
+
+  assert.equal(
+    card._guessRelatedSelectEntityByPatterns(card._getMopModeEntityPatterns()),
+    "select.roborock_s8_mop_mode",
+  );
+
+  card._setModeOption("mop_mode", "deep");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].data.entity_id, "select.roborock_s8_mop_mode");
+  assert.equal(calls[0].data.option, "deep");
+});
+
+test("advance vacuum does not prefer a sibling's higher-scoring mop helper", () => {
+  const states = siblingRoborockStates();
+  delete states["select.roborock_s8_pro_water_level"];
+  states["select.roborock_s8_pro_mop_intensity"] = {
+    entity_id: "select.roborock_s8_pro_mop_intensity",
+    state: "high",
+    attributes: { options: ["off", "low", "medium", "high"] },
+  };
+  const { card, calls } = createCard({ states });
+  card._config.entity = "vacuum.roborock_s8";
+
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+  card._setModeOption("mop", "low");
+  assert.equal(calls[0]?.data?.entity_id, "select.roborock_s8_water_level");
+});
+
+test("advance vacuum still binds mop helpers that share the vacuum device_id", () => {
+  const states = siblingRoborockStates();
+  const entities = {
+    "vacuum.roborock_s8": { device_id: "s8-device" },
+    "vacuum.roborock_s8_pro": { device_id: "pro-device" },
+    "select.roborock_s8_water_level": { device_id: "s8-device" },
+    "select.roborock_s8_pro_water_level": { device_id: "pro-device" },
+  };
+  const { card } = createCard({ states, entities });
+  card._config.entity = "vacuum.roborock_s8";
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+
+  card._config.entity = "vacuum.roborock_s8_pro";
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_pro_water_level");
+});
+
 test("advanced vacuum editor keeps platform selection compact and Valetudo-specific", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /\.editor-grid \{\n\s+align-items: start;/);

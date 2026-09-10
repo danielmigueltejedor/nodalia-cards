@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.2.9-alpha.1] - 2026-09-10
+
+First **`2.2.9`** alpha: Vacuum and Advance Vacuum no longer command a sibling robot when entity ids share a prefix.
+
+### Fixed
+
+- Advance Vacuum dock buttons and dock settings stay on the configured vacuum instead of scanning every `button.*` / `select.*` globally and pressing another robot's empty, wash or dry helper.
+- Advance Vacuum room/activity auto-detect ignores a longer sibling such as `vacuum.roborock_s8_pro` when the card is bound to `vacuum.roborock_s8`, so a docked S8 no longer inherits the Pro's cleaning state and sends `pause` instead of the selected rooms.
+- Advance Vacuum suction, mop and mop-mode selects own only helpers that share `device_id` or are not claimed by a longer sibling vacuum id.
+- Vacuum Card mop, suction, status, error and pause discovery use the same ownership rule, and the unscoped Roborock error fallback only runs on single-vacuum homes.
+
+### Validation
+
+- Node regressions cover two-robot dock routing, S8 vs S8 Pro substring collisions, device-id matches, single-vacuum unscoped helpers, room start vs sibling activity, and Vacuum Card mop/pause routing.
+
 ## [2.2.6-alpha.2] - 2026-09-02
 
 Second **`2.2.6`** alpha: Navigation Bar media-player entity replacement and Graph unavailable-badge clip.

@@ -598,3 +598,96 @@ test("vacuum auto-discovery picks up helper entities from a later hass snapshot"
   assert.equal(card._guessRelatedSelectEntity("suction"), "select.roborock_s7_fan_speed");
   assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s7_water_level");
 });
+
+function createVacuumSiblingHome(card, { s8State = "cleaning" } = {}) {
+  const calls = [];
+  const states = {
+    "vacuum.roborock_s8": {
+      entity_id: "vacuum.roborock_s8",
+      state: s8State,
+      attributes: { friendly_name: "Roborock S8" },
+    },
+    "vacuum.roborock_s8_pro": {
+      entity_id: "vacuum.roborock_s8_pro",
+      state: "docked",
+      attributes: { friendly_name: "Roborock S8 Pro" },
+    },
+    "vacuum.roborock_qrevo": {
+      entity_id: "vacuum.roborock_qrevo",
+      state: "docked",
+      attributes: { friendly_name: "Qrevo" },
+    },
+    "sensor.roborock_s8_status": { entity_id: "sensor.roborock_s8_status", state: s8State },
+    "sensor.roborock_s8_pro_status": { entity_id: "sensor.roborock_s8_pro_status", state: "docked" },
+    "sensor.roborock_s8_error": { entity_id: "sensor.roborock_s8_error", state: "none" },
+    "sensor.roborock_qrevo_error": { entity_id: "sensor.roborock_qrevo_error", state: "lidar_blocked" },
+    "select.roborock_s8_water_level": {
+      entity_id: "select.roborock_s8_water_level",
+      state: "low",
+      attributes: { options: ["off", "low", "medium", "high"] },
+    },
+    "select.roborock_s8_pro_water_level": {
+      entity_id: "select.roborock_s8_pro_water_level",
+      state: "high",
+      attributes: { options: ["off", "low", "medium", "high"] },
+    },
+    "select.roborock_s8_fan_speed": {
+      entity_id: "select.roborock_s8_fan_speed",
+      state: "balanced",
+      attributes: { options: ["quiet", "balanced", "turbo"] },
+    },
+    "select.roborock_s8_pro_fan_speed": {
+      entity_id: "select.roborock_s8_pro_fan_speed",
+      state: "turbo",
+      attributes: { options: ["quiet", "balanced", "turbo"] },
+    },
+  };
+  card.hass = {
+    states,
+    callService(domain, service, data) {
+      calls.push({ domain, service, data });
+      return Promise.resolve();
+    },
+  };
+  return { calls, states };
+}
+
+test("vacuum card keeps mop, status and pause on the configured robot when a longer sibling exists", () => {
+  const CardClass = loadVacuumCard();
+  const card = new CardClass();
+  card._render = () => {};
+  card.setConfig({ entity: "vacuum.roborock_s8" });
+  const { calls, states } = createVacuumSiblingHome(card);
+
+  assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_water_level");
+  assert.equal(card._guessRelatedSelectEntity("suction"), "select.roborock_s8_fan_speed");
+  assert.equal(card._guessRelatedStateEntity(), "sensor.roborock_s8_status");
+  assert.equal(card._guessRelatedErrorEntity(), "sensor.roborock_s8_error");
+
+  const mop = card._getModeDescriptor("mop", states["vacuum.roborock_s8"]);
+  assert.equal(mop?.target, "select.roborock_s8_water_level");
+  assert.equal(mop?.service, "select");
+
+  assert.equal(card._isDocked(states["vacuum.roborock_s8"]), false);
+  assert.equal(card._shouldUsePausePrimary(states["vacuum.roborock_s8"]), true);
+
+  card._applyLinkedSmartModeSelection("mop", "medium", states["vacuum.roborock_s8"]);
+  card._runPrimaryAction(states["vacuum.roborock_s8"]);
+
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].domain, "select");
+  assert.equal(calls[0].service, "select_option");
+  assert.equal(calls[0].data.entity_id, "select.roborock_s8_water_level");
+  assert.equal(calls[0].data.option, "medium");
+  assert.equal(calls[1].domain, "vacuum");
+  assert.equal(calls[1].service, "pause");
+  assert.equal(calls[1].data.entity_id, "vacuum.roborock_s8");
+
+  const proCard = new CardClass();
+  proCard._render = () => {};
+  proCard.setConfig({ entity: "vacuum.roborock_s8_pro" });
+  proCard.hass = { states };
+  assert.equal(proCard._guessRelatedSelectEntity("mop"), "select.roborock_s8_pro_water_level");
+  assert.equal(proCard._guessRelatedStateEntity(), "sensor.roborock_s8_pro_status");
+});
+

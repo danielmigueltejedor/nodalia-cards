@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.2.8";
+const CARD_VERSION = "2.2.9-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -316,6 +316,45 @@ function normalizeTextKey(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function listVacuumObjectIds(states = {}) {
+  return Object.keys(states || {})
+    .filter(id => id.startsWith("vacuum."))
+    .map(id => normalizeTextKey(id.split(".").slice(1).join("_")))
+    .filter(Boolean);
+}
+
+/**
+ * Helpers whose ids contain `vacuum.roborock_s8` also match `vacuum.roborock_s8_pro`.
+ * Same `device_id` always wins; otherwise the longest matching vacuum object id owns the helper.
+ * Unscoped `roborock` guesses are allowed only when the home has a single `vacuum.*`.
+ */
+function isHelperRelatedToConfiguredVacuum({
+  candidateId,
+  searchable = "",
+  isSameDevice = false,
+  objectId,
+  vacuumObjectIds,
+}) {
+  if (isSameDevice) {
+    return true;
+  }
+  if (!objectId) {
+    return false;
+  }
+  const haystack = `${normalizeTextKey(candidateId)} ${normalizeTextKey(searchable)}`;
+  if (!haystack.includes(objectId)) {
+    return false;
+  }
+  const claimedByLongerSibling = (vacuumObjectIds || []).some(siblingId => (
+    siblingId
+    && siblingId !== objectId
+    && siblingId.length > objectId.length
+    && siblingId.includes(objectId)
+    && haystack.includes(siblingId)
+  ));
+  return !claimedByLongerSibling;
 }
 
 function isUnavailableState(state) {
@@ -963,7 +1002,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return null;
     }
 
-    const objectId = String(this._config.entity).split(".")[1] || "";
+    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
     if (!objectId) {
       return null;
     }
@@ -986,15 +1025,27 @@ class NodaliaVacuumCard extends HTMLElement {
     };
     const suctionPatterns = ["fan_speed", "fan_power", "suction", "cleaning_mode"];
     const mopPatterns = ["mop", "water", "water_level", "water_volume", "scrub"];
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+    const allowUnscopedRoborock = vacuumObjectIds.length <= 1;
 
-    Object.keys(this._hass.states).forEach(entityId => {
+    Object.keys(states).forEach(entityId => {
+      const isSameDevice = Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId);
+      const related = isHelperRelatedToConfiguredVacuum({
+        candidateId: entityId,
+        searchable: states[entityId]?.attributes?.friendly_name || "",
+        isSameDevice,
+        objectId,
+        vacuumObjectIds,
+      });
       if (entityId.startsWith("sensor.")) {
-        const related = entityId.includes(objectId);
         if (related && ["estado", "status", "state"].some(pattern => entityId.includes(pattern))) {
           candidates.state.push(entityId);
         }
         if (
-          (related || entityId.includes("roborock"))
+          (related || (allowUnscopedRoborock && entityId.includes("roborock")))
           && ["error", "fault", "fallo", "erro"].some(pattern => entityId.includes(pattern))
         ) {
           candidates.error.push(entityId);
@@ -1008,7 +1059,7 @@ class NodaliaVacuumCard extends HTMLElement {
         return;
       }
 
-      if (!entityId.startsWith("select.") || !entityId.includes(objectId)) {
+      if (!entityId.startsWith("select.") || !related) {
         return;
       }
       if (suctionPatterns.some(pattern => entityId.includes(pattern))) {
@@ -3831,7 +3882,7 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       return "";
     }
 
-    const objectId = String(this._config.entity).split(".")[1] || "";
+    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
     if (!objectId) {
       return "";
     }
@@ -3840,10 +3891,20 @@ class NodaliaVacuumCardEditor extends HTMLElement {
       ? ["mop", "water", "water_level", "water_volume", "scrub"]
       : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
 
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
+    const candidates = Object.keys(states)
       .filter(entityId => entityId.startsWith("select."))
-      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => isHelperRelatedToConfiguredVacuum({
+        candidateId: entityId,
+        searchable: states[entityId]?.attributes?.friendly_name || "",
+        isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+        objectId,
+        vacuumObjectIds,
+      }))
       .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
       .sort((left, right) => left.localeCompare(right, sortLoc));
 

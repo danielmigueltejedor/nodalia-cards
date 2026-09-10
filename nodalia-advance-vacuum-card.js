@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.2.8";
+const CARD_VERSION = "2.2.9-alpha.1";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -382,7 +382,43 @@ const {
   fireEvent,
 } = window.NodaliaUtils;
 
+function listVacuumObjectIds(states = {}) {
+  return Object.keys(states || {})
+    .filter(id => id.startsWith("vacuum."))
+    .map(id => normalizeTextKey(id.split(".").slice(1).join("_")))
+    .filter(Boolean);
+}
 
+/**
+ * Helpers whose ids contain `vacuum.roborock_s8` also match `vacuum.roborock_s8_pro`.
+ * Same `device_id` always wins; otherwise the longest matching vacuum object id owns the helper.
+ */
+function isHelperRelatedToConfiguredVacuum({
+  candidateId,
+  searchable = "",
+  isSameDevice = false,
+  objectId,
+  vacuumObjectIds,
+}) {
+  if (isSameDevice) {
+    return true;
+  }
+  if (!objectId) {
+    return false;
+  }
+  const haystack = `${normalizeTextKey(candidateId)} ${normalizeTextKey(searchable)}`;
+  if (!haystack.includes(objectId)) {
+    return false;
+  }
+  const claimedByLongerSibling = (vacuumObjectIds || []).some(siblingId => (
+    siblingId
+    && siblingId !== objectId
+    && siblingId.length > objectId.length
+    && siblingId.includes(objectId)
+    && haystack.includes(siblingId)
+  ));
+  return !claimedByLongerSibling;
+}
 
 function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -2770,6 +2806,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const vacuumRegistryEntry = registry[entityId] || null;
       const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
       const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
+      const vacuumObjectIds = listVacuumObjectIds(states);
       Object.keys(states).forEach(candidateId => {
         if (candidateId === entityId) {
           return;
@@ -2789,7 +2826,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           candidateRegistryEntry?.translation_key,
           candidateState?.attributes?.friendly_name,
         ].filter(Boolean).join(" "));
-        const resemblesVacuum = isSameDevice || (objectId && searchable.includes(objectId));
+        const resemblesVacuum = isHelperRelatedToConfiguredVacuum({
+          candidateId,
+          searchable,
+          isSameDevice,
+          objectId,
+          vacuumObjectIds,
+        });
         if (!resemblesVacuum) {
           return;
         }
@@ -3647,15 +3690,25 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
-    const objectId = String(this._config.entity).split(".")[1] || "";
+    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
     if (!objectId) {
       return "";
     }
 
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
+    const candidates = Object.keys(states)
       .filter(entityId => entityId.startsWith(`${domain}.`))
-      .filter(entityId => entityId.includes(objectId))
+      .filter(entityId => isHelperRelatedToConfiguredVacuum({
+        candidateId: entityId,
+        searchable: states[entityId]?.attributes?.friendly_name || "",
+        isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+        objectId,
+        vacuumObjectIds,
+      }))
       .filter(entityId => !excludedEntities.includes(entityId))
       .map(entityId => ({
         entityId,
@@ -3685,8 +3738,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config?.entity]?.device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
+    const candidates = Object.keys(states)
       .filter(entityId => domainList.some(domain => entityId.startsWith(`${domain}.`)))
       .filter(entityId => !excludedEntities.includes(entityId))
       .map(entityId => ({
@@ -3696,7 +3754,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .filter(candidate => candidate.score > 0)
       .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc));
 
-    return candidates[0]?.entityId || "";
+    const related = candidates.filter(candidate => isHelperRelatedToConfiguredVacuum({
+      candidateId: candidate.entityId,
+      searchable: states[candidate.entityId]?.attributes?.friendly_name || "",
+      isSameDevice: Boolean(vacuumDeviceId && registry[candidate.entityId]?.device_id === vacuumDeviceId),
+      objectId,
+      vacuumObjectIds,
+    }));
+    if (related.length) {
+      return related[0].entityId;
+    }
+
+    return vacuumObjectIds.length > 1
+      ? ""
+      : (candidates[0]?.entityId || "");
   }
 
   _getEntityState(entityId) {
