@@ -10,6 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.9] - 2026-09-15
+
+Stable **`2.2.9`**: Vacuum and Advance Vacuum keep commands on the configured robot when sibling entity ids share a prefix.
+
+### Fixed
+
+- Advance Vacuum dock buttons and dock settings stay on the configured vacuum instead of scanning every `button.*` / `select.*` globally and pressing another robot's empty, wash or dry helper.
+- Advance Vacuum room/activity auto-detect ignores a longer sibling such as `vacuum.roborock_s8_pro` when the card is bound to `vacuum.roborock_s8`, so a docked S8 no longer inherits the Pro's cleaning state and sends `pause` instead of the selected rooms.
+- Advance Vacuum suction, mop and mop-mode selects own only helpers that share `device_id` or are not claimed by a longer sibling vacuum id.
+- Vacuum Card mop, suction, status, error and pause discovery use the same ownership rule, and the unscoped Roborock error fallback only runs on single-vacuum homes.
+
+### Changed
+
+- CI pins CodeQL init and analyze together at `4.38.0`, pnpm/action-setup at `6.1.0`, and `@playwright/test` at `1.63.0`.
+
+### Validation
+
+- Node regressions cover two-robot dock routing, S8 vs S8 Pro substring collisions, device-id matches, single-vacuum unscoped helpers, room start vs sibling activity, and Vacuum Card mop/pause routing.
+- The complete Node suite now contains **481** tests.
+
+Per-build notes for **`2.2.9-alpha.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
 ## [2.2.8] - 2026-09-02
 
 Stable **`2.2.8`**: GitHub releases ship only `nodalia-cards.js`, so HACS and GitHub count the same plugin file as other Dashboard cards, and the README badge shows all-time downloads.

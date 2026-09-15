@@ -11,20 +11,20 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.9-alpha.1
+2.2.9
 ```
 
-Preview **`2.2.9-alpha.1`** keeps Vacuum and Advance Vacuum commands on the configured robot when sibling ids share a prefix (`vacuum.roborock_s8` vs `vacuum.roborock_s8_pro`). Stable **`2.2.8`** remains the recommended daily-driver release.
+Preview **`2.2.9`** is the current recommended release: Vacuum and Advance Vacuum keep commands on the configured robot when sibling entity ids share a prefix.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.8
+2.2.9
 ```
 
-Stable **`2.2.8`** publishes a single countable `nodalia-cards.js` GitHub asset and an all-time downloads badge. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.9`** keeps Vacuum and Advance Vacuum commands on the configured robot when sibling ids share a prefix (`vacuum.roborock_s8` vs `vacuum.roborock_s8_pro`). Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -45,7 +45,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.8`**
+- Regression-free mobile and desktop behavior on stable **`2.2.9`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

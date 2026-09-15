@@ -237,6 +237,8 @@ test("repository workflows pin audited external actions by immutable commit", ()
     "f28e40c7f34bde8b3046d885e986cb6290c5673b",
     "59d89421af93a897026c735860bf21b6eb4f7b26",
     "f25eda876ebb741d872b63b9f2c6dfdd77f14b83",
+    "cdf488f595d80d6e07e03d4674febd5ab45fa938",
+    "0977fd99725f1db4007ccb2928dbb4e90d06cc86",
   ]);
   const workflowDir = path.join(root, ".github", "workflows");
   const workflows = fs.readdirSync(workflowDir).filter(file => file.endsWith(".yml"));
