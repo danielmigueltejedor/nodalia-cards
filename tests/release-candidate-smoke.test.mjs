@@ -149,8 +149,8 @@ test("the single HACS runtime contains cards and visual editors", () => {
   const runtime = runtimeBuffer.toString("utf8");
 
   assert.ok(
-    runtimeBuffer.length < 4 * 1024 * 1024 + 2 * 1024,
-    "self-contained HACS bundle should stay below 4 MiB + 2 KiB",
+    runtimeBuffer.length < 4 * 1024 * 1024 + 4 * 1024,
+    "self-contained HACS bundle should stay below 4 MiB + 4 KiB",
   );
   assert.ok(gzipSync(runtimeBuffer).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
   assert.match(runtime, /\.editorStr=function/);

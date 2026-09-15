@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-navigation-bar";
 const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.2.9";
+const CARD_VERSION = "2.3.0-alpha.1";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -264,27 +264,35 @@ const DEFAULT_CONFIG = {
 
 const STUB_CONFIG = {
   show_labels: false,
+  layout: {
+    show_desktop: true,
+  },
+  styles: {
+    bar: {
+      border_radius: "32px",
+      padding: "12px 16px",
+    },
+    button: {
+      size: "60px",
+      label_size: "8px",
+    },
+    popup: {
+      max_width: "320px",
+      item_size: "32px",
+    },
+    media_player: {
+      border_radius: "24px",
+      padding: "10px",
+      artwork_size: "92px",
+    },
+  },
   routes: [
-    {
-      icon: "mdi:home-assistant",
-      label: "Home",
-      path: "/lovelace/principal",
-    },
-    {
-      icon: "mdi:flash",
-      label: "Energy",
-      path: "/lovelace/energia",
-    },
-    {
-      icon: "mdi:thermostat",
-      label: "Climate",
-      path: "/lovelace/termostatos",
-    },
-    {
-      icon: "mdi:security",
-      label: "Security",
-      path: "/lovelace/seguridad",
-    },
+    { icon: "mdi:view-dashboard", label: "Home", path: "/lovelace/home" },
+    { icon: "mdi:devices", label: "Devices", path: "/config/devices/dashboard" },
+    { icon: "mdi:creation", label: "Automations", path: "/config/automation/dashboard" },
+    { icon: "mdi:cog", label: "Settings", path: "/config/dashboard" },
+    { icon: "mdi:account", label: "Profile", path: "/profile" },
+    { icon: "mdi:dots-horizontal", label: "More", path: "/config/dashboard" },
   ],
 };
 
@@ -559,8 +567,18 @@ function normalizeConfig(config) {
 }
 
 class NodaliaNavigationBarCard extends HTMLElement {
-  static getStubConfig() {
-    return deepClone(STUB_CONFIG);
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    const config = deepClone(STUB_CONFIG);
+    const entityId = window.NodaliaUtils?.findStubEntityIds?.(hass, entities, entitiesFallback, ["media_player"], 1)[0] || "";
+    if (entityId) {
+      config.media_player = {
+        players: [{
+          entity: entityId,
+          label: hass?.states?.[entityId]?.attributes?.friendly_name || "",
+        }],
+      };
+    }
+    return config;
   }
 
   static async getConfigElement() {
@@ -2966,6 +2984,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const hasActiveOverlay = Boolean(this._popupState || this._mediaBrowserState);
     const playDockEntrance = animations.enabled
+      && !inEditMode
       && this._animateDockEntranceNext
       && !hasActiveOverlay
       && !this._dockEntrancePlayed;
@@ -3033,11 +3052,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
       .split(/\s+/)[0] || "28px";
     const navbarCardBorderRadius = fullWidthBar
       ? "0"
-      : config.layout.position === "bottom"
+      : isFixed && config.layout.position === "bottom"
         ? `${barRadiusToken} ${barRadiusToken} 0 0`
-        : config.layout.position === "top"
+        : isFixed && config.layout.position === "top"
           ? `0 0 ${barRadiusToken} ${barRadiusToken}`
           : config.styles.bar.border_radius;
+    const barPadding = isFixed
+      ? config.styles.bar.padding
+      : String(config.styles.bar.padding || "12px 16px").replace(
+        /calc\(\s*12px\s*\+\s*env\(safe-area-inset-bottom\s*,\s*0px\)\s*\)/gi,
+        "12px",
+      );
     const navbarSurfaceBase =
       "linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)), var(--nodalia-user-bar-bg, var(--nodalia-surface-soft))";
     const navbarSurfaceBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
@@ -3110,6 +3135,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           --nodalia-user-bar-bg: ${config.styles.bar.background};
           display: block;
           width: 100%;
+          ${inEditMode ? "height: 100%; min-height: 240px; position: relative;" : ""}
         }
 
         * {
@@ -3122,10 +3148,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
 
         .dock {
-          position: ${isFixed ? "fixed" : "relative"};
-          left: ${fullWidthBar ? "0" : config.layout.side_margin};
-          right: ${fullWidthBar ? "0" : config.layout.side_margin};
-          ${config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};`}
+          position: ${isFixed ? "fixed" : inEditMode ? "absolute" : "relative"};
+          left: ${inEditMode ? "12px" : fullWidthBar ? "0" : config.layout.side_margin};
+          right: ${inEditMode ? "12px" : fullWidthBar ? "0" : config.layout.side_margin};
+          ${inEditMode
+            ? (config.layout.position === "top" ? "top: 12px;" : "bottom: 12px;")
+            : (config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};`)}
           z-index: ${config.layout.z_index};
           pointer-events: none;
         }
@@ -3175,7 +3203,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           box-shadow: ${config.styles.bar.box_shadow};
           backdrop-filter: ${config.styles.bar.backdrop_filter};
           display: block;
-          padding: ${config.styles.bar.padding};
+          padding: ${barPadding};
           min-height: ${config.styles.bar.min_height};
           overflow: hidden;
           pointer-events: none;

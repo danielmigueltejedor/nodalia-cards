@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.1] - 2026-09-15
+
+First **`2.3.0`** alpha: Navigation Bar's Lovelace picker and visual-editor preview look like the live pill bar.
+
+### Fixed
+
+- The card picker and visual-editor preview no longer flatten the bar into a docked top-only sheet. In edit/preview the bar is a floating pill with full corner radius, circular 60px buttons, and it sits at the bottom of the preview pane.
+- Stub config now matches the product bar (32px radius, 60px chips, dashboard-style routes) and, when Home Assistant has a `media_player`, includes that player so the preview can show the stacked media + nav layout.
+
+### Validation
+
+- Node regressions cover stub styles, pill radius in unfixed/preview mode, and the preview dock layout.
+
 ## [2.2.9-alpha.1] - 2026-09-10
 
 First **`2.2.9`** alpha: Vacuum and Advance Vacuum no longer command a sibling robot when entity ids share a prefix.

@@ -175,3 +175,16 @@ test("Navigation editor still commits native text-input player changes", () => {
   assert.equal(editor._config.media_player.players[0].entity, "media_player.salon");
   assert.equal(editor.lastDispatchedEvent.detail.config.media_player.players[0].entity, "media_player.salon");
 });
+
+test("navigation bar stub and preview render a floating pill like the live card", () => {
+  const source = read("nodalia-navigation-bar.js");
+  assert.match(source, /const STUB_CONFIG = \{[\s\S]*?border_radius: "32px"/);
+  assert.match(source, /const STUB_CONFIG = \{[\s\S]*?size: "60px"/);
+  assert.match(source, /icon: "mdi:view-dashboard"/);
+  assert.match(source, /static getStubConfig\(hass, entities = \[\], entitiesFallback = \[\]\)/);
+  assert.match(source, /findStubEntityIds\?\.\(hass, entities, entitiesFallback, \["media_player"\], 1\)/);
+  assert.match(source, /isFixed && config\.layout\.position === "bottom"/);
+  assert.match(source, /inEditMode \? "absolute"/);
+  assert.match(source, /inEditMode \? "height: 100%; min-height: 240px; position: relative;"/);
+  assert.match(source, /playDockEntrance = animations\.enabled\s*\n\s*&& !inEditMode/);
+});
