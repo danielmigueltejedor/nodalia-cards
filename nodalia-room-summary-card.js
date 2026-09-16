@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.3.0-alpha.2";
+const CARD_VERSION = "2.3.0-alpha.3";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -20,6 +20,7 @@ const DEFAULT_CONFIG = {
   occupancy: "",
   climate: "",
   camera: "",
+  camera_config: {},
   media_player: "",
   media_players: [],
   media_config: {},
@@ -42,6 +43,7 @@ const DEFAULT_CONFIG = {
   doors: [],
   windows: [],
   alerts: [],
+  alarms: [],
   show_temperature: true,
   show_humidity: true,
   show_presence: true,
@@ -190,6 +192,10 @@ function hubSecurityEntityIds(config) {
     .filter(Boolean);
 }
 
+function hubAlarmEntityIds(config) {
+  return (config?.alarms || []).map(id => String(id || "").trim()).filter(Boolean);
+}
+
 function formatEditorHexChannel(value) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -278,7 +284,21 @@ function normalizeConfig(rawConfig = {}) {
   config.presence = entityScalar(config.presence, config.occupancy_entity, config.occupancy);
   config.occupancy = entityScalar(config.occupancy, config.presence);
   config.climate = entityScalar(config.climate, config.climate_entity);
-  config.camera = entityScalar(config.camera);
+  config.camera_config = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
+  config.camera = entityScalar(
+    config.camera,
+    config.camera_config.entity,
+    Array.isArray(config.camera_config.cameras) ? config.camera_config.cameras[0] : "",
+  );
+  if (config.camera) {
+    config.camera_config.entity = config.camera;
+    const cameras = Array.isArray(config.camera_config.cameras)
+      ? config.camera_config.cameras.map(id => String(id || "").trim()).filter(Boolean)
+      : [];
+    if (!cameras.includes(config.camera)) {
+      config.camera_config.cameras = [config.camera, ...cameras];
+    }
+  }
   config.media_config = isObject(config.media_config) ? deepClone(config.media_config) : {};
   config.media_config.players = Array.isArray(config.media_config.players)
     ? config.media_config.players.filter(isObject).map(player => deepClone(player))
@@ -302,6 +322,7 @@ function normalizeConfig(rawConfig = {}) {
   config.doors = entityList(config.doors);
   config.windows = entityList(config.windows);
   config.alerts = entityList(config.alerts, config.motion_entities);
+  config.alarms = entityList(config.alarms, config.alarm, config.alarm_entities);
   const rawEmbedOptions = isObject(config.embed_options) ? config.embed_options : {};
   config.embed_options = {};
   CUSTOMIZABLE_EMBED_LISTS.forEach(listKey => {
@@ -507,7 +528,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       ...(config.vacuums || []), ...(config.fans || []),
       ...(config.humidifiers || []), ...(config.others || []),
       ...(config.locks || []), ...(config.doors || []),
-      ...(config.windows || []), ...(config.alerts || []),
+      ...(config.windows || []), ...(config.alerts || []), ...(config.alarms || []),
     ].filter(Boolean);
     const states = [...new Set(ids)].map(id => {
       const state = hass?.states?.[id];
@@ -610,7 +631,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         active: summary?.camera_available === true,
       });
     }
-    if (config.show_security !== false && hubSecurityEntityIds(config).length) {
+    if (config.show_security !== false && (hubSecurityEntityIds(config).length || hubAlarmEntityIds(config).length)) {
       items.push({
         id: "security",
         icon: "mdi:shield-home",
@@ -805,9 +826,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
     if (activePanel === "covers" && config.covers?.length) {
       patchPanel("covers", this._renderHubCoverPanel(config));
-    }
-    if (activePanel === "climate" && config.climate) {
-      patchPanel("climate", this._renderHubClimatePanel(config));
     }
     this._mountHubEmbeddedCards();
     return true;
@@ -1222,22 +1240,34 @@ class NodaliaRoomSummaryCard extends HTMLElement {
 
   _hubCameraEmbedConfig(config, host) {
     const entityId = String(host?.dataset?.entity || "").trim();
+    const native = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
     const embeddedStyles = this._hubEmbeddedAccentPack(config);
+    const cameras = Array.isArray(native.cameras)
+      ? native.cameras.map(id => String(id || "").trim()).filter(Boolean)
+      : [];
+    if (entityId && !cameras.includes(entityId)) {
+      cameras.unshift(entityId);
+    }
     return {
-      entity: entityId,
-      show_name: false,
-      show_state: false,
-      show_status_chips: false,
+      ...native,
+      entity: entityId || native.entity || cameras[0] || "",
+      cameras: cameras.length ? cameras : (entityId ? [entityId] : []),
+      show_name: native.show_name === true,
+      show_state: native.show_state === true,
+      show_status_chips: native.show_status_chips === true,
       styles: {
         ...embeddedStyles,
+        ...(isObject(native.styles) ? native.styles : {}),
         card: {
           ...(embeddedStyles.card || {}),
-          padding: "8px",
+          ...(isObject(native.styles?.card) ? native.styles.card : {}),
+          padding: native.styles?.card?.padding || "8px",
         },
         preview: {
           aspect_ratio: "16 / 9",
           min_height: "140px",
           border_radius: "18px",
+          ...(isObject(native.styles?.preview) ? native.styles.preview : {}),
         },
       },
     };
@@ -1255,6 +1285,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     (config.humidifiers || []).forEach(id => add("humidifier", id, "panel"));
     (config.others || []).forEach(id => add("entity", id, "panel"));
     hubSecurityEntityIds(config).forEach(id => add("entity", id, "panel"));
+    hubAlarmEntityIds(config).forEach(id => add("alarm", id, "panel"));
+    if (config.climate) add("climate", config.climate, "panel");
     const mediaIds = hubMediaPlayerIds(config);
     if (mediaIds[0]) add("media", mediaIds[0], "group");
     if (config.camera) add("camera", config.camera, "live");
@@ -1345,6 +1377,19 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         compact_layout_mode: "never",
         tap_action: "toggle",
         icon_tap_action: "toggle",
+        styles: embeddedStyles,
+      });
+    });
+    this.shadowRoot.querySelectorAll('[data-hub-embed="climate"]').forEach(host => {
+      mount(host, "nodalia-climate-card", {
+        layout: "compact",
+        show_schedule_button: false,
+        styles: embeddedStyles,
+      });
+    });
+    this.shadowRoot.querySelectorAll('[data-hub-embed="alarm"]').forEach(host => {
+      mount(host, "nodalia-alarm-panel-card", {
+        compact_layout_mode: "never",
         styles: embeddedStyles,
       });
     });
@@ -1511,6 +1556,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           config.alerts[0],
         );
       }
+      if (summary.alarmsTriggered > 0 && config.alarms?.[0]) {
+        pushChip(
+          "room-hub__metric-bubble--security",
+          "mdi:shield-alert",
+          this._t("alarm", "Alarm"),
+          config.alarms[0],
+        );
+      }
     }
     return chips.join("");
   }
@@ -1580,23 +1633,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _renderHubClimatePanel(config) {
-    const entityId = config.climate;
-    const state = getState(this._hass, entityId);
-    const current = finiteNumber(state?.attributes?.current_temperature);
-    const target = finiteNumber(state?.attributes?.temperature);
-    const unit = String(state?.attributes?.unit_of_measurement || "°C").trim();
-    const mode = String(state?.attributes?.hvac_mode || state?.state || "—");
-    const label = this._entityLabel(entityId);
-    return `<div class="room-hub__panel room-hub__panel--climate">
-      <div class="room-hub__climate-dial">
-        <div class="room-hub__climate-value">${escapeHtml(current !== null ? `${current}${unit}` : "—")}</div>
-        <div class="room-hub__climate-target">${escapeHtml(target !== null ? `${this._t("target", "Target")} ${target}${unit}` : mode)}</div>
-        <div class="room-hub__device-controls">
-          <button type="button" class="room-hub__mini-control" data-room-action="climate:-1:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("lowerTemperature", "Lower temperature")}: ${label}`)}"><ha-icon icon="mdi:minus"></ha-icon></button>
-          <button type="button" class="room-hub__mini-control" data-room-action="climate:1:${escapeHtml(entityId)}" aria-label="${escapeHtml(`${this._t("raiseTemperature", "Raise temperature")}: ${label}`)}"><ha-icon icon="mdi:plus"></ha-icon></button>
-        </div>
-      </div>
-    </div>`;
+    if (!config.climate) return "";
+    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts([config.climate], "climate")}</div>`;
   }
 
   _renderHubVacuumPanel(config) {
@@ -1617,7 +1655,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _renderHubSecurityPanel(config) {
-    return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(hubSecurityEntityIds(config), "entity")}</div>`;
+    const alarmIds = hubAlarmEntityIds(config);
+    const sensorIds = hubSecurityEntityIds(config);
+    return `<div class="room-hub__panel room-hub__panel--embed">
+      ${alarmIds.length ? this._renderHubEmbedHosts(alarmIds, "alarm") : ""}
+      ${sensorIds.length ? this._renderHubEmbedHosts(sensorIds, "entity") : ""}
+    </div>`;
   }
 
   _renderHubPanelContent(panel, config, summary, styles, accentColor) {
@@ -1854,6 +1897,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         .room-hub__embed-host > nodalia-fan-card,
         .room-hub__embed-host > nodalia-humidifier-card,
         .room-hub__embed-host > nodalia-entity-card,
+        .room-hub__embed-host > nodalia-climate-card,
+        .room-hub__embed-host > nodalia-alarm-panel-card,
         .room-hub__embed-host > nodalia-camera-card,
         .room-hub__embed-host > nodalia-media-player { display:block; max-width:100%; overflow:visible; width:100%; }
         .room-hub__embed-host > nodalia-light-card .light-card.is-off,
@@ -1873,9 +1918,6 @@ class NodaliaRoomSummaryCard extends HTMLElement {
           cursor:pointer; display:inline-flex; height:34px; justify-content:center; width:34px;
         }
         .room-hub__mini-control--primary { background:color-mix(in srgb, ${accentColor} 18%, transparent); border-color:color-mix(in srgb, ${accentColor} 24%, transparent); color:${accentColor}; height:40px; width:40px; }
-        .room-hub__climate-dial { display:grid; gap:10px; justify-items:center; padding:8px 0; text-align:center; }
-        .room-hub__climate-value { font-size:28px; font-weight:700; line-height:1; }
-        .room-hub__climate-target { color:var(--secondary-text-color); font-size:12px; }
         @keyframes room-hub-slide { from { opacity:0.94; transform:translateX(-4px); } to { opacity:1; transform:translateX(0); } }
         @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
         @media (prefers-reduced-motion:reduce) { .room-hub__body--enter { animation:none; } }
@@ -1935,6 +1977,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onMediaConfigChanged = this._onMediaConfigChanged.bind(this);
+    this._onCameraConfigChanged = this._onCameraConfigChanged.bind(this);
   }
 
   connectedCallback() {
@@ -1975,6 +2018,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (!shouldRender) {
       this.shadowRoot?.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
       this.shadowRoot?.querySelectorAll("nodalia-media-player-editor").forEach(editor => { editor.hass = hass; });
+      this.shadowRoot?.querySelectorAll("nodalia-camera-card-editor").forEach(editor => { editor.hass = hass; });
       return;
     }
     const focusState = this._captureFocusState();
@@ -2023,6 +2067,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-selector");
     this._watchEditorControlTag("ha-icon-picker");
     this._watchEditorControlTag("nodalia-media-player-editor");
+    this._watchEditorControlTag("nodalia-camera-card-editor");
   }
 
   _editorLabel(key) {
@@ -2050,12 +2095,30 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _onShadowValueChanged(e) {
+    const nestedEditor = e.composedPath().find(node =>
+      node instanceof HTMLElement
+      && (node.localName === "nodalia-media-player-editor" || node.localName === "nodalia-camera-card-editor")
+    );
+    if (nestedEditor) return;
     const host = e.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
     if (!host?.dataset?.field) {
       return;
     }
     e.stopPropagation();
     setByPath(this._config, host.dataset.field, String(e.detail?.value || "").trim());
+    if (host.dataset.field === "camera") {
+      const camera = String(this._config.camera || "").trim();
+      if (!isObject(this._config.camera_config)) this._config.camera_config = {};
+      this._config.camera_config.entity = camera;
+      const cameras = Array.isArray(this._config.camera_config.cameras)
+        ? this._config.camera_config.cameras.map(id => String(id || "").trim()).filter(Boolean)
+        : [];
+      if (camera && !cameras.includes(camera)) {
+        this._config.camera_config.cameras = [camera, ...cameras];
+      }
+      this._emitConfig(true);
+      return;
+    }
     this._emitConfig(false);
   }
 
@@ -2128,6 +2191,33 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._config.media_config = mediaConfig;
     this._config.media_player = ids[0] || "";
     this._config.media_players = ids.slice(1);
+    this._emitConfig(false);
+  }
+
+  _cameraEditorConfig() {
+    const native = isObject(this._config?.camera_config) ? deepClone(this._config.camera_config) : {};
+    const camera = String(this._config?.camera || native.entity || "").trim();
+    if (camera) {
+      native.entity = camera;
+      const cameras = Array.isArray(native.cameras)
+        ? native.cameras.map(id => String(id || "").trim()).filter(Boolean)
+        : [];
+      if (!cameras.includes(camera)) {
+        native.cameras = [camera, ...cameras];
+      }
+    }
+    return native;
+  }
+
+  _onCameraConfigChanged(event) {
+    event.stopPropagation();
+    const cameraConfig = isObject(event.detail?.config) ? deepClone(event.detail.config) : {};
+    this._config.camera_config = cameraConfig;
+    this._config.camera = String(
+      cameraConfig.entity
+      || (Array.isArray(cameraConfig.cameras) ? cameraConfig.cameras[0] : "")
+      || "",
+    ).trim();
     this._emitConfig(false);
   }
 
@@ -2246,6 +2336,16 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     </section>`;
   }
 
+  _cameraConfigSection() {
+    return `<section class="editor-section editor-section--nested">
+      <div class="editor-section__header"><div>
+        <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.room_summary.camera_section_title"))}</div>
+        <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.room_summary.camera_section_hint"))}</div>
+      </div></div>
+      <div class="native-editor-host" data-mounted-control="camera-config-editor"></div>
+    </section>`;
+  }
+
   _mountEntityPicker(host) {
     if (!(host instanceof HTMLElement)) return;
     window.NodaliaUtils?.mountEntityPickerHost?.(host, {
@@ -2283,6 +2383,19 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     editor.addEventListener("config-changed", this._onMediaConfigChanged);
     editor.hass = this._hass;
     editor.setConfig(this._mediaEditorConfig());
+    host.replaceChildren(editor);
+  }
+
+  _mountCameraConfigEditor(host) {
+    if (!(host instanceof HTMLElement)) return;
+    if (!customElements.get("nodalia-camera-card-editor")) {
+      this._watchEditorControlTag("nodalia-camera-card-editor");
+      return;
+    }
+    const editor = document.createElement("nodalia-camera-card-editor");
+    editor.addEventListener("config-changed", this._onCameraConfigChanged);
+    editor.hass = this._hass;
+    editor.setConfig(this._cameraEditorConfig());
     host.replaceChildren(editor);
   }
 
@@ -2459,10 +2572,10 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
         ${this._entity("ed.room_summary.humidity_entity", "humidity", c.humidity, ["sensor"])}
         ${this._entity("ed.room_summary.presence_entity", "presence", c.presence, ["binary_sensor", "device_tracker", "person"])}
         ${this._entity("ed.room_summary.climate_entity", "climate", c.climate, ["climate"])}
-        ${this._entity("ed.room_summary.camera_entity", "camera", c.camera, ["camera"])}
         ${this._entity("ed.room_summary.power_entity", "power", c.power, ["sensor"])}
         ${this._entity("ed.room_summary.air_quality_entity", "air_quality", c.air_quality, ["sensor"])}
       </div>
+      ${this._cameraConfigSection()}
       ${this._mediaConfigSection()}
       ${this._listSection("ed.room_summary.lights_section_title", "ed.room_summary.lights_section_hint", "lights", ["light"], true)}
       ${this._listSection("ed.room_summary.covers_section_title", "ed.room_summary.covers_section_hint", "covers", ["cover"])}
@@ -2474,6 +2587,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       ${this._listSection("ed.room_summary.windows_section_title", "ed.room_summary.windows_section_hint", "windows", ["binary_sensor"])}
       ${this._listSection("ed.room_summary.locks_section_title", "ed.room_summary.locks_section_hint", "locks", ["lock"])}
       ${this._listSection("ed.room_summary.alerts_section_title", "ed.room_summary.alerts_section_hint", "alerts", ["binary_sensor"])}
+      ${this._listSection("ed.room_summary.alarms_section_title", "ed.room_summary.alarms_section_hint", "alarms", ["alarm_control_panel"])}
       </section>
       <section class="editor-section">
         <div class="editor-section__header">
@@ -2543,6 +2657,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
     this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
     this.shadowRoot.querySelectorAll('[data-mounted-control="media-config-editor"]').forEach(host => this._mountMediaConfigEditor(host));
+    this.shadowRoot.querySelectorAll('[data-mounted-control="camera-config-editor"]').forEach(host => this._mountCameraConfigEditor(host));
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
@@ -2567,6 +2682,7 @@ if (typeof globalThis !== "undefined") {
     normalizeEntityField,
     hubMediaPlayerIds,
     hubSecurityEntityIds,
+    hubAlarmEntityIds,
     buildRoomSummary,
     hasRoomContent,
     formatMetric,

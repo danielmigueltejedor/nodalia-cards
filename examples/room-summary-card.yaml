@@ -1,7 +1,7 @@
 type: custom:nodalia-room-summary-card
 name: Salón
 icon: mdi:sofa
-layout: standard
+layout: hub
 temperature: sensor.salon_temperature
 humidity: sensor.salon_humidity
 presence: binary_sensor.salon_presence
@@ -12,5 +12,15 @@ lights:
 covers:
   - cover.salon_blind
 camera: camera.salon
+camera_config:
+  entity: camera.salon
+  camera_streams:
+    - camera: camera.salon
+      provider: go2rtc
+      url: http://go2rtc.local:1984
+      stream: salon
+      mode: mse
 media_player: media_player.salon
+alarms:
+  - alarm_control_panel.house
 show_quick_actions: true

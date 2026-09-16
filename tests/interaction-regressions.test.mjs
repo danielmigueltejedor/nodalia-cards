@@ -1421,6 +1421,16 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
   }
 });
 
+test("light card brightness fill uses negative delay so hass rerenders do not restart it", () => {
+  const source = read("nodalia-light-card.js");
+  assert.match(source, /powerAnimationState === "powering-up"/);
+  assert.match(source, /const fillElapsed = now - Number\(this\._powerTransition\.startedAt\)/);
+  assert.match(source, /brightnessFillDelay = -clamp\(fillElapsed/);
+  assert.match(source, /--light-card-brightness-fill-delay: \$\{brightnessFillDelay\}ms;/);
+  assert.match(source, /var\(--light-card-brightness-fill-delay, 0ms\)/);
+  assert.doesNotMatch(source, /FillDelayBase/);
+});
+
 test("fan and humidifier skip redundant renders during active power transitions", () => {
   for (const file of ["nodalia-fan-card.js", "nodalia-humidifier-card.js"]) {
     const source = read(file);

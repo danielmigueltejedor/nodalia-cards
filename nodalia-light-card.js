@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "2.3.0-alpha.2";
+const CARD_VERSION = "2.3.0-alpha.3";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -3066,6 +3066,13 @@ class NodaliaLightCard extends HTMLElement {
     const brightnessFillDuration = shouldAnimateBrightnessFill
       ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100)
       : 0;
+    let brightnessFillDelay = 0;
+    if (shouldAnimateBrightnessFill && this._powerTransition?.startedAt != null) {
+      const fillElapsed = now - Number(this._powerTransition.startedAt);
+      if (fillElapsed > 0) {
+        brightnessFillDelay = -clamp(fillElapsed, 0, brightnessFillDuration);
+      }
+    }
     const brightnessSliderShellClass = shouldAnimateBrightnessFill ? " light-card__slider-shell--brightness-fill" : "";
 
     const statePosition = config.state_position === "below" ? "below" : "right";
@@ -3428,7 +3435,7 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-power-duration: ${animations.powerDuration}ms;
           --light-card-power-delay: ${powerAnimationDelay}ms;
           --light-card-controls-delay: ${controlsAnimationDelay}ms;
-          --light-card-brightness-fill-delay: 0ms;
+          --light-card-brightness-fill-delay: ${brightnessFillDelay}ms;
           --light-card-brightness-fill-duration: ${brightnessFillDuration}ms;
           --light-card-brightness-empty-duration: ${animations.controlsDuration}ms;
           --light-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -3959,7 +3966,7 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__slider-shell--brightness-fill .light-card__slider-track[data-light-control="brightness"]::before {
-          animation: light-card-brightness-fill var(--light-card-brightness-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--light-card-brightness-fill-delay) both;
+          animation: light-card-brightness-fill var(--light-card-brightness-fill-duration) cubic-bezier(0.2, 0.86, 0.18, 1) var(--light-card-brightness-fill-delay, 0ms) both;
         }
 
         .light-card__controls-shell--leaving .light-card__slider-track[data-light-control="brightness"]::before {

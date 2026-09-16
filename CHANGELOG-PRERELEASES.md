@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.3] - 2026-09-16
+
+Third **`2.3.0`** alpha: Room Summary climate uses the compact Nodalia climate card, camera go2rtc is editable from the Hub visual editor, alarms belong in Security, and the light brightness slider no longer restarts its fill when the light turns on.
+
+### Fixed
+
+- The climate Hub panel embeds `nodalia-climate-card` in compact layout instead of a custom dial.
+- The visual editor nests Camera Card settings (`camera_config`, including go2rtc / Frigate streams) the same way it already nests the media player editor.
+- Alarm control panels can be added to Security and render as embedded alarm cards; triggered/pending/arming states raise the security chip.
+- Turning a light on no longer replays the brightness-fill animation from empty on each Home Assistant update.
+
+### Validation
+
+- Node regressions cover compact climate embeds, camera_config stream passthrough, alarm entities, and light fill delay.
+
 ## [2.3.0-alpha.2] - 2026-09-16
 
 Second **`2.3.0`** alpha: Room Summary Hub no longer flickers on tab changes or entity toggles, and configured camera, media, power and security entities actually appear.

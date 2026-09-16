@@ -306,7 +306,8 @@ test("room summary hub icon-only controls have accessible names", () => {
   const coverPanel = source.slice(source.indexOf("  _renderHubCoverPanel(config) {"), source.indexOf("  _renderHubClimatePanel(config) {"));
   const climatePanel = source.slice(source.indexOf("  _renderHubClimatePanel(config) {"), source.indexOf("  _renderHubVacuumPanel(config) {"));
   assert.equal((coverPanel.match(/aria-label=/g) || []).length, 4);
-  assert.equal((climatePanel.match(/aria-label=/g) || []).length, 2);
+  assert.equal((climatePanel.match(/aria-label=/g) || []).length, 0);
+  assert.match(climatePanel, /_renderHubEmbedHosts\(\[config\.climate\], "climate"\)/);
 });
 
 test("room summary normalizeConfig accepts vacuums, fans, humidifiers, and others", () => {
@@ -333,6 +334,35 @@ test("room summary hub media players combine primary and extras", () => {
   assert.equal(rs.hubMediaPlayerIds(config).join("|"), "media_player.salon|media_player.kitchen");
   assert.equal(config.media_players.length, 1);
   assert.equal(config.media_players[0], "media_player.kitchen");
+});
+
+test("room summary preserves native camera streams and alarm entities", () => {
+  const config = rs.normalizeConfig({
+    camera_config: {
+      entity: "camera.salon",
+      camera_streams: [{
+        camera: "camera.salon",
+        provider: "go2rtc",
+        url: "http://go2rtc.local:1984",
+        stream: "salon",
+        mode: "mse",
+      }],
+    },
+    alarms: ["alarm_control_panel.house", "alarm_control_panel.house"],
+  });
+  assert.equal(config.camera, "camera.salon");
+  assert.equal(config.camera_config.camera_streams[0].provider, "go2rtc");
+  assert.equal(config.camera_config.camera_streams[0].stream, "salon");
+  assert.equal(config.alarms.length, 1);
+  assert.equal(config.alarms[0], "alarm_control_panel.house");
+  assert.equal(rs.hasRoomContent({ alarms: ["alarm_control_panel.house"] }), true);
+  assert.equal(rs.hubAlarmEntityIds(config).join("|"), "alarm_control_panel.house");
+
+  const triggered = rs.buildRoomSummary(mockHass({
+    "alarm_control_panel.house": state("alarm_control_panel.house", "triggered"),
+  }), config);
+  assert.equal(triggered.alarmsTriggered, 1);
+  assert.equal(triggered.security_issue, true);
 });
 
 test("room summary preserves native media config and embedded card icon overrides", () => {
@@ -371,6 +401,8 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="vacuum"/);
   assert.match(source, /data-hub-embed="fan"/);
   assert.match(source, /data-hub-embed="humidifier"/);
+  assert.match(source, /data-hub-embed="climate"/);
+  assert.match(source, /data-hub-embed="alarm"/);
   assert.match(source, /data-hub-embed="entity"/);
   assert.match(source, /data-hub-embed="media"/);
   assert.match(source, /data-hub-embed="camera"/);
@@ -386,13 +418,16 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
   assert.match(source, /panel_duration: 0/);
   assert.match(source, /nodalia-media-player-editor/);
+  assert.match(source, /nodalia-camera-card-editor/);
   assert.match(source, /media_config/);
+  assert.match(source, /camera_config/);
   assert.match(source, /embed_options/);
   assert.match(source, /card\.parentElement !== host/);
   assert.match(source, /room-hub__home-header/);
   assert.match(source, /room-hub__status-chips/);
   assert.match(source, /more-info:/);
   assert.match(source, /compact_layout_mode: "never"/);
+  assert.match(source, /layout: "compact"/);
   assert.match(source, /media_players/);
   assert.match(source, /hubMediaPlayerIds/);
   assert.match(source, /room-summary-card--hub[\s\S]*overflow:\s*visible/);
@@ -432,6 +467,7 @@ test("room summary patches Hub state without remounting embedded cards", () => {
 test("room summary keeps a grouped media player and surfaces camera plus security entities", () => {
   const source = read("nodalia-room-summary-card.js");
   const mediaPanel = source.slice(source.indexOf("_renderHubMediaPanel"), source.indexOf("_renderHubCameraPanel"));
+  const securityPanel = source.slice(source.indexOf("  _renderHubSecurityPanel(config) {"), source.indexOf("  _renderHubPanelContent(panel, config, summary, styles, accentColor) {"));
 
   assert.match(mediaPanel, /data-hub-media="group"/);
   assert.doesNotMatch(mediaPanel, /_renderHubEmbedHosts\(ids, "media"\)/);
@@ -442,6 +478,10 @@ test("room summary keeps a grouped media player and surfaces camera plus securit
   assert.match(source, /_renderHubHomeCamera/);
   assert.match(source, /_renderHubSecurityPanel/);
   assert.match(source, /hubSecurityEntityIds/);
+  assert.match(source, /hubAlarmEntityIds/);
+  assert.match(securityPanel, /_renderHubEmbedHosts\(alarmIds, "alarm"\)/);
+  assert.match(source, /nodalia-alarm-panel-card/);
+  assert.match(source, /nodalia-climate-card/);
   assert.match(source, /room-hub__metric-bubble--power/);
   assert.match(source, /room-hub__metric-bubble--air/);
 });

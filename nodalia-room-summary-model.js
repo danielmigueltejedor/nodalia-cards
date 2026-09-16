@@ -58,6 +58,10 @@
     return ["unlocked", "open"].includes(normalizeTextKey(state?.state));
   }
 
+  function stateIsAlarmTriggered(state) {
+    return ["triggered", "pending", "arming"].includes(normalizeTextKey(state?.state));
+  }
+
   function formatMetric(state, unitFallback = "") {
     if (!state || isUnavailable(state)) return "—";
     const unit = String(state.attributes?.unit_of_measurement || unitFallback || "").trim();
@@ -88,7 +92,8 @@
       || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
       || (c.vacuums || []).length || (c.fans || []).length
       || (c.humidifiers || []).length || (c.others || []).length
-      || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length,
+      || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length
+      || (c.alarms || []).length,
     );
   }
 
@@ -109,6 +114,7 @@
     const windowsOpen = countMatching(hass, c.windows, stateIsOpen);
     const locksUnlocked = countMatching(hass, c.locks, stateIsUnlocked);
     const alertsActive = countMatching(hass, c.alerts, stateIsOn);
+    const alarmsTriggered = countMatching(hass, c.alarms, stateIsAlarmTriggered);
     const occupied = presenceState && !isUnavailable(presenceState) ? stateIsOn(presenceState) : null;
     const mediaPlaying = mediaState && normalizeTextKey(mediaState.state) === "playing";
     const cameraAvailable = cameraState ? !isUnavailable(cameraState) : false;
@@ -118,7 +124,7 @@
     const humid = humidityNum !== null && humidityNum >= Number(comfort.humid ?? 70);
     const dry = humidityNum !== null && humidityNum <= Number(comfort.dry ?? 30);
     const comfortable = tempNum !== null && !hot && !cold && !humid && !dry;
-    const securityIssue = doorsOpen > 0 || windowsOpen > 0 || locksUnlocked > 0 || alertsActive > 0;
+    const securityIssue = doorsOpen > 0 || windowsOpen > 0 || locksUnlocked > 0 || alertsActive > 0 || alarmsTriggered > 0;
 
     let climateLabel = "";
     if (climateState && !isUnavailable(climateState)) {
@@ -160,6 +166,7 @@
       windowsOpen,
       locksUnlocked,
       alertsActive,
+      alarmsTriggered,
       mediaState: mediaState ? String(mediaState.state) : "",
     };
   }
@@ -172,6 +179,7 @@
     stateIsOn,
     stateIsOpen,
     stateIsUnlocked,
+    stateIsAlarmTriggered,
     formatMetric,
     getState,
     countMatching,
