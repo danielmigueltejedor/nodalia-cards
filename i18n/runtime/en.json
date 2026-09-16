@@ -396,6 +396,8 @@
     "noRoomData": "No room data",
     "humidifiers": "Humidifiers",
     "others": "Others",
+    "camera": "Camera",
+    "security": "Security",
     "expandDetails": "Expand room details",
     "collapseDetails": "Collapse room details"
   },

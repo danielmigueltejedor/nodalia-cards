@@ -396,6 +396,8 @@
     "noRoomData": "Keine Raumdaten",
     "humidifiers": "Luftbefeuchter",
     "others": "Andere",
+    "camera": "Kamera",
+    "security": "Sicherheit",
     "expandDetails": "Raumdetails erweitern",
     "collapseDetails": "Raumdetails einklappen"
   },

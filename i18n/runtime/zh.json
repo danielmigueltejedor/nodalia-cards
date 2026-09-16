@@ -396,6 +396,8 @@
     "noRoomData": "无房间数据",
     "humidifiers": "加湿器",
     "others": "其他的",
+    "camera": "摄像头",
+    "security": "安防",
     "expandDetails": "展开房间详情",
     "collapseDetails": "收起房间详情"
   },

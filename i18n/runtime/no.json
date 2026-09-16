@@ -396,6 +396,8 @@
     "noRoomData": "Ingen romdata",
     "humidifiers": "Luftfuktere",
     "others": "Andre",
+    "camera": "Kamera",
+    "security": "Sikkerhet",
     "expandDetails": "Utvid romdetaljer",
     "collapseDetails": "Skjul romdetaljer"
   },

@@ -373,13 +373,16 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="humidifier"/);
   assert.match(source, /data-hub-embed="entity"/);
   assert.match(source, /data-hub-embed="media"/);
+  assert.match(source, /data-hub-embed="camera"/);
   assert.match(source, /_mountHubEmbeddedCards/);
   assert.match(source, /_hubEmbedCache = new Map/);
   assert.match(source, /_hubEmbedConfigSignatures = new WeakMap/);
   assert.match(source, /_activateHubPanel\(next\)/);
   assert.match(source, /data-hub-panel=/);
   assert.match(source, /const renderedPanels = \[activePanel\]/);
-  assert.match(source, /data-hub-slot="home"/);
+  assert.match(source, /data-hub-slot="group"/);
+  assert.match(source, /data-hub-slot="live"/);
+  assert.match(source, /_parkHubEmbeddedCards/);
   assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
   assert.match(source, /panel_duration: 0/);
   assert.match(source, /nodalia-media-player-editor/);
@@ -403,22 +406,44 @@ test("room summary patches Hub state without remounting embedded cards", () => {
   const patchStart = source.indexOf("\n  _patchHubState() {");
   const patchEnd = source.indexOf("\n  _toggleEntity(", patchStart);
   const patchBlock = source.slice(patchStart, patchEnd);
+  const chromeStart = source.indexOf("\n  _syncHubChrome(");
+  const chromeEnd = source.indexOf("\n  _activateHubPanel(", chromeStart);
+  const chromeBlock = source.slice(chromeStart, chromeEnd);
   const mountStart = source.indexOf("\n  _mountHubEmbeddedCards() {");
   const mountEnd = source.indexOf("\n  _renderHubEmbedHosts(", mountStart);
   const mountBlock = source.slice(mountStart, mountEnd);
 
   assert.match(source, /if \(prev && this\._patchHubState\(\)\) return;/);
-  assert.match(patchBlock, /header\.outerHTML = this\._renderHubHeader/);
-  assert.match(patchBlock, /contextActions\.innerHTML = this\._renderHubContextActions/);
+  assert.match(chromeBlock, /header\.outerHTML = this\._renderHubHeader/);
+  assert.match(chromeBlock, /contextActions\.innerHTML = this\._renderHubContextActions/);
+  assert.match(patchBlock, /this\._syncHubChrome\(/);
   assert.match(patchBlock, /this\._mountHubEmbeddedCards\(\)/);
   assert.doesNotMatch(patchBlock, /shadowRoot\.innerHTML\s*=/);
   assert.match(mountBlock, /const configSignature = JSON\.stringify\(cardConfig\)/);
   assert.match(mountBlock, /_hubEmbedConfigSignatures\.get\(card\) !== configSignature/);
+  assert.match(mountBlock, /_hubConfiguredEmbedKeys/);
   assert.ok(
     mountBlock.indexOf("card.setConfig(cardConfig)") < mountBlock.indexOf("card.hass = this._hass"),
     "embedded card config should settle before hass triggers its render",
   );
   assert.match(source, /state\.last_updated \|\| state\.last_changed/);
+});
+
+test("room summary keeps a grouped media player and surfaces camera plus security entities", () => {
+  const source = read("nodalia-room-summary-card.js");
+  const mediaPanel = source.slice(source.indexOf("_renderHubMediaPanel"), source.indexOf("_renderHubCameraPanel"));
+
+  assert.match(mediaPanel, /data-hub-media="group"/);
+  assert.doesNotMatch(mediaPanel, /_renderHubEmbedHosts\(ids, "media"\)/);
+  assert.match(source, /album_cover_background: native\.album_cover_background !== false/);
+  assert.match(source, /show: true/);
+  assert.doesNotMatch(source, /active_tint_color: accent/);
+  assert.match(source, /nodalia-camera-card/);
+  assert.match(source, /_renderHubHomeCamera/);
+  assert.match(source, /_renderHubSecurityPanel/);
+  assert.match(source, /hubSecurityEntityIds/);
+  assert.match(source, /room-hub__metric-bubble--power/);
+  assert.match(source, /room-hub__metric-bubble--air/);
 });
 
 test("room summary hub uses stable control icons and active tint classes", () => {

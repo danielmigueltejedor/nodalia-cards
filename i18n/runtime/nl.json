@@ -396,6 +396,8 @@
     "noRoomData": "Geen kamergegevens",
     "humidifiers": "Luchtbevochtigers",
     "others": "Anderen",
+    "camera": "Camera",
+    "security": "Beveiliging",
     "expandDetails": "Kamerdetails uitklappen",
     "collapseDetails": "Kamerdetails inklappen"
   },

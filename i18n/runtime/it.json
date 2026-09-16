@@ -396,6 +396,8 @@
     "noRoomData": "Nessun dato sulla camera",
     "humidifiers": "Umidificatori",
     "others": "Altri",
+    "camera": "Fotocamera",
+    "security": "Sicurezza",
     "expandDetails": "Espandi dettagli stanza",
     "collapseDetails": "Comprimi dettagli stanza"
   },

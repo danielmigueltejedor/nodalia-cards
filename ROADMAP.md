@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.1
+2.3.0-alpha.2
 ```
 
-Preview **`2.3.0-alpha.1`** makes the Navigation Bar Lovelace picker and visual-editor preview look like the live pill bar. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.2`** stops Room Summary Hub flicker and shows configured camera, media, power and security entities. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

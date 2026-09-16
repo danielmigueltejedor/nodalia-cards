@@ -8,6 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.2] - 2026-09-16
+
+Second **`2.3.0`** alpha: Room Summary Hub no longer flickers on tab changes or entity toggles, and configured camera, media, power and security entities actually appear.
+
+### Fixed
+
+- Switching Hub tabs and toggling an embedded light (or other entity) no longer remounts the nested cards, so their entrance animation does not play twice and the panel no longer blinks.
+- The grouped media player keeps album-cover coloring instead of forcing the room accent tint, and idle/off players stay available in the pager.
+- A configured camera now shows on Home and in its own Hub tab. Power, air quality, doors, windows, locks and alerts surface as chips, with a Security tab for those entities.
+
+### Validation
+
+- Node regressions cover grouped media embeds, camera hosts, security/power chips, and Hub patching that does not wipe nested cards.
+
 ## [2.3.0-alpha.1] - 2026-09-15
 
 First **`2.3.0`** alpha: Navigation Bar's Lovelace picker and visual-editor preview look like the live pill bar.

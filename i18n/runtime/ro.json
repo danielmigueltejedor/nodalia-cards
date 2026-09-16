@@ -396,6 +396,8 @@
     "noRoomData": "Nu există date despre cameră",
     "humidifiers": "Umidificatoare",
     "others": "Alţii",
+    "camera": "Cameră",
+    "security": "Securitate",
     "expandDetails": "Extinde detaliile camerei",
     "collapseDetails": "Restrânge detaliile camerei"
   },

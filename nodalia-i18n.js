@@ -618,6 +618,8 @@
         noRoomData: "No room data",
         humidifiers: "Humidifiers",
         others: "Others",
+        camera: "Camera",
+        security: "Security",
         expandDetails: "Expand room details",
         collapseDetails: "Collapse room details"
       },
@@ -1670,6 +1672,8 @@
         noRoomData: "Keine Raumdaten",
         humidifiers: "Luftbefeuchter",
         others: "Andere",
+        camera: "Kamera",
+        security: "Sicherheit",
         expandDetails: "Raumdetails erweitern",
         collapseDetails: "Raumdetails einklappen"
       },
@@ -2722,6 +2726,8 @@
         noRoomData: "Δεν υπάρχουν δεδομένα δωματίου",
         humidifiers: "Υγραντήρες",
         others: "Άλλοι",
+        camera: "Κάμερα",
+        security: "Ασφάλεια",
         expandDetails: "Ανάπτυξη λεπτομερειών δωματίου",
         collapseDetails: "Σύμπτυξη λεπτομερειών δωματίου"
       },
@@ -3774,6 +3780,8 @@
         noRoomData: "Sin datos de habitación",
         humidifiers: "Humidificadores",
         others: "Otros",
+        camera: "Cámara",
+        security: "Seguridad",
         expandDetails: "Ampliar detalles de la habitación",
         collapseDetails: "Contraer detalles de la habitación"
       },
@@ -4826,6 +4834,8 @@
         noRoomData: "Aucune donnée de chambre",
         humidifiers: "Humidificateurs",
         others: "Autres",
+        camera: "Caméra",
+        security: "Sécurité",
         expandDetails: "Développer les détails de la pièce",
         collapseDetails: "Replier les détails de la pièce"
       },
@@ -5878,6 +5888,8 @@
         noRoomData: "Nessun dato sulla camera",
         humidifiers: "Umidificatori",
         others: "Altri",
+        camera: "Fotocamera",
+        security: "Sicurezza",
         expandDetails: "Espandi dettagli stanza",
         collapseDetails: "Comprimi dettagli stanza"
       },
@@ -6930,6 +6942,8 @@
         noRoomData: "Geen kamergegevens",
         humidifiers: "Luchtbevochtigers",
         others: "Anderen",
+        camera: "Camera",
+        security: "Beveiliging",
         expandDetails: "Kamerdetails uitklappen",
         collapseDetails: "Kamerdetails inklappen"
       },
@@ -7982,6 +7996,8 @@
         noRoomData: "Ingen romdata",
         humidifiers: "Luftfuktere",
         others: "Andre",
+        camera: "Kamera",
+        security: "Sikkerhet",
         expandDetails: "Utvid romdetaljer",
         collapseDetails: "Skjul romdetaljer"
       },
@@ -9034,6 +9050,8 @@
         noRoomData: "Não há dados do quarto",
         humidifiers: "Umidificadores",
         others: "Outros",
+        camera: "Câmara",
+        security: "Segurança",
         expandDetails: "Expandir detalhes da divisão",
         collapseDetails: "Recolher detalhes da divisão"
       },
@@ -10086,6 +10104,8 @@
         noRoomData: "Nu există date despre cameră",
         humidifiers: "Umidificatoare",
         others: "Alţii",
+        camera: "Cameră",
+        security: "Securitate",
         expandDetails: "Extinde detaliile camerei",
         collapseDetails: "Restrânge detaliile camerei"
       },
@@ -11138,6 +11158,8 @@
         noRoomData: "Нет данных о комнате",
         humidifiers: "Увлажнители",
         others: "Другие",
+        camera: "Камера",
+        security: "Безопасность",
         expandDetails: "Развернуть сведения о комнате",
         collapseDetails: "Свернуть сведения о комнате"
       },
@@ -12190,6 +12212,8 @@
         noRoomData: "无房间数据",
         humidifiers: "加湿器",
         others: "其他的",
+        camera: "摄像头",
+        security: "安防",
         expandDetails: "展开房间详情",
         collapseDetails: "收起房间详情"
       },
