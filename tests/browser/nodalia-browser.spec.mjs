@@ -1919,7 +1919,7 @@ test("Media Player control bubbles stay readable and inside square cards", async
     document.documentElement.style.setProperty("--secondary-text-color", "rgba(244,244,244,0.72)");
     document.documentElement.style.setProperty("--primary-color", "#ffb74a");
     document.documentElement.style.setProperty("--rgb-primary-color", "255, 183, 74");
-    card.style.width = "180px";
+    card.style.width = "320px";
     card.setConfig({
       players: [{ entity: "media_player.test", label: "HomePod mini" }],
       layout: { mode: "square", fixed: false },
@@ -1932,6 +1932,9 @@ test("Media Player control bubbles stay readable and inside square cards", async
     const buttons = [...root.querySelectorAll(".media-player__control, .media-player__volume-button")];
     const cardBox = surface.getBoundingClientRect();
     const styles = window.getComputedStyle(play);
+    const art = root.querySelector(".media-player__art-layer");
+    const timeChip = root.querySelector(".media-player__chip--time");
+    const progress = root.querySelector(".media-player__progress");
     const clipped = buttons.some(button => {
       const box = button.getBoundingClientRect();
       return box.left < cardBox.left - 1
@@ -1939,6 +1942,11 @@ test("Media Player control bubbles stay readable and inside square cards", async
         || box.top < cardBox.top - 1
         || box.bottom > cardBox.bottom + 1;
     });
+    const timeBox = timeChip?.getBoundingClientRect();
+    const progressBox = progress?.getBoundingClientRect();
+    const timeOverlapsProgress = Boolean(timeBox && progressBox
+      && timeBox.bottom > progressBox.top + 1
+      && timeBox.top < progressBox.bottom - 1);
     return {
       buttonCount: buttons.length,
       clipped,
@@ -1946,6 +1954,8 @@ test("Media Player control bubbles stay readable and inside square cards", async
       backdrop: styles.backdropFilter || styles.webkitBackdropFilter,
       playSize: Math.round(play.getBoundingClientRect().width),
       hasAddon: Boolean(root.querySelector(".media-player__transport-addon")),
+      artFilter: art ? window.getComputedStyle(art).filter : "",
+      timeOverlapsProgress,
     };
   });
 
@@ -1955,6 +1965,8 @@ test("Media Player control bubbles stay readable and inside square cards", async
   expect(metrics.playSize).toBeGreaterThanOrEqual(24);
   expect(metrics.boxShadow).toMatch(/24px/);
   expect(metrics.backdrop).toMatch(/blur/);
+  expect(metrics.timeOverlapsProgress).toBe(false);
+  expect(metrics.artFilter === "none" || metrics.artFilter === "").toBe(true);
 });
 
 test("Advance Vacuum keeps the card surface when expanding rooms", async ({ page }) => {

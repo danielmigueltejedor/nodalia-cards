@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.6b] - 2026-09-17
+
+Sixth experimental TypeScript architecture preview on the parallel `b` line.
+Square Media Player keeps a sharp album cover, more readable glass controls,
+and the time chip above the progress bar on desktop-sized cards.
+
+### Changed
+
+- Square and artwork Media Player fill the card with an unblurred cover and a
+  bottom gradient instead of a blurred wallpaper.
+- Transport buttons use a denser card-surface mix so icons stay readable on
+  photos; play is a solid accent bubble.
+- Desktop square cards stack the time chip above the seek bar so they no
+  longer overlap.
+
+### Validation
+
+- Node regressions plus Chromium coverage that a 320px square card keeps the
+  time chip off the progress bar and a sharp artwork layer.
+
 ## [2.3.0-alpha.5b] - 2026-09-17
 
 Fifth experimental TypeScript architecture preview on the parallel `b` line.

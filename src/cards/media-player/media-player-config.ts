@@ -49,7 +49,7 @@ export const DEFAULT_CONFIG = {
   },
   artwork: {
     mode: "immersive",
-    blur: 6,
+    blur: 0,
     dim: 0.22,
     saturation: 1.05,
     opacity: 1,

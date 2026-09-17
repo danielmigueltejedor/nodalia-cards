@@ -4165,12 +4165,12 @@ export class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip {
           align-items: center;
-          -webkit-backdrop-filter: blur(18px);
-          backdrop-filter: blur(18px);
-          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          -webkit-backdrop-filter: blur(22px) saturate(1.35);
+          backdrop-filter: blur(22px) saturate(1.35);
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #1c1c20)) 62%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 18%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${playerStyles.subtitle_size};
@@ -4295,12 +4295,12 @@ export class NodaliaMediaPlayer extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          -webkit-backdrop-filter: blur(18px);
-          backdrop-filter: blur(18px);
-          background: color-mix(in srgb, var(--primary-text-color, #f4f4f4) 12%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color, #f4f4f4) 14%, transparent);
+          -webkit-backdrop-filter: blur(22px) saturate(1.35);
+          backdrop-filter: blur(22px) saturate(1.35);
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #1c1c20)) 72%, color-mix(in srgb, var(--primary-text-color, #f4f4f4) 16%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color, #f4f4f4) 22%, transparent);
           border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color, #f4f4f4) 10%, transparent), 0 10px 24px rgba(0, 0, 0, 0.22);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color, #f4f4f4) 14%, transparent), 0 10px 24px rgba(0, 0, 0, 0.28);
           color: var(--primary-text-color, #f4f4f4);
           cursor: pointer;
           display: inline-flex;
@@ -4317,9 +4317,10 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__control--primary {
-          background: color-mix(in srgb, var(--primary-color) 22%, ${playerStyles.accent_background});
-          border-color: color-mix(in srgb, var(--primary-color) 48%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
-          color: ${playerStyles.accent_color};
+          background: var(--primary-color);
+          border-color: color-mix(in srgb, var(--primary-color) 70%, #fff);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 24px rgba(0, 0, 0, 0.32);
+          color: var(--text-primary-color, #161616);
         }
 
         .media-player__control--active {
@@ -4660,17 +4661,69 @@ export class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--square,
         .media-player-card--artwork {
-          padding: 12px 12px 22px;
+          display: grid;
+          grid-template-rows: minmax(0, 1fr) auto;
+          padding: 14px 14px 12px;
+        }
+
+        .media-player-card--square.has-album-background::before,
+        .media-player-card--artwork.has-album-background::before {
+          background: transparent;
+        }
+
+        .media-player-card--square.has-album-background::after,
+        .media-player-card--artwork.has-album-background::after {
+          background: linear-gradient(
+            180deg,
+            rgba(8, 8, 10, 0.46) 0%,
+            rgba(8, 8, 10, 0.1) 24%,
+            rgba(8, 8, 10, 0.08) 48%,
+            rgba(8, 8, 10, 0.52) 74%,
+            rgba(8, 8, 10, 0.78) 100%
+          );
+        }
+
+        .media-player-card--square .media-player__album-bg,
+        .media-player-card--square .media-player__art-layer,
+        .media-player-card--artwork .media-player__album-bg,
+        .media-player-card--artwork .media-player__art-layer {
+          filter: none;
+          inset: 0;
+          opacity: 1;
+          transform: none;
+        }
+
+        .media-player-card--square .media-player__art-layer.is-idle-animated,
+        .media-player-card--artwork .media-player__art-layer.is-idle-animated {
+          animation: none;
+        }
+
+        .media-player-card--square.has-album-background .media-player__title,
+        .media-player-card--square.has-album-background .media-player__subtitle,
+        .media-player-card--artwork.has-album-background .media-player__title,
+        .media-player-card--artwork.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.42);
         }
 
         .media-player-card--square .media-player__content,
         .media-player-card--artwork .media-player__content {
           align-content: space-between;
           gap: 10px;
-          height: 100%;
+          grid-row: 1;
+          height: auto;
           min-height: 0;
           padding-top: 2px;
-          padding-bottom: 8px;
+          padding-bottom: 0;
+        }
+
+        .media-player-card--square .media-player__progress,
+        .media-player-card--artwork .media-player__progress {
+          grid-row: 2;
+          inset: auto;
+          margin-top: 10px;
+          position: static;
+          width: 100%;
         }
 
         .media-player-card--square .media-player__hero,
