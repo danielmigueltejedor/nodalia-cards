@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.8b
+2.3.0-alpha.9b
 ```
 
-Preview **`2.3.0-alpha.8b`** keeps square Media Player overlay-square on phones and shares compact density across Fan, Humidifier, Vacuum and Light. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.9b`** keeps compact icons on the left and adds Fan and Humidifier TypeScript splits beside Light, Climate and Media Player. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

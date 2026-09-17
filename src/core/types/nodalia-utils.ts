@@ -10,6 +10,7 @@ export interface NodaliaUtilsApi {
   deepClone<T>(value: T): T;
   mergeDeep<T>(base: T, override?: unknown): T;
   compactConfig<T>(value: T): T;
+  getByPath(target: object, path: string): unknown;
   shouldUseCompactCardLayout(options?: {
     mode?: unknown;
     width?: number;

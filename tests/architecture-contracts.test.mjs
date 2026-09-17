@@ -369,7 +369,7 @@ test("editor focus and listener lifecycle primitives are idempotent", () => {
   assert.deepEqual(calls.map(call => call[0]), ["add", "remove"]);
 });
 
-test("TypeScript climate, media player and light sources are canonical and still ship HACS JS artifacts", () => {
+test("TypeScript climate, media player, light, fan and humidifier sources are canonical and still ship HACS JS artifacts", () => {
   const climateFiles = [
     "src/cards/climate/index.ts",
     "src/cards/climate/climate-card.ts",
@@ -407,6 +407,28 @@ test("TypeScript climate, media player and light sources are canonical and still
   lightFiles.forEach(file => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   });
+  const fanFiles = [
+    "src/cards/fan/index.ts",
+    "src/cards/fan/fan-card.ts",
+    "src/cards/fan/fan-config.ts",
+    "src/cards/fan/fan-types.ts",
+    "src/cards/fan/fan-helpers.ts",
+    "src/cards/fan/fan-editor.ts",
+  ];
+  fanFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const humidifierFiles = [
+    "src/cards/humidifier/index.ts",
+    "src/cards/humidifier/humidifier-card.ts",
+    "src/cards/humidifier/humidifier-config.ts",
+    "src/cards/humidifier/humidifier-types.ts",
+    "src/cards/humidifier/humidifier-helpers.ts",
+    "src/cards/humidifier/humidifier-editor.ts",
+  ];
+  humidifierFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
   const generatedClimate = read("nodalia-climate-card.js");
   assert.match(generatedClimate, /window\.__NODALIA_CLIMATE__/);
   assert.match(generatedClimate, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
@@ -416,12 +438,22 @@ test("TypeScript climate, media player and light sources are canonical and still
   const generatedLight = read("nodalia-light-card.js");
   assert.match(generatedLight, /window\.__NODALIA_LIGHT__/);
   assert.match(generatedLight, /customElements\.define\(CARD_TAG, NodaliaLightCard\)/);
+  const generatedFan = read("nodalia-fan-card.js");
+  assert.match(generatedFan, /window\.__NODALIA_FAN__/);
+  assert.match(generatedFan, /customElements\.define\(CARD_TAG, NodaliaFanCard\)/);
+  const generatedHumidifier = read("nodalia-humidifier-card.js");
+  assert.match(generatedHumidifier, /window\.__NODALIA_HUMIDIFIER__/);
+  assert.match(generatedHumidifier, /customElements\.define\(CARD_TAG, NodaliaHumidifierCard\)/);
   const standaloneBuild = read("scripts/build-src-cards.mjs");
   const hacsBuild = read("scripts/build-bundle.mjs");
   assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/media-player\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/light\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/fan\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/humidifier\/standalone\.ts/);
   assert.match(hacsBuild, /src\/cards\/climate\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/media-player\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/light\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/fan\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/humidifier\/index\.ts/);
 });

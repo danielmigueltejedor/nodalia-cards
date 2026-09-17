@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.8b";
+const CARD_VERSION = "2.3.0-alpha.9b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2958,9 +2958,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card--compact .vacuum-card__header {
-          grid-template-columns: minmax(0, 1fr);
-          justify-items: center;
-          padding-right: ${batteryChipMarkup ? "72px" : "0"};
+          grid-template-columns: auto minmax(0, 1fr) auto;
           text-align: center;
         }
 
@@ -3386,7 +3384,7 @@ class NodaliaVacuumCard extends HTMLElement {
             gap: 8px;
           }
 
-          .vacuum-card:not(.vacuum-card--compact) .vacuum-card__header {
+          .vacuum-card__header {
             gap: 10px;
             grid-template-columns: auto minmax(0, 1fr) auto;
             padding-right: ${batteryChipMarkup ? "82px" : "0"};

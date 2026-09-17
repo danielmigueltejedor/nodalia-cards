@@ -80,6 +80,18 @@ function loadCardNormalizeConfig(file, className) {
     assert.ok(typeof api?.normalizeConfig === "function", "light public API should expose normalizeConfig");
     return api.normalizeConfig;
   }
+  if (file === "nodalia-fan-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_FAN__ || sandbox.__NODALIA_FAN__;
+    assert.ok(typeof api?.normalizeConfig === "function", "fan public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-humidifier-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_HUMIDIFIER__ || sandbox.__NODALIA_HUMIDIFIER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "humidifier public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -1400,7 +1412,7 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
 
   files.forEach(file => {
     const source = read(file);
-    assert.match(source, /const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;/);
+    assert.match(source, /(?:const|let|var) OPTIMISTIC_TOGGLE_TIMEOUT = 3200;/);
     assert.match(source, /this\._optimisticToggle = null;/);
     assert.match(source, /this\._optimisticToggleTimer = 0;/);
     assert.match(source, /_getActualState\(hass = this\._hass\)/);
@@ -1420,7 +1432,7 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
     const source = read(file);
     assert.match(
       source,
-      /const attrs = turningOn\s*\?\s*\{ \.\.\.\(actualState\?\.attributes \|\| \{\}\), \.\.\.\(snapshot\.attributes \|\| \{\}\) \}/,
+      /const attrs = turningOn\s*\?\s*\{ \.\.\.\(?actualState\?\.attributes \|\| \{\}\)?,\s*\.\.\.\(?snapshot\.attributes \|\| \{\}\)?/,
     );
   }
   assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
@@ -1435,7 +1447,7 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
     assert.match(source, /_scheduleOptimisticVisualSettleTimeout/);
     assert.match(source, /_clearOptimisticVisualSettle/);
     assert.match(source, /visualSettleChanged/);
-    assert.match(source, /_lastKnownOnState = new Map\(\)/);
+    assert.match(source, /_lastKnownOnState = (?:\/\* @__PURE__ \*\/ )?new Map\(\)/);
     assert.match(source, /_shouldUseOptimisticVisualSettle/);
     assert.match(source, /_startOptimisticVisualSettle/);
     assert.match(source, /powerAnimationState === "powering-up"/);
@@ -2368,17 +2380,12 @@ test("fan humidifier vacuum and light compact density share the same helper", ()
     "nodalia-humidifier-card.js",
     "nodalia-vacuum-card.js",
     "src/cards/light/light-card.ts",
+    "src/cards/fan/fan-card.ts",
+    "src/cards/humidifier/humidifier-card.ts",
   ]) {
     const source = read(file);
     assert.match(source, /shouldUseCompactCardLayout/, file);
   }
-  const fan = read("nodalia-fan-card.js");
-  assert.match(fan, /\.fan-card--compact \.fan-card__hero \{[\s\S]*grid-template-columns: \$\{styles\.icon\.size\}/);
-  assert.match(fan, /:not\(\.fan-card--compact\):not\(\.fan-card--circular\) \.fan-card__hero/);
-  const humidifier = read("nodalia-humidifier-card.js");
-  assert.match(humidifier, /:not\(\.humidifier-card--compact\):not\(\.humidifier-card--circular\) \.humidifier-card__hero/);
-  const vacuum = read("nodalia-vacuum-card.js");
-  assert.match(vacuum, /\.vacuum-card--compact \.vacuum-card__header \{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
 });
 
 test("fav card aligns service security with entity and cleans up alarm host span", () => {

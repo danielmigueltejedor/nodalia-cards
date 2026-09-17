@@ -5,14 +5,12 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.8b)
+## Current architecture map (2.3.0-alpha.9b)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
-Climate and Media Player canonical source now lives under `src/cards/`
-and is compiled to the existing `nodalia-climate-card.js` and
-`nodalia-media-player.js` artifacts. Light canonical source lives under
-`src/cards/light/` and compiles to `nodalia-light-card.js`.
+Climate, Media Player, Light, Fan and Humidifier canonical source now lives under
+`src/cards/` and is compiled to the existing HACS `nodalia-*-card.js` artifacts.
 
 ```text
 src/
@@ -20,6 +18,8 @@ src/
   cards/climate/              Climate TypeScript split (pilot)
   cards/media-player/         Media Player TypeScript split
   cards/light/                Light TypeScript split
+  cards/fan/                  Fan TypeScript split
+  cards/humidifier/           Humidifier TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
 nodalia-backend.js            Optional Nodalia Engine client
@@ -27,10 +27,10 @@ nodalia-render-signature.js   Render-signature helpers
 nodalia-bubble-contrast.js    Icon contrast helpers
 nodalia-i18n.js               Generated runtime i18n
 nodalia-editor-ui.js          Generated editor i18n catalog
-nodalia-*-card.js             Card artifacts (Climate and Media Player generated)
+nodalia-*-card.js             Card artifacts (migrated cards generated)
 nodalia-cards.js              Minified HACS single-file bundle
 scripts/build-src-cards.mjs   TypeScript → standalone JS
-scripts/build-bundle.mjs      HACS bundle (imports Climate and Media Player from src/)
+scripts/build-bundle.mjs      HACS bundle (imports migrated cards from src/)
 ```
 
 Unmigrated cards still live as root `nodalia-*.js` files. Those files remain
@@ -52,7 +52,10 @@ Approximate sizes on this preview (handwritten unless noted):
 | `src/cards/media-player/media-player-card.ts` | ~4900 lines | Media Player HTMLElement / artwork / layouts |
 | `nodalia-calendar-card.js` | ~207 KB | Events, weather, composers, webhooks |
 | `src/cards/climate/climate-editor.ts` | ~2037 lines | Climate visual editor (incl. unused legacy class) |
-| `nodalia-humidifier-card.js` | ~202 KB | Humidity, modes, optimistic UI |
+| `nodalia-humidifier-card.js` | generated | Compiled Humidifier artifact |
+| `src/cards/humidifier/humidifier-card.ts` | ~3870 lines | Humidifier HTMLElement / humidity / modes |
+| `nodalia-fan-card.js` | generated | Compiled Fan artifact |
+| `src/cards/fan/fan-card.ts` | ~3640 lines | Fan HTMLElement / speed / oscillation |
 | `nodalia-light-card.js` | generated | Compiled Light artifact |
 | `src/cards/light/light-card.ts` | ~3970 lines | Light HTMLElement / brightness / color |
 | `nodalia-navigation-bar.js` | ~196 KB | Routes, media overlay, popups |
@@ -67,7 +70,7 @@ types are already separate. Styles, actions and controller logic remain inside
 HACS: nodalia-cards.js
   CORE: i18n → utils → backend → render-signature → bubble-contrast
   SUPPORT: notifications-mobile-policy, room-summary-model, camera-stream-model
-  CARDS: each nodalia-*.js (Climate/Media Player/Light compiled from src/cards/*/index.ts)
+  CARDS: each nodalia-*.js (migrated cards compiled from src/cards/*/index.ts)
   EDITOR UI: nodalia-editor-ui.js concatenated after the runtime
 
 Standalone Climate: nodalia-utils.js (required first) → nodalia-climate-card.js
@@ -116,13 +119,15 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-climate-card.js` | Generated from `src/cards/climate/standalone.ts` (unminified IIFE) |
 | `nodalia-media-player.js` | Generated from `src/cards/media-player/standalone.ts` (unminified IIFE) |
 | `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |
+| `nodalia-fan-card.js` | Generated from `src/cards/fan/standalone.ts` (unminified IIFE) |
+| `nodalia-humidifier-card.js` | Generated from `src/cards/humidifier/standalone.ts` (unminified IIFE) |
 | Other `nodalia-*.js` cards | Still handwritten until migrated |
 | `nodalia-cards.manifest.js` | Version/hash metadata |
 | `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
 
-Do not edit generated Climate, Media Player, or Light JS by hand. Change
-`src/cards/climate`, `src/cards/media-player`, or `src/cards/light` and run
-`pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
+Do not edit generated Climate, Media Player, Light, Fan, or Humidifier JS by hand. Change
+`src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
+or `src/cards/humidifier` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
 unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
 The standalone Climate artifact keeps that class because source-contract tests still
 assert both editor implementations.
@@ -174,8 +179,8 @@ when a file is large *and* mixed.
    `src/core/` with window adapters at the bundle edge.
 3. **Climate pilot (this preview)** — split Climate; keep Lovelace behavior.
 4. **Remaining large cards** — Advanced Vacuum, Notifications, Entity, Power
-   Flow, Calendar, Humidifier, Navigation. Media Player and Light already live
-   under `src/cards/`.
+   Flow, Calendar, Navigation. Media Player, Light, Fan and Humidifier already
+   live under `src/cards/`.
 5. **Smaller cards** — migrate without over-splitting.
 6. **Cleanup** — drop obsolete internals, reduce globals, type remaining
    `@ts-nocheck` files, replace regex tests with behavioral tests where safe.
@@ -186,7 +191,7 @@ when a file is large *and* mixed.
 2. `pnpm run lint` — ESLint on `src/**/*.ts`.
 3. `scripts/build-src-cards.mjs` — esbuild TypeScript cards to root JS.
 4. `scripts/build-bundle.mjs` — esbuild HACS bundle from published JS parts,
-   compiling Climate, Media Player and Light from `src/cards/*/index.ts`.
+   compiling Climate, Media Player, Light, Fan and Humidifier from `src/cards/*/index.ts`.
 
 `pnpm run validate` runs typecheck, lint, i18n checks, the bundle, and unit tests.
 

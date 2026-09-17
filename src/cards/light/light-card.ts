@@ -3904,11 +3904,11 @@ export class NodaliaLightCard extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .light-card:not(.light-card--compact):not(.light-card--mini) .light-card__hero {
+          .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .light-card:not(.light-card--compact):not(.light-card--mini) .light-card__icon {
+          .light-card__icon {
             height: 50px;
             width: 50px;
           }

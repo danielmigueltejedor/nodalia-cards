@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.9b] - 2026-09-18
+
+Ninth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Fan, Humidifier and Vacuum tiles keep the icon on the left, and Fan
+and Humidifier now live under `src/cards/` like Light.
+
+### Changed
+
+- Compact density no longer recenters the power icon; 4- and 6-column tiles
+  keep the original left-aligned bubble beside the copy.
+- Fan canonical source moved to `src/cards/fan/` and still compiles to
+  `nodalia-fan-card.js`.
+- Humidifier canonical source moved to `src/cards/humidifier/` and still
+  compiles to `nodalia-humidifier-card.js`.
+
+### Validation
+
+- Node regressions after compiling Fan and Humidifier from TypeScript,
+  including optimistic settle, compact helper, and public `normalizeConfig`.
+
 ## [2.3.0-alpha.8b] - 2026-09-17
 
 Eighth experimental TypeScript architecture preview on the parallel `b` line.

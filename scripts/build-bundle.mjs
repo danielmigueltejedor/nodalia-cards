@@ -61,6 +61,8 @@ const BUNDLE_SOURCE_ALIASES = {
   "nodalia-climate-card.js": "src/cards/climate/index.ts",
   "nodalia-media-player.js": "src/cards/media-player/index.ts",
   "nodalia-light-card.js": "src/cards/light/index.ts",
+  "nodalia-fan-card.js": "src/cards/fan/index.ts",
+  "nodalia-humidifier-card.js": "src/cards/humidifier/index.ts",
 };
 
 await buildSrcCards();

@@ -17,6 +17,14 @@ export const SRC_CARD_ENTRIES = [
     entry: "src/cards/light/standalone.ts",
     outfile: "nodalia-light-card.js",
   },
+  {
+    entry: "src/cards/fan/standalone.ts",
+    outfile: "nodalia-fan-card.js",
+  },
+  {
+    entry: "src/cards/humidifier/standalone.ts",
+    outfile: "nodalia-humidifier-card.js",
+  },
 ];
 
 export async function buildSrcCards() {
