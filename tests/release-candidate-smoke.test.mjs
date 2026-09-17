@@ -102,7 +102,7 @@ test("HACS publishing contract includes license, information, images, and plugin
 });
 
 test("repository root retains only the canonical generated HACS bundle", () => {
-  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+b?)?\.js$/;
   const rootFiles = fs.readdirSync(root);
 
   assert.deepEqual(rootFiles.filter(file => versionedBundlePattern.test(file)), []);
@@ -825,7 +825,7 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-climate-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-climate-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
   assert.match(build, /nodalia-climate-card\.js/);
   assert.ok(pkg.files.includes("nodalia-climate-card.js"), "nodalia-climate-card.js should be published");

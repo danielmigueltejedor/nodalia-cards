@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.3
+2.3.0-alpha.3b
 ```
 
-Preview **`2.3.0-alpha.3`** embeds compact climate and alarm cards in Room Summary, exposes Camera Card go2rtc settings in the Hub editor, and stops the light slider fill from restarting on turn-on. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.3b`** starts the TypeScript `src/` architecture with Climate as the first modular card. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

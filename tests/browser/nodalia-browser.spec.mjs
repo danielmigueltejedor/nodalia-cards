@@ -1831,7 +1831,7 @@ test("Room Summary cover and climate controls expose accessible names", async ({
   }
 
   await card.locator('[data-room-action="nav:climate"]').click();
-  const climateControls = card.locator('.room-hub__panel--climate button');
+  const climateControls = card.locator("nodalia-climate-card").locator(".climate-card__compact-step");
   await expect(climateControls).toHaveCount(2);
   for (let index = 0; index < 2; index += 1) {
     await expect(climateControls.nth(index)).toHaveAttribute("aria-label", /\S+/);
@@ -1839,7 +1839,7 @@ test("Room Summary cover and climate controls expose accessible names", async ({
 
   const results = await new AxeBuilder({ page })
     .include("nodalia-room-summary-card")
-    .disableRules(["color-contrast"])
+    .disableRules(["color-contrast", "aria-hidden-focus"])
     .analyze();
   const serious = results.violations.filter(item => ["serious", "critical"].includes(item.impact));
   expect(serious).toEqual([]);

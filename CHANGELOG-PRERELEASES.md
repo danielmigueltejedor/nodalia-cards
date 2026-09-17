@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.3b] - 2026-09-17
+
+Experimental TypeScript architecture preview on a parallel `b` line. Lovelace
+behavior, YAML, custom element tags and HACS install stay compatible with
+`2.3.0-alpha.3`. Canonical Climate source now lives under `src/cards/climate/`
+and is compiled to the existing `nodalia-climate-card.js` artifact.
+
+### Changed
+
+- Added strict TypeScript, ESLint and a `src/` layout. Climate is the first
+  card split into config, model, dial, schedule, editor and card modules.
+- `pnpm run validate` now typechecks and lints before generating bundles.
+- Architecture notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+### Validation
+
+- Node regressions plus `tsc` and ESLint on `src/`.
+
 ## [2.3.0-alpha.3] - 2026-09-16
 
 Third **`2.3.0`** alpha: Room Summary climate uses the compact Nodalia climate card, camera go2rtc is editable from the Hub visual editor, alarms belong in Security, and the light brightness slider no longer restarts its fill when the light turns on.

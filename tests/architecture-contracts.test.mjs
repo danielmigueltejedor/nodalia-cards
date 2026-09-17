@@ -92,8 +92,8 @@ test("public custom-element and editor tags stay exact", () => {
   const actualEditors = [];
   for (const file of CARD_FILES) {
     const source = read(file);
-    const cardTag = source.match(/const CARD_TAG = "([^"]+)"/)?.[1];
-    const editorTag = source.match(/const EDITOR_TAG = "([^"]+)"/)?.[1];
+    const cardTag = source.match(/(?:const|let|var) CARD_TAG = "([^"]+)"/)?.[1];
+    const editorTag = source.match(/(?:const|let|var) EDITOR_TAG = "([^"]+)"/)?.[1];
     actualCards.push(cardTag);
     actualEditors.push(editorTag);
   }
@@ -110,7 +110,7 @@ test("build and package expose the exact supported card source set", () => {
 
   const pkg = JSON.parse(read("package.json"));
   CARD_FILES.forEach(file => assert.ok(pkg.files.includes(file), `${file} must remain published`));
-  assert.match(pkg.version, /^2\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/);
+  assert.match(pkg.version, /^2\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+b?)?$/);
   assert.ok(pkg.files.includes("nodalia-notifications-mobile-policy.js"));
   assert.ok(pkg.files.includes("nodalia-room-summary-model.js"));
   assert.ok(pkg.files.includes("nodalia-camera-stream-model.js"));
@@ -140,7 +140,7 @@ test("card runtime metadata stays synchronized with package version", () => {
     const source = read(file);
     assert.match(
       source,
-      new RegExp(`const CARD_VERSION = ${JSON.stringify(pkg.version).replaceAll(".", "\\.")}`),
+      new RegExp(`(?:const|let|var) CARD_VERSION = ${JSON.stringify(pkg.version).replaceAll(".", "\\.")}`),
       `${file} must report package version ${pkg.version}`,
     );
   });
@@ -357,4 +357,27 @@ test("editor focus and listener lifecycle primitives are idempotent", () => {
   assert.equal(utils.bindShadowListeners(host, [{ type: "input", listener }]), false);
   assert.equal(utils.releaseShadowListeners(host), true);
   assert.deepEqual(calls.map(call => call[0]), ["add", "remove"]);
+});
+
+test("TypeScript climate source is canonical and still ships the HACS JS artifact", () => {
+  const climateFiles = [
+    "src/cards/climate/index.ts",
+    "src/cards/climate/climate-card.ts",
+    "src/cards/climate/climate-config.ts",
+    "src/cards/climate/climate-types.ts",
+    "src/cards/climate/climate-model.ts",
+    "src/cards/climate/climate-dial.ts",
+    "src/cards/climate/climate-schedule.ts",
+    "src/cards/climate/climate-editor.ts",
+  ];
+  climateFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const generated = read("nodalia-climate-card.js");
+  assert.match(generated, /window\.__NODALIA_CLIMATE__/);
+  assert.match(generated, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
+  const standaloneBuild = read("scripts/build-src-cards.mjs");
+  const hacsBuild = read("scripts/build-bundle.mjs");
+  assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
+  assert.match(hacsBuild, /src\/cards\/climate\/index\.ts/);
 });

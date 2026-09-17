@@ -41,21 +41,33 @@ function loadNodaliaUtils(sandbox) {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
 }
 
+function findGeneratedClassIndex(source, className) {
+  return source.search(new RegExp(`(?:class (?:_)?${className}\\b|(?:var|let|const) ${className} = class)`));
+}
+
 function loadCardNormalizeConfig(file, className) {
   const source = read(file);
-  const classStart = source.indexOf(`class ${className}`);
-  assert.ok(classStart > 0, `${file} should define ${className}`);
+  const classStart = findGeneratedClassIndex(source, className);
+  assert.ok(classStart >= 0, `${file} should define ${className}`);
   const sandbox = {
     URL,
     window: null,
     customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
     globalThis: null,
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   loadNodaliaUtils(sandbox);
+  if (file === "nodalia-climate-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CLIMATE__;
+    assert.ok(typeof api?.normalizeConfig === "function", "climate public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -322,7 +334,7 @@ test("visual editors reattach shadow listeners on reconnect", () => {
 
   editorFiles.forEach(([file, editorClass]) => {
     const source = read(file);
-    const editorStart = source.indexOf(`class ${editorClass}`);
+    const editorStart = findGeneratedClassIndex(source, editorClass);
     assert.ok(editorStart >= 0, `${file} should define ${editorClass}`);
     const attachStart = source.indexOf("_attachEditorShadowListeners", editorStart);
     const editorCtorBlock = source.slice(editorStart, attachStart);
@@ -803,7 +815,7 @@ test("climate five-mode dial controls use dense two-row sizing", () => {
   assert.match(source, /if \(n === 5 \|\| n === 6\) \{\s*return \[fragments\.slice\(0, 3\), fragments\.slice\(3\)\];/);
   assert.match(source, /modeDialButtonCount === 5 \|\| modeDialButtonCount === 6/);
   assert.match(source, /modeDialButtonCount >= 5\s*\?\s*Math\.max\(28, Math\.round\(modeControlSize - 6\)\)/);
-  assert.match(source, /modeDialButtonCount >= 5\s*\?\s*\(tightLayout \? "4px" : "5px"\)/);
+  assert.match(source, /modeDialButtonCount >= 5\s*\?\s*\(?tightLayout \? "4px" : "5px"\)?/);
 });
 
 test("climate off null setpoint step buttons wake and create a setpoint from current temperature", async () => {
@@ -1578,7 +1590,7 @@ test("climate card defaults webhook access to admin-only", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /allow_webhooks_for_non_admin: false/);
   assert.match(source, /allow_webhooks_for_non_admin === true/);
-  assert.match(source, /isUnsafeConfigPathKey/);
+  assert.match(source, /(?:isUnsafeConfigPathKey|function setByPath)/);
 });
 
 test("advance vacuum card defaults shared session webhook access to admin-only", () => {

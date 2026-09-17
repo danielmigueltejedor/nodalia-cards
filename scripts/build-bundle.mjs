@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { build } from "esbuild";
+import { buildSrcCards } from "./build-src-cards.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -56,6 +57,12 @@ const CARD_PARTS = [
 
 const ALL_PARTS = [...CORE_PARTS, ...CARD_SUPPORT_PARTS, ...CARD_PARTS];
 
+const BUNDLE_SOURCE_ALIASES = {
+  "nodalia-climate-card.js": "src/cards/climate/index.ts",
+};
+
+await buildSrcCards();
+
 /** Strip inlined nodalia-utils copy used for standalone card scripts (see scripts/sync-standalone-embed.mjs). */
 function stripStandaloneUtilsEmbed(source) {
   const i0 = source.indexOf(STANDALONE_UTILS_START);
@@ -71,7 +78,9 @@ function stripStandaloneUtilsEmbed(source) {
 }
 
 async function buildParts(parts, label) {
-  const entrySource = parts.map(name => `import "./${name}";`).join("\n");
+  const entrySource = parts
+    .map(name => `import "./${BUNDLE_SOURCE_ALIASES[name] || name}";`)
+    .join("\n");
   const result = await build({
     absWorkingDir: root,
     stdin: {
@@ -128,7 +137,7 @@ const editorHash = crypto.createHash("sha256").update(editorBody).digest("hex").
 
 const manifestFile = "nodalia-cards.manifest.js";
 const loaderFile = "nodalia-cards.js";
-const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+const VERSIONED_BUNDLE_PATTERN = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+b?)?\.js$/;
 const REDUNDANT_BUNDLE_FILES = new Set(["nodalia-cards.bundle.js"]);
 
 const fullFooter = `;if(typeof window!=="undefined"){window.__NODALIA_BUNDLE__=${JSON.stringify({
