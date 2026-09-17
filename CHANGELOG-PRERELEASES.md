@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.7b] - 2026-09-17
+
+Seventh experimental TypeScript architecture preview on the parallel `b` line.
+Light now lives under `src/cards/light/` and still compiles to the existing
+HACS `nodalia-light-card.js` artifact. Lovelace tags, YAML, editors and
+visual behavior stay compatible with `2.3.0-alpha.6b`.
+
+### Changed
+
+- Light canonical source moved to `src/cards/light/` (card, editor, config,
+  helpers, constants) and is compiled into `nodalia-light-card.js`.
+- Tests and the HACS bundle now use `window.__NODALIA_LIGHT__` the same way
+  Climate and Media Player already expose their public helpers.
+
+### Validation
+
+- Node regressions after compiling Light from TypeScript, including optimistic
+  toggle, brightness fill, and editor/config contracts.
+
 ## [2.3.0-alpha.6b] - 2026-09-17
 
 Sixth experimental TypeScript architecture preview on the parallel `b` line.

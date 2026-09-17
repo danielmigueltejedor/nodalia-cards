@@ -2,6 +2,7 @@ import type { NodaliaBackendApi } from "./engine";
 import type { NodaliaUtilsApi } from "./nodalia-utils";
 import type { ClimatePublicApi } from "../../cards/climate/climate-types";
 import type { MediaPlayerPublicApi } from "../../cards/media-player/media-player-types";
+import type { LightPublicApi } from "../../cards/light/light-types";
 
 interface NodaliaI18nApi {
   resolveHass?: (hass: unknown) => unknown;
@@ -28,6 +29,7 @@ declare global {
     NodaliaRenderSignature?: NodaliaRenderSignatureApi;
     __NODALIA_CLIMATE__?: ClimatePublicApi;
     __NODALIA_MEDIA_PLAYER__?: MediaPlayerPublicApi;
+    __NODALIA_LIGHT__?: LightPublicApi;
   }
 
   var NodaliaUtils: NodaliaUtilsApi;

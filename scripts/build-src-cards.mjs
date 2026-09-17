@@ -13,6 +13,10 @@ export const SRC_CARD_ENTRIES = [
     entry: "src/cards/media-player/standalone.ts",
     outfile: "nodalia-media-player.js",
   },
+  {
+    entry: "src/cards/light/standalone.ts",
+    outfile: "nodalia-light-card.js",
+  },
 ];
 
 export async function buildSrcCards() {

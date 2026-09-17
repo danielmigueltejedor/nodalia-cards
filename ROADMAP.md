@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.6b
+2.3.0-alpha.7b
 ```
 
-Preview **`2.3.0-alpha.6b`** keeps the TypeScript Media Player split with a sharp square cover, denser glass controls, and a time chip that no longer overlaps the seek bar. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.7b`** keeps the TypeScript Light split beside Climate and Media Player. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

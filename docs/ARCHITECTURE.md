@@ -5,19 +5,21 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.6b)
+## Current architecture map (2.3.0-alpha.7b)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
 Climate and Media Player canonical source now lives under `src/cards/`
 and is compiled to the existing `nodalia-climate-card.js` and
-`nodalia-media-player.js` artifacts.
+`nodalia-media-player.js` artifacts. Light canonical source lives under
+`src/cards/light/` and compiles to `nodalia-light-card.js`.
 
 ```text
 src/
   core/types/                 Shared HA / action / Engine / utils types
   cards/climate/              Climate TypeScript split (pilot)
   cards/media-player/         Media Player TypeScript split
+  cards/light/                Light TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils)
 nodalia-backend.js            Optional Nodalia Engine client
@@ -51,7 +53,8 @@ Approximate sizes on this preview (handwritten unless noted):
 | `nodalia-calendar-card.js` | ~207 KB | Events, weather, composers, webhooks |
 | `src/cards/climate/climate-editor.ts` | ~2037 lines | Climate visual editor (incl. unused legacy class) |
 | `nodalia-humidifier-card.js` | ~202 KB | Humidity, modes, optimistic UI |
-| `nodalia-light-card.js` | ~197 KB | Brightness, color, effects |
+| `nodalia-light-card.js` | generated | Compiled Light artifact |
+| `src/cards/light/light-card.ts` | ~3970 lines | Light HTMLElement / brightness / color |
 | `nodalia-navigation-bar.js` | ~196 KB | Routes, media overlay, popups |
 
 Climate still has a large view/controller. Config, model, dial, schedule and
@@ -64,7 +67,7 @@ types are already separate. Styles, actions and controller logic remain inside
 HACS: nodalia-cards.js
   CORE: i18n → utils → backend → render-signature → bubble-contrast
   SUPPORT: notifications-mobile-policy, room-summary-model, camera-stream-model
-  CARDS: each nodalia-*.js (Climate compiled from src/cards/climate/index.ts)
+  CARDS: each nodalia-*.js (Climate/Media Player/Light compiled from src/cards/*/index.ts)
   EDITOR UI: nodalia-editor-ui.js concatenated after the runtime
 
 Standalone Climate: nodalia-utils.js (required first) → nodalia-climate-card.js
@@ -72,6 +75,12 @@ Standalone Climate: nodalia-utils.js (required first) → nodalia-climate-card.j
     → index.ts (custom elements + window.__NODALIA_CLIMATE__)
     → climate-card / climate-editor / config / model / dial / schedule
     → climate-runtime.ts → window.NodaliaUtils
+
+Standalone Light: nodalia-utils.js (required first) → nodalia-light-card.js
+  src/cards/light/standalone.ts
+    → index.ts (custom elements + window.__NODALIA_LIGHT__)
+    → light-card / light-editor / config / helpers
+    → light-runtime.ts → window.NodaliaUtils
 ```
 
 Cards call Home Assistant through `hass.states`, `hass.callService`,
@@ -92,6 +101,8 @@ These globals remain part of the public/standalone contract:
 | `window.NodaliaEditorUI` | Editor catalog (`__NODALIA_EDITOR__`) |
 | `window.__NODALIA_BUNDLE__` | Installed bundle version/hash |
 | `window.__NODALIA_CLIMATE__` | Climate public helpers for tests/tools |
+| `window.__NODALIA_MEDIA_PLAYER__` | Media Player public helpers for tests/tools |
+| `window.__NODALIA_LIGHT__` | Light public helpers for tests/tools |
 | `customElements` tags | `nodalia-climate-card`, `nodalia-climate-card-editor`, etc. |
 
 Internally, migrated modules import ES modules. Globals stay at distribution
@@ -103,14 +114,17 @@ boundaries so standalone `<script>` loading still works.
 |---|---|
 | `nodalia-cards.js` | HACS/manual install: minified runtime + editor catalog |
 | `nodalia-climate-card.js` | Generated from `src/cards/climate/standalone.ts` (unminified IIFE) |
+| `nodalia-media-player.js` | Generated from `src/cards/media-player/standalone.ts` (unminified IIFE) |
+| `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |
 | Other `nodalia-*.js` cards | Still handwritten until migrated |
 | `nodalia-cards.manifest.js` | Version/hash metadata |
 | `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
 
-Do not edit generated Climate JS by hand. Change `src/cards/climate` and run
-`pnpm run bundle`. The HACS bundle compiles Climate from `index.ts` so the
+Do not edit generated Climate, Media Player, or Light JS by hand. Change
+`src/cards/climate`, `src/cards/media-player`, or `src/cards/light` and run
+`pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
 unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
-The standalone artifact keeps that class because source-contract tests still
+The standalone Climate artifact keeps that class because source-contract tests still
 assert both editor implementations.
 
 ## Tests protecting each subsystem
@@ -119,6 +133,7 @@ assert both editor implementations.
 |---|---|
 | Tags, versions, HACS filename, bundle size | `tests/architecture-contracts.test.mjs`, `tests/release-candidate-smoke.test.mjs` |
 | Climate public API / schedule storage | `tests/climate-setpoint-schedule-storage.test.mjs` (`window.__NODALIA_CLIMATE__`) |
+| Light public API / optimistic toggle | `tests/light-optimistic-toggle.test.mjs`, `tests/interaction-regressions.test.mjs` (`window.__NODALIA_LIGHT__`) |
 | Climate interactions, compact/circular, editors | `tests/interaction-regressions.test.mjs`, `tests/high-severity-regressions.test.mjs` |
 | Engine schedule / override chips | `tests/engine-dashboard-native-ux.test.mjs` |
 | Browser / a11y / layouts | `tests/browser/*.spec.mjs` (Chromium, Firefox, WebKit) |
@@ -159,7 +174,8 @@ when a file is large *and* mixed.
    `src/core/` with window adapters at the bundle edge.
 3. **Climate pilot (this preview)** — split Climate; keep Lovelace behavior.
 4. **Remaining large cards** — Advanced Vacuum, Notifications, Entity, Power
-   Flow, Media Player, Calendar, Humidifier, Light, Navigation.
+   Flow, Calendar, Humidifier, Navigation. Media Player and Light already live
+   under `src/cards/`.
 5. **Smaller cards** — migrate without over-splitting.
 6. **Cleanup** — drop obsolete internals, reduce globals, type remaining
    `@ts-nocheck` files, replace regex tests with behavioral tests where safe.
@@ -170,7 +186,7 @@ when a file is large *and* mixed.
 2. `pnpm run lint` — ESLint on `src/**/*.ts`.
 3. `scripts/build-src-cards.mjs` — esbuild TypeScript cards to root JS.
 4. `scripts/build-bundle.mjs` — esbuild HACS bundle from published JS parts,
-   compiling Climate from `src/cards/climate/index.ts`.
+   compiling Climate, Media Player and Light from `src/cards/*/index.ts`.
 
 `pnpm run validate` runs typecheck, lint, i18n checks, the bundle, and unit tests.
 
@@ -190,6 +206,20 @@ index.ts               Custom element registration + window.__NODALIA_CLIMATE__
 standalone.ts          Standalone entry; keeps unused legacy editor class
 ```
 
+## Card architecture (Light)
+
+```text
+light-types.ts         Public API types
+light-constants.ts     Tags, versions, timeouts, color presets
+light-runtime.ts       Explicit window.NodaliaUtils adapters
+light-config.ts        DEFAULT_CONFIG, migrations, normalizeConfig
+light-helpers.ts       Color, temperature slider and editor color helpers
+light-card.ts          Web component lifecycle and render (still large)
+light-editor.ts        Visual editor (still large)
+index.ts               Custom element registration + window.__NODALIA_LIGHT__
+standalone.ts          Standalone entry for nodalia-light-card.js
+```
+
 ## TypeScript conventions
 
 `tsconfig.json` enables `strict`, `noImplicitAny`, `noUncheckedIndexedAccess`,
@@ -203,6 +233,9 @@ Relaxed checking is currently limited to:
 - `climate-model.ts` and `climate-schedule.ts` (`// @ts-nocheck` with a
   description) until remaining `unknown` internals are narrowed. Public
   exports already have signatures.
+- `light-card.ts` and `light-editor.ts` (`// @ts-nocheck`) for the same reason.
+- `light-config.ts` and `light-helpers.ts` (`// @ts-nocheck` with a description)
+  until remaining `unknown` internals are narrowed.
 
 Do not introduce `any` in new modules. Prefer `unknown` plus narrowing.
 Home Assistant types in `src/core/types` only include fields Nodalia actually

@@ -74,6 +74,12 @@ function loadCardNormalizeConfig(file, className) {
     assert.ok(typeof api?.normalizeConfig === "function", "media player public API should expose normalizeConfig");
     return api.normalizeConfig;
   }
+  if (file === "nodalia-light-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_LIGHT__ || sandbox.__NODALIA_LIGHT__;
+    assert.ok(typeof api?.normalizeConfig === "function", "light public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -210,7 +216,7 @@ test("light card temperature slider gradient follows mired vs kelvin control dir
 });
 
 test("light card power-down skips expanded controls shell when panel was collapsed", () => {
-  const source = read("nodalia-light-card.js");
+  const source = read("src/cards/light/light-card.ts");
   assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
   assert.match(source, /stale `_lastControlsMarkup` would otherwise force a full-height shell/);
 });
@@ -1440,7 +1446,7 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
 });
 
 test("light card brightness fill uses negative delay so hass rerenders do not restart it", () => {
-  const source = read("nodalia-light-card.js");
+  const source = read("src/cards/light/light-card.ts");
   assert.match(source, /powerAnimationState === "powering-up"/);
   assert.match(source, /const fillElapsed = now - Number\(this\._powerTransition\.startedAt\)/);
   assert.match(source, /brightnessFillDelay = -clamp\(fillElapsed/);

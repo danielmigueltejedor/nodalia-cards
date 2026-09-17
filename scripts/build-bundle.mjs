@@ -60,6 +60,7 @@ const ALL_PARTS = [...CORE_PARTS, ...CARD_SUPPORT_PARTS, ...CARD_PARTS];
 const BUNDLE_SOURCE_ALIASES = {
   "nodalia-climate-card.js": "src/cards/climate/index.ts",
   "nodalia-media-player.js": "src/cards/media-player/index.ts",
+  "nodalia-light-card.js": "src/cards/light/index.ts",
 };
 
 await buildSrcCards();

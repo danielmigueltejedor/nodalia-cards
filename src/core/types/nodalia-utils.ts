@@ -15,6 +15,7 @@ export interface NodaliaUtilsApi {
   deleteByPath(target: object, path: string): void;
   clamp(value: number, min: number, max: number): number;
   escapeHtml(value: unknown): string;
+  escapeSelectorValue(value: unknown): string;
   fireEvent(
     node: EventTarget | null | undefined,
     type: string,

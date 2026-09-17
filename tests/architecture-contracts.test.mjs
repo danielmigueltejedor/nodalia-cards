@@ -359,7 +359,7 @@ test("editor focus and listener lifecycle primitives are idempotent", () => {
   assert.deepEqual(calls.map(call => call[0]), ["add", "remove"]);
 });
 
-test("TypeScript climate and media player sources are canonical and still ship HACS JS artifacts", () => {
+test("TypeScript climate, media player and light sources are canonical and still ship HACS JS artifacts", () => {
   const climateFiles = [
     "src/cards/climate/index.ts",
     "src/cards/climate/climate-card.ts",
@@ -386,16 +386,32 @@ test("TypeScript climate and media player sources are canonical and still ship H
   mediaFiles.forEach(file => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   });
+  const lightFiles = [
+    "src/cards/light/index.ts",
+    "src/cards/light/light-card.ts",
+    "src/cards/light/light-config.ts",
+    "src/cards/light/light-types.ts",
+    "src/cards/light/light-helpers.ts",
+    "src/cards/light/light-editor.ts",
+  ];
+  lightFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
   const generatedClimate = read("nodalia-climate-card.js");
   assert.match(generatedClimate, /window\.__NODALIA_CLIMATE__/);
   assert.match(generatedClimate, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
   const generatedMedia = read("nodalia-media-player.js");
   assert.match(generatedMedia, /window\.__NODALIA_MEDIA_PLAYER__/);
   assert.match(generatedMedia, /customElements\.define\(CARD_TAG, NodaliaMediaPlayer\)/);
+  const generatedLight = read("nodalia-light-card.js");
+  assert.match(generatedLight, /window\.__NODALIA_LIGHT__/);
+  assert.match(generatedLight, /customElements\.define\(CARD_TAG, NodaliaLightCard\)/);
   const standaloneBuild = read("scripts/build-src-cards.mjs");
   const hacsBuild = read("scripts/build-bundle.mjs");
   assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/media-player\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/light\/standalone\.ts/);
   assert.match(hacsBuild, /src\/cards\/climate\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/media-player\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/light\/index\.ts/);
 });
