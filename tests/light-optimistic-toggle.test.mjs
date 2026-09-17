@@ -8,17 +8,25 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-function loadLightCardClass() {
+function loadLightCustomElements() {
   const registry = new Map();
 
   class FakeHTMLElement {
     constructor() {
       this.isConnected = true;
+      this._listeners = new Map();
     }
 
-    addEventListener() {}
+    addEventListener(type, listener) {
+      const listeners = this._listeners.get(type) || [];
+      listeners.push(listener);
+      this._listeners.set(type, listeners);
+    }
 
-    removeEventListener() {}
+    removeEventListener(type, listener) {
+      const listeners = this._listeners.get(type) || [];
+      this._listeners.set(type, listeners.filter(item => item !== listener));
+    }
 
     attachShadow() {
       this.shadowRoot = {
@@ -30,7 +38,10 @@ function loadLightCardClass() {
       return this.shadowRoot;
     }
 
-    dispatchEvent() {
+    dispatchEvent(event) {
+      for (const listener of this._listeners.get(event?.type) || []) {
+        listener(event);
+      }
       return true;
     }
   }
@@ -61,6 +72,9 @@ function loadLightCardClass() {
       setItem(key, value) { this._data.set(key, String(value)); },
     },
     navigator: { language: "en-US" },
+    requestAnimationFrame: cb => { cb(); return 1; },
+    cancelAnimationFrame() {},
+    ShadowRoot: class ShadowRoot {},
     ResizeObserver: class {
       observe() {}
       disconnect() {}
@@ -72,9 +86,41 @@ function loadLightCardClass() {
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-i18n.js"), sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
+  sandbox.window.NodaliaUtils.clampEditorDialogScroll = () => {};
+  sandbox.window.NodaliaUtils.bindEditorDialogLayoutFix = () => {};
   vm.runInContext(read("nodalia-light-card.js"), sandbox);
-  return registry.get("nodalia-light-card");
+  return registry;
 }
+
+function loadLightCardClass() {
+  return loadLightCustomElements().get("nodalia-light-card");
+}
+
+function loadLightEditorClass() {
+  return loadLightCustomElements().get("nodalia-light-card-editor");
+}
+
+test("light editor persists individual scroll haptic toggles", () => {
+  const LightEditor = loadLightEditorClass();
+  const editor = new LightEditor();
+  editor.setConfig({
+    entity: "light.test",
+    haptics: {
+      enabled: true,
+      scrolls: { brightness: true, temperature: true, color: true },
+    },
+  });
+
+  let changedConfig = null;
+  editor.addEventListener("config-changed", event => {
+    changedConfig = event.detail?.config || null;
+  });
+
+  editor._setFieldValue("haptics.scrolls.brightness", false);
+  editor._emitConfig();
+
+  assert.equal(changedConfig?.haptics?.scrolls?.brightness, false);
+});
 
 test("light card re-renders when optimistic turn-off is confirmed with unchanged signature", () => {
   const LightCard = loadLightCardClass();

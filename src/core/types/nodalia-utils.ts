@@ -10,6 +10,11 @@ export interface NodaliaUtilsApi {
   deepClone<T>(value: T): T;
   mergeDeep<T>(base: T, override?: unknown): T;
   compactConfig<T>(value: T): T;
+  shouldUseCompactCardLayout(options?: {
+    mode?: unknown;
+    width?: number;
+    gridColumns?: number | null;
+  }): boolean;
   isUnsafeConfigPathKey(key: PropertyKey): boolean;
   setByPath(target: object, path: string, value: unknown): void;
   deleteByPath(target: object, path: string): void;

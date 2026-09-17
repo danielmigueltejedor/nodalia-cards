@@ -480,22 +480,11 @@ export class NodaliaLightCard extends HTMLElement {
   }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const gridColumns = this._getConfiguredGridColumns();
-    if (gridColumns !== null) {
-      return gridColumns < 4;
-    }
-
-    return width > 0 && width < this._getCompactLayoutThreshold();
+    return window.NodaliaUtils.shouldUseCompactCardLayout({
+      mode: this._config?.compact_layout_mode,
+      width,
+      gridColumns: this._getConfiguredGridColumns(),
+    });
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -3915,11 +3904,11 @@ export class NodaliaLightCard extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .light-card__hero {
+          .light-card:not(.light-card--compact):not(.light-card--mini) .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .light-card__icon {
+          .light-card:not(.light-card--compact):not(.light-card--mini) .light-card__icon {
             height: 50px;
             width: 50px;
           }

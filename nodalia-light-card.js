@@ -4,7 +4,7 @@
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
   var EDITOR_TAG = "nodalia-light-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.7b";
+  var CARD_VERSION = "2.3.0-alpha.8b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -35,7 +35,7 @@
   // src/cards/light/light-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone2 = utils.deepClone.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var compactConfig = utils.compactConfig.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
@@ -353,11 +353,11 @@
     const normalizedStatePosition = String(config.state_position || "").toLowerCase();
     config.state_position = normalizedStatePosition === "below" ? "below" : "right";
     if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
-      config.quick_brightness = deepClone2(DEFAULT_CONFIG.quick_brightness);
+      config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
     }
     config.quick_brightness = config.quick_brightness.map((value) => Number(value)).filter((value) => Number.isFinite(value)).map((value) => clamp(Math.round(value), 1, 100));
     if (!config.quick_brightness.length) {
-      config.quick_brightness = deepClone2(DEFAULT_CONFIG.quick_brightness);
+      config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
     }
     const rawPresets = Array.isArray(config.color_presets) ? config.color_presets : [];
     const normalizedPresets = [];
@@ -375,7 +375,7 @@
         label: String(entry.label ?? "").trim()
       });
     }
-    config.color_presets = normalizedPresets.length ? normalizedPresets : deepClone2(DEFAULT_CONFIG.color_presets);
+    config.color_presets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
     const numericPowerDuration = Number(config.animations?.power_duration);
     const numericControlsDuration = Number(config.animations?.controls_duration);
     const numericModeSwitchDuration = Number(config.animations?.mode_switch_duration);
@@ -477,7 +477,7 @@
       config.hold_navigation_path = config.hold_url;
     }
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone2(DEFAULT_CONFIG.styles);
+    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
     return config;
   }
 
@@ -487,7 +487,7 @@
       return document.createElement(EDITOR_TAG);
     }
     static getStubConfig(hass, entities = [], entitiesFallback = []) {
-      return applyStubEntity(deepClone2(STUB_CONFIG), hass, ["light"], entities, entitiesFallback);
+      return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light"], entities, entitiesFallback);
     }
     static getEntitySuggestion(hass, entityId) {
       return [
@@ -877,18 +877,11 @@
       return width > 0 && width < this._getMiniLayoutThreshold();
     }
     _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-      const mode = this._config?.compact_layout_mode || "auto";
-      if (mode === "always") {
-        return true;
-      }
-      if (mode === "never") {
-        return false;
-      }
-      const gridColumns = this._getConfiguredGridColumns();
-      if (gridColumns !== null) {
-        return gridColumns < 4;
-      }
-      return width > 0 && width < this._getCompactLayoutThreshold();
+      return window.NodaliaUtils.shouldUseCompactCardLayout({
+        mode: this._config?.compact_layout_mode,
+        width,
+        gridColumns: this._getConfiguredGridColumns()
+      });
     }
     _triggerHaptic(style = this._config?.haptics?.style) {
       if (!this._config?.haptics?.enabled) {
@@ -1703,7 +1696,7 @@
         return {};
       }
       if (isObject(rawValue)) {
-        return deepClone2(rawValue);
+        return deepClone(rawValue);
       }
       try {
         const parsed = JSON.parse(rawValue);
@@ -3798,11 +3791,11 @@
         }
 
         @media (max-width: 420px) {
-          .light-card__hero {
+          .light-card:not(.light-card--compact):not(.light-card--mini) .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .light-card__icon {
+          .light-card:not(.light-card--compact):not(.light-card--mini) .light-card__icon {
             height: 50px;
             width: 50px;
           }

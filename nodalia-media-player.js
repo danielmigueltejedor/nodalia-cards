@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.7b";
+  var CARD_VERSION = "2.3.0-alpha.8b";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -225,7 +225,7 @@
     switch (mode) {
       case "square":
       case "artwork":
-        return { rows: "auto", columns: 6, min_rows: 4, min_columns: 4 };
+        return { rows: "auto", columns: 6, min_rows: 3, min_columns: 3 };
       case "chip":
         return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
       case "compact":
@@ -1279,6 +1279,7 @@
         return false;
       }
       this._resolvedLayoutMode = next;
+      this.setAttribute("data-presentation", next);
       if (this.isConnected && this._config) {
         this._lastRenderSignature = "";
         this._render();
@@ -3621,6 +3622,7 @@
       const albumDim = artworkVisuals.dim;
       const presentationMode = this._getPresentationMode();
       this._resolvedLayoutMode = presentationMode;
+      this.setAttribute("data-presentation", presentationMode);
       const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
       const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
       const activeTintSecondaryStrength = isLightThemeSurface ? 34 : 30;
@@ -3650,6 +3652,16 @@
           --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --media-player-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
           display: block;
+          width: 100%;
+        }
+
+        :host([data-presentation="square"]),
+        :host([data-presentation="artwork"]) {
+          align-self: start;
+          aspect-ratio: 1 / 1;
+          height: auto;
+          max-width: 100%;
+          overflow: hidden;
           width: 100%;
         }
 
@@ -3719,12 +3731,6 @@
         .media-player-card--chip {
           min-height: 72px;
           padding: 10px 12px 14px;
-        }
-
-        .media-player-card--square,
-        .media-player-card--artwork {
-          aspect-ratio: 1 / 1;
-          min-height: 0;
         }
 
         .media-player-card--compact {
@@ -5012,16 +5018,21 @@
         }
 
         @media (max-width: 420px) {
-          .media-player__hero {
+          .media-player-card:not(.media-player-card--square):not(.media-player-card--artwork) .media-player__hero {
             grid-template-columns: ${playerStyles.artwork_size} minmax(0, 1fr);
           }
         }
 
         .media-player-card--square,
         .media-player-card--artwork {
+          aspect-ratio: 1 / 1;
           display: grid;
           grid-template-rows: minmax(0, 1fr) auto;
+          height: auto;
+          max-width: 100%;
+          min-height: 0;
           padding: 14px 14px 12px;
+          width: 100%;
         }
 
         .media-player-card--square.has-album-background::before,
@@ -5066,10 +5077,12 @@
 
         .media-player-card--square .media-player__content,
         .media-player-card--artwork .media-player__content {
-          align-content: space-between;
+          align-content: stretch;
+          display: grid;
           gap: 10px;
           grid-row: 1;
-          height: auto;
+          grid-template-rows: auto minmax(0, 1fr);
+          height: 100%;
           min-height: 0;
           padding-top: 2px;
           padding-bottom: 0;
@@ -5124,6 +5137,8 @@
         .media-player-card--artwork .media-player__center-stack,
         .media-player-card--square .media-player__transport-row,
         .media-player-card--artwork .media-player__transport-row {
+          align-content: end;
+          align-self: end;
           min-width: 0;
           width: 100%;
         }

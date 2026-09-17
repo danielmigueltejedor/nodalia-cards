@@ -90,7 +90,7 @@ export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMod
   switch (mode) {
     case "square":
     case "artwork":
-      return { rows: "auto", columns: 6, min_rows: 4, min_columns: 4 };
+      return { rows: "auto", columns: 6, min_rows: 3, min_columns: 3 };
     case "chip":
       return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
     case "compact":

@@ -1969,6 +1969,64 @@ test("Media Player control bubbles stay readable and inside square cards", async
   expect(metrics.artFilter === "none" || metrics.artFilter === "").toBe(true);
 });
 
+test("Media Player square overlay stays square in a tall phone cell", async ({ page }) => {
+  await loadBundle(page);
+  const metrics = await page.evaluate(() => {
+    const state = {
+      entity_id: "media_player.test",
+      state: "playing",
+      attributes: {
+        friendly_name: "HomePod mini",
+        media_title: "Ojos Brujos",
+        media_artist: "Clarent",
+        entity_picture: "/local/cover.jpg",
+        media_duration: 250,
+        media_position: 48,
+        media_position_updated_at: new Date().toISOString(),
+        volume_level: 0.4,
+        supported_features: 2050,
+      },
+    };
+    const cell = document.createElement("div");
+    cell.style.width = "390px";
+    cell.style.height = "640px";
+    cell.style.display = "grid";
+    const card = document.createElement("nodalia-media-player");
+    card.style.width = "100%";
+    card.setConfig({
+      players: [{ entity: "media_player.test", label: "HomePod mini" }],
+      layout: { mode: "square", fixed: false },
+    });
+    card.hass = window.makeHass({ "media_player.test": state });
+    cell.append(card);
+    document.querySelector("#fixture").append(cell);
+    const root = card.shadowRoot;
+    const surface = root.querySelector(".media-player-card");
+    const artwork = root.querySelector(".media-player__artwork");
+    const browse = root.querySelector(".media-player__volume-button--browse");
+    const cardBox = surface.getBoundingClientRect();
+    const hostBox = card.getBoundingClientRect();
+    const browseBox = browse?.getBoundingClientRect();
+    return {
+      presentation: card.getAttribute("data-presentation"),
+      hostRatio: hostBox.height / Math.max(hostBox.width, 1),
+      surfaceRatio: cardBox.height / Math.max(cardBox.width, 1),
+      artworkDisplay: artwork ? window.getComputedStyle(artwork).display : "",
+      browseNearTop: browseBox ? browseBox.top - cardBox.top < 56 : false,
+      browseNearRight: browseBox ? cardBox.right - browseBox.right < 28 : false,
+    };
+  });
+
+  expect(metrics.presentation).toBe("square");
+  expect(metrics.hostRatio).toBeGreaterThan(0.85);
+  expect(metrics.hostRatio).toBeLessThan(1.2);
+  expect(metrics.surfaceRatio).toBeGreaterThan(0.85);
+  expect(metrics.surfaceRatio).toBeLessThan(1.2);
+  expect(metrics.artworkDisplay).toBe("none");
+  expect(metrics.browseNearTop).toBe(true);
+  expect(metrics.browseNearRight).toBe(true);
+});
+
 test("Advance Vacuum keeps the card surface when expanding rooms", async ({ page }) => {
   await loadBundle(page);
   const persisted = await page.evaluate(() => {

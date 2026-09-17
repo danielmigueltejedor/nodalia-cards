@@ -205,6 +205,16 @@ test("complex cards keep policy and state projection outside view components", (
   assert.doesNotMatch(camera, /function buildGo2rtcWebSocketEndpoint\(/);
 });
 
+test("shared compact layout helper treats 4/6-col tiles and phone widths as compact", () => {
+  const { utils } = loadUtils();
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "always", width: 900, gridColumns: 12 }), true);
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "never", width: 120, gridColumns: 2 }), false);
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 390, gridColumns: 12 }), true);
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 520, gridColumns: 6 }), true);
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 520, gridColumns: 4 }), true);
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 720, gridColumns: 12 }), false);
+});
+
 test("shared merge and compaction preserve configuration semantics", () => {
   const { utils } = loadUtils();
   const defaults = { nested: { enabled: true, count: 2 }, rows: [{ id: "base" }], keep: "yes" };

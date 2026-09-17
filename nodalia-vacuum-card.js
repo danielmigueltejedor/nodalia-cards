@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.7b";
+const CARD_VERSION = "2.3.0-alpha.8b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -772,22 +772,11 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const gridColumns = this._getConfiguredGridColumns();
-    if (gridColumns !== null) {
-      return gridColumns < 4;
-    }
-
-    return width > 0 && width < this._getCompactLayoutThreshold();
+    return window.NodaliaUtils.shouldUseCompactCardLayout({
+      mode: this._config?.compact_layout_mode,
+      width,
+      gridColumns: this._getConfiguredGridColumns(),
+    });
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -2969,7 +2958,9 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card--compact .vacuum-card__header {
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr);
+          justify-items: center;
+          padding-right: ${batteryChipMarkup ? "72px" : "0"};
           text-align: center;
         }
 
@@ -3395,7 +3386,7 @@ class NodaliaVacuumCard extends HTMLElement {
             gap: 8px;
           }
 
-          .vacuum-card__header {
+          .vacuum-card:not(.vacuum-card--compact) .vacuum-card__header {
             gap: 10px;
             grid-template-columns: auto minmax(0, 1fr) auto;
             padding-right: ${batteryChipMarkup ? "82px" : "0"};

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.3.0-alpha.7b";
+const CARD_VERSION = "2.3.0-alpha.8b";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -852,15 +852,11 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _isCompactLayout() {
-    const mode = this._config?.compact_layout_mode || "auto";
-    if (mode === "always") return true;
-    if (mode === "never") return false;
-    const configuredColumns = this._getConfiguredGridColumns();
-    if (configuredColumns !== null) {
-      return configuredColumns < 4;
-    }
-    const width = Math.round(this._cardWidth || this.clientWidth || 0);
-    return width > 0 && width <= COMPACT_LAYOUT_THRESHOLD;
+    return window.NodaliaUtils.shouldUseCompactCardLayout({
+      mode: this._config?.compact_layout_mode,
+      width: Math.round(this._cardWidth || this.clientWidth || 0),
+      gridColumns: this._getConfiguredGridColumns(),
+    });
   }
 
   _renderEmptyState() {

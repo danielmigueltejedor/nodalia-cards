@@ -2355,11 +2355,30 @@ test("NodaliaUtils renders card empty state shell for missing entity state", () 
   }
 });
 
-test("cover card compact auto mode uses width and grid heuristics", () => {
+test("cover card compact auto mode uses the shared width and grid helper", () => {
   const source = read("nodalia-cover-card.js");
-  assert.match(source, /COMPACT_LAYOUT_THRESHOLD/);
-  assert.match(source, /configuredColumns < 4/);
+  assert.match(source, /shouldUseCompactCardLayout/);
+  assert.doesNotMatch(source, /configuredColumns < 4/);
   assert.doesNotMatch(source, /if \(mode === "auto"\)[\s\S]*return false;/);
+});
+
+test("fan humidifier vacuum and light compact density share the same helper", () => {
+  for (const file of [
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-vacuum-card.js",
+    "src/cards/light/light-card.ts",
+  ]) {
+    const source = read(file);
+    assert.match(source, /shouldUseCompactCardLayout/, file);
+  }
+  const fan = read("nodalia-fan-card.js");
+  assert.match(fan, /\.fan-card--compact \.fan-card__hero \{[\s\S]*grid-template-columns: \$\{styles\.icon\.size\}/);
+  assert.match(fan, /:not\(\.fan-card--compact\):not\(\.fan-card--circular\) \.fan-card__hero/);
+  const humidifier = read("nodalia-humidifier-card.js");
+  assert.match(humidifier, /:not\(\.humidifier-card--compact\):not\(\.humidifier-card--circular\) \.humidifier-card__hero/);
+  const vacuum = read("nodalia-vacuum-card.js");
+  assert.match(vacuum, /\.vacuum-card--compact \.vacuum-card__header \{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
 });
 
 test("fav card aligns service security with entity and cleans up alarm host span", () => {

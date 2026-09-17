@@ -144,6 +144,7 @@ const editorImports = `// @ts-nocheck
 import {
   clamp,
   compactConfig,
+  deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,

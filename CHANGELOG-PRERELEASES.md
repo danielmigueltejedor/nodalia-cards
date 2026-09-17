@@ -8,6 +8,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.8b] - 2026-09-17
+
+Eighth experimental TypeScript architecture preview on the parallel `b` line.
+Square and artwork Media Player stay overlay-square on phones, and Fan,
+Humidifier, Vacuum, Light and Cover share one compact-density helper so 4-,
+6- and 12-column tiles look right without per-card YAML.
+
+### Changed
+
+- Square/artwork Media Player hosts keep `aspect-ratio: 1 / 1`, hide the
+  content thumbnail, and pin browse to the top-right even inside a tall
+  mobile sections cell.
+- Compact auto mode now uses card width under 480px or 6 columns or fewer, so
+  phone-width 6-column tiles compact instead of stretching the expanded layout.
+- Fan, Humidifier, Vacuum and Light compact CSS no longer fight the phone
+  viewport query, so 4- and 6-column tiles stay icon-centered.
+
+### Validation
+
+- Node regressions for the shared compact helper, square overlay CSS, and the
+  Light editor haptic persist path. Chromium coverage that a 390px-wide tall
+  phone cell keeps a square overlay.
+
 ## [2.3.0-alpha.7b] - 2026-09-17
 
 Seventh experimental TypeScript architecture preview on the parallel `b` line.

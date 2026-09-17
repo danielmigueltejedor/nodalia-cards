@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-humidifier-card";
 const EDITOR_TAG = "nodalia-humidifier-card-editor";
-const CARD_VERSION = "2.3.0-alpha.7b";
+const CARD_VERSION = "2.3.0-alpha.8b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -870,22 +870,11 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const gridColumns = this._getConfiguredGridColumns();
-    if (gridColumns !== null) {
-      return gridColumns < 4;
-    }
-
-    return width > 0 && width < this._getCompactLayoutThreshold();
+    return window.NodaliaUtils.shouldUseCompactCardLayout({
+      mode: this._config?.compact_layout_mode,
+      width,
+      gridColumns: this._getConfiguredGridColumns(),
+    });
   }
 
   _getState() {
@@ -4290,11 +4279,11 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .humidifier-card__hero {
+          .humidifier-card:not(.humidifier-card--compact):not(.humidifier-card--circular) .humidifier-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .humidifier-card__icon {
+          .humidifier-card:not(.humidifier-card--compact):not(.humidifier-card--circular) .humidifier-card__icon {
             height: 50px;
             width: 50px;
           }

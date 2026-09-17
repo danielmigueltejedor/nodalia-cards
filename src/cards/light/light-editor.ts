@@ -3,6 +3,7 @@
 import {
   clamp,
   compactConfig,
+  deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.3.0-alpha.7b";
+const CARD_VERSION = "2.3.0-alpha.8b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -833,22 +833,11 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const gridColumns = this._getConfiguredGridColumns();
-    if (gridColumns !== null) {
-      return gridColumns < 4;
-    }
-
-    return width > 0 && width < this._getCompactLayoutThreshold();
+    return window.NodaliaUtils.shouldUseCompactCardLayout({
+      mode: this._config?.compact_layout_mode,
+      width,
+      gridColumns: this._getConfiguredGridColumns(),
+    });
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -3081,6 +3070,8 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__hero {
+          grid-template-columns: ${styles.icon.size};
+          justify-content: center;
           justify-items: center;
           text-align: center;
         }
@@ -4067,11 +4058,11 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .fan-card__hero {
+          .fan-card:not(.fan-card--compact):not(.fan-card--circular) .fan-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
           }
 
-          .fan-card__icon {
+          .fan-card:not(.fan-card--compact):not(.fan-card--circular) .fan-card__icon {
             height: 50px;
             width: 50px;
           }

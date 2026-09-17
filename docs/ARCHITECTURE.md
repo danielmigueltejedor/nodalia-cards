@@ -5,7 +5,7 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.7b)
+## Current architecture map (2.3.0-alpha.8b)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
@@ -21,7 +21,7 @@ src/
   cards/media-player/         Media Player TypeScript split
   cards/light/                Light TypeScript split
 
-nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils)
+nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
 nodalia-backend.js            Optional Nodalia Engine client
 nodalia-render-signature.js   Render-signature helpers
 nodalia-bubble-contrast.js    Icon contrast helpers

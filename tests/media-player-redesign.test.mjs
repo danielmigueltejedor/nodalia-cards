@@ -111,11 +111,16 @@ test("media player controls follow the Nodalia bubble recipe and keep square lay
   assert.match(source, /--mdc-icon-size: calc\(\$\{playerStyles\.control_size\} \* 0\.46\)/);
   assert.doesNotMatch(source, /media-player__transport-addon/);
   assert.doesNotMatch(source, /padding-top: 28%/);
-  assert.match(source, /align-content: space-between/);
+  assert.match(source, /:host\(\[data-presentation="square"\]\)/);
+  assert.match(source, /aspect-ratio: 1 \/ 1/);
+  assert.match(source, /align-content: stretch/);
   assert.match(source, /media-player-card--square \.media-player__volume-button--browse/);
   assert.match(source, /media-player-card--square \.media-player__progress/);
   assert.match(source, /position: static/);
   assert.match(source, /\.media-player-card--square \.media-player__album-bg[\s\S]*filter: none/);
+  assert.match(source, /:not\(\.media-player-card--square\):not\(\.media-player-card--artwork\) \.media-player__hero/);
+  const layout = read("src/cards/media-player/media-player-layout.ts");
+  assert.match(layout, /min_rows: 3/);
 });
 
 test("media player keeps a persistent artwork stage and vacuum keeps a persistent surface", () => {

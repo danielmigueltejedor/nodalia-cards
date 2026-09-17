@@ -285,6 +285,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
       return false;
     }
     this._resolvedLayoutMode = next;
+    this.setAttribute("data-presentation", next);
     if (this.isConnected && this._config) {
       this._lastRenderSignature = "";
       this._render();
@@ -3256,6 +3257,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
     const albumDim = artworkVisuals.dim;
     const presentationMode = this._getPresentationMode();
     this._resolvedLayoutMode = presentationMode;
+    this.setAttribute("data-presentation", presentationMode);
     const cardTopHighlight = isLightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
@@ -3288,6 +3290,16 @@ export class NodaliaMediaPlayer extends HTMLElement {
           --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --media-player-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
           display: block;
+          width: 100%;
+        }
+
+        :host([data-presentation="square"]),
+        :host([data-presentation="artwork"]) {
+          align-self: start;
+          aspect-ratio: 1 / 1;
+          height: auto;
+          max-width: 100%;
+          overflow: hidden;
           width: 100%;
         }
 
@@ -3361,12 +3373,6 @@ export class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--chip {
           min-height: 72px;
           padding: 10px 12px 14px;
-        }
-
-        .media-player-card--square,
-        .media-player-card--artwork {
-          aspect-ratio: 1 / 1;
-          min-height: 0;
         }
 
         .media-player-card--compact {
@@ -4654,16 +4660,21 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .media-player__hero {
+          .media-player-card:not(.media-player-card--square):not(.media-player-card--artwork) .media-player__hero {
             grid-template-columns: ${playerStyles.artwork_size} minmax(0, 1fr);
           }
         }
 
         .media-player-card--square,
         .media-player-card--artwork {
+          aspect-ratio: 1 / 1;
           display: grid;
           grid-template-rows: minmax(0, 1fr) auto;
+          height: auto;
+          max-width: 100%;
+          min-height: 0;
           padding: 14px 14px 12px;
+          width: 100%;
         }
 
         .media-player-card--square.has-album-background::before,
@@ -4708,10 +4719,12 @@ export class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--square .media-player__content,
         .media-player-card--artwork .media-player__content {
-          align-content: space-between;
+          align-content: stretch;
+          display: grid;
           gap: 10px;
           grid-row: 1;
-          height: auto;
+          grid-template-rows: auto minmax(0, 1fr);
+          height: 100%;
           min-height: 0;
           padding-top: 2px;
           padding-bottom: 0;
@@ -4766,6 +4779,8 @@ export class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--artwork .media-player__center-stack,
         .media-player-card--square .media-player__transport-row,
         .media-player-card--artwork .media-player__transport-row {
+          align-content: end;
+          align-self: end;
           min-width: 0;
           width: 100%;
         }
