@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.4b
+2.3.0-alpha.5b
 ```
 
-Preview **`2.3.0-alpha.4b`** continues the TypeScript `src/` architecture with Media Player as the second modular card, plus artwork-first layouts and a flicker-free card surface. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.5b`** keeps the TypeScript Media Player split and matches its controls to the Fan glass-bubble recipe so square and artwork cards stay readable. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.5b] - 2026-09-17
+
+Fifth experimental TypeScript architecture preview on the parallel `b` line.
+Media Player controls match the Fan glass-bubble recipe so they stay readable
+on immersive artwork, and square or narrow cards no longer clip the transport.
+
+### Changed
+
+- Media Player transport, volume and browse buttons use the shared Nodalia
+  glass bubble: 36px, backdrop blur, inset highlight and drop shadow.
+- Square, artwork and chip layouts keep every control inside the card instead
+  of packing the transport into the bottom band or overflowing the browse
+  control.
+
+### Validation
+
+- Node regressions plus Chromium coverage that Media Player bubbles stay
+  inside a 180px square card.
+
 ## [2.3.0-alpha.4b] - 2026-09-17
 
 Fourth experimental TypeScript architecture preview on the parallel `b` line.

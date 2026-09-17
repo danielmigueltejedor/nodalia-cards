@@ -98,6 +98,22 @@ test("seek is detected from supported_features and string layout becomes layout.
   assert.ok(config.artwork.blur < 18);
 });
 
+test("media player controls follow the Nodalia bubble recipe and keep square layouts unclipped", () => {
+  const api = loadMediaPlayerApi();
+  const styles = api.normalizeConfig({}).styles.player;
+  assert.equal(styles.control_size, "36px");
+  assert.equal(styles.title_size, "15px");
+
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(source, /0 10px 24px rgba\(0, 0, 0, 0\.22\)/);
+  assert.match(source, /backdrop-filter: blur\(18px\)/);
+  assert.match(source, /--mdc-icon-size: calc\(\$\{playerStyles\.control_size\} \* 0\.46\)/);
+  assert.doesNotMatch(source, /media-player__transport-addon/);
+  assert.doesNotMatch(source, /padding-top: 28%/);
+  assert.match(source, /align-content: space-between/);
+  assert.match(source, /media-player-card--square \.media-player__volume-button--browse/);
+});
+
 test("media player keeps a persistent artwork stage and vacuum keeps a persistent surface", () => {
   const media = read("src/cards/media-player/media-player-card.ts");
   assert.match(media, /_commitPersistentMediaShadow\(/);
