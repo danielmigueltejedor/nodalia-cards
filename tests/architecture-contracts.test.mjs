@@ -183,7 +183,7 @@ test("entity-first suggestions cover every entity-centric Nodalia card", () => {
   }
 
   const entity = read("nodalia-entity-card.js");
-  assert.match(entity, /createEntitySuggestion\(CARD_TAG, hass, entityId\);/);
+  assert.match(entity, /createEntitySuggestion\(CARD_TAG, hass, entityId/);
   for (const file of ["nodalia-circular-gauge-card.js", "nodalia-graph-card.js"]) {
     const source = read(file);
     assert.match(source, /"sensor", "number", "input_number"/, file);
@@ -359,7 +359,7 @@ test("editor focus and listener lifecycle primitives are idempotent", () => {
   assert.deepEqual(calls.map(call => call[0]), ["add", "remove"]);
 });
 
-test("TypeScript climate source is canonical and still ships the HACS JS artifact", () => {
+test("TypeScript climate and media player sources are canonical and still ship HACS JS artifacts", () => {
   const climateFiles = [
     "src/cards/climate/index.ts",
     "src/cards/climate/climate-card.ts",
@@ -373,11 +373,29 @@ test("TypeScript climate source is canonical and still ships the HACS JS artifac
   climateFiles.forEach(file => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   });
-  const generated = read("nodalia-climate-card.js");
-  assert.match(generated, /window\.__NODALIA_CLIMATE__/);
-  assert.match(generated, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
+  const mediaFiles = [
+    "src/cards/media-player/index.ts",
+    "src/cards/media-player/media-player-card.ts",
+    "src/cards/media-player/media-player-config.ts",
+    "src/cards/media-player/media-player-types.ts",
+    "src/cards/media-player/media-player-artwork.ts",
+    "src/cards/media-player/media-player-progress.ts",
+    "src/cards/media-player/media-player-layout.ts",
+    "src/cards/media-player/media-player-editor.ts",
+  ];
+  mediaFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const generatedClimate = read("nodalia-climate-card.js");
+  assert.match(generatedClimate, /window\.__NODALIA_CLIMATE__/);
+  assert.match(generatedClimate, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
+  const generatedMedia = read("nodalia-media-player.js");
+  assert.match(generatedMedia, /window\.__NODALIA_MEDIA_PLAYER__/);
+  assert.match(generatedMedia, /customElements\.define\(CARD_TAG, NodaliaMediaPlayer\)/);
   const standaloneBuild = read("scripts/build-src-cards.mjs");
   const hacsBuild = read("scripts/build-bundle.mjs");
   assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/media-player\/standalone\.ts/);
   assert.match(hacsBuild, /src\/cards\/climate\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/media-player\/index\.ts/);
 });

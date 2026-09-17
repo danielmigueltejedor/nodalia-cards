@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3b";
+const CARD_VERSION = "2.3.0-alpha.4b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1179,7 +1179,17 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId);
+    const domain = String(entityId || "").split(".")[0];
+    const suggestions = [
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        label: "Entity — Standard",
+      }),
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        label: domain === "media_player" ? "Entity Card — Compact media state" : "Entity — Compact",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
+      }),
+    ];
+    return suggestions.filter(Boolean);
   }
 
   constructor() {

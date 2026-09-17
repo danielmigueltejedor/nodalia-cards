@@ -108,7 +108,18 @@ export class NodaliaClimateCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["climate"] });
+    return [
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["climate"],
+        label: "Climate — Circular",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, layout: "circular" }),
+      }),
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["climate"],
+        label: "Climate — Compact",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, layout: "compact" }),
+      }),
+    ].filter(Boolean);
   }
 
   constructor() {

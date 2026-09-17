@@ -68,6 +68,12 @@ function loadCardNormalizeConfig(file, className) {
     assert.ok(typeof api?.normalizeConfig === "function", "climate public API should expose normalizeConfig");
     return api.normalizeConfig;
   }
+  if (file === "nodalia-media-player.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_MEDIA_PLAYER__ || sandbox.__NODALIA_MEDIA_PLAYER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "media player public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -407,16 +413,16 @@ test("media player editor keeps player row when entity is cleared", () => {
   const source = read("nodalia-media-player.js");
   assert.doesNotMatch(source, /config\.players = Array\.isArray\(config\.players\) \? config\.players\.filter\(player => player\?\.entity\)/);
   assert.match(source, /if \(key === "entity" && item === ""\)/);
-  assert.match(source, /isEntityField && \(value === undefined \|\| value === null \|\| value === ""\)/);
-  assert.match(source, /return this\._getConfiguredPlayers\(\)\.filter\(player => \{[\s\S]*!player\?\.entity/);
+  assert.match(source, /isEntityField && \(value === (?:undefined|void 0) \|\| value === null \|\| value === ""\)/);
+  assert.match(source, /return this\._getConfiguredPlayers\(\)\.filter\(\(?player\)? => \{[\s\S]*!player\?\.entity/);
 });
 
 test("media player editor preserves nested service data drafts until change commit", () => {
   const source = read("nodalia-media-player.js");
-  const inputStart = source.lastIndexOf("  _onShadowInput(event)");
-  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowValueChanged(event)", inputStart));
-  const valueStart = source.indexOf("  _onShadowValueChanged(event)", inputStart);
-  const valueBlock = source.slice(valueStart, source.indexOf("\n  _onShadowClick(event)", valueStart));
+  const inputStart = source.lastIndexOf("_onShadowInput(event)");
+  const inputBlock = source.slice(inputStart, source.indexOf("_onShadowValueChanged(event)", inputStart));
+  const valueStart = source.indexOf("_onShadowValueChanged(event)", inputStart);
+  const valueBlock = source.slice(valueStart, source.indexOf("_onShadowClick(event)", valueStart));
 
   assert.match(inputBlock, /this\._setFieldValue\(input\.dataset\.field, nextValue\)/);
   assert.match(inputBlock, /if \(event\.type === "change"\) \{[\s\S]*this\._emitConfig\(\)/);
@@ -439,7 +445,7 @@ test("media player editor round-trips service data as a JSON object", () => {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-media-player.js"), sandbox);
 
-  const helpers = sandbox.__NODALIA_MEDIA_PLAYER__;
+  const helpers = sandbox.__NODALIA_MEDIA_PLAYER__ || sandbox.window.__NODALIA_MEDIA_PLAYER__;
   assert.equal(
     helpers.formatEditorJsonValue({ entity_id: "input_boolean.media_power" }),
     '{\n  "entity_id": "input_boolean.media_power"\n}',
@@ -458,8 +464,8 @@ test("media player editor round-trips service data as a JSON object", () => {
 
 test("media player editor rejects invalid service data without emitting it", () => {
   const source = read("nodalia-media-player.js");
-  const inputStart = source.lastIndexOf("  _onShadowInput(event)");
-  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowValueChanged(event)", inputStart));
+  const inputStart = source.lastIndexOf("_onShadowInput(event)");
+  const inputBlock = source.slice(inputStart, source.indexOf("_onShadowValueChanged(event)", inputStart));
 
   assert.match(source, /valueType: "json"/);
   assert.match(source, /action\?\.service_data \?\? action\?\.data/);
@@ -469,14 +475,14 @@ test("media player editor rejects invalid service data without emitting it", () 
 
 test("media player custom power actions work by default and player selection follows the entity", () => {
   const source = read("nodalia-media-player.js");
-  const configStart = source.indexOf("const DEFAULT_CONFIG");
+  const configStart = source.search(/(?:const|let|var) DEFAULT_CONFIG/);
   const securityStart = source.indexOf("  security:", configStart);
   const defaultSecurity = source.slice(securityStart, source.indexOf("  layout:", securityStart));
 
   assert.match(defaultSecurity, /strict_service_actions: false/);
   assert.match(source, /this\._activePlayerEntity = String\(visiblePlayers\[this\._activePlayerIndex\]\?\.entity \|\| ""\)/);
   assert.match(source, /_resolveActivePlayerIndex\(players\)/);
-  assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activePlayerEntity\)/);
+  assert.match(source, /players\.findIndex\(\(?player\)? => player\?\.entity === this\._activePlayerEntity\)/);
 });
 
 test("navigation editor persists secondary media-player picker changes", () => {

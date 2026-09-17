@@ -8,6 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.4b] - 2026-09-17
+
+Fourth experimental TypeScript architecture preview on the parallel `b` line.
+Lovelace behavior, YAML, custom element tags and HACS install stay compatible
+with `2.3.0-alpha.3`. Media Player now lives under `src/cards/media-player/`
+with artwork-first layouts, a persistent background layer, and extra
+entity-picker format presets.
+
+### Changed
+
+- Media Player moved to `src/cards/media-player/` with immersive artwork,
+  square/chip/compact/artwork layouts, crossfade, a draggable seek bar and idle
+  slideshow. Vacuum room expansion keeps the card surface mounted.
+- Entity-first card picker offers curated layout presets for Media Player,
+  Climate, Light, Fan, Vacuum and Entity.
+- Architecture notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+### Validation
+
+- Node regressions plus `tsc` and ESLint on `src/`. Chromium covers picker
+  presets, the persistent Media Player art stage, and Vacuum surface identity.
+- The self-contained HACS bundle budget is `4 MiB + 64 KiB` after the Media
+  Player TypeScript split.
+
 ## [2.3.0-alpha.3b] - 2026-09-17
 
 Experimental TypeScript architecture preview on a parallel `b` line. Lovelace

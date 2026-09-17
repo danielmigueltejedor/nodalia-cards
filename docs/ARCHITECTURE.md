@@ -5,17 +5,19 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.3b)
+## Current architecture map (2.3.0-alpha.4b)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
-Climate is the first card whose canonical source lives under `src/` and is
-compiled back to the same `nodalia-climate-card.js` path.
+Climate and Media Player canonical source now lives under `src/cards/`
+and is compiled to the existing `nodalia-climate-card.js` and
+`nodalia-media-player.js` artifacts.
 
 ```text
 src/
   core/types/                 Shared HA / action / Engine / utils types
   cards/climate/              Climate TypeScript split (pilot)
+  cards/media-player/         Media Player TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils)
 nodalia-backend.js            Optional Nodalia Engine client
@@ -23,10 +25,10 @@ nodalia-render-signature.js   Render-signature helpers
 nodalia-bubble-contrast.js    Icon contrast helpers
 nodalia-i18n.js               Generated runtime i18n
 nodalia-editor-ui.js          Generated editor i18n catalog
-nodalia-*-card.js             Card artifacts (Climate generated; others still source)
+nodalia-*-card.js             Card artifacts (Climate and Media Player generated)
 nodalia-cards.js              Minified HACS single-file bundle
 scripts/build-src-cards.mjs   TypeScript → standalone JS
-scripts/build-bundle.mjs      HACS bundle (imports Climate from src/)
+scripts/build-bundle.mjs      HACS bundle (imports Climate and Media Player from src/)
 ```
 
 Unmigrated cards still live as root `nodalia-*.js` files. Those files remain
@@ -44,7 +46,8 @@ Approximate sizes on this preview (handwritten unless noted):
 | `nodalia-entity-card.js` | ~260 KB | Generic entity, domains, actions, editor |
 | `nodalia-notifications-card.js` | ~258 KB | Inbox, mobile policy, Engine sync, editor |
 | `nodalia-power-flow-card.js` | ~231 KB | Energy graph, nodes, chips, editor |
-| `nodalia-media-player.js` | ~212 KB | Players, browser, TV panels, editor |
+| `nodalia-media-player.js` | generated | Compiled Media Player artifact |
+| `src/cards/media-player/media-player-card.ts` | ~4900 lines | Media Player HTMLElement / artwork / layouts |
 | `nodalia-calendar-card.js` | ~207 KB | Events, weather, composers, webhooks |
 | `src/cards/climate/climate-editor.ts` | ~2037 lines | Climate visual editor (incl. unused legacy class) |
 | `nodalia-humidifier-card.js` | ~202 KB | Humidity, modes, optimistic UI |

@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3b";
+const CARD_VERSION = "2.3.0-alpha.4b";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };

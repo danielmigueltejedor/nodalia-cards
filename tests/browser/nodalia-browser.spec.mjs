@@ -606,6 +606,11 @@ test("entity-first picker receives relevant Nodalia card suggestions", async ({ 
   expect(suggestions["media_player.living_room"].find(item => item.config.type === "custom:nodalia-media-player")?.config).toMatchObject({
     players: [{ entity: "media_player.living_room", label: "Living room" }],
   });
+  expect(
+    suggestions["media_player.living_room"]
+      .filter(item => item.config.type === "custom:nodalia-media-player")
+      .map(item => item.config.layout?.mode),
+  ).toEqual(expect.arrayContaining(["standard", "square", "compact", "chip", "artwork"]));
   expect(errors).toEqual([]);
 });
 
@@ -1844,3 +1849,77 @@ test("Room Summary cover and climate controls expose accessible names", async ({
   const serious = results.violations.filter(item => ["serious", "critical"].includes(item.impact));
   expect(serious).toEqual([]);
 });
+
+test("Media Player keeps the artwork stage across unrelated state updates", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const picture = "/local/cover.jpg";
+    const state = (volume, title = "Song") => ({
+      entity_id: "media_player.test",
+      state: "playing",
+      attributes: {
+        friendly_name: "Living room",
+        media_title: title,
+        media_artist: "Artist",
+        entity_picture: picture,
+        media_duration: 100,
+        media_position: 10,
+        media_position_updated_at: new Date().toISOString(),
+        volume_level: volume,
+        supported_features: 2,
+      },
+    });
+    const hass = window.makeHass({ "media_player.test": state(0.4) });
+    const card = document.createElement("nodalia-media-player");
+    card.setConfig({
+      players: [{ entity: "media_player.test", label: "Living room" }],
+      layout: { mode: "standard", fixed: false },
+    });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    window.mediaArtworkFixture = { card, state };
+  });
+
+  expect(await page.evaluate(() => Boolean(
+    window.mediaArtworkFixture.card.shadowRoot.querySelector("[data-media-art-stage]"),
+  ))).toBe(true);
+
+  await page.evaluate(() => {
+    const fixture = window.mediaArtworkFixture;
+    fixture.artNode = fixture.card.shadowRoot.querySelector("[data-media-art-stage]");
+    fixture.card.hass = window.makeHass({ "media_player.test": fixture.state(0.7, "Song") });
+  });
+
+  expect(await page.evaluate(() => {
+    const fixture = window.mediaArtworkFixture;
+    return fixture.artNode === fixture.card.shadowRoot.querySelector("[data-media-art-stage]");
+  })).toBe(true);
+});
+
+test("Advance Vacuum keeps the card surface when expanding rooms", async ({ page }) => {
+  await loadBundle(page);
+  const persisted = await page.evaluate(() => {
+    const hass = window.makeHass({
+      "vacuum.robot": {
+        entity_id: "vacuum.robot",
+        state: "docked",
+        attributes: { friendly_name: "Robot" },
+      },
+    });
+    const card = document.createElement("nodalia-advance-vacuum-card");
+    card.setConfig({ entity: "vacuum.robot" });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    const before = card.shadowRoot.querySelector("[data-vacuum-surface], ha-card.advance-vacuum-card");
+    card._activeMode = "rooms";
+    card._lastRenderSignature = "";
+    card._render();
+    return {
+      sameSurface: before === card.shadowRoot.querySelector("[data-vacuum-surface], ha-card.advance-vacuum-card"),
+      hasCommit: typeof card._commitPersistentVacuumShadow === "function",
+    };
+  });
+  expect(persisted.hasCommit).toBe(true);
+  expect(persisted.sameSurface).toBe(true);
+});
+

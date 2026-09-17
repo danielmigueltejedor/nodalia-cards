@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3b";
+const CARD_VERSION = "2.3.0-alpha.4b";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -1454,7 +1454,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["vacuum"] });
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["vacuum"],
+      label: "Vacuum — Advanced",
+    });
   }
 
   constructor() {
@@ -7592,6 +7595,47 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     `;
   }
 
+  _commitPersistentVacuumShadow(markup) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    const styleStart = markup.indexOf("<style>");
+    const styleEnd = markup.indexOf("</style>");
+    if (styleStart < 0 || styleEnd < 0) {
+      this.shadowRoot.innerHTML = markup;
+      return;
+    }
+    const css = markup.slice(styleStart + 7, styleEnd);
+    const body = markup.slice(styleEnd + 8).trim();
+    const cardOpen = body.indexOf("<ha-card");
+    const cardOpenEnd = body.indexOf(">", cardOpen);
+    const cardClose = body.lastIndexOf("</ha-card>");
+    if (cardOpen < 0 || cardOpenEnd < 0 || cardClose < 0) {
+      this.shadowRoot.innerHTML = markup;
+      return;
+    }
+    const cardAttrs = body.slice(cardOpen, cardOpenEnd + 1);
+    const inner = body.slice(cardOpenEnd + 1, cardClose);
+    const liveImage = this.shadowRoot.querySelector("[data-map-image]");
+    if (liveImage instanceof HTMLElement) {
+      liveImage.remove();
+    }
+    let styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
+    let card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
+    if (!(styleEl instanceof HTMLStyleElement) || !(card instanceof HTMLElement)) {
+      this.shadowRoot.innerHTML = `<style data-vacuum-style></style><ha-card class="advance-vacuum-card" data-vacuum-surface="true"></ha-card>`;
+      styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
+      card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
+    }
+    if (styleEl.textContent !== css) {
+      styleEl.textContent = css;
+    }
+    const classMatch = cardAttrs.match(/class="([^"]*)"/);
+    card.className = classMatch ? classMatch[1] : "advance-vacuum-card";
+    card.setAttribute("data-vacuum-surface", "true");
+    card.innerHTML = inner;
+  }
+
   _render() {
     if (!this.shadowRoot) {
       return;
@@ -7709,7 +7753,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       ...(this._draftZone ? [{ ...this._draftZone, predefined: false, draft: true }] : []),
       ];
 
-      this.shadowRoot.innerHTML = `
+      const vacuumMarkup = `
       <style>
         :host {
           --advance-vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -8877,6 +8921,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+      this._commitPersistentVacuumShadow(vacuumMarkup);
 
       let image = this.shadowRoot.querySelector("[data-map-image]");
       const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");

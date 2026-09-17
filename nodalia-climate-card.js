@@ -4,7 +4,7 @@
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
   var EDITOR_TAG = "nodalia-climate-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.3b";
+  var CARD_VERSION = "2.3.0-alpha.4b";
   var SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
   var SETPOINT_SCHEDULE_MINUTES_PER_DAY = 24 * 60;
   var SCHEDULE_TIMELINE_SNAP_MINUTES = 5;
@@ -2818,7 +2818,18 @@ ${weekdayYaml}
       return applyStubEntity(deepClone(STUB_CONFIG), hass, ["climate"], entities, entitiesFallback);
     }
     static getEntitySuggestion(hass, entityId) {
-      return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["climate"] });
+      return [
+        window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+          domains: ["climate"],
+          label: "Climate — Circular",
+          buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, layout: "circular" })
+        }),
+        window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+          domains: ["climate"],
+          label: "Climate — Compact",
+          buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, layout: "compact" })
+        })
+      ].filter(Boolean);
     }
     constructor() {
       super();

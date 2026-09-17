@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-light-card";
 const EDITOR_TAG = "nodalia-light-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3b";
+const CARD_VERSION = "2.3.0-alpha.4b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -566,7 +566,18 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["light"] });
+    return [
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["light"],
+        label: "Light — Standard",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" }),
+      }),
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["light"],
+        label: "Light — Compact",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
+      }),
+    ].filter(Boolean);
   }
 
   constructor() {

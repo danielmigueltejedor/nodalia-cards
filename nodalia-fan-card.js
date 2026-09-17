@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-fan-card";
 const EDITOR_TAG = "nodalia-fan-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3b";
+const CARD_VERSION = "2.3.0-alpha.4b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -526,7 +526,18 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["fan"] });
+    return [
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["fan"],
+        label: "Fan — Standard",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" }),
+      }),
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["fan"],
+        label: "Fan — Compact",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
+      }),
+    ].filter(Boolean);
   }
 
   constructor() {

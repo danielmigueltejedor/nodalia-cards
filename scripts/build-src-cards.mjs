@@ -9,6 +9,10 @@ export const SRC_CARD_ENTRIES = [
     entry: "src/cards/climate/standalone.ts",
     outfile: "nodalia-climate-card.js",
   },
+  {
+    entry: "src/cards/media-player/standalone.ts",
+    outfile: "nodalia-media-player.js",
+  },
 ];
 
 export async function buildSrcCards() {
@@ -28,7 +32,7 @@ export async function buildSrcCards() {
       keepNames: false,
       sourcemap: false,
       banner: {
-        js: "/* Generated from src/cards/climate. Do not edit. */",
+        js: `/* Generated from ${card.entry.replace(/\/standalone\.ts$/, "")}. Do not edit. */`,
       },
       supported: {
         "const-and-let": true,
