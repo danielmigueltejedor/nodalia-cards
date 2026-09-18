@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.10b] - 2026-09-18
+
+Tenth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Entity, Light, Fan and Humidifier tiles keep the icon on the left, and
+Media Player idle/TV/chip/compact artwork uses the same 22px icon container.
+
+### Changed
+
+- Compact Entity and Light heroes no longer collapse to a centered 1-column
+  icon; the bubble stays on the left like the expanded layout.
+- Fan compact heroes stop centering the icon track.
+- Media Player artwork radius is 22px in idle, TV, chip and compact modes so
+  Apple TV, projector and speaker tiles match.
+
+### Validation
+
+- Node regressions for left-aligned compact heroes and a single Media Player
+  artwork radius.
+
 ## [2.3.0-alpha.9b] - 2026-09-18
 
 Ninth experimental TypeScript architecture preview on the parallel `b` line.

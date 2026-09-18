@@ -3031,8 +3031,8 @@ export class NodaliaLightCard extends HTMLElement {
 
         .light-card--compact .light-card__hero {
           gap: 10px;
-          grid-template-columns: 1fr;
-          justify-items: center;
+          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
+          justify-items: start;
         }
 
         .light-card--compact.is-off .light-card__hero {
@@ -3067,6 +3067,7 @@ export class NodaliaLightCard extends HTMLElement {
           color: ${lightIconColor};
           cursor: pointer;
           height: ${styles.icon.size};
+          justify-self: start;
           width: ${styles.icon.size};
         }
 

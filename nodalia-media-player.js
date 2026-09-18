@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.9b";
+  var CARD_VERSION = "2.3.0-alpha.10b";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -3961,7 +3961,6 @@
         }
 
         .media-player__artwork--idle {
-          border-radius: 18px;
           height: 56px;
           width: 56px;
         }
@@ -4200,7 +4199,6 @@
         }
 
         .media-player-card--tv .media-player__artwork {
-          border-radius: 20px;
           height: ${tvArtworkSize};
           width: ${tvArtworkSize};
         }
@@ -5204,7 +5202,6 @@
         }
 
         .media-player-card--chip .media-player__artwork {
-          border-radius: 12px;
           height: 44px;
           width: 44px;
         }
@@ -5263,7 +5260,6 @@
         }
 
         .media-player-card--compact .media-player__artwork {
-          border-radius: 14px;
           height: 48px;
           width: 48px;
         }

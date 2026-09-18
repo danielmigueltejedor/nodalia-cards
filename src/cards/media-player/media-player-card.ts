@@ -3603,7 +3603,6 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__artwork--idle {
-          border-radius: 18px;
           height: 56px;
           width: 56px;
         }
@@ -3842,7 +3841,6 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__artwork {
-          border-radius: 20px;
           height: ${tvArtworkSize};
           width: ${tvArtworkSize};
         }
@@ -4846,7 +4844,6 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--chip .media-player__artwork {
-          border-radius: 12px;
           height: 44px;
           width: 44px;
         }
@@ -4905,7 +4902,6 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact .media-player__artwork {
-          border-radius: 14px;
           height: 48px;
           width: 48px;
         }

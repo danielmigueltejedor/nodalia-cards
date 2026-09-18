@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.3.0-alpha.9b";
+const CARD_VERSION = "2.3.0-alpha.10b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -4885,9 +4885,10 @@ class NodaliaEntityCard extends HTMLElement {
           min-width: 0;
         }
 
+        .entity-card--compact .entity-card__hero,
         .entity-card--compact:not(.entity-card--with-copy) .entity-card__hero {
-          justify-items: center;
-          grid-template-columns: 1fr;
+          justify-items: start;
+          grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
         }
 
         .entity-card__copy-header {

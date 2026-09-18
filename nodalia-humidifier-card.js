@@ -4,7 +4,7 @@
   // src/cards/humidifier/humidifier-constants.ts
   var CARD_TAG = "nodalia-humidifier-card";
   var EDITOR_TAG = "nodalia-humidifier-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.9b";
+  var CARD_VERSION = "2.3.0-alpha.10b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2709,6 +2709,7 @@
           transform: scale(1);
           transform-origin: center;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          justify-self: start;
           width: ${styles.icon.size};
         }
 

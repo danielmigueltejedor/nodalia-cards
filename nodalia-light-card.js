@@ -4,7 +4,7 @@
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
   var EDITOR_TAG = "nodalia-light-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.9b";
+  var CARD_VERSION = "2.3.0-alpha.10b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2920,8 +2920,8 @@
 
         .light-card--compact .light-card__hero {
           gap: 10px;
-          grid-template-columns: 1fr;
-          justify-items: center;
+          grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
+          justify-items: start;
         }
 
         .light-card--compact.is-off .light-card__hero {
@@ -2954,6 +2954,7 @@
           color: ${lightIconColor};
           cursor: pointer;
           height: ${styles.icon.size};
+          justify-self: start;
           width: ${styles.icon.size};
         }
 

@@ -123,6 +123,15 @@ test("media player controls follow the Nodalia bubble recipe and keep square lay
   assert.match(layout, /min_rows: 3/);
 });
 
+test("media player artwork containers share one border radius", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 22px;/);
+  assert.doesNotMatch(source, /\.media-player__artwork--idle \{[^}]*border-radius:/);
+  assert.doesNotMatch(source, /\.media-player-card--tv \.media-player__artwork \{[^}]*border-radius:/);
+  assert.doesNotMatch(source, /\.media-player-card--chip \.media-player__artwork \{[^}]*border-radius:/);
+  assert.doesNotMatch(source, /\.media-player-card--compact \.media-player__artwork \{[^}]*border-radius:/);
+});
+
 test("media player keeps a persistent artwork stage and vacuum keeps a persistent surface", () => {
   const media = read("src/cards/media-player/media-player-card.ts");
   assert.match(media, /_commitPersistentMediaShadow\(/);

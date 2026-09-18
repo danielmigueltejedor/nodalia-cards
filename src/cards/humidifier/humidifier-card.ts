@@ -2788,6 +2788,7 @@ export class NodaliaHumidifierCard extends HTMLElement {
           transform: scale(1);
           transform-origin: center;
           transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          justify-self: start;
           width: ${styles.icon.size};
         }
 

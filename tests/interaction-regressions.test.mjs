@@ -2388,6 +2388,21 @@ test("fan humidifier vacuum and light compact density share the same helper", ()
   }
 });
 
+test("compact tiles keep the icon bubble on the left", () => {
+  const blocks = [
+    ["src/cards/light/light-card.ts", /\.light-card--compact \.light-card__hero \{[\s\S]*?\}/],
+    ["src/cards/fan/fan-card.ts", /\.fan-card--compact \.fan-card__hero \{[\s\S]*?\}/],
+    ["src/cards/humidifier/humidifier-card.ts", /\.humidifier-card--compact \.humidifier-card__hero \{[\s\S]*?\}/],
+    ["nodalia-entity-card.js", /\.entity-card--compact:not\(\.entity-card--with-copy\) \.entity-card__hero \{[\s\S]*?\}/],
+  ];
+  for (const [file, pattern] of blocks) {
+    const block = read(file).match(pattern)?.[0] || "";
+    assert.ok(block, `${file} should declare a compact hero`);
+    assert.doesNotMatch(block, /justify-items:\s*center/, `${file} compact hero should not center the icon`);
+    assert.doesNotMatch(block, /grid-template-columns:\s*1fr;/, `${file} compact hero should keep the icon track`);
+  }
+});
+
 test("fav card aligns service security with entity and cleans up alarm host span", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /strict_service_actions: true/);
