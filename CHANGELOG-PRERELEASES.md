@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.15b] - 2026-09-18
+
+Fifteenth experimental TypeScript architecture preview on the parallel `b` line.
+Narrow square Media Players keep the device-name chip off the transport buttons.
+
+### Changed
+
+- Square/artwork overlays reserve a bottom row for controls and hide the
+  device chip below 260px, so “HomePod mini” no longer sits on play/skip.
+
+### Validation
+
+- Node regression for the square overlay container query and three-row content
+  grid.
+
 ## [2.3.0-alpha.14b] - 2026-09-18
 
 Fourteenth experimental TypeScript architecture preview on the parallel `b` line.

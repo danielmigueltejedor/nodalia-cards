@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.14b
+2.3.0-alpha.15b
 ```
 
-Preview **`2.3.0-alpha.14b`** keeps playing music tiles as square overlays on phone and desktop, idle TVs as compact pills, and Vacuum battery chips on the title row. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.15b`** keeps the Media Player device chip off the transport buttons on narrow phone squares. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

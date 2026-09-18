@@ -139,6 +139,14 @@ test("media player idle compact keeps name and power on one row", () => {
   assert.doesNotMatch(source, /idle-tv-off-bar/);
 });
 
+test("square media player overlay keeps the name chip off the transport row", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(source, /container-type: inline-size;/);
+  assert.match(source, /grid-template-rows: auto minmax\(0, 1fr\) auto;/);
+  assert.match(source, /@container \(max-width: 260px\) \{[\s\S]*?\.media-player__info-rail \{[\s\S]*?display: none;/);
+  assert.match(source, /\.media-player-card--square \.media-player__center-stack,[\s\S]*?grid-row: 3;/);
+});
+
 test("square media player overlay stays a tile instead of collapsing to a chip", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /:host\(\[data-presentation="square"\]\)/);

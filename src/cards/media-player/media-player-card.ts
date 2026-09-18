@@ -4701,6 +4701,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--artwork {
           align-self: start;
           aspect-ratio: 1 / 1;
+          container-type: inline-size;
           display: grid;
           grid-template-rows: minmax(0, 1fr) auto;
           height: auto;
@@ -4757,7 +4758,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
           display: grid;
           gap: 10px;
           grid-row: 1;
-          grid-template-rows: auto minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr) auto;
           height: 100%;
           min-height: 0;
           padding-top: 2px;
@@ -4775,6 +4776,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--square .media-player__hero,
         .media-player-card--artwork .media-player__hero {
+          grid-row: 1;
           grid-template-columns: minmax(0, 1fr);
         }
 
@@ -4810,13 +4812,38 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--square .media-player__center-stack,
-        .media-player-card--artwork .media-player__center-stack,
+        .media-player-card--artwork .media-player__center-stack {
+          align-content: end;
+          align-self: end;
+          grid-row: 3;
+          min-width: 0;
+          width: 100%;
+        }
+
         .media-player-card--square .media-player__transport-row,
         .media-player-card--artwork .media-player__transport-row {
           align-content: end;
-          align-self: end;
           min-width: 0;
           width: 100%;
+        }
+
+        @container (max-width: 260px) {
+          .media-player__info-rail {
+            display: none;
+          }
+
+          .media-player__title {
+            font-size: 14px;
+          }
+
+          .media-player__subtitle {
+            font-size: 12px;
+          }
+
+          .media-player-card--square .media-player__content,
+          .media-player-card--artwork .media-player__content {
+            gap: 6px;
+          }
         }
 
         .media-player-card--square .media-player__transport-cluster,
@@ -4928,6 +4955,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--chip .media-player__footer,
+        .media-player-card--square .media-player__chips-wrap,
         .media-player-card--artwork .media-player__chips-wrap,
         .media-player-card--compact .media-player__chips-wrap {
           display: none;
