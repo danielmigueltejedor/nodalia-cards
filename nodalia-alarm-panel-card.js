@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "2.3.0-alpha.12b";
+const CARD_VERSION = "2.3.0-alpha.13b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

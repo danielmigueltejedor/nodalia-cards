@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.12b";
+const CARD_VERSION = "2.3.0-alpha.13b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2958,21 +2958,21 @@ class NodaliaVacuumCard extends HTMLElement {
           gap: ${styles.card.gap};
           grid-template-columns: auto minmax(0, 1fr) auto;
           min-width: 0;
-          padding-right: ${batteryChipMarkup ? "88px" : "0"};
           position: relative;
         }
 
         .vacuum-card--compact .vacuum-card__header {
           grid-template-columns: auto minmax(0, 1fr) auto;
-          text-align: center;
+          text-align: start;
         }
 
         .vacuum-card--compact .vacuum-card__copy {
           justify-items: start;
+          min-width: 0;
         }
 
         .vacuum-card--compact .vacuum-card__chips {
-          justify-content: center;
+          justify-content: flex-start;
         }
 
         .vacuum-card__icon-button {
@@ -3065,11 +3065,10 @@ class NodaliaVacuumCard extends HTMLElement {
         .vacuum-card__header-meta {
           align-items: flex-start;
           display: flex;
+          flex-shrink: 0;
+          grid-column: 3;
           justify-content: flex-end;
           min-width: 0;
-          position: absolute;
-          right: 0;
-          top: 0;
         }
 
         .vacuum-card__title {
@@ -3118,6 +3117,7 @@ class NodaliaVacuumCard extends HTMLElement {
           background: color-mix(in srgb, ${batteryChipColor} 16%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
           border-color: color-mix(in srgb, ${batteryChipColor} 38%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           color: ${batteryChipColor};
+          flex-shrink: 0;
           gap: 6px;
         }
 
@@ -3392,13 +3392,10 @@ class NodaliaVacuumCard extends HTMLElement {
           .vacuum-card__header {
             gap: 10px;
             grid-template-columns: auto minmax(0, 1fr) auto;
-            padding-right: ${batteryChipMarkup ? "82px" : "0"};
           }
 
           .vacuum-card__header-meta {
             justify-content: flex-end;
-            right: 0;
-            top: 0;
           }
 
           .vacuum-card__chip--battery {

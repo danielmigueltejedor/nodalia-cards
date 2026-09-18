@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.12b";
+  var CARD_VERSION = "2.3.0-alpha.13b";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -3414,12 +3414,9 @@
     `;
       const idleNameText = String(playerLabel || title || "").trim();
       const idleNameMarkup = idleNameText ? `<div class="media-player__idle-name">${escapeHtml(idleNameText)}</div>` : "";
-      const idleTvOffMarkup = `
-      <div class="media-player__idle-tv-off-bar">
-        ${idleNameMarkup}
-        <div class="media-player__idle-actions media-player__idle-actions--tv media-player__idle-actions--tv-off">
-          ${tvPowerMarkup}
-        </div>
+      const idleTvOffPowerMarkup = `
+      <div class="media-player__idle-actions media-player__idle-actions--tv media-player__idle-actions--tv-off">
+        ${tvPowerMarkup}
       </div>
     `;
       if (useCompactIdleLayout) {
@@ -3431,7 +3428,7 @@
         >
           ${this._renderProgressMarkup(player, state, progress)}
           <div class="media-player__content media-player__content--idle${renderAnimateEntrance ? " media-player__content--entering" : ""}">
-            <div class="media-player__idle-hero">
+            <div class="media-player__idle-hero${isTvPlayer && isTvOff ? " media-player__idle-hero--tv-off" : ""}">
               ${artworkIsSourceToggle ? `
                     <button
                       type="button"
@@ -3449,8 +3446,8 @@
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </div>
                   `}
-              ${isTvPlayer && isTvOff ? idleTvOffMarkup : `
-                    <div class="media-player__idle-main ${isTvPlayer && isTvOff ? "media-player__idle-main--tv-off" : ""}">
+              ${isTvPlayer && isTvOff ? `${idleNameMarkup}${idleTvOffPowerMarkup}` : `
+                    <div class="media-player__idle-main">
                       ${idleNameMarkup}
                       ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
                     </div>
@@ -3661,9 +3658,22 @@
         :host([data-presentation="artwork"]) {
           align-self: start;
           aspect-ratio: 1 / 1;
-          height: auto;
+          height: auto !important;
+          max-height: 100%;
           max-width: 100%;
+          min-height: 0;
           overflow: hidden;
+          width: 100%;
+        }
+
+        :host([data-presentation="square"]) .dock,
+        :host([data-presentation="artwork"]) .dock,
+        :host([data-presentation="square"]) .dock-inner,
+        :host([data-presentation="artwork"]) .dock-inner,
+        :host([data-presentation="square"]) .player-stack,
+        :host([data-presentation="artwork"]) .player-stack {
+          height: 100%;
+          min-height: 0;
           width: 100%;
         }
 
@@ -3890,9 +3900,14 @@
         .media-player__idle-hero {
           align-items: center;
           display: grid;
-          gap: 12px;
-          grid-template-columns: 48px minmax(0, 1fr);
+          gap: 10px;
+          grid-template-columns: 40px minmax(0, 1fr);
           min-width: 0;
+          width: 100%;
+        }
+
+        .media-player__idle-hero--tv-off {
+          grid-template-columns: 40px minmax(0, 1fr) auto;
         }
 
         .media-player__idle-name {
@@ -3913,11 +3928,8 @@
           min-width: 0;
         }
 
-        .media-player__idle-tv-off-bar {
-          align-items: center;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
+        .media-player__idle-hero--tv-off .media-player__idle-actions--tv-off {
+          justify-self: end;
         }
 
         .media-player__hero-copy {
@@ -3973,8 +3985,8 @@
         }
 
         .media-player__artwork--idle {
-          height: 48px;
-          width: 48px;
+          height: 40px;
+          width: 40px;
         }
 
         .media-player__artwork img {
@@ -4220,8 +4232,8 @@
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
-          height: 48px;
-          width: 48px;
+          height: 40px;
+          width: 40px;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon {
@@ -4318,22 +4330,27 @@
           padding-top: 6px;
         }
 
-        .media-player-card--tv.media-player-card--idle .media-player__idle-main--tv-off {
-          align-items: center;
-          gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        .media-player-card--tv.media-player-card--idle .media-player__idle-tv-off-bar {
+        .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
           align-items: center;
           gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: start;
+          grid-template-columns: 40px minmax(0, 1fr) auto;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off {
           justify-content: flex-end;
           width: fit-content;
+        }
+
+        .media-player-card--idle .media-player__control {
+          height: 32px;
+          min-width: 32px;
+          width: 32px;
+        }
+
+        .media-player-card--idle .media-player__control ha-icon {
+          --mdc-icon-size: 15px;
+          height: 15px;
+          width: 15px;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
@@ -5020,7 +5037,7 @@
             justify-content: center;
           }
 
-          .media-player__idle-actions--tv,
+          .media-player__idle-actions--tv:not(.media-player__idle-actions--tv-off),
           .media-player__tv-footer {
             justify-content: center;
           }
@@ -5034,10 +5051,12 @@
 
         .media-player-card--square,
         .media-player-card--artwork {
+          align-self: start;
           aspect-ratio: 1 / 1;
           display: grid;
           grid-template-rows: minmax(0, 1fr) auto;
           height: auto;
+          max-height: 100%;
           max-width: 100%;
           min-height: 0;
           padding: 14px 14px 12px;

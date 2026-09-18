@@ -1988,7 +1988,7 @@ test("Media Player square overlay stays square in a tall phone cell", async ({ p
       },
     };
     const cell = document.createElement("div");
-    cell.style.width = "390px";
+    cell.style.width = "180px";
     cell.style.height = "640px";
     cell.style.display = "grid";
     const card = document.createElement("nodalia-media-player");

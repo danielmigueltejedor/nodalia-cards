@@ -126,9 +126,18 @@ test("media player controls follow the Nodalia bubble recipe and keep square lay
 test("media player idle compact keeps name and power on one row", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /media-player__idle-name/);
+  assert.match(source, /media-player__idle-hero--tv-off/);
   assert.match(source, /\.media-player-card--idle \{[\s\S]*?min-height: 0;/);
-  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-tv-off-bar \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;/);
-  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 48px;/);
+  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-hero--tv-off \{[\s\S]*?grid-template-columns: 40px minmax\(0, 1fr\) auto;/);
+  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 40px;/);
+  assert.doesNotMatch(source, /idle-tv-off-bar/);
+});
+
+test("square media player overlay cannot grow taller than its width", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(source, /:host\(\[data-presentation="square"\]\)[\s\S]*?min-height: 0;/);
+  assert.match(source, /\.media-player-card--square,[\s\S]*?min-height: 0;/);
+  assert.match(source, /height: auto !important;/);
 });
 
 test("media player artwork containers share one border radius", () => {

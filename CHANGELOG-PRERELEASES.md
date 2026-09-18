@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.13b] - 2026-09-18
+
+Thirteenth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Vacuum keeps the battery chip in the header row, idle TV tiles keep
+power beside a truncating name, and square music players stay 1:1 on phones.
+
+### Changed
+
+- Compact Vacuum battery chips sit in the header grid instead of overlaying the
+  title and state chip.
+- Idle TV Media Players use a three-column hero: artwork, name, and power.
+- Square/artwork Media Player hosts no longer grow with overlay content, so a
+  narrow phone cell stays square like desktop.
+
+### Validation
+
+- Node regressions for Vacuum header-meta flow, idle TV three-column heroes,
+  and square `min-height: 0`. Chromium coverage that an 180px-wide tall phone
+  cell keeps a square overlay.
+
 ## [2.3.0-alpha.12b] - 2026-09-18
 
 Twelfth experimental TypeScript architecture preview on the parallel `b` line.
