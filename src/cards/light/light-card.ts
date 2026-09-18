@@ -3029,12 +3029,13 @@ export class NodaliaLightCard extends HTMLElement {
           min-width: 0;
         }
 
-        .light-card--mini .light-card__hero {
+        .light-card--mini:not(.light-card--with-copy) .light-card__hero {
           gap: 0;
           grid-template-columns: 1fr;
           justify-items: center;
         }
 
+        .light-card--mini.light-card--with-copy .light-card__hero,
         .light-card--compact .light-card__hero {
           gap: 10px;
           grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
@@ -3150,6 +3151,7 @@ export class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card--compact .light-card__copy {
+          min-width: 0;
           width: 100%;
         }
 
@@ -3913,6 +3915,12 @@ export class NodaliaLightCard extends HTMLElement {
         @media (max-width: 420px) {
           .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .light-card--compact .light-card__hero,
+          .light-card--mini.light-card--with-copy .light-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+            justify-items: start;
           }
 
           .light-card__icon {

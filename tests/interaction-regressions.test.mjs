@@ -2419,6 +2419,15 @@ test("compact tiles show the name when the row is wide enough", () => {
   }
 });
 
+test("compact light and humidifier keep the name beside the icon on narrow viewports", () => {
+  const light = read("src/cards/light/light-card.ts");
+  assert.match(light, /light-card--mini:not\(\.light-card--with-copy\) \.light-card__hero/);
+  assert.match(light, /light-card--mini\.light-card--with-copy \.light-card__hero/);
+  const humidifier = read("src/cards/humidifier/humidifier-card.ts");
+  assert.match(humidifier, /humidifier-card:not\(\.humidifier-card--compact\) \.humidifier-card__headline/);
+  assert.match(humidifier, /humidifier-card--compact \.humidifier-card__chips \{[\s\S]*justify-self: end;/);
+});
+
 test("fav card aligns service security with entity and cleans up alarm host span", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /strict_service_actions: true/);

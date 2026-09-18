@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.11b
+2.3.0-alpha.12b
 ```
 
-Preview **`2.3.0-alpha.11b`** shows compact names when the tile is wide enough, keeps icons on the left, and unifies Media Player artwork radius. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.12b`** keeps compact names beside the icon on phones, pins Humidifier chips to the right, and lays idle Media Players out as a single row. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

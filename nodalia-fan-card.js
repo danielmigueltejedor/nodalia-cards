@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.11b";
+  var CARD_VERSION = "2.3.0-alpha.12b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2674,12 +2674,15 @@
         }
 
         .fan-card--compact .fan-card__copy {
-          justify-items: start;
+          justify-items: stretch;
+          min-width: 0;
+          width: 100%;
         }
 
         .fan-card--compact .fan-card__headline {
           grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: start;
+          justify-items: stretch;
+          width: 100%;
         }
 
         .fan-card__title {
@@ -2705,6 +2708,7 @@
 
         .fan-card--compact .fan-card__chips {
           justify-content: flex-end;
+          justify-self: end;
         }
 
         .fan-card__chip {

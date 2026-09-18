@@ -123,6 +123,14 @@ test("media player controls follow the Nodalia bubble recipe and keep square lay
   assert.match(layout, /min_rows: 3/);
 });
 
+test("media player idle compact keeps name and power on one row", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(source, /media-player__idle-name/);
+  assert.match(source, /\.media-player-card--idle \{[\s\S]*?min-height: 0;/);
+  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-tv-off-bar \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 48px;/);
+});
+
 test("media player artwork containers share one border radius", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 22px;/);

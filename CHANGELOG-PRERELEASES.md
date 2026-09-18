@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.12b] - 2026-09-18
+
+Twelfth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Light and Humidifier keep the name beside the icon on phones, Humidifier
+chips stay on the right, and idle Media Player tiles are a single row.
+
+### Changed
+
+- Compact Light/Humidifier heroes stay two columns on narrow viewports, including
+  Light mini tiles that also show a title.
+- Humidifier compact headlines stretch so state chips sit on the right edge.
+- Idle/off Media Player tiles use a pill row: artwork, name, and power.
+
+### Validation
+
+- Node regressions for compact hero columns, humidifier chip alignment, and
+  Media Player idle one-row layout.
+
 ## [2.3.0-alpha.11b] - 2026-09-18
 
 Eleventh experimental TypeScript architecture preview on the parallel `b` line.

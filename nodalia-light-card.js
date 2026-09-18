@@ -4,7 +4,7 @@
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
   var EDITOR_TAG = "nodalia-light-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.11b";
+  var CARD_VERSION = "2.3.0-alpha.12b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2917,12 +2917,13 @@
           min-width: 0;
         }
 
-        .light-card--mini .light-card__hero {
+        .light-card--mini:not(.light-card--with-copy) .light-card__hero {
           gap: 0;
           grid-template-columns: 1fr;
           justify-items: center;
         }
 
+        .light-card--mini.light-card--with-copy .light-card__hero,
         .light-card--compact .light-card__hero {
           gap: 10px;
           grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
@@ -3036,6 +3037,7 @@
         }
 
         .light-card--compact .light-card__copy {
+          min-width: 0;
           width: 100%;
         }
 
@@ -3799,6 +3801,12 @@
         @media (max-width: 420px) {
           .light-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .light-card--compact .light-card__hero,
+          .light-card--mini.light-card--with-copy .light-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+            justify-items: start;
           }
 
           .light-card__icon {

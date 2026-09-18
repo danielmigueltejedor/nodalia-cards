@@ -2887,13 +2887,16 @@ export class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card--compact .humidifier-card__copy {
-          justify-items: start;
+          justify-items: stretch;
+          min-width: 0;
           text-align: start;
+          width: 100%;
         }
 
         .humidifier-card--compact .humidifier-card__headline {
           grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: start;
+          justify-items: stretch;
+          width: 100%;
         }
 
         .humidifier-card__title {
@@ -2922,6 +2925,7 @@ export class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card--compact .humidifier-card__chips {
           justify-content: flex-end;
+          justify-self: end;
         }
 
         .humidifier-card--compact .humidifier-card__title {
@@ -3802,11 +3806,11 @@ export class NodaliaHumidifierCard extends HTMLElement {
         }
 
         @media (max-width: 620px) {
-          .humidifier-card__headline {
+          .humidifier-card:not(.humidifier-card--compact) .humidifier-card__headline {
             grid-template-columns: minmax(0, 1fr);
           }
 
-          .humidifier-card__chips {
+          .humidifier-card:not(.humidifier-card--compact) .humidifier-card__chips {
             justify-content: flex-start;
           }
         }
@@ -3814,6 +3818,11 @@ export class NodaliaHumidifierCard extends HTMLElement {
         @media (max-width: 420px) {
           .humidifier-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .humidifier-card--compact .humidifier-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+            justify-items: start;
           }
 
           .humidifier-card__icon {

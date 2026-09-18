@@ -4,7 +4,7 @@
   // src/cards/humidifier/humidifier-constants.ts
   var CARD_TAG = "nodalia-humidifier-card";
   var EDITOR_TAG = "nodalia-humidifier-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.11b";
+  var CARD_VERSION = "2.3.0-alpha.12b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2803,13 +2803,16 @@
         }
 
         .humidifier-card--compact .humidifier-card__copy {
-          justify-items: start;
+          justify-items: stretch;
+          min-width: 0;
           text-align: start;
+          width: 100%;
         }
 
         .humidifier-card--compact .humidifier-card__headline {
           grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: start;
+          justify-items: stretch;
+          width: 100%;
         }
 
         .humidifier-card__title {
@@ -2838,6 +2841,7 @@
 
         .humidifier-card--compact .humidifier-card__chips {
           justify-content: flex-end;
+          justify-self: end;
         }
 
         .humidifier-card--compact .humidifier-card__title {
@@ -3714,11 +3718,11 @@
         }
 
         @media (max-width: 620px) {
-          .humidifier-card__headline {
+          .humidifier-card:not(.humidifier-card--compact) .humidifier-card__headline {
             grid-template-columns: minmax(0, 1fr);
           }
 
-          .humidifier-card__chips {
+          .humidifier-card:not(.humidifier-card--compact) .humidifier-card__chips {
             justify-content: flex-start;
           }
         }
@@ -3726,6 +3730,11 @@
         @media (max-width: 420px) {
           .humidifier-card__hero {
             grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .humidifier-card--compact .humidifier-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+            justify-items: start;
           }
 
           .humidifier-card__icon {

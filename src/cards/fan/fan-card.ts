@@ -2701,12 +2701,15 @@ export class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__copy {
-          justify-items: start;
+          justify-items: stretch;
+          min-width: 0;
+          width: 100%;
         }
 
         .fan-card--compact .fan-card__headline {
           grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: start;
+          justify-items: stretch;
+          width: 100%;
         }
 
         .fan-card__title {
@@ -2732,6 +2735,7 @@ export class NodaliaFanCard extends HTMLElement {
 
         .fan-card--compact .fan-card__chips {
           justify-content: flex-end;
+          justify-self: end;
         }
 
         .fan-card__chip {
