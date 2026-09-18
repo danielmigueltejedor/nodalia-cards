@@ -2419,12 +2419,13 @@ test("compact tiles show the name when the row is wide enough", () => {
   }
 });
 
-test("compact vacuum keeps the battery chip in the header grid", () => {
+test("compact vacuum keeps the battery chip in the title row", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /\.vacuum-card__header-meta \{[^}]*grid-column: 3;/);
+  assert.match(source, /vacuum-card__headline/);
+  assert.match(source, /\.vacuum-card__headline \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(source, /showCopyBlock = showTitle \|\| chips\.length > 0 \|\| Boolean\(batteryChipMarkup\)/);
   assert.doesNotMatch(source, /\.vacuum-card__header-meta \{[^}]*position:\s*absolute;/);
   assert.doesNotMatch(source, /padding-right: \$\{batteryChipMarkup \? "88px"/);
-  assert.match(source, /\.vacuum-card--compact \.vacuum-card__header \{[\s\S]*?text-align: start;/);
 });
 
 test("compact light and humidifier keep the name beside the icon on narrow viewports", () => {

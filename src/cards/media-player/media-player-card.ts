@@ -271,11 +271,28 @@ export class NodaliaMediaPlayer extends HTMLElement {
     this._layoutObserver.observe(this);
   }
 
+  _getActivePlayerContext() {
+    const players = this._getVisiblePlayers();
+    const player = players[this._resolveActivePlayerIndex(players)] || players[0] || this._getConfiguredPlayers()[0];
+    if (!player?.entity) {
+      return null;
+    }
+    return {
+      player,
+      state: this._hass?.states?.[player.entity] || null,
+    };
+  }
+
   _getPresentationMode() {
+    const context = this._getActivePlayerContext();
+    const isTvPlayer = context
+      ? this._getPlayerDeviceType(context.player, context.state) === "tv"
+      : false;
     return resolvePresentationMode(
       this._config?.layout?.mode,
       { width: this.clientWidth, height: this.clientHeight },
       this._resolvedLayoutMode,
+      { preferSquareTiles: !isTvPlayer },
     );
   }
 
@@ -3298,22 +3315,9 @@ export class NodaliaMediaPlayer extends HTMLElement {
         :host([data-presentation="artwork"]) {
           align-self: start;
           aspect-ratio: 1 / 1;
-          height: auto !important;
-          max-height: 100%;
+          height: auto;
           max-width: 100%;
-          min-height: 0;
           overflow: hidden;
-          width: 100%;
-        }
-
-        :host([data-presentation="square"]) .dock,
-        :host([data-presentation="artwork"]) .dock,
-        :host([data-presentation="square"]) .dock-inner,
-        :host([data-presentation="artwork"]) .dock-inner,
-        :host([data-presentation="square"]) .player-stack,
-        :host([data-presentation="artwork"]) .player-stack {
-          height: 100%;
-          min-height: 0;
           width: 100%;
         }
 

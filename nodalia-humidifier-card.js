@@ -4,7 +4,7 @@
   // src/cards/humidifier/humidifier-constants.ts
   var CARD_TAG = "nodalia-humidifier-card";
   var EDITOR_TAG = "nodalia-humidifier-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.13b";
+  var CARD_VERSION = "2.3.0-alpha.14b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2329,7 +2329,7 @@
       if (config.show_fan_mode_chip !== false && currentFanMode) {
         chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
       }
-      const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+      const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
       const showCopyBlock = showTitle || chips.length > 0;
       const hasSecondaryControls = modeOptions.length > 0 || fanModeOptions.length > 0;
       const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;

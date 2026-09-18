@@ -8,6 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.14b] - 2026-09-18
+
+Fourteenth experimental TypeScript architecture preview on the parallel `b` line.
+Playing music tiles stay square overlays on phone and desktop, idle TVs stay
+compact pills, and Vacuum battery chips sit on the title row.
+
+### Changed
+
+- Auto Media Player no longer collapses 6-column music tiles into chip or
+  compact thumbnail layouts; those tiles use the square artwork overlay.
+- Host square CSS no longer forces `height: auto !important`, which had
+  squashed desktop overlays into chips.
+- Compact Vacuum puts the battery chip in the title row so it cannot overlay
+  the name or state chip.
+- Circular Fan and Humidifier show the entity title like Cover and Climate, so
+  iPhone browser smoke tests can compare native circular chrome.
+- Browser smoke tests tolerate a missing climate override chip instead of
+  throwing inside `getComputedStyle`.
+
+### Validation
+
+- Node regressions for auto square tiles, collapsed-short tiles staying square,
+  TV compact preference, and Vacuum headline chips.
+
 ## [2.3.0-alpha.13b] - 2026-09-18
 
 Thirteenth experimental TypeScript architecture preview on the parallel `b` line.

@@ -10,6 +10,13 @@ export const MEDIA_PLAYER_PRESENTATION_MODES = [
 ] as const;
 
 const EXPLICIT_MODES = ["standard", "square", "chip", "compact", "artwork"] as const;
+const TILE_MAX_WIDTH = 960;
+const CHIP_MIN_WIDTH = 960;
+const COMPACT_MAX_WIDTH = 132;
+
+export type ResolvePresentationOptions = {
+  preferSquareTiles?: boolean;
+};
 
 export function normalizePresentationMode(value: unknown): MediaPlayerPresentationMode {
   const key = String(value || "").trim().toLowerCase();
@@ -35,14 +42,22 @@ function keepCurrentIfClose(
     return next;
   }
 
+  if (next === "square" && (current === "chip" || current === "compact")) {
+    return "square";
+  }
+
+  if (current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
+    return "square";
+  }
+
   const ratio = width / Math.max(height, 1);
   if (current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
     return "square";
   }
-  if (current === "chip" && height <= 168 && ratio >= 1.7) {
+  if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
     return "chip";
   }
-  if (current === "compact" && width <= 300 && height <= 230) {
+  if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
     return "compact";
   }
   if (current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
@@ -55,6 +70,7 @@ export function resolvePresentationMode(
   mode: unknown,
   size: { width?: number; height?: number } = {},
   current: MediaPlayerPresentationMode | "" = "",
+  options: ResolvePresentationOptions = {},
 ): Exclude<MediaPlayerPresentationMode, "auto"> {
   const requested = normalizePresentationMode(mode);
   if (requested !== "auto") {
@@ -63,18 +79,24 @@ export function resolvePresentationMode(
 
   const width = Number(size.width) || 0;
   const height = Number(size.height) || 0;
-  if (!(width > 0) || !(height > 0)) {
+  if (!(width > 0)) {
     return current && current !== "auto" ? current : "standard";
   }
 
-  const ratio = width / height;
+  const preferSquareTiles = options.preferSquareTiles !== false;
+  const ratio = height > 0 ? width / height : 0;
   let next: Exclude<MediaPlayerPresentationMode, "auto"> = "standard";
-  if (height <= 132 && ratio >= 2.05) {
+
+  if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
     next = "chip";
+  } else if (preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH) {
+    next = "square";
+  } else if (!preferSquareTiles && width <= 248 && (height <= 210 || height <= 0)) {
+    next = "compact";
+  } else if (preferSquareTiles && width < COMPACT_MAX_WIDTH) {
+    next = "compact";
   } else if (ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
     next = "square";
-  } else if (width <= 248 && height <= 210) {
-    next = "compact";
   }
 
   const stableCurrent = current && current !== "auto" ? current : "";

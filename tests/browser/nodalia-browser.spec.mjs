@@ -270,8 +270,21 @@ test("device and Climate layout variants render and keep their native controls",
     compactClimate._lastRenderSignature = "";
     compactClimate._render();
     await new Promise(resolve => requestAnimationFrame(() => resolve()));
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
     const visual = element => {
+      if (!(element instanceof Element)) {
+        return {
+          width: 0,
+          height: 0,
+          borderRadius: "",
+          fontSize: "",
+          fontWeight: "",
+          padding: "",
+          backdropFilter: "",
+          strokeWidth: "",
+        };
+      }
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
       return {
@@ -306,8 +319,12 @@ test("device and Climate layout variants render and keep their native controls",
       fanControl: visual(fanCompactRoot.querySelector(".fan-card__control")),
       climateControl: visual(climateCompactRoot.querySelector(".climate-card__compact-step")),
       climateOverride: visual(climateCompactRoot.querySelector(".climate-card__override-chip")),
-      climateOverrideBoxSizing: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip")).boxSizing,
-      climateOverrideLabelOverflow: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip-label")).textOverflow,
+      climateOverrideBoxSizing: climateCompactRoot.querySelector(".climate-card__override-chip")
+        ? getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip")).boxSizing
+        : "",
+      climateOverrideLabelOverflow: climateCompactRoot.querySelector(".climate-card__override-chip-label")
+        ? getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip-label")).textOverflow
+        : "",
     };
     const climateDial = climateCircularRoot.querySelector(".climate-card__dial");
     const circularMetrics = {

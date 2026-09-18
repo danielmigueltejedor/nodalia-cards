@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.13b";
+  var CARD_VERSION = "2.3.0-alpha.14b";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -167,6 +167,9 @@
     "compact",
     "artwork"
   ];
+  var TILE_MAX_WIDTH = 960;
+  var CHIP_MIN_WIDTH = 960;
+  var COMPACT_MAX_WIDTH = 132;
   function normalizePresentationMode(value) {
     const key = String(value || "").trim().toLowerCase();
     if (key === "horizontal" || key === "long" || key === "chip") {
@@ -184,14 +187,20 @@
     if (!current || current === next) {
       return next;
     }
+    if (next === "square" && (current === "chip" || current === "compact")) {
+      return "square";
+    }
+    if (current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
+      return "square";
+    }
     const ratio = width / Math.max(height, 1);
     if (current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
       return "square";
     }
-    if (current === "chip" && height <= 168 && ratio >= 1.7) {
+    if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
       return "chip";
     }
-    if (current === "compact" && width <= 300 && height <= 230) {
+    if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
       return "compact";
     }
     if (current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
@@ -199,24 +208,29 @@
     }
     return next;
   }
-  function resolvePresentationMode(mode, size = {}, current = "") {
+  function resolvePresentationMode(mode, size = {}, current = "", options = {}) {
     const requested = normalizePresentationMode(mode);
     if (requested !== "auto") {
       return requested;
     }
     const width = Number(size.width) || 0;
     const height = Number(size.height) || 0;
-    if (!(width > 0) || !(height > 0)) {
+    if (!(width > 0)) {
       return current && current !== "auto" ? current : "standard";
     }
-    const ratio = width / height;
+    const preferSquareTiles = options.preferSquareTiles !== false;
+    const ratio = height > 0 ? width / height : 0;
     let next = "standard";
-    if (height <= 132 && ratio >= 2.05) {
+    if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
       next = "chip";
+    } else if (preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH) {
+      next = "square";
+    } else if (!preferSquareTiles && width <= 248 && (height <= 210 || height <= 0)) {
+      next = "compact";
+    } else if (preferSquareTiles && width < COMPACT_MAX_WIDTH) {
+      next = "compact";
     } else if (ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
       next = "square";
-    } else if (width <= 248 && height <= 210) {
-      next = "compact";
     }
     const stableCurrent = current && current !== "auto" ? current : "";
     return keepCurrentIfClose(stableCurrent, next, width, height);
@@ -1266,11 +1280,25 @@
       });
       this._layoutObserver.observe(this);
     }
+    _getActivePlayerContext() {
+      const players = this._getVisiblePlayers();
+      const player = players[this._resolveActivePlayerIndex(players)] || players[0] || this._getConfiguredPlayers()[0];
+      if (!player?.entity) {
+        return null;
+      }
+      return {
+        player,
+        state: this._hass?.states?.[player.entity] || null
+      };
+    }
     _getPresentationMode() {
+      const context = this._getActivePlayerContext();
+      const isTvPlayer = context ? this._getPlayerDeviceType(context.player, context.state) === "tv" : false;
       return resolvePresentationMode(
         this._config?.layout?.mode,
         { width: this.clientWidth, height: this.clientHeight },
-        this._resolvedLayoutMode
+        this._resolvedLayoutMode,
+        { preferSquareTiles: !isTvPlayer }
       );
     }
     _syncPresentationMode() {
@@ -3658,22 +3686,9 @@
         :host([data-presentation="artwork"]) {
           align-self: start;
           aspect-ratio: 1 / 1;
-          height: auto !important;
-          max-height: 100%;
+          height: auto;
           max-width: 100%;
-          min-height: 0;
           overflow: hidden;
-          width: 100%;
-        }
-
-        :host([data-presentation="square"]) .dock,
-        :host([data-presentation="artwork"]) .dock,
-        :host([data-presentation="square"]) .dock-inner,
-        :host([data-presentation="artwork"]) .dock-inner,
-        :host([data-presentation="square"]) .player-stack,
-        :host([data-presentation="artwork"]) .player-stack {
-          height: 100%;
-          min-height: 0;
           width: 100%;
         }
 

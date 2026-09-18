@@ -2157,7 +2157,7 @@ export class NodaliaFanCard extends HTMLElement {
     const isCompactLayout = this._isCompactLayout;
     const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
     const chips = [];
-    const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+    const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
     const showCopyBlock = showTitle || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
     if (config.show_state === true) {

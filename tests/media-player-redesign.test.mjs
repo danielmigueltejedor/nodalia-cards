@@ -38,9 +38,15 @@ test("media player layouts stay stable across nearby size changes", () => {
   assert.equal(api.resolvePresentationMode("square"), "square");
   assert.equal(api.resolvePresentationMode("horizontal"), "chip");
   assert.equal(api.resolvePresentationMode("auto", { width: 180, height: 180 }), "square");
-  assert.equal(api.resolvePresentationMode("auto", { width: 520, height: 96 }), "chip");
-  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }), "compact");
+  assert.equal(api.resolvePresentationMode("auto", { width: 400, height: 96 }), "square");
+  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }), "square");
+  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }, "compact"), "square");
   assert.equal(api.resolvePresentationMode("auto", { width: 210, height: 160 }, "square"), "square");
+  assert.equal(api.resolvePresentationMode("auto", { width: 1000, height: 96 }), "chip");
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 220, height: 160 }, "", { preferSquareTiles: false }),
+    "compact",
+  );
 });
 
 test("recent artwork history skips consecutive duplicates and respects the cap", () => {
@@ -133,11 +139,14 @@ test("media player idle compact keeps name and power on one row", () => {
   assert.doesNotMatch(source, /idle-tv-off-bar/);
 });
 
-test("square media player overlay cannot grow taller than its width", () => {
+test("square media player overlay stays a tile instead of collapsing to a chip", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
-  assert.match(source, /:host\(\[data-presentation="square"\]\)[\s\S]*?min-height: 0;/);
-  assert.match(source, /\.media-player-card--square,[\s\S]*?min-height: 0;/);
-  assert.match(source, /height: auto !important;/);
+  assert.match(source, /:host\(\[data-presentation="square"\]\)/);
+  assert.match(source, /preferSquareTiles: !isTvPlayer/);
+  assert.doesNotMatch(source, /height: auto !important;/);
+  const layout = read("src/cards/media-player/media-player-layout.ts");
+  assert.match(layout, /CHIP_MIN_WIDTH = 960/);
+  assert.match(layout, /preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH/);
 });
 
 test("media player artwork containers share one border radius", () => {

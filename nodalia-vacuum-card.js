@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.13b";
+const CARD_VERSION = "2.3.0-alpha.14b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -2859,7 +2859,7 @@ class NodaliaVacuumCard extends HTMLElement {
       : "";
 
     const showTitle = !isCompactLayout || this._shouldShowCompactTitle();
-    const showCopyBlock = showTitle || chips.length > 0;
+    const showCopyBlock = showTitle || chips.length > 0 || Boolean(batteryChipMarkup);
     const canRunBodyCardTap =
       this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
     const canRunIconCardTap =
@@ -2956,13 +2956,13 @@ class NodaliaVacuumCard extends HTMLElement {
           align-items: start;
           display: grid;
           gap: ${styles.card.gap};
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-columns: auto minmax(0, 1fr);
           min-width: 0;
           position: relative;
         }
 
         .vacuum-card--compact .vacuum-card__header {
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-columns: auto minmax(0, 1fr);
           text-align: start;
         }
 
@@ -3062,13 +3062,23 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
         }
 
+        .vacuum-card__headline {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+
+        .vacuum-card__headline-fill {
+          min-width: 0;
+        }
+
         .vacuum-card__header-meta {
-          align-items: flex-start;
+          align-items: center;
           display: flex;
           flex-shrink: 0;
-          grid-column: 3;
           justify-content: flex-end;
-          min-width: 0;
         }
 
         .vacuum-card__title {
@@ -3391,7 +3401,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
           .vacuum-card__header {
             gap: 10px;
-            grid-template-columns: auto minmax(0, 1fr) auto;
+            grid-template-columns: auto minmax(0, 1fr);
           }
 
           .vacuum-card__header-meta {
@@ -3431,13 +3441,15 @@ class NodaliaVacuumCard extends HTMLElement {
               showCopyBlock
                 ? `
                   <div class="vacuum-card__copy">
-                    ${showTitle ? `<div class="vacuum-card__title">${escapeHtml(title)}</div>` : ""}
+                    <div class="vacuum-card__headline">
+                      ${showTitle ? `<div class="vacuum-card__title">${escapeHtml(title)}</div>` : `<span class="vacuum-card__headline-fill"></span>`}
+                      ${batteryChipMarkup ? `<div class="vacuum-card__header-meta">${batteryChipMarkup}</div>` : ""}
+                    </div>
                     ${chips.length ? `<div class="vacuum-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 `
                 : ""
             }
-            ${batteryChipMarkup ? `<div class="vacuum-card__header-meta">${batteryChipMarkup}</div>` : ""}
           </div>
 
           ${

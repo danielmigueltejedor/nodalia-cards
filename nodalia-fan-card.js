@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.13b";
+  var CARD_VERSION = "2.3.0-alpha.14b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2223,7 +2223,7 @@
       const isCompactLayout = this._isCompactLayout;
       const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
       const chips = [];
-      const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+      const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
       const showCopyBlock = showTitle || config.show_state === true || isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
       if (config.show_state === true) {
         chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);

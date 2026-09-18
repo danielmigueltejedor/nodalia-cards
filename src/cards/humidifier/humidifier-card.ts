@@ -2315,7 +2315,7 @@ export class NodaliaHumidifierCard extends HTMLElement {
       chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
-    const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+    const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
     const showCopyBlock = showTitle || chips.length > 0;
     const hasSecondaryControls = (modeOptions.length > 0) || (fanModeOptions.length > 0);
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;

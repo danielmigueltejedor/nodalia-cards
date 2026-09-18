@@ -4,7 +4,7 @@
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
   var EDITOR_TAG = "nodalia-light-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.13b";
+  var CARD_VERSION = "2.3.0-alpha.14b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
