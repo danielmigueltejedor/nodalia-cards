@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-alarm-panel-card";
 const EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-const CARD_VERSION = "2.3.0-alpha.10b";
+const CARD_VERSION = "2.3.0-alpha.11b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -496,6 +496,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._config?.grid_options?.columns,
+    });
+  }
+
+  _shouldShowCompactTitle(width) {
+    return window.NodaliaUtils.shouldShowCompactCardTitle({
+      width: Math.round(width || this._cardWidth || this.clientWidth || 0),
     });
   }
 
@@ -1665,7 +1671,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
               ${showUnavailableBadge ? `<span class="alarm-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
             <div class="alarm-card__copy ${shouldAnimateEntrance ? "alarm-card__copy--entering" : ""}">
-              ${isCompactLayout ? "" : `<div class="alarm-card__title">${escapeHtml(title)}</div>`}
+              ${!isCompactLayout || this._shouldShowCompactTitle() ? `<div class="alarm-card__title">${escapeHtml(title)}</div>` : ""}
               ${chips.length ? `<div class="alarm-card__chips">${chips.join("")}</div>` : ""}
             </div>
           </div>

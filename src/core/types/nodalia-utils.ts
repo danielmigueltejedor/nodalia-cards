@@ -16,6 +16,9 @@ export interface NodaliaUtilsApi {
     width?: number;
     gridColumns?: number | null;
   }): boolean;
+  shouldShowCompactCardTitle(options?: {
+    width?: number;
+  }): boolean;
   isUnsafeConfigPathKey(key: PropertyKey): boolean;
   setByPath(target: object, path: string, value: unknown): void;
   deleteByPath(target: object, path: string): void;

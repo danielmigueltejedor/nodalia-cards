@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-cover-card";
 const EDITOR_TAG = "nodalia-cover-card-editor";
-const CARD_VERSION = "2.3.0-alpha.10b";
+const CARD_VERSION = "2.3.0-alpha.11b";
 const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 const COMPACT_LAYOUT_THRESHOLD = 150;
@@ -856,6 +856,12 @@ class NodaliaCoverCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width: Math.round(this._cardWidth || this.clientWidth || 0),
       gridColumns: this._getConfiguredGridColumns(),
+    });
+  }
+
+  _shouldShowCompactTitle() {
+    return window.NodaliaUtils.shouldShowCompactCardTitle({
+      width: Math.round(this._cardWidth || this.clientWidth || 0),
     });
   }
 
@@ -1722,7 +1728,8 @@ class NodaliaCoverCard extends HTMLElement {
     const supportsPosition = canSetPosition && position !== null;
     const supportsTilt = config.show_tilt_slider !== false && this._supports(COVER_FEATURES.SET_TILT_POSITION, state) && tilt !== null;
     const supportsStop = config.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
-    const showCopyBlock = !this._isCompactLayout() || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
+    const showTitle = isCircularLayout || !this._isCompactLayout() || this._shouldShowCompactTitle();
+    const showCopyBlock = showTitle || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
     const tOpen = this._coverCardUi("open", "Open");
     const tClose = this._coverCardUi("close", "Close");
     const tStop = this._coverCardUi("stop", "Stop");
@@ -2419,7 +2426,7 @@ class NodaliaCoverCard extends HTMLElement {
             ${showCopyBlock ? `
               <div class="fan-card__copy">
                 <div class="fan-card__headline">
-                  ${!isCircularLayout && this._isCompactLayout() ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                  ${showTitle ? `<div class="fan-card__title">${escapeHtml(title)}</div>` : ""}
                   ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
                 </div>
               </div>

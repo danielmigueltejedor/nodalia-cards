@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-entity-card";
 const EDITOR_TAG = "nodalia-entity-card-editor";
-const CARD_VERSION = "2.3.0-alpha.10b";
+const CARD_VERSION = "2.3.0-alpha.11b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -1441,6 +1441,7 @@ class NodaliaEntityCard extends HTMLElement {
       `ia:${String(this._config?.icon_active || "")}`,
       `ii:${String(this._config?.icon_inactive || "")}`,
       `c:${this._isCompactLayout ? 1 : 0}`,
+      `ct:${this._shouldShowCompactTitle() ? 1 : 0}`,
       `qa:${Array.isArray(this._config?.quick_actions) ? this._config.quick_actions.length : 0}`,
       `tap:${String(this._config?.tap_action || "")}`,
       `itap:${String(this._config?.icon_tap_action ?? "")}`,
@@ -1486,6 +1487,12 @@ class NodaliaEntityCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
+    });
+  }
+
+  _shouldShowCompactTitle(width) {
+    return window.NodaliaUtils.shouldShowCompactCardTitle({
+      width: Math.round(width || this._cardWidth || this.clientWidth || 0),
     });
   }
 
@@ -4641,7 +4648,7 @@ class NodaliaEntityCard extends HTMLElement {
     const secondaryValue = config.show_secondary_chip !== false
       ? this._formatAttributeValue(state, config.secondary_attribute)
       : null;
-    const showTitle = !isCompactLayout;
+    const showTitle = config.show_name !== false && (!isCompactLayout || this._shouldShowCompactTitle());
     const placeStateChipOnTitleRow = statePosition === "right" && Boolean(stateChip);
     const chips = [
       placeStateChipOnTitleRow ? "" : stateChip,

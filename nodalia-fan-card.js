@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.10b";
+  var CARD_VERSION = "2.3.0-alpha.11b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -712,6 +712,9 @@
         width,
         gridColumns: this._getConfiguredGridColumns()
       });
+    }
+    _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+      return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
     }
     _triggerHaptic(style = this._config?.haptics?.style) {
       if (!this._config?.haptics?.enabled) {
@@ -2220,7 +2223,8 @@
       const isCompactLayout = this._isCompactLayout;
       const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
       const chips = [];
-      const showCopyBlock = !isCompactLayout || config.show_state === true || isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
+      const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+      const showCopyBlock = showTitle || config.show_state === true || isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
       if (config.show_state === true) {
         chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
       }
@@ -2670,12 +2674,12 @@
         }
 
         .fan-card--compact .fan-card__copy {
-          justify-items: center;
+          justify-items: start;
         }
 
         .fan-card--compact .fan-card__headline {
-          grid-template-columns: minmax(0, 1fr);
-          justify-items: center;
+          grid-template-columns: minmax(0, 1fr) auto;
+          justify-items: start;
         }
 
         .fan-card__title {
@@ -2700,7 +2704,7 @@
         }
 
         .fan-card--compact .fan-card__chips {
-          justify-content: center;
+          justify-content: flex-end;
         }
 
         .fan-card__chip {
@@ -3585,7 +3589,7 @@
             ${showCopyBlock ? `
                 <div class="fan-card__copy">
                   <div class="fan-card__headline">
-                    ${!isCircularLayout && isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                    ${showTitle ? `<div class="fan-card__title">${escapeHtml(title)}</div>` : ""}
                     ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 </div>

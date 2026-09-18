@@ -4,7 +4,7 @@
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
   var EDITOR_TAG = "nodalia-light-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.10b";
+  var CARD_VERSION = "2.3.0-alpha.11b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -765,6 +765,7 @@
         Number(attrs.supported_features ?? -1),
         window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en",
         this._isCompactLayout ? 1 : 0,
+        this._shouldShowCompactTitle() ? 1 : 0,
         this._shouldUseMiniLayout() ? 1 : 0,
         String(this._activeControlMode || ""),
         this._config?.show_state === true ? 1 : 0,
@@ -882,6 +883,9 @@
         width,
         gridColumns: this._getConfiguredGridColumns()
       });
+    }
+    _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+      return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
     }
     _triggerHaptic(style = this._config?.haptics?.style) {
       if (!this._config?.haptics?.enabled) {
@@ -2585,7 +2589,8 @@
       const activeValueChipBelowMarkup = statePosition === "below" ? activeValueChipMarkup : "";
       const hasHeaderChips = Boolean(stateChipHeaderMarkup || activeValueChipHeaderMarkup || controlsPanelToggleMarkup);
       const hasBelowChips = Boolean(stateChipBelowMarkup || activeValueChipBelowMarkup);
-      const showCopyBlock = !isMiniLayout && (!isCompactLayout || hasHeaderChips || hasBelowChips);
+      const showTitle = !isMiniLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+      const showCopyBlock = showTitle || hasHeaderChips || hasBelowChips;
       const sliderInnerMarkup = showDetailedControls && availableControlModes.length > 0 ? `
         ${displayedControlMode === "temperature" ? `
               <div class="light-card__slider-wrap">
@@ -3035,7 +3040,7 @@
         }
 
         .light-card--compact .light-card__copy-header {
-          justify-content: flex-end;
+          justify-content: space-between;
           width: 100%;
         }
 
@@ -3821,7 +3826,7 @@
             ${showCopyBlock ? `
                 <div class="light-card__copy">
                   <div class="light-card__copy-header">
-                    ${isCompactLayout ? "" : `<div class="light-card__title">${escapeHtml(title)}</div>`}
+                    ${showTitle ? `<div class="light-card__title">${escapeHtml(title)}</div>` : ""}
                     ${hasHeaderChips ? `<div class="light-card__chips">${stateChipHeaderMarkup}${activeValueChipHeaderMarkup}${controlsPanelToggleMarkup}</div>` : ""}
                   </div>
                   ${hasBelowChips ? `<div class="light-card__chips light-card__chips--below">${stateChipBelowMarkup}${activeValueChipBelowMarkup}</div>` : ""}

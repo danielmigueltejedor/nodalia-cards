@@ -359,6 +359,10 @@ export class NodaliaFanCard extends HTMLElement {
     });
   }
 
+  _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+    return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
+  }
+
   _triggerHaptic(style = this._config?.haptics?.style) {
     if (!this._config?.haptics?.enabled) {
       return;
@@ -2153,7 +2157,8 @@ export class NodaliaFanCard extends HTMLElement {
     const isCompactLayout = this._isCompactLayout;
     const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
     const chips = [];
-    const showCopyBlock = !isCompactLayout || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
+    const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+    const showCopyBlock = showTitle || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
     if (config.show_state === true) {
       chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
@@ -2696,12 +2701,12 @@ export class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__copy {
-          justify-items: center;
+          justify-items: start;
         }
 
         .fan-card--compact .fan-card__headline {
-          grid-template-columns: minmax(0, 1fr);
-          justify-items: center;
+          grid-template-columns: minmax(0, 1fr) auto;
+          justify-items: start;
         }
 
         .fan-card__title {
@@ -2726,7 +2731,7 @@ export class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__chips {
-          justify-content: center;
+          justify-content: flex-end;
         }
 
         .fan-card__chip {
@@ -3618,7 +3623,7 @@ export class NodaliaFanCard extends HTMLElement {
               ? `
                 <div class="fan-card__copy">
                   <div class="fan-card__headline">
-                    ${!isCircularLayout && isCompactLayout ? "" : `<div class="fan-card__title">${escapeHtml(title)}</div>`}
+                    ${showTitle ? `<div class="fan-card__title">${escapeHtml(title)}</div>` : ""}
                     ${chips.length ? `<div class="fan-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 </div>

@@ -2403,6 +2403,22 @@ test("compact tiles keep the icon bubble on the left", () => {
   }
 });
 
+test("compact tiles show the name when the row is wide enough", () => {
+  for (const file of [
+    "src/cards/light/light-card.ts",
+    "src/cards/fan/fan-card.ts",
+    "src/cards/humidifier/humidifier-card.ts",
+    "nodalia-entity-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-alarm-panel-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /shouldShowCompactCardTitle/, file);
+    assert.doesNotMatch(source, /isCompactLayout \? "" : `<div class="\w+-card__title"/, file);
+  }
+});
+
 test("fav card aligns service security with entity and cleans up alarm host span", () => {
   const source = read("nodalia-fav-card.js");
   assert.match(source, /strict_service_actions: true/);

@@ -10,6 +10,7 @@
     "mergeDeep",
     "compactConfig",
     "shouldUseCompactCardLayout",
+    "shouldShowCompactCardTitle",
     "getByPath",
     "clamp",
     "escapeHtml",
@@ -314,6 +315,17 @@
     }
 
     return false;
+  }
+
+  /** Compact tiles still show the name when the row is wide enough for icon + label. */
+  const COMPACT_CARD_TITLE_MIN_WIDTH = 148;
+
+  function shouldShowCompactCardTitle({ width } = {}) {
+    const measured = Number(width);
+    if (!Number.isFinite(measured) || measured <= 0) {
+      return true;
+    }
+    return measured >= COMPACT_CARD_TITLE_MIN_WIDTH;
   }
 
   function escapeHtml(value) {
@@ -2434,6 +2446,7 @@
     mergeDeep,
     compactConfig,
     shouldUseCompactCardLayout,
+    shouldShowCompactCardTitle,
     getByPath,
     clamp,
     escapeHtml,

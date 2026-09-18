@@ -4,7 +4,7 @@
   // src/cards/humidifier/humidifier-constants.ts
   var CARD_TAG = "nodalia-humidifier-card";
   var EDITOR_TAG = "nodalia-humidifier-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.10b";
+  var CARD_VERSION = "2.3.0-alpha.11b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -740,6 +740,9 @@
         width,
         gridColumns: this._getConfiguredGridColumns()
       });
+    }
+    _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+      return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
     }
     _getState() {
       const actualState = this._getActualState();
@@ -2326,7 +2329,8 @@
       if (config.show_fan_mode_chip !== false && currentFanMode) {
         chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
       }
-      const showCopyBlock = !isCompactLayout || chips.length > 0;
+      const showTitle = !isCircularLayout && (!isCompactLayout || this._shouldShowCompactTitle());
+      const showCopyBlock = showTitle || chips.length > 0;
       const hasSecondaryControls = modeOptions.length > 0 || fanModeOptions.length > 0;
       const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
       const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
@@ -2799,13 +2803,13 @@
         }
 
         .humidifier-card--compact .humidifier-card__copy {
-          justify-items: center;
-          text-align: center;
+          justify-items: start;
+          text-align: start;
         }
 
         .humidifier-card--compact .humidifier-card__headline {
-          grid-template-columns: minmax(0, 1fr);
-          justify-items: center;
+          grid-template-columns: minmax(0, 1fr) auto;
+          justify-items: start;
         }
 
         .humidifier-card__title {
@@ -2833,7 +2837,15 @@
         }
 
         .humidifier-card--compact .humidifier-card__chips {
-          justify-content: center;
+          justify-content: flex-end;
+        }
+
+        .humidifier-card--compact .humidifier-card__title {
+          -webkit-line-clamp: 1;
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .humidifier-card__chip {
@@ -3751,7 +3763,7 @@
             ${showCopyBlock ? `
                 <div class="humidifier-card__copy">
                   <div class="humidifier-card__headline">
-                    ${!isCircularLayout && isCompactLayout ? "" : `<div class="humidifier-card__title">${escapeHtml(title)}</div>`}
+                    ${showTitle ? `<div class="humidifier-card__title">${escapeHtml(title)}</div>` : ""}
                     ${chips.length ? `<div class="humidifier-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 </div>

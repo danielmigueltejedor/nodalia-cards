@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-vacuum-card";
 const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.10b";
+const CARD_VERSION = "2.3.0-alpha.11b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,
@@ -777,6 +777,10 @@ class NodaliaVacuumCard extends HTMLElement {
       width,
       gridColumns: this._getConfiguredGridColumns(),
     });
+  }
+
+  _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+    return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
   }
 
   _triggerHaptic(style = this._config?.haptics?.style) {
@@ -2854,7 +2858,8 @@ class NodaliaVacuumCard extends HTMLElement {
       `
       : "";
 
-    const showCopyBlock = !isCompactLayout || chips.length > 0;
+    const showTitle = !isCompactLayout || this._shouldShowCompactTitle();
+    const showCopyBlock = showTitle || chips.length > 0;
     const canRunBodyCardTap =
       this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
     const canRunIconCardTap =
@@ -2963,7 +2968,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card--compact .vacuum-card__copy {
-          justify-items: ${batteryChipMarkup ? "start" : "center"};
+          justify-items: start;
         }
 
         .vacuum-card--compact .vacuum-card__chips {
@@ -3429,7 +3434,7 @@ class NodaliaVacuumCard extends HTMLElement {
               showCopyBlock
                 ? `
                   <div class="vacuum-card__copy">
-                    <div class="vacuum-card__title">${escapeHtml(title)}</div>
+                    ${showTitle ? `<div class="vacuum-card__title">${escapeHtml(title)}</div>` : ""}
                     ${chips.length ? `<div class="vacuum-card__chips">${chips.join("")}</div>` : ""}
                   </div>
                 `

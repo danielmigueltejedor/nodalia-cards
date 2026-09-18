@@ -8,6 +8,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.11b] - 2026-09-18
+
+Eleventh experimental TypeScript architecture preview on the parallel `b` line.
+Compact tiles show the entity name when the row is wide enough for icon plus
+label, instead of hiding it whenever compact density is on.
+
+### Changed
+
+- Compact Entity, Light, Fan, Humidifier, Cover, Vacuum and Alarm keep the
+  title on tiles about 148px wide or more, with ellipsis if the label is long.
+- Narrow phone tiles still hide the name so the icon stays the only content.
+
+### Validation
+
+- Node regressions for the shared compact-title helper and per-card title
+  rendering.
+
 ## [2.3.0-alpha.10b] - 2026-09-18
 
 Tenth experimental TypeScript architecture preview on the parallel `b` line.
