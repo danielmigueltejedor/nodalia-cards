@@ -4992,10 +4992,18 @@ export class NodaliaMediaPlayer extends HTMLElement {
       </div>
       ${mediaBrowserMarkup}
     `;
+    const idleArtworkConfig = this._config?.idle_artwork || {};
+    const artworkEntityId = String(this._activePlayerEntity || "");
+    const keepIdleArtwork = Boolean(this._activeArtworkIdle)
+      && idleArtworkConfig.enabled !== false
+      && this._artworkController.recentFor(artworkEntityId).length > 0;
     this._commitPersistentMediaShadow(markup, {
       artworkUrl: this._activeArtworkUrl || "",
       idle: Boolean(this._activeArtworkIdle),
-      hasAlbumBackground: Boolean(contentMarkup) && this._config.album_cover_background !== false,
+      entityId: artworkEntityId,
+      hasAlbumBackground: Boolean(contentMarkup)
+        && this._config.album_cover_background !== false
+        && Boolean(this._activeArtworkUrl || keepIdleArtwork),
     });
 
     this._restoreMediaBrowserScrollState();
@@ -5059,7 +5067,8 @@ export class NodaliaMediaPlayer extends HTMLElement {
       card.insertBefore(stage, card.firstChild);
       this._syncArtworkLayer(stage, artOptions);
     } else if (this._artworkController) {
-      this._artworkController.stopSlideshow();
+      this._artworkController.clear();
+      this._artworkController.detach();
     }
   }
 
@@ -5088,8 +5097,13 @@ export class NodaliaMediaPlayer extends HTMLElement {
     const idleConfig = config.idle_artwork || {};
     const playing = !artOptions.idle;
     const artworkUrl = String(artOptions.artworkUrl || "").trim();
+    const entityId = String(artOptions.entityId || this._activePlayerEntity || "");
+    const entityRecent = this._artworkController.recentFor(entityId);
+    if (this._idleSlideshowUrl && !entityRecent.includes(this._idleSlideshowUrl)) {
+      this._idleSlideshowUrl = "";
+    }
     if (artworkUrl) {
-      this._artworkController.remember(artworkUrl, idleConfig.max_items);
+      this._artworkController.remember(artworkUrl, idleConfig.max_items, entityId);
       this._artworkController.stopSlideshow();
       this._artworkController.show(artworkUrl, {
         crossfade: config.artwork?.crossfade !== false,
@@ -5097,6 +5111,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
         idle: Boolean(artOptions.idle) && idleConfig.animation === "subtle",
         animation: idleConfig.animation,
         connected: this.isConnected,
+        entityId,
       });
       if (config.artwork?.dynamic_colors !== false) {
         sampleArtworkPalette(artworkUrl).then(palette => {
@@ -5110,12 +5125,14 @@ export class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
-    if (playing || idleConfig.enabled === false || !this._artworkController.recent.length) {
-      this._artworkController.stopSlideshow();
+    if (playing || idleConfig.enabled === false || !entityRecent.length) {
+      this._artworkController.clear();
       return;
     }
 
-    const first = this._idleSlideshowUrl || this._artworkController.recent[0];
+    const first = (this._idleSlideshowUrl && entityRecent.includes(this._idleSlideshowUrl)
+      ? this._idleSlideshowUrl
+      : entityRecent[0]) || "";
     if (first) {
       this._artworkController.show(first, {
         crossfade: config.artwork?.crossfade !== false,
@@ -5123,6 +5140,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
         idle: true,
         animation: idleConfig.animation,
         connected: this.isConnected,
+        entityId,
       });
     }
     this._artworkController.startSlideshow(idleConfig, url => {
@@ -5136,8 +5154,9 @@ export class NodaliaMediaPlayer extends HTMLElement {
         idle: true,
         animation: idleConfig.animation,
         connected: this.isConnected,
+        entityId,
       });
-    });
+    }, entityId);
   }
 
   _startProgressDrag(track, clientX, event = null, pointerId = null) {

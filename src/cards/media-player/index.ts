@@ -1,6 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./media-player-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./media-player-config";
-import { extractArtworkPalette, rememberRecentArtwork } from "./media-player-artwork";
+import {
+  extractArtworkPalette,
+  MediaPlayerArtworkController,
+  rememberRecentArtwork,
+  resetArtworkLayers,
+} from "./media-player-artwork";
 import { interpolatePlaybackProgress, supportsMediaSeek } from "./media-player-progress";
 import { resolvePresentationMode } from "./media-player-layout";
 import { formatEditorJsonValue, parseEditorJsonObject } from "./media-player-helpers";
@@ -36,6 +41,8 @@ const publicApi = {
   supportsMediaSeek,
   rememberRecentArtwork,
   extractArtworkPalette,
+  resetArtworkLayers,
+  MediaPlayerArtworkController,
 };
 
 window.__NODALIA_MEDIA_PLAYER__ = publicApi as MediaPlayerPublicApi;

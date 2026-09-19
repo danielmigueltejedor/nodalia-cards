@@ -92,6 +92,72 @@ function loadCardNormalizeConfig(file, className) {
     assert.ok(typeof api?.normalizeConfig === "function", "humidifier public API should expose normalizeConfig");
     return api.normalizeConfig;
   }
+  if (file === "nodalia-cover-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_COVER__ || sandbox.__NODALIA_COVER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "cover public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-alarm-panel-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_ALARM_PANEL__ || sandbox.__NODALIA_ALARM_PANEL__;
+    assert.ok(typeof api?.normalizeConfig === "function", "alarm panel public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-vacuum-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_VACUUM__ || sandbox.__NODALIA_VACUUM__;
+    assert.ok(typeof api?.normalizeConfig === "function", "vacuum public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-entity-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_ENTITY__ || sandbox.__NODALIA_ENTITY__;
+    assert.ok(typeof api?.normalizeConfig === "function", "entity public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-fav-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_FAV__ || sandbox.__NODALIA_FAV__;
+    assert.ok(typeof api?.normalizeConfig === "function", "fav public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-person-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_PERSON__ || sandbox.__NODALIA_PERSON__;
+    assert.ok(typeof api?.normalizeConfig === "function", "person public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-camera-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CAMERA__ || sandbox.__NODALIA_CAMERA__;
+    assert.ok(typeof api?.normalizeConfig === "function", "camera public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-circular-gauge-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CIRCULAR_GAUGE__ || sandbox.__NODALIA_CIRCULAR_GAUGE__;
+    assert.ok(typeof api?.normalizeConfig === "function", "circular gauge public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-insignia-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_INSIGNIA__ || sandbox.__NODALIA_INSIGNIA__;
+    assert.ok(typeof api?.normalizeConfig === "function", "insignia public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-scenes-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_SCENES__ || sandbox.__NODALIA_SCENES__;
+    assert.ok(typeof api?.normalizeConfig === "function", "scenes public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-news-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_NEWS__ || sandbox.__NODALIA_NEWS__;
+    assert.ok(typeof api?.normalizeConfig === "function", "news public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -608,7 +674,7 @@ test("entity and fav icon bubbles match Light metrics and preserve tint contrast
   assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
   assert.match(source, /\.fav-card__icon ha-icon \{[\s\S]*color: \$\{iconColor\};/);
   assert.match(source, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
-  assert.match(source, /const iconSizePx = [^;]*isMini \? 38 : \(isCompactInline \? 38 : 56\)/);
+  assert.match(source, /(?:const|let|var) iconSizePx = [^;]*isMini \? 38 : \(?isCompactInline \? 38 : 56\)?/);
   assert.match(source, /--mdc-icon-size: calc\(\$\{iconSizePx\}px \* 0\.46\)/);
   assert.match(source, /@media \(max-width: 420px\) \{[\s\S]*\.fav-card--inline \.fav-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
   assert.match(entitySource, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
@@ -1232,7 +1298,7 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
   const source = read("nodalia-cover-card.js");
   const editorLabels = JSON.parse(read("i18n/editor/en.json"));
   assert.match(source, /control\.includeDomains = \["cover"\]/);
-  assert.match(source, /control\.entityFilter = stateObj => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
+  assert.match(source, /control\.entityFilter = \(?stateObj\)? => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
   assert.match(source, /class="editor-control-host"[\s\S]*data-mounted-control="cover-entity"/);
   assert.match(source, /<ha-icon-picker[\s\S]*data-field="\$\{escapeHtml\(field\)\}"/);
   assert.match(source, /editor-section__actions/);
@@ -2096,7 +2162,7 @@ test("circular gauge entrance animates a single smooth progress arc", () => {
 
 test("circular gauge keeps WebKit-safe literal colors in segmented SVG strokes", () => {
   const source = read("nodalia-circular-gauge-card.js");
-  assert.match(source, /const GAUGE_TINT_SEGMENT_COUNT = 16;/);
+  assert.match(source, /(?:const|let|var) GAUGE_TINT_SEGMENT_COUNT = 16;/);
   assert.match(source, /function resolveGaugeSvgStrokeColor\(/);
   assert.match(source, /\(\?:color-mix\|var\)\\\(/);
   assert.match(source, /getGaugeSvgFallbackColor\(sampleRatio\)/);
@@ -2382,6 +2448,10 @@ test("fan humidifier vacuum and light compact density share the same helper", ()
     "src/cards/light/light-card.ts",
     "src/cards/fan/fan-card.ts",
     "src/cards/humidifier/humidifier-card.ts",
+    "src/cards/cover/cover-card.ts",
+    "src/cards/vacuum/vacuum-card.ts",
+    "src/cards/alarm-panel/alarm-panel-card.ts",
+    "src/cards/entity/entity-card.ts",
   ]) {
     const source = read(file);
     assert.match(source, /shouldUseCompactCardLayout/, file);
@@ -2393,6 +2463,7 @@ test("compact tiles keep the icon bubble on the left", () => {
     ["src/cards/light/light-card.ts", /\.light-card--compact \.light-card__hero \{[\s\S]*?\}/],
     ["src/cards/fan/fan-card.ts", /\.fan-card--compact \.fan-card__hero \{[\s\S]*?\}/],
     ["src/cards/humidifier/humidifier-card.ts", /\.humidifier-card--compact \.humidifier-card__hero \{[\s\S]*?\}/],
+    ["src/cards/entity/entity-card.ts", /\.entity-card--compact:not\(\.entity-card--with-copy\) \.entity-card__hero \{[\s\S]*?\}/],
     ["nodalia-entity-card.js", /\.entity-card--compact:not\(\.entity-card--with-copy\) \.entity-card__hero \{[\s\S]*?\}/],
   ];
   for (const [file, pattern] of blocks) {
@@ -2408,6 +2479,10 @@ test("compact tiles show the name when the row is wide enough", () => {
     "src/cards/light/light-card.ts",
     "src/cards/fan/fan-card.ts",
     "src/cards/humidifier/humidifier-card.ts",
+    "src/cards/cover/cover-card.ts",
+    "src/cards/vacuum/vacuum-card.ts",
+    "src/cards/alarm-panel/alarm-panel-card.ts",
+    "src/cards/entity/entity-card.ts",
     "nodalia-entity-card.js",
     "nodalia-cover-card.js",
     "nodalia-vacuum-card.js",

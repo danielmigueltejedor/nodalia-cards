@@ -60,6 +60,46 @@ test("recent artwork history skips consecutive duplicates and respects the cap",
   );
 });
 
+test("stacked media players drop leftover album art when the next player has none", async () => {
+  const api = loadMediaPlayerApi();
+  const classList = () => {
+    const classes = new Set();
+    return {
+      add: name => classes.add(name),
+      remove: (...names) => names.forEach(name => classes.delete(name)),
+      toggle(name, force) {
+        if (force) {
+          classes.add(name);
+          return;
+        }
+        classes.delete(name);
+      },
+      contains: name => classes.has(name),
+    };
+  };
+  const current = { style: { backgroundImage: 'url("cover-living.jpg")' }, classList: classList() };
+  const incoming = { style: { backgroundImage: 'url("cover-living.jpg")' }, classList: classList() };
+  const stage = { style: { removeProperty() {}, setProperty() {} } };
+  const controller = new api.MediaPlayerArtworkController();
+  controller.attach({ stage, current, incoming });
+  controller.currentUrl = "cover-living.jpg";
+  controller.remember("cover-living.jpg", 8, "media_player.living");
+
+  const cleared = await controller.show("", { entityId: "media_player.kitchen" });
+
+  assert.equal(cleared, false);
+  assert.equal(controller.currentUrl, "");
+  assert.equal(current.style.backgroundImage, "");
+  assert.equal(incoming.style.backgroundImage, "");
+  same(controller.recentFor("media_player.living"), ["cover-living.jpg"]);
+  same(controller.recentFor("media_player.kitchen"), []);
+
+  const media = read("src/cards/media-player/media-player-card.ts");
+  assert.match(media, /this\._artworkController\.clear\(/);
+  assert.match(media, /recentFor\(artworkEntityId\)/);
+  assert.match(media, /Boolean\(this\._activeArtworkUrl \|\| keepIdleArtwork\)/);
+});
+
 test("palette extraction failure returns null instead of throwing", () => {
   const api = loadMediaPlayerApi();
   assert.equal(api.extractArtworkPalette({}), null);

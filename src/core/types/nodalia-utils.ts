@@ -47,6 +47,7 @@ export interface NodaliaUtilsApi {
     name: string;
     description: string;
     preview?: boolean;
+    documentationURL?: string;
   }) => void;
   renderLovelaceEntityGuardCardHtml?: (
     hass: unknown,
@@ -68,4 +69,5 @@ export interface NodaliaUtilsApi {
     target?: Record<string, unknown> | null,
   ) => unknown;
   clampEditorDialogScroll?: (editorHost: object) => void;
+  sanitizeCssValue(value: unknown, fallback?: unknown): string;
 }

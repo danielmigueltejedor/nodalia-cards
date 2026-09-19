@@ -846,7 +846,7 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-scenes-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-scenes-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
   assert.match(source, /callService\("scene", "turn_on"/);
   assert.match(source, /_triggerLaunchAnimation/);
@@ -862,7 +862,7 @@ test("news card is registered and shipped in the HACS bundle", () => {
   const build = read("scripts/build-bundle.mjs");
   const pkg = JSON.parse(read("package.json"));
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-news-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-news-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
   assert.match(source, /registerCustomCard\?\.\(\{/);
   assert.match(source, /function isSafeHttpUrl\(/);
@@ -877,7 +877,7 @@ test("camera card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-camera-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-camera-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
   assert.match(source, /camera_proxy/);
   assert.match(source, /camera-card__expanded/);
@@ -893,7 +893,7 @@ test("cover card is registered and shipped in the HACS bundle", () => {
   const sync = read("scripts/sync-standalone-embed.mjs");
   const pkg = read("package.json");
   const readme = read("README.md");
-  assert.match(source, /const CARD_TAG = "nodalia-cover-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-cover-card"/);
   assert.match(source, /set_cover_position/);
   assert.match(source, /set_cover_tilt_position/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCoverCard\)/);

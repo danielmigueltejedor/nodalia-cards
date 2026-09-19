@@ -1,428 +1,325 @@
-const CARD_TAG = "nodalia-scenes-card";
-const EDITOR_TAG = "nodalia-scenes-card-editor";
-const CARD_VERSION = "2.3.0-alpha.15b";
-const DEFAULT_SCENE_ACCENT = "#c9a86c";
-const SCENE_LAUNCH_DURATION = 780;
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
+/* Generated from src/cards/scenes. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/scenes/scenes-constants.ts
+  var CARD_TAG = "nodalia-scenes-card";
+  var EDITOR_TAG = "nodalia-scenes-card-editor";
+  var CARD_VERSION = "2.3.0-alpha.16b";
+  var DEFAULT_SCENE_ACCENT = "#c9a86c";
+  var SCENE_LAUNCH_DURATION = 780;
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
+  var TAP_ACTIONS = /* @__PURE__ */ new Set(["activate", "more-info", "none"]);
+  var HOLD_ACTIONS = /* @__PURE__ */ new Set(["activate", "more-info", "none"]);
 
-const TAP_ACTIONS = new Set(["activate", "more-info", "none"]);
-const HOLD_ACTIONS = new Set(["activate", "more-info", "none"]);
+  // src/cards/scenes/scenes-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
+  var getByPath = utils.getByPath.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var setByPath = utils.setByPath.bind(utils);
+  var deleteByPath = utils.deleteByPath.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var normalizeTextKey = utils.normalizeTextKey.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var escapeSelectorValue2 = utils.escapeSelectorValue.bind(utils);
+  var fireEvent = utils.fireEvent.bind(utils);
 
-const DEFAULT_CONFIG = {
-  name: "",
-  language: "auto",
-  scenes: [],
-  layout: "grid",
-  columns: 3,
-  show_title: true,
-  use_entity_icon: true,
-  use_entity_picture: false,
-  tap_action: "activate",
-  hold_action: "more-info",
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  animations: {
-    enabled: true,
-    content_duration: 420,
-    button_bounce_duration: 320,
-    launch_duration: SCENE_LAUNCH_DURATION,
-  },
-  styles: {
-    accent: DEFAULT_SCENE_ACCENT,
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
-    },
-    button: {
-      min_height: "88px",
-      border_radius: "22px",
-      gap: "8px",
-      icon_size: "24px",
-      label_size: "12px",
-      background: "",
-      border: "",
-    },
-    icon: {
-      size: "44px",
-      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      color: "var(--primary-text-color)",
-      on_color: DEFAULT_SCENE_ACCENT,
-    },
-    chip_border_radius: "999px",
-    title_size: "15px",
-  },
-};
-
-const STUB_CONFIG = {
-  name: "Scenes",
-  layout: "grid",
-  columns: 2,
-  scenes: [],
-};
-
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  isObject,
-  deepClone,
-  getByPath,
-  isUnsafeConfigPathKey,
-  setByPath,
-  deleteByPath,
-  clamp,
-  normalizeTextKey,
-  escapeHtml,
-  escapeSelectorValue,
-  fireEvent,
-} = window.NodaliaUtils;
-
-
-
-function mergeConfig(base, override) {
-  if (window.NodaliaUtils?.mergeDeep) {
-    return window.NodaliaUtils.mergeDeep(base, override || {});
-  }
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
-  }
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-  keys.forEach(key => {
-    if (isUnsafeConfigPathKey(key)) {
-      return;
+  // src/cards/scenes/scenes-helpers.ts
+  function mergeConfig(base, override) {
+    if (window.NodaliaUtils?.mergeDeep) {
+      return window.NodaliaUtils.mergeDeep(base, override || {});
     }
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-    if (overrideValue === undefined) {
-      result[key] = deepClone(baseValue);
-      return;
+    if (Array.isArray(base)) {
+      return Array.isArray(override) ? override.map((item) => deepClone(item)) : deepClone(base);
     }
-    if (Array.isArray(overrideValue)) {
-      result[key] = deepClone(overrideValue);
-      return;
+    if (!isObject(base)) {
+      return override === void 0 ? base : override;
     }
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      result[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-    result[key] = overrideValue;
-  });
-  return result;
-}
-
-function compactConfig(value) {
-  if (window.NodaliaUtils?.compactConfig) {
-    return window.NodaliaUtils.compactConfig(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-  if (isObject(value)) {
-    const compacted = {};
-    Object.entries(value).forEach(([key, item]) => {
+    const result = {};
+    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
+    keys.forEach((key) => {
       if (isUnsafeConfigPathKey(key)) {
         return;
       }
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
+      const baseValue = base[key];
+      const overrideValue = override ? override[key] : void 0;
+      if (overrideValue === void 0) {
+        result[key] = deepClone(baseValue);
+        return;
+      }
+      if (Array.isArray(overrideValue)) {
+        result[key] = deepClone(overrideValue);
+        return;
+      }
+      if (isObject(baseValue) && isObject(overrideValue)) {
+        result[key] = mergeConfig(baseValue, overrideValue);
+        return;
+      }
+      result[key] = overrideValue;
+    });
+    return result;
+  }
+  function compactConfig(value) {
+    if (window.NodaliaUtils?.compactConfig) {
+      return window.NodaliaUtils.compactConfig(value);
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
+    }
+    if (isObject(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        if (isUnsafeConfigPathKey(key)) {
+          return;
+        }
+        const cleaned = compactConfig(item);
+        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== void 0 && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
+      });
+      return compacted;
+    }
+    if (value === "" || value === null || value === void 0) {
+      return void 0;
+    }
+    return value;
+  }
+  function moveItem(list, fromIndex, toIndex) {
+    if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+      return;
+    }
+    const [item] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, item);
+  }
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+  function resolveEditorColorValue(value) {
+    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+    if (typeof resolver === "function") {
+      return resolver(value);
+    }
+    return String(value ?? "").trim();
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
+    }
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
+    }
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+    return {
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex(hex, alpha)
+    };
+  }
+  function getEditorColorFallbackValue(field) {
+    const normalized = String(field || "");
+    if (normalized.endsWith("icon.on_color") || normalized.endsWith("styles.accent") || normalized.endsWith(".color")) {
+      return DEFAULT_SCENE_ACCENT;
+    }
+    if (normalized.endsWith("icon.color")) {
+      return DEFAULT_CONFIG.styles.icon.color;
+    }
+    if (normalized.endsWith("icon.background")) {
+      return DEFAULT_CONFIG.styles.icon.background;
+    }
+    if (normalized.endsWith("button.background")) {
+      return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
+    }
+    if (normalized.endsWith("card.background")) {
+      return DEFAULT_CONFIG.styles.card.background;
+    }
+    return DEFAULT_CONFIG.styles.icon.on_color;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+  function isUnavailableState(state) {
+    return normalizeTextKey(state?.state) === "unavailable";
+  }
+  function collectDashboardScrollSnapshot(anchor) {
+    const containers = [];
+    const seen = /* @__PURE__ */ new Set();
+    const remember = (el) => {
+      if (!(el instanceof HTMLElement) || seen.has(el)) {
+        return;
+      }
+      seen.add(el);
+      containers.push({
+        el,
+        left: el.scrollLeft,
+        top: el.scrollTop
+      });
+    };
+    let node = anchor instanceof HTMLElement ? anchor : null;
+    while (node) {
+      const style = getComputedStyle(node);
+      if (/(auto|scroll|overlay)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1 || /(auto|scroll|overlay)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1) {
+        remember(node);
+      }
+      node = node.parentElement;
+    }
+    if (typeof document !== "undefined") {
+      remember(document.scrollingElement || document.documentElement);
+      try {
+        const homeAssistant = document.querySelector("home-assistant");
+        const huiRoot = homeAssistant?.shadowRoot?.querySelector("hui-root");
+        remember(huiRoot?.shadowRoot?.querySelector("#view"));
+        remember(
+          homeAssistant?.shadowRoot?.querySelector("partial-panel-resolver")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-view")
+        );
+      } catch (_error) {
+      }
+    }
+    return {
+      containers,
+      winX: typeof window !== "undefined" ? window.scrollX : 0,
+      winY: typeof window !== "undefined" ? window.scrollY : 0
+    };
+  }
+  function restoreDashboardScrollSnapshot(snapshot) {
+    if (!snapshot?.containers?.length) {
+      return;
+    }
+    snapshot.containers.forEach(({ el, left, top }) => {
+      if (!(el instanceof HTMLElement) || !el.isConnected) {
+        return;
+      }
+      if (el.scrollTop !== top) {
+        el.scrollTop = top;
+      }
+      if (el.scrollLeft !== left) {
+        el.scrollLeft = left;
       }
     });
-    return compacted;
-  }
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-  return value;
-}
-
-
-
-
-
-function moveItem(list, fromIndex, toIndex) {
-  if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
-    return;
-  }
-  const [item] = list.splice(fromIndex, 1);
-  list.splice(toIndex, 0, item);
-}
-
-
-function formatEditorHexChannel(value) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
-
-function resolveEditorColorValue(value) {
-  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-  if (typeof resolver === "function") {
-    return resolver(value);
-  }
-  return String(value ?? "").trim();
-}
-
-function formatEditorColorFromHex(hex, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
-  }
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
-  }
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
-
-function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const channels = resolvedValue.match(/[\d.]+/g) || [];
-  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-  return {
-    alpha,
-    hex,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
-
-function getEditorColorFallbackValue(field) {
-  const normalized = String(field || "");
-  if (normalized.endsWith("icon.on_color") || normalized.endsWith("styles.accent") || normalized.endsWith(".color")) {
-    return DEFAULT_SCENE_ACCENT;
-  }
-  if (normalized.endsWith("icon.color")) {
-    return DEFAULT_CONFIG.styles.icon.color;
-  }
-  if (normalized.endsWith("icon.background")) {
-    return DEFAULT_CONFIG.styles.icon.background;
-  }
-  if (normalized.endsWith("button.background")) {
-    return "color-mix(in srgb, var(--primary-text-color) 5%, transparent)";
-  }
-  if (normalized.endsWith("card.background")) {
-    return DEFAULT_CONFIG.styles.card.background;
-  }
-  return DEFAULT_CONFIG.styles.icon.on_color;
-}
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-
-
-function collectDashboardScrollSnapshot(anchor) {
-  const containers = [];
-  const seen = new Set();
-  const remember = el => {
-    if (!(el instanceof HTMLElement) || seen.has(el)) {
-      return;
-    }
-    seen.add(el);
-    containers.push({
-      el,
-      left: el.scrollLeft,
-      top: el.scrollTop,
-    });
-  };
-
-  let node = anchor instanceof HTMLElement ? anchor : null;
-  while (node) {
-    const style = getComputedStyle(node);
-    if (
-      (/(auto|scroll|overlay)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) ||
-      (/(auto|scroll|overlay)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1)
-    ) {
-      remember(node);
-    }
-    node = node.parentElement;
-  }
-
-  if (typeof document !== "undefined") {
-    remember(document.scrollingElement || document.documentElement);
-    try {
-      const homeAssistant = document.querySelector("home-assistant");
-      const huiRoot = homeAssistant?.shadowRoot?.querySelector("hui-root");
-      remember(huiRoot?.shadowRoot?.querySelector("#view"));
-      remember(
-        homeAssistant
-          ?.shadowRoot
-          ?.querySelector("partial-panel-resolver")
-          ?.shadowRoot
-          ?.querySelector("ha-panel-lovelace")
-          ?.shadowRoot
-          ?.querySelector("hui-view"),
-      );
-    } catch (_error) {
-      // Ignore closed shadow roots.
+    if (typeof window !== "undefined") {
+      window.scrollTo(snapshot.winX, snapshot.winY);
     }
   }
-
-  return {
-    containers,
-    winX: typeof window !== "undefined" ? window.scrollX : 0,
-    winY: typeof window !== "undefined" ? window.scrollY : 0,
-  };
-}
-
-function restoreDashboardScrollSnapshot(snapshot) {
-  if (!snapshot?.containers?.length) {
-    return;
-  }
-  snapshot.containers.forEach(({ el, left, top }) => {
-    if (!(el instanceof HTMLElement) || !el.isConnected) {
-      return;
+  var dashboardScrollRestoreGeneration = 0;
+  function scheduleDashboardScrollRestore(snapshot) {
+    if (!snapshot?.containers?.length || typeof window === "undefined") {
+      return () => {
+      };
     }
-    if (el.scrollTop !== top) {
-      el.scrollTop = top;
-    }
-    if (el.scrollLeft !== left) {
-      el.scrollLeft = left;
-    }
-  });
-  if (typeof window !== "undefined") {
-    window.scrollTo(snapshot.winX, snapshot.winY);
-  }
-}
-
-let dashboardScrollRestoreGeneration = 0;
-
-function scheduleDashboardScrollRestore(snapshot) {
-  if (!snapshot?.containers?.length || typeof window === "undefined") {
-    return () => {};
-  }
-
-  const generation = dashboardScrollRestoreGeneration + 1;
-  dashboardScrollRestoreGeneration = generation;
-  const restore = () => {
-    if (generation !== dashboardScrollRestoreGeneration) {
-      return;
-    }
-    restoreDashboardScrollSnapshot(snapshot);
-  };
-
-  restore();
-  window.requestAnimationFrame(() => {
+    const generation = dashboardScrollRestoreGeneration + 1;
+    dashboardScrollRestoreGeneration = generation;
+    const restore = () => {
+      if (generation !== dashboardScrollRestoreGeneration) {
+        return;
+      }
+      restoreDashboardScrollSnapshot(snapshot);
+    };
     restore();
-    window.requestAnimationFrame(restore);
-  });
-  const timeoutA = window.setTimeout(restore, 0);
-  const timeoutB = window.setTimeout(restore, 48);
-
-  return () => {
-    if (generation === dashboardScrollRestoreGeneration) {
-      dashboardScrollRestoreGeneration += 1;
+    window.requestAnimationFrame(() => {
+      restore();
+      window.requestAnimationFrame(restore);
+    });
+    const timeoutA = window.setTimeout(restore, 0);
+    const timeoutB = window.setTimeout(restore, 48);
+    return () => {
+      if (generation === dashboardScrollRestoreGeneration) {
+        dashboardScrollRestoreGeneration += 1;
+      }
+      window.clearTimeout(timeoutA);
+      window.clearTimeout(timeoutB);
+    };
+  }
+  function cancelDashboardScrollRestore() {
+    dashboardScrollRestoreGeneration += 1;
+  }
+  function sanitizeCssValue(value, fallback) {
+    const raw = String(value ?? "").trim();
+    const safeFallback = String(fallback ?? "").trim();
+    if (!raw) {
+      return safeFallback;
     }
-    window.clearTimeout(timeoutA);
-    window.clearTimeout(timeoutB);
-  };
-}
-
-function cancelDashboardScrollRestore() {
-  dashboardScrollRestoreGeneration += 1;
-}
-
-function sanitizeCssValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  const safeFallback = String(fallback ?? "").trim();
-  if (!raw) {
-    return safeFallback;
+    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+      return safeFallback;
+    }
+    return raw;
   }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-    return safeFallback;
+  function getDefaultSceneAccent(styles = DEFAULT_CONFIG.styles) {
+    return sanitizeCssValue(styles?.accent, DEFAULT_SCENE_ACCENT) || DEFAULT_SCENE_ACCENT;
   }
-  return raw;
-}
-
-function getDefaultSceneAccent(styles = DEFAULT_CONFIG.styles) {
-  return sanitizeCssValue(styles?.accent, DEFAULT_SCENE_ACCENT) || DEFAULT_SCENE_ACCENT;
-}
-
-function resolveSceneAccent(value, fallback = DEFAULT_SCENE_ACCENT) {
-  const raw = String(value ?? "").trim();
-  if (!raw) {
-    return fallback;
+  function resolveSceneAccent(value, fallback = DEFAULT_SCENE_ACCENT) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return fallback;
+    }
+    return sanitizeCssValue(raw, fallback) || fallback;
   }
-  return sanitizeCssValue(raw, fallback) || fallback;
-}
-
-
-function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const defaults = DEFAULT_CONFIG.styles;
-  const card = styles?.card || {};
-  const button = styles?.button || {};
-  const icon = styles?.icon || {};
-  return {
-    accent: getDefaultSceneAccent(styles),
-    card: {
-      background: sanitizeCssValue(card.background, defaults.card.background),
-      border: sanitizeCssValue(card.border, defaults.card.border),
-      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
-      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
-      gap: sanitizeCssValue(card.gap, defaults.card.gap),
-      padding: sanitizeCssValue(card.padding, defaults.card.padding),
-    },
-    button: {
-      background: sanitizeCssValue(button.background, defaults.button.background),
-      border: sanitizeCssValue(button.border, defaults.button.border),
-      border_radius: sanitizeCssValue(button.border_radius, defaults.button.border_radius),
-      gap: sanitizeCssValue(button.gap, defaults.button.gap),
-      icon_size: sanitizeCssValue(button.icon_size, defaults.button.icon_size),
-      label_size: sanitizeCssValue(button.label_size, defaults.button.label_size),
-      min_height: sanitizeCssValue(button.min_height, defaults.button.min_height),
-    },
-    icon: {
-      background: sanitizeCssValue(icon.background, defaults.icon.background),
-      color: sanitizeCssValue(icon.color, defaults.icon.color),
-      on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
-      size: sanitizeCssValue(icon.size, defaults.icon.size),
-    },
-    chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
-    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
-  };
-}
-
-function normalizeSceneRows(rawScenes, options = {}) {
-  const keepEmpty = options.keepEmpty === true;
-  if (!Array.isArray(rawScenes)) {
-    return [];
+  function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+    const defaults = DEFAULT_CONFIG.styles;
+    const card = styles?.card || {};
+    const button = styles?.button || {};
+    const icon = styles?.icon || {};
+    return {
+      accent: getDefaultSceneAccent(styles),
+      card: {
+        background: sanitizeCssValue(card.background, defaults.card.background),
+        border: sanitizeCssValue(card.border, defaults.card.border),
+        border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+        box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+        gap: sanitizeCssValue(card.gap, defaults.card.gap),
+        padding: sanitizeCssValue(card.padding, defaults.card.padding)
+      },
+      button: {
+        background: sanitizeCssValue(button.background, defaults.button.background),
+        border: sanitizeCssValue(button.border, defaults.button.border),
+        border_radius: sanitizeCssValue(button.border_radius, defaults.button.border_radius),
+        gap: sanitizeCssValue(button.gap, defaults.button.gap),
+        icon_size: sanitizeCssValue(button.icon_size, defaults.button.icon_size),
+        label_size: sanitizeCssValue(button.label_size, defaults.button.label_size),
+        min_height: sanitizeCssValue(button.min_height, defaults.button.min_height)
+      },
+      icon: {
+        background: sanitizeCssValue(icon.background, defaults.icon.background),
+        color: sanitizeCssValue(icon.color, defaults.icon.color),
+        on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
+        size: sanitizeCssValue(icon.size, defaults.icon.size)
+      },
+      chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
+      title_size: sanitizeCssValue(styles?.title_size, defaults.title_size)
+    };
   }
-
-  const rows = rawScenes
-    .map(item => {
+  function normalizeSceneRows2(rawScenes, options = {}) {
+    const keepEmpty = options.keepEmpty === true;
+    if (!Array.isArray(rawScenes)) {
+      return [];
+    }
+    const rows = rawScenes.map((item) => {
       if (typeof item === "string") {
         return { entity: String(item).trim(), name: "", icon: "", color: "" };
       }
@@ -433,60 +330,35 @@ function normalizeSceneRows(rawScenes, options = {}) {
         entity: String(item.entity || "").trim(),
         name: String(item.name || "").trim(),
         icon: String(item.icon || "").trim(),
-        color: String(item.color || "").trim(),
+        color: String(item.color || "").trim()
       };
-    })
-    .filter(item => item !== null);
-
-  return keepEmpty ? rows : rows.filter(item => item.entity);
-}
-
-function normalizeConfig(rawConfig, options = {}) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const layout = normalizeTextKey(config.layout);
-  config.layout = ["grid", "list", "single"].includes(layout) ? layout : "grid";
-  config.columns = clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6);
-  const tap = normalizeTextKey(config.tap_action);
-  config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
-  const hold = normalizeTextKey(config.hold_action);
-  config.hold_action = HOLD_ACTIONS.has(hold) ? hold : "more-info";
-  config.scenes = normalizeSceneRows(config.scenes, options);
-  return config;
-}
-
-function getStubSceneEntities(hass, limit = 4, entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils
-    .findStubEntityIds(hass, entities, entitiesFallback, ["scene"], limit)
-    .map(entity => ({ entity }));
-}
-
-function applyStubConfig(config, hass, entities = [], entitiesFallback = []) {
-  const next = deepClone(config);
-  const scenes = getStubSceneEntities(hass, 4, entities, entitiesFallback);
-  if (scenes.length) {
-    next.scenes = scenes;
+    }).filter((item) => item !== null);
+    return keepEmpty ? rows : rows.filter((item) => item.entity);
   }
-  if (!String(next.name || "").trim()) {
-    next.name = "Scenes";
+  function getStubSceneEntities(hass, limit = 4, entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, ["scene"], limit).map((entity) => ({ entity }));
   }
-  return next;
-}
-
-function resolveSceneEntries(config, hass) {
-  const rows = Array.isArray(config?.scenes) ? config.scenes : [];
-  const defaultAccent = getDefaultSceneAccent(config?.styles);
-  return rows
-    .map((item, index) => {
+  function applyStubConfig(config, hass, entities = [], entitiesFallback = []) {
+    const next = deepClone(config);
+    const scenes = getStubSceneEntities(hass, 4, entities, entitiesFallback);
+    if (scenes.length) {
+      next.scenes = scenes;
+    }
+    if (!String(next.name || "").trim()) {
+      next.name = "Scenes";
+    }
+    return next;
+  }
+  function resolveSceneEntries(config, hass) {
+    const rows = Array.isArray(config?.scenes) ? config.scenes : [];
+    const defaultAccent = getDefaultSceneAccent(config?.styles);
+    return rows.map((item, index) => {
       const entity = String(item?.entity || "").trim();
       if (!entity.startsWith("scene.")) {
         return null;
       }
       const state = hass?.states?.[entity];
-      const friendly =
-        window.NodaliaUtils?.getEntityFriendlyName?.(hass, entity)
-        || state?.attributes?.friendly_name
-        || entity.split(".")[1]?.replace(/_/g, " ")
-        || entity;
+      const friendly = window.NodaliaUtils?.getEntityFriendlyName?.(hass, entity) || state?.attributes?.friendly_name || entity.split(".")[1]?.replace(/_/g, " ") || entity;
       const label = String(item?.name || "").trim() || friendly;
       let icon = String(item?.icon || "").trim();
       if (!icon && config.use_entity_icon !== false) {
@@ -495,10 +367,7 @@ function resolveSceneEntries(config, hass) {
       if (!icon) {
         icon = "mdi:palette-outline";
       }
-      const picture =
-        config.use_entity_picture === true
-          ? String(state?.attributes?.entity_picture || "").trim()
-          : "";
+      const picture = config.use_entity_picture === true ? String(state?.attributes?.entity_picture || "").trim() : "";
       const accent = resolveSceneAccent(item?.color, defaultAccent);
       return {
         entity,
@@ -507,401 +376,430 @@ function resolveSceneEntries(config, hass) {
         picture,
         accent,
         index,
-        unavailable: !state || isUnavailableState(state),
+        unavailable: !state || isUnavailableState(state)
       };
-    })
-    .filter(Boolean);
-}
-
-class NodaliaScenesCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
+    }).filter(Boolean);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    return applyStubConfig(deepClone(STUB_CONFIG), hass, entities, entitiesFallback);
+  // src/cards/scenes/scenes-config.ts
+  var DEFAULT_CONFIG = {
+    name: "",
+    language: "auto",
+    scenes: [],
+    layout: "grid",
+    columns: 3,
+    show_title: true,
+    use_entity_icon: true,
+    use_entity_picture: false,
+    tap_action: "activate",
+    hold_action: "more-info",
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 420,
+      button_bounce_duration: 320,
+      launch_duration: SCENE_LAUNCH_DURATION
+    },
+    styles: {
+      accent: DEFAULT_SCENE_ACCENT,
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      button: {
+        min_height: "88px",
+        border_radius: "22px",
+        gap: "8px",
+        icon_size: "24px",
+        label_size: "12px",
+        background: "",
+        border: ""
+      },
+      icon: {
+        size: "44px",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        color: "var(--primary-text-color)",
+        on_color: DEFAULT_SCENE_ACCENT
+      },
+      chip_border_radius: "999px",
+      title_size: "15px"
+    }
+  };
+  var STUB_CONFIG = {
+    name: "Scenes",
+    layout: "grid",
+    columns: 2,
+    scenes: []
+  };
+  function normalizeConfig(rawConfig, options = {}) {
+    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+    const layout = normalizeTextKey(config.layout);
+    config.layout = ["grid", "list", "single"].includes(layout) ? layout : "grid";
+    config.columns = clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6);
+    const tap = normalizeTextKey(config.tap_action);
+    config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
+    const hold = normalizeTextKey(config.hold_action);
+    config.hold_action = HOLD_ACTIONS.has(hold) ? hold : "more-info";
+    config.scenes = normalizeSceneRows2(config.scenes, options);
+    return config;
   }
 
-  static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-      domains: ["scene"],
-      buildConfig: (_hass, selectedEntityId) => ({
-        layout: "single",
-        scenes: [{ entity: selectedEntityId }],
-      }),
-    });
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
-    this._launchAnimationTimers = new Map();
-    this._pressAnimationTimers = new Map();
-    this._cancelScrollRestore = null;
-    this._suppressNextSceneTap = false;
-    this._interactionScrollSnapshot = null;
-    this._sceneInteractionScrollUntil = 0;
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
-    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown, true);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
-    this._detachHostHold =
-      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
-        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-            resolveZone: event => {
-              const button = event
-                .composedPath()
-                .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
-              return button?.dataset?.sceneEntity || null;
-            },
-            shouldBeginHold: entityId => this._canRunHoldAction(entityId),
-            onHold: entityId => {
-              this._triggerHaptic();
-              this._performHoldAction(entityId);
-            },
-            markHoldConsumedClick: () => {
-              this._suppressNextSceneTap = true;
-            },
-          })
-        : () => {};
-  }
-
-  connectedCallback() {
-    this._detachHostHold?.reconnect?.();
-    this._animateContentOnNextRender = true;
-    if (this._hass && this._config) {
+  // src/cards/scenes/scenes-card.ts
+  var NodaliaScenesCard = class extends HTMLElement {
+    static async getConfigElement() {
+      return document.createElement(EDITOR_TAG);
+    }
+    static getStubConfig(hass, entities = [], entitiesFallback = []) {
+      return applyStubConfig(deepClone(STUB_CONFIG), hass, entities, entitiesFallback);
+    }
+    static getEntitySuggestion(hass, entityId) {
+      return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["scene"],
+        buildConfig: (_hass, selectedEntityId) => ({
+          layout: "single",
+          scenes: [{ entity: selectedEntityId }]
+        })
+      });
+    }
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._config = normalizeConfig(STUB_CONFIG);
+      this._hass = null;
       this._lastRenderSignature = "";
+      this._animateContentOnNextRender = true;
+      this._launchAnimationTimers = /* @__PURE__ */ new Map();
+      this._pressAnimationTimers = /* @__PURE__ */ new Map();
+      this._cancelScrollRestore = null;
+      this._suppressNextSceneTap = false;
+      this._interactionScrollSnapshot = null;
+      this._sceneInteractionScrollUntil = 0;
+      this._onShadowClick = this._onShadowClick.bind(this);
+      this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+      this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+      this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+      this.shadowRoot.addEventListener("click", this._onShadowClick);
+      this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
+      this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown, true);
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
+      this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+        resolveZone: (event) => {
+          const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.sceneEntity);
+          return button?.dataset?.sceneEntity || null;
+        },
+        shouldBeginHold: (entityId) => this._canRunHoldAction(entityId),
+        onHold: (entityId) => {
+          this._triggerHaptic();
+          this._performHoldAction(entityId);
+        },
+        markHoldConsumedClick: () => {
+          this._suppressNextSceneTap = true;
+        }
+      }) : () => {
+      };
+    }
+    connectedCallback() {
+      this._detachHostHold?.reconnect?.();
+      this._animateContentOnNextRender = true;
+      if (this._hass && this._config) {
+        this._lastRenderSignature = "";
+        this._render();
+      }
+    }
+    disconnectedCallback() {
+      this._detachHostHold?.();
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      this._cancelScrollRestore?.();
+      this._cancelScrollRestore = null;
+      cancelDashboardScrollRestore();
+      this._animateContentOnNextRender = true;
+      this._lastRenderSignature = "";
+    }
+    setConfig(config) {
+      this._config = normalizeConfig(config || {});
+      this._lastRenderSignature = "";
+      this._animateContentOnNextRender = true;
       this._render();
     }
-  }
-
-  disconnectedCallback() {
-    this._detachHostHold?.();
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-    this._cancelScrollRestore?.();
-    this._cancelScrollRestore = null;
-    cancelDashboardScrollRestore();
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    const nextSignature = this._getRenderSignature();
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
+    set hass(hass) {
+      this._hass = hass;
+      const nextSignature = this._getRenderSignature();
+      if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        return;
+      }
+      this._lastRenderSignature = nextSignature;
+      this._render();
     }
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    const layout = ["list", "single"].includes(this._config?.layout) ? this._config.layout : "grid";
-    const count = Math.max(1, resolveSceneEntries(this._config, this._hass).length || 1);
-    if (layout === "single") {
-      return 2;
+    getCardSize() {
+      const layout = ["list", "single"].includes(this._config?.layout) ? this._config.layout : "grid";
+      const count = Math.max(1, resolveSceneEntries(this._config, this._hass).length || 1);
+      if (layout === "single") {
+        return 2;
+      }
+      if (layout === "list") {
+        return Math.min(6, count + 1);
+      }
+      const columns = clamp(Math.round(Number(this._config?.columns) || 3), 1, 6);
+      return Math.min(6, Math.ceil(count / columns) + 1);
     }
-    if (layout === "list") {
-      return Math.min(6, count + 1);
+    getGridOptions() {
+      return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
     }
-    const columns = clamp(Math.round(Number(this._config?.columns) || 3), 1, 6);
-    return Math.min(6, Math.ceil(count / columns) + 1);
-  }
-
-  getGridOptions() {
-    return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
-  }
-
-  _getAnimationSettings() {
-    const animations = this._config?.animations || DEFAULT_CONFIG.animations;
-    return {
-      enabled: animations.enabled !== false,
-      contentDuration: clamp(Math.round(Number(animations.content_duration) || 420), 0, 2000),
-      buttonBounceDuration: clamp(Math.round(Number(animations.button_bounce_duration) || 320), 0, 1200),
-      launchDuration: clamp(Math.round(Number(animations.launch_duration) || SCENE_LAUNCH_DURATION), 240, 2400),
-    };
-  }
-
-  _scenesUiCopy() {
-    const NI = window.NodaliaI18n;
-    if (!NI?.strings || !NI.resolveLanguage) {
+    _getAnimationSettings() {
+      const animations = this._config?.animations || DEFAULT_CONFIG.animations;
       return {
-        emptyTitle: "Nodalia Scenes Card",
-        emptyBody: "Add scene entities in the card editor.",
-        defaultName: "Scenes",
-        unavailable: "Unavailable",
-        subtitle: "Tap a mood to launch",
-        moods: "moods",
+        enabled: animations.enabled !== false,
+        contentDuration: clamp(Math.round(Number(animations.content_duration) || 420), 0, 2e3),
+        buttonBounceDuration: clamp(Math.round(Number(animations.button_bounce_duration) || 320), 0, 1200),
+        launchDuration: clamp(Math.round(Number(animations.launch_duration) || SCENE_LAUNCH_DURATION), 240, 2400)
       };
     }
-    const lang = NI.resolveLanguage(this._hass, this._config?.language);
-    const scenes = NI.strings(lang).scenes || {};
-    return {
-      emptyTitle: scenes.emptyTitle || "Nodalia Scenes Card",
-      emptyBody: scenes.emptyBody || "Add scene entities in the card editor.",
-      defaultName: scenes.defaultName || "Scenes",
-      unavailable: scenes.unavailable || "Unavailable",
-      subtitle: scenes.subtitle || "Tap a mood to launch",
-      moods: scenes.moods || "moods",
-    };
-  }
-
-  _getRenderSignature() {
-    const config = this._config || {};
-    const entries = resolveSceneEntries(config, this._hass);
-    const sceneStamp = (Array.isArray(config.scenes) ? config.scenes : [])
-      .map(item => (typeof item === "string" ? item : `${item?.entity || ""}:${item?.tint || ""}`))
-      .join("|");
-    const styles = config.styles || {};
-    return [
-      CARD_VERSION,
-      config.layout || "grid",
-      config.columns ?? 3,
-      config.name || "",
-      config.language || "auto",
-      config.show_title !== false,
-      styles.accent || "",
-      styles.icon?.size || "",
-      sceneStamp,
-      entries.map(entry => `${entry.entity}:${entry.unavailable}:${entry.accent}`).join("|"),
-    ].join("::");
-  }
-
-  _canRunHoldAction(entityId) {
-    const action = normalizeTextKey(this._config?.hold_action);
-    return Boolean(entityId) && action !== "none";
-  }
-
-  _triggerHaptic(styleOverride) {
-    const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
-    if (haptics.enabled === false) {
-      return;
-    }
-    const style = styleOverride || haptics.style || "medium";
-    fireEvent(this, "haptic", style, { bubbles: true, composed: true });
-    if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      const pattern = HAPTIC_PATTERNS[style] ?? HAPTIC_PATTERNS.medium;
-      try {
-        navigator.vibrate(pattern);
-      } catch (_error) {
-        // Ignore unsupported vibrate.
+    _scenesUiCopy() {
+      const NI = window.NodaliaI18n;
+      if (!NI?.strings || !NI.resolveLanguage) {
+        return {
+          emptyTitle: "Nodalia Scenes Card",
+          emptyBody: "Add scene entities in the card editor.",
+          defaultName: "Scenes",
+          unavailable: "Unavailable",
+          subtitle: "Tap a mood to launch",
+          moods: "moods"
+        };
       }
+      const lang = NI.resolveLanguage(this._hass, this._config?.language);
+      const scenes = NI.strings(lang).scenes || {};
+      return {
+        emptyTitle: scenes.emptyTitle || "Nodalia Scenes Card",
+        emptyBody: scenes.emptyBody || "Add scene entities in the card editor.",
+        defaultName: scenes.defaultName || "Scenes",
+        unavailable: scenes.unavailable || "Unavailable",
+        subtitle: scenes.subtitle || "Tap a mood to launch",
+        moods: scenes.moods || "moods"
+      };
     }
-  }
-
-  _triggerPressAnimation(tile) {
-    if (!(tile instanceof HTMLElement)) {
-      return;
+    _getRenderSignature() {
+      const config = this._config || {};
+      const entries = resolveSceneEntries(config, this._hass);
+      const sceneStamp = (Array.isArray(config.scenes) ? config.scenes : []).map((item) => typeof item === "string" ? item : `${item?.entity || ""}:${item?.tint || ""}`).join("|");
+      const styles = config.styles || {};
+      return [
+        CARD_VERSION,
+        config.layout || "grid",
+        config.columns ?? 3,
+        config.name || "",
+        config.language || "auto",
+        config.show_title !== false,
+        styles.accent || "",
+        styles.icon?.size || "",
+        sceneStamp,
+        entries.map((entry) => `${entry.entity}:${entry.unavailable}:${entry.accent}`).join("|")
+      ].join("::");
     }
-    const animations = this._getAnimationSettings();
-    tile.classList.remove("is-pressing");
-    void tile.offsetWidth;
-    tile.classList.add("is-pressing");
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!tile.isConnected) {
+    _canRunHoldAction(entityId) {
+      const action = normalizeTextKey(this._config?.hold_action);
+      return Boolean(entityId) && action !== "none";
+    }
+    _triggerHaptic(styleOverride) {
+      const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
+      if (haptics.enabled === false) {
         return;
       }
+      const style = styleOverride || haptics.style || "medium";
+      fireEvent(this, "haptic", style, { bubbles: true, composed: true });
+      if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        const pattern = HAPTIC_PATTERNS[style] ?? HAPTIC_PATTERNS.medium;
+        try {
+          navigator.vibrate(pattern);
+        } catch (_error) {
+        }
+      }
+    }
+    _triggerPressAnimation(tile) {
+      if (!(tile instanceof HTMLElement)) {
+        return;
+      }
+      const animations = this._getAnimationSettings();
       tile.classList.remove("is-pressing");
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration);
+      void tile.offsetWidth;
+      tile.classList.add("is-pressing");
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const done = () => {
+        if (!tile.isConnected) {
+          return;
+        }
+        tile.classList.remove("is-pressing");
+      };
+      if (typeof schedule === "function") {
+        schedule(this, done, animations.buttonBounceDuration);
+      } else {
+        window.setTimeout(done, animations.buttonBounceDuration);
+      }
     }
-  }
-
-  _triggerLaunchAnimation(tile) {
-    if (!(tile instanceof HTMLElement)) {
-      return;
-    }
-    const duration = this._getAnimationSettings().launchDuration;
-    tile.classList.remove("scenes-card__tile--launching");
-    const icon = tile.querySelector(".scenes-card__tile-icon");
-    if (icon instanceof HTMLElement) {
-      icon.classList.remove("scenes-card__tile-icon--launching");
-    }
-    void tile.offsetWidth;
-    tile.classList.add("scenes-card__tile--launching");
-    if (icon instanceof HTMLElement) {
-      icon.classList.add("scenes-card__tile-icon--launching");
-    }
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!tile.isConnected) {
+    _triggerLaunchAnimation(tile) {
+      if (!(tile instanceof HTMLElement)) {
         return;
       }
+      const duration = this._getAnimationSettings().launchDuration;
       tile.classList.remove("scenes-card__tile--launching");
+      const icon = tile.querySelector(".scenes-card__tile-icon");
       if (icon instanceof HTMLElement) {
         icon.classList.remove("scenes-card__tile-icon--launching");
       }
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, duration);
-    } else {
-      window.setTimeout(done, duration);
+      void tile.offsetWidth;
+      tile.classList.add("scenes-card__tile--launching");
+      if (icon instanceof HTMLElement) {
+        icon.classList.add("scenes-card__tile-icon--launching");
+      }
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const done = () => {
+        if (!tile.isConnected) {
+          return;
+        }
+        tile.classList.remove("scenes-card__tile--launching");
+        if (icon instanceof HTMLElement) {
+          icon.classList.remove("scenes-card__tile-icon--launching");
+        }
+      };
+      if (typeof schedule === "function") {
+        schedule(this, done, duration);
+      } else {
+        window.setTimeout(done, duration);
+      }
     }
-  }
-
-  _openMoreInfo(entityId) {
-    if (!entityId) {
-      return;
+    _openMoreInfo(entityId) {
+      if (!entityId) {
+        return;
+      }
+      fireEvent(this, "hass-more-info", { entityId });
     }
-    fireEvent(this, "hass-more-info", { entityId });
-  }
-
-  _captureDashboardScrollSnapshot() {
-    return collectDashboardScrollSnapshot(this);
-  }
-
-  _scheduleDashboardScrollRestore(snapshot = this._interactionScrollSnapshot) {
-    this._cancelScrollRestore?.();
-    this._cancelScrollRestore = scheduleDashboardScrollRestore(snapshot);
-  }
-
-  _rememberSceneInteractionScroll(button) {
-    this._interactionScrollSnapshot = collectDashboardScrollSnapshot(button || this);
-    this._sceneInteractionScrollUntil = Date.now() + 1200;
-  }
-
-  _blurSceneInteractionFocus() {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement && this.shadowRoot?.contains(active)) {
-      active.blur();
+    _captureDashboardScrollSnapshot() {
+      return collectDashboardScrollSnapshot(this);
     }
-  }
-
-  _activateScene(entityId) {
-    if (!this._hass || !entityId) {
-      return;
+    _scheduleDashboardScrollRestore(snapshot = this._interactionScrollSnapshot) {
+      this._cancelScrollRestore?.();
+      this._cancelScrollRestore = scheduleDashboardScrollRestore(snapshot);
     }
-    this._triggerHaptic("success");
-    this._hass.callService("scene", "turn_on", { entity_id: entityId });
-    const tile = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
-    this._triggerLaunchAnimation(tile);
-    this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
-  }
-
-  _performTapAction(entityId) {
-    const action = normalizeTextKey(this._config?.tap_action);
-    if (action === "none") {
-      return;
+    _rememberSceneInteractionScroll(button) {
+      this._interactionScrollSnapshot = collectDashboardScrollSnapshot(button || this);
+      this._sceneInteractionScrollUntil = Date.now() + 1200;
     }
-    if (action === "more-info") {
-      this._triggerHaptic("selection");
-      this._openMoreInfo(entityId);
-      return;
+    _blurSceneInteractionFocus() {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && this.shadowRoot?.contains(active)) {
+        active.blur();
+      }
     }
-    this._activateScene(entityId);
-  }
-
-  _performHoldAction(entityId) {
-    const action = normalizeTextKey(this._config?.hold_action);
-    if (action === "none") {
-      return;
+    _activateScene(entityId) {
+      if (!this._hass || !entityId) {
+        return;
+      }
+      this._triggerHaptic("success");
+      this._hass.callService("scene", "turn_on", { entity_id: entityId });
+      const tile = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
+      this._triggerLaunchAnimation(tile);
+      this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
     }
-    const button = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
-    this._triggerPressAnimation(button);
-    if (action === "more-info") {
-      this._openMoreInfo(entityId);
-      return;
+    _performTapAction(entityId) {
+      const action = normalizeTextKey(this._config?.tap_action);
+      if (action === "none") {
+        return;
+      }
+      if (action === "more-info") {
+        this._triggerHaptic("selection");
+        this._openMoreInfo(entityId);
+        return;
+      }
+      this._activateScene(entityId);
     }
-    this._activateScene(entityId);
-  }
-
-  _findSceneButtonFromEvent(event) {
-    const button = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
-    if (!button || button.dataset.unavailable === "true" || button.getAttribute("aria-disabled") === "true") {
-      return null;
+    _performHoldAction(entityId) {
+      const action = normalizeTextKey(this._config?.hold_action);
+      if (action === "none") {
+        return;
+      }
+      const button = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
+      this._triggerPressAnimation(button);
+      if (action === "more-info") {
+        this._openMoreInfo(entityId);
+        return;
+      }
+      this._activateScene(entityId);
     }
-    return button;
-  }
-
-  _prepareSceneInteraction(event, button) {
-    this._rememberSceneInteractionScroll(button);
-    event.preventDefault();
-    this._blurSceneInteractionFocus();
-  }
-
-  _onShadowPointerDown(event) {
-    const button = this._findSceneButtonFromEvent(event);
-    if (!button) {
-      return;
+    _findSceneButtonFromEvent(event) {
+      const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.sceneEntity);
+      if (!button || button.dataset.unavailable === "true" || button.getAttribute("aria-disabled") === "true") {
+        return null;
+      }
+      return button;
     }
-    if (typeof event.button === "number" && event.button !== 0) {
-      return;
+    _prepareSceneInteraction(event, button) {
+      this._rememberSceneInteractionScroll(button);
+      event.preventDefault();
+      this._blurSceneInteractionFocus();
     }
-    if (event.pointerType === "touch") {
+    _onShadowPointerDown(event) {
+      const button = this._findSceneButtonFromEvent(event);
+      if (!button) {
+        return;
+      }
+      if (typeof event.button === "number" && event.button !== 0) {
+        return;
+      }
+      if (event.pointerType === "touch") {
+        this._rememberSceneInteractionScroll(button);
+        this._triggerPressAnimation(button);
+        return;
+      }
+      this._prepareSceneInteraction(event, button);
+      this._triggerPressAnimation(button);
+    }
+    _onShadowMouseDown(event) {
+      const button = this._findSceneButtonFromEvent(event);
+      if (!button || event.button !== 0) {
+        return;
+      }
+      this._prepareSceneInteraction(event, button);
+    }
+    _onShadowTouchStart(event) {
+      const button = this._findSceneButtonFromEvent(event);
+      if (!button) {
+        return;
+      }
       this._rememberSceneInteractionScroll(button);
       this._triggerPressAnimation(button);
-      return;
     }
-    this._prepareSceneInteraction(event, button);
-    this._triggerPressAnimation(button);
-  }
-
-  _onShadowMouseDown(event) {
-    const button = this._findSceneButtonFromEvent(event);
-    if (!button || event.button !== 0) {
-      return;
+    _onShadowClick(event) {
+      if (this._suppressNextSceneTap) {
+        this._suppressNextSceneTap = false;
+        return;
+      }
+      const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.sceneEntity);
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const entityId = button.dataset.sceneEntity;
+      if (!entityId || button.dataset.unavailable === "true" || button.getAttribute("aria-disabled") === "true") {
+        return;
+      }
+      this._rememberSceneInteractionScroll(button);
+      this._blurSceneInteractionFocus();
+      this._triggerPressAnimation(button);
+      this._performTapAction(entityId);
+      this._scheduleDashboardScrollRestore();
     }
-    this._prepareSceneInteraction(event, button);
-  }
-
-  _onShadowTouchStart(event) {
-    const button = this._findSceneButtonFromEvent(event);
-    if (!button) {
-      return;
-    }
-    this._rememberSceneInteractionScroll(button);
-    this._triggerPressAnimation(button);
-  }
-
-  _onShadowClick(event) {
-    if (this._suppressNextSceneTap) {
-      this._suppressNextSceneTap = false;
-      return;
-    }
-    const button = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
-    if (!button) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const entityId = button.dataset.sceneEntity;
-    if (!entityId || button.dataset.unavailable === "true" || button.getAttribute("aria-disabled") === "true") {
-      return;
-    }
-    this._rememberSceneInteractionScroll(button);
-    this._blurSceneInteractionFocus();
-    this._triggerPressAnimation(button);
-    this._performTapAction(entityId);
-    this._scheduleDashboardScrollRestore();
-  }
-
-  _renderEmptyState() {
-    const ui = this._scenesUiCopy();
-    const styles = getSafeStyles(this._config?.styles);
-    return `
+    _renderEmptyState() {
+      const ui = this._scenesUiCopy();
+      const styles = getSafeStyles(this._config?.styles);
+      return `
       <style>
         :host { display: block; }
         * { box-sizing: border-box; }
@@ -923,44 +821,32 @@ class NodaliaScenesCard extends HTMLElement {
         <div class="scenes-card__empty-text">${escapeHtml(ui.emptyBody)}</div>
       </ha-card>
     `;
-  }
-
-  _getSceneTilePresentation(entry, styles, layout = "grid") {
-    const iconSize = parseSizeToPixels(styles.icon.size, 44);
-    const listIconSize = Math.max(42, iconSize - 2);
-    const bubbleSize = layout === "single"
-      ? Math.max(56, iconSize + 12)
-      : layout === "list"
-        ? listIconSize
-        : Math.max(46, iconSize + 2);
-    const darkenBubbleIconGlyph = Boolean(
-      window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(
-        { entity_id: entry.entity || "scene.placeholder" },
-        entry.accent,
-      ),
-    );
-    const iconGlyphColor = darkenBubbleIconGlyph
-      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${entry.accent})`
-      : entry.accent;
-    return {
-      style: `--scene-accent: ${escapeHtml(entry.accent)}; --scene-icon-glyph: ${escapeHtml(iconGlyphColor)}; --scene-bubble-size: ${bubbleSize}px;`,
-      tileClass: `scenes-card__tile scenes-card__tile--${layout}`,
-    };
-  }
-
-  _renderSceneTileContent(entry, ui) {
-    return `
+    }
+    _getSceneTilePresentation(entry, styles, layout = "grid") {
+      const iconSize = parseSizeToPixels(styles.icon.size, 44);
+      const listIconSize = Math.max(42, iconSize - 2);
+      const bubbleSize = layout === "single" ? Math.max(56, iconSize + 12) : layout === "list" ? listIconSize : Math.max(46, iconSize + 2);
+      const darkenBubbleIconGlyph = Boolean(
+        window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(
+          { entity_id: entry.entity || "scene.placeholder" },
+          entry.accent
+        )
+      );
+      const iconGlyphColor = darkenBubbleIconGlyph ? `color-mix(in srgb, var(--primary-text-color) 56%, ${entry.accent})` : entry.accent;
+      return {
+        style: `--scene-accent: ${escapeHtml(entry.accent)}; --scene-icon-glyph: ${escapeHtml(iconGlyphColor)}; --scene-bubble-size: ${bubbleSize}px;`,
+        tileClass: `scenes-card__tile scenes-card__tile--${layout}`
+      };
+    }
+    _renderSceneTileContent(entry, ui) {
+      return `
       <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
       <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
       <span class="scenes-card__tile-burst" aria-hidden="true"></span>
       <span class="scenes-card__tile-launch" aria-hidden="true"></span>
       <span class="scenes-card__tile-body">
         <span class="scenes-card__tile-icon">
-          ${
-            entry.picture
-              ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />`
-              : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`
-          }
+          ${entry.picture ? `<img src="${escapeHtml(entry.picture)}" alt="" loading="lazy" />` : `<ha-icon icon="${escapeHtml(entry.icon)}"></ha-icon>`}
         </span>
         <span class="scenes-card__tile-copy">
           <span class="scenes-card__tile-label">${escapeHtml(entry.label)}</span>
@@ -968,11 +854,10 @@ class NodaliaScenesCard extends HTMLElement {
         </span>
       </span>
     `;
-  }
-
-  _renderSceneTile(entry, styles, ui, isList) {
-    const presentation = this._getSceneTilePresentation(entry, styles, isList ? "list" : "grid");
-    return `
+    }
+    _renderSceneTile(entry, styles, ui, isList) {
+      const presentation = this._getSceneTilePresentation(entry, styles, isList ? "list" : "grid");
+      return `
       <div
         role="button"
         tabindex="-1"
@@ -986,51 +871,43 @@ class NodaliaScenesCard extends HTMLElement {
         ${this._renderSceneTileContent(entry, ui)}
       </div>
     `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
     }
-
-    const config = this._config || {};
-    const entries = resolveSceneEntries(config, this._hass);
-    if (!entries.length) {
-      this.shadowRoot.innerHTML = this._renderEmptyState();
-      return;
-    }
-
-    const ui = this._scenesUiCopy();
-    const styles = getSafeStyles(config.styles);
-    const animations = this._getAnimationSettings();
-    const showTitle = config.show_title !== false;
-    const title = String(config.name || "").trim() || ui.defaultName;
-    const isList = config.layout === "list";
-    const isSingle = config.layout === "single";
-    const isGrid = !isList && !isSingle;
-    const singleEntry = isSingle ? entries[0] : null;
-    const renderedEntries = isSingle ? entries.slice(0, 1) : entries;
-    const columns = clamp(Math.round(Number(config.columns) || 3), 1, 6);
-    const shouldAnimate = animations.enabled && this._animateContentOnNextRender;
-    const accentColor = singleEntry?.accent || styles.accent;
-    const singlePresentation = singleEntry
-      ? this._getSceneTilePresentation(singleEntry, styles, "single")
-      : null;
-    const chipBorderRadius = escapeHtml(styles.chip_border_radius);
-    const configuredBorder = String(styles.card.border || "").trim();
-    const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
-    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 48%, ${styles.card.background} 100%)`;
-    const cardBorder = !configuredBorder || configuredBorder === defaultBorder
-      ? `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`
-      : configuredBorder;
-    const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
-    const tileBorderRadius = styles.button.border_radius;
-    const tileMinHeight = styles.button.min_height;
-    if (shouldAnimate) {
-      this._animateContentOnNextRender = false;
-    }
-
-    this.shadowRoot.innerHTML = `
+    _render() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      const config = this._config || {};
+      const entries = resolveSceneEntries(config, this._hass);
+      if (!entries.length) {
+        this.shadowRoot.innerHTML = this._renderEmptyState();
+        return;
+      }
+      const ui = this._scenesUiCopy();
+      const styles = getSafeStyles(config.styles);
+      const animations = this._getAnimationSettings();
+      const showTitle = config.show_title !== false;
+      const title = String(config.name || "").trim() || ui.defaultName;
+      const isList = config.layout === "list";
+      const isSingle = config.layout === "single";
+      const isGrid = !isList && !isSingle;
+      const singleEntry = isSingle ? entries[0] : null;
+      const renderedEntries = isSingle ? entries.slice(0, 1) : entries;
+      const columns = clamp(Math.round(Number(config.columns) || 3), 1, 6);
+      const shouldAnimate = animations.enabled && this._animateContentOnNextRender;
+      const accentColor = singleEntry?.accent || styles.accent;
+      const singlePresentation = singleEntry ? this._getSceneTilePresentation(singleEntry, styles, "single") : null;
+      const chipBorderRadius = escapeHtml(styles.chip_border_radius);
+      const configuredBorder = String(styles.card.border || "").trim();
+      const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
+      const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 48%, ${styles.card.background} 100%)`;
+      const cardBorder = !configuredBorder || configuredBorder === defaultBorder ? `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))` : configuredBorder;
+      const cardShadow = `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
+      const tileBorderRadius = styles.button.border_radius;
+      const tileMinHeight = styles.button.min_height;
+      if (shouldAnimate) {
+        this._animateContentOnNextRender = false;
+      }
+      this.shadowRoot.innerHTML = `
       <style>
         :host {
           --scenes-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -1519,12 +1396,8 @@ class NodaliaScenesCard extends HTMLElement {
         ${singleEntry?.unavailable ? 'aria-disabled="true"' : ""}
         ${singlePresentation ? `style="${singlePresentation.style}"` : ""}
       >
-        ${isSingle
-          ? this._renderSceneTileContent(singleEntry, ui)
-          : `
-            ${
-              showTitle
-                ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
+        ${isSingle ? this._renderSceneTileContent(singleEntry, ui) : `
+            ${showTitle ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
                     <div class="scenes-card__brand">
                       <span class="scenes-card__brand-icon" aria-hidden="true">
                         <ha-icon icon="mdi:palette-swatch-variant"></ha-icon>
@@ -1535,291 +1408,247 @@ class NodaliaScenesCard extends HTMLElement {
                       </div>
                     </div>
                     <span class="scenes-card__count-chip">${entries.length} ${escapeHtml(ui.moods)}</span>
-                  </div>`
-                : ""
-            }
+                  </div>` : ""}
             <div class="scenes-card__grid ${shouldAnimate ? "scenes-card__grid--entering" : ""}">
-              ${renderedEntries.map(entry => this._renderSceneTile(entry, styles, ui, isList)).join("")}
+              ${renderedEntries.map((entry) => this._renderSceneTile(entry, styles, ui, isList)).join("")}
             </div>
           `}
       </ha-card>
     `;
-
-    if (Date.now() < (this._sceneInteractionScrollUntil || 0)) {
-      this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
+      if (Date.now() < (this._sceneInteractionScrollUntil || 0)) {
+        this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
+      }
+      this.style.setProperty("--scenes-accent", accentColor);
     }
+  };
 
-    this.style.setProperty("--scenes-accent", accentColor);
-  }
-}
-
-class NodaliaScenesCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG, { keepEmpty: true });
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._pendingEditorControlTags = new Set();
-    this._showStyleSection = false;
-    this._showActionsSection = false;
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["value-changed", this._onShadowValueChanged],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      this._syncMountedPickerHass();
-      return;
+  // src/cards/scenes/scenes-editor.ts
+  var NodaliaScenesCardEditor = class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._config = normalizeConfig(STUB_CONFIG, { keepEmpty: true });
+      this._hass = null;
+      this._entityOptionsSignature = "";
+      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+      this._showStyleSection = false;
+      this._showActionsSection = false;
+      this._onShadowInput = this._onShadowInput.bind(this);
+      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+      this._onShadowClick = this._onShadowClick.bind(this);
     }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {}, { keepEmpty: true });
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils?.editorFilteredStatesSignature?.(
-      hass,
-      this._config?.language,
-      id => id.startsWith("scene."),
-    ) ?? "";
-  }
-
-  _watchEditorControlTag(tagName) {
-    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-      return;
+    _attachEditorShadowListeners() {
+      window.NodaliaUtils.bindShadowListeners(this, [
+        ["input", this._onShadowInput],
+        ["change", this._onShadowInput],
+        ["value-changed", this._onShadowValueChanged],
+        ["click", this._onShadowClick]
+      ], "editor");
     }
-
-    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-      return;
+    _detachEditorShadowListeners() {
+      window.NodaliaUtils.releaseShadowListeners(this, "editor");
     }
-
-    this._pendingEditorControlTags.add(tagName);
-    customElements.whenDefined(tagName)
-      .then(() => {
+    connectedCallback() {
+      this._attachEditorShadowListeners();
+      window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+    }
+    disconnectedCallback() {
+      this._detachEditorShadowListeners();
+      window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+    }
+    set hass(hass) {
+      const nextSignature = this._getEntityOptionsSignature(hass);
+      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+      this._hass = hass;
+      this._entityOptionsSignature = nextSignature;
+      if (!shouldRender) {
+        this._syncMountedPickerHass();
+        return;
+      }
+      const focusState = this._captureFocusState();
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    setConfig(config) {
+      const focusState = this._captureFocusState();
+      this._config = normalizeConfig(config || {}, { keepEmpty: true });
+      this._render();
+      this._restoreFocusState(focusState);
+    }
+    _getEntityOptionsSignature(hass = this._hass) {
+      return window.NodaliaUtils?.editorFilteredStatesSignature?.(
+        hass,
+        this._config?.language,
+        (id) => id.startsWith("scene.")
+      ) ?? "";
+    }
+    _watchEditorControlTag(tagName) {
+      if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+        return;
+      }
+      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+        return;
+      }
+      this._pendingEditorControlTags.add(tagName);
+      customElements.whenDefined(tagName).then(() => {
         this._pendingEditorControlTags.delete(tagName);
-
         if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
-
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      })
-      .catch(() => {
+      }).catch(() => {
         this._pendingEditorControlTags.delete(tagName);
       });
-  }
-
-  _ensureEditorControlsReady() {
-    this._watchEditorControlTag("ha-entity-picker");
-    this._watchEditorControlTag("ha-selector");
-    this._watchEditorControlTag("ha-icon-picker");
-  }
-
-  _syncMountedPickerHass() {
-    if (!this._hass || !this.shadowRoot) {
-      return;
     }
-
-    this.shadowRoot.querySelectorAll("ha-entity-picker[data-field], ha-icon-picker[data-field]").forEach(control => {
-      if ("hass" in control) {
-        control.hass = this._hass;
+    _ensureEditorControlsReady() {
+      this._watchEditorControlTag("ha-entity-picker");
+      this._watchEditorControlTag("ha-selector");
+      this._watchEditorControlTag("ha-icon-picker");
+    }
+    _syncMountedPickerHass() {
+      if (!this._hass || !this.shadowRoot) {
+        return;
       }
-    });
-  }
-
-  _captureFocusState() {
-    return window.NodaliaUtils.captureEditorFocusState(this);
-  }
-
-  _restoreFocusState(focusState) {
-    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
+      this.shadowRoot.querySelectorAll("ha-entity-picker[data-field], ha-icon-picker[data-field]").forEach((control) => {
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+      });
     }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(nextConfig, { keepEmpty: true });
-    this._render();
-    this._restoreFocusState(focusState);
-    const base = window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig;
-    const exportConfig = {
-      ...base,
-      scenes: normalizeSceneRows(nextConfig.scenes, { keepEmpty: false }),
-    };
-    fireEvent(this, "config-changed", {
-      config: compactConfig(exportConfig),
-    });
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
+    _captureFocusState() {
+      return window.NodaliaUtils.captureEditorFocusState(this);
     }
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
+    _restoreFocusState(focusState) {
+      window.NodaliaUtils.restoreEditorFocusState(this, focusState);
     }
-    if (valueType === "number") {
-      const numeric = Number(input.value);
-      return Number.isFinite(numeric) ? numeric : input.value;
+    _editorLabel(s) {
+      if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+        return s;
+      }
+      const hass = this._hass ?? this.hass;
+      return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
     }
-    if (valueType === "color") {
-      return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-    }
-    return input.value;
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-    if (!input?.dataset?.field) {
-      return;
-    }
-    event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    this._config = normalizeConfig(this._config, { keepEmpty: true });
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _onShadowValueChanged(event) {
-    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
-    if (!control?.dataset?.field) {
-      return;
-    }
-    event.stopPropagation();
-    const field = control.dataset.field;
-    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-    const previousValue = getByPath(this._config, field);
-    if (String(nextValue ?? "") === String(previousValue ?? "")) {
-      return;
-    }
-    if (typeof control.dataset?.value === "string") {
-      control.dataset.value = String(nextValue || "");
-    }
-    this._setFieldValue(field, nextValue);
-    this._config = normalizeConfig(this._config, { keepEmpty: true });
-    this._emitConfig();
-  }
-
-  _onShadowClick(event) {
-    const toggleButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
-    if (toggleButton) {
-      event.preventDefault();
-      event.stopPropagation();
+    _emitConfig() {
       const focusState = this._captureFocusState();
-      if (toggleButton.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
-      } else if (toggleButton.dataset.editorToggle === "actions") {
-        this._showActionsSection = !this._showActionsSection;
-      }
+      const nextConfig = deepClone(this._config);
+      this._config = normalizeConfig(nextConfig, { keepEmpty: true });
       this._render();
       this._restoreFocusState(focusState);
-      return;
+      const base = window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig;
+      const exportConfig = {
+        ...base,
+        scenes: normalizeSceneRows(nextConfig.scenes, { keepEmpty: false })
+      };
+      fireEvent(this, "config-changed", {
+        config: compactConfig(exportConfig)
+      });
     }
-
-    const button = event.composedPath().find(node => node instanceof HTMLButtonElement && node.dataset?.action);
-    if (!button) {
-      return;
+    _setFieldValue(path, value) {
+      if (value === void 0 || value === null || value === "") {
+        deleteByPath(this._config, path);
+        return;
+      }
+      setByPath(this._config, path, value);
     }
-    event.preventDefault();
-    event.stopPropagation();
-    const action = button.dataset.action;
-    const index = Number(button.dataset.index);
-    this._config.scenes = Array.isArray(this._config.scenes) ? this._config.scenes : [];
-
-    if (action === "add-scene") {
-      this._config.scenes.push({ entity: "", name: "", icon: "", color: "" });
+    _readFieldValue(input) {
+      const valueType = input.dataset.valueType || "string";
+      if (valueType === "boolean") {
+        return Boolean(input.checked);
+      }
+      if (valueType === "number") {
+        const numeric = Number(input.value);
+        return Number.isFinite(numeric) ? numeric : input.value;
+      }
+      if (valueType === "color") {
+        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+      }
+      return input.value;
+    }
+    _onShadowInput(event) {
+      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      if (!input?.dataset?.field) {
+        return;
+      }
+      event.stopPropagation();
+      this._setFieldValue(input.dataset.field, this._readFieldValue(input));
+      this._config = normalizeConfig(this._config, { keepEmpty: true });
+      if (event.type === "change") {
+        this._emitConfig();
+      }
+    }
+    _onShadowValueChanged(event) {
+      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+      if (!control?.dataset?.field) {
+        return;
+      }
+      event.stopPropagation();
+      const field = control.dataset.field;
+      const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+      const previousValue = getByPath(this._config, field);
+      if (String(nextValue ?? "") === String(previousValue ?? "")) {
+        return;
+      }
+      if (typeof control.dataset?.value === "string") {
+        control.dataset.value = String(nextValue || "");
+      }
+      this._setFieldValue(field, nextValue);
+      this._config = normalizeConfig(this._config, { keepEmpty: true });
       this._emitConfig();
-      return;
     }
-
-    if (!Number.isInteger(index) || index < 0 || index >= this._config.scenes.length) {
-      return;
+    _onShadowClick(event) {
+      const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+      if (toggleButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        const focusState = this._captureFocusState();
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+        } else if (toggleButton.dataset.editorToggle === "actions") {
+          this._showActionsSection = !this._showActionsSection;
+        }
+        this._render();
+        this._restoreFocusState(focusState);
+        return;
+      }
+      const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && node.dataset?.action);
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const action = button.dataset.action;
+      const index = Number(button.dataset.index);
+      this._config.scenes = Array.isArray(this._config.scenes) ? this._config.scenes : [];
+      if (action === "add-scene") {
+        this._config.scenes.push({ entity: "", name: "", icon: "", color: "" });
+        this._emitConfig();
+        return;
+      }
+      if (!Number.isInteger(index) || index < 0 || index >= this._config.scenes.length) {
+        return;
+      }
+      if (action === "remove-scene") {
+        this._config.scenes.splice(index, 1);
+        this._emitConfig();
+        return;
+      }
+      if (action === "move-scene-up") {
+        moveItem(this._config.scenes, index, index - 1);
+        this._emitConfig();
+        return;
+      }
+      if (action === "move-scene-down") {
+        moveItem(this._config.scenes, index, index + 1);
+        this._emitConfig();
+      }
     }
-
-    if (action === "remove-scene") {
-      this._config.scenes.splice(index, 1);
-      this._emitConfig();
-      return;
-    }
-
-    if (action === "move-scene-up") {
-      moveItem(this._config.scenes, index, index - 1);
-      this._emitConfig();
-      return;
-    }
-
-    if (action === "move-scene-down") {
-      moveItem(this._config.scenes, index, index + 1);
-      this._emitConfig();
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    return `
+    _renderTextField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+      return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -1831,26 +1660,24 @@ class NodaliaScenesCardEditor extends HTMLElement {
         />
       </label>
     `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
+    }
+    _renderCheckboxField(label, field, checked) {
+      const tLabel = this._editorLabel(label);
+      return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-  }
-
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
-    const tLabel = this._editorLabel(label);
-    return `
+    }
+    _renderSelectField(label, field, value, options, renderOptions = {}) {
+      const tLabel = this._editorLabel(label);
+      return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `
+          ${options.map((option) => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
               ${escapeHtml(this._editorLabel(option.label))}
             </option>
@@ -1858,17 +1685,14 @@ class NodaliaScenesCardEditor extends HTMLElement {
         </select>
       </label>
     `;
-  }
-
-  _renderColorField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("ed.person.custom_color");
-    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-    const currentValue = value === undefined || value === null || value === ""
-      ? fallbackValue
-      : String(value);
-    const colorModel = getEditorColorModel(currentValue, fallbackValue);
-    return `
+    }
+    _renderColorField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const tColorCustom = this._editorLabel("ed.person.custom_color");
+      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+      const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+      const colorModel = getEditorColorModel(currentValue, fallbackValue);
+      return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -1886,13 +1710,12 @@ class NodaliaScenesCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderEntityPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    return `
+    }
+    _renderEntityPickerField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+      return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -1904,13 +1727,12 @@ class NodaliaScenesCardEditor extends HTMLElement {
         ></div>
       </label>
     `;
-  }
-
-  _renderIconPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    return `
+    }
+    _renderIconPickerField(label, field, value, options = {}) {
+      const tLabel = this._editorLabel(label);
+      const inputValue = value === void 0 || value === null ? "" : String(value);
+      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+      return `
       <div class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
@@ -1921,63 +1743,54 @@ class NodaliaScenesCardEditor extends HTMLElement {
         ></ha-icon-picker>
       </div>
     `;
-  }
-
-  _mountSceneEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
     }
-
-    const field = host.dataset.field || "entity";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["scene"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("scene.");
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
+    _mountSceneEntityPicker(host) {
+      if (!(host instanceof HTMLElement)) {
+        return;
       }
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {
-          domain: "scene",
-        },
-      };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      if (placeholder) {
-        control.placeholder = placeholder;
+      const field = host.dataset.field || "entity";
+      const nextValue = host.dataset.value || "";
+      const placeholder = host.dataset.placeholder || "";
+      let control = null;
+      if (customElements.get("ha-entity-picker")) {
+        control = document.createElement("ha-entity-picker");
+        control.includeDomains = ["scene"];
+        control.allowCustomEntity = true;
+        control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("scene.");
+        if (placeholder) {
+          control.setAttribute("placeholder", placeholder);
+        }
+      } else if (customElements.get("ha-selector")) {
+        control = document.createElement("ha-selector");
+        control.selector = {
+          entity: {
+            domain: "scene"
+          }
+        };
+      } else {
+        control = document.createElement("input");
+        control.type = "text";
+        if (placeholder) {
+          control.placeholder = placeholder;
+        }
       }
+      control.dataset.field = field;
+      control.dataset.value = nextValue;
+      if ("hass" in control) {
+        control.hass = this._hass;
+      }
+      if ("value" in control) {
+        control.value = nextValue;
+      }
+      if (control.tagName !== "INPUT") {
+        control.addEventListener("value-changed", this._onShadowValueChanged);
+      } else {
+        control.addEventListener("change", this._onShadowInput);
+      }
+      host.replaceChildren(control);
     }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    } else {
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _renderSceneEditorCard(item, index, total) {
-    return `
+    _renderSceneEditorCard(item, index, total) {
+      return `
       <div class="scene-editor-card">
         <div class="scene-editor-card__header">
           <div class="scene-editor-card__title">${escapeHtml(this._editorLabel("ed.scenes.scenes_section_title"))} ${index + 1}</div>
@@ -1993,19 +1806,16 @@ class NodaliaScenesCardEditor extends HTMLElement {
         ${this._renderColorField("ed.scenes.scene_color", `scenes.${index}.color`, item.color, { fullWidth: true })}
       </div>
     `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
     }
-
-    const config = this._config || {};
-    const scenes = Array.isArray(config.scenes) ? config.scenes : [];
-    const isSingle = config.layout === "single";
-    const visibleScenes = isSingle ? scenes.slice(0, 1) : scenes;
-
-    this.shadowRoot.innerHTML = `
+    _render() {
+      if (!this.shadowRoot) {
+        return;
+      }
+      const config = this._config || {};
+      const scenes = Array.isArray(config.scenes) ? config.scenes : [];
+      const isSingle = config.layout === "single";
+      const visibleScenes = isSingle ? scenes.slice(0, 1) : scenes;
+      this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
         * { box-sizing: border-box; }
@@ -2199,21 +2009,21 @@ class NodaliaScenesCardEditor extends HTMLElement {
           <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.scenes.general_section_hint"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${!isSingle ? this._renderTextField("ed.weather.card_name", "name", config.name, {
-              fullWidth: true,
-              placeholder: this._editorLabel("ed.scenes.name_placeholder"),
-            }) : ""}
+        fullWidth: true,
+        placeholder: this._editorLabel("ed.scenes.name_placeholder")
+      }) : ""}
             ${!isSingle ? this._renderCheckboxField("ed.scenes.show_title", "show_title", config.show_title !== false) : ""}
             ${this._renderSelectField(
-              "ed.scenes.layout",
-              "layout",
-              config.layout,
-              [
-                { value: "grid", label: "ed.scenes.layout_grid" },
-                { value: "list", label: "ed.scenes.layout_list" },
-                { value: "single", label: "ed.scenes.layout_single" },
-              ],
-              { fullWidth: true },
-            )}
+        "ed.scenes.layout",
+        "layout",
+        config.layout,
+        [
+          { value: "grid", label: "ed.scenes.layout_grid" },
+          { value: "list", label: "ed.scenes.layout_list" },
+          { value: "single", label: "ed.scenes.layout_single" }
+        ],
+        { fullWidth: true }
+      )}
             ${config.layout === "grid" ? this._renderTextField("ed.scenes.columns", "columns", config.columns, { type: "number", valueType: "number" }) : ""}
             ${this._renderCheckboxField("ed.scenes.use_entity_icon", "use_entity_icon", config.use_entity_icon !== false)}
             ${this._renderCheckboxField("ed.scenes.show_entity_picture", "use_entity_picture", config.use_entity_picture === true)}
@@ -2224,11 +2034,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
           <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.scenes.scenes_section_title"))}</div>
           <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.scenes.scenes_section_hint"))}</div>
           <div class="scene-editor-list">
-            ${
-              visibleScenes.length
-                ? visibleScenes.map((item, index) => this._renderSceneEditorCard(item, index, visibleScenes.length)).join("")
-                : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.scenes.scenes_empty"))}</div>`
-            }
+            ${visibleScenes.length ? visibleScenes.map((item, index) => this._renderSceneEditorCard(item, index, visibleScenes.length)).join("") : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.scenes.scenes_empty"))}</div>`}
           </div>
           <div class="editor-actions" ${isSingle && scenes.length ? "hidden" : ""}>
             <button type="button" data-action="add-scene">${escapeHtml(this._editorLabel("ed.scenes.add_scene"))}</button>
@@ -2245,36 +2051,32 @@ class NodaliaScenesCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showActionsSection
-              ? `
+          ${this._showActionsSection ? `
             <div class="editor-grid editor-grid--stacked">
               ${this._renderSelectField(
-                "ed.scenes.tap_action",
-                "tap_action",
-                config.tap_action,
-                [
-                  { value: "activate", label: "ed.scenes.tap_activate" },
-                  { value: "more-info", label: "ed.scenes.tap_more_info" },
-                  { value: "none", label: "ed.scenes.hold_none" },
-                ],
-                { fullWidth: true },
-              )}
+        "ed.scenes.tap_action",
+        "tap_action",
+        config.tap_action,
+        [
+          { value: "activate", label: "ed.scenes.tap_activate" },
+          { value: "more-info", label: "ed.scenes.tap_more_info" },
+          { value: "none", label: "ed.scenes.hold_none" }
+        ],
+        { fullWidth: true }
+      )}
               ${this._renderSelectField(
-                "ed.scenes.hold_action",
-                "hold_action",
-                config.hold_action,
-                [
-                  { value: "more-info", label: "ed.scenes.hold_more_info" },
-                  { value: "activate", label: "ed.scenes.hold_activate" },
-                  { value: "none", label: "ed.scenes.hold_none" },
-                ],
-                { fullWidth: true },
-              )}
+        "ed.scenes.hold_action",
+        "hold_action",
+        config.hold_action,
+        [
+          { value: "more-info", label: "ed.scenes.hold_more_info" },
+          { value: "activate", label: "ed.scenes.hold_activate" },
+          { value: "none", label: "ed.scenes.hold_none" }
+        ],
+        { fullWidth: true }
+      )}
             </div>
-          `
-              : ""
-          }
+          ` : ""}
         </section>
 
         <section class="editor-section">
@@ -2284,20 +2086,20 @@ class NodaliaScenesCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics?.enabled !== false)}
             ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "ed.person.haptic_style",
-              "haptics.style",
-              config.haptics?.style || "medium",
-              [
-                { value: "selection", label: "ed.person.haptic_selection" },
-                { value: "light", label: "ed.person.haptic_light" },
-                { value: "medium", label: "ed.person.haptic_medium" },
-                { value: "heavy", label: "ed.person.haptic_heavy" },
-                { value: "success", label: "ed.person.haptic_success" },
-                { value: "warning", label: "ed.person.haptic_warning" },
-                { value: "failure", label: "ed.person.haptic_failure" },
-              ],
-              { fullWidth: true },
-            )}
+        "ed.person.haptic_style",
+        "haptics.style",
+        config.haptics?.style || "medium",
+        [
+          { value: "selection", label: "ed.person.haptic_selection" },
+          { value: "light", label: "ed.person.haptic_light" },
+          { value: "medium", label: "ed.person.haptic_medium" },
+          { value: "heavy", label: "ed.person.haptic_heavy" },
+          { value: "success", label: "ed.person.haptic_success" },
+          { value: "warning", label: "ed.person.haptic_warning" },
+          { value: "failure", label: "ed.person.haptic_failure" }
+        ],
+        { fullWidth: true }
+      )}
           </div>
         </section>
 
@@ -2311,9 +2113,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
             <div class="editor-grid editor-grid--stacked">
               ${this._renderColorField("ed.scenes.styles_accent", "styles.accent", config.styles?.accent || DEFAULT_CONFIG.styles.accent, { fullWidth: true })}
               <div class="editor-styles-subgroup editor-field--full">
@@ -2325,17 +2125,17 @@ class NodaliaScenesCardEditor extends HTMLElement {
                 ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
                 ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
                 ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-                  escapeHtml,
-                  field: "styles.card.border_radius",
-                  value: config.styles?.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
-                  tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-                  labels: {
-                    pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                    soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                    round: this._editorLabel("ed.entity.chip_radius_round"),
-                    square: this._editorLabel("ed.entity.chip_radius_square"),
-                  },
-                })}
+        escapeHtml,
+        field: "styles.card.border_radius",
+        value: config.styles?.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
+        tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+        labels: {
+          pill: this._editorLabel("ed.entity.chip_radius_pill"),
+          soft: this._editorLabel("ed.entity.chip_radius_soft"),
+          round: this._editorLabel("ed.entity.chip_radius_round"),
+          square: this._editorLabel("ed.entity.chip_radius_square")
+        }
+      })}
               </div>
 
               <div class="editor-styles-subgroup editor-field--full">
@@ -2357,17 +2157,17 @@ class NodaliaScenesCardEditor extends HTMLElement {
                 ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", config.styles?.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
                 ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
                 ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-                  escapeHtml,
-                  field: "styles.button.border_radius",
-                  value: config.styles?.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
-                  tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-                  labels: {
-                    pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                    soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                    round: this._editorLabel("ed.entity.chip_radius_round"),
-                    square: this._editorLabel("ed.entity.chip_radius_square"),
-                  },
-                })}
+        escapeHtml,
+        field: "styles.button.border_radius",
+        value: config.styles?.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
+        tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+        labels: {
+          pill: this._editorLabel("ed.entity.chip_radius_pill"),
+          soft: this._editorLabel("ed.entity.chip_radius_soft"),
+          round: this._editorLabel("ed.entity.chip_radius_round"),
+          square: this._editorLabel("ed.entity.chip_radius_square")
+        }
+      })}
               </div>
 
               <div class="editor-styles-subgroup editor-field--full">
@@ -2376,36 +2176,41 @@ class NodaliaScenesCardEditor extends HTMLElement {
                 ${this._renderTextField("ed.scenes.launch_duration", "animations.launch_duration", config.animations?.launch_duration || DEFAULT_CONFIG.animations.launch_duration, { type: "number", valueType: "number" })}
               </div>
             </div>
-          `
-              : ""
-          }
+          ` : ""}
         </section>
       </div>
     `;
+      this.shadowRoot.querySelectorAll('[data-mounted-control="scene-entity"]').forEach((host) => this._mountSceneEntityPicker(host));
+      this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
+        control.hass = this._hass;
+        control.value = control.dataset.value || "";
+        control.addEventListener("value-changed", this._onShadowValueChanged);
+      });
+      this._ensureEditorControlsReady();
+      window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+    }
+  };
 
-    this.shadowRoot.querySelectorAll('[data-mounted-control="scene-entity"]').forEach(host => this._mountSceneEntityPicker(host));
-    this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(control => {
-      control.hass = this._hass;
-      control.value = control.dataset.value || "";
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    });
-    this._ensureEditorControlsReady();
-    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+  // src/cards/scenes/index.ts
+  if (!customElements.get(CARD_TAG)) {
+    customElements.define(CARD_TAG, NodaliaScenesCard);
   }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaScenesCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaScenesCardEditor);
-}
-
-window.NodaliaUtils.registerCustomCard({
-  type: CARD_TAG,
-  name: "Nodalia Scenes Card",
-  description: "Cinematic Home Assistant scene moods with per-scene tints and launch feedback",
-  preview: true,
-  documentationURL: "https://github.com/danielmigueltejedor/nodalia-cards",
-});
+  if (!customElements.get(EDITOR_TAG)) {
+    customElements.define(EDITOR_TAG, NodaliaScenesCardEditor);
+  }
+  window.NodaliaUtils.registerCustomCard({
+    type: CARD_TAG,
+    name: "Nodalia Scenes Card",
+    description: "Cinematic Home Assistant scene moods with per-scene tints and launch feedback",
+    preview: true,
+    documentationURL: "https://github.com/danielmigueltejedor/nodalia-cards"
+  });
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG,
+    normalizeConfig
+  };
+  window.__NODALIA_SCENES__ = publicApi;
+})();

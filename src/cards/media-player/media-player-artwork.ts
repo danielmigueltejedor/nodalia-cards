@@ -173,10 +173,23 @@ export interface ArtworkLayerHost {
   incoming: HTMLElement;
 }
 
+export function resetArtworkLayers(host: ArtworkLayerHost | null | undefined): void {
+  if (!host) {
+    return;
+  }
+  host.current.style.backgroundImage = "";
+  host.incoming.style.backgroundImage = "";
+  host.incoming.style.transitionDuration = "";
+  host.current.classList.remove("is-idle-animated");
+  host.incoming.classList.remove("is-visible", "is-ready", "is-idle-animated");
+}
+
 export class MediaPlayerArtworkController {
   currentUrl = "";
   recent: string[] = [];
   palette: ArtworkPalette | null = null;
+  activeEntity = "";
+  private recentByEntity = new Map<string, string[]>();
   private slideshowTimer = 0;
   private slideshowIndex = 0;
   private generation = 0;
@@ -197,8 +210,31 @@ export class MediaPlayerArtworkController {
     return this.host?.stage || null;
   }
 
-  remember(url: string, maxItems = 8): void {
-    this.recent = rememberRecentArtwork(this.recent, url, maxItems);
+  recentFor(entityId = ""): string[] {
+    const id = String(entityId || this.activeEntity || "").trim();
+    if (!id) {
+      return this.recent.slice();
+    }
+    return (this.recentByEntity.get(id) || []).slice();
+  }
+
+  remember(url: string, maxItems = 8, entityId = ""): void {
+    const id = String(entityId || this.activeEntity || "").trim();
+    this.activeEntity = id || this.activeEntity;
+    const next = rememberRecentArtwork(id ? this.recentFor(id) : this.recent, url, maxItems);
+    this.recent = next;
+    if (id) {
+      this.recentByEntity.set(id, next);
+    }
+  }
+
+  clear(): void {
+    this.generation += 1;
+    this.currentUrl = "";
+    this.stopSlideshow();
+    resetArtworkLayers(this.host);
+    this.host?.stage?.style.removeProperty("--nodalia-media-accent");
+    this.palette = null;
   }
 
   stopSlideshow(): void {
@@ -219,14 +255,21 @@ export class MediaPlayerArtworkController {
       idle?: boolean;
       animation?: string;
       connected?: boolean;
+      entityId?: string;
     } = {},
   ): Promise<boolean> {
     const host = this.host;
     const nextUrl = String(url || "").trim();
+    const entityId = String(options.entityId || this.activeEntity || "").trim();
+    if (entityId) {
+      this.activeEntity = entityId;
+      this.recent = this.recentFor(entityId);
+    }
     if (!host) {
       return false;
     }
     if (!nextUrl) {
+      this.clear();
       return false;
     }
     if (nextUrl === this.currentUrl && host.current.style.backgroundImage) {
@@ -277,7 +320,13 @@ export class MediaPlayerArtworkController {
   startSlideshow(
     config: MediaPlayerIdleArtworkConfig,
     onTick: (url: string) => void,
+    entityId = "",
   ): void {
+    const id = String(entityId || this.activeEntity || "").trim();
+    if (id) {
+      this.activeEntity = id;
+      this.recent = this.recentFor(id);
+    }
     this.stopSlideshow();
     if (!config.enabled || !config.slideshow || this.recent.length < 2) {
       return;

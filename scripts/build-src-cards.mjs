@@ -25,6 +25,50 @@ export const SRC_CARD_ENTRIES = [
     entry: "src/cards/humidifier/standalone.ts",
     outfile: "nodalia-humidifier-card.js",
   },
+  {
+    entry: "src/cards/cover/standalone.ts",
+    outfile: "nodalia-cover-card.js",
+  },
+  {
+    entry: "src/cards/alarm-panel/standalone.ts",
+    outfile: "nodalia-alarm-panel-card.js",
+  },
+  {
+    entry: "src/cards/vacuum/standalone.ts",
+    outfile: "nodalia-vacuum-card.js",
+  },
+  {
+    entry: "src/cards/entity/standalone.ts",
+    outfile: "nodalia-entity-card.js",
+  },
+  {
+    entry: "src/cards/fav/standalone.ts",
+    outfile: "nodalia-fav-card.js",
+  },
+  {
+    entry: "src/cards/person/standalone.ts",
+    outfile: "nodalia-person-card.js",
+  },
+  {
+    entry: "src/cards/camera/standalone.ts",
+    outfile: "nodalia-camera-card.js",
+  },
+  {
+    entry: "src/cards/circular-gauge/standalone.ts",
+    outfile: "nodalia-circular-gauge-card.js",
+  },
+  {
+    entry: "src/cards/insignia/standalone.ts",
+    outfile: "nodalia-insignia-card.js",
+  },
+  {
+    entry: "src/cards/scenes/standalone.ts",
+    outfile: "nodalia-scenes-card.js",
+  },
+  {
+    entry: "src/cards/news/standalone.ts",
+    outfile: "nodalia-news-card.js",
+  },
 ];
 
 export async function buildSrcCards() {

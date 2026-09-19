@@ -8,6 +8,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.16b] - 2026-09-19
+
+Sixteenth experimental TypeScript architecture preview on the parallel `b` line.
+Cover through News now compile from `src/cards/`, and stacked Media Players no
+longer keep another player's album art.
+
+### Changed
+
+- Canonical TypeScript source now covers Alarm Panel, Camera, Circular Gauge,
+  Cover, Entity, Fav, Insignia, News, Person, Scenes and Vacuum, still compiled
+  to the existing HACS `nodalia-*-card.js` artifacts.
+- Insignia still registers as a Lovelace custom badge.
+
+### Fixed
+
+- Stacked Media Players clear leftover album-cover backgrounds when switching
+  back to a player without artwork. Idle cover history stays per entity.
+
+### Validation
+
+- Node regressions for per-entity artwork reset and News helpers via
+  `window.__NODALIA_NEWS__`. Full suite **505** tests.
+
 ## [2.3.0-alpha.15b] - 2026-09-18
 
 Fifteenth experimental TypeScript architecture preview on the parallel `b` line.

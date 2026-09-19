@@ -5,11 +5,11 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.15b)
+## Current architecture map (2.3.0-alpha.16b)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
-Climate, Media Player, Light, Fan and Humidifier canonical source now lives under
+Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes and News canonical source now lives under
 `src/cards/` and is compiled to the existing HACS `nodalia-*-card.js` artifacts.
 
 ```text
@@ -20,6 +20,17 @@ src/
   cards/light/                Light TypeScript split
   cards/fan/                  Fan TypeScript split
   cards/humidifier/           Humidifier TypeScript split
+  cards/cover/                Cover TypeScript split
+  cards/alarm-panel/          Alarm Panel TypeScript split
+  cards/vacuum/               Vacuum TypeScript split
+  cards/entity/               Entity TypeScript split
+  cards/fav/                  Fav TypeScript split
+  cards/person/               Person TypeScript split
+  cards/camera/               Camera TypeScript split
+  cards/circular-gauge/       Circular Gauge TypeScript split
+  cards/insignia/             Insignia TypeScript split (custom badge)
+  cards/scenes/               Scenes TypeScript split
+  cards/news/                 News TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
 nodalia-backend.js            Optional Nodalia Engine client
@@ -45,7 +56,10 @@ Approximate sizes on this preview (handwritten unless noted):
 | `nodalia-advance-vacuum-card.js` | ~341 KB | Map, rooms, dock, sessions, editor |
 | `nodalia-climate-card.js` | generated ~338 KB | Compiled Climate artifact |
 | `src/cards/climate/climate-card.ts` | ~6470 lines | Climate HTMLElement / render / interactions |
-| `nodalia-entity-card.js` | ~260 KB | Generic entity, domains, actions, editor |
+| `nodalia-entity-card.js` | generated | Compiled Entity artifact |
+| `src/cards/entity/entity-card.ts` | ~4260 lines | Generic entity, domains, air quality, editor |
+| `src/cards/fav/fav-card.ts` | ~1670 lines | Favorite mini control, alarm host, editor |
+| `src/cards/person/person-card.ts` | ~1230 lines | Person photo, zone, actions |
 | `nodalia-notifications-card.js` | ~258 KB | Inbox, mobile policy, Engine sync, editor |
 | `nodalia-power-flow-card.js` | ~231 KB | Energy graph, nodes, chips, editor |
 | `nodalia-media-player.js` | generated | Compiled Media Player artifact |
@@ -56,6 +70,12 @@ Approximate sizes on this preview (handwritten unless noted):
 | `src/cards/humidifier/humidifier-card.ts` | ~3870 lines | Humidifier HTMLElement / humidity / modes |
 | `nodalia-fan-card.js` | generated | Compiled Fan artifact |
 | `src/cards/fan/fan-card.ts` | ~3640 lines | Fan HTMLElement / speed / oscillation |
+| `nodalia-cover-card.js` | generated | Compiled Cover artifact |
+| `src/cards/cover/cover-card.ts` | ~1930 lines | Cover HTMLElement / position / tilt |
+| `nodalia-vacuum-card.js` | generated | Compiled Vacuum artifact |
+| `src/cards/vacuum/vacuum-card.ts` | ~3100 lines | Vacuum HTMLElement / presets / battery |
+| `nodalia-alarm-panel-card.js` | generated | Compiled Alarm Panel artifact |
+| `src/cards/alarm-panel/alarm-panel-card.ts` | ~1510 lines | Alarm HTMLElement / arm / code |
 | `nodalia-light-card.js` | generated | Compiled Light artifact |
 | `src/cards/light/light-card.ts` | ~3970 lines | Light HTMLElement / brightness / color |
 | `nodalia-navigation-bar.js` | ~196 KB | Routes, media overlay, popups |
@@ -106,6 +126,17 @@ These globals remain part of the public/standalone contract:
 | `window.__NODALIA_CLIMATE__` | Climate public helpers for tests/tools |
 | `window.__NODALIA_MEDIA_PLAYER__` | Media Player public helpers for tests/tools |
 | `window.__NODALIA_LIGHT__` | Light public helpers for tests/tools |
+| `window.__NODALIA_FAN__` | Fan public helpers for tests/tools |
+| `window.__NODALIA_HUMIDIFIER__` | Humidifier public helpers for tests/tools |
+| `window.__NODALIA_COVER__` | Cover public helpers for tests/tools |
+| `window.__NODALIA_ALARM_PANEL__` | Alarm Panel public helpers for tests/tools |
+| `window.__NODALIA_VACUUM__` | Vacuum public helpers for tests/tools |
+| `window.__NODALIA_ENTITY__` | Entity public helpers for tests/tools |
+| `window.__NODALIA_ENTITY_AIR_QUALITY__` | Entity air-quality helpers for tests/tools |
+| `window.__NODALIA_FAV__` | Fav public helpers for tests/tools |
+| `window.__NODALIA_PERSON__` | Person public helpers for tests/tools |
+| `window.__NODALIA_CAMERA__` | Camera public helpers for tests/tools |
+| `window.__NODALIA_CIRCULAR_GAUGE__` | Circular Gauge public helpers for tests/tools |
 | `customElements` tags | `nodalia-climate-card`, `nodalia-climate-card-editor`, etc. |
 
 Internally, migrated modules import ES modules. Globals stay at distribution
@@ -121,13 +152,24 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |
 | `nodalia-fan-card.js` | Generated from `src/cards/fan/standalone.ts` (unminified IIFE) |
 | `nodalia-humidifier-card.js` | Generated from `src/cards/humidifier/standalone.ts` (unminified IIFE) |
+| `nodalia-cover-card.js` | Generated from `src/cards/cover/standalone.ts` (unminified IIFE) |
+| `nodalia-alarm-panel-card.js` | Generated from `src/cards/alarm-panel/standalone.ts` (unminified IIFE) |
+| `nodalia-vacuum-card.js` | Generated from `src/cards/vacuum/standalone.ts` (unminified IIFE) |
+| `nodalia-entity-card.js` | Generated from `src/cards/entity/standalone.ts` (unminified IIFE) |
+| `nodalia-fav-card.js` | Generated from `src/cards/fav/standalone.ts` (unminified IIFE) |
+| `nodalia-person-card.js` | Generated from `src/cards/person/standalone.ts` (unminified IIFE) |
+| `nodalia-camera-card.js` | Generated from `src/cards/camera/standalone.ts` (unminified IIFE) |
+| `nodalia-circular-gauge-card.js` | Generated from `src/cards/circular-gauge/standalone.ts` (unminified IIFE) |
+| `nodalia-insignia-card.js` | Generated from `src/cards/insignia/standalone.ts` (unminified IIFE) |
+| `nodalia-scenes-card.js` | Generated from `src/cards/scenes/standalone.ts` (unminified IIFE) |
+| `nodalia-news-card.js` | Generated from `src/cards/news/standalone.ts` (unminified IIFE) |
 | Other `nodalia-*.js` cards | Still handwritten until migrated |
 | `nodalia-cards.manifest.js` | Version/hash metadata |
 | `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
 
-Do not edit generated Climate, Media Player, Light, Fan, or Humidifier JS by hand. Change
+Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, or News JS by hand. Change
 `src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
-or `src/cards/humidifier` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
+`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, or `src/cards/news` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
 unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
 The standalone Climate artifact keeps that class because source-contract tests still
 assert both editor implementations.
@@ -241,6 +283,8 @@ Relaxed checking is currently limited to:
 - `light-card.ts` and `light-editor.ts` (`// @ts-nocheck`) for the same reason.
 - `light-config.ts` and `light-helpers.ts` (`// @ts-nocheck` with a description)
   until remaining `unknown` internals are narrowed.
+- Fan, Humidifier, Cover, Alarm Panel, Vacuum and Entity card/editor/helpers follow the same `@ts-nocheck`
+  split while their HTMLElement controllers stay large.
 
 Do not introduce `any` in new modules. Prefer `unknown` plus narrowing.
 Home Assistant types in `src/core/types` only include fields Nodalia actually

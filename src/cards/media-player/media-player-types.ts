@@ -1,4 +1,5 @@
 import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { MediaPlayerArtworkController } from "./media-player-artwork";
 
 export type MediaPlayerPresentationMode =
   | "auto"
@@ -80,6 +81,12 @@ export interface MediaPlayerPublicApi {
   supportsMediaSeek: (state: unknown) => boolean;
   rememberRecentArtwork: (history: string[], url: string, maxItems?: number) => string[];
   extractArtworkPalette: (image: CanvasImageSource) => ArtworkPalette | null;
+  resetArtworkLayers: (host?: {
+    stage: HTMLElement;
+    current: HTMLElement;
+    incoming: HTMLElement;
+  } | null) => void;
+  MediaPlayerArtworkController: new () => MediaPlayerArtworkController;
 }
 
 export type MediaPlayerHass = HomeAssistant | null;

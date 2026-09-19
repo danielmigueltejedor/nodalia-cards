@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.15b";
+  var CARD_VERSION = "2.3.0-alpha.16b";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -618,11 +618,23 @@
       return null;
     }
   }
+  function resetArtworkLayers(host) {
+    if (!host) {
+      return;
+    }
+    host.current.style.backgroundImage = "";
+    host.incoming.style.backgroundImage = "";
+    host.incoming.style.transitionDuration = "";
+    host.current.classList.remove("is-idle-animated");
+    host.incoming.classList.remove("is-visible", "is-ready", "is-idle-animated");
+  }
   var MediaPlayerArtworkController = class {
     constructor() {
       this.currentUrl = "";
       this.recent = [];
       this.palette = null;
+      this.activeEntity = "";
+      this.recentByEntity = /* @__PURE__ */ new Map();
       this.slideshowTimer = 0;
       this.slideshowIndex = 0;
       this.generation = 0;
@@ -640,8 +652,29 @@
     getStage() {
       return this.host?.stage || null;
     }
-    remember(url, maxItems = 8) {
-      this.recent = rememberRecentArtwork(this.recent, url, maxItems);
+    recentFor(entityId = "") {
+      const id = String(entityId || this.activeEntity || "").trim();
+      if (!id) {
+        return this.recent.slice();
+      }
+      return (this.recentByEntity.get(id) || []).slice();
+    }
+    remember(url, maxItems = 8, entityId = "") {
+      const id = String(entityId || this.activeEntity || "").trim();
+      this.activeEntity = id || this.activeEntity;
+      const next = rememberRecentArtwork(id ? this.recentFor(id) : this.recent, url, maxItems);
+      this.recent = next;
+      if (id) {
+        this.recentByEntity.set(id, next);
+      }
+    }
+    clear() {
+      this.generation += 1;
+      this.currentUrl = "";
+      this.stopSlideshow();
+      resetArtworkLayers(this.host);
+      this.host?.stage?.style.removeProperty("--nodalia-media-accent");
+      this.palette = null;
     }
     stopSlideshow() {
       if (this.slideshowTimer) {
@@ -655,10 +688,16 @@
     async show(url, options = {}) {
       const host = this.host;
       const nextUrl = String(url || "").trim();
+      const entityId = String(options.entityId || this.activeEntity || "").trim();
+      if (entityId) {
+        this.activeEntity = entityId;
+        this.recent = this.recentFor(entityId);
+      }
       if (!host) {
         return false;
       }
       if (!nextUrl) {
+        this.clear();
         return false;
       }
       if (nextUrl === this.currentUrl && host.current.style.backgroundImage) {
@@ -701,7 +740,12 @@
       }, duration);
       return true;
     }
-    startSlideshow(config, onTick) {
+    startSlideshow(config, onTick, entityId = "") {
+      const id = String(entityId || this.activeEntity || "").trim();
+      if (id) {
+        this.activeEntity = id;
+        this.recent = this.recentFor(id);
+      }
       this.stopSlideshow();
       if (!config.enabled || !config.slideshow || this.recent.length < 2) {
         return;
@@ -5359,10 +5403,14 @@
       </div>
       ${mediaBrowserMarkup}
     `;
+      const idleArtworkConfig = this._config?.idle_artwork || {};
+      const artworkEntityId = String(this._activePlayerEntity || "");
+      const keepIdleArtwork = Boolean(this._activeArtworkIdle) && idleArtworkConfig.enabled !== false && this._artworkController.recentFor(artworkEntityId).length > 0;
       this._commitPersistentMediaShadow(markup, {
         artworkUrl: this._activeArtworkUrl || "",
         idle: Boolean(this._activeArtworkIdle),
-        hasAlbumBackground: Boolean(contentMarkup) && this._config.album_cover_background !== false
+        entityId: artworkEntityId,
+        hasAlbumBackground: Boolean(contentMarkup) && this._config.album_cover_background !== false && Boolean(this._activeArtworkUrl || keepIdleArtwork)
       });
       this._restoreMediaBrowserScrollState();
       this._restoreTvPanelScrollState();
@@ -5419,7 +5467,8 @@
         card.insertBefore(stage, card.firstChild);
         this._syncArtworkLayer(stage, artOptions);
       } else if (this._artworkController) {
-        this._artworkController.stopSlideshow();
+        this._artworkController.clear();
+        this._artworkController.detach();
       }
     }
     _createArtworkStage() {
@@ -5446,15 +5495,21 @@
       const idleConfig = config.idle_artwork || {};
       const playing = !artOptions.idle;
       const artworkUrl = String(artOptions.artworkUrl || "").trim();
+      const entityId = String(artOptions.entityId || this._activePlayerEntity || "");
+      const entityRecent = this._artworkController.recentFor(entityId);
+      if (this._idleSlideshowUrl && !entityRecent.includes(this._idleSlideshowUrl)) {
+        this._idleSlideshowUrl = "";
+      }
       if (artworkUrl) {
-        this._artworkController.remember(artworkUrl, idleConfig.max_items);
+        this._artworkController.remember(artworkUrl, idleConfig.max_items, entityId);
         this._artworkController.stopSlideshow();
         this._artworkController.show(artworkUrl, {
           crossfade: config.artwork?.crossfade !== false,
           duration: config.artwork?.crossfade_duration,
           idle: Boolean(artOptions.idle) && idleConfig.animation === "subtle",
           animation: idleConfig.animation,
-          connected: this.isConnected
+          connected: this.isConnected,
+          entityId
         });
         if (config.artwork?.dynamic_colors !== false) {
           sampleArtworkPalette(artworkUrl).then((palette) => {
@@ -5468,18 +5523,19 @@
         }
         return;
       }
-      if (playing || idleConfig.enabled === false || !this._artworkController.recent.length) {
-        this._artworkController.stopSlideshow();
+      if (playing || idleConfig.enabled === false || !entityRecent.length) {
+        this._artworkController.clear();
         return;
       }
-      const first = this._idleSlideshowUrl || this._artworkController.recent[0];
+      const first = (this._idleSlideshowUrl && entityRecent.includes(this._idleSlideshowUrl) ? this._idleSlideshowUrl : entityRecent[0]) || "";
       if (first) {
         this._artworkController.show(first, {
           crossfade: config.artwork?.crossfade !== false,
           duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
           idle: true,
           animation: idleConfig.animation,
-          connected: this.isConnected
+          connected: this.isConnected,
+          entityId
         });
       }
       this._artworkController.startSlideshow(idleConfig, (url) => {
@@ -5492,9 +5548,10 @@
           duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
           idle: true,
           animation: idleConfig.animation,
-          connected: this.isConnected
+          connected: this.isConnected,
+          entityId
         });
-      });
+      }, entityId);
     }
     _startProgressDrag(track, clientX, event = null, pointerId = null) {
       if (!(track instanceof HTMLElement) || track.dataset.mediaProgress !== "seek") {
@@ -6831,7 +6888,9 @@
     interpolatePlaybackProgress,
     supportsMediaSeek,
     rememberRecentArtwork,
-    extractArtworkPalette
+    extractArtworkPalette,
+    resetArtworkLayers,
+    MediaPlayerArtworkController
   };
   window.__NODALIA_MEDIA_PLAYER__ = publicApi;
 })();
