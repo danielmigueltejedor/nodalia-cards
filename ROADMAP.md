@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.18b
+2.3.0-alpha.19b
 ```
 
-Preview **`2.3.0-alpha.18b`** restores Camera Card render after a missing TypeScript helper import. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.19b`** migrates Weather and Graph to TypeScript and fixes stacked Media Player leftover height. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

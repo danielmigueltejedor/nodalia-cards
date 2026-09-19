@@ -69,6 +69,14 @@ export const SRC_CARD_ENTRIES = [
     entry: "src/cards/news/standalone.ts",
     outfile: "nodalia-news-card.js",
   },
+  {
+    entry: "src/cards/weather/standalone.ts",
+    outfile: "nodalia-weather-card.js",
+  },
+  {
+    entry: "src/cards/graph/standalone.ts",
+    outfile: "nodalia-graph-card.js",
+  },
 ];
 
 export async function buildSrcCards() {

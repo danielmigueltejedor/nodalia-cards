@@ -8,6 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.19b] - 2026-09-19
+
+Nineteenth experimental TypeScript architecture preview on the parallel `b` line.
+Weather and Graph compile from `src/cards/`, and stacked Media Players no longer
+keep leftover square height after switching away from album art.
+
+### Changed
+
+- Canonical TypeScript source now covers Weather and Graph, still compiled to
+  the existing HACS `nodalia-*-card.js` artifacts.
+
+### Fixed
+
+- Stacked Media Players drop leftover square host height when switching from a
+  cover player back to a compact or TV overlay.
+- Auto square tiles require real album artwork and active content, so idle TVs
+  and logo-only players no longer grow taller than their controls.
+
+### Validation
+
+- Node regressions for Media Player leftover height, Weather
+  `window.__NODALIA_WEATHER__`, and Graph `window.__NODALIA_GRAPH__`. Full
+  suite **510** tests.
+
 ## [2.3.0-alpha.18b] - 2026-09-19
 
 Eighteenth experimental TypeScript architecture preview on the parallel `b` line.

@@ -132,6 +132,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
     this._displayArtworkByEntity = new Map();
     this._artworkController = new MediaPlayerArtworkController();
     this._resolvedLayoutMode = "";
+    this._presentationEntityId = "";
     this._layoutObserver = null;
     this._activeProgressDrag = null;
     this._idleSlideshowUrl = "";
@@ -285,14 +286,29 @@ export class NodaliaMediaPlayer extends HTMLElement {
 
   _getPresentationMode() {
     const context = this._getActivePlayerContext();
+    const entityId = String(context?.player?.entity || "");
+    if (entityId !== this._presentationEntityId) {
+      this._presentationEntityId = entityId;
+      this._resolvedLayoutMode = "";
+    }
     const isTvPlayer = context
       ? this._getPlayerDeviceType(context.player, context.state) === "tv"
       : false;
+    const isIdleLayout = Boolean(
+      context && this._shouldUseIdleLayout(context.player, context.state),
+    );
+    const artworkUrl = context
+      ? this._getPlayerArtwork(context.player, context.state)
+      : "";
+    const preferSquareTiles = Boolean(!isTvPlayer && !isIdleLayout && artworkUrl);
     return resolvePresentationMode(
       this._config?.layout?.mode,
-      { width: this.clientWidth, height: this.clientHeight },
+      {
+        width: this.clientWidth,
+        height: preferSquareTiles ? this.clientHeight : 0,
+      },
       this._resolvedLayoutMode,
-      { preferSquareTiles: !isTvPlayer },
+      { preferSquareTiles },
     );
   }
 
@@ -3307,7 +3323,9 @@ export class NodaliaMediaPlayer extends HTMLElement {
           --media-player-browser-duration: ${animations.enabled ? animations.browserDuration : 0}ms;
           --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --media-player-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+          aspect-ratio: auto;
           display: block;
+          height: auto;
           width: 100%;
         }
 

@@ -74,6 +74,8 @@ const BUNDLE_SOURCE_ALIASES = {
   "nodalia-insignia-card.js": "src/cards/insignia/index.ts",
   "nodalia-scenes-card.js": "src/cards/scenes/index.ts",
   "nodalia-news-card.js": "src/cards/news/index.ts",
+  "nodalia-weather-card.js": "src/cards/weather/index.ts",
+  "nodalia-graph-card.js": "src/cards/graph/index.ts",
 };
 
 await buildSrcCards();

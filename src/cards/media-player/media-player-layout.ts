@@ -37,21 +37,26 @@ function keepCurrentIfClose(
   next: Exclude<MediaPlayerPresentationMode, "auto">,
   width: number,
   height: number,
+  preferSquareTiles: boolean,
 ): Exclude<MediaPlayerPresentationMode, "auto"> {
   if (!current || current === next) {
     return next;
   }
 
-  if (next === "square" && (current === "chip" || current === "compact")) {
+  if (!preferSquareTiles && (current === "square" || current === "artwork")) {
+    return next;
+  }
+
+  if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
     return "square";
   }
 
-  if (current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
+  if (preferSquareTiles && current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
     return "square";
   }
 
   const ratio = width / Math.max(height, 1);
-  if (current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
+  if (preferSquareTiles && current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
     return "square";
   }
   if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
@@ -60,7 +65,7 @@ function keepCurrentIfClose(
   if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
     return "compact";
   }
-  if (current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
+  if (preferSquareTiles && current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
     return "artwork";
   }
   return next;
@@ -91,16 +96,21 @@ export function resolvePresentationMode(
     next = "chip";
   } else if (preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH) {
     next = "square";
-  } else if (!preferSquareTiles && width <= 248 && (height <= 210 || height <= 0)) {
+  } else if (!preferSquareTiles && width <= 248) {
     next = "compact";
   } else if (preferSquareTiles && width < COMPACT_MAX_WIDTH) {
     next = "compact";
-  } else if (ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
+  } else if (
+    preferSquareTiles
+    && ratio >= 0.84
+    && ratio <= 1.18
+    && Math.min(width, height) >= 168
+  ) {
     next = "square";
   }
 
   const stableCurrent = current && current !== "auto" ? current : "";
-  return keepCurrentIfClose(stableCurrent, next, width, height);
+  return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles);
 }
 
 export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMode, "auto">): {

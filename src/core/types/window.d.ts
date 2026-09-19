@@ -16,6 +16,8 @@ import type { CircularGaugePublicApi } from "../../cards/circular-gauge/circular
 import type { InsigniaPublicApi } from "../../cards/insignia/insignia-types";
 import type { ScenesPublicApi } from "../../cards/scenes/scenes-types";
 import type { NewsPublicApi } from "../../cards/news/news-types";
+import type { WeatherPublicApi } from "../../cards/weather/weather-types";
+import type { GraphPublicApi } from "../../cards/graph/graph-types";
 
 interface NodaliaI18nApi {
   resolveHass?: (hass: unknown) => unknown;
@@ -66,6 +68,8 @@ declare global {
     __NODALIA_INSIGNIA__?: InsigniaPublicApi;
     __NODALIA_SCENES__?: ScenesPublicApi;
     __NODALIA_NEWS__?: NewsPublicApi;
+    __NODALIA_WEATHER__?: WeatherPublicApi;
+    __NODALIA_GRAPH__?: GraphPublicApi;
     customCards?: Array<{ type?: string; [key: string]: unknown }>;
     customBadges?: Array<{
       type?: string;

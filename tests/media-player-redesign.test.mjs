@@ -47,6 +47,14 @@ test("media player layouts stay stable across nearby size changes", () => {
     api.resolvePresentationMode("auto", { width: 220, height: 160 }, "", { preferSquareTiles: false }),
     "compact",
   );
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 340, height: 340 }, "square", { preferSquareTiles: false }),
+    "standard",
+  );
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 220, height: 220 }, "square", { preferSquareTiles: false }),
+    "compact",
+  );
 });
 
 test("recent artwork history skips consecutive duplicates and respects the cap", () => {
@@ -190,7 +198,7 @@ test("square media player overlay keeps the name chip off the transport row", ()
 test("square media player overlay stays a tile instead of collapsing to a chip", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /:host\(\[data-presentation="square"\]\)/);
-  assert.match(source, /preferSquareTiles: !isTvPlayer/);
+  assert.match(source, /preferSquareTiles = Boolean\(!isTvPlayer && !isIdleLayout && artworkUrl\)/);
   assert.doesNotMatch(source, /height: auto !important;/);
   const layout = read("src/cards/media-player/media-player-layout.ts");
   assert.match(layout, /CHIP_MIN_WIDTH = 960/);

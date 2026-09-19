@@ -80,7 +80,9 @@ function loadGraphEditor() {
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-graph-card.js"), sandbox);
-  vm.runInContext("globalThis.__normalizeGraphConfig = normalizeConfig;", sandbox);
+  const api = sandbox.window.__NODALIA_GRAPH__ || sandbox.__NODALIA_GRAPH__;
+  assert.ok(typeof api?.normalizeConfig === "function", "graph public API should expose normalizeConfig");
+  sandbox.__normalizeGraphConfig = api.normalizeConfig;
 
   const EditorClass = registry.get("nodalia-graph-card-editor");
   assert.ok(EditorClass, "NodaliaGraphCardEditor should register");

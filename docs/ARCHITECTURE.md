@@ -5,11 +5,11 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.18b)
+## Current architecture map (2.3.0-alpha.19b)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
-Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes and News canonical source now lives under
+Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather and Graph canonical source now lives under
 `src/cards/` and is compiled to the existing HACS `nodalia-*-card.js` artifacts.
 
 ```text
@@ -31,6 +31,8 @@ src/
   cards/insignia/             Insignia TypeScript split (custom badge)
   cards/scenes/               Scenes TypeScript split
   cards/news/                 News TypeScript split
+  cards/weather/              Weather TypeScript split
+  cards/graph/                Graph TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
 nodalia-backend.js            Optional Nodalia Engine client
@@ -137,6 +139,11 @@ These globals remain part of the public/standalone contract:
 | `window.__NODALIA_PERSON__` | Person public helpers for tests/tools |
 | `window.__NODALIA_CAMERA__` | Camera public helpers for tests/tools |
 | `window.__NODALIA_CIRCULAR_GAUGE__` | Circular Gauge public helpers for tests/tools |
+| `window.__NODALIA_INSIGNIA__` | Insignia public helpers for tests/tools |
+| `window.__NODALIA_SCENES__` | Scenes public helpers for tests/tools |
+| `window.__NODALIA_NEWS__` | News public helpers for tests/tools |
+| `window.__NODALIA_WEATHER__` | Weather public helpers for tests/tools |
+| `window.__NODALIA_GRAPH__` | Graph public helpers for tests/tools |
 | `customElements` tags | `nodalia-climate-card`, `nodalia-climate-card-editor`, etc. |
 
 Internally, migrated modules import ES modules. Globals stay at distribution
@@ -163,13 +170,15 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-insignia-card.js` | Generated from `src/cards/insignia/standalone.ts` (unminified IIFE) |
 | `nodalia-scenes-card.js` | Generated from `src/cards/scenes/standalone.ts` (unminified IIFE) |
 | `nodalia-news-card.js` | Generated from `src/cards/news/standalone.ts` (unminified IIFE) |
+| `nodalia-weather-card.js` | Generated from `src/cards/weather/standalone.ts` (unminified IIFE) |
+| `nodalia-graph-card.js` | Generated from `src/cards/graph/standalone.ts` (unminified IIFE) |
 | Other `nodalia-*.js` cards | Still handwritten until migrated |
 | `nodalia-cards.manifest.js` | Version/hash metadata |
 | `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
 
-Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, or News JS by hand. Change
+Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, or Graph JS by hand. Change
 `src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
-`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, or `src/cards/news` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
+`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, or `src/cards/graph` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
 unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
 The standalone Climate artifact keeps that class because source-contract tests still
 assert both editor implementations.
@@ -233,7 +242,7 @@ when a file is large *and* mixed.
 2. `pnpm run lint` — ESLint on `src/**/*.ts`.
 3. `scripts/build-src-cards.mjs` — esbuild TypeScript cards to root JS.
 4. `scripts/build-bundle.mjs` — esbuild HACS bundle from published JS parts,
-   compiling Climate, Media Player, Light, Fan and Humidifier from `src/cards/*/index.ts`.
+   compiling migrated cards from `src/cards/*/index.ts`.
 
 `pnpm run validate` runs typecheck, lint, i18n checks, the bundle, and unit tests.
 

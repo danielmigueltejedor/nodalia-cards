@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.18b";
+  var CARD_VERSION = "2.3.0-alpha.19b";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -183,18 +183,21 @@
     }
     return "auto";
   }
-  function keepCurrentIfClose(current, next, width, height) {
+  function keepCurrentIfClose(current, next, width, height, preferSquareTiles) {
     if (!current || current === next) {
       return next;
     }
-    if (next === "square" && (current === "chip" || current === "compact")) {
+    if (!preferSquareTiles && (current === "square" || current === "artwork")) {
+      return next;
+    }
+    if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
       return "square";
     }
-    if (current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
+    if (preferSquareTiles && current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
       return "square";
     }
     const ratio = width / Math.max(height, 1);
-    if (current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
+    if (preferSquareTiles && current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
       return "square";
     }
     if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
@@ -203,7 +206,7 @@
     if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
       return "compact";
     }
-    if (current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
+    if (preferSquareTiles && current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
       return "artwork";
     }
     return next;
@@ -225,15 +228,15 @@
       next = "chip";
     } else if (preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH) {
       next = "square";
-    } else if (!preferSquareTiles && width <= 248 && (height <= 210 || height <= 0)) {
+    } else if (!preferSquareTiles && width <= 248) {
       next = "compact";
     } else if (preferSquareTiles && width < COMPACT_MAX_WIDTH) {
       next = "compact";
-    } else if (ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
+    } else if (preferSquareTiles && ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
       next = "square";
     }
     const stableCurrent = current && current !== "auto" ? current : "";
-    return keepCurrentIfClose(stableCurrent, next, width, height);
+    return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles);
   }
   function presentationGridOptions(mode) {
     switch (mode) {
@@ -1199,6 +1202,7 @@
       this._displayArtworkByEntity = /* @__PURE__ */ new Map();
       this._artworkController = new MediaPlayerArtworkController();
       this._resolvedLayoutMode = "";
+      this._presentationEntityId = "";
       this._layoutObserver = null;
       this._activeProgressDrag = null;
       this._idleSlideshowUrl = "";
@@ -1337,12 +1341,25 @@
     }
     _getPresentationMode() {
       const context = this._getActivePlayerContext();
+      const entityId = String(context?.player?.entity || "");
+      if (entityId !== this._presentationEntityId) {
+        this._presentationEntityId = entityId;
+        this._resolvedLayoutMode = "";
+      }
       const isTvPlayer = context ? this._getPlayerDeviceType(context.player, context.state) === "tv" : false;
+      const isIdleLayout = Boolean(
+        context && this._shouldUseIdleLayout(context.player, context.state)
+      );
+      const artworkUrl = context ? this._getPlayerArtwork(context.player, context.state) : "";
+      const preferSquareTiles = Boolean(!isTvPlayer && !isIdleLayout && artworkUrl);
       return resolvePresentationMode(
         this._config?.layout?.mode,
-        { width: this.clientWidth, height: this.clientHeight },
+        {
+          width: this.clientWidth,
+          height: preferSquareTiles ? this.clientHeight : 0
+        },
         this._resolvedLayoutMode,
-        { preferSquareTiles: !isTvPlayer }
+        { preferSquareTiles }
       );
     }
     _syncPresentationMode() {
@@ -3722,7 +3739,9 @@
           --media-player-browser-duration: ${animations.enabled ? animations.browserDuration : 0}ms;
           --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --media-player-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+          aspect-ratio: auto;
           display: block;
+          height: auto;
           width: 100%;
         }
 

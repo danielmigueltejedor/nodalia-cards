@@ -4,7 +4,7 @@
   // src/cards/circular-gauge/circular-gauge-constants.ts
   var CARD_TAG = "nodalia-circular-gauge-card";
   var EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.18b";
+  var CARD_VERSION = "2.3.0-alpha.19b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

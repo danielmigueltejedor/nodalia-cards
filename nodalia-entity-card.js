@@ -4,7 +4,7 @@
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
   var EDITOR_TAG = "nodalia-entity-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.18b";
+  var CARD_VERSION = "2.3.0-alpha.19b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

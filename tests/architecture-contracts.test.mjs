@@ -554,6 +554,28 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   newsFiles.forEach(file => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   });
+  const weatherFiles = [
+    "src/cards/weather/index.ts",
+    "src/cards/weather/weather-card.ts",
+    "src/cards/weather/weather-config.ts",
+    "src/cards/weather/weather-types.ts",
+    "src/cards/weather/weather-helpers.ts",
+    "src/cards/weather/weather-editor.ts",
+  ];
+  weatherFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const graphFiles = [
+    "src/cards/graph/index.ts",
+    "src/cards/graph/graph-card.ts",
+    "src/cards/graph/graph-config.ts",
+    "src/cards/graph/graph-types.ts",
+    "src/cards/graph/graph-helpers.ts",
+    "src/cards/graph/graph-editor.ts",
+  ];
+  graphFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
   const generatedClimate = read("nodalia-climate-card.js");
   assert.match(generatedClimate, /window\.__NODALIA_CLIMATE__/);
   assert.match(generatedClimate, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
@@ -603,6 +625,12 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   const generatedNews = read("nodalia-news-card.js");
   assert.match(generatedNews, /window\.__NODALIA_NEWS__/);
   assert.match(generatedNews, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
+  const generatedWeather = read("nodalia-weather-card.js");
+  assert.match(generatedWeather, /window\.__NODALIA_WEATHER__/);
+  assert.match(generatedWeather, /customElements\.define\(CARD_TAG, NodaliaWeatherCard\)/);
+  const generatedGraph = read("nodalia-graph-card.js");
+  assert.match(generatedGraph, /window\.__NODALIA_GRAPH__/);
+  assert.match(generatedGraph, /customElements\.define\(CARD_TAG, NodaliaGraphCard\)/);
   const standaloneBuild = read("scripts/build-src-cards.mjs");
   const hacsBuild = read("scripts/build-bundle.mjs");
   assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
@@ -621,6 +649,8 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   assert.match(standaloneBuild, /src\/cards\/insignia\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/scenes\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/news\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/weather\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/graph\/standalone\.ts/);
   assert.match(hacsBuild, /src\/cards\/climate\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/media-player\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/light\/index\.ts/);
@@ -637,4 +667,6 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   assert.match(hacsBuild, /src\/cards\/insignia\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/scenes\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/news\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/weather\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/graph\/index\.ts/);
 });

@@ -158,6 +158,18 @@ function loadCardNormalizeConfig(file, className) {
     assert.ok(typeof api?.normalizeConfig === "function", "news public API should expose normalizeConfig");
     return api.normalizeConfig;
   }
+  if (file === "nodalia-weather-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_WEATHER__ || sandbox.__NODALIA_WEATHER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "weather public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-graph-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_GRAPH__ || sandbox.__NODALIA_GRAPH__;
+    assert.ok(typeof api?.normalizeConfig === "function", "graph public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -823,7 +835,7 @@ test("light, fan, and humidifier normalize native Lovelace service action object
 
 test("graph card refreshes history and restores host listeners after reconnect", () => {
   const source = read("nodalia-graph-card.js");
-  assert.match(source, /const HISTORY_REFRESH_INTERVAL = 180000/);
+  assert.match(source, /HISTORY_REFRESH_INTERVAL = 18(?:0000|e4)/);
   assert.match(source, /_scheduleHistoryRefresh\(\)/);
   assert.match(source, /this\._requestHistory\(\);[\s\S]*this\._scheduleHistoryRefresh\(\)/);
   const connectedStart = source.indexOf("  connectedCallback() {");
@@ -2318,7 +2330,7 @@ test("calendar card invalidates refresh run id on disconnect", () => {
 
 test("weather forecast subscription guards disconnected lifecycle", () => {
   const source = read("nodalia-weather-card.js");
-  assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(source, /subscribeMessage\(\(?event\)? => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
 test("vacuum built-in controls bypass the configurable service allowlist", () => {
