@@ -8,6 +8,347 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.19b] - 2026-09-19
+
+Nineteenth experimental TypeScript architecture preview on the parallel `b` line.
+Weather and Graph compile from `src/cards/`, and stacked Media Players no longer
+keep leftover square height after switching away from album art.
+
+### Changed
+
+- Canonical TypeScript source now covers Weather and Graph, still compiled to
+  the existing HACS `nodalia-*-card.js` artifacts.
+
+### Fixed
+
+- Stacked Media Players drop leftover square host height when switching from a
+  cover player back to a compact or TV overlay.
+- Auto square tiles require real album artwork and active content, so idle TVs
+  and logo-only players no longer grow taller than their controls.
+
+### Validation
+
+- Node regressions for Media Player leftover height, Weather
+  `window.__NODALIA_WEATHER__`, and Graph `window.__NODALIA_GRAPH__`. Full
+  suite **510** tests.
+
+## [2.3.0-alpha.18b] - 2026-09-19
+
+Eighteenth experimental TypeScript architecture preview on the parallel `b` line.
+Camera Card no longer throws during Lovelace render after the TypeScript split.
+
+### Fixed
+
+- Camera Card imports `normalizeTextKey` and `cameraStreamName`, so the first
+  `hass` render no longer raises a `ReferenceError` that Lovelace shows as a
+  configuration error.
+- Camera editor imports stream and tap-action compact helpers used when saving
+  YAML.
+
+### Validation
+
+- Node regression for Camera `setConfig` plus connected `hass` render. Full
+  suite **506** tests.
+
+## [2.3.0-alpha.17b] - 2026-09-19
+
+Seventeenth experimental TypeScript architecture preview on the parallel `b` line.
+Camera Card and Room Summary no longer fail Lovelace configuration after the
+TypeScript Camera split.
+
+### Fixed
+
+- Camera Card no longer binds `NodaliaCameraStreamModel` at module load, which
+  aborted the HACS bundle before Room Summary registered.
+- Camera `normalizeConfig` imports `deepClone` so the style sanitizer fallback
+  cannot throw a configuration error.
+- Room Summary skips embedded cards whose custom element is missing instead of
+  failing the hub `setConfig`.
+
+### Validation
+
+- Node regressions for Camera load without a preloaded stream model and Room
+  Summary hub mount guard. Full suite **506** tests.
+
+## [2.3.0-alpha.16b] - 2026-09-19
+
+Sixteenth experimental TypeScript architecture preview on the parallel `b` line.
+Cover through News now compile from `src/cards/`, and stacked Media Players no
+longer keep another player's album art.
+
+### Changed
+
+- Canonical TypeScript source now covers Alarm Panel, Camera, Circular Gauge,
+  Cover, Entity, Fav, Insignia, News, Person, Scenes and Vacuum, still compiled
+  to the existing HACS `nodalia-*-card.js` artifacts.
+- Insignia still registers as a Lovelace custom badge.
+
+### Fixed
+
+- Stacked Media Players clear leftover album-cover backgrounds when switching
+  back to a player without artwork. Idle cover history stays per entity.
+
+### Validation
+
+- Node regressions for per-entity artwork reset and News helpers via
+  `window.__NODALIA_NEWS__`. Full suite **505** tests.
+
+## [2.3.0-alpha.15b] - 2026-09-18
+
+Fifteenth experimental TypeScript architecture preview on the parallel `b` line.
+Narrow square Media Players keep the device-name chip off the transport buttons.
+
+### Changed
+
+- Square/artwork overlays reserve a bottom row for controls and hide the
+  device chip below 260px, so “HomePod mini” no longer sits on play/skip.
+
+### Validation
+
+- Node regression for the square overlay container query and three-row content
+  grid.
+
+## [2.3.0-alpha.14b] - 2026-09-18
+
+Fourteenth experimental TypeScript architecture preview on the parallel `b` line.
+Playing music tiles stay square overlays on phone and desktop, idle TVs stay
+compact pills, and Vacuum battery chips sit on the title row.
+
+### Changed
+
+- Auto Media Player no longer collapses 6-column music tiles into chip or
+  compact thumbnail layouts; those tiles use the square artwork overlay.
+- Host square CSS no longer forces `height: auto !important`, which had
+  squashed desktop overlays into chips.
+- Compact Vacuum puts the battery chip in the title row so it cannot overlay
+  the name or state chip.
+- Circular Fan and Humidifier show the entity title like Cover and Climate, so
+  iPhone browser smoke tests can compare native circular chrome.
+- Browser smoke tests tolerate a missing climate override chip instead of
+  throwing inside `getComputedStyle`.
+
+### Validation
+
+- Node regressions for auto square tiles, collapsed-short tiles staying square,
+  TV compact preference, and Vacuum headline chips.
+
+## [2.3.0-alpha.13b] - 2026-09-18
+
+Thirteenth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Vacuum keeps the battery chip in the header row, idle TV tiles keep
+power beside a truncating name, and square music players stay 1:1 on phones.
+
+### Changed
+
+- Compact Vacuum battery chips sit in the header grid instead of overlaying the
+  title and state chip.
+- Idle TV Media Players use a three-column hero: artwork, name, and power.
+- Square/artwork Media Player hosts no longer grow with overlay content, so a
+  narrow phone cell stays square like desktop.
+
+### Validation
+
+- Node regressions for Vacuum header-meta flow, idle TV three-column heroes,
+  and square `min-height: 0`. Chromium coverage that an 180px-wide tall phone
+  cell keeps a square overlay.
+
+## [2.3.0-alpha.12b] - 2026-09-18
+
+Twelfth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Light and Humidifier keep the name beside the icon on phones, Humidifier
+chips stay on the right, and idle Media Player tiles are a single row.
+
+### Changed
+
+- Compact Light/Humidifier heroes stay two columns on narrow viewports, including
+  Light mini tiles that also show a title.
+- Humidifier compact headlines stretch so state chips sit on the right edge.
+- Idle/off Media Player tiles use a pill row: artwork, name, and power.
+
+### Validation
+
+- Node regressions for compact hero columns, humidifier chip alignment, and
+  Media Player idle one-row layout.
+
+## [2.3.0-alpha.11b] - 2026-09-18
+
+Eleventh experimental TypeScript architecture preview on the parallel `b` line.
+Compact tiles show the entity name when the row is wide enough for icon plus
+label, instead of hiding it whenever compact density is on.
+
+### Changed
+
+- Compact Entity, Light, Fan, Humidifier, Cover, Vacuum and Alarm keep the
+  title on tiles about 148px wide or more, with ellipsis if the label is long.
+- Narrow phone tiles still hide the name so the icon stays the only content.
+
+### Validation
+
+- Node regressions for the shared compact-title helper and per-card title
+  rendering.
+
+## [2.3.0-alpha.10b] - 2026-09-18
+
+Tenth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Entity, Light, Fan and Humidifier tiles keep the icon on the left, and
+Media Player idle/TV/chip/compact artwork uses the same 22px icon container.
+
+### Changed
+
+- Compact Entity and Light heroes no longer collapse to a centered 1-column
+  icon; the bubble stays on the left like the expanded layout.
+- Fan compact heroes stop centering the icon track.
+- Media Player artwork radius is 22px in idle, TV, chip and compact modes so
+  Apple TV, projector and speaker tiles match.
+
+### Validation
+
+- Node regressions for left-aligned compact heroes and a single Media Player
+  artwork radius.
+
+## [2.3.0-alpha.9b] - 2026-09-18
+
+Ninth experimental TypeScript architecture preview on the parallel `b` line.
+Compact Fan, Humidifier and Vacuum tiles keep the icon on the left, and Fan
+and Humidifier now live under `src/cards/` like Light.
+
+### Changed
+
+- Compact density no longer recenters the power icon; 4- and 6-column tiles
+  keep the original left-aligned bubble beside the copy.
+- Fan canonical source moved to `src/cards/fan/` and still compiles to
+  `nodalia-fan-card.js`.
+- Humidifier canonical source moved to `src/cards/humidifier/` and still
+  compiles to `nodalia-humidifier-card.js`.
+
+### Validation
+
+- Node regressions after compiling Fan and Humidifier from TypeScript,
+  including optimistic settle, compact helper, and public `normalizeConfig`.
+
+## [2.3.0-alpha.8b] - 2026-09-17
+
+Eighth experimental TypeScript architecture preview on the parallel `b` line.
+Square and artwork Media Player stay overlay-square on phones, and Fan,
+Humidifier, Vacuum, Light and Cover share one compact-density helper so 4-,
+6- and 12-column tiles look right without per-card YAML.
+
+### Changed
+
+- Square/artwork Media Player hosts keep `aspect-ratio: 1 / 1`, hide the
+  content thumbnail, and pin browse to the top-right even inside a tall
+  mobile sections cell.
+- Compact auto mode now uses card width under 480px or 6 columns or fewer, so
+  phone-width 6-column tiles compact instead of stretching the expanded layout.
+- Fan, Humidifier, Vacuum and Light compact CSS no longer fight the phone
+  viewport query, so 4- and 6-column tiles stay icon-centered.
+
+### Validation
+
+- Node regressions for the shared compact helper, square overlay CSS, and the
+  Light editor haptic persist path. Chromium coverage that a 390px-wide tall
+  phone cell keeps a square overlay.
+
+## [2.3.0-alpha.7b] - 2026-09-17
+
+Seventh experimental TypeScript architecture preview on the parallel `b` line.
+Light now lives under `src/cards/light/` and still compiles to the existing
+HACS `nodalia-light-card.js` artifact. Lovelace tags, YAML, editors and
+visual behavior stay compatible with `2.3.0-alpha.6b`.
+
+### Changed
+
+- Light canonical source moved to `src/cards/light/` (card, editor, config,
+  helpers, constants) and is compiled into `nodalia-light-card.js`.
+- Tests and the HACS bundle now use `window.__NODALIA_LIGHT__` the same way
+  Climate and Media Player already expose their public helpers.
+
+### Validation
+
+- Node regressions after compiling Light from TypeScript, including optimistic
+  toggle, brightness fill, and editor/config contracts.
+
+## [2.3.0-alpha.6b] - 2026-09-17
+
+Sixth experimental TypeScript architecture preview on the parallel `b` line.
+Square Media Player keeps a sharp album cover, more readable glass controls,
+and the time chip above the progress bar on desktop-sized cards.
+
+### Changed
+
+- Square and artwork Media Player fill the card with an unblurred cover and a
+  bottom gradient instead of a blurred wallpaper.
+- Transport buttons use a denser card-surface mix so icons stay readable on
+  photos; play is a solid accent bubble.
+- Desktop square cards stack the time chip above the seek bar so they no
+  longer overlap.
+
+### Validation
+
+- Node regressions plus Chromium coverage that a 320px square card keeps the
+  time chip off the progress bar and a sharp artwork layer.
+
+## [2.3.0-alpha.5b] - 2026-09-17
+
+Fifth experimental TypeScript architecture preview on the parallel `b` line.
+Media Player controls match the Fan glass-bubble recipe so they stay readable
+on immersive artwork, and square or narrow cards no longer clip the transport.
+
+### Changed
+
+- Media Player transport, volume and browse buttons use the shared Nodalia
+  glass bubble: 36px, backdrop blur, inset highlight and drop shadow.
+- Square, artwork and chip layouts keep every control inside the card instead
+  of packing the transport into the bottom band or overflowing the browse
+  control.
+
+### Validation
+
+- Node regressions plus Chromium coverage that Media Player bubbles stay
+  inside a 180px square card.
+
+## [2.3.0-alpha.4b] - 2026-09-17
+
+Fourth experimental TypeScript architecture preview on the parallel `b` line.
+Lovelace behavior, YAML, custom element tags and HACS install stay compatible
+with `2.3.0-alpha.3`. Media Player now lives under `src/cards/media-player/`
+with artwork-first layouts, a persistent background layer, and extra
+entity-picker format presets.
+
+### Changed
+
+- Media Player moved to `src/cards/media-player/` with immersive artwork,
+  square/chip/compact/artwork layouts, crossfade, a draggable seek bar and idle
+  slideshow. Vacuum room expansion keeps the card surface mounted.
+- Entity-first card picker offers curated layout presets for Media Player,
+  Climate, Light, Fan, Vacuum and Entity.
+- Architecture notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+### Validation
+
+- Node regressions plus `tsc` and ESLint on `src/`. Chromium covers picker
+  presets, the persistent Media Player art stage, and Vacuum surface identity.
+- The self-contained HACS bundle budget is `4 MiB + 64 KiB` after the Media
+  Player TypeScript split.
+
+## [2.3.0-alpha.3b] - 2026-09-17
+
+Experimental TypeScript architecture preview on a parallel `b` line. Lovelace
+behavior, YAML, custom element tags and HACS install stay compatible with
+`2.3.0-alpha.3`. Canonical Climate source now lives under `src/cards/climate/`
+and is compiled to the existing `nodalia-climate-card.js` artifact.
+
+### Changed
+
+- Added strict TypeScript, ESLint and a `src/` layout. Climate is the first
+  card split into config, model, dial, schedule, editor and card modules.
+- `pnpm run validate` now typechecks and lints before generating bundles.
+- Architecture notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+### Validation
+
+- Node regressions plus `tsc` and ESLint on `src/`.
+
 ## [2.3.0-alpha.3] - 2026-09-16
 
 Third **`2.3.0`** alpha: Room Summary climate uses the compact Nodalia climate card, camera go2rtc is editable from the Hub visual editor, alarms belong in Security, and the light brightness slider no longer restarts its fill when the light turns on.

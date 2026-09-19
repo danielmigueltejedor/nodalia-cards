@@ -1,0 +1,6481 @@
+// @ts-nocheck
+/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import {
+  CARD_TAG,
+  CARD_VERSION,
+  DIAL_CIRCLE_RADIUS,
+  DIAL_CIRCUMFERENCE,
+  DIAL_END_ANGLE,
+  DIAL_HIDDEN_LENGTH,
+  DIAL_START_ANGLE,
+  DIAL_SWEEP,
+  DIAL_VIEWBOX_SIZE,
+  DIAL_VISIBLE_LENGTH,
+  DRAFT_CONFIRMATION_RETRY_LIMIT,
+  DRAFT_CONFIRMATION_TIMEOUT,
+  EDITOR_TAG,
+  ENGINE_OVERRIDE_HOLD_HOURS,
+  ENGINE_OVERRIDE_REFRESH_MS,
+  HAPTIC_PATTERNS,
+  LEGACY_CLIMATE_DIAL_BACKGROUND,
+  LEGACY_CLIMATE_DIAL_OFF_COLOR,
+  LEGACY_CLIMATE_DIAL_TRACK_COLOR,
+  LEGACY_CLIMATE_ICON_OFF_COLORS,
+  RANGE_THUMB_DRAG_THRESHOLD_PX,
+  SCHEDULE_BLOCK_DRAG_THRESHOLD_PX,
+  SCHEDULE_MIN_BLOCK_MINUTES,
+  SCHEDULE_TIMELINE_SNAP_MINUTES,
+  SETPOINT_SCHEDULE_DAY_ORDER,
+  SETPOINT_SCHEDULE_DAY_TO_JS,
+  SETPOINT_SCHEDULE_MINUTES_PER_DAY,
+  STEP_BUTTON_COMMIT_DEBOUNCE,
+} from "./climate-constants";
+import {
+  clamp,
+  compactConfig,
+  deepClone,
+  deleteByPath,
+  escapeHtml,
+  fireEvent,
+  isObject,
+  isUnsafeConfigPathKey,
+  mergeConfig,
+  normalizeTextKey,
+  setByPath,
+} from "./climate-runtime";
+
+import { DEFAULT_CONFIG, STUB_CONFIG, applyStubEntity, normalizeConfig } from "./climate-config";
+import {
+  climateDialActionMeta,
+  formatEditorColorFromHex,
+  formatEngineOverrideTime,
+  formatTemperature,
+  formatTemperatureRangeSummary,
+  getActionMeta,
+  getClimateTemperatureScaleLetter,
+  getClimateTemperatureUnit,
+  getHassLocale,
+  getModeMeta,
+  getRelativeLuminance,
+  getStepPrecision,
+  isUnavailableState,
+  parseEngineOverrideUntil,
+  parseFiniteClimateNumber,
+  parseRgbColor,
+  parseSizeToPixels,
+  resolveColorInContext,
+  resolveEditorColorValue,
+} from "./climate-model";
+import {
+  buildClimateDialModeButtonRows,
+  getClimateDialCenterInsetCss,
+  getDialMarkerPosition,
+  getDialValueFromPoint,
+} from "./climate-dial";
+import {
+  buildClimateSetpointScheduleAutomationId,
+  buildClimateSetpointScheduleAutomationSpecs,
+  buildClimateSetpointScheduleAutomationsYaml,
+  buildClimateSetpointScheduleWebhookBody,
+  decodeSetpointScheduleStorageState,
+  encodeSetpointScheduleStorageState,
+  findScheduleGapForDay,
+  formatScheduleClockMinutes,
+  getActiveSetpointScheduleSlot,
+  getClimateScheduleStorageEntityId,
+  getSetpointScheduleBlockLayout,
+  getSetpointScheduleDayOrder,
+  isSetpointScheduleStorageStateWithinLimit,
+  normalizeSetpointScheduleConfig,
+  normalizeSetpointScheduleSlot,
+  parseScheduleClockMinutes,
+  scheduleMinutesFromTrackClientX,
+  snapScheduleTimelineMinutes,
+  createSetpointScheduleSlotId,
+} from "./climate-schedule";
+
+export class NodaliaClimateCard extends HTMLElement {
+  static async getConfigElement() {
+    if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
+      await customElements.whenDefined(EDITOR_TAG);
+    }
+
+    return document.createElement(EDITOR_TAG);
+  }
+
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["climate"], entities, entitiesFallback);
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return [
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["climate"],
+        label: "Climate — Circular",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, layout: "circular" }),
+      }),
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["climate"],
+        label: "Climate — Compact",
+        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, layout: "compact" }),
+      }),
+    ].filter(Boolean);
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(STUB_CONFIG);
+    this._hass = null;
+    this._draftTemperature = new Map();
+    this._draftTempRange = new Map();
+    this._draftResetTimer = 0;
+    this._temperatureCommitDebounceTimer = 0;
+    this._temperatureCommitQueuedValue = null;
+    this._temperatureCommitInFlight = false;
+    this._temperatureCommitRequiresHvacWake = false;
+    this._temperatureCommitRetryCount = 0;
+    this._rangeCommitDebounceTimer = 0;
+    this._rangeCommitQueuedValue = null;
+    this._rangeCommitInFlight = false;
+    this._rangeCommitRetryCount = 0;
+    this._activeDialDrag = null;
+    this._dragWindowListenersAttached = false;
+    this._dialDragFrame = 0;
+    this._pendingDialDragPoint = null;
+    this._pendingRenderAfterDrag = false;
+    this._pendingRenderAfterScheduleDrag = false;
+    /** `null` | `"low"` | `"high"` — dual-range (`heat_cool`) thumb focus for step buttons; not persisted. */
+    this._selectedRangeThumb = null;
+    this._lastDualRangeModeKey = null;
+    this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+    this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
+    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
+    this._detachHostHold = () => {};
+    this._suppressNextClimateTap = false;
+    this._scheduleComposerOpen = false;
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+    this._scheduleComposerError = "";
+    this._scheduleComposerSaving = false;
+    this._scheduleDraftRevision = 0;
+    this._commitAborted = false;
+    this._scheduleComposerSelectedSlotId = "";
+    this._activeScheduleDrag = null;
+    this._scheduleBlockDragPending = null;
+    this._engineOverride = null;
+    this._engineOverrideSignature = "";
+    this._engineOverrideInFlight = false;
+    this._engineOverrideBusy = false;
+    this._lastEngineOverrideCheck = 0;
+    this._onWindowSchedulePointerMove = this._onWindowSchedulePointerMove.bind(this);
+    this._onWindowSchedulePointerUp = this._onWindowSchedulePointerUp.bind(this);
+    this._onWindowScheduleBlockDragMove = this._onWindowScheduleBlockDragMove.bind(this);
+    this._onWindowScheduleBlockDragUp = this._onWindowScheduleBlockDragUp.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this._onShadowInput = this._onShadowInput.bind(this);
+    this._onShadowBlur = this._onShadowBlur.bind(this);
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("input", this._onShadowInput);
+    this.shadowRoot.addEventListener("change", this._onShadowInput);
+    this.shadowRoot.addEventListener("blur", this._onShadowBlur, true);
+    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    }
+  }
+
+  connectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const path = event.composedPath();
+              if (path.some(node => node instanceof HTMLElement && node.dataset?.climateAction)) {
+                return null;
+              }
+              if (path.some(node => node instanceof HTMLElement && node.dataset?.climateControl)) {
+                return null;
+              }
+              if (
+                path.some(
+                  node =>
+                    node instanceof HTMLElement &&
+                    (node.classList?.contains("climate-schedule-expanded") ||
+                      node.classList?.contains("climate-schedule-agenda__track") ||
+                      node.dataset?.scheduleBlockId ||
+                      node.dataset?.scheduleResize ||
+                      node.dataset?.climateScheduleField ||
+                      node.dataset?.climateScheduleBackdrop === "true"),
+                )
+              ) {
+                return null;
+              }
+              return path.some(node => node instanceof HTMLElement && node.dataset?.climateCard === "root")
+                ? "body"
+                : null;
+            },
+            shouldBeginHold: () => {
+              const action = String(this._config?.hold_action || "more-info");
+              return action !== "none" && Boolean(this._getState());
+            },
+            onHold: () => {
+              this._triggerHaptic();
+              this._triggerPressAnimation(this.shadowRoot?.querySelector(".climate-card__content"));
+              this._performHoldAction();
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextClimateTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
+    this._animateContentOnNextRender = true;
+    this._commitAborted = false;
+    if (this._hass && this._config) {
+      this._lastRenderSignature = "";
+      this._render();
+    }
+  }
+
+  disconnectedCallback() {
+    this._detachHostHold?.();
+    this._detachHostHold = () => {};
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    this._setDragWindowListeners(false);
+    this._setScheduleDragWindowListeners(false);
+    this._setScheduleBlockDragPendingListeners(false);
+    this._activeScheduleDrag = null;
+    this._scheduleBlockDragPending = null;
+
+    if (this._activeDialDrag) {
+      this._setDialDraggingState(false, this._activeDialDrag.dial);
+      this._activeDialDrag = null;
+    }
+
+    if (this._draftResetTimer) {
+      window.clearTimeout(this._draftResetTimer);
+      this._draftResetTimer = 0;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
+    }
+    if (this._rangeCommitDebounceTimer) {
+      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._rangeCommitDebounceTimer = 0;
+    }
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    this._commitAborted = true;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+  }
+
+  setConfig(config) {
+    const prevEntity = this._config?.entity;
+    this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    if (prevEntity && prevEntity !== this._config.entity) {
+      this._draftTemperature.clear();
+      this._draftTempRange.clear();
+      this._temperatureCommitQueuedValue = null;
+      this._rangeCommitQueuedValue = null;
+      if (this._temperatureCommitDebounceTimer) {
+        window.clearTimeout(this._temperatureCommitDebounceTimer);
+        this._temperatureCommitDebounceTimer = 0;
+      }
+      if (this._rangeCommitDebounceTimer) {
+        window.clearTimeout(this._rangeCommitDebounceTimer);
+        this._rangeCommitDebounceTimer = 0;
+      }
+      this._selectedRangeThumb = null;
+      this._lastDualRangeModeKey = null;
+      this._temperatureCommitRequiresHvacWake = false;
+      this._engineOverride = null;
+      this._engineOverrideSignature = "";
+      this._lastEngineOverrideCheck = 0;
+    }
+    this._lastRenderSignature = "";
+    this._animateContentOnNextRender = true;
+    this._render();
+    void this._refreshEngineOverrideState();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    void this._refreshEngineOverrideState();
+    const entityId = this._config?.entity || "";
+    if (
+      entityId
+      && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))
+    ) {
+      this._syncDraftWithState();
+    }
+
+    const nextSignature = this._getRenderSignature(hass);
+    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+      if (this._activeDialDrag) {
+        this._pendingRenderAfterDrag = true;
+      }
+      return;
+    }
+
+    this._lastRenderSignature = nextSignature;
+
+    if (this._activeDialDrag) {
+      this._pendingRenderAfterDrag = true;
+      return;
+    }
+
+    if (this._activeScheduleDrag) {
+      this._pendingRenderAfterScheduleDrag = true;
+      return;
+    }
+
+    this._render();
+  }
+
+  getCardSize() {
+    const showEngineOverride = this._engineOverride?.available === true
+      && this._config?.show_schedule_button !== false;
+    if (this._config?.layout === "compact") {
+      return showEngineOverride ? 3 : 2;
+    }
+    return showEngineOverride ? 5 : 4;
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const attrs = state?.attributes || {};
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      entityId,
+      state?.state || "",
+      attrs.friendly_name || "",
+      attrs.icon || "",
+      this._config?.show_entity_picture === true,
+      this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "",
+      parseFiniteClimateNumber(attrs.temperature),
+      parseFiniteClimateNumber(attrs.current_temperature),
+      parseFiniteClimateNumber(attrs.target_temp_high),
+      parseFiniteClimateNumber(attrs.target_temp_low),
+      attrs.humidity ?? -1,
+      attrs.current_humidity ?? -1,
+      attrs.hvac_mode || "",
+      attrs.hvac_action || "",
+      attrs.preset_mode || "",
+      attrs.fan_mode || "",
+      attrs.swing_mode || "",
+      this._config?.layout || "circular",
+      `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}|${this._config?.double_tap_action || ""}`,
+      Boolean(entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))),
+      this._scheduleComposerOpen === true,
+      this._scheduleDraftRevision || 0,
+      Boolean(this._scheduleComposerDraft?.enabled),
+      Array.isArray(this._scheduleComposerDraft?.slots) ? this._scheduleComposerDraft.slots.length : 0,
+      this._scheduleComposerError,
+      this._scheduleComposerSaving === true,
+      this._config?.show_schedule_button !== false,
+      this._engineOverrideSignature || "",
+      this._engineOverrideBusy === true,
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "climate:", values }]);
+    }
+    return values.join("::");
+  }
+
+  _climateScheduleText(key, fallback = "") {
+    if (typeof window.NodaliaI18n?.translateClimateSchedule === "function") {
+      return window.NodaliaI18n.translateClimateSchedule(
+        this._hass,
+        this._config?.language ?? "auto",
+        key,
+        fallback,
+      );
+    }
+    return fallback;
+  }
+
+  _touchScheduleDraftRevision() {
+    this._scheduleDraftRevision = (this._scheduleDraftRevision || 0) + 1;
+  }
+
+  _getScheduleComposerDraft() {
+    return normalizeSetpointScheduleConfig(this._scheduleComposerDraft);
+  }
+
+  _setScheduleComposerDraft(schedule, options = {}) {
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    this._touchScheduleDraftRevision();
+    if (options.render !== false) {
+      this._render();
+      return;
+    }
+
+    this._syncRenderSignature();
+  }
+
+  _syncRenderSignature() {
+    if (this._hass) {
+      this._lastRenderSignature = this._getRenderSignature(this._hass);
+    }
+  }
+
+  _captureScheduleAgendaScrollState() {
+    if (!this._scheduleComposerOpen || !this.shadowRoot) {
+      return null;
+    }
+
+    const agenda = this.shadowRoot.querySelector(".climate-schedule-agenda");
+    if (!(agenda instanceof HTMLElement)) {
+      return null;
+    }
+
+    return agenda.scrollTop;
+  }
+
+  _restoreScheduleAgendaScrollState(scrollTop) {
+    if (typeof scrollTop !== "number" || !Number.isFinite(scrollTop) || scrollTop <= 0) {
+      return;
+    }
+
+    const apply = () => {
+      const agenda = this.shadowRoot?.querySelector(".climate-schedule-agenda");
+      if (agenda instanceof HTMLElement) {
+        agenda.scrollTop = scrollTop;
+      }
+    };
+
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(apply);
+      });
+      return;
+    }
+
+    apply();
+  }
+
+  _loadScheduleDraftFromStorage() {
+    const storageEntityId = getClimateScheduleStorageEntityId(
+      this._config?.entity,
+      this._config?.setpoint_schedule_helper,
+    );
+    const rawState = storageEntityId ? String(this._hass?.states?.[storageEntityId]?.state ?? "").trim() : "";
+    if (rawState && rawState !== "unknown" && rawState !== "unavailable") {
+      return decodeSetpointScheduleStorageState(rawState);
+    }
+
+    const legacy = this._config?.setpoint_schedule;
+    if (legacy && (Array.isArray(legacy.slots) ? legacy.slots.length : 0) > 0) {
+      return normalizeSetpointScheduleConfig(legacy);
+    }
+
+    return normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+  }
+
+  _openScheduleComposer() {
+    this._scheduleComposerError = "";
+    this._scheduleComposerSaving = false;
+    this._scheduleComposerDraft = this._loadScheduleDraftFromStorage();
+    this._scheduleComposerOpen = true;
+    const loadRevision = this._scheduleDraftRevision || 0;
+    const entityId = String(this._config?.entity || "").trim();
+    this._lastRenderSignature = "";
+    this._render();
+    void this._loadNativeScheduleDraft(entityId, loadRevision);
+  }
+
+  async _loadNativeScheduleDraft(entityId, loadRevision) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    if (!backend || !entityId || !this._hass) {
+      return false;
+    }
+    try {
+      const status = await backend.status(this._hass, { silent: true });
+      if (!status?.available || !status.capabilities?.includes("climate_schedules")) {
+        return false;
+      }
+      const result = await backend.getClimateSchedule(this._hass, entityId);
+      if (
+        !this._scheduleComposerOpen
+        || entityId !== String(this._config?.entity || "").trim()
+        || loadRevision !== (this._scheduleDraftRevision || 0)
+        || !result?.schedule
+      ) {
+        return false;
+      }
+      this._scheduleComposerDraft = normalizeSetpointScheduleConfig(result.schedule);
+      this._touchScheduleDraftRevision();
+      this._lastRenderSignature = "";
+      this._render();
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  /**
+   * Keeps the live override chips in sync with the Engine. Only entities that already have a
+   * stored schedule expose them, so plugin-only installs render the card unchanged.
+   */
+  async _refreshEngineOverrideState(options = {}) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    const entityId = String(this._config?.entity || "").trim();
+    if (!backend || !this._hass || !entityId || this._engineOverrideInFlight) {
+      return false;
+    }
+    const now = Date.now();
+    if (options.force !== true && now - this._lastEngineOverrideCheck < ENGINE_OVERRIDE_REFRESH_MS) {
+      return false;
+    }
+    this._engineOverrideInFlight = true;
+    this._lastEngineOverrideCheck = now;
+    try {
+      const status = await backend.status(this._hass, { silent: true });
+      if (!backend.hasCapability(status, "climate_overrides")) {
+        return this._applyEngineOverrideState(null);
+      }
+      const result = await backend.getClimateSchedule(this._hass, entityId);
+      const schedule = result?.schedule;
+      if (!schedule || typeof schedule !== "object") {
+        return this._applyEngineOverrideState(null);
+      }
+      const until = parseEngineOverrideUntil(schedule.override?.until);
+      return this._applyEngineOverrideState({
+        available: true,
+        until: until && until.getTime() > Date.now() ? until.toISOString() : "",
+      });
+    } catch (_error) {
+      return this._applyEngineOverrideState(null);
+    } finally {
+      this._engineOverrideInFlight = false;
+    }
+  }
+
+  _applyEngineOverrideState(next) {
+    const signature = next?.available === true ? `1:${next.until || ""}` : "0";
+    if (signature === this._engineOverrideSignature) {
+      return false;
+    }
+    this._engineOverrideSignature = signature;
+    this._engineOverride = next?.available === true ? next : null;
+    if (this._activeDialDrag || this._activeScheduleDrag) {
+      if (this._activeDialDrag) {
+        this._pendingRenderAfterDrag = true;
+      }
+      if (this._activeScheduleDrag) {
+        this._pendingRenderAfterScheduleDrag = true;
+      }
+      return true;
+    }
+    this._lastRenderSignature = "";
+    this._render();
+    return true;
+  }
+
+  async _setEngineOverrideHold(hours = ENGINE_OVERRIDE_HOLD_HOURS) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    const entityId = String(this._config?.entity || "").trim();
+    if (!backend || !this._hass || !entityId || this._engineOverrideBusy) {
+      return false;
+    }
+    const state = this._getState();
+    const override = { until: new Date(Date.now() + hours * 3_600_000).toISOString() };
+    // Engine treats `temperature` as a single setpoint, so preserve both ends of a live range.
+    if (this._isDualSetpointRange(state)) {
+      const range = this._getEffectiveTargetLowHigh(state);
+      const pair = this._normalizeLowHighPair(range.low, range.high, state);
+      if (pair) {
+        override.target_temp_low = Number(pair.low);
+        override.target_temp_high = Number(pair.high);
+      }
+    } else {
+      const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
+      if (Number.isFinite(target)) {
+        override.temperature = Number(target);
+      }
+    }
+    return this._runEngineOverrideRequest(() => backend.setClimateOverride(this._hass, entityId, override));
+  }
+
+  async _clearEngineOverride() {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    const entityId = String(this._config?.entity || "").trim();
+    if (!backend || !this._hass || !entityId || this._engineOverrideBusy) {
+      return false;
+    }
+    return this._runEngineOverrideRequest(() => backend.clearClimateOverride(this._hass, entityId));
+  }
+
+  async _runEngineOverrideRequest(request) {
+    this._engineOverrideBusy = true;
+    this._lastRenderSignature = "";
+    this._render();
+    try {
+      await request();
+      this._triggerHaptic("success");
+      return true;
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Climate Card: the Engine rejected the override change.", error);
+      }
+      return false;
+    } finally {
+      this._engineOverrideBusy = false;
+      await this._refreshEngineOverrideState({ force: true });
+      if (this.isConnected && this.shadowRoot) {
+        this._lastRenderSignature = "";
+        this._render();
+      }
+    }
+  }
+
+  _renderEngineOverrideHtml() {
+    if (
+      this._engineOverride?.available !== true
+      || this._config?.show_schedule_button === false
+    ) {
+      return "";
+    }
+    const applyValues = window.NodaliaUtils?.applyLabelValues
+      || ((text, values) => String(text ?? "").replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
+        Object.prototype.hasOwnProperty.call(values || {}, token) ? String(values[token] ?? "") : match
+      )));
+    const holdLabel = this._climateScheduleText("override.hold2h", "Hold 2 hours");
+    const clearLabel = this._climateScheduleText("override.clear", "Resume schedule");
+    const until = String(this._engineOverride.until || "");
+    const statusText = until
+      ? applyValues(this._climateScheduleText("override.activeUntil", "Override until {time}"), {
+        time: formatEngineOverrideTime(until, this._hass),
+      })
+      : "";
+    const busy = this._engineOverrideBusy === true ? "disabled" : "";
+
+    return `
+      <div class="climate-card__override${until ? " climate-card__override--active" : ""}">
+        <button
+          type="button"
+          class="climate-card__override-chip${until ? " is-active" : ""}"
+          data-climate-action="override-hold"
+          title="${escapeHtml(holdLabel)}"
+          ${busy}
+        >
+          <span class="climate-card__override-chip-icon" aria-hidden="true">
+            <ha-icon icon="mdi:timer-sand"></ha-icon>
+          </span>
+          <span class="climate-card__override-chip-copy">
+            <span class="climate-card__override-chip-label">${escapeHtml(holdLabel)}</span>
+          </span>
+        </button>
+        ${
+          until
+            ? `
+              <button
+                type="button"
+                class="climate-card__override-chip climate-card__override-chip--clear"
+                data-climate-action="override-clear"
+                title="${escapeHtml(clearLabel)}"
+                ${busy}
+              >
+                <span class="climate-card__override-chip-icon" aria-hidden="true">
+                  <ha-icon icon="mdi:calendar-refresh-outline"></ha-icon>
+                </span>
+                <span class="climate-card__override-chip-copy">
+                  <span class="climate-card__override-chip-label">${escapeHtml(clearLabel)}</span>
+                </span>
+              </button>
+            `
+            : ""
+        }
+        ${statusText ? `<span class="climate-card__override-status"><span class="climate-card__override-status-dot" aria-hidden="true"></span>${escapeHtml(statusText)}</span>` : ""}
+      </div>
+    `;
+  }
+
+  _closeScheduleComposer() {
+    this._scheduleComposerOpen = false;
+    this._scheduleComposerError = "";
+    this._scheduleComposerSaving = false;
+    this._scheduleComposerSelectedSlotId = "";
+    this._activeScheduleDrag = null;
+    this._scheduleBlockDragPending = null;
+    this._setScheduleDragWindowListeners(false);
+    this._setScheduleBlockDragPendingListeners(false);
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _setScheduleComposerError(message = "") {
+    this._scheduleComposerError = String(message ?? "").trim();
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _renderScheduleComposerErrorHtml() {
+    const message = String(this._scheduleComposerError || "").trim();
+    if (!message) {
+      return "";
+    }
+
+    return `
+      <div class="climate-schedule-expanded__error" role="alert" aria-live="polite">
+        <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+        <span>${escapeHtml(message)}</span>
+      </div>
+    `;
+  }
+
+  async _postScheduleWebhookPayload(webhookId, body) {
+    const id = String(webhookId ?? "").trim();
+    if (!id) {
+      return false;
+    }
+
+    if (
+      this._config?.security?.allow_webhooks_for_non_admin === false &&
+      !this._hass?.user?.is_admin
+    ) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Climate Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).",
+        );
+      }
+      return false;
+    }
+
+    const post =
+      typeof window !== "undefined" &&
+      window.NodaliaUtils &&
+      typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+        ? window.NodaliaUtils.postHomeAssistantWebhook
+        : null;
+    if (!post) {
+      return false;
+    }
+
+    try {
+      return Boolean(await post(id, body, this._hass));
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  _syncScheduleComposerDraftFromDom() {
+    if (!this.shadowRoot) {
+      return this._getScheduleComposerDraft();
+    }
+
+    const schedule = this._getScheduleComposerDraft();
+    schedule.enabled = Boolean(
+      this.shadowRoot.querySelector('[data-climate-schedule-field="enabled"]')?.checked,
+    );
+
+    const domPatchById = new Map();
+    this.shadowRoot.querySelectorAll("[data-schedule-slot-editor]").forEach(editor => {
+      const slotId = String(editor.getAttribute("data-schedule-slot-editor") || "").trim();
+      if (!slotId) {
+        return;
+      }
+
+      const start = String(editor.querySelector('[data-climate-schedule-field="start"]')?.value || "").trim();
+      const end = String(editor.querySelector('[data-climate-schedule-field="end"]')?.value || "").trim();
+      const temperatureRaw = Number(editor.querySelector('[data-climate-schedule-field="temperature"]')?.value);
+      domPatchById.set(slotId, {
+        start,
+        end,
+        temperature: temperatureRaw,
+      });
+    });
+
+    const mergedSlots = schedule.slots.map(slot => {
+      const patch = domPatchById.get(slot.id);
+      if (!patch) {
+        return slot;
+      }
+      domPatchById.delete(slot.id);
+      return normalizeSetpointScheduleSlot({
+        ...slot,
+        ...patch,
+      });
+    });
+
+    for (const [slotId, patch] of domPatchById) {
+      mergedSlots.push(
+        normalizeSetpointScheduleSlot({
+          id: slotId,
+          ...patch,
+        }),
+      );
+    }
+
+    schedule.slots = mergedSlots;
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    this._touchScheduleDraftRevision();
+    return this._scheduleComposerDraft;
+  }
+
+  _flushScheduleComposerFocusedField() {
+    const active = this.shadowRoot?.activeElement;
+    if (
+      !(active instanceof HTMLInputElement)
+      || !active.dataset?.climateScheduleField
+      || active.dataset.climateScheduleField === "enabled"
+    ) {
+      return;
+    }
+
+    const slotId = String(active.dataset.scheduleSlotId || "").trim();
+    const field = String(active.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    let value = active.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  async _submitScheduleComposer() {
+    if (!this.isConnected || !this._hass || !this.shadowRoot) {
+      return;
+    }
+
+    const entityId = String(this._config?.entity || "").trim();
+    if (!entityId) {
+      this._setScheduleComposerError(
+        this._climateScheduleText("errors.entityMissing", "Select a climate entity first."),
+      );
+      return;
+    }
+
+    const state = this._getState();
+    if (state && this._isDualSetpointRange(state)) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.dualRangeUnsupported",
+          "Weekly schedules are not supported while the thermostat uses a dual heat/cool range.",
+        ),
+      );
+      return;
+    }
+
+    this._flushScheduleComposerFocusedField();
+    const schedule = this._syncScheduleComposerDraftFromDom();
+    this._scheduleComposerSaving = true;
+    this._scheduleComposerError = "";
+    this._lastRenderSignature = "";
+    this._render();
+
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    let nativeSaveError = null;
+    if (backend) {
+      try {
+        const status = await backend.status(this._hass, { silent: true });
+        if (status?.available && status.capabilities?.includes("climate_schedules")) {
+          await backend.setClimateSchedule(this._hass, entityId, {
+            ...schedule,
+            week_starts_on: this._config?.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
+          });
+          this._scheduleComposerSaving = false;
+          if (this.isConnected && this.shadowRoot) {
+            this._scheduleComposerDraft = schedule;
+            this._triggerHaptic("success");
+            this._closeScheduleComposer();
+          }
+          return;
+        }
+      } catch (error) {
+        nativeSaveError = error;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Climate Card: native schedule synchronization failed; trying the legacy webhook.", error);
+        }
+      }
+    }
+
+    const webhookId = String(this._config?.setpoint_schedule_webhook || "").trim();
+    if (!webhookId) {
+      this._scheduleComposerSaving = false;
+      this._setScheduleComposerError(
+        nativeSaveError
+          ? this._climateScheduleText(
+            "errors.nativeFailed",
+            "Native schedule save failed. Use an administrator account or configure the legacy fallback.",
+          )
+          : this._climateScheduleText(
+            "errors.webhookMissing",
+            "Install the Nodalia integration or configure the legacy schedule webhook in the card editor.",
+          ),
+      );
+      return;
+    }
+    const storageEntityId = getClimateScheduleStorageEntityId(
+      entityId,
+      this._config?.setpoint_schedule_helper,
+    );
+    const body = buildClimateSetpointScheduleWebhookBody({
+      entityId,
+      schedule,
+      storageEntityId,
+      friendlyName: this._getClimateName(state),
+      cardVersion: CARD_VERSION,
+    });
+
+    if (!isSetpointScheduleStorageStateWithinLimit(body.storage_state)) {
+      this._setScheduleComposerError(
+        this._climateScheduleText(
+          "errors.storageTooLarge",
+          "This schedule is too large for the input_text helper (255 characters). Remove blocks or use Path A automations on disk.",
+        ),
+      );
+      return;
+    }
+
+    const ok = await this._postScheduleWebhookPayload(webhookId, body);
+    this._scheduleComposerSaving = false;
+
+    if (!this.isConnected || !this.shadowRoot) {
+      return;
+    }
+
+    if (!ok) {
+      this._setScheduleComposerError(
+        this._climateScheduleText("errors.webhookFailed", "Could not sync the schedule. Check the webhook and Home Assistant logs."),
+      );
+      return;
+    }
+
+    if (storageEntityId && typeof this._hass?.callService === "function") {
+      try {
+        await Promise.resolve(
+          this._hass.callService("input_text", "set_value", {
+            entity_id: storageEntityId,
+            value: body.storage_state,
+          }),
+        );
+      } catch (_error) {
+        // Webhook may already persist; ignore optimistic helper write failures.
+      }
+    }
+
+    this._scheduleComposerDraft = schedule;
+    this._triggerHaptic("success");
+    this._closeScheduleComposer();
+  }
+
+  _updateScheduleComposerSlot(slotId, patch = {}, options = {}) {
+    const schedule = this._getScheduleComposerDraft();
+    const index = schedule.slots.findIndex(slot => slot.id === slotId);
+    if (index === -1) {
+      return;
+    }
+
+    schedule.slots[index] = normalizeSetpointScheduleSlot({
+      ...schedule.slots[index],
+      ...patch,
+    });
+    this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+    this._touchScheduleDraftRevision();
+    if (options.render !== false) {
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+
+    this._patchScheduleBlockDom(slotId);
+    this._syncRenderSignature();
+  }
+
+  _getScheduleDayTrackElement(day) {
+    const dayKey = String(day ?? "").trim();
+    if (!dayKey || !this.shadowRoot) {
+      return null;
+    }
+
+    const track = this.shadowRoot.querySelector(`[data-schedule-day-track="${escapeSelectorValue(dayKey)}"]`);
+    return track instanceof HTMLElement ? track : null;
+  }
+
+  _patchScheduleBlockDom(slotId) {
+    if (!this.shadowRoot || !slotId) {
+      return;
+    }
+
+    const schedule = this._getScheduleComposerDraft();
+    const slot = schedule.slots.find(item => item.id === slotId);
+    if (!slot) {
+      return;
+    }
+
+    const layout = getSetpointScheduleBlockLayout(slot);
+    const block = this.shadowRoot.querySelector(
+      `[data-schedule-block-id="${escapeSelectorValue(slotId)}"]`,
+    );
+    if (block instanceof HTMLElement) {
+      block.style.setProperty("--block-left", `${layout.left.toFixed(3)}%`);
+      block.style.setProperty("--block-width", `${layout.width.toFixed(3)}%`);
+      const timeEl = block.querySelector(".climate-schedule-agenda__block-time");
+      const tempEl = block.querySelector(".climate-schedule-agenda__block-temp");
+      const tempLabel = formatTemperature(
+        slot.temperature,
+        this._getTemperatureStep(this._getState()),
+        true,
+        this._hass,
+      );
+      const rangeLabel = `${slot.start}–${slot.end}`;
+      if (timeEl) {
+        timeEl.textContent = rangeLabel;
+      }
+      if (tempEl) {
+        tempEl.textContent = tempLabel;
+      }
+      block.title = `${rangeLabel} · ${tempLabel}`;
+      block.setAttribute("aria-label", `${rangeLabel}, ${tempLabel}`);
+    }
+
+    const editor = this.shadowRoot.querySelector(
+      `[data-schedule-slot-editor="${escapeSelectorValue(slotId)}"]`,
+    );
+    if (editor instanceof HTMLElement) {
+      const startInput = editor.querySelector('[data-climate-schedule-field="start"]');
+      const endInput = editor.querySelector('[data-climate-schedule-field="end"]');
+      const tempInput = editor.querySelector('[data-climate-schedule-field="temperature"]');
+      const activeEl = this.shadowRoot?.activeElement;
+      if (startInput instanceof HTMLInputElement && activeEl !== startInput) {
+        startInput.value = slot.start;
+      }
+      if (endInput instanceof HTMLInputElement && activeEl !== endInput) {
+        endInput.value = slot.end;
+      }
+      if (tempInput instanceof HTMLInputElement && activeEl !== tempInput) {
+        tempInput.value = String(slot.temperature);
+      }
+    }
+  }
+
+  _syncScheduleComposerSelectionDom() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const selectedId = this._scheduleComposerSelectedSlotId;
+    this.shadowRoot.querySelectorAll("[data-schedule-block-id]").forEach(node => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      node.classList.toggle("is-selected", node.dataset.scheduleBlockId === selectedId);
+    });
+    this.shadowRoot.querySelectorAll("[data-schedule-slot-editor]").forEach(node => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      node.classList.toggle("is-visible", node.getAttribute("data-schedule-slot-editor") === selectedId);
+    });
+  }
+
+  _addScheduleComposerSlot(day = "mon") {
+    const schedule = this._getScheduleComposerDraft();
+    const gap = findScheduleGapForDay(schedule.slots, day);
+    const daySlots = schedule.slots.filter(slot => slot.day === day);
+    const fallbackTemp = daySlots.length ? daySlots[daySlots.length - 1].temperature : 21;
+    const slot = normalizeSetpointScheduleSlot({
+      day,
+      start: formatScheduleClockMinutes(gap.start),
+      end: formatScheduleClockMinutes(gap.end),
+      temperature: fallbackTemp,
+    });
+    schedule.slots.push(slot);
+    this._scheduleComposerSelectedSlotId = slot.id;
+    this._setScheduleComposerDraft(schedule);
+  }
+
+  _getScheduleComposerDayOrder() {
+    return getSetpointScheduleDayOrder(this._config?.setpoint_schedule_week_starts_on);
+  }
+
+  _setScheduleComposerSelectedSlot(slotId) {
+    this._scheduleComposerSelectedSlotId = String(slotId ?? "").trim();
+    if (this._scheduleComposerOpen && this.shadowRoot?.querySelector("[data-schedule-day-track]")) {
+      this._syncScheduleComposerSelectionDom();
+      return;
+    }
+
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _setScheduleBlockDragPendingListeners(active) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (active) {
+      if (this._scheduleBlockDragPendingListenersActive) {
+        return;
+      }
+      window.addEventListener("pointermove", this._onWindowScheduleBlockDragMove);
+      window.addEventListener("pointerup", this._onWindowScheduleBlockDragUp);
+      window.addEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+      this._scheduleBlockDragPendingListenersActive = true;
+      return;
+    }
+
+    if (!this._scheduleBlockDragPendingListenersActive) {
+      return;
+    }
+    window.removeEventListener("pointermove", this._onWindowScheduleBlockDragMove);
+    window.removeEventListener("pointerup", this._onWindowScheduleBlockDragUp);
+    window.removeEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+    this._scheduleBlockDragPendingListenersActive = false;
+  }
+
+  _onWindowScheduleBlockDragMove(event) {
+    const pending = this._scheduleBlockDragPending;
+    if (!pending) {
+      return;
+    }
+    if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = Math.abs(event.clientX - pending.startClientX);
+    const deltaY = Math.abs(event.clientY - pending.startClientY);
+    if (Math.max(deltaX, deltaY) < SCHEDULE_BLOCK_DRAG_THRESHOLD_PX) {
+      return;
+    }
+
+    this._scheduleBlockDragPending = null;
+    this._setScheduleBlockDragPendingListeners(false);
+    event.preventDefault();
+    this._startScheduleDrag({
+      slotId: pending.slotId,
+      mode: "move",
+      day: pending.day,
+      track: pending.track,
+      clientX: pending.startClientX,
+      pointerId: pending.pointerId,
+      event,
+    });
+    this._applyScheduleDragAtClientX(event.clientX);
+  }
+
+  _onWindowScheduleBlockDragUp(event) {
+    const pending = this._scheduleBlockDragPending;
+    if (!pending) {
+      return;
+    }
+    if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+      return;
+    }
+
+    this._scheduleBlockDragPending = null;
+    this._setScheduleBlockDragPendingListeners(false);
+  }
+
+  _setScheduleDragWindowListeners(active) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (active) {
+      if (this._scheduleDragListenersActive) {
+        return;
+      }
+      window.addEventListener("pointermove", this._onWindowSchedulePointerMove);
+      window.addEventListener("pointerup", this._onWindowSchedulePointerUp);
+      window.addEventListener("pointercancel", this._onWindowSchedulePointerUp);
+      this._scheduleDragListenersActive = true;
+      return;
+    }
+
+    if (!this._scheduleDragListenersActive) {
+      return;
+    }
+    window.removeEventListener("pointermove", this._onWindowSchedulePointerMove);
+    window.removeEventListener("pointerup", this._onWindowSchedulePointerUp);
+    window.removeEventListener("pointercancel", this._onWindowSchedulePointerUp);
+    this._scheduleDragListenersActive = false;
+  }
+
+  _applyScheduleDragAtClientX(clientX) {
+    const drag = this._activeScheduleDrag;
+    if (!drag?.slotId) {
+      return;
+    }
+
+    const track = this._getScheduleDayTrackElement(drag.day);
+    if (!track) {
+      return;
+    }
+
+    drag.track = track;
+
+    const schedule = this._getScheduleComposerDraft();
+    const slot = schedule.slots.find(item => item.id === drag.slotId);
+    if (!slot) {
+      return;
+    }
+
+    const pointerMinutes = scheduleMinutesFromTrackClientX(track, clientX);
+    const initialStart = drag.initialStart;
+    const initialEnd = drag.initialEnd;
+    const duration = Math.max(initialEnd - initialStart, SCHEDULE_MIN_BLOCK_MINUTES);
+    const dragPatch = {};
+
+    if (drag.mode === "move") {
+      let start = snapScheduleTimelineMinutes(pointerMinutes - drag.pointerOffsetMinutes);
+      let end = start + duration;
+      if (end > SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1) {
+        end = SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1;
+        start = Math.max(0, end - duration);
+      }
+      dragPatch.start = formatScheduleClockMinutes(start);
+      dragPatch.end = formatScheduleClockMinutes(end);
+    } else if (drag.mode === "resize-start") {
+      let start = snapScheduleTimelineMinutes(pointerMinutes);
+      const end = initialEnd;
+      if (end - start < SCHEDULE_MIN_BLOCK_MINUTES) {
+        start = Math.max(0, end - SCHEDULE_MIN_BLOCK_MINUTES);
+      }
+      dragPatch.start = formatScheduleClockMinutes(start);
+      dragPatch.end = formatScheduleClockMinutes(end);
+    } else if (drag.mode === "resize-end") {
+      const start = initialStart;
+      let end = snapScheduleTimelineMinutes(pointerMinutes);
+      if (end - start < SCHEDULE_MIN_BLOCK_MINUTES) {
+        end = Math.min(SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1, start + SCHEDULE_MIN_BLOCK_MINUTES);
+      }
+      dragPatch.start = formatScheduleClockMinutes(start);
+      dragPatch.end = formatScheduleClockMinutes(end);
+    }
+
+    if (!Object.keys(dragPatch).length) {
+      return;
+    }
+
+    this._updateScheduleComposerSlot(drag.slotId, dragPatch, { render: false });
+  }
+
+  _startScheduleDrag(options = {}) {
+    const {
+      slotId,
+      mode,
+      day,
+      track,
+      clientX,
+      pointerId = null,
+      event = null,
+    } = options;
+    const schedule = this._getScheduleComposerDraft();
+    const slot = schedule.slots.find(item => item.id === slotId);
+    const resolvedTrack = track instanceof HTMLElement ? track : this._getScheduleDayTrackElement(day || slot?.day);
+    if (!slot || !resolvedTrack) {
+      return false;
+    }
+
+    const layout = getSetpointScheduleBlockLayout(slot);
+    const pointerMinutes = scheduleMinutesFromTrackClientX(resolvedTrack, clientX);
+    this._activeScheduleDrag = {
+      slotId,
+      mode,
+      day: slot.day,
+      track: resolvedTrack,
+      pointerId,
+      initialStart: layout.start,
+      initialEnd: layout.end,
+      pointerOffsetMinutes: mode === "move" ? pointerMinutes - layout.start : 0,
+    };
+    this._scheduleComposerSelectedSlotId = slotId;
+    this._syncScheduleComposerSelectionDom();
+    this._setScheduleDragWindowListeners(true);
+
+    if (event && typeof resolvedTrack.setPointerCapture === "function" && event.pointerId != null) {
+      try {
+        resolvedTrack.setPointerCapture(event.pointerId);
+      } catch (_error) {
+        // Ignore capture failures on synthetic pointers.
+      }
+    }
+
+    return true;
+  }
+
+  _finishScheduleDrag(event = null) {
+    const drag = this._activeScheduleDrag;
+    if (!drag) {
+      return;
+    }
+
+    const track = drag.track instanceof HTMLElement ? drag.track : this._getScheduleDayTrackElement(drag.day);
+    if (
+      track instanceof HTMLElement &&
+      event?.pointerId != null &&
+      typeof track.releasePointerCapture === "function"
+    ) {
+      try {
+        if (track.hasPointerCapture?.(event.pointerId)) {
+          track.releasePointerCapture(event.pointerId);
+        }
+      } catch (_error) {
+        // Ignore release failures.
+      }
+    }
+
+    this._activeScheduleDrag = null;
+    this._setScheduleDragWindowListeners(false);
+    if (this._pendingRenderAfterScheduleDrag) {
+      this._pendingRenderAfterScheduleDrag = false;
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+    this._lastRenderSignature = "";
+    this._render();
+  }
+
+  _onWindowSchedulePointerMove(event) {
+    const drag = this._activeScheduleDrag;
+    if (!drag) {
+      return;
+    }
+    if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    this._applyScheduleDragAtClientX(event.clientX);
+  }
+
+  _onWindowSchedulePointerUp(event) {
+    const drag = this._activeScheduleDrag;
+    if (!drag) {
+      return;
+    }
+    if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+      return;
+    }
+    this._applyScheduleDragAtClientX(event.clientX);
+    this._finishScheduleDrag(event);
+  }
+
+  _handleScheduleComposerPointerDown(event, path) {
+    if (!this._scheduleComposerOpen || event.button !== 0) {
+      return false;
+    }
+
+    if (
+      path.some(
+        node =>
+          node instanceof HTMLInputElement ||
+          node instanceof HTMLTextAreaElement ||
+          node instanceof HTMLSelectElement ||
+          node instanceof HTMLButtonElement,
+      )
+    ) {
+      return false;
+    }
+
+    const resizeHandle = path.find(
+      node => node instanceof HTMLElement && node.dataset?.scheduleResize,
+    );
+    if (resizeHandle) {
+      const slotId = String(resizeHandle.dataset.scheduleSlotId || "").trim();
+      const mode = String(resizeHandle.dataset.scheduleResize || "").trim();
+      const track = path.find(
+        node => node instanceof HTMLElement && node.dataset?.scheduleDayTrack,
+      );
+      const day = String(track?.dataset?.scheduleDayTrack || "").trim();
+      if (slotId && track && day && (mode === "start" || mode === "end")) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._scheduleBlockDragPending = null;
+        this._setScheduleBlockDragPendingListeners(false);
+        this._startScheduleDrag({
+          slotId,
+          mode: mode === "start" ? "resize-start" : "resize-end",
+          day,
+          track,
+          clientX: event.clientX,
+          pointerId: event.pointerId,
+          event,
+        });
+        return true;
+      }
+    }
+
+    const block = path.find(
+      node => node instanceof HTMLElement && node.dataset?.scheduleBlockId,
+    );
+    if (block) {
+      const slotId = String(block.dataset.scheduleBlockId || "").trim();
+      const track = path.find(
+        node => node instanceof HTMLElement && node.dataset?.scheduleDayTrack,
+      );
+      const day = String(track?.dataset?.scheduleDayTrack || "").trim();
+      if (slotId && track && day) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._setScheduleComposerSelectedSlot(slotId);
+        this._scheduleBlockDragPending = {
+          slotId,
+          day,
+          track,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          pointerId: event.pointerId,
+        };
+        this._setScheduleBlockDragPendingListeners(true);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  _removeScheduleComposerSlot(slotId) {
+    const schedule = this._getScheduleComposerDraft();
+    schedule.slots = schedule.slots.filter(slot => slot.id !== slotId);
+    if (this._scheduleComposerSelectedSlotId === slotId) {
+      this._scheduleComposerSelectedSlotId = "";
+    }
+    this._setScheduleComposerDraft(schedule);
+  }
+
+  _setScheduleComposerEnabled(enabled) {
+    const schedule = this._getScheduleComposerDraft();
+    schedule.enabled = enabled === true;
+    this._setScheduleComposerDraft(schedule);
+  }
+
+  getGridOptions() {
+    const showEngineOverride = this._engineOverride?.available === true
+      && this._config?.show_schedule_button !== false;
+    if (this._config?.layout === "compact") {
+      return {
+        rows: "auto",
+        columns: "full",
+        min_rows: showEngineOverride ? 3 : 2,
+        min_columns: 2,
+      };
+    }
+    return {
+      rows: "auto",
+      columns: "full",
+      min_rows: showEngineOverride ? 6 : 5,
+      min_columns: 7,
+    };
+  }
+
+  _getConfiguredGridRows() {
+    const numericRows = Number(this._config?.grid_options?.rows);
+    return Number.isFinite(numericRows) ? numericRows : null;
+  }
+
+  _getConfiguredGridColumns() {
+    const numericColumns = Number(this._config?.grid_options?.columns);
+    return Number.isFinite(numericColumns) ? numericColumns : null;
+  }
+
+  _getCompactLevel() {
+    const configuredRows = this._getConfiguredGridRows();
+    const configuredColumns = this._getConfiguredGridColumns();
+
+    if (
+      (configuredRows !== null && configuredRows <= 3)
+      || (configuredColumns !== null && configuredColumns <= 4)
+    ) {
+      return "tight";
+    }
+
+    if (
+      (configuredRows !== null && configuredRows <= 4)
+      || (configuredColumns !== null && configuredColumns <= 6)
+    ) {
+      return "compact";
+    }
+
+    return "default";
+  }
+
+  _getState() {
+    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+  }
+
+  _syncDraftWithState() {
+    const state = this._getState();
+    const entityId = this._config?.entity;
+    if (!entityId || !state) {
+      return;
+    }
+
+    if (this._isDualSetpointRange(state)) {
+      if (!this._draftTempRange.has(entityId)) {
+        this._draftTemperature.delete(entityId);
+        return;
+      }
+      const step = this._getTemperatureStep(state);
+      const tol = Math.max(0.05, Math.min(step / 2, 0.25));
+      const draft = this._draftTempRange.get(entityId);
+      const al = parseFiniteClimateNumber(state.attributes?.target_temp_low);
+      const ah = parseFiniteClimateNumber(state.attributes?.target_temp_high);
+      if (
+        Number.isFinite(al) && Number.isFinite(ah) &&
+        Number.isFinite(draft?.low) && Number.isFinite(draft?.high) &&
+        Math.abs(al - draft.low) <= tol &&
+        Math.abs(ah - draft.high) <= tol
+      ) {
+        this._clearTemperatureDraft(entityId);
+      }
+      this._draftTemperature.delete(entityId);
+      return;
+    }
+
+    this._draftTempRange.delete(entityId);
+
+    if (!this._draftTemperature.has(entityId)) {
+      return;
+    }
+
+    const actualTemperature = parseFiniteClimateNumber(state.attributes?.temperature);
+    const draftTemperature = Number(this._draftTemperature.get(entityId));
+    const tolerance = this._getTemperatureSyncTolerance(state);
+
+    if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+      this._clearTemperatureDraft(entityId);
+    }
+  }
+
+  _clearTemperatureDraft(entityId = this._config?.entity) {
+    if (entityId) {
+      this._draftTemperature.delete(entityId);
+      this._draftTempRange.delete(entityId);
+    }
+
+    this._temperatureCommitQueuedValue = null;
+    this._rangeCommitQueuedValue = null;
+    this._temperatureCommitRetryCount = 0;
+    this._rangeCommitRetryCount = 0;
+    this._temperatureCommitRequiresHvacWake = false;
+
+    if (this._draftResetTimer) {
+      window.clearTimeout(this._draftResetTimer);
+      this._draftResetTimer = 0;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
+    }
+    if (this._rangeCommitDebounceTimer) {
+      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._rangeCommitDebounceTimer = 0;
+    }
+  }
+
+  _getClimateName(state) {
+    return this._config?.name
+      || state?.attributes?.friendly_name
+      || this._config?.entity
+      || "Climate";
+  }
+
+  _getClimateIcon(state) {
+    return this._config?.icon
+      || state?.attributes?.icon
+      || "mdi:thermostat";
+  }
+
+  _getEntityPicture(state) {
+    if (this._config?.show_entity_picture !== true) {
+      return "";
+    }
+    return String(
+      this._config?.entity_picture
+      || state?.attributes?.entity_picture_local
+      || state?.attributes?.entity_picture
+      || "",
+    ).trim();
+  }
+
+  _getTemperatureRange(state) {
+    const min = parseFiniteClimateNumber(state?.attributes?.min_temp);
+    const max = parseFiniteClimateNumber(state?.attributes?.max_temp);
+
+    if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
+      return {
+        min,
+        max,
+      };
+    }
+
+    return {
+      min: 10,
+      max: 30,
+    };
+  }
+
+  _getTemperatureStep(state) {
+    const step = Number(state?.attributes?.target_temp_step);
+    return Number.isFinite(step) && step > 0 ? step : 0.5;
+  }
+
+  /**
+   * `heat_cool` with both range bounds and no single `temperature` (Ecobee-style): dual-handle dial.
+   * If only one of low/high is finite, falls back to single-setpoint behaviour (`_isDualSetpointRange` false).
+   * Inverted low/high from an integration is still detected here; `_normalizeLowHighPair` swaps before commit.
+   */
+  _isDualSetpointRange(state) {
+    if (!state?.attributes) {
+      return false;
+    }
+    const attrs = state.attributes;
+    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+      return false;
+    }
+    if (normalizeTextKey(this._getCurrentMode(state)) !== "heat_cool") {
+      return false;
+    }
+    const low = parseFiniteClimateNumber(attrs.target_temp_low);
+    const high = parseFiniteClimateNumber(attrs.target_temp_high);
+    return Number.isFinite(low) && Number.isFinite(high);
+  }
+
+  /** Minimum span between low and high (at least 1° in entity units, never below `target_temp_step`). */
+  _getHeatCoolMinGap(state) {
+    const step = this._getTemperatureStep(state);
+    return Math.max(1, step);
+  }
+
+  _clampRangeLowCandidate(rawValue, high, state) {
+    if (!state || !Number.isFinite(high)) {
+      return null;
+    }
+    const range = this._getTemperatureRange(state);
+    const gap = this._getHeatCoolMinGap(state);
+    const maxLow = high - gap;
+    if (!Number.isFinite(maxLow) || maxLow < range.min) {
+      return null;
+    }
+    const n = this._normalizeTemperatureValue(rawValue, state);
+    return clamp(n, range.min, maxLow);
+  }
+
+  _clampRangeHighCandidate(rawValue, low, state) {
+    if (!state || !Number.isFinite(low)) {
+      return null;
+    }
+    const range = this._getTemperatureRange(state);
+    const gap = this._getHeatCoolMinGap(state);
+    const minHigh = low + gap;
+    if (!Number.isFinite(minHigh) || minHigh > range.max) {
+      return null;
+    }
+    const n = this._normalizeTemperatureValue(rawValue, state);
+    return clamp(n, minHigh, range.max);
+  }
+
+  _getEffectiveTargetLowHigh(state) {
+    const entityId = this._config?.entity;
+    if (entityId && this._draftTempRange.has(entityId)) {
+      return { ...this._draftTempRange.get(entityId) };
+    }
+    const attrs = state?.attributes || {};
+    return {
+      low: parseFiniteClimateNumber(attrs.target_temp_low),
+      high: parseFiniteClimateNumber(attrs.target_temp_high),
+    };
+  }
+
+  _normalizeLowHighPair(low, high, state) {
+    const lo = this._normalizeTemperatureValue(low, state);
+    const hi = this._normalizeTemperatureValue(high, state);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+      return null;
+    }
+    let a = lo;
+    let b = hi;
+    if (b < a) {
+      [a, b] = [b, a];
+    }
+    const range = this._getTemperatureRange(state);
+    const gap = this._getHeatCoolMinGap(state);
+    if (b - a < gap) {
+      b = Math.min(range.max, a + gap);
+      b = this._normalizeTemperatureValue(b, state);
+      if (b - a < gap) {
+        a = Math.max(range.min, b - gap);
+        a = this._normalizeTemperatureValue(a, state);
+      }
+    }
+    return { low: a, high: b };
+  }
+
+  _getTemperatureSyncTolerance(state) {
+    const step = this._getTemperatureStep(state);
+    return Math.max(0.05, Math.min(step / 2, 0.2));
+  }
+
+  _normalizeTemperatureValue(value, state = this._getState()) {
+    if (!state) {
+      return Number(value);
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
+    const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
+    return Number(rounded.toFixed(Math.max(1, getStepPrecision(step))));
+  }
+
+  _supportsTargetTemperature(state) {
+    const attrs = state?.attributes || {};
+    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+      return true;
+    }
+    if (this._isDualSetpointRange(state)) {
+      return true;
+    }
+    return (
+      Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
+      Number.isFinite(parseFiniteClimateNumber(attrs.max_temp))
+    );
+  }
+
+  _supportsTargetTemperatureControl(state) {
+    const features = Number(state?.attributes?.supported_features);
+    if (Number.isFinite(features)) {
+      return Boolean((features & 1) || (features & 2));
+    }
+    return this._supportsTargetTemperature(state);
+  }
+
+  /**
+   * Reported target temperature for single-setpoint modes, or mid-point while dragging dual range.
+   * Returns `null` when the integration exposes no active setpoint (e.g. Ecobee `heat_cool` with
+   * `temperature` / `target_temp_low` / `target_temp_high` all unset) — callers must not invent a fallback.
+   */
+  _getTargetTemperature(state) {
+    const entityId = this._config?.entity;
+    if (entityId && this._draftTemperature.has(entityId)) {
+      return Number(this._draftTemperature.get(entityId));
+    }
+
+    if (entityId && this._isDualSetpointRange(state) && this._draftTempRange.has(entityId)) {
+      const pair = this._draftTempRange.get(entityId);
+      if (Number.isFinite(pair?.low) && Number.isFinite(pair?.high)) {
+        return Number((((pair.high + pair.low) / 2)).toFixed(2));
+      }
+    }
+
+    const attrs = state?.attributes || {};
+    const direct = parseFiniteClimateNumber(attrs.temperature);
+    if (Number.isFinite(direct)) {
+      return direct;
+    }
+
+    const high = parseFiniteClimateNumber(attrs.target_temp_high);
+    const low = parseFiniteClimateNumber(attrs.target_temp_low);
+    if (Number.isFinite(high) && Number.isFinite(low)) {
+      return Number(((high + low) / 2).toFixed(1));
+    }
+
+    return null;
+  }
+
+  _getCurrentTemperature(state) {
+    const current = parseFiniteClimateNumber(state?.attributes?.current_temperature);
+    return Number.isFinite(current) ? current : null;
+  }
+
+  _getCurrentHumidity(state) {
+    const humidity = Number(state?.attributes?.current_humidity);
+    return Number.isFinite(humidity) ? humidity : null;
+  }
+
+  _getCurrentMode(state) {
+    return String(state?.attributes?.hvac_mode || state?.state || "").trim();
+  }
+
+  _getCurrentAction(state) {
+    return String(state?.attributes?.hvac_action || "").trim();
+  }
+
+  _getOrderedModeOptions(state) {
+    const rawModes = Array.isArray(state?.attributes?.hvac_modes)
+      ? state.attributes.hvac_modes.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+    const uniqueModes = [...new Set(rawModes)];
+    const preferredOrder = ["heat", "cool", "heat_cool", "auto", "dry", "fan_only"];
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+
+    return uniqueModes
+      .filter(mode => normalizeTextKey(mode) !== "off")
+      .sort((left, right) => {
+        const leftIndex = preferredOrder.indexOf(normalizeTextKey(left));
+        const rightIndex = preferredOrder.indexOf(normalizeTextKey(right));
+        const safeLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+        const safeRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+        return safeLeft - safeRight || left.localeCompare(right, sortLoc);
+      });
+  }
+
+  _getPreferredOnMode(state) {
+    const allModes = Array.isArray(state?.attributes?.hvac_modes)
+      ? state.attributes.hvac_modes.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+    const modeSet = new Set(allModes.map(mode => normalizeTextKey(mode)));
+
+    if (modeSet.has("heat_cool")) {
+      return "heat_cool";
+    }
+    if (modeSet.has("heat")) {
+      return "heat";
+    }
+    if (modeSet.has("cool")) {
+      return "cool";
+    }
+    if (modeSet.has("auto")) {
+      return "auto";
+    }
+    if (modeSet.has("dry")) {
+      return "dry";
+    }
+    if (modeSet.has("fan_only")) {
+      return "fan_only";
+    }
+
+    return allModes.find(mode => normalizeTextKey(mode) !== "off") || "heat";
+  }
+
+  _isOff(state) {
+    return normalizeTextKey(this._getCurrentMode(state)) === "off";
+  }
+
+  /**
+   * Some integrations leave `attributes.hvac_mode` non-off while `state` is already `off`.
+   * Off-null setpoint wake and similar paths must still treat the entity as shut off.
+   */
+  _isEffectiveClimateOff(state) {
+    if (!state) {
+      return false;
+    }
+    if (normalizeTextKey(String(state.state ?? "").trim()) === "off") {
+      return true;
+    }
+    return this._isOff(state);
+  }
+
+  /**
+   * Ecobee-style: indoor temp known, but no published single or dual setpoints yet.
+   * Used by step buttons without treating `current_temperature` as a visible target.
+   */
+  _isNullSetpointFromCurrentState(state) {
+    if (!state?.attributes || isUnavailableState(state)) {
+      return false;
+    }
+    const attrs = state.attributes;
+    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+      return false;
+    }
+    const low = parseFiniteClimateNumber(attrs.target_temp_low);
+    const high = parseFiniteClimateNumber(attrs.target_temp_high);
+    if (Number.isFinite(low) || Number.isFinite(high)) {
+      return false;
+    }
+    return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
+  }
+
+  _isOffNullSetpointState(state) {
+    return this._isEffectiveClimateOff(state) && this._isNullSetpointFromCurrentState(state);
+  }
+
+  /**
+   * HVAC mode to enable before `set_temperature` when creating a setpoint from current temperature.
+   * Order: heat → cool → heat_cool (Better Thermostat / Ecobee-friendly; differs from `_getPreferredOnMode` toggle order).
+   */
+  _getSetpointWakeHvacMode(state) {
+    const modeSet = new Set(
+      (Array.isArray(state?.attributes?.hvac_modes) ? state.attributes.hvac_modes : [])
+        .map(item => normalizeTextKey(String(item || "").trim()))
+        .filter(Boolean),
+    );
+    for (const candidate of ["heat", "cool", "heat_cool"]) {
+      if (modeSet.has(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  _supportsNullSetpointCreation(state) {
+    if (!this._isNullSetpointFromCurrentState(state)) {
+      return false;
+    }
+    if (!this._supportsTargetTemperatureControl(state)) {
+      return false;
+    }
+    const { min, max } = this._getTemperatureRange(state);
+    return Number.isFinite(min) && Number.isFinite(max) && min < max;
+  }
+
+  _supportsOffNullSetpointWake(state) {
+    return this._isOffNullSetpointState(state) && this._supportsNullSetpointCreation(state);
+  }
+
+  _getStateLabel(state) {
+    const action = this._getCurrentAction(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateClimateHvacLabel) {
+      const raw = action || this._getCurrentMode(state);
+      return window.NodaliaI18n.translateClimateHvacLabel(hass, langCfg, raw, Boolean(action));
+    }
+    if (action) {
+      return getActionMeta(action).label;
+    }
+    return getModeMeta(this._getCurrentMode(state)).label;
+  }
+
+  _getAccentColor(state) {
+    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+    const dialStyles = styles.dial || DEFAULT_CONFIG.styles.dial;
+    const { accent } = climateDialActionMeta(this._getCurrentAction(state), this._getCurrentMode(state));
+
+    switch (accent) {
+      case "heat":
+        return dialStyles.heat_color;
+      case "cool":
+        return dialStyles.cool_color;
+      case "dry":
+        return dialStyles.dry_color;
+      case "fan":
+        return dialStyles.fan_color;
+      case "auto":
+        return dialStyles.auto_color;
+      default:
+        return dialStyles.off_color;
+    }
+  }
+
+  _setClimateService(service, data = {}) {
+    if (!this._hass || !this._config?.entity) {
+      return Promise.resolve();
+    }
+
+    const fullService = `climate.${service}`;
+    if (!this._isServiceAllowed(fullService)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Climate Card", fullService);
+      return Promise.resolve();
+    }
+
+    return this._hass.callService("climate", service, {
+      entity_id: this._config.entity,
+      ...data,
+    });
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions !== true) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
+  _setHvacMode(mode) {
+    if (!mode) {
+      return;
+    }
+
+    this._setClimateService("set_hvac_mode", {
+      hvac_mode: mode,
+    });
+  }
+
+  _toggleClimate(state) {
+    if (this._isOff(state) || isUnavailableState(state)) {
+      this._setHvacMode(this._getPreferredOnMode(state));
+      return;
+    }
+
+    this._setHvacMode("off");
+  }
+
+  _queueTemperatureCommit(value, options = {}) {
+    const state = this._getState();
+    if (!state || this._isDualSetpointRange(state)) {
+      return null;
+    }
+
+    const offNullWake =
+      options.hvacWake === true &&
+      this._isOffNullSetpointState(state) &&
+      this._supportsOffNullSetpointWake(state);
+
+    if (!this._supportsTargetTemperature(state) && !offNullWake) {
+      return null;
+    }
+
+    this._temperatureCommitRequiresHvacWake = Boolean(offNullWake);
+
+    const normalized = this._normalizeTemperatureValue(value, state);
+    const entityId = this._config?.entity;
+
+    if (!entityId || !Number.isFinite(normalized)) {
+      return null;
+    }
+
+    if (this._rangeCommitDebounceTimer) {
+      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._rangeCommitDebounceTimer = 0;
+    }
+
+    this._draftTemperature.set(entityId, normalized);
+    this._temperatureCommitQueuedValue = normalized;
+    this._temperatureCommitRetryCount = 0;
+
+    if (options.render !== false) {
+      this._render();
+    }
+
+    if (options.immediate === true) {
+      this._flushQueuedTemperatureCommit();
+      return normalized;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+    }
+
+    this._temperatureCommitDebounceTimer = window.setTimeout(() => {
+      this._temperatureCommitDebounceTimer = 0;
+      this._flushQueuedTemperatureCommit();
+    }, STEP_BUTTON_COMMIT_DEBOUNCE);
+
+    this._scheduleDraftReset();
+    return normalized;
+  }
+
+  async _flushQueuedTemperatureCommit() {
+    const entityId = this._config?.entity;
+    if (!entityId) {
+      return;
+    }
+
+    const state = this._getState();
+    if (!state || this._isDualSetpointRange(state)) {
+      return;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
+    }
+
+    if (this._temperatureCommitInFlight) {
+      return;
+    }
+
+    const target = Number(
+      this._temperatureCommitQueuedValue ?? this._draftTemperature.get(entityId),
+    );
+    if (!Number.isFinite(target)) {
+      return;
+    }
+
+    this._temperatureCommitQueuedValue = null;
+    this._temperatureCommitInFlight = true;
+    let serviceFailed = false;
+
+    const hvacWake = this._temperatureCommitRequiresHvacWake;
+    this._temperatureCommitRequiresHvacWake = false;
+    let wakeMode = null;
+
+    try {
+      if (hvacWake) {
+        wakeMode = this._getSetpointWakeHvacMode(state);
+        if (wakeMode) {
+          await Promise.resolve(this._setClimateService("set_hvac_mode", {
+            hvac_mode: wakeMode,
+          }));
+          if (this._commitAborted) {
+            return;
+          }
+        } else if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug("Nodalia Climate Card: committing setpoint without HVAC wake mode.");
+        }
+      }
+      if (!serviceFailed) {
+        await Promise.resolve(this._setClimateService("set_temperature", {
+          temperature: target,
+          ...(wakeMode ? { hvac_mode: wakeMode } : {}),
+        }));
+        if (this._commitAborted) {
+          return;
+        }
+      }
+    } catch (_error) {
+      serviceFailed = true;
+      this._temperatureCommitQueuedValue = target;
+    } finally {
+      this._temperatureCommitInFlight = false;
+
+      if (serviceFailed) {
+        this._temperatureCommitRequiresHvacWake = Boolean(hvacWake);
+        this._scheduleDraftReset();
+        return;
+      }
+
+      const queuedRaw = this._temperatureCommitQueuedValue;
+      const queuedValue = queuedRaw === null || queuedRaw === undefined ? NaN : Number(queuedRaw);
+      if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) > 0.001) {
+        this._flushQueuedTemperatureCommit();
+        return;
+      }
+
+      if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) <= 0.001) {
+        this._temperatureCommitQueuedValue = null;
+      }
+
+      if (this._draftTemperature.has(entityId)) {
+        this._scheduleDraftReset();
+      }
+    }
+  }
+
+  _queueRangeCommit(pair, options = {}) {
+    const state = this._getState();
+    if (!state || !this._isDualSetpointRange(state)) {
+      return null;
+    }
+
+    const normalized = this._normalizeLowHighPair(pair.low, pair.high, state);
+    if (!normalized) {
+      return null;
+    }
+
+    const entityId = this._config?.entity;
+    if (!entityId) {
+      return null;
+    }
+
+    if (this._temperatureCommitDebounceTimer) {
+      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._temperatureCommitDebounceTimer = 0;
+    }
+
+    this._draftTempRange.set(entityId, normalized);
+    this._rangeCommitQueuedValue = normalized;
+    this._rangeCommitRetryCount = 0;
+
+    if (options.render !== false) {
+      this._render();
+    }
+
+    if (options.immediate === true) {
+      this._flushQueuedRangeCommit();
+      return normalized;
+    }
+
+    if (this._rangeCommitDebounceTimer) {
+      window.clearTimeout(this._rangeCommitDebounceTimer);
+    }
+
+    this._rangeCommitDebounceTimer = window.setTimeout(() => {
+      this._rangeCommitDebounceTimer = 0;
+      this._flushQueuedRangeCommit();
+    }, STEP_BUTTON_COMMIT_DEBOUNCE);
+
+    this._scheduleDraftReset();
+    return normalized;
+  }
+
+  async _flushQueuedRangeCommit() {
+    const entityId = this._config?.entity;
+    if (!entityId) {
+      return;
+    }
+
+    const state = this._getState();
+    if (!state || !this._isDualSetpointRange(state)) {
+      return;
+    }
+
+    if (this._rangeCommitDebounceTimer) {
+      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._rangeCommitDebounceTimer = 0;
+    }
+
+    if (this._rangeCommitInFlight) {
+      return;
+    }
+
+    const pending = this._rangeCommitQueuedValue ?? this._draftTempRange.get(entityId);
+    if (!pending || !Number.isFinite(pending.low) || !Number.isFinite(pending.high)) {
+      return;
+    }
+
+    this._rangeCommitQueuedValue = null;
+    this._rangeCommitInFlight = true;
+    let serviceFailed = false;
+
+    try {
+      await Promise.resolve(this._setClimateService("set_temperature", {
+        target_temp_low: pending.low,
+        target_temp_high: pending.high,
+      }));
+      if (this._commitAborted) {
+        return;
+      }
+    } catch (_error) {
+      serviceFailed = true;
+      this._rangeCommitQueuedValue = pending;
+    } finally {
+      this._rangeCommitInFlight = false;
+
+      if (serviceFailed) {
+        this._scheduleDraftReset();
+        return;
+      }
+
+      const queued = this._rangeCommitQueuedValue;
+      if (
+        queued &&
+        Number.isFinite(queued.low) &&
+        Number.isFinite(queued.high) &&
+        (Math.abs(queued.low - pending.low) > 0.001 || Math.abs(queued.high - pending.high) > 0.001)
+      ) {
+        this._flushQueuedRangeCommit();
+        return;
+      }
+
+      if (
+        queued &&
+        Number.isFinite(queued.low) &&
+        Number.isFinite(queued.high) &&
+        Math.abs(queued.low - pending.low) <= 0.001 &&
+        Math.abs(queued.high - pending.high) <= 0.001
+      ) {
+        this._rangeCommitQueuedValue = null;
+      }
+
+      if (this._draftTempRange.has(entityId)) {
+        this._scheduleDraftReset();
+      }
+    }
+  }
+
+  _commitTemperature(value, options = {}) {
+    const normalized = this._queueTemperatureCommit(value, {
+      immediate: options.immediate !== false,
+      render: options.render,
+    });
+
+    if (!Number.isFinite(normalized)) {
+      return null;
+    }
+
+    this._scheduleDraftReset();
+    return normalized;
+  }
+
+  async _createSetpointFromCurrentBy(delta) {
+    const state = this._getState();
+    if (!state || !this._supportsNullSetpointCreation(state)) {
+      return false;
+    }
+
+    const baseline = this._getCurrentTemperature(state);
+    if (!Number.isFinite(baseline)) {
+      return false;
+    }
+
+    const step = this._getTemperatureStep(state);
+    const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
+    if (!Number.isFinite(next)) {
+      return false;
+    }
+
+    this._triggerHaptic("selection");
+
+    const wakeMode = this._getSetpointWakeHvacMode(state);
+    try {
+      if (wakeMode) {
+        await Promise.resolve(this._setClimateService("set_hvac_mode", {
+          hvac_mode: wakeMode,
+        }));
+      } else if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("Nodalia Climate Card: creating setpoint without HVAC wake mode.");
+      }
+
+      await Promise.resolve(this._setClimateService("set_temperature", {
+        temperature: next,
+        ...(wakeMode ? { hvac_mode: wakeMode } : {}),
+      }));
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("Nodalia Climate Card: failed to create setpoint from current temperature.", error);
+      }
+    }
+
+    return true;
+  }
+
+  _scheduleDraftReset() {
+    if (this._draftResetTimer) {
+      window.clearTimeout(this._draftResetTimer);
+    }
+
+    this._draftResetTimer = window.setTimeout(() => {
+      this._draftResetTimer = 0;
+
+      const entityId = this._config?.entity;
+      const state = this._getState();
+      if (!entityId || !state) {
+        return;
+      }
+
+      if (this._isDualSetpointRange(state)) {
+        if (!this._draftTempRange.has(entityId)) {
+          return;
+        }
+        if (this._rangeCommitDebounceTimer || this._rangeCommitInFlight) {
+          this._scheduleDraftReset();
+          return;
+        }
+        const step = this._getTemperatureStep(state);
+        const tol = Math.max(0.05, Math.min(step / 2, 0.25));
+        const draft = this._draftTempRange.get(entityId);
+        const al = parseFiniteClimateNumber(state.attributes?.target_temp_low);
+        const ah = parseFiniteClimateNumber(state.attributes?.target_temp_high);
+        if (
+          Number.isFinite(al) && Number.isFinite(ah) &&
+          Number.isFinite(draft?.low) && Number.isFinite(draft?.high) &&
+          Math.abs(al - draft.low) <= tol &&
+          Math.abs(ah - draft.high) <= tol
+        ) {
+          this._clearTemperatureDraft(entityId);
+          this._render();
+          return;
+        }
+
+        if (this._rangeCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && draft) {
+          this._rangeCommitRetryCount += 1;
+          this._rangeCommitQueuedValue = draft;
+          this._flushQueuedRangeCommit();
+          return;
+        }
+
+        this._clearTemperatureDraft(entityId);
+        this._render();
+        return;
+      }
+
+      if (!this._draftTemperature.has(entityId)) {
+        return;
+      }
+
+      if (this._temperatureCommitDebounceTimer || this._temperatureCommitInFlight) {
+        this._scheduleDraftReset();
+        return;
+      }
+
+      const actualTemperature = parseFiniteClimateNumber(state.attributes?.temperature);
+      const draftTemperature = Number(this._draftTemperature.get(entityId));
+      const tolerance = this._getTemperatureSyncTolerance(state);
+
+      if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+        this._clearTemperatureDraft(entityId);
+        this._render();
+        return;
+      }
+
+      if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && Number.isFinite(draftTemperature)) {
+        this._temperatureCommitRetryCount += 1;
+        this._temperatureCommitQueuedValue = draftTemperature;
+        this._flushQueuedTemperatureCommit();
+        return;
+      }
+
+      this._clearTemperatureDraft(entityId);
+      this._render();
+    }, DRAFT_CONFIRMATION_TIMEOUT);
+  }
+
+  _changeTemperatureBy(delta) {
+    const state = this._getState();
+    if (!state) {
+      return;
+    }
+
+    if (this._supportsNullSetpointCreation(state)) {
+      this._createSetpointFromCurrentBy(delta);
+      return;
+    }
+
+    const step = this._getTemperatureStep(state);
+
+    if (this._isDualSetpointRange(state)) {
+      if (!this._supportsTargetTemperature(state)) {
+        return;
+      }
+      const { low, high } = this._getEffectiveTargetLowHigh(state);
+      if (!Number.isFinite(low) || !Number.isFinite(high)) {
+        return;
+      }
+      const range = this._getTemperatureRange(state);
+      const deltaTemp = Number(delta) * step;
+      const sel = this._selectedRangeThumb;
+
+      let pair = null;
+      if (sel === "low") {
+        const newLowRaw = low + deltaTemp;
+        const newLow = this._clampRangeLowCandidate(newLowRaw, high, state);
+        if (newLow === null) {
+          return;
+        }
+        pair = this._normalizeLowHighPair(newLow, high, state);
+      } else if (sel === "high") {
+        const newHighRaw = high + deltaTemp;
+        const newHigh = this._clampRangeHighCandidate(newHighRaw, low, state);
+        if (newHigh === null) {
+          return;
+        }
+        pair = this._normalizeLowHighPair(low, newHigh, state);
+      } else {
+        let newLow = low + deltaTemp;
+        let newHigh = high + deltaTemp;
+        if (newLow < range.min) {
+          const d = range.min - newLow;
+          newLow = range.min;
+          newHigh = newHigh + d;
+        } else if (newHigh > range.max) {
+          const d = newHigh - range.max;
+          newHigh = range.max;
+          newLow = newLow - d;
+        }
+        pair = this._normalizeLowHighPair(newLow, newHigh, state);
+      }
+
+      if (!pair) {
+        return;
+      }
+      this._triggerHaptic("selection");
+      this._queueRangeCommit(pair, {
+        immediate: false,
+        render: true,
+      });
+      return;
+    }
+
+    if (!this._supportsTargetTemperature(state)) {
+      return;
+    }
+
+    const current = parseFiniteClimateNumber(this._getTargetTemperature(state));
+    if (!Number.isFinite(current)) {
+      return;
+    }
+    const next = this._normalizeTemperatureValue(current + (Number(delta) * step), state);
+    this._triggerHaptic("selection");
+    this._queueTemperatureCommit(next, {
+      immediate: false,
+      render: true,
+    });
+  }
+
+  _triggerHaptic(styleOverride = null) {
+    const haptics = this._config?.haptics || {};
+    if (haptics.enabled !== true) {
+      return;
+    }
+
+    const style = styleOverride || haptics.style || "medium";
+    fireEvent(this, "haptic", style, {
+      bubbles: true,
+      cancelable: false,
+      composed: true,
+    });
+
+    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+    }
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      dialDuration: clamp(
+        Number(configuredAnimations.dial_duration) || DEFAULT_CONFIG.animations.dial_duration,
+        80,
+        2000,
+      ),
+      buttonBounceDuration: clamp(
+        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+        120,
+        1200,
+      ),
+      contentDuration: clamp(
+        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+        140,
+        1800,
+      ),
+    };
+  }
+
+  _isLightThemeSurface() {
+    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+
+    const textLuminance = getRelativeLuminance(textColor);
+    if (textLuminance !== null) {
+      return textLuminance < 0.36;
+    }
+
+    const backgroundLuminance = getRelativeLuminance(backgroundColor);
+    if (backgroundLuminance !== null) {
+      return backgroundLuminance > 0.62;
+    }
+
+    return false;
+  }
+
+  _triggerButtonBounce(button) {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    button.classList.remove("is-pressing");
+    button.getBoundingClientRect();
+    button.classList.add("is-pressing");
+
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!button.isConnected) {
+        return;
+      }
+      button.classList.remove("is-pressing");
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
+  }
+
+  _scheduleEntranceAnimationReset(delay) {
+    if (this._entranceAnimationResetTimer) {
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
+  _setDialDraggingState(isDragging, dial = this._activeDialDrag?.dial || null) {
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    dial.classList.toggle("is-dragging", Boolean(isDragging));
+  }
+
+  _setDragWindowListeners(enabled) {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const shouldAttach = Boolean(enabled);
+    if (shouldAttach === this._dragWindowListenersAttached) {
+      return;
+    }
+    this._dragWindowListenersAttached = shouldAttach;
+    if (shouldAttach) {
+      window.addEventListener("pointermove", this._onWindowPointerMove);
+      window.addEventListener("pointerup", this._onWindowPointerUp);
+      window.addEventListener("pointercancel", this._onWindowPointerUp);
+      window.addEventListener("mousemove", this._onWindowMouseMove);
+      window.addEventListener("mouseup", this._onWindowMouseUp);
+      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+        window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+        window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+        window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+      }
+      return;
+    }
+    window.removeEventListener("pointermove", this._onWindowPointerMove);
+    window.removeEventListener("pointerup", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+      window.removeEventListener("touchmove", this._onWindowTouchMove);
+      window.removeEventListener("touchend", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+    }
+  }
+
+  _updateDialRangePreview(low, high) {
+    const dial = this.shadowRoot?.querySelector(".climate-card__dial");
+    const state = this._getState();
+    if (!(dial instanceof HTMLElement) || !state || !this._isDualSetpointRange(state)) {
+      return;
+    }
+    if (!Number.isFinite(low) || !Number.isFinite(high)) {
+      return;
+    }
+    const temperatureRange = this._getTemperatureRange(state);
+    const temperatureStep = this._getTemperatureStep(state);
+    const tempSpan = Math.max(temperatureRange.max - temperatureRange.min, temperatureStep);
+    const ratioL = clamp((low - temperatureRange.min) / tempSpan, 0, 1);
+    const ratioH = clamp((high - temperatureRange.min) / tempSpan, 0, 1);
+    const heatLen = Number((ratioL * DIAL_VISIBLE_LENGTH).toFixed(3));
+    const coolLen = Number(((1 - ratioH) * DIAL_VISIBLE_LENGTH).toFixed(3));
+    const coolOff = Number((-ratioH * DIAL_VISIBLE_LENGTH).toFixed(3));
+    const posH = getDialMarkerPosition(DIAL_START_ANGLE + (ratioH * DIAL_SWEEP));
+    const posL = getDialMarkerPosition(DIAL_START_ANGLE + (ratioL * DIAL_SWEEP));
+    dial.style.setProperty("--climate-heat-progress", String(heatLen));
+    dial.style.setProperty("--climate-cool-progress", String(coolLen));
+    dial.style.setProperty("--climate-cool-dashoffset", `${coolOff}px`);
+    dial.style.setProperty("--climate-thumb-heat-left", `${posL.left}%`);
+    dial.style.setProperty("--climate-thumb-heat-top", `${posL.top}%`);
+    dial.style.setProperty("--climate-thumb-cool-left", `${posH.left}%`);
+    dial.style.setProperty("--climate-thumb-cool-top", `${posH.top}%`);
+  }
+
+  _updateDialPreview(value) {
+    const state = this._getState();
+    if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
+      return;
+    }
+    const dial = this.shadowRoot?.querySelector(".climate-card__dial");
+    const targetValue = this.shadowRoot?.querySelector('[data-climate-readout="target"]');
+
+    if (!state || !(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
+    const ratio = (nextValue - range.min) / Math.max(range.max - range.min, step);
+    const angle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
+    const progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
+    const thumbPosition = getDialMarkerPosition(angle);
+
+    dial.style.setProperty("--climate-angle", `${angle}deg`);
+    dial.style.setProperty("--climate-progress-length", `${progressLength}`);
+    dial.style.setProperty("--climate-thumb-left", `${thumbPosition.left}%`);
+    dial.style.setProperty("--climate-thumb-top", `${thumbPosition.top}%`);
+    dial.setAttribute("aria-valuenow", String(Number(nextValue)));
+
+    if (targetValue instanceof HTMLElement) {
+      targetValue.textContent = formatTemperature(nextValue, step, false, this._hass);
+    }
+  }
+
+  _hapticOnDialStep(steppedValue, { commit = false } = {}) {
+    if (this._config?.haptics?.scrolls?.temperature_dial === false) {
+      return;
+    }
+    const next = Number(steppedValue);
+    if (!Number.isFinite(next)) {
+      return;
+    }
+    const drag = this._activeDialDrag;
+    if (drag) {
+      if (drag.lastHapticValue === next) {
+        return;
+      }
+      drag.lastHapticValue = next;
+      this._triggerHaptic("selection");
+      return;
+    }
+    if (commit) {
+      this._triggerHaptic("selection");
+      return;
+    }
+  }
+
+  _applyDialValue(value, options = {}) {
+    const state = this._getState();
+    if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
+      return;
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const nextValue = clamp(Number(value), range.min, range.max);
+    const rounded = range.min + (Math.round((nextValue - range.min) / step) * step);
+    const stepped = Number(rounded.toFixed(Math.max(1, getStepPrecision(step))));
+    this._draftTemperature.set(this._config.entity, stepped);
+    this._updateDialPreview(rounded);
+
+    this._hapticOnDialStep(stepped, { commit: options.commit === true });
+    if (options.commit === true) {
+      this._commitTemperature(rounded);
+    }
+  }
+
+  _startDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+    if (!(dial instanceof HTMLElement)) {
+      return;
+    }
+
+    const seedState = this._getState();
+    const seedStep = seedState ? this._getTemperatureStep(seedState) : 1;
+    const seedDraft = seedState ? this._draftTemperature.get(this._config.entity) : null;
+    const seedValue = Number.isFinite(Number(seedDraft))
+      ? Number(seedDraft)
+      : Number(dial.getAttribute("aria-valuenow"));
+    this._activeDialDrag = {
+      kind: "single",
+      dial,
+      geometry: dial.getBoundingClientRect(),
+      pointerId,
+      lastValue: null,
+      lastHapticValue: Number.isFinite(seedValue)
+        ? Number(seedValue.toFixed(Math.max(1, getStepPrecision(seedStep))))
+        : null,
+    };
+    this._setDragWindowListeners(true);
+    this._setDialDraggingState(true, dial);
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const state = this._getState();
+    if (!state) {
+      this._setDialDraggingState(false, dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      return;
+    }
+
+    if (!this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
+      this._setDialDraggingState(false, dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      return;
+    }
+
+    const nextValue = getDialValueFromPoint(
+      dial,
+      clientX,
+      clientY,
+      this._getTemperatureRange(state),
+      this._getTemperatureStep(state),
+      null,
+      this._activeDialDrag.geometry,
+    );
+    this._activeDialDrag.lastValue = nextValue;
+    this._applyDialValue(nextValue, { commit: false });
+  }
+
+  _moveDialDrag(clientX, clientY, event = null) {
+    const drag = this._activeDialDrag;
+    const state = this._getState();
+
+    if (!drag || !state) {
+      return;
+    }
+
+    if (drag.kind === "range") {
+      this._moveRangeDialDrag(clientX, clientY, event);
+      return;
+    }
+
+    if (event) {
+      event.preventDefault();
+    }
+
+    const nextValue = getDialValueFromPoint(
+      drag.dial,
+      clientX,
+      clientY,
+      this._getTemperatureRange(state),
+      this._getTemperatureStep(state),
+      drag.lastValue,
+      drag.geometry,
+    );
+    drag.lastValue = nextValue;
+    this._applyDialValue(nextValue, { commit: false });
+  }
+
+  _queueDialDragMove(clientX, clientY, event = null) {
+    this._pendingDialDragPoint = { clientX, clientY, event };
+    if (this._dialDragFrame) {
+      return;
+    }
+    this._dialDragFrame = window.requestAnimationFrame(() => {
+      this._dialDragFrame = 0;
+      const pending = this._pendingDialDragPoint;
+      this._pendingDialDragPoint = null;
+      if (!pending) {
+        return;
+      }
+      this._moveDialDrag(pending.clientX, pending.clientY, pending.event);
+    });
+  }
+
+  _commitDialDrag(clientX, clientY, event = null, pointerId = null) {
+    const drag = this._activeDialDrag;
+    const state = this._getState();
+
+    if (!drag || !state) {
+      return;
+    }
+
+    if (drag.kind === "range") {
+      this._commitRangeDialDrag(clientX, clientY, event, pointerId);
+      return;
+    }
+
+    if (event) {
+      event.preventDefault();
+    }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
+
+    const nextValue = getDialValueFromPoint(
+      drag.dial,
+      clientX,
+      clientY,
+      this._getTemperatureRange(state),
+      this._getTemperatureStep(state),
+      drag.lastValue,
+      drag.geometry,
+    );
+    drag.lastValue = nextValue;
+    this._applyDialValue(nextValue, { commit: true });
+
+    this._setDialDraggingState(false, drag.dial);
+    this._activeDialDrag = null;
+    this._setDragWindowListeners(false);
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
+  _startRangeDialDrag(dial, handle, clientX, clientY, event = null, pointerId = null) {
+    if (!(dial instanceof HTMLElement) || (handle !== "low" && handle !== "high")) {
+      return;
+    }
+    const state = this._getState();
+    if (!state || !this._isDualSetpointRange(state)) {
+      return;
+    }
+
+    const pairSeed = this._getEffectiveTargetLowHigh(state);
+    this._activeDialDrag = {
+      kind: "range",
+      handle,
+      dial,
+      geometry: dial.getBoundingClientRect(),
+      pointerId,
+      lastLow: NaN,
+      lastHigh: NaN,
+      startClientX: clientX,
+      startClientY: clientY,
+      rangeThumbDragStarted: false,
+      lastHapticValue: handle === "low" ? pairSeed.low : pairSeed.high,
+    };
+    this._setDragWindowListeners(true);
+    this._setDialDraggingState(true, dial);
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const pair = this._getEffectiveTargetLowHigh(state);
+    if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+      this._setDialDraggingState(false, dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      return;
+    }
+
+    this._activeDialDrag.lastLow = pair.low;
+    this._activeDialDrag.lastHigh = pair.high;
+    this._activeDialDrag.lastHapticValue = handle === "low" ? pair.low : pair.high;
+
+    const entityId = this._config.entity;
+    if (entityId) {
+      this._draftTempRange.set(entityId, { low: pair.low, high: pair.high });
+    }
+    this._updateDialRangePreview(pair.low, pair.high);
+
+    if (event?.target?.setPointerCapture && pointerId != null && event.target instanceof Element) {
+      try {
+        event.target.setPointerCapture(pointerId);
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+  }
+
+  _moveRangeDialDrag(clientX, clientY, event = null) {
+    const drag = this._activeDialDrag;
+    const state = this._getState();
+    if (!drag || drag.kind !== "range" || !state) {
+      return;
+    }
+    if (event) {
+      event.preventDefault();
+    }
+
+    const dx = clientX - drag.startClientX;
+    const dy = clientY - drag.startClientY;
+    if (!drag.rangeThumbDragStarted) {
+      if (Math.hypot(dx, dy) < RANGE_THUMB_DRAG_THRESHOLD_PX) {
+        return;
+      }
+      drag.rangeThumbDragStarted = true;
+      this._selectedRangeThumb = drag.handle;
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const fallback = drag.handle === "low" ? drag.lastLow : drag.lastHigh;
+    const raw = getDialValueFromPoint(drag.dial, clientX, clientY, range, step, fallback, drag.geometry);
+    let low = drag.lastLow;
+    let high = drag.lastHigh;
+    if (drag.handle === "low") {
+      const v = this._clampRangeLowCandidate(raw, high, state);
+      if (v !== null) {
+        low = v;
+      }
+    } else {
+      const v = this._clampRangeHighCandidate(raw, low, state);
+      if (v !== null) {
+        high = v;
+      }
+    }
+    drag.lastLow = low;
+    drag.lastHigh = high;
+    this._hapticOnDialStep(drag.handle === "low" ? low : high, { commit: false });
+
+    const entityId = this._config.entity;
+    if (entityId) {
+      this._draftTempRange.set(entityId, { low, high });
+    }
+    this._updateDialRangePreview(low, high);
+  }
+
+  _commitRangeDialDrag(clientX, clientY, event = null, _pointerId = null) {
+    const drag = this._activeDialDrag;
+    const state = this._getState();
+    if (!drag || drag.kind !== "range" || !state) {
+      return;
+    }
+    if (event) {
+      event.preventDefault();
+    }
+    if (this._dialDragFrame) {
+      window.cancelAnimationFrame(this._dialDragFrame);
+      this._dialDragFrame = 0;
+    }
+    this._pendingDialDragPoint = null;
+
+    if (!drag.rangeThumbDragStarted) {
+      const h = drag.handle;
+      this._selectedRangeThumb = this._selectedRangeThumb === h ? null : h;
+      this._setDialDraggingState(false, drag.dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      const entityId = this._config.entity;
+      const pairEff = this._getEffectiveTargetLowHigh(state);
+      if (entityId && Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+        this._draftTempRange.set(entityId, { low: pairEff.low, high: pairEff.high });
+      }
+      if (Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+        this._updateDialRangePreview(pairEff.low, pairEff.high);
+      }
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+      }
+      this._render();
+      return;
+    }
+
+    const range = this._getTemperatureRange(state);
+    const step = this._getTemperatureStep(state);
+    const fallback = drag.handle === "low" ? drag.lastLow : drag.lastHigh;
+    const raw = getDialValueFromPoint(drag.dial, clientX, clientY, range, step, fallback, drag.geometry);
+    let low = drag.lastLow;
+    let high = drag.lastHigh;
+    if (drag.handle === "low") {
+      const v = this._clampRangeLowCandidate(raw, high, state);
+      if (v !== null) {
+        low = v;
+      }
+    } else {
+      const v = this._clampRangeHighCandidate(raw, low, state);
+      if (v !== null) {
+        high = v;
+      }
+    }
+    const normalized = this._normalizeLowHighPair(low, high, state);
+
+    if (normalized) {
+      const commitStep = drag.handle === "low" ? normalized.low : normalized.high;
+      this._hapticOnDialStep(commitStep, { commit: true });
+    }
+
+    this._setDialDraggingState(false, drag.dial);
+    this._activeDialDrag = null;
+    this._setDragWindowListeners(false);
+
+    this._selectedRangeThumb = drag.handle;
+
+    if (normalized) {
+      this._queueRangeCommit(normalized, { immediate: true, render: true });
+    }
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
+  _onShadowPointerDown(event) {
+    const path = event.composedPath();
+
+    if (this._handleScheduleComposerPointerDown(event, path)) {
+      return;
+    }
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      return;
+    }
+
+    const stateEarly = this._getState();
+    if (
+      !this._activeDialDrag &&
+      stateEarly &&
+      this._isDualSetpointRange(stateEarly) &&
+      this._selectedRangeThumb
+    ) {
+      const onRangeThumb = path.some(
+        n =>
+          n instanceof Element &&
+          (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
+      );
+      if (!onRangeThumb) {
+        const dialDual = path.find(
+          n =>
+            n instanceof HTMLElement &&
+            n.classList?.contains("climate-card__dial") &&
+            n.classList?.contains("climate-card__dial--dual-range"),
+        );
+        if (dialDual) {
+          this._selectedRangeThumb = null;
+          this._render();
+        }
+      }
+    }
+
+    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
+      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      if (
+        !this._activeDialDrag &&
+        dial &&
+        (typeof event.button !== "number" || event.button === 0)
+      ) {
+        this._startRangeDialDrag(
+          dial,
+          rangeLow ? "low" : "high",
+          event.clientX,
+          event.clientY,
+          event,
+          event.pointerId,
+        );
+      }
+      return;
+    }
+
+    const dialHandle = path.find(
+      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
+    );
+    const dial = dialHandle
+      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      : null;
+
+    if (
+      this._activeDialDrag ||
+      !dial ||
+      (typeof event.button === "number" && event.button !== 0)
+    ) {
+      return;
+    }
+
+    this._startDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
+  }
+
+  _onShadowMouseDown(event) {
+    const path = event.composedPath();
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      return;
+    }
+
+    const stateEarly = this._getState();
+    if (
+      !this._activeDialDrag &&
+      stateEarly &&
+      this._isDualSetpointRange(stateEarly) &&
+      this._selectedRangeThumb
+    ) {
+      const onRangeThumb = path.some(
+        n =>
+          n instanceof Element &&
+          (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
+      );
+      if (!onRangeThumb) {
+        const dialDual = path.find(
+          n =>
+            n instanceof HTMLElement &&
+            n.classList?.contains("climate-card__dial") &&
+            n.classList?.contains("climate-card__dial--dual-range"),
+        );
+        if (dialDual) {
+          this._selectedRangeThumb = null;
+          this._render();
+        }
+      }
+    }
+
+    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
+      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      if (!this._activeDialDrag && dial && event.button === 0) {
+        this._startRangeDialDrag(dial, rangeLow ? "low" : "high", event.clientX, event.clientY, event, null);
+      }
+      return;
+    }
+
+    const dialHandle = path.find(
+      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
+    );
+    const dial = dialHandle
+      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      : null;
+
+    if (this._activeDialDrag || !dial || event.button !== 0) {
+      return;
+    }
+
+    this._startDialDrag(dial, event.clientX, event.clientY, event);
+  }
+
+  _onShadowTouchStart(event) {
+    const path = event.composedPath();
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      return;
+    }
+
+    const stateEarly = this._getState();
+    if (
+      !this._activeDialDrag &&
+      stateEarly &&
+      this._isDualSetpointRange(stateEarly) &&
+      this._selectedRangeThumb
+    ) {
+      const onRangeThumb = path.some(
+        n =>
+          n instanceof Element &&
+          (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
+      );
+      if (!onRangeThumb) {
+        const dialDual = path.find(
+          n =>
+            n instanceof HTMLElement &&
+            n.classList?.contains("climate-card__dial") &&
+            n.classList?.contains("climate-card__dial--dual-range"),
+        );
+        if (dialDual) {
+          this._selectedRangeThumb = null;
+          this._render();
+        }
+      }
+    }
+
+    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState()) && event.touches?.length) {
+      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      if (!this._activeDialDrag && dial) {
+        const t = event.touches[0];
+        this._startRangeDialDrag(dial, rangeLow ? "low" : "high", t.clientX, t.clientY, event, null);
+      }
+      return;
+    }
+
+    const dialHandle = path.find(
+      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
+    );
+    const dial = dialHandle
+      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      : null;
+
+    if (this._activeDialDrag || !dial || !event.touches?.length) {
+      return;
+    }
+
+    this._startDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+  }
+
+  _onWindowPointerMove(event) {
+    const drag = this._activeDialDrag;
+    if (!drag) {
+      return;
+    }
+    if (
+      drag.pointerId != null &&
+      event.pointerId != null &&
+      drag.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    this._queueDialDragMove(event.clientX, event.clientY, event);
+  }
+
+  _onWindowPointerUp(event) {
+    const drag = this._activeDialDrag;
+    if (!drag) {
+      return;
+    }
+    if (
+      drag.pointerId != null &&
+      event.pointerId != null &&
+      drag.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    this._commitDialDrag(event.clientX, event.clientY, event, event.pointerId);
+  }
+
+  _onWindowMouseMove(event) {
+    if (!this._activeDialDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
+      return;
+    }
+
+    this._queueDialDragMove(event.clientX, event.clientY, event);
+  }
+
+  _onWindowMouseUp(event) {
+    if (!this._activeDialDrag) {
+      return;
+    }
+
+    this._commitDialDrag(event.clientX, event.clientY, event);
+  }
+
+  _onWindowTouchMove(event) {
+    if (!this._activeDialDrag || !event.touches?.length) {
+      return;
+    }
+
+    this._queueDialDragMove(event.touches[0].clientX, event.touches[0].clientY, event);
+  }
+
+  _onWindowTouchStartCapture(event) {
+    const drag = this._activeDialDrag;
+    if (!drag) {
+      return;
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    if (path.includes(drag.dial)) {
+      return;
+    }
+
+    this._setDialDraggingState(false, drag.dial);
+    this._activeDialDrag = null;
+    this._setDragWindowListeners(false);
+
+    if (this._pendingRenderAfterDrag) {
+      this._pendingRenderAfterDrag = false;
+      this._render();
+    }
+  }
+
+  _onWindowTouchEnd(event) {
+    if (!this._activeDialDrag) {
+      return;
+    }
+
+    const touch = event.changedTouches?.[0];
+    if (!touch) {
+      this._setDialDraggingState(false, this._activeDialDrag.dial);
+      this._activeDialDrag = null;
+      this._setDragWindowListeners(false);
+      if (this._pendingRenderAfterDrag) {
+        this._pendingRenderAfterDrag = false;
+        this._render();
+      }
+      return;
+    }
+
+    this._commitDialDrag(touch.clientX, touch.clientY, event);
+  }
+
+  _performClimateCardAction(actionKind) {
+    const key = actionKind === "hold"
+      ? "hold_action"
+      : actionKind === "double_tap"
+        ? "double_tap_action"
+        : "tap_action";
+    const action = String(this._config?.[key] || "more-info");
+    if (action === "none") {
+      return;
+    }
+
+    this._triggerHaptic();
+
+    if (action === "more-info") {
+      fireEvent(this, "hass-more-info", {
+        entityId: this._config.entity,
+      });
+    }
+  }
+
+  _performTapAction() {
+    this._performClimateCardAction("tap");
+  }
+
+  _performHoldAction() {
+    this._performClimateCardAction("hold");
+  }
+
+  _performDoubleTapAction() {
+    this._performClimateCardAction("double_tap");
+  }
+
+  _triggerPressAnimation(element, className = "is-pressing") {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+    if (animations.enabled === false) {
+      return;
+    }
+
+    const duration = clamp(
+      Number(animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+      120,
+      1200,
+    );
+    element.classList.remove(className);
+    element.getBoundingClientRect();
+    element.classList.add(className);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
+      element.classList.remove(className);
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, duration + 40);
+    } else {
+      window.setTimeout(done, duration + 40);
+    }
+  }
+
+  _onShadowClick(event) {
+    const path = event.composedPath();
+    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
+    if (actionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const climateAction = actionButton.dataset.climateAction;
+      if (climateAction === "schedule-open" || climateAction === "schedule-close") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (climateAction === "schedule-open") {
+          this._triggerHaptic("selection");
+          if (event.detail === 0) {
+            this._triggerButtonBounce(actionButton);
+          }
+          this._openScheduleComposer();
+        } else {
+          this._closeScheduleComposer();
+        }
+        return;
+      }
+
+      if (climateAction === "schedule-save") {
+        this._triggerHaptic("selection");
+        void this._submitScheduleComposer();
+        return;
+      }
+
+      if (climateAction === "schedule-add") {
+        this._triggerHaptic("selection");
+        this._addScheduleComposerSlot(actionButton.dataset.scheduleDay || "mon");
+        return;
+      }
+
+      if (climateAction === "schedule-remove") {
+        if (actionButton.dataset.scheduleSlotId) {
+          this._triggerHaptic("selection");
+          this._removeScheduleComposerSlot(actionButton.dataset.scheduleSlotId);
+        }
+        return;
+      }
+
+      if (climateAction === "override-hold" || climateAction === "override-clear") {
+        this._triggerHaptic("selection");
+        if (event.detail === 0) {
+          this._triggerButtonBounce(actionButton);
+        }
+        if (climateAction === "override-hold") {
+          void this._setEngineOverrideHold();
+        } else {
+          void this._clearEngineOverride();
+        }
+        return;
+      }
+
+      const state = this._getState();
+      if (!state) {
+        return;
+      }
+
+      if (event.detail === 0) {
+        this._triggerButtonBounce(actionButton);
+      }
+
+      switch (climateAction) {
+      case "toggle":
+        this._selectedRangeThumb = null;
+        this._triggerHaptic();
+        this._toggleClimate(state);
+        break;
+      case "decrease":
+        this._changeTemperatureBy(-1);
+        break;
+      case "increase":
+        this._changeTemperatureBy(1);
+        break;
+      case "mode":
+        if (actionButton.dataset.mode) {
+          this._selectedRangeThumb = null;
+          this._triggerHaptic();
+          this._setHvacMode(actionButton.dataset.mode);
+        }
+        break;
+      default:
+        break;
+      }
+      return;
+    }
+
+    const scheduleBackdrop = path.find(
+      node => node instanceof HTMLElement && node.dataset?.climateScheduleBackdrop === "true",
+    );
+    if (scheduleBackdrop) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closeScheduleComposer();
+      return;
+    }
+
+    if (
+      path.some(
+        node => node instanceof HTMLElement && node.classList?.contains("climate-schedule-expanded"),
+      )
+    ) {
+      return;
+    }
+
+    const cardRoot = path.find(node => node instanceof HTMLElement && node.dataset?.climateCard === "root");
+    if (!cardRoot) {
+      return;
+    }
+
+    if (this._scheduleComposerOpen) {
+      return;
+    }
+
+    if (path.some(node => node instanceof HTMLElement && node.dataset?.climateControl)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this._getState()) {
+      return;
+    }
+
+    if (this._suppressNextClimateTap) {
+      this._suppressNextClimateTap = false;
+      return;
+    }
+
+    const tapAction = String(this._config?.tap_action || "more-info");
+    const doubleAction = String(this._config?.double_tap_action || "none");
+    const runTap = () => {
+      if (tapAction === "none") {
+        return;
+      }
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".climate-card__content"));
+      this._performTapAction();
+    };
+    const runDouble = () => {
+      if (doubleAction === "none") {
+        return;
+      }
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".climate-card__content"));
+      this._performDoubleTapAction();
+    };
+
+    if (doubleAction !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+      window.NodaliaUtils.scheduleCardZoneTap(this, {
+        zone: "body",
+        onSingle: runTap,
+        onDouble: runDouble,
+      });
+      return;
+    }
+
+    runTap();
+  }
+
+  _onShadowKeyDown(event) {
+    if (!this._scheduleComposerOpen) {
+      return;
+    }
+
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    const target = event.composedPath()[0];
+    if (
+      target instanceof HTMLInputElement &&
+      (target.type === "time" || target.type === "number" || target.type === "text")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _onShadowInput(event) {
+    const compactInput = event
+      .composedPath()
+      .find(node => node instanceof HTMLInputElement && node.dataset?.climateCompactField);
+
+    if (compactInput) {
+      event.stopPropagation();
+      const state = this._getState();
+      const field = compactInput.dataset.climateCompactField;
+      let value = Number(compactInput.value);
+      if (!state || !Number.isFinite(value)) {
+        return;
+      }
+
+      const range = this._getTemperatureRange(state);
+      const step = this._getTemperatureStep(state);
+      const ratio = clamp((value - range.min) / Math.max(range.max - range.min, step), 0, 1);
+      compactInput.closest(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(ratio));
+      const valueNode = compactInput.closest(".climate-card__compact-slider")?.querySelector("[data-climate-compact-value]");
+      if (valueNode instanceof HTMLElement) {
+        valueNode.textContent = formatTemperature(value, step, true, this._hass);
+      }
+
+      if (field === "temperature") {
+        const targetNode = this.shadowRoot?.querySelector('[data-climate-readout="compact-target"]');
+        if (targetNode instanceof HTMLElement) {
+          targetNode.textContent = formatTemperature(value, step, false, this._hass);
+        }
+        this._queueTemperatureCommit(value, {
+          immediate: event.type === "change",
+          render: event.type === "change",
+        });
+        return;
+      }
+
+      const pair = this._getEffectiveTargetLowHigh(state);
+      if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+        return;
+      }
+      this._selectedRangeThumb = field === "low" ? "low" : "high";
+      const constrainedValue = field === "low"
+        ? this._clampRangeLowCandidate(value, pair.high, state)
+        : this._clampRangeHighCandidate(value, pair.low, state);
+      if (!Number.isFinite(constrainedValue)) {
+        return;
+      }
+      if (constrainedValue !== value) {
+        value = constrainedValue;
+        compactInput.value = String(value);
+        const constrainedRatio = clamp((value - range.min) / Math.max(range.max - range.min, step), 0, 1);
+        compactInput.closest(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(constrainedRatio));
+        if (valueNode instanceof HTMLElement) {
+          valueNode.textContent = formatTemperature(value, step, true, this._hass);
+        }
+      }
+      const nextPair = field === "low"
+        ? { low: value, high: pair.high }
+        : { low: pair.low, high: value };
+      this._queueRangeCommit(nextPair, {
+        immediate: event.type === "change",
+        render: event.type === "change",
+      });
+      return;
+    }
+
+    const input = event
+      .composedPath()
+      .find(node => (
+        node instanceof HTMLInputElement
+        || node instanceof HTMLSelectElement
+      ) && node.dataset?.climateScheduleField);
+
+    if (!input) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    if (input.dataset?.climateScheduleField === "enabled") {
+      if (event.type === "input") {
+        return;
+      }
+      this._setScheduleComposerEnabled(Boolean(input.checked));
+      return;
+    }
+
+    const slotId = String(input.dataset.scheduleSlotId || "").trim();
+    const field = String(input.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    if ((input.type === "time" || input.type === "number") && event.type === "input") {
+      return;
+    }
+
+    let value = input.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  _onShadowBlur(event) {
+    const input = event.composedPath()[0];
+    if (
+      !(input instanceof HTMLInputElement)
+      || !input.dataset?.climateScheduleField
+      || input.dataset.climateScheduleField === "enabled"
+    ) {
+      return;
+    }
+
+    const slotId = String(input.dataset.scheduleSlotId || "").trim();
+    const field = String(input.dataset.climateScheduleField || "").trim();
+    if (!slotId || !field) {
+      return;
+    }
+
+    let value = input.value;
+    if (field === "temperature") {
+      value = Number(value);
+      if (!Number.isFinite(value)) {
+        return;
+      }
+    }
+
+    this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
+  }
+
+  _renderSetpointScheduleButtonHtml(options = {}) {
+    const scheduleLabel = this._climateScheduleText(
+      "openButton",
+      "Weekly setpoint schedule",
+    );
+    const placement = options.placement === "dial" ? "dial" : "steps";
+
+    return `
+      <button
+        type="button"
+        class="climate-card__schedule-button climate-card__schedule-button--${placement}"
+        data-climate-action="schedule-open"
+        aria-label="${escapeHtml(scheduleLabel)}"
+        title="${escapeHtml(scheduleLabel)}"
+      >
+        <ha-icon icon="mdi:calendar-clock"></ha-icon>
+      </button>
+    `;
+  }
+
+  _renderSetpointScheduleSlotEditorHtml(slot, options = {}) {
+    const {
+      startLabel,
+      endLabel,
+      tempLabel,
+      removeLabel,
+      minTemp,
+      maxTemp,
+      stepAttr,
+    } = options;
+    const selected = this._scheduleComposerSelectedSlotId === slot.id;
+
+    return `
+      <div class="climate-schedule-agenda__editor ${selected ? "is-visible" : ""}" data-schedule-slot-editor="${escapeHtml(slot.id)}">
+        <label class="climate-schedule-agenda__editor-field">
+          <span>${escapeHtml(startLabel)}</span>
+          <input
+            type="time"
+            value="${escapeHtml(slot.start)}"
+            data-climate-schedule-field="start"
+            data-schedule-slot-id="${escapeHtml(slot.id)}"
+          />
+        </label>
+        <label class="climate-schedule-agenda__editor-field">
+          <span>${escapeHtml(endLabel)}</span>
+          <input
+            type="time"
+            value="${escapeHtml(slot.end)}"
+            data-climate-schedule-field="end"
+            data-schedule-slot-id="${escapeHtml(slot.id)}"
+          />
+        </label>
+        <label class="climate-schedule-agenda__editor-field climate-schedule-agenda__editor-field--temp">
+          <span>${escapeHtml(tempLabel)}</span>
+          <input
+            type="number"
+            min="${minTemp}"
+            max="${maxTemp}"
+            step="${stepAttr}"
+            value="${escapeHtml(String(slot.temperature))}"
+            data-climate-schedule-field="temperature"
+            data-schedule-slot-id="${escapeHtml(slot.id)}"
+          />
+        </label>
+        <button
+          type="button"
+          class="climate-schedule-agenda__editor-remove"
+          data-climate-action="schedule-remove"
+          data-schedule-slot-id="${escapeHtml(slot.id)}"
+          aria-label="${escapeHtml(removeLabel)}"
+          title="${escapeHtml(removeLabel)}"
+        >
+          <ha-icon icon="mdi:delete-outline"></ha-icon>
+        </button>
+      </div>
+    `;
+  }
+
+  _renderSetpointScheduleDayAgendaRowHtml(day, slots, options = {}) {
+    const {
+      dayLabel,
+      addLabel,
+      emptyLabel,
+      accentColor,
+      temperatureStep,
+      hass,
+      startLabel,
+      endLabel,
+      tempLabel,
+      removeLabel,
+      minTemp,
+      maxTemp,
+      stepAttr,
+    } = options;
+    const daySlots = slots
+      .filter(slot => slot.day === day && slot.enabled !== false)
+      .sort((left, right) => {
+        const a = parseScheduleClockMinutes(left.start) ?? 0;
+        const b = parseScheduleClockMinutes(right.start) ?? 0;
+        return a - b;
+      });
+
+    const blocks = daySlots
+      .map(slot => {
+        const layout = getSetpointScheduleBlockLayout(slot);
+        const selected = this._scheduleComposerSelectedSlotId === slot.id;
+        const tempLabelShort = formatTemperature(slot.temperature, temperatureStep, true, hass);
+        return `
+          <div
+            class="climate-schedule-agenda__block ${selected ? "is-selected" : ""}"
+            data-schedule-block-id="${escapeHtml(slot.id)}"
+            style="--block-left:${layout.left.toFixed(3)}%;--block-width:${layout.width.toFixed(3)}%;"
+            title="${escapeHtml(`${slot.start}–${slot.end} · ${tempLabelShort}`)}"
+            aria-label="${escapeHtml(`${slot.start}–${slot.end}, ${tempLabelShort}`)}"
+          >
+            <span class="climate-schedule-agenda__block-grip climate-schedule-agenda__block-grip--start" data-schedule-resize="start" data-schedule-slot-id="${escapeHtml(slot.id)}" aria-hidden="true"></span>
+            <span class="climate-schedule-agenda__block-body">
+              <span class="climate-schedule-agenda__block-time">${escapeHtml(`${slot.start}–${slot.end}`)}</span>
+              <span class="climate-schedule-agenda__block-temp">${escapeHtml(tempLabelShort)}</span>
+            </span>
+            <span class="climate-schedule-agenda__block-grip climate-schedule-agenda__block-grip--end" data-schedule-resize="end" data-schedule-slot-id="${escapeHtml(slot.id)}" aria-hidden="true"></span>
+          </div>
+        `;
+      })
+      .join("");
+
+    const editors = daySlots
+      .map(slot => this._renderSetpointScheduleSlotEditorHtml(slot, {
+        startLabel,
+        endLabel,
+        tempLabel,
+        removeLabel,
+        minTemp,
+        maxTemp,
+        stepAttr,
+      }))
+      .join("");
+
+    return `
+      <div class="climate-schedule-agenda__row">
+        <div class="climate-schedule-agenda__row-head">
+          <span class="climate-schedule-agenda__day-label">${escapeHtml(dayLabel)}</span>
+          <button
+            type="button"
+            class="climate-schedule-agenda__day-add"
+            data-climate-action="schedule-add"
+            data-schedule-day="${escapeHtml(day)}"
+            aria-label="${escapeHtml(addLabel)}"
+            title="${escapeHtml(addLabel)}"
+          >
+            <ha-icon icon="mdi:plus"></ha-icon>
+          </button>
+        </div>
+        <div class="climate-schedule-agenda__timeline-wrap">
+          <div
+            class="climate-schedule-agenda__track"
+            data-schedule-day-track="${escapeHtml(day)}"
+            style="--schedule-accent:${escapeHtml(accentColor)};"
+          >
+            <div class="climate-schedule-agenda__track-grid" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="climate-schedule-agenda__blocks">
+              ${blocks || `<span class="climate-schedule-agenda__track-empty">${escapeHtml(emptyLabel)}</span>`}
+            </div>
+          </div>
+          <div class="climate-schedule-agenda__axis" aria-hidden="true">
+            <span>00</span>
+            <span>06</span>
+            <span>12</span>
+            <span>18</span>
+            <span>24</span>
+          </div>
+        </div>
+        ${editors}
+      </div>
+    `;
+  }
+
+  _renderScheduleComposerHtml(options = {}) {
+    const {
+      accentColor,
+      temperatureStep,
+      temperatureRange,
+      hass,
+    } = options;
+    const schedule = this._getScheduleComposerDraft();
+    const title = this._climateScheduleText("popupTitle", "Weekly schedule");
+    const hint = this._climateScheduleText(
+      "popupHint",
+      "Define time blocks and target temperatures, then save them natively in Home Assistant.",
+    );
+    const enabledLabel = this._climateScheduleText("enabledLabel", "Enable schedule");
+    const addLabel = this._climateScheduleText("addSlot", "Add block");
+    const emptyLabel = this._climateScheduleText("emptyDay", "No blocks");
+    const cancelLabel = this._climateScheduleText("cancel", "Cancel");
+    const saveLabel = this._climateScheduleText("save", "Save schedule");
+    const savingLabel = this._climateScheduleText("saving", "Saving…");
+    const startLabel = this._climateScheduleText("start", "Start");
+    const endLabel = this._climateScheduleText("end", "End");
+    const tempLabel = this._climateScheduleText("temperature", "Setpoint");
+    const removeLabel = this._climateScheduleText("remove", "Remove");
+    const minTemp = temperatureRange.min;
+    const maxTemp = temperatureRange.max;
+    const stepAttr = temperatureStep > 0 ? temperatureStep : 0.5;
+    const isSaving = this._scheduleComposerSaving === true;
+
+    const closeLabel = this._climateScheduleText("close", "Close");
+    const dayOrder = this._getScheduleComposerDayOrder();
+    const agendaRows = dayOrder
+      .map(day =>
+        this._renderSetpointScheduleDayAgendaRowHtml(day, schedule.slots, {
+          dayLabel: this._climateScheduleText(`day.${day}`, day),
+          addLabel,
+          emptyLabel,
+          accentColor,
+          temperatureStep,
+          hass,
+          startLabel,
+          endLabel,
+          tempLabel,
+          removeLabel,
+          minTemp,
+          maxTemp,
+          stepAttr,
+        }),
+      )
+      .join("");
+
+    return `
+      <div
+        class="climate-schedule-expanded ${this._scheduleComposerOpen ? "is-open" : ""}"
+        style="--climate-schedule-accent:${escapeHtml(accentColor)};"
+        aria-hidden="${this._scheduleComposerOpen ? "false" : "true"}"
+      >
+        <div class="climate-schedule-expanded__backdrop" data-climate-schedule-backdrop="true"></div>
+        <div
+          class="climate-schedule-expanded__panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="${escapeHtml(title)}"
+        >
+          <div class="climate-schedule-expanded__toolbar">
+            <div class="climate-schedule-expanded__toolbar-copy">
+              <div class="climate-schedule-expanded__title">${escapeHtml(title)}</div>
+              <div class="climate-schedule-expanded__hint">${escapeHtml(hint)}</div>
+            </div>
+            <button
+              type="button"
+              class="climate-schedule-expanded__close"
+              data-climate-action="schedule-close"
+              aria-label="${escapeHtml(closeLabel)}"
+              ${isSaving ? "disabled" : ""}
+            >
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
+          </div>
+          ${this._renderScheduleComposerErrorHtml()}
+          <label class="climate-schedule-expanded__enabled">
+            <input
+              type="checkbox"
+              ${schedule.enabled ? "checked" : ""}
+              data-climate-schedule-field="enabled"
+            />
+            <span class="climate-schedule-expanded__enabled-switch" aria-hidden="true"></span>
+            <span>${escapeHtml(enabledLabel)}</span>
+          </label>
+          <div class="climate-schedule-agenda">
+            ${agendaRows}
+          </div>
+          <div class="climate-schedule-expanded__actions">
+            <button
+              type="button"
+              class="climate-schedule-expanded__btn"
+              data-climate-action="schedule-close"
+              ${isSaving ? "disabled" : ""}
+            >
+              ${escapeHtml(cancelLabel)}
+            </button>
+            <button
+              type="button"
+              class="climate-schedule-expanded__btn climate-schedule-expanded__btn--primary"
+              data-climate-action="schedule-save"
+              ${isSaving ? "disabled" : ""}
+            >
+              ${escapeHtml(isSaving ? savingLabel : saveLabel)}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _climateCardUi(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _climateCardAria(key, fallback = "") {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard?.aria;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard?.aria;
+    const raw = pack?.[key] ?? enPack?.[key];
+    return String(raw != null && raw !== "" ? raw : fallback);
+  }
+
+  _renderEmptyState() {
+    const title = escapeHtml(this._climateCardUi("emptyTitle", "Nodalia Climate Card"));
+    const body = escapeHtml(
+      this._climateCardUi("emptyBody", "Set `entity` to a `climate.*` entity to show this card."),
+    );
+    return `
+      <ha-card class="climate-card climate-card--empty">
+        <div class="climate-card__empty-title">${title}</div>
+        <div class="climate-card__empty-text">${body}</div>
+      </ha-card>
+    `;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    const savedScheduleAgendaScrollTop = this._captureScheduleAgendaScrollState();
+
+    const config = this._config || normalizeConfig({});
+    const styles = config.styles || DEFAULT_CONFIG.styles;
+    const isCompactCardLayout = config.layout === "compact";
+
+    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+      this._hass,
+      config.entity,
+      { cardClass: "climate-card" },
+    );
+    if (entityGuard) {
+      this.shadowRoot.innerHTML = entityGuard;
+      return;
+    }
+
+    const state = this._getState();
+    if (!state) {
+      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+        this._renderEmptyState(),
+        { card: (config || DEFAULT_CONFIG).styles?.card },
+      ) ?? this._renderEmptyState();
+      return;
+    }
+
+    const title = this._getClimateName(state);
+    const icon = this._getClimateIcon(state);
+    const entityPicture = this._getEntityPicture(state);
+    const accentColor = this._getAccentColor(state);
+    const currentMode = this._getCurrentMode(state);
+    const currentTemperature = this._getCurrentTemperature(state);
+    const currentHumidity = this._getCurrentHumidity(state);
+    const targetTemperature = this._getTargetTemperature(state);
+    const temperatureRange = this._getTemperatureRange(state);
+    const temperatureStep = this._getTemperatureStep(state);
+    const normalizedCurrentMode = normalizeTextKey(currentMode);
+    const supportsTargetTemperature = this._supportsTargetTemperature(state);
+    const compactLevel = this._getCompactLevel();
+    const compactLayout = compactLevel !== "default";
+    const tightLayout = compactLevel === "tight";
+    const modeOptions = config.show_mode_buttons !== false ? this._getOrderedModeOptions(state) : [];
+    const visibleModeOptions = modeOptions.filter(mode => normalizeTextKey(mode) !== normalizedCurrentMode);
+    const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
+    const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
+    const darkenBubbleIconGlyph =
+      !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+    const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
+    const isRangeMode = !isOff && this._isDualSetpointRange(state);
+    if (!isRangeMode) {
+      this._selectedRangeThumb = null;
+      this._lastDualRangeModeKey = null;
+    } else {
+      const modeKey = normalizedCurrentMode;
+      if (this._lastDualRangeModeKey != null && this._lastDualRangeModeKey !== modeKey) {
+        this._selectedRangeThumb = null;
+      }
+      this._lastDualRangeModeKey = modeKey;
+    }
+    const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
+    const hasNumericTarget =
+      targetTemperature !== null && targetTemperature !== undefined && Number.isFinite(Number(targetTemperature));
+    const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
+    const mainTemperaturePref =
+      normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
+    const currentFin =
+      currentTemperature !== null && Number.isFinite(Number(currentTemperature))
+        ? Number(currentTemperature)
+        : NaN;
+    const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
+    const dialThumbValue = isRangeMode ? NaN : (supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN);
+    let dialPrimaryReadoutValue;
+    if (isRangeMode) {
+      dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
+    } else if (mainTemperaturePref === "current") {
+      dialPrimaryReadoutValue = Number.isFinite(currentFin)
+        ? currentFin
+        : (Number.isFinite(targetFin) ? targetFin : NaN);
+    } else if (Number.isFinite(targetFin)) {
+      dialPrimaryReadoutValue = targetFin;
+    } else if (Number.isFinite(currentFin)) {
+      dialPrimaryReadoutValue = currentFin;
+    } else {
+      dialPrimaryReadoutValue = NaN;
+    }
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const i18nLang = config.language ?? "auto";
+    const toggleAriaLabel = window.NodaliaI18n?.translateClimateAria
+      ? window.NodaliaI18n.translateClimateAria(hass, i18nLang, "togglePower", "Turn on or off")
+      : "Turn on or off";
+    const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
+    const tempScale = getClimateTemperatureScaleLetter(hass);
+    const translateClimateMode = mode => (
+      window.NodaliaI18n?.translateClimateHvacLabel
+        ? window.NodaliaI18n.translateClimateHvacLabel(hass, i18nLang, mode, false)
+        : getModeMeta(mode).label
+    );
+    const climateOffModeLabel = escapeHtml(translateClimateMode("off"));
+    // The compact Climate layout deliberately uses the same visual primitives as
+    // Fan, Cover and Humidifier: 14px card padding, 38px hero bubble and 12px copy.
+    const cardPaddingY = isCompactCardLayout ? 14 : tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
+    const cardPaddingX = isCompactCardLayout ? 14 : tightLayout ? 12 : compactLayout ? 14 : parseSizeToPixels(styles.card.padding, 16);
+    const effectiveCardPadding = `${cardPaddingY}px ${cardPaddingX}px`;
+    const effectiveCardGap = tightLayout ? "10px" : compactLayout ? "12px" : styles.card.gap;
+    const supportsNullSetpointCreation = this._supportsNullSetpointCreation(state);
+    const showStepControls =
+      config.show_step_controls !== false &&
+      (supportsTargetTemperature || supportsNullSetpointCreation);
+    const contentColumnGap = showStepControls
+      ? (tightLayout ? "8px" : compactLayout ? "9px" : "10px")
+      : effectiveCardGap;
+    const effectiveIconSizePx = isCompactCardLayout
+      ? 38
+      : Math.max(
+        48,
+        Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58),
+      );
+    const effectiveIconSize = `${effectiveIconSizePx}px`;
+    const effectiveTitleSize = isCompactCardLayout
+      ? "12px"
+      : `${Math.max(
+        14,
+        Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
+      )}px`;
+    const effectiveCurrentSize = `${Math.max(
+      14,
+      Math.min(parseSizeToPixels(styles.current_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
+    )}px`;
+    const effectiveTargetSize = `${Math.max(
+      42,
+      Math.min(parseSizeToPixels(styles.target_size, 50), tightLayout ? 44 : compactLayout ? 46 : 50),
+    )}px`;
+    const effectiveChipHeight = `${Math.max(
+      21,
+      Math.min(parseSizeToPixels(styles.chip_height, 24), tightLayout ? 22 : compactLayout ? 23 : 24),
+    )}px`;
+    const effectiveChipFontSize = `${Math.max(
+      10,
+      Math.min(parseSizeToPixels(styles.chip_font_size, 11), tightLayout ? 10 : compactLayout ? 10.5 : 11),
+    )}px`;
+    const effectiveChipPadding = tightLayout ? "0 9px" : compactLayout ? "0 10px" : styles.chip_padding;
+    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+    const dialMaxCapPx = Math.max(
+      220,
+      parseSizeToPixels(styles.dial?.max_size ?? DEFAULT_CONFIG.styles.dial.max_size, 480),
+    );
+    const dialSizePx = Math.max(
+      220,
+      Math.min(
+        parseSizeToPixels(styles.dial.size, 280),
+        tightLayout ? Math.min(dialMaxCapPx, 236) : compactLayout ? Math.min(dialMaxCapPx, 252) : dialMaxCapPx,
+      ),
+    );
+    const dialStrokePx = Math.max(
+      15,
+      Math.min(parseSizeToPixels(styles.dial.stroke, 18), tightLayout ? 16 : compactLayout ? 17 : 18),
+    );
+    const thumbSizePx = Math.max(
+      20,
+      Math.min(parseSizeToPixels(styles.dial.thumb_size, 24), tightLayout ? 21 : compactLayout ? 22 : 24),
+    );
+    const stepControlSize = Math.max(
+      40,
+      Math.min(parseSizeToPixels(styles.step_control.size, 50), tightLayout ? 42 : compactLayout ? 46 : 50),
+    );
+    const modeControlSize = Math.max(
+      32,
+      Math.min(parseSizeToPixels(styles.control.size, 42) - 4, tightLayout ? 34 : compactLayout ? 36 : 38),
+    );
+    const modeControlRenderPx =
+      modeDialButtonCount >= 8
+        ? Math.max(24, Math.round(modeControlSize - 9))
+        : modeDialButtonCount >= 5
+          ? Math.max(28, Math.round(modeControlSize - 6))
+          : modeControlSize;
+    const modeDialButtonGap =
+      modeDialButtonCount >= 8
+        ? "3px"
+        : modeDialButtonCount >= 7
+          ? "4px"
+          : modeDialButtonCount >= 5
+            ? (tightLayout ? "4px" : "5px")
+            : (tightLayout ? "8px" : "10px");
+    const interBlockGapPx = showStepControls
+      ? (tightLayout ? 16 : compactLayout ? 18 : 20)
+      : (tightLayout ? 10 : compactLayout ? 12 : 14);
+    const showScheduleButton = config.show_schedule_button !== false;
+    // Engine override chips sit between the dial and +/- steps; auto-height must
+    // reserve their row or Sections clips the step controls (overflow: hidden).
+    const showEngineOverride = this._engineOverride?.available === true && showScheduleButton;
+    const overrideChipPx = showEngineOverride
+      ? (isCompactCardLayout ? 36 : Math.max(40, parseSizeToPixels(effectiveChipHeight, 24) + 12))
+      : 0;
+    const overrideStatusPx = showEngineOverride && this._engineOverride?.until
+      ? (tightLayout ? 18 : 20)
+      : 0;
+    const overrideBlockPx = showEngineOverride
+      ? overrideChipPx + overrideStatusPx + interBlockGapPx
+      : 0;
+    const compactSliderCount = isRangeMode ? 2 : (supportsTargetTemperature && Number.isFinite(targetFin) ? 1 : 0);
+    const compactControlRowCount = compactSliderCount || showStepControls ? Math.max(1, compactSliderCount) : 0;
+    const climateCardMinHeightPx = isCompactCardLayout
+      ? Math.max(
+        94,
+        Math.round(
+          cardPaddingY * 2 +
+            effectiveIconSizePx +
+            (compactControlRowCount ? 16 + (compactControlRowCount * 48) + ((compactControlRowCount - 1) * 8) : 0) +
+            (modeDialButtonCount || config.show_schedule_button !== false ? 10 + 36 : 0) +
+            overrideBlockPx,
+        ),
+      )
+      : Math.max(
+        220,
+        Math.round(
+          cardPaddingY * 2 +
+            effectiveIconSizePx +
+            dialSizePx +
+            overrideBlockPx +
+            (showStepControls ? stepControlSize : 0) +
+            interBlockGapPx,
+        ),
+      );
+    const dialCenterGridGap =
+      modeDialButtonCount >= 5
+        ? (tightLayout ? "6px" : compactLayout ? "7px" : "8px")
+        : modeDialButtonCount >= 3
+          ? (tightLayout ? "8px" : compactLayout ? "9px" : "11px")
+          : (tightLayout ? "10px" : compactLayout ? "12px" : "15px");
+    const dialCenterInsetCss = getClimateDialCenterInsetCss(modeDialButtonCount, tightLayout, compactLayout);
+    const dialCenterAlignContent = modeDialButtonCount >= 3 ? "start" : "center";
+    const stackedModeControlsGap =
+      modeDialButtonCount >= 5 ? (tightLayout ? "6px" : compactLayout ? "6px" : "7px") : (tightLayout ? "7px" : "9px");
+    const targetUnitTopEm = modeDialButtonCount >= 3 ? "0.44em" : "0.14em";
+    const targetBlockPaddingTop = modeDialButtonCount >= 3 ? "0.12em" : "0";
+    const tempSpan = Math.max(temperatureRange.max - temperatureRange.min, temperatureStep);
+    const chips = [];
+    let ratio = 0;
+    let dialAngle = DIAL_START_ANGLE;
+    let progressLength = 0;
+    let thumbPosition = { left: 50, top: 50 };
+    let heatArcLen = 0;
+    let coolArcLen = 0;
+    let coolDashOffsetPx = 0;
+    let thumbHeatPosition = { left: 50, top: 50 };
+    let thumbCoolPosition = { left: 50, top: 50 };
+    if (isRangeMode && Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)) {
+      const ratioL = clamp((rangeBand.low - temperatureRange.min) / tempSpan, 0, 1);
+      const ratioH = clamp((rangeBand.high - temperatureRange.min) / tempSpan, 0, 1);
+      heatArcLen = Number((ratioL * DIAL_VISIBLE_LENGTH).toFixed(3));
+      coolArcLen = Number(((1 - ratioH) * DIAL_VISIBLE_LENGTH).toFixed(3));
+      coolDashOffsetPx = Number((-ratioH * DIAL_VISIBLE_LENGTH).toFixed(3));
+      const angleL = DIAL_START_ANGLE + (ratioL * DIAL_SWEEP);
+      const angleH = DIAL_START_ANGLE + (ratioH * DIAL_SWEEP);
+      thumbHeatPosition = getDialMarkerPosition(angleL);
+      thumbCoolPosition = getDialMarkerPosition(angleH);
+    } else if (supportsTargetTemperature && Number.isFinite(dialThumbValue)) {
+      ratio = (dialThumbValue - temperatureRange.min) / tempSpan;
+      dialAngle = DIAL_START_ANGLE + (clamp(ratio, 0, 1) * DIAL_SWEEP);
+      progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
+      thumbPosition = getDialMarkerPosition(dialAngle);
+    }
+    const currentRatio = currentTemperature !== null
+      ? clamp(
+        (currentTemperature - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep),
+        0,
+        1,
+      )
+      : null;
+    const currentAngle = currentRatio === null
+      ? null
+      : DIAL_START_ANGLE + (currentRatio * DIAL_SWEEP);
+    const currentMarkerPosition = currentAngle === null ? null : getDialMarkerPosition(currentAngle);
+    const showDialCurrentMarker = !isRangeMode && currentMarkerPosition !== null;
+    const dialSvgInner = isRangeMode
+      ? `
+                <circle
+                  class="climate-card__dial-track"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-progress-heat"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-progress-cool"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>`
+      : `
+                <circle
+                  class="climate-card__dial-track"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-hit"
+                  data-climate-control="dial-hit"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>
+                <circle
+                  class="climate-card__dial-progress"
+                  cx="${DIAL_VIEWBOX_SIZE / 2}"
+                  cy="${DIAL_VIEWBOX_SIZE / 2}"
+                  r="${DIAL_CIRCLE_RADIUS}"
+                ></circle>`;
+    const dialThumbsInner = isRangeMode
+      ? `
+              <span class="climate-card__dial-thumb climate-card__dial-thumb--heat${this._selectedRangeThumb === "low" ? " climate-card__dial-thumb--range-selected" : ""}" data-climate-control="dial-range-low" aria-hidden="true"></span>
+              <span class="climate-card__dial-thumb climate-card__dial-thumb--cool${this._selectedRangeThumb === "high" ? " climate-card__dial-thumb--range-selected" : ""}" data-climate-control="dial-range-high" aria-hidden="true"></span>`
+      : `
+              <span class="climate-card__dial-current-marker" aria-hidden="true"></span>
+              <span class="climate-card__dial-thumb" data-climate-control="dial-hit" aria-hidden="true"></span>`;
+    const dialInlineVars = isRangeMode
+      ? `--climate-thumb-heat-left:${thumbHeatPosition.left}%;--climate-thumb-heat-top:${thumbHeatPosition.top}%;--climate-thumb-cool-left:${thumbCoolPosition.left}%;--climate-thumb-cool-top:${thumbCoolPosition.top}%;--climate-heat-progress:${heatArcLen};--climate-cool-progress:${coolArcLen};--climate-cool-dashoffset:${coolDashOffsetPx}px;`
+      : `--climate-thumb-left:${thumbPosition.left}%;--climate-thumb-top:${thumbPosition.top}%;${showDialCurrentMarker ? `--climate-current-left:${currentMarkerPosition.left}%;--climate-current-top:${currentMarkerPosition.top}%;` : ""}`;
+
+    if (config.show_state_chip !== false) {
+      chips.push(`<div class="climate-card__chip climate-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
+    }
+
+    if (config.show_current_temperature_chip !== false && currentTemperature !== null) {
+      chips.push(`<div class="climate-card__chip">${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</div>`);
+    }
+
+    if (config.show_humidity_chip !== false && currentHumidity !== null) {
+      chips.push(`<div class="climate-card__chip">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
+    }
+
+    const currentActionMeta = climateDialActionMeta(this._getCurrentAction(state), currentMode);
+    const dialPrimaryReadoutHtml = isRangeMode
+      ? escapeHtml(
+        currentTemperature !== null
+          ? formatTemperature(currentTemperature, temperatureStep, false, hass)
+          : formatTemperature(null, temperatureStep, false, hass),
+      )
+      : escapeHtml(formatTemperature(dialPrimaryReadoutValue, temperatureStep, false, hass));
+    const dialNoSetpointHint =
+      window.NodaliaI18n?.translateClimateDialNoSetpointHint != null
+        ? window.NodaliaI18n.translateClimateDialNoSetpointHint(hass, i18nLang)
+        : "No active setpoint";
+    const dialMetaHtml = isRangeMode
+      ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>`
+      : noSetpointDial
+        ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>`
+        : mainTemperaturePref === "current" && hasPublishedSingleTarget && Number.isFinite(targetFin)
+          ? `<span>${escapeHtml(formatTemperature(targetFin, temperatureStep, true, hass))}</span>`
+          : (currentTemperature !== null
+            ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
+            : "");
+    const dialActionHtml =
+      noSetpointDial && isOff
+        ? ""
+        : `<span class="climate-card__dial-action">
+                    <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
+                  </span>`;
+    const dialAriaLabelVariant = isRangeMode ? "rangeGroup" : noSetpointDial ? "noSetpoint" : "targetSlider";
+    const dialAriaFallback =
+      dialAriaLabelVariant === "rangeGroup"
+        ? "Comfort range and indoor temperature"
+        : dialAriaLabelVariant === "noSetpoint"
+          ? "Indoor temperature; thermostat has no active target yet"
+          : "Target temperature";
+    const dialAriaLabel =
+      window.NodaliaI18n?.translateClimateDialAria != null
+        ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, dialAriaLabelVariant)
+        : dialAriaFallback;
+    const ariaDialSemanticValue = Number.isFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
+    const ariaDialValue =
+      !isRangeMode && !noSetpointDial && Number.isFinite(ariaDialSemanticValue)
+        ? ariaDialSemanticValue
+        : null;
+    const cardBackground = isOff
+      ? styles.card.background
+      : `
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+      `.trim();
+    const cardBorder = isOff
+      ? styles.card.border
+      : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+    const cardShadow = isOff
+      ? styles.card.box_shadow
+      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;
+    const dialSurfaceBackground = `
+      radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 30%),
+      linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
+      linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.dial.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.dial.background}) 60%, ${styles.dial.background} 100%)
+    `.trim();
+    const dialTrackColor = `color-mix(in srgb, ${styles.dial.track_color} 52%, var(--primary-text-color) 48%)`;
+    const dialHeatStroke = String(styles.dial.heat_color || "#f59f42").trim();
+    const dialCoolStroke = String(styles.dial.cool_color || "#71c0ff").trim();
+    const animations = this._getAnimationSettings();
+    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+    const showScheduleInSteps = showScheduleButton && showStepControls;
+    const showScheduleOnDial = showScheduleButton && !showStepControls;
+    const scheduleButtonDialMarkup = showScheduleOnDial
+      ? this._renderSetpointScheduleButtonHtml({ placement: "dial" })
+      : "";
+    const scheduleButtonStepsMarkup = showScheduleInSteps
+      ? this._renderSetpointScheduleButtonHtml({ placement: "steps" })
+      : "";
+    const scheduleComposerMarkup = this._renderScheduleComposerHtml({
+      accentColor,
+      temperatureStep,
+      temperatureRange,
+      hass,
+    });
+    const engineOverrideMarkup = this._renderEngineOverrideHtml();
+    const dialControlsStacked = modeDialButtonCount >= 3;
+    const dialModeButtonFragments = [];
+    if (!isOff) {
+      dialModeButtonFragments.push(`
+                  <button
+                    type="button"
+                    class="climate-card__mode-button climate-card__mode-button--power is-active"
+                    data-climate-action="toggle"
+                    title="${climateOffModeLabel}"
+                    aria-label="${climateOffModeLabel}"
+                  >
+                    <ha-icon icon="mdi:power"></ha-icon>
+                  </button>`);
+    }
+    for (const mode of visibleModeOptions) {
+      const meta = getModeMeta(mode);
+      const modeLabel = translateClimateMode(mode);
+      dialModeButtonFragments.push(`
+                        <button
+                          type="button"
+                          class="climate-card__mode-button"
+                          data-climate-action="mode"
+                          data-mode="${escapeHtml(mode)}"
+                          title="${escapeHtml(modeLabel)}"
+                          aria-label="${escapeHtml(modeLabel)}"
+                        >
+                          <ha-icon icon="${escapeHtml(meta.icon)}"></ha-icon>
+                        </button>`);
+    }
+    const dialControlsMarkup =
+      dialModeButtonFragments.length === 0
+        ? `<div class="climate-card__dial-controls"></div>`
+        : dialControlsStacked
+          ? (() => {
+              const rows = buildClimateDialModeButtonRows(dialModeButtonFragments);
+              const rowsHtml = rows
+                .map(
+                  (frags, idx) =>
+                    `<div class="climate-card__dial-controls-row${idx > 0 ? " climate-card__dial-controls-row--secondary" : ""}">${frags.join("")}</div>`,
+                )
+                .join("");
+
+              return `
+                <div class="climate-card__dial-controls climate-card__dial-controls--stacked">
+                  ${rowsHtml}
+                </div>`;
+            })()
+          : `
+                <div class="climate-card__dial-controls">
+                  ${dialModeButtonFragments.join("")}
+                </div>`;
+
+    const compactSlider = ({ field, label, value, color = accentColor }) => {
+      if (!Number.isFinite(value)) {
+        return "";
+      }
+      const compactRatio = clamp(
+        (value - temperatureRange.min) / Math.max(temperatureRange.max - temperatureRange.min, temperatureStep),
+        0,
+        1,
+      );
+      return `
+        <label class="climate-card__compact-slider" style="--compact-progress:${compactRatio};--compact-slider-color:${escapeHtml(color)};">
+          <span class="climate-card__compact-slider-label">${escapeHtml(label)}</span>
+          <span class="climate-card__compact-slider-shell">
+            <span class="climate-card__compact-slider-track" aria-hidden="true"></span>
+            <input type="range" min="${temperatureRange.min}" max="${temperatureRange.max}" step="${temperatureStep}" value="${value}" data-climate-compact-field="${escapeHtml(field)}" aria-label="${escapeHtml(label)}" />
+          </span>
+          <strong data-climate-compact-value>${escapeHtml(formatTemperature(value, temperatureStep, true, hass))}</strong>
+        </label>`;
+    };
+    const compactSlidersMarkup = isRangeMode
+      ? `
+          ${compactSlider({ field: "low", label: translateClimateMode("heat"), value: rangeBand.low, color: dialHeatStroke })}
+          ${compactSlider({ field: "high", label: translateClimateMode("cool"), value: rangeBand.high, color: dialCoolStroke })}
+        `
+      : (supportsTargetTemperature && Number.isFinite(targetFin)
+        ? compactSlider({ field: "temperature", label: dialAriaLabel, value: targetFin })
+        : "");
+    const compactTargetReadout = isRangeMode
+      ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))
+      : `<span data-climate-readout="compact-target">${dialPrimaryReadoutHtml}</span><span class="climate-card__compact-degree">°${escapeHtml(tempScale)}</span>`;
+    if (isCompactCardLayout && (isRangeMode || Number.isFinite(dialPrimaryReadoutValue))) {
+      chips.push(`<div class="climate-card__chip climate-card__chip--target">${compactTargetReadout}</div>`);
+    }
+    const compactStepActionsMarkup = showStepControls
+      ? `
+        <div class="climate-card__compact-slider-actions">
+          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="decrease" aria-label="${escapeHtml(this._climateCardAria("decreaseTemperature", "Decrease temperature"))}"><span>&minus;</span></button>
+          <button type="button" class="climate-card__mode-button climate-card__compact-step" data-climate-action="increase" aria-label="${escapeHtml(this._climateCardAria("increaseTemperature", "Increase temperature"))}"><span>+</span></button>
+        </div>`
+      : "";
+    const compactScheduleButtonMarkup = showScheduleButton
+      ? this._renderSetpointScheduleButtonHtml({ placement: "steps" })
+      : "";
+    const compactControlsMarkup = `
+      <div class="climate-card__compact-controls-shell" data-nodalia-tap-shield="true">
+        <div class="climate-card__compact-controls-inner">
+          ${compactSlidersMarkup || compactStepActionsMarkup ? `
+            <div class="climate-card__compact-slider-row">
+              <div class="climate-card__compact-sliders climate-card__compact-sliders--${compactSliderCount <= 1 ? "single" : "range"}">${compactSlidersMarkup}</div>
+              ${compactStepActionsMarkup}
+            </div>` : ""}
+          ${dialModeButtonFragments.length || compactScheduleButtonMarkup ? `
+            <div class="climate-card__compact-modes">
+              ${dialControlsMarkup}
+              ${compactScheduleButtonMarkup}
+            </div>` : ""}
+        </div>
+      </div>
+      ${engineOverrideMarkup}
+    `;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          --climate-card-dial-duration: ${animations.enabled ? animations.dialDuration : 0}ms;
+          --climate-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --climate-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --climate-mode-gap: ${modeDialButtonGap};
+          align-self: start;
+          display: block;
+          height: auto;
+          max-width: 100%;
+          min-height: ${climateCardMinHeightPx}px;
+          width: 100%;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        ha-card {
+          height: auto;
+          min-height: ${climateCardMinHeightPx}px;
+          overflow: hidden;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .climate-card {
+          background: ${isCompactCardLayout
+            ? cardBackground
+            : `radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 34%, transparent) 0%, transparent 60%),
+              radial-gradient(circle at 50% 38%, color-mix(in srgb, ${accentColor} 16%, transparent) 0%, transparent 64%),
+              linear-gradient(180deg, color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 44%),
+              ${cardBackground}`};
+          border: ${cardBorder};
+          border-radius: ${isCompactCardLayout ? "var(--nodalia-card-border-radius, 28px)" : styles.card.border_radius};
+          box-shadow: ${cardShadow};
+          color: var(--primary-text-color);
+          container-name: nodalia-climate;
+          container-type: size;
+          isolation: isolate;
+          overflow: hidden;
+          position: relative;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .climate-card::before {
+          background: ${isOff
+            ? "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"
+            : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`};
+          content: "";
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .climate-card::after {
+          background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
+            linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 68%);
+          content: "";
+          inset: 0;
+          opacity: ${isOff ? "0" : "1"};
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .climate-card__content {
+          display: flex;
+          flex-direction: column;
+          gap: ${contentColumnGap};
+          height: auto;
+          justify-content: flex-start;
+          min-height: 0;
+          padding: ${effectiveCardPadding};
+          position: relative;
+          z-index: 1;
+        }
+
+        .climate-card__hero {
+          align-items: center;
+          display: grid;
+          flex: 0 0 auto;
+          gap: ${effectiveCardGap};
+          grid-template-columns: ${effectiveIconSize} minmax(0, 1fr);
+          min-height: 0;
+          width: 100%;
+        }
+
+        .climate-card__icon {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: calc(${styles.icon.size} * 0.5);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+            0 10px 26px rgba(0, 0, 0, 0.16);
+          color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
+          cursor: pointer;
+          display: inline-flex;
+          height: ${effectiveIconSize};
+          justify-content: center;
+          margin: 0;
+          outline: none;
+          padding: 0;
+          position: relative;
+          transform: translateZ(0);
+          transform-origin: center;
+          transition:
+            background 180ms ease,
+            border-color 180ms ease,
+            box-shadow 180ms ease,
+            color 180ms ease,
+            transform 160ms ease;
+          will-change: transform;
+          width: ${effectiveIconSize};
+        }
+
+        .climate-card__icon ha-icon {
+          --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
+          color: ${
+            darkenBubbleIconGlyph
+              ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
+              : (isOff ? styles.icon.off_color : styles.icon.on_color)
+          };
+          display: inline-flex;
+          height: calc(${effectiveIconSize} * 0.44);
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: calc(${effectiveIconSize} * 0.44);
+        }
+
+        .climate-card__picture {
+          border-radius: inherit;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          position: absolute;
+          width: 100%;
+        }
+
+        .climate-card__unavailable-badge {
+          align-items: center;
+          background: #ff9b4a;
+          border: 2px solid ${styles.card.background};
+          border-radius: 999px;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          display: inline-flex;
+          height: 18px;
+          justify-content: center;
+          position: absolute;
+          right: -2px;
+          top: -2px;
+          width: 18px;
+          z-index: 2;
+        }
+
+        .climate-card__unavailable-badge ha-icon {
+          --mdc-icon-size: 11px;
+          color:#fff;
+          height: 11px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 11px;
+        }
+
+        .climate-card__copy {
+          display: grid;
+          gap: ${tightLayout ? "8px" : "10px"};
+          min-width: 0;
+        }
+
+        .climate-card__headline {
+          align-items: start;
+          display: grid;
+          gap: ${tightLayout ? "8px" : "10px"};
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+        }
+
+        .climate-card__title {
+          color: var(--primary-text-color);
+          font-size: ${effectiveTitleSize};
+          font-weight: 700;
+          line-height: 1.14;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-card__chips {
+          align-items: center;
+          display: flex;
+          flex: 0 0 auto;
+          flex-wrap: wrap;
+          gap: ${tightLayout ? "8px" : "10px"};
+          justify-content: flex-end;
+          min-width: 0;
+          max-width: 100%;
+        }
+
+        .climate-card__chip {
+          align-items: center;
+          backdrop-filter: blur(18px);
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: ${chipBorderRadius};
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          font-size: ${effectiveChipFontSize};
+          font-weight: 700;
+          height: ${effectiveChipHeight};
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          padding: ${effectiveChipPadding};
+          text-overflow: ellipsis;
+          transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+          white-space: nowrap;
+        }
+
+        .climate-card--layout-compact {
+          border-radius: var(--nodalia-card-border-radius, 28px);
+        }
+        .climate-card--layout-compact .climate-card__content { gap: 0; }
+        .climate-card--layout-compact .climate-card__hero {
+          gap: 12px;
+          grid-template-columns: 38px minmax(0, 1fr);
+        }
+        .climate-card--layout-compact .climate-card__icon {
+          background: ${isOff
+            ? "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
+            : `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`};
+          border-radius: 999px;
+          height: 38px;
+          width: 38px;
+        }
+        .climate-card--layout-compact .climate-card__copy { gap: 10px; }
+        .climate-card--layout-compact .climate-card__headline { gap: 10px; }
+        .climate-card--layout-compact .climate-card__title { font-size: 12px; line-height: 1.15; }
+        .climate-card--layout-compact .climate-card__chips { gap: 10px; }
+        .climate-card--layout-compact .climate-card__chip {
+          font-size: 11px;
+          height: 24px;
+          padding: 0 9px;
+        }
+        .climate-card__compact-degree { font-size: .42em; font-weight: 600; margin-left: 2px; vertical-align: top; }
+        .climate-card__chip--target .climate-card__compact-degree { font-size: 1em; margin-left: 1px; vertical-align: baseline; }
+        .climate-card__compact-controls-shell {
+          display: grid;
+          grid-template-rows: 1fr;
+          margin-top: 16px;
+          min-width: 0;
+          overflow: visible;
+        }
+        .climate-card__compact-controls-inner { display: grid; gap: 10px; min-width: 0; }
+        .climate-card__compact-slider-row {
+          align-items: center;
+          display: grid;
+          gap: 14px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+          overflow: visible;
+          padding-inline: 4px;
+        }
+        .climate-card__compact-sliders { display: grid; gap: 8px; min-width: 0; }
+        .climate-card__compact-slider {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+          min-width: 0;
+        }
+        .climate-card__compact-slider-label,
+        .climate-card__compact-slider > strong {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .climate-card__compact-sliders--single :is(.climate-card__compact-slider-label, .climate-card__compact-slider > strong) { display: none; }
+        .climate-card__compact-sliders--range .climate-card__compact-slider {
+          grid-template-columns: auto minmax(80px, 1fr) auto;
+        }
+        .climate-card__compact-slider > strong { color: var(--primary-text-color); min-width: 42px; text-align: right; }
+        .climate-card__compact-slider-shell {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          display: flex;
+          height: 48px;
+          min-width: 0;
+          padding: 0 14px;
+          position: relative;
+        }
+        .climate-card__compact-slider-track {
+          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 999px;
+          height: 22px;
+          inset: 50% 14px auto;
+          overflow: hidden;
+          pointer-events: none;
+          position: absolute;
+          transform: translateY(-50%);
+        }
+        .climate-card__compact-slider-track::before {
+          background: var(--compact-slider-color, ${accentColor});
+          border-radius: inherit;
+          content: "";
+          inset: 0;
+          position: absolute;
+          transform: scaleX(var(--compact-progress, 0));
+          transform-origin: left center;
+        }
+        .climate-card__compact-slider input {
+          appearance: none;
+          background: transparent;
+          cursor: pointer;
+          height: 48px;
+          inset: 0 14px;
+          margin: 0;
+          opacity: 0;
+          position: absolute;
+          touch-action: pan-y;
+          width: calc(100% - 28px);
+        }
+        .climate-card__compact-slider-actions {
+          display: inline-flex;
+          flex: 0 0 auto;
+          gap: 12px;
+          justify-content: flex-end;
+          padding-block: 4px;
+        }
+        .climate-card--layout-compact .climate-card__compact-step {
+          font-size: 20px;
+          height: 36px;
+          width: 36px;
+        }
+        .climate-card__compact-modes {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+          min-width: 0;
+          padding-inline: 4px;
+        }
+        .climate-card__compact-modes .climate-card__dial-controls { margin-top: 0; padding-top: 0; width: auto; }
+        .climate-card__compact-modes .climate-card__mode-button { height: 36px; width: 36px; }
+        .climate-card__compact-modes .climate-card__schedule-button {
+          height: 36px;
+          position: static;
+          width: 36px;
+        }
+        .climate-card__compact-modes .climate-card__schedule-button ha-icon {
+          --mdc-icon-size: 17px;
+          height: 17px;
+          width: 17px;
+        }
+
+        .climate-card__dial-wrap {
+          align-items: center;
+          display: flex;
+          flex: 0 0 auto;
+          justify-content: center;
+          min-height: 0;
+          padding-top: ${showStepControls ? "0" : (tightLayout ? "0" : "2px")};
+          position: relative;
+        }
+
+        .climate-card__schedule-button {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 5%, transparent), transparent 60%),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color: ${isOff ? styles.icon.off_color : styles.icon.on_color};
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: ${stepControlSize}px;
+          justify-content: center;
+          margin: 0;
+          outline: none;
+          padding: 0;
+          transform: translateZ(0);
+          transition:
+            background 160ms ease,
+            border-color 160ms ease,
+            box-shadow 160ms ease,
+            color 160ms ease,
+            transform 160ms ease;
+          width: ${stepControlSize}px;
+          will-change: transform;
+        }
+
+        .climate-card__schedule-button--dial {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
+            ${styles.icon.background};
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          bottom: ${tightLayout ? "2px" : compactLayout ? "4px" : "6px"};
+          left: ${tightLayout ? "2px" : compactLayout ? "4px" : "6px"};
+          position: absolute;
+          z-index: 4;
+        }
+
+        .climate-card__schedule-button--steps {
+          position: relative;
+        }
+
+        .climate-card__schedule-button:hover {
+          transform: translateY(-1px);
+        }
+
+        .climate-card__schedule-button ha-icon {
+          --mdc-icon-size: calc(${stepControlSize}px * 0.42);
+          display: inline-flex;
+          height: calc(${stepControlSize}px * 0.42);
+          width: calc(${stepControlSize}px * 0.42);
+        }
+
+        .climate-card__override {
+          align-items: center;
+          display: flex;
+          flex: 0 0 auto;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          min-height: 0;
+        }
+
+        .climate-card__override-chip {
+          -webkit-backdrop-filter: blur(18px);
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font-family: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          height: 40px;
+          justify-content: center;
+          letter-spacing: -0.01em;
+          padding: 0;
+          position: relative;
+          transform: translateZ(0);
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+          width: 40px;
+        }
+
+        .climate-card__override-chip-icon {
+          align-items: center;
+          background: transparent;
+          border: 0;
+          box-shadow: none;
+          color: color-mix(in srgb, ${accentColor} 82%, var(--primary-text-color));
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 100%;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .climate-card__override-chip-copy {
+          clip: rect(0 0 0 0);
+          clip-path: inset(50%);
+          height: 1px;
+          overflow: hidden;
+          position: absolute;
+          white-space: nowrap;
+          width: 1px;
+        }
+
+        .climate-card__override-chip-label {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-card__override-chip:hover:not(:disabled) {
+          border-color: color-mix(in srgb, ${accentColor} 46%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+            0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18));
+          transform: translateY(-1px);
+        }
+
+        .climate-card__override-chip:disabled {
+          cursor: default;
+          opacity: 0.55;
+        }
+
+        .climate-card__override-chip ha-icon {
+          --mdc-icon-size: 15px;
+          display: inline-flex;
+          height: 15px;
+          width: 15px;
+        }
+
+        .climate-card__override-chip.is-active {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 18%, transparent), transparent 60%),
+            color-mix(in srgb, ${accentColor} 16%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border-color: color-mix(in srgb, ${accentColor} 42%, transparent);
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent),
+            0 14px 30px color-mix(in srgb, ${accentColor} 22%, rgba(0, 0, 0, 0.18));
+        }
+
+        .climate-card__override-chip--clear {
+          color: var(--primary-text-color);
+        }
+
+        .climate-card__override-chip--clear .climate-card__override-chip-icon {
+          color: var(--primary-text-color);
+        }
+
+        .climate-card--layout-compact .climate-card__override {
+          box-sizing: border-box;
+          margin-top: 10px;
+          padding-inline: 4px;
+          width: 100%;
+        }
+
+        .climate-card--layout-compact .climate-card__override-chip {
+          box-sizing: border-box;
+          flex: 0 0 36px;
+          height: 36px;
+          padding: 0;
+          width: 36px;
+        }
+
+        .climate-card--layout-compact .climate-card__override-chip-icon {
+          height: 100%;
+          width: 100%;
+        }
+
+        .climate-card--layout-compact .climate-card__override-chip-label,
+        .climate-card--layout-compact .climate-card__override-chip span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-card--layout-compact .climate-card__override-status {
+          flex: 1 0 100%;
+          justify-content: center;
+          text-align: center;
+        }
+
+        .climate-card__override-status {
+          align-items: center;
+          background: color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
+          border: 1px solid color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: 11px;
+          font-weight: 650;
+          gap: 7px;
+          line-height: 1.3;
+          max-width: 100%;
+          overflow-wrap: anywhere;
+          padding: 5px 10px;
+        }
+
+        .climate-card__override-status-dot {
+          background: ${accentColor};
+          border-radius: 50%;
+          box-shadow: 0 0 0 4px color-mix(in srgb, ${accentColor} 14%, transparent);
+          flex: 0 0 auto;
+          height: 7px;
+          width: 7px;
+        }
+
+        .climate-schedule-expanded {
+          --climate-schedule-accent: var(--primary-color);
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: fixed;
+          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
+          z-index: 120;
+        }
+
+        .climate-schedule-expanded.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .climate-schedule-expanded__backdrop {
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.32);
+          inset: 0;
+          position: absolute;
+        }
+
+        .climate-schedule-expanded__panel {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--climate-schedule-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 94%, rgba(255, 255, 255, 0.02));
+          border: 1px solid color-mix(in srgb, var(--climate-schedule-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 12px;
+          isolation: isolate;
+          left: 50%;
+          max-height: min(92vh, 920px);
+          max-height: min(92dvh, 920px);
+          max-width: min(calc(100vw - 24px), 920px);
+          overflow: hidden;
+          padding: 14px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(calc(100vw - 24px), 920px);
+          z-index: 1;
+        }
+
+        .climate-schedule-expanded__toolbar {
+          align-items: flex-start;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .climate-schedule-expanded__toolbar-copy {
+          display: grid;
+          flex: 1 1 auto;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .climate-schedule-expanded__title {
+          font-size: 16px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+
+        .climate-schedule-expanded__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .climate-schedule-expanded__close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 32px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 32px;
+        }
+
+        .climate-schedule-expanded__close ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-expanded__error {
+          align-items: flex-start;
+          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
+          border-radius: 10px;
+          color: var(--error-color, #db4437);
+          display: flex;
+          font-size: 12px;
+          gap: 8px;
+          line-height: 1.4;
+          padding: 8px 10px;
+        }
+
+        .climate-schedule-expanded__error ha-icon {
+          --mdc-icon-size: 16px;
+          flex: 0 0 auto;
+          margin-top: 1px;
+        }
+
+        .climate-schedule-expanded__enabled {
+          align-items: center;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 10px;
+          min-height: 34px;
+        }
+
+        .climate-schedule-expanded__enabled input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .climate-schedule-expanded__enabled-switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 22px;
+          position: relative;
+          width: 40px;
+        }
+
+        .climate-schedule-expanded__enabled-switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch::before {
+          transform: translateX(18px);
+        }
+
+        .climate-schedule-agenda {
+          display: grid;
+          gap: 12px;
+          max-height: min(58vh, 560px);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .climate-schedule-agenda__row {
+          display: grid;
+          gap: 8px;
+        }
+
+        .climate-schedule-agenda__row-head {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(72px, 92px) minmax(0, 1fr);
+        }
+
+        .climate-schedule-agenda__day-label {
+          font-size: 13px;
+          font-weight: 800;
+          text-transform: capitalize;
+        }
+
+        .climate-schedule-agenda__day-add {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 30px;
+          justify-content: center;
+          justify-self: end;
+          margin: 0;
+          padding: 0;
+          width: 30px;
+        }
+
+        .climate-schedule-agenda__day-add ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-agenda__timeline-wrap {
+          display: grid;
+          gap: 4px;
+          grid-column: 1 / -1;
+        }
+
+        .climate-schedule-agenda__track {
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          height: 56px;
+          overflow: hidden;
+          position: relative;
+          touch-action: none;
+          user-select: none;
+        }
+
+        .climate-schedule-agenda__track-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          height: 100%;
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .climate-schedule-agenda__track-grid span {
+          border-right: 1px dashed color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+        }
+
+        .climate-schedule-agenda__track-grid span:last-child {
+          border-right: 0;
+        }
+
+        .climate-schedule-agenda__blocks {
+          height: 100%;
+          inset: 0;
+          position: absolute;
+          z-index: 1;
+        }
+
+        .climate-schedule-agenda__track-empty {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 600;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          white-space: nowrap;
+        }
+
+        .climate-schedule-agenda__axis {
+          color: var(--secondary-text-color);
+          display: grid;
+          font-size: 10px;
+          font-weight: 700;
+          grid-template-columns: repeat(5, 1fr);
+          letter-spacing: 0.02em;
+          text-align: center;
+        }
+
+        .climate-schedule-agenda__block {
+          align-items: stretch;
+          background: color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 78%, transparent);
+          border: 1px solid color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 42%, transparent);
+          border-radius: 10px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          cursor: pointer;
+          display: grid;
+          grid-template-columns: 8px minmax(0, 1fr) 8px;
+          height: calc(100% - 8px);
+          left: var(--block-left, 0%);
+          min-width: 44px;
+          overflow: hidden;
+          position: absolute;
+          top: 4px;
+          touch-action: none;
+          width: var(--block-width, 20%);
+          z-index: 1;
+        }
+
+        .climate-schedule-agenda__block.is-selected {
+          border-color: color-mix(in srgb, var(--primary-text-color) 28%, var(--schedule-accent, var(--climate-schedule-accent)));
+          box-shadow:
+            0 0 0 2px color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 35%, transparent),
+            inset 0 1px 0 rgba(255, 255, 255, 0.24);
+          z-index: 2;
+        }
+
+        .climate-schedule-agenda__block:active {
+          cursor: grabbing;
+        }
+
+        .climate-schedule-agenda__block-grip {
+          cursor: ew-resize;
+          display: block;
+          flex: 0 0 10px;
+          min-height: 100%;
+          touch-action: none;
+          z-index: 2;
+        }
+
+        .climate-schedule-agenda__block-body {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          justify-content: center;
+          min-width: 0;
+          overflow: hidden;
+          padding: 0 2px;
+          pointer-events: none;
+        }
+
+        .climate-schedule-agenda__block-time {
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1.1;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-schedule-agenda__block-temp {
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.1;
+          opacity: 0.92;
+        }
+
+        .climate-schedule-agenda__editor {
+          display: none;
+          gap: 8px;
+          grid-column: 1 / -1;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+        }
+
+        .climate-schedule-agenda__editor.is-visible {
+          display: grid;
+        }
+
+        .climate-schedule-agenda__editor-field {
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .climate-schedule-agenda__editor-field--temp {
+          grid-column: 1 / -1;
+        }
+
+        .climate-schedule-agenda__editor-field > span {
+          color: var(--secondary-text-color);
+          font-size: 10px;
+          font-weight: 700;
+        }
+
+        .climate-schedule-agenda__editor-field input {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 10px;
+          color: var(--primary-text-color);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 6px 8px;
+          width: 100%;
+        }
+
+        .climate-schedule-agenda__editor-remove {
+          align-items: center;
+          appearance: none;
+          align-self: end;
+          background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 28%, transparent);
+          border-radius: 999px;
+          color: var(--error-color, #db4437);
+          cursor: pointer;
+          display: inline-flex;
+          height: 36px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 36px;
+        }
+
+        .climate-schedule-agenda__editor-remove ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-expanded__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .climate-schedule-expanded__btn {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 0 14px;
+        }
+
+        .climate-schedule-expanded__btn:disabled {
+          cursor: default;
+          opacity: 0.5;
+        }
+
+        .climate-schedule-expanded__btn--primary {
+          background: color-mix(in srgb, var(--climate-schedule-accent) 22%, transparent);
+          border-color: color-mix(in srgb, var(--climate-schedule-accent) 38%, var(--divider-color));
+        }
+
+        @media (max-width: 640px) {
+          .climate-schedule-expanded__panel {
+            border-radius: 14px;
+            max-height: 94vh;
+            max-height: 94dvh;
+            max-width: min(calc(100vw - 16px), 920px);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(calc(100vw - 16px), 920px);
+          }
+
+          .climate-schedule-agenda__row-head {
+            grid-template-columns: minmax(64px, 80px) minmax(0, 1fr);
+          }
+        }
+
+        .climate-card__dial {
+          --climate-angle: ${dialAngle}deg;
+          --climate-progress-length: ${progressLength};
+          --climate-dial-size: ${dialSizePx}px;
+          --climate-thumb-size: ${thumbSizePx}px;
+          align-self: center;
+          aspect-ratio: 1;
+          -webkit-backdrop-filter: blur(18px);
+          backdrop-filter: blur(18px);
+          background: ${dialSurfaceBackground};
+          border: 1px solid color-mix(in srgb, ${accentColor} 10%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+          border-radius: 50%;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+            0 18px 38px rgba(0, 0, 0, 0.16);
+          box-sizing: border-box;
+          cursor: ${supportsTargetTemperature && !isRangeMode ? "grab" : "default"};
+          flex-shrink: 0;
+          height: auto;
+          max-width: 100%;
+          position: relative;
+          touch-action: none;
+          transform: translateZ(0) scale(1);
+          transform-origin: center;
+          transition:
+            background 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            box-shadow 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          user-select: none;
+          -webkit-user-select: none;
+          will-change: transform, box-shadow;
+          width: min(var(--climate-dial-size), 100%);
+        }
+
+        @supports (width: 1cqw) {
+          .climate-card__dial {
+            width: min(var(--climate-dial-size), 100%, 94cqw);
+          }
+        }
+
+        .climate-card__dial:active {
+          cursor: ${supportsTargetTemperature && !isRangeMode ? "grabbing" : "default"};
+        }
+
+        .climate-card__dial--dual-range {
+          cursor: default;
+        }
+
+        .climate-card__dial--no-setpoint {
+          cursor: default;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-hit {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-thumb:not(.climate-card__dial-current-marker) {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .climate-card__dial--no-setpoint .climate-card__dial-progress {
+          opacity: 0.2;
+        }
+
+        .climate-card__dial-no-setpoint {
+          color: var(--secondary-text-color);
+          font-size: 0.9em;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+          line-height: 1.25;
+          text-align: center;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat,
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool {
+          cursor: grab;
+          pointer-events: auto;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat {
+          left: var(--climate-thumb-heat-left, 50%);
+          top: var(--climate-thumb-heat-top, 50%);
+          z-index: 3;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool {
+          left: var(--climate-thumb-cool-left, 50%);
+          top: var(--climate-thumb-cool-top, 50%);
+          z-index: 4;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool::after {
+          background: color-mix(in srgb, ${dialCoolStroke} 22%, rgba(255, 255, 255, 0.96));
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat::after {
+          background: color-mix(in srgb, ${dialHeatStroke} 18%, rgba(255, 255, 255, 0.96));
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--range-selected {
+          box-shadow:
+            0 0 0 2px color-mix(in srgb, ${accentColor} 50%, transparent),
+            0 0 0 9px color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 0 26px color-mix(in srgb, ${accentColor} 38%, transparent),
+            0 10px 26px rgba(0, 0, 0, 0.22);
+          transform: translate(-50%, -50%) scale(1.1);
+          z-index: 6;
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--heat.climate-card__dial-thumb--range-selected::after {
+          box-shadow: 0 0 0 2px color-mix(in srgb, ${dialHeatStroke} 55%, transparent);
+        }
+
+        .climate-card__dial--dual-range .climate-card__dial-thumb--cool.climate-card__dial-thumb--range-selected::after {
+          box-shadow: 0 0 0 2px color-mix(in srgb, ${dialCoolStroke} 55%, transparent);
+        }
+
+        .climate-card__dial-progress-heat,
+        .climate-card__dial-progress-cool {
+          fill: none;
+          stroke-linecap: round;
+          stroke-width: ${dialStrokePx};
+          transform: rotate(${DIAL_START_ANGLE}deg);
+          transform-origin: ${DIAL_VIEWBOX_SIZE / 2}px ${DIAL_VIEWBOX_SIZE / 2}px;
+        }
+
+        .climate-card__dial-progress-heat {
+          stroke: ${dialHeatStroke};
+          stroke-dasharray: var(--climate-heat-progress, 0) ${DIAL_CIRCUMFERENCE};
+          opacity: 0.94;
+          transition:
+            stroke-dasharray var(--climate-card-dial-duration) ease-out,
+            opacity 180ms ease;
+        }
+
+        .climate-card__dial-progress-cool {
+          stroke: ${dialCoolStroke};
+          stroke-dasharray: var(--climate-cool-progress, 0) ${DIAL_CIRCUMFERENCE};
+          stroke-dashoffset: var(--climate-cool-dashoffset, 0px);
+          opacity: 0.94;
+          transition:
+            stroke-dasharray var(--climate-card-dial-duration) ease-out,
+            stroke-dashoffset var(--climate-card-dial-duration) ease-out,
+            opacity 180ms ease;
+        }
+
+        .climate-card__dial-svg {
+          display: block;
+          height: 100%;
+          overflow: visible;
+          width: 100%;
+        }
+
+        .climate-card__dial-track,
+        .climate-card__dial-hit,
+        .climate-card__dial-progress {
+          fill: none;
+          stroke-dasharray: ${DIAL_VISIBLE_LENGTH} ${DIAL_HIDDEN_LENGTH};
+          stroke-linecap: round;
+          stroke-width: ${dialStrokePx};
+          transform: rotate(${DIAL_START_ANGLE}deg);
+          transform-origin: ${DIAL_VIEWBOX_SIZE / 2}px ${DIAL_VIEWBOX_SIZE / 2}px;
+        }
+
+        .climate-card__dial-track {
+          stroke: ${dialTrackColor};
+        }
+
+        .climate-card__dial-hit {
+          cursor: ${supportsTargetTemperature ? "grab" : "default"};
+          pointer-events: stroke;
+          stroke: transparent;
+          stroke-width: ${dialStrokePx + 22};
+        }
+
+        .climate-card__dial-progress {
+          filter: drop-shadow(0 0 0 transparent);
+          opacity: 0.94;
+          stroke: ${accentColor};
+          stroke-dasharray: var(--climate-progress-length) ${DIAL_CIRCUMFERENCE};
+          transition:
+            stroke var(--climate-card-dial-duration) ease,
+            stroke-dasharray var(--climate-card-dial-duration) ease-out,
+            filter 180ms ease,
+            opacity 180ms ease;
+        }
+
+        .climate-card__dial-thumb {
+          background: transparent;
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 4%, transparent),
+            0 0 0 6px color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+            0 0 18px color-mix(in srgb, ${accentColor} 12%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.18);
+          height: var(--climate-thumb-size);
+          left: var(--climate-thumb-left, 50%);
+          pointer-events: auto;
+          position: absolute;
+          top: var(--climate-thumb-top, 50%);
+          transform: translate(-50%, -50%) scale(1);
+          transition:
+            left var(--climate-card-dial-duration) ease-out,
+            top var(--climate-card-dial-duration) ease-out,
+            transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            border-color var(--climate-card-dial-duration) ease,
+            box-shadow var(--climate-card-dial-duration) ease,
+            background var(--climate-card-dial-duration) ease;
+          width: var(--climate-thumb-size);
+          z-index: 2;
+        }
+
+        .climate-card__dial-thumb::before {
+          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px);
+          background: radial-gradient(circle, color-mix(in srgb, var(--primary-text-color) 14%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 8%, transparent) 38%, color-mix(in srgb, var(--primary-text-color) 3%, transparent) 58%, transparent 76%);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 50%;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          content: "";
+          inset: 0;
+          position: absolute;
+        }
+
+        .climate-card__dial-thumb::after {
+          content: "";
+          height: 82%;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 82%;
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 50%;
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+        }
+
+        .climate-card__dial-current-marker {
+          background: rgba(255, 255, 255, 0.94);
+          border: 2px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border-radius: 50%;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          height: calc(var(--climate-thumb-size) * 0.5);
+          left: var(--climate-current-left, 50%);
+          opacity: ${currentAngle === null ? "0" : "1"};
+          pointer-events: none;
+          position: absolute;
+          top: var(--climate-current-top, 50%);
+          transform: translate(-50%, -50%);
+          transition:
+            left var(--climate-card-dial-duration) ease-out,
+            top var(--climate-card-dial-duration) ease-out,
+            opacity var(--climate-card-dial-duration) ease;
+          width: calc(var(--climate-thumb-size) * 0.5);
+          z-index: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress,
+        .climate-card__dial.is-dragging .climate-card__dial-progress-heat,
+        .climate-card__dial.is-dragging .climate-card__dial-progress-cool,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--heat,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--cool,
+        .climate-card__dial.is-dragging .climate-card__dial-current-marker {
+          transition: none !important;
+        }
+
+        .climate-card__dial.is-dragging {
+          background:
+            radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--primary-text-color) 10%, transparent), transparent 30%),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, ${styles.dial.background} 90%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%,
+              color-mix(in srgb, ${styles.dial.background} 94%, rgba(0, 0, 0, 0.14)) 100%
+            );
+          border-color: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 24px 44px rgba(0, 0, 0, 0.2);
+          transform: translateZ(0) scale(1.03);
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${accentColor} 24%, transparent));
+          opacity: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress-heat {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${dialHeatStroke} 38%, transparent));
+          opacity: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-progress-cool {
+          filter: drop-shadow(0 0 10px color-mix(in srgb, ${dialCoolStroke} 38%, transparent));
+          opacity: 1;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-thumb,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--heat,
+        .climate-card__dial.is-dragging .climate-card__dial-thumb--cool {
+          animation: climate-card-dial-thumb-pop 260ms cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          background: transparent;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 0 0 7px color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)),
+            0 0 22px color-mix(in srgb, ${accentColor} 18%, transparent),
+            0 18px 34px rgba(0, 0, 0, 0.24);
+          transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        .climate-card__dial-center {
+          align-content: ${dialCenterAlignContent};
+          display: grid;
+          gap: ${dialCenterGridGap};
+          inset: ${dialCenterInsetCss};
+          justify-items: center;
+          pointer-events: auto;
+          position: absolute;
+          text-align: center;
+          transform: scale(1);
+          transition:
+            opacity 220ms cubic-bezier(0.22, 0.84, 0.26, 1),
+            transform 220ms cubic-bezier(0.22, 0.84, 0.26, 1);
+          z-index: 1;
+        }
+
+        .climate-card__target {
+          color: var(--primary-text-color);
+          display: inline-block;
+          font-size: ${effectiveTargetSize};
+          font-weight: 500;
+          letter-spacing: -0.06em;
+          line-height: 0.94;
+          min-height: calc(${effectiveTargetSize} * 0.94);
+          min-width: 0;
+          padding-right: calc(${effectiveTargetSize} * 0.34);
+          padding-top: ${targetBlockPaddingTop};
+          pointer-events: none;
+          position: relative;
+          transition: color var(--climate-card-dial-duration) ease;
+          white-space: nowrap;
+        }
+
+        .climate-card__dial.is-dragging .climate-card__dial-center {
+          transform: scale(1.02);
+        }
+
+        .climate-card__target-value {
+          display: inline-block;
+          transition: opacity 140ms ease;
+        }
+
+        .climate-card__target-unit {
+          align-items: flex-start;
+          color: var(--primary-text-color);
+          display: inline-flex;
+          font-size: calc(${effectiveTargetSize} * 0.24);
+          font-weight: 500;
+          gap: 0.04em;
+          letter-spacing: 0;
+          line-height: 1;
+          opacity: 0.92;
+          position: absolute;
+          right: 0;
+          top: ${targetUnitTopEm};
+        }
+
+        .climate-card__target-degree,
+        .climate-card__target-scale {
+          display: inline-block;
+          line-height: 1;
+        }
+
+        .climate-card__target-degree {
+          transform: translateY(-0.06em);
+        }
+
+        .climate-card__divider {
+          background: color-mix(in srgb, var(--primary-text-color) 18%, transparent);
+          border-radius: 999px;
+          height: 1px;
+          pointer-events: none;
+          width: clamp(84px, 72%, 148px);
+        }
+
+        .climate-card__dial-meta {
+          align-items: center;
+          color: var(--primary-text-color);
+          display: flex;
+          flex-wrap: wrap;
+          font-size: ${effectiveCurrentSize};
+          gap: ${tightLayout ? "10px" : "12px"};
+          justify-content: center;
+          line-height: 1;
+          pointer-events: none;
+        }
+
+        .climate-card__dial-range {
+          font-size: calc(${effectiveCurrentSize} * 0.92);
+          font-weight: 500;
+          letter-spacing: -0.02em;
+          max-width: 100%;
+          text-align: center;
+        }
+
+        .climate-card__dial-action {
+          align-items: center;
+          display: inline-flex;
+          justify-content: center;
+        }
+
+        .climate-card__dial-action ha-icon {
+          --mdc-icon-size: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
+          color: ${accentColor};
+          display: inline-flex;
+          height: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
+          transition: color var(--climate-card-dial-duration) ease;
+          width: ${tightLayout ? "15px" : compactLayout ? "16px" : "17px"};
+        }
+
+        .climate-card__dial-controls {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--climate-mode-gap, ${tightLayout ? "8px" : "10px"});
+          justify-content: center;
+          margin-top: 2px;
+          pointer-events: auto;
+          width: 100%;
+        }
+
+        .climate-card__dial-controls--stacked {
+          flex-direction: column;
+          flex-wrap: nowrap;
+          gap: ${stackedModeControlsGap};
+        }
+
+        .climate-card__dial-controls-row {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--climate-mode-gap, ${tightLayout ? "8px" : "10px"});
+          justify-content: center;
+          width: 100%;
+        }
+
+        .climate-card__dial-controls-row--secondary {
+          justify-content: center;
+        }
+
+        .climate-card__mode-button,
+        .climate-card__step-button {
+          -webkit-tap-highlight-color: transparent;
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+            0 10px 24px rgba(0, 0, 0, 0.16);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          justify-content: center;
+          margin: 0;
+          outline: none;
+          padding: 0;
+          pointer-events: auto;
+          position: relative;
+          transform: translateZ(0);
+          transform-origin: center;
+          transition:
+            background 160ms ease,
+            border-color 160ms ease,
+            transform 160ms ease,
+            box-shadow 160ms ease,
+            color 160ms ease;
+          will-change: transform;
+        }
+
+        .climate-card__mode-button {
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 6%, transparent), transparent 60%),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          height: ${modeControlRenderPx}px;
+          width: ${modeControlRenderPx}px;
+        }
+
+        .climate-card__mode-button:hover,
+        .climate-card__step-button:hover {
+          transform: translateY(-1px);
+        }
+
+        :is(.climate-card__icon, .climate-card__schedule-button, .climate-card__mode-button, .climate-card__step-button):active:not(:disabled),
+        :is(.climate-card__icon, .climate-card__schedule-button, .climate-card__mode-button, .climate-card__step-button).is-pressing:not(:disabled) {
+          animation: climate-card-button-bounce var(--climate-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .climate-card__mode-button--power {
+          border-color: color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 10%, transparent));
+        }
+
+        .climate-card__mode-button.is-active {
+          background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});
+          border-color: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          color: ${styles.control.accent_color};
+        }
+
+        .climate-card__mode-button ha-icon {
+          --mdc-icon-size: calc(${modeControlRenderPx}px * 0.46);
+          display: inline-flex;
+          height: calc(${modeControlRenderPx}px * 0.46);
+          width: calc(${modeControlRenderPx}px * 0.46);
+        }
+
+        .climate-card__steps {
+          display: flex;
+          flex: 0 0 auto;
+          gap: ${tightLayout ? "10px" : compactLayout ? "12px" : "14px"};
+          justify-content: center;
+        }
+
+        .climate-card__hero--entering {
+          animation: climate-card-fade-up calc(var(--climate-card-content-duration) * 0.9) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .climate-card__dial-wrap--entering {
+          animation: climate-card-fade-up var(--climate-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 40ms;
+        }
+
+        .climate-card__dial-wrap--entering .climate-card__dial {
+          animation: climate-card-dial-bloom calc(var(--climate-card-content-duration) * 1.02) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .climate-card__dial-wrap--entering .climate-card__dial-center {
+          animation: climate-card-dial-center-bloom calc(var(--climate-card-content-duration) * 0.92) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 70ms;
+        }
+
+        .climate-card__steps--entering {
+          animation: climate-card-fade-up calc(var(--climate-card-content-duration) * 0.88) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: 90ms;
+        }
+
+        .climate-card__step-button {
+          backdrop-filter: blur(18px);
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--primary-text-color) 5%, transparent), transparent 60%),
+            color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          color: var(--primary-text-color);
+          font-size: calc(${stepControlSize}px * 0.8);
+          height: ${stepControlSize}px;
+          line-height: 1;
+          width: ${stepControlSize}px;
+        }
+
+        .climate-card__step-button span {
+          align-items: center;
+          display: inline-flex;
+          font-size: calc(${stepControlSize}px * 0.72);
+          height: 100%;
+          justify-content: center;
+          line-height: 1;
+          transform: translateY(-0.04em);
+          width: 100%;
+        }
+
+        @keyframes climate-card-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.1);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes climate-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.965);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes climate-card-dial-bloom {
+          0% {
+            opacity: 0;
+            transform: translateZ(0) scale(0.95);
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 2%, transparent),
+              0 10px 24px rgba(0, 0, 0, 0.08);
+          }
+          55% {
+            opacity: 1;
+            transform: translateZ(0) scale(1.015);
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+              0 22px 42px rgba(0, 0, 0, 0.16);
+          }
+          100% {
+            opacity: 1;
+            transform: translateZ(0) scale(1);
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+              0 18px 38px rgba(0, 0, 0, 0.16);
+          }
+        }
+
+        @keyframes climate-card-dial-center-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes climate-card-dial-thumb-pop {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          48% {
+            transform: translate(-50%, -50%) scale(1.24);
+          }
+          72% {
+            transform: translate(-50%, -50%) scale(1.09);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.15);
+          }
+        }
+
+        ${animations.enabled ? "" : `
+        ha-card,
+        .climate-card,
+        .climate-card * {
+          animation: none !important;
+          transition: none !important;
+        }
+        `}
+
+        @media (max-width: 560px) {
+          .climate-card__headline {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .climate-card__chips {
+            justify-content: flex-start;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .climate-card--layout-compact .climate-card__hero {
+            grid-template-columns: 50px minmax(0, 1fr);
+          }
+
+          .climate-card--layout-compact .climate-card__icon {
+            height: 50px;
+            width: 50px;
+          }
+
+          .climate-card--layout-compact .climate-card__icon ha-icon {
+            --mdc-icon-size: 23px;
+            height: 23px;
+            width: 23px;
+          }
+        }
+        ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      </style>
+      <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)} ${isCompactCardLayout ? "climate-card--layout-compact" : "climate-card--layout-circular"}" style="--accent-color:${escapeHtml(accentColor)};">
+        <div class="climate-card__content" data-climate-card="root">
+          <div class="climate-card__hero ${shouldAnimateEntrance ? "climate-card__hero--entering" : ""}">
+            <button
+              type="button"
+              class="climate-card__icon"
+              data-climate-action="toggle"
+              aria-label="${escapeHtml(toggleAriaLabel)}"
+            >
+              ${entityPicture
+                ? `<img class="climate-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
+                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
+              ${showUnavailableBadge ? `<span class="climate-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
+            </button>
+            <div class="climate-card__copy">
+              <div class="climate-card__headline">
+                <div class="climate-card__title">${escapeHtml(title)}</div>
+                ${chips.length ? `<div class="climate-card__chips">${chips.join("")}</div>` : ""}
+              </div>
+            </div>
+          </div>
+
+          ${isCompactCardLayout ? compactControlsMarkup : `
+          <div class="climate-card__dial-wrap ${shouldAnimateEntrance ? "climate-card__dial-wrap--entering" : ""}">
+            ${scheduleButtonDialMarkup}
+            <div
+              class="climate-card__dial${isRangeMode ? " climate-card__dial--dual-range" : ""}${noSetpointDial ? " climate-card__dial--no-setpoint" : ""}"
+              data-climate-control="dial"
+              role="${isRangeMode || noSetpointDial ? "group" : "slider"}"
+              aria-label="${escapeHtml(dialAriaLabel)}"
+              ${!isRangeMode && !noSetpointDial && ariaDialValue !== null ? `aria-valuemin="${temperatureRange.min}" aria-valuemax="${temperatureRange.max}" aria-valuenow="${ariaDialValue}"` : ""}
+              ${noSetpointDial ? "aria-disabled=\"true\"" : ""}
+              style="${dialInlineVars}"
+            >
+              <svg class="climate-card__dial-svg" viewBox="0 0 ${DIAL_VIEWBOX_SIZE} ${DIAL_VIEWBOX_SIZE}" aria-hidden="true">
+                ${dialSvgInner}
+              </svg>
+              ${dialThumbsInner}
+              <div class="climate-card__dial-center">
+                <div class="climate-card__target">
+                  <span class="climate-card__target-value" data-climate-readout="target">${dialPrimaryReadoutHtml}</span>
+                  <span class="climate-card__target-unit"><span class="climate-card__target-degree">°</span><span class="climate-card__target-scale">${escapeHtml(tempScale)}</span></span>
+                </div>
+                <div class="climate-card__divider"></div>
+                <div class="climate-card__dial-meta">
+                  ${dialMetaHtml}
+                  ${dialActionHtml}
+                </div>
+                ${dialControlsMarkup}
+              </div>
+            </div>
+          </div>
+
+          ${engineOverrideMarkup}
+
+          ${
+            showStepControls
+              ? `
+                <div class="climate-card__steps ${shouldAnimateEntrance ? "climate-card__steps--entering" : ""}">
+                  <button
+                    type="button"
+                    class="climate-card__step-button"
+                    data-climate-action="decrease"
+                    aria-label="${escapeHtml(this._climateCardAria("decreaseTemperature", "Decrease temperature"))}"
+                  >
+                    <span>&minus;</span>
+                  </button>
+                  ${scheduleButtonStepsMarkup}
+                  <button
+                    type="button"
+                    class="climate-card__step-button"
+                    data-climate-action="increase"
+                    aria-label="${escapeHtml(this._climateCardAria("increaseTemperature", "Increase temperature"))}"
+                  >
+                    <span>+</span>
+                  </button>
+                </div>
+              `
+              : ""
+          }
+          `}
+        </div>
+      </ha-card>
+      ${scheduleComposerMarkup}
+    `;
+
+    if (shouldAnimateEntrance) {
+      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+    }
+
+    this._syncRenderSignature();
+    this._restoreScheduleAgendaScrollState(savedScheduleAgendaScrollTop);
+  }
+}

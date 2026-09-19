@@ -10,44 +10,21 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 function loadNewsHelpers() {
   const source = read("nodalia-news-card.js");
-  const helperSource = `${source.split("class NodaliaNewsCard")[0]}
-    globalThis.__newsHelpers = {
-      normalizeNewsItem,
-      normalizeConfig,
-      resolveSourceEntries,
-      collectNormalizedItems,
-      applyNewsFilters,
-      getNewsItemsForConfig,
-      isSafeHttpUrl,
-      parsePublishedMs,
-      parseHideOlderThanMs,
-      buildNewsRenderStamp,
-      coerceNewsAttributeList,
-      extractRawItemsFromState,
-      getNewsSourceHealth,
-      getNewsSourceHealth,
-      mergeNewsItemHistory,
-      restoreNewsHistoryItem,
-      getNewsHistoryStorageKey,
-      encodeCompactNewsHistoryEntry,
-      decodeCompactNewsHistoryEntry,
-      parseNewsHistoryFromHelperState,
-      fitNewsHistoryPayloadToLimit,
-      loadNewsHistoryFromHelper,
-      writeNewsHistoryToHelper,
-    };
-  `;
   const sandbox = {
     URL,
     window: null,
-    customElements: { define() {}, get() {} },
+    customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
+    globalThis: null,
   };
   sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
-  vm.runInContext(helperSource, sandbox);
-  return sandbox.__newsHelpers;
+  vm.runInContext(source, sandbox);
+  const api = sandbox.window.__NODALIA_NEWS__ || sandbox.__NODALIA_NEWS__;
+  assert.ok(api, "news public API should be registered");
+  return api;
 }
 
 const helpers = loadNewsHelpers();

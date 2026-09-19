@@ -41,21 +41,135 @@ function loadNodaliaUtils(sandbox) {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
 }
 
+function findGeneratedClassIndex(source, className) {
+  return source.search(new RegExp(`(?:class (?:_)?${className}\\b|(?:var|let|const) ${className} = class)`));
+}
+
 function loadCardNormalizeConfig(file, className) {
   const source = read(file);
-  const classStart = source.indexOf(`class ${className}`);
-  assert.ok(classStart > 0, `${file} should define ${className}`);
+  const classStart = findGeneratedClassIndex(source, className);
+  assert.ok(classStart >= 0, `${file} should define ${className}`);
   const sandbox = {
     URL,
     window: null,
     customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
     globalThis: null,
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   loadNodaliaUtils(sandbox);
+  if (file === "nodalia-climate-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CLIMATE__;
+    assert.ok(typeof api?.normalizeConfig === "function", "climate public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-media-player.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_MEDIA_PLAYER__ || sandbox.__NODALIA_MEDIA_PLAYER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "media player public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-light-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_LIGHT__ || sandbox.__NODALIA_LIGHT__;
+    assert.ok(typeof api?.normalizeConfig === "function", "light public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-fan-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_FAN__ || sandbox.__NODALIA_FAN__;
+    assert.ok(typeof api?.normalizeConfig === "function", "fan public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-humidifier-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_HUMIDIFIER__ || sandbox.__NODALIA_HUMIDIFIER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "humidifier public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-cover-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_COVER__ || sandbox.__NODALIA_COVER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "cover public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-alarm-panel-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_ALARM_PANEL__ || sandbox.__NODALIA_ALARM_PANEL__;
+    assert.ok(typeof api?.normalizeConfig === "function", "alarm panel public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-vacuum-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_VACUUM__ || sandbox.__NODALIA_VACUUM__;
+    assert.ok(typeof api?.normalizeConfig === "function", "vacuum public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-entity-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_ENTITY__ || sandbox.__NODALIA_ENTITY__;
+    assert.ok(typeof api?.normalizeConfig === "function", "entity public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-fav-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_FAV__ || sandbox.__NODALIA_FAV__;
+    assert.ok(typeof api?.normalizeConfig === "function", "fav public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-person-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_PERSON__ || sandbox.__NODALIA_PERSON__;
+    assert.ok(typeof api?.normalizeConfig === "function", "person public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-camera-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CAMERA__ || sandbox.__NODALIA_CAMERA__;
+    assert.ok(typeof api?.normalizeConfig === "function", "camera public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-circular-gauge-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CIRCULAR_GAUGE__ || sandbox.__NODALIA_CIRCULAR_GAUGE__;
+    assert.ok(typeof api?.normalizeConfig === "function", "circular gauge public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-insignia-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_INSIGNIA__ || sandbox.__NODALIA_INSIGNIA__;
+    assert.ok(typeof api?.normalizeConfig === "function", "insignia public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-scenes-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_SCENES__ || sandbox.__NODALIA_SCENES__;
+    assert.ok(typeof api?.normalizeConfig === "function", "scenes public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-news-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_NEWS__ || sandbox.__NODALIA_NEWS__;
+    assert.ok(typeof api?.normalizeConfig === "function", "news public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-weather-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_WEATHER__ || sandbox.__NODALIA_WEATHER__;
+    assert.ok(typeof api?.normalizeConfig === "function", "weather public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-graph-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_GRAPH__ || sandbox.__NODALIA_GRAPH__;
+    assert.ok(typeof api?.normalizeConfig === "function", "graph public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -192,7 +306,7 @@ test("light card temperature slider gradient follows mired vs kelvin control dir
 });
 
 test("light card power-down skips expanded controls shell when panel was collapsed", () => {
-  const source = read("nodalia-light-card.js");
+  const source = read("src/cards/light/light-card.ts");
   assert.match(source, /} else if \(this\._lastControlsMarkup && this\._lastRenderedShowDetailedControls\) \{/);
   assert.match(source, /stale `_lastControlsMarkup` would otherwise force a full-height shell/);
 });
@@ -322,7 +436,7 @@ test("visual editors reattach shadow listeners on reconnect", () => {
 
   editorFiles.forEach(([file, editorClass]) => {
     const source = read(file);
-    const editorStart = source.indexOf(`class ${editorClass}`);
+    const editorStart = findGeneratedClassIndex(source, editorClass);
     assert.ok(editorStart >= 0, `${file} should define ${editorClass}`);
     const attachStart = source.indexOf("_attachEditorShadowListeners", editorStart);
     const editorCtorBlock = source.slice(editorStart, attachStart);
@@ -395,16 +509,16 @@ test("media player editor keeps player row when entity is cleared", () => {
   const source = read("nodalia-media-player.js");
   assert.doesNotMatch(source, /config\.players = Array\.isArray\(config\.players\) \? config\.players\.filter\(player => player\?\.entity\)/);
   assert.match(source, /if \(key === "entity" && item === ""\)/);
-  assert.match(source, /isEntityField && \(value === undefined \|\| value === null \|\| value === ""\)/);
-  assert.match(source, /return this\._getConfiguredPlayers\(\)\.filter\(player => \{[\s\S]*!player\?\.entity/);
+  assert.match(source, /isEntityField && \(value === (?:undefined|void 0) \|\| value === null \|\| value === ""\)/);
+  assert.match(source, /return this\._getConfiguredPlayers\(\)\.filter\(\(?player\)? => \{[\s\S]*!player\?\.entity/);
 });
 
 test("media player editor preserves nested service data drafts until change commit", () => {
   const source = read("nodalia-media-player.js");
-  const inputStart = source.lastIndexOf("  _onShadowInput(event)");
-  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowValueChanged(event)", inputStart));
-  const valueStart = source.indexOf("  _onShadowValueChanged(event)", inputStart);
-  const valueBlock = source.slice(valueStart, source.indexOf("\n  _onShadowClick(event)", valueStart));
+  const inputStart = source.lastIndexOf("_onShadowInput(event)");
+  const inputBlock = source.slice(inputStart, source.indexOf("_onShadowValueChanged(event)", inputStart));
+  const valueStart = source.indexOf("_onShadowValueChanged(event)", inputStart);
+  const valueBlock = source.slice(valueStart, source.indexOf("_onShadowClick(event)", valueStart));
 
   assert.match(inputBlock, /this\._setFieldValue\(input\.dataset\.field, nextValue\)/);
   assert.match(inputBlock, /if \(event\.type === "change"\) \{[\s\S]*this\._emitConfig\(\)/);
@@ -427,7 +541,7 @@ test("media player editor round-trips service data as a JSON object", () => {
   vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-media-player.js"), sandbox);
 
-  const helpers = sandbox.__NODALIA_MEDIA_PLAYER__;
+  const helpers = sandbox.__NODALIA_MEDIA_PLAYER__ || sandbox.window.__NODALIA_MEDIA_PLAYER__;
   assert.equal(
     helpers.formatEditorJsonValue({ entity_id: "input_boolean.media_power" }),
     '{\n  "entity_id": "input_boolean.media_power"\n}',
@@ -446,8 +560,8 @@ test("media player editor round-trips service data as a JSON object", () => {
 
 test("media player editor rejects invalid service data without emitting it", () => {
   const source = read("nodalia-media-player.js");
-  const inputStart = source.lastIndexOf("  _onShadowInput(event)");
-  const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowValueChanged(event)", inputStart));
+  const inputStart = source.lastIndexOf("_onShadowInput(event)");
+  const inputBlock = source.slice(inputStart, source.indexOf("_onShadowValueChanged(event)", inputStart));
 
   assert.match(source, /valueType: "json"/);
   assert.match(source, /action\?\.service_data \?\? action\?\.data/);
@@ -457,14 +571,14 @@ test("media player editor rejects invalid service data without emitting it", () 
 
 test("media player custom power actions work by default and player selection follows the entity", () => {
   const source = read("nodalia-media-player.js");
-  const configStart = source.indexOf("const DEFAULT_CONFIG");
+  const configStart = source.search(/(?:const|let|var) DEFAULT_CONFIG/);
   const securityStart = source.indexOf("  security:", configStart);
   const defaultSecurity = source.slice(securityStart, source.indexOf("  layout:", securityStart));
 
   assert.match(defaultSecurity, /strict_service_actions: false/);
   assert.match(source, /this\._activePlayerEntity = String\(visiblePlayers\[this\._activePlayerIndex\]\?\.entity \|\| ""\)/);
   assert.match(source, /_resolveActivePlayerIndex\(players\)/);
-  assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activePlayerEntity\)/);
+  assert.match(source, /players\.findIndex\(\(?player\)? => player\?\.entity === this\._activePlayerEntity\)/);
 });
 
 test("navigation editor persists secondary media-player picker changes", () => {
@@ -572,7 +686,7 @@ test("entity and fav icon bubbles match Light metrics and preserve tint contrast
   assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
   assert.match(source, /\.fav-card__icon ha-icon \{[\s\S]*color: \$\{iconColor\};/);
   assert.match(source, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
-  assert.match(source, /const iconSizePx = [^;]*isMini \? 38 : \(isCompactInline \? 38 : 56\)/);
+  assert.match(source, /(?:const|let|var) iconSizePx = [^;]*isMini \? 38 : \(?isCompactInline \? 38 : 56\)?/);
   assert.match(source, /--mdc-icon-size: calc\(\$\{iconSizePx\}px \* 0\.46\)/);
   assert.match(source, /@media \(max-width: 420px\) \{[\s\S]*\.fav-card--inline \.fav-card__icon \{[\s\S]*height: 50px;[\s\S]*width: 50px;/);
   assert.match(entitySource, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
@@ -721,7 +835,7 @@ test("light, fan, and humidifier normalize native Lovelace service action object
 
 test("graph card refreshes history and restores host listeners after reconnect", () => {
   const source = read("nodalia-graph-card.js");
-  assert.match(source, /const HISTORY_REFRESH_INTERVAL = 180000/);
+  assert.match(source, /HISTORY_REFRESH_INTERVAL = 18(?:0000|e4)/);
   assert.match(source, /_scheduleHistoryRefresh\(\)/);
   assert.match(source, /this\._requestHistory\(\);[\s\S]*this\._scheduleHistoryRefresh\(\)/);
   const connectedStart = source.indexOf("  connectedCallback() {");
@@ -803,7 +917,7 @@ test("climate five-mode dial controls use dense two-row sizing", () => {
   assert.match(source, /if \(n === 5 \|\| n === 6\) \{\s*return \[fragments\.slice\(0, 3\), fragments\.slice\(3\)\];/);
   assert.match(source, /modeDialButtonCount === 5 \|\| modeDialButtonCount === 6/);
   assert.match(source, /modeDialButtonCount >= 5\s*\?\s*Math\.max\(28, Math\.round\(modeControlSize - 6\)\)/);
-  assert.match(source, /modeDialButtonCount >= 5\s*\?\s*\(tightLayout \? "4px" : "5px"\)/);
+  assert.match(source, /modeDialButtonCount >= 5\s*\?\s*\(?tightLayout \? "4px" : "5px"\)?/);
 });
 
 test("climate off null setpoint step buttons wake and create a setpoint from current temperature", async () => {
@@ -1196,7 +1310,7 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
   const source = read("nodalia-cover-card.js");
   const editorLabels = JSON.parse(read("i18n/editor/en.json"));
   assert.match(source, /control\.includeDomains = \["cover"\]/);
-  assert.match(source, /control\.entityFilter = stateObj => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
+  assert.match(source, /control\.entityFilter = \(?stateObj\)? => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
   assert.match(source, /class="editor-control-host"[\s\S]*data-mounted-control="cover-entity"/);
   assert.match(source, /<ha-icon-picker[\s\S]*data-field="\$\{escapeHtml\(field\)\}"/);
   assert.match(source, /editor-section__actions/);
@@ -1376,7 +1490,7 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
 
   files.forEach(file => {
     const source = read(file);
-    assert.match(source, /const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;/);
+    assert.match(source, /(?:const|let|var) OPTIMISTIC_TOGGLE_TIMEOUT = 3200;/);
     assert.match(source, /this\._optimisticToggle = null;/);
     assert.match(source, /this\._optimisticToggleTimer = 0;/);
     assert.match(source, /_getActualState\(hass = this\._hass\)/);
@@ -1396,7 +1510,7 @@ test("fan humidifier and entity cards use light-style optimistic toggle state", 
     const source = read(file);
     assert.match(
       source,
-      /const attrs = turningOn\s*\?\s*\{ \.\.\.\(actualState\?\.attributes \|\| \{\}\), \.\.\.\(snapshot\.attributes \|\| \{\}\) \}/,
+      /const attrs = turningOn\s*\?\s*\{ \.\.\.\(?actualState\?\.attributes \|\| \{\}\)?,\s*\.\.\.\(?snapshot\.attributes \|\| \{\}\)?/,
     );
   }
   assert.match(read("nodalia-entity-card.js"), /const isPrimaryEntity = entityId && entityId === this\._config\?\.entity;/);
@@ -1411,7 +1525,7 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
     assert.match(source, /_scheduleOptimisticVisualSettleTimeout/);
     assert.match(source, /_clearOptimisticVisualSettle/);
     assert.match(source, /visualSettleChanged/);
-    assert.match(source, /_lastKnownOnState = new Map\(\)/);
+    assert.match(source, /_lastKnownOnState = (?:\/\* @__PURE__ \*\/ )?new Map\(\)/);
     assert.match(source, /_shouldUseOptimisticVisualSettle/);
     assert.match(source, /_startOptimisticVisualSettle/);
     assert.match(source, /powerAnimationState === "powering-up"/);
@@ -1422,7 +1536,7 @@ test("fan and humidifier cards use optimistic visual settle and slider fill duri
 });
 
 test("light card brightness fill uses negative delay so hass rerenders do not restart it", () => {
-  const source = read("nodalia-light-card.js");
+  const source = read("src/cards/light/light-card.ts");
   assert.match(source, /powerAnimationState === "powering-up"/);
   assert.match(source, /const fillElapsed = now - Number\(this\._powerTransition\.startedAt\)/);
   assert.match(source, /brightnessFillDelay = -clamp\(fillElapsed/);
@@ -1578,7 +1692,7 @@ test("climate card defaults webhook access to admin-only", () => {
   const source = read("nodalia-climate-card.js");
   assert.match(source, /allow_webhooks_for_non_admin: false/);
   assert.match(source, /allow_webhooks_for_non_admin === true/);
-  assert.match(source, /isUnsafeConfigPathKey/);
+  assert.match(source, /(?:isUnsafeConfigPathKey|function setByPath)/);
 });
 
 test("advance vacuum card defaults shared session webhook access to admin-only", () => {
@@ -2060,7 +2174,7 @@ test("circular gauge entrance animates a single smooth progress arc", () => {
 
 test("circular gauge keeps WebKit-safe literal colors in segmented SVG strokes", () => {
   const source = read("nodalia-circular-gauge-card.js");
-  assert.match(source, /const GAUGE_TINT_SEGMENT_COUNT = 16;/);
+  assert.match(source, /(?:const|let|var) GAUGE_TINT_SEGMENT_COUNT = 16;/);
   assert.match(source, /function resolveGaugeSvgStrokeColor\(/);
   assert.match(source, /\(\?:color-mix\|var\)\\\(/);
   assert.match(source, /getGaugeSvgFallbackColor\(sampleRatio\)/);
@@ -2216,7 +2330,7 @@ test("calendar card invalidates refresh run id on disconnect", () => {
 
 test("weather forecast subscription guards disconnected lifecycle", () => {
   const source = read("nodalia-weather-card.js");
-  assert.match(source, /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(source, /subscribeMessage\(\(?event\)? => \{[\s\S]*if \(!this\.isConnected\)/);
 });
 
 test("vacuum built-in controls bypass the configurable service allowlist", () => {
@@ -2331,11 +2445,83 @@ test("NodaliaUtils renders card empty state shell for missing entity state", () 
   }
 });
 
-test("cover card compact auto mode uses width and grid heuristics", () => {
+test("cover card compact auto mode uses the shared width and grid helper", () => {
   const source = read("nodalia-cover-card.js");
-  assert.match(source, /COMPACT_LAYOUT_THRESHOLD/);
-  assert.match(source, /configuredColumns < 4/);
+  assert.match(source, /shouldUseCompactCardLayout/);
+  assert.doesNotMatch(source, /configuredColumns < 4/);
   assert.doesNotMatch(source, /if \(mode === "auto"\)[\s\S]*return false;/);
+});
+
+test("fan humidifier vacuum and light compact density share the same helper", () => {
+  for (const file of [
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-vacuum-card.js",
+    "src/cards/light/light-card.ts",
+    "src/cards/fan/fan-card.ts",
+    "src/cards/humidifier/humidifier-card.ts",
+    "src/cards/cover/cover-card.ts",
+    "src/cards/vacuum/vacuum-card.ts",
+    "src/cards/alarm-panel/alarm-panel-card.ts",
+    "src/cards/entity/entity-card.ts",
+  ]) {
+    const source = read(file);
+    assert.match(source, /shouldUseCompactCardLayout/, file);
+  }
+});
+
+test("compact tiles keep the icon bubble on the left", () => {
+  const blocks = [
+    ["src/cards/light/light-card.ts", /\.light-card--compact \.light-card__hero \{[\s\S]*?\}/],
+    ["src/cards/fan/fan-card.ts", /\.fan-card--compact \.fan-card__hero \{[\s\S]*?\}/],
+    ["src/cards/humidifier/humidifier-card.ts", /\.humidifier-card--compact \.humidifier-card__hero \{[\s\S]*?\}/],
+    ["src/cards/entity/entity-card.ts", /\.entity-card--compact:not\(\.entity-card--with-copy\) \.entity-card__hero \{[\s\S]*?\}/],
+    ["nodalia-entity-card.js", /\.entity-card--compact:not\(\.entity-card--with-copy\) \.entity-card__hero \{[\s\S]*?\}/],
+  ];
+  for (const [file, pattern] of blocks) {
+    const block = read(file).match(pattern)?.[0] || "";
+    assert.ok(block, `${file} should declare a compact hero`);
+    assert.doesNotMatch(block, /justify-items:\s*center/, `${file} compact hero should not center the icon`);
+    assert.doesNotMatch(block, /grid-template-columns:\s*1fr;/, `${file} compact hero should keep the icon track`);
+  }
+});
+
+test("compact tiles show the name when the row is wide enough", () => {
+  for (const file of [
+    "src/cards/light/light-card.ts",
+    "src/cards/fan/fan-card.ts",
+    "src/cards/humidifier/humidifier-card.ts",
+    "src/cards/cover/cover-card.ts",
+    "src/cards/vacuum/vacuum-card.ts",
+    "src/cards/alarm-panel/alarm-panel-card.ts",
+    "src/cards/entity/entity-card.ts",
+    "nodalia-entity-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-alarm-panel-card.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /shouldShowCompactCardTitle/, file);
+    assert.doesNotMatch(source, /isCompactLayout \? "" : `<div class="\w+-card__title"/, file);
+  }
+});
+
+test("compact vacuum keeps the battery chip in the title row", () => {
+  const source = read("nodalia-vacuum-card.js");
+  assert.match(source, /vacuum-card__headline/);
+  assert.match(source, /\.vacuum-card__headline \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(source, /showCopyBlock = showTitle \|\| chips\.length > 0 \|\| Boolean\(batteryChipMarkup\)/);
+  assert.doesNotMatch(source, /\.vacuum-card__header-meta \{[^}]*position:\s*absolute;/);
+  assert.doesNotMatch(source, /padding-right: \$\{batteryChipMarkup \? "88px"/);
+});
+
+test("compact light and humidifier keep the name beside the icon on narrow viewports", () => {
+  const light = read("src/cards/light/light-card.ts");
+  assert.match(light, /light-card--mini:not\(\.light-card--with-copy\) \.light-card__hero/);
+  assert.match(light, /light-card--mini\.light-card--with-copy \.light-card__hero/);
+  const humidifier = read("src/cards/humidifier/humidifier-card.ts");
+  assert.match(humidifier, /humidifier-card:not\(\.humidifier-card--compact\) \.humidifier-card__headline/);
+  assert.match(humidifier, /humidifier-card--compact \.humidifier-card__chips \{[\s\S]*justify-self: end;/);
 });
 
 test("fav card aligns service security with entity and cleans up alarm host span", () => {

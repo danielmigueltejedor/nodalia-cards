@@ -9,48 +9,26 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 function loadCameraHelpers() {
-  const source = read("nodalia-camera-card.js").replace(/^import[^\n]+\n+/, "");
-  const helperSource = `${source.split("class NodaliaCameraCard")[0]}
-    globalThis.__cameraHelpers = {
-      normalizeConfig,
-      normalizeCameras,
-      normalizeExpandedActions,
-      normalizeCameraActions,
-      normalizeCameraTapActions,
-      normalizeCameraStreams,
-      compactCameraTapActions,
-      compactCameraStreams,
-      buildGo2rtcViewerUrl,
-      buildGo2rtcWebSocketEndpoint,
-      buildFrigateGo2rtcPath,
-      signHomeAssistantPath,
-      resolveGo2rtcPlayerSource,
-      isMixedContentUrl,
-      parseServiceData,
-      formatRelativeAge,
-      stripEqualToDefaults,
-      isUsableCameraAccessToken,
-      parseCameraProxyAuth,
-      appendQueryParam,
-      DEFAULT_CONFIG,
-      CAMERA_LAYOUT,
-      CAMERA_PRESENTATION,
-      MAX_CAMERAS,
-    };
-  `;
+  const source = read("nodalia-camera-card.js");
   const sandbox = {
     URL,
     location: { protocol: "https:", href: "https://home-assistant.example/lovelace/cameras" },
     window: null,
-    customElements: { define() {}, get() {} },
+    globalThis: null,
+    customElements: { define() {}, get() { return null; } },
     HTMLElement: class {},
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
   };
   sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-camera-stream-model.js"), sandbox);
-  vm.runInContext(helperSource, sandbox);
-  return sandbox.__cameraHelpers;
+  vm.runInContext(source, sandbox);
+  const api = sandbox.window.__NODALIA_CAMERA__ || sandbox.__NODALIA_CAMERA__;
+  assert.ok(api, "camera public API should exist");
+  return api;
 }
 
 function loadGo2rtcPlayer() {
@@ -127,11 +105,73 @@ test("camera card registers custom element and bundle entry", () => {
   const build = read("scripts/build-bundle.mjs");
   const pkg = JSON.parse(read("package.json"));
 
-  assert.match(source, /const CARD_TAG = "nodalia-camera-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-camera-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-camera-card\.js/);
   assert.ok(pkg.files.includes("nodalia-camera-card.js"));
+  assert.doesNotMatch(source, /streamModel\.buildGo2rtcViewerUrl\.bind\(streamModel\)/);
+});
+
+test("camera card loads and accepts setConfig without a preloaded stream model", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = false;
+    }
+    attachShadow() {
+      this.shadowRoot = {
+        innerHTML: "",
+        addEventListener() {},
+        removeEventListener() {},
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+  }
+  const sandbox = {
+    URL,
+    location: { protocol: "https:", href: "https://home-assistant.example/lovelace/cameras" },
+    window: null,
+    globalThis: null,
+    customElements: {
+      define(name, ctor) { registry.set(name, ctor); },
+      get(name) { return registry.get(name) || null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
+    clearTimeout: id => globalThis.clearTimeout(id),
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-camera-card.js"), sandbox);
+  const api = sandbox.window.__NODALIA_CAMERA__ || sandbox.__NODALIA_CAMERA__;
+  assert.ok(api, "camera public API should exist without a preloaded stream model");
+  const config = api.normalizeConfig({ entity: "camera.entrada" });
+  assert.equal(config.entity, "camera.entrada");
+  const Card = registry.get("nodalia-camera-card");
+  assert.equal(typeof Card, "function");
+  const card = new Card();
+  card.setConfig({ entity: "camera.entrada", cameras: ["camera.entrada"] });
+  assert.equal(card._config.entity, "camera.entrada");
+  card.isConnected = true;
+  card.hass = {
+    language: "en",
+    states: {
+      "camera.entrada": {
+        entity_id: "camera.entrada",
+        state: "idle",
+        attributes: { friendly_name: "Entrada", access_token: "abc123" },
+        last_changed: "2026-09-19T16:00:00.000Z",
+      },
+    },
+  };
+  assert.match(String(card.shadowRoot?.innerHTML || ""), /camera-card/);
 });
 
 test("camera normalizeConfig forces mosaic feed and accepts tap action objects", () => {
@@ -504,8 +544,8 @@ test("camera card renders mosaic markup for multiple cameras", () => {
   assert.match(source, /camera-card__mosaic--four/);
   assert.match(source, /camera-card__expanded-actions/);
   assert.match(source, /grid-template-columns: 2fr 1fr/);
-  assert.match(source, /const CAMERA_LAYOUT = "mosaic"/);
-  assert.match(source, /const CAMERA_PRESENTATION = "feed"/);
+  assert.match(source, /(?:const|let|var) CAMERA_LAYOUT = "mosaic"/);
+  assert.match(source, /(?:const|let|var) CAMERA_PRESENTATION = "feed"/);
   assert.doesNotMatch(source, /\bLAYOUT_MODES\b/);
   assert.doesNotMatch(source, /\bPRESENTATION_MODES\b/);
   assert.match(source, /data-camera-preview-age/);
@@ -547,7 +587,7 @@ test("camera proxy URLs require a live access token and quarantine failed tokens
   assert.equal(parsed.accessToken, "deadbeef");
 
   const source = read("nodalia-camera-card.js");
-  assert.match(source, /_failedCameraTokens = new Map\(\)/);
+  assert.match(source, /_failedCameraTokens = (?:\/\* @__PURE__ \*\/ )?new Map\(\)/);
   assert.match(source, /_failedCameraTokens\.get\(entityId\) === accessToken/);
   assert.match(source, /_failedCameraTokens\.set\(parsed\.entityId, parsed\.accessToken\)/);
   assert.doesNotMatch(source, /_failedCameraTokens\.size > MAX_FAILED_IMAGE_URLS/);
@@ -605,7 +645,7 @@ test("camera configured services respect strict security and explicit targets", 
 
 test("camera visual editor normalizes config and mounts camera entity picker", () => {
   const source = read("nodalia-camera-card.js");
-  assert.match(source, /class NodaliaCameraCardEditor/);
+  assert.match(source, /(?:class NodaliaCameraCardEditor\b|(?:var|let|const) NodaliaCameraCardEditor = class)/);
   assert.match(source, /picker\.includeDomains = domains\.length \? domains : \["camera"\]/);
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /bindEditorDialogLayoutFix/);
@@ -967,14 +1007,14 @@ test("go2rtc keeps retrying during startup and reports only after the grace peri
 
 test("camera preview age bubble updates without re-rendering the image", () => {
   const source = read("nodalia-camera-card.js");
-  const updateStart = source.indexOf("\n  _updatePreviewAgeBubbles() {");
-  const updateEnd = source.indexOf("\n  _schedulePreviewAgeRefresh() {", updateStart);
+  const updateStart = source.search(/\n\s*_updatePreviewAgeBubbles\(\) \{/);
+  const updateEnd = source.search(/\n\s*_previewAgeRefreshDelay\(\) \{/);
   const updateBlock = source.slice(updateStart, updateEnd);
 
   assert.match(source, /\.camera-card__preview-age \{[\s\S]*background: rgba\(0, 0, 0, 0\.34\)/);
   assert.match(source, /\.camera-card__preview-age \{[\s\S]*bottom: 12px;[\s\S]*left: 12px;/);
   assert.match(source, /this\._previewAgeTimer = window\.setTimeout/);
-  assert.match(source, /return hasSubMinutePreview \? 1000 : 15000/);
+  assert.match(source, /return hasSubMinutePreview \? (?:1000|1e3) : (?:15000|15e3)/);
   assert.match(source, /}, this\._previewAgeRefreshDelay\(\)\)/);
   assert.match(updateBlock, /node\.textContent = label/);
   assert.doesNotMatch(updateBlock, /this\._render\(\)/);

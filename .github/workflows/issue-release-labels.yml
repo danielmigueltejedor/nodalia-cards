@@ -28,13 +28,13 @@ jobs:
             const issue_number = issue.number;
             const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
             const published = releases.filter(release => !release.draft);
-            const latestPreview = published.find(release => /-(?:alpha|beta|rc)\.\d+$/.test(release.tag_name));
-            const latestBetaOrRc = published.find(release => /-(?:beta|rc)\.\d+$/.test(release.tag_name));
+            const latestPreview = published.find(release => /-(?:alpha|beta|rc)\.\d+b?$/.test(release.tag_name));
+            const latestBetaOrRc = published.find(release => /-(?:beta|rc)\.\d+b?$/.test(release.tag_name));
             const latestStable = published.find(release => !release.prerelease && !/-[0-9A-Za-z]/.test(release.tag_name));
             const latestPreviewVersion = latestPreview?.tag_name?.replace(/^v/, "") || "latest preview";
             const latestBetaVersion = latestBetaOrRc?.tag_name?.replace(/^v/, "") || "latest beta/RC";
             const latestStableVersion = latestStable?.tag_name?.replace(/^v/, "") || "latest stable";
-            const previewMaturityLabel = /-alpha\.\d+$/.test(latestPreview?.tag_name || "")
+            const previewMaturityLabel = /-alpha\.\d+b?$/.test(latestPreview?.tag_name || "")
               ? "maturity: alpha-ready"
               : "maturity: beta-ready";
 

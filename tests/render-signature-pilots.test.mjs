@@ -85,11 +85,14 @@ test("alpha.5 cards avoid JSON attribute signatures and use slim person stamp", 
   assert.match(getValueSignatureFn[0], /`a:\$\{value\.length\}/);
   assert.match(read("nodalia-light-card.js"), /prefix: "light:"/);
   const personSource = read("nodalia-person-card.js");
-  const personSignatureFn = personSource.match(/_getRenderSignature\(hass = this\._hass\) \{[\s\S]*?\n  \}/);
-  assert.ok(personSignatureFn, "expected person _getRenderSignature");
-  assert.doesNotMatch(personSignatureFn[0], /_getTitle\(/);
-  assert.doesNotMatch(personSignatureFn[0], /_translateState\(/);
-  assert.doesNotMatch(personSignatureFn[0], /_getBadgeDescriptor\(/);
+  const personSignatureStart = personSource.indexOf("_getRenderSignature(hass = this._hass)");
+  assert.ok(personSignatureStart >= 0, "expected person _getRenderSignature");
+  const personSignatureNext = personSource.indexOf("_personActionPrefix", personSignatureStart);
+  assert.ok(personSignatureNext > personSignatureStart, "expected person action helpers after render signature");
+  const personSignatureFn = personSource.slice(personSignatureStart, personSignatureNext);
+  assert.doesNotMatch(personSignatureFn, /_getTitle\(/);
+  assert.doesNotMatch(personSignatureFn, /_translateState\(/);
+  assert.doesNotMatch(personSignatureFn, /_getBadgeDescriptor\(/);
 });
 
 test("alpha.7 cards adopt normalizeSecurityConfig in normalizeConfig", () => {

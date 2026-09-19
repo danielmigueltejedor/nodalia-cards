@@ -1,0 +1,11 @@
+export const CARD_TAG = "nodalia-camera-card";
+export const EDITOR_TAG = "nodalia-camera-card-editor";
+export const CARD_VERSION = "2.3.0-alpha.19b";
+export const CAMERA_LAYOUT = "mosaic";
+export const CAMERA_PRESENTATION = "feed";
+export const MAX_CAMERAS = 4;
+export const MAX_FAILED_IMAGE_URLS = 32;
+export const STREAM_PROVIDERS = new Set(["home_assistant", "frigate_go2rtc", "go2rtc", "iframe"]);
+export const STREAM_MODES = new Set(["auto", "webrtc", "mse", "hls", "mjpeg"]);
+export const TAP_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
+export const HOLD_ACTIONS = new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);

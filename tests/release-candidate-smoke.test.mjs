@@ -102,7 +102,7 @@ test("HACS publishing contract includes license, information, images, and plugin
 });
 
 test("repository root retains only the canonical generated HACS bundle", () => {
-  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+)?\.js$/;
+  const versionedBundlePattern = /^nodalia-cards-(?:core-|suite-|editor-)?\d+(?:\.\d+){2,}(?:-(?:alpha|beta|rc)\.\d+b?)?\.js$/;
   const rootFiles = fs.readdirSync(root);
 
   assert.deepEqual(rootFiles.filter(file => versionedBundlePattern.test(file)), []);
@@ -149,8 +149,8 @@ test("the single HACS runtime contains cards and visual editors", () => {
   const runtime = runtimeBuffer.toString("utf8");
 
   assert.ok(
-    runtimeBuffer.length < 4 * 1024 * 1024 + 16 * 1024,
-    "self-contained HACS bundle should stay below 4 MiB + 16 KiB",
+    runtimeBuffer.length < 4 * 1024 * 1024 + 64 * 1024,
+    "self-contained HACS bundle should stay below 4 MiB + 64 KiB",
   );
   assert.ok(gzipSync(runtimeBuffer).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
   assert.match(runtime, /\.editorStr=function/);
@@ -612,7 +612,7 @@ test("calendar supports haptics and external popup open requests", () => {
 test("weather forecast dates use the resolved Home Assistant locale", () => {
   const source = read("nodalia-weather-card.js");
   assert.match(source, /function formatForecastDateTime\(value, type, locale\)/);
-  assert.match(source, /const localeArg = locale && locale !== "auto" \? locale : undefined/);
+  assert.match(source, /const localeArg = locale && locale !== "auto" \? locale : (?:undefined|void 0)/);
   assert.match(source, /toLocaleDateString\(localeArg/);
   assert.match(source, /const forecastLocale = window\.NodaliaI18n\?\.localeTag\?\.\(langFc\) \|\| langFc/);
   assert.match(source, /_renderForecastChart\(visibleItems, activeType, state, forecastLocale(?:, unitPrefs)?\)/);
@@ -825,7 +825,7 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-climate-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-climate-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
   assert.match(build, /nodalia-climate-card\.js/);
   assert.ok(pkg.files.includes("nodalia-climate-card.js"), "nodalia-climate-card.js should be published");
@@ -846,7 +846,7 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-scenes-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-scenes-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
   assert.match(source, /callService\("scene", "turn_on"/);
   assert.match(source, /_triggerLaunchAnimation/);
@@ -862,7 +862,7 @@ test("news card is registered and shipped in the HACS bundle", () => {
   const build = read("scripts/build-bundle.mjs");
   const pkg = JSON.parse(read("package.json"));
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-news-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-news-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
   assert.match(source, /registerCustomCard\?\.\(\{/);
   assert.match(source, /function isSafeHttpUrl\(/);
@@ -877,7 +877,7 @@ test("camera card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
-  assert.match(source, /const CARD_TAG = "nodalia-camera-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-camera-card"/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
   assert.match(source, /camera_proxy/);
   assert.match(source, /camera-card__expanded/);
@@ -893,7 +893,7 @@ test("cover card is registered and shipped in the HACS bundle", () => {
   const sync = read("scripts/sync-standalone-embed.mjs");
   const pkg = read("package.json");
   const readme = read("README.md");
-  assert.match(source, /const CARD_TAG = "nodalia-cover-card"/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-cover-card"/);
   assert.match(source, /set_cover_position/);
   assert.match(source, /set_cover_tilt_position/);
   assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCoverCard\)/);

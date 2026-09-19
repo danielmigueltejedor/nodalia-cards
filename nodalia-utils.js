@@ -9,6 +9,8 @@
     "deepEqual",
     "mergeDeep",
     "compactConfig",
+    "shouldUseCompactCardLayout",
+    "shouldShowCompactCardTitle",
     "getByPath",
     "clamp",
     "escapeHtml",
@@ -287,6 +289,43 @@
 
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+
+  /** 4/6-col tiles and phone-width cards stay compact; 12-col desktops keep the full layout. */
+  const COMPACT_CARD_MAX_WIDTH = 480;
+  const COMPACT_CARD_MAX_COLUMNS = 6;
+
+  function shouldUseCompactCardLayout({ mode, width, gridColumns } = {}) {
+    const compactMode = String(mode || "auto").trim().toLowerCase();
+    if (compactMode === "always" || compactMode === "true") {
+      return true;
+    }
+    if (compactMode === "never" || compactMode === "false") {
+      return false;
+    }
+
+    const measured = Number(width);
+    if (Number.isFinite(measured) && measured > 0 && measured < COMPACT_CARD_MAX_WIDTH) {
+      return true;
+    }
+
+    const columns = Number(gridColumns);
+    if (Number.isFinite(columns) && columns > 0 && columns <= COMPACT_CARD_MAX_COLUMNS) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Compact tiles still show the name when the row is wide enough for icon + label. */
+  const COMPACT_CARD_TITLE_MIN_WIDTH = 148;
+
+  function shouldShowCompactCardTitle({ width } = {}) {
+    const measured = Number(width);
+    if (!Number.isFinite(measured) || measured <= 0) {
+      return true;
+    }
+    return measured >= COMPACT_CARD_TITLE_MIN_WIDTH;
   }
 
   function escapeHtml(value) {
@@ -2406,6 +2445,8 @@
     deepEqual,
     mergeDeep,
     compactConfig,
+    shouldUseCompactCardLayout,
+    shouldShowCompactCardTitle,
     getByPath,
     clamp,
     escapeHtml,
