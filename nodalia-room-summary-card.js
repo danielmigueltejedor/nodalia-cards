@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-room-summary-card";
 const EDITOR_TAG = "nodalia-room-summary-card-editor";
-const CARD_VERSION = "2.3.0-alpha.16b";
+const CARD_VERSION = "2.3.0-alpha.17b";
 
 const HUB_PANELS = new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
 const COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
@@ -1309,6 +1309,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       if (!(host instanceof HTMLElement)) return;
       const entityId = String(host.dataset.entity || "").trim();
       if (!entityId) return;
+      if (!customElements.get(tagName)) return;
       const cacheKey = cacheKeyForHost(host);
       let card = this._hubEmbedCache?.get(cacheKey);
       if (!card) {
@@ -1323,8 +1324,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       const configChanged = this._hubEmbedConfigSignatures.get(card) !== configSignature;
       if (this._hass) card._hass = this._hass;
       if (configChanged) {
-        card.setConfig(cardConfig);
-        this._hubEmbedConfigSignatures.set(card, configSignature);
+        try {
+          card.setConfig(cardConfig);
+          this._hubEmbedConfigSignatures.set(card, configSignature);
+        } catch (error) {
+          console.warn(`[nodalia-room-summary-card] ${tagName} setConfig failed`, error);
+        }
       } else if (this._hass) {
         card.hass = this._hass;
       }

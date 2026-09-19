@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.16b
+2.3.0-alpha.17b
 ```
 
-Preview **`2.3.0-alpha.16b`** compiles Cover through News from TypeScript and clears leftover Media Player album art when switching stacked players. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.17b`** restores Camera Card and Room Summary after a TypeScript load crash. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

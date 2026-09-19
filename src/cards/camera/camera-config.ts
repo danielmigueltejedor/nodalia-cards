@@ -1,6 +1,6 @@
 // @ts-nocheck -- merged Lovelace YAML is projected into the runtime camera config.
 import { CAMERA_LAYOUT, CAMERA_PRESENTATION, HOLD_ACTIONS, TAP_ACTIONS } from "./camera-constants";
-import { isObject } from "./camera-runtime";
+import { deepClone, isObject } from "./camera-runtime";
 import {
   mergeConfig,
   normalizeCameraActions,

@@ -1,7 +1,7 @@
 // @ts-nocheck
 /* Visual editor surface: typed incrementally after the card runtime split. */
 import { MAX_CAMERAS } from "./camera-constants";
-import { escapeHtml, getByPath } from "./camera-runtime";
+import { escapeHtml, getByPath, isObject } from "./camera-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./camera-config";
 import {
   fireEvent,

@@ -461,6 +461,7 @@ test("room summary patches Hub state without remounting embedded cards", () => {
     mountBlock.indexOf("card.setConfig(cardConfig)") < mountBlock.indexOf("card.hass = this._hass"),
     "embedded card config should settle before hass triggers its render",
   );
+  assert.match(mountBlock, /if \(!customElements\.get\(tagName\)\) return;/);
   assert.match(source, /state\.last_updated \|\| state\.last_changed/);
 });
 

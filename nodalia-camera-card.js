@@ -1003,7 +1003,7 @@
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
   var EDITOR_TAG = "nodalia-camera-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.16b";
+  var CARD_VERSION = "2.3.0-alpha.17b";
   var CAMERA_LAYOUT = "mosaic";
   var CAMERA_PRESENTATION = "feed";
   var MAX_CAMERAS = 4;
@@ -1015,17 +1015,16 @@
 
   // src/cards/camera/camera-runtime.ts
   var utils = window.NodaliaUtils;
-  var streamModel = window.NodaliaCameraStreamModel;
-  var isObject2 = utils.isObject.bind(utils);
-  var deepClone2 = utils.deepClone.bind(utils);
+  var isObject = utils.isObject.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
   var getByPath = utils.getByPath.bind(utils);
   var clamp = utils.clamp.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
-  var buildGo2rtcViewerUrl = streamModel.buildGo2rtcViewerUrl.bind(streamModel);
-  var sanitizeIframeUrl = streamModel.sanitizeIframeUrl.bind(streamModel);
-  var buildGo2rtcWebSocketEndpoint = streamModel.buildGo2rtcWebSocketEndpoint.bind(streamModel);
-  var buildFrigateGo2rtcPath = streamModel.buildFrigateGo2rtcPath.bind(streamModel);
-  var isMixedContentUrl = streamModel.isMixedContentUrl.bind(streamModel);
+  var buildGo2rtcViewerUrl = (baseUrl, streamName, mode) => window.NodaliaCameraStreamModel.buildGo2rtcViewerUrl(baseUrl, streamName, mode);
+  var sanitizeIframeUrl = (rawValue) => window.NodaliaCameraStreamModel.sanitizeIframeUrl(rawValue);
+  var buildGo2rtcWebSocketEndpoint = (baseUrl, streamName) => window.NodaliaCameraStreamModel.buildGo2rtcWebSocketEndpoint(baseUrl, streamName);
+  var buildFrigateGo2rtcPath = (clientId, streamName) => window.NodaliaCameraStreamModel.buildFrigateGo2rtcPath(clientId, streamName);
+  var isMixedContentUrl = (rawValue, pageLocation) => window.NodaliaCameraStreamModel.isMixedContentUrl(rawValue, pageLocation);
 
   // src/cards/camera/camera-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
@@ -1042,9 +1041,9 @@
   }
   function mergeConfig(base, override) {
     if (Array.isArray(base)) {
-      return Array.isArray(override) ? override.map((item) => deepClone2(item)) : deepClone2(base);
+      return Array.isArray(override) ? override.map((item) => deepClone(item)) : deepClone(base);
     }
-    if (!isObject2(base)) {
+    if (!isObject(base)) {
       return override === void 0 ? base : override;
     }
     const result = {};
@@ -1053,11 +1052,11 @@
       if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
         return;
       }
-      if (isObject2(base[key]) && isObject2(override?.[key]) && !Array.isArray(base[key])) {
+      if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
         result[key] = mergeConfig(base[key], override[key]);
         return;
       }
-      result[key] = override?.[key] === void 0 ? deepClone2(base[key]) : deepClone2(override[key]);
+      result[key] = override?.[key] === void 0 ? deepClone(base[key]) : deepClone(override[key]);
     });
     return result;
   }
@@ -1066,7 +1065,7 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject2(cursor[key]) && !Array.isArray(cursor[key])) {
+      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
         cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
       }
       cursor = cursor[key];
@@ -1137,12 +1136,12 @@
     if (!rawValue) {
       return {};
     }
-    if (isObject2(rawValue)) {
-      return deepClone2(rawValue);
+    if (isObject(rawValue)) {
+      return deepClone(rawValue);
     }
     try {
       const parsed = JSON.parse(rawValue);
-      return isObject2(parsed) ? parsed : {};
+      return isObject(parsed) ? parsed : {};
     } catch (_error) {
       return {};
     }
@@ -1156,14 +1155,14 @@
     }));
   }
   function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
-    const result = deepClone2(config || {});
+    const result = deepClone(config || {});
     const walk = (current, base, path = "") => {
-      if (!isObject2(current) || !isObject2(base)) {
+      if (!isObject(current) || !isObject(base)) {
         return;
       }
       Object.keys(current).forEach((key) => {
         const nextPath = path ? `${path}.${key}` : key;
-        if (isObject2(current[key]) && isObject2(base[key]) && !Array.isArray(current[key])) {
+        if (isObject(current[key]) && isObject(base[key]) && !Array.isArray(current[key])) {
           walk(current[key], base[key], nextPath);
           if (!Object.keys(current[key]).length) {
             delete current[key];
@@ -1179,7 +1178,7 @@
     return result;
   }
   function normalizeCameraEntityId2(value) {
-    if (isObject2(value)) {
+    if (isObject(value)) {
       return String(value.entity ?? value.entity_id ?? "").trim();
     }
     return String(value ?? "").trim();
@@ -1206,7 +1205,7 @@
       return [];
     }
     return rawActions.map((item) => {
-      if (!isObject2(item)) {
+      if (!isObject(item)) {
         return null;
       }
       const entity = String(item.entity ?? "").trim();
@@ -1221,8 +1220,8 @@
         icon_color: String(item.icon_color ?? item.iconColor ?? "").trim(),
         tap_action: TAP_ACTIONS.has(action) ? action : "toggle",
         tap_service: String(item.tap_service ?? "").trim(),
-        tap_service_data: isObject2(item.tap_service_data) ? deepClone2(item.tap_service_data) : String(item.tap_service_data ?? "").trim(),
-        tap_service_target: isObject2(item.tap_service_target) ? deepClone2(item.tap_service_target) : String(item.tap_service_target ?? "").trim(),
+        tap_service_data: isObject(item.tap_service_data) ? deepClone(item.tap_service_data) : String(item.tap_service_data ?? "").trim(),
+        tap_service_target: isObject(item.tap_service_target) ? deepClone(item.tap_service_target) : String(item.tap_service_target ?? "").trim(),
         tap_url: String(item.tap_url ?? "").trim(),
         navigation_path: String(item.navigation_path ?? "").trim(),
         tap_new_tab: item.tap_new_tab === true
@@ -1235,7 +1234,7 @@
     }
     const validCameras = new Set(cameraIds);
     return rawActions.map((item) => {
-      if (!isObject2(item)) {
+      if (!isObject(item)) {
         return null;
       }
       const camera = normalizeCameraEntityId2(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
@@ -1253,9 +1252,9 @@
     const validCameras = new Set(cameraIds);
     const seen = /* @__PURE__ */ new Set();
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
-    const serializeActionObject = (value) => isObject2(value) ? JSON.stringify(value) : String(value ?? "").trim();
+    const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
     return rawActions.map((item) => {
-      if (!isObject2(item)) {
+      if (!isObject(item)) {
         return null;
       }
       const camera = normalizeCameraEntityId2(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
@@ -1299,7 +1298,7 @@
     }).filter(Boolean).slice(0, MAX_CAMERAS);
   }
   function compactCameraTapAction(rawAction = {}, fallbackAction = "toggle") {
-    const source = isObject2(rawAction) ? rawAction : { tap_action: rawAction };
+    const source = isObject(rawAction) ? rawAction : { tap_action: rawAction };
     const action = TAP_ACTIONS.has(normalizeTextKey2(source.tap_action)) ? normalizeTextKey2(source.tap_action) : fallbackAction;
     const compact = { tap_action: action };
     if (action === "service") {
@@ -1334,7 +1333,7 @@
     const validCameras = new Set(cameraIds);
     const seen = /* @__PURE__ */ new Set();
     return rawStreams.map((item) => {
-      if (!isObject2(item)) {
+      if (!isObject(item)) {
         return null;
       }
       const camera = normalizeCameraEntityId2(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
@@ -1560,7 +1559,7 @@
     config.camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
     config.expanded_actions = normalizeExpandedActions(config.expanded_actions);
     config.language = String(config.language ?? "auto").trim() || "auto";
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject2(config.security) ? config.security : {} };
+    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     if (typeof applyTap === "function") {
       applyTap(config, {
@@ -1584,7 +1583,7 @@
     }
     config.tap_action = TAP_ACTIONS.has(normalizeTextKey2(config.tap_action)) ? normalizeTextKey2(config.tap_action) : DEFAULT_CONFIG.tap_action;
     config.hold_action = HOLD_ACTIONS.has(normalizeTextKey2(config.hold_action)) ? normalizeTextKey2(config.hold_action) : DEFAULT_CONFIG.hold_action;
-    const serializeActionObject = (value) => isObject2(value) ? JSON.stringify(value) : String(value ?? "").trim();
+    const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
     config.tap_service = String(config.tap_service ?? "").trim();
     config.tap_service_data = serializeActionObject(config.tap_service_data);
     config.tap_service_target = serializeActionObject(config.tap_service_target);
@@ -1611,7 +1610,7 @@
       return document.createElement(EDITOR_TAG);
     }
     static getStubConfig(hass, entities = [], entitiesFallback = []) {
-      return applyStubEntity(deepClone2(STUB_CONFIG), hass, ["camera"], entities, entitiesFallback);
+      return applyStubEntity(deepClone(STUB_CONFIG), hass, ["camera"], entities, entitiesFallback);
     }
     static getEntitySuggestion(hass, entityId) {
       return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["camera"] });
@@ -2527,7 +2526,7 @@
     }
     _expandedCardConfig(action) {
       const domain = String(action.entity || "").split(".")[0];
-      const security = deepClone2(this._config?.security || DEFAULT_CONFIG.security);
+      const security = deepClone(this._config?.security || DEFAULT_CONFIG.security);
       if (action.tap_action === "service" && action.tap_service) {
         security.allowed_services = Array.from(/* @__PURE__ */ new Set([
           ...Array.isArray(security.allowed_services) ? security.allowed_services : [],
@@ -2539,9 +2538,9 @@
         tap_action: action.tap_action || "toggle",
         tap_new_tab: action.tap_new_tab === true,
         security,
-        haptics: deepClone2(this._config?.haptics || DEFAULT_CONFIG.haptics),
+        haptics: deepClone(this._config?.haptics || DEFAULT_CONFIG.haptics),
         animations: {
-          ...deepClone2(this._config?.animations || DEFAULT_CONFIG.animations),
+          ...deepClone(this._config?.animations || DEFAULT_CONFIG.animations),
           content_duration: 0,
           panel_duration: 0
         },
@@ -2549,7 +2548,7 @@
       };
       ["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"].forEach((key) => {
         if (action[key]) {
-          config[key] = (key === "tap_service_data" || key === "tap_service_target") && isObject(action[key]) ? JSON.stringify(action[key]) : deepClone2(action[key]);
+          config[key] = (key === "tap_service_data" || key === "tap_service_target") && isObject(action[key]) ? JSON.stringify(action[key]) : deepClone(action[key]);
         }
       });
       if (action.icon_color) {
@@ -4077,16 +4076,19 @@
     customElements.define(EDITOR_TAG, NodaliaCameraCardEditor);
   }
   (function registerNodaliaCameraCardPicker() {
-    const hass = window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.cameraCard ?? window.NodaliaI18n?.strings?.("en")?.cameraCard ?? {};
-    const description = String(pack.cardDescription || "Nodalia-style camera preview with status chips and expanded view.");
-    window.NodaliaUtils.registerCustomCard({
-      type: CARD_TAG,
-      name: "Nodalia Camera Card",
-      description,
-      preview: true
-    });
+    try {
+      const hass = window.NodaliaI18n?.resolveHass?.(null);
+      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";
+      const pack = window.NodaliaI18n?.strings?.(lang)?.cameraCard ?? window.NodaliaI18n?.strings?.("en")?.cameraCard ?? {};
+      const description = String(pack.cardDescription || "Nodalia-style camera preview with status chips and expanded view.");
+      window.NodaliaUtils?.registerCustomCard?.({
+        type: CARD_TAG,
+        name: "Nodalia Camera Card",
+        description,
+        preview: true
+      });
+    } catch {
+    }
   })();
   var publicApi = {
     CARD_TAG,

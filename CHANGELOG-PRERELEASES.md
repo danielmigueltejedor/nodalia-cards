@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.17b] - 2026-09-19
+
+Seventeenth experimental TypeScript architecture preview on the parallel `b` line.
+Camera Card and Room Summary no longer fail Lovelace configuration after the
+TypeScript Camera split.
+
+### Fixed
+
+- Camera Card no longer binds `NodaliaCameraStreamModel` at module load, which
+  aborted the HACS bundle before Room Summary registered.
+- Camera `normalizeConfig` imports `deepClone` so the style sanitizer fallback
+  cannot throw a configuration error.
+- Room Summary skips embedded cards whose custom element is missing instead of
+  failing the hub `setConfig`.
+
+### Validation
+
+- Node regressions for Camera load without a preloaded stream model and Room
+  Summary hub mount guard. Full suite **506** tests.
+
 ## [2.3.0-alpha.16b] - 2026-09-19
 
 Sixteenth experimental TypeScript architecture preview on the parallel `b` line.

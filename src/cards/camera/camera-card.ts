@@ -12,6 +12,7 @@ import {
   deepClone,
   escapeHtml,
   isMixedContentUrl,
+  isObject,
   sanitizeIframeUrl,
 } from "./camera-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./camera-config";

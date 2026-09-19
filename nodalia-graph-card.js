@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-graph-card";
 const EDITOR_TAG = "nodalia-graph-card-editor";
-const CARD_VERSION = "2.3.0-alpha.16b";
+const CARD_VERSION = "2.3.0-alpha.17b";
 const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

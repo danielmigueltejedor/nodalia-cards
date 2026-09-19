@@ -4,7 +4,7 @@
   // src/cards/person/person-constants.ts
   var CARD_TAG = "nodalia-person-card";
   var EDITOR_TAG = "nodalia-person-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.16b";
+  var CARD_VERSION = "2.3.0-alpha.17b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

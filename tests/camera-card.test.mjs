@@ -110,6 +110,53 @@ test("camera card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-camera-card\.js/);
   assert.ok(pkg.files.includes("nodalia-camera-card.js"));
+  assert.doesNotMatch(source, /streamModel\.buildGo2rtcViewerUrl\.bind\(streamModel\)/);
+});
+
+test("camera card loads and accepts setConfig without a preloaded stream model", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = false;
+    }
+    attachShadow() {
+      this.shadowRoot = {
+        innerHTML: "",
+        addEventListener() {},
+        removeEventListener() {},
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+  }
+  const sandbox = {
+    URL,
+    location: { protocol: "https:", href: "https://home-assistant.example/lovelace/cameras" },
+    window: null,
+    globalThis: null,
+    customElements: {
+      define(name, ctor) { registry.set(name, ctor); },
+      get(name) { return registry.get(name) || null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-camera-card.js"), sandbox);
+  const api = sandbox.window.__NODALIA_CAMERA__ || sandbox.__NODALIA_CAMERA__;
+  assert.ok(api, "camera public API should exist without a preloaded stream model");
+  const config = api.normalizeConfig({ entity: "camera.entrada" });
+  assert.equal(config.entity, "camera.entrada");
+  const Card = registry.get("nodalia-camera-card");
+  assert.equal(typeof Card, "function");
+  const card = new Card();
+  card.setConfig({ entity: "camera.entrada", cameras: ["camera.entrada"] });
+  assert.equal(card._config.entity, "camera.entrada");
 });
 
 test("camera normalizeConfig forces mosaic feed and accepts tap action objects", () => {

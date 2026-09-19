@@ -45,18 +45,22 @@ if (!customElements.get(EDITOR_TAG)) {
 }
 
 (function registerNodaliaCameraCardPicker() {
-  const hass = window.NodaliaI18n?.resolveHass?.(null);
-  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";
-  const pack = (window.NodaliaI18n?.strings?.(lang) as { cameraCard?: { cardDescription?: string } } | undefined)?.cameraCard
-    ?? (window.NodaliaI18n?.strings?.("en") as { cameraCard?: { cardDescription?: string } } | undefined)?.cameraCard
-    ?? {};
-  const description = String(pack.cardDescription || "Nodalia-style camera preview with status chips and expanded view.");
-  window.NodaliaUtils.registerCustomCard({
-    type: CARD_TAG,
-    name: "Nodalia Camera Card",
-    description,
-    preview: true,
-  });
+  try {
+    const hass = window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";
+    const pack = (window.NodaliaI18n?.strings?.(lang) as { cameraCard?: { cardDescription?: string } } | undefined)?.cameraCard
+      ?? (window.NodaliaI18n?.strings?.("en") as { cameraCard?: { cardDescription?: string } } | undefined)?.cameraCard
+      ?? {};
+    const description = String(pack.cardDescription || "Nodalia-style camera preview with status chips and expanded view.");
+    window.NodaliaUtils?.registerCustomCard?.({
+      type: CARD_TAG,
+      name: "Nodalia Camera Card",
+      description,
+      preview: true,
+    });
+  } catch {
+    // Picker registration must never prevent the card custom element from loading.
+  }
 })();
 
 const publicApi = {

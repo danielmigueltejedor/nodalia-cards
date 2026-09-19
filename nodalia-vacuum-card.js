@@ -4,7 +4,7 @@
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
   var EDITOR_TAG = "nodalia-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.16b";
+  var CARD_VERSION = "2.3.0-alpha.17b";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
