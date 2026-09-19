@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.17b
+2.3.0-alpha.18b
 ```
 
-Preview **`2.3.0-alpha.17b`** restores Camera Card and Room Summary after a TypeScript load crash. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.18b`** restores Camera Card render after a missing TypeScript helper import. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable **`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

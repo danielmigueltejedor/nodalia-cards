@@ -140,6 +140,8 @@ test("camera card loads and accepts setConfig without a preloaded stream model",
       get(name) { return registry.get(name) || null; },
     },
     HTMLElement: FakeHTMLElement,
+    setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
+    clearTimeout: id => globalThis.clearTimeout(id),
     btoa: value => Buffer.from(value, "binary").toString("base64"),
     atob: value => Buffer.from(value, "base64").toString("binary"),
   };
@@ -157,6 +159,19 @@ test("camera card loads and accepts setConfig without a preloaded stream model",
   const card = new Card();
   card.setConfig({ entity: "camera.entrada", cameras: ["camera.entrada"] });
   assert.equal(card._config.entity, "camera.entrada");
+  card.isConnected = true;
+  card.hass = {
+    language: "en",
+    states: {
+      "camera.entrada": {
+        entity_id: "camera.entrada",
+        state: "idle",
+        attributes: { friendly_name: "Entrada", access_token: "abc123" },
+        last_changed: "2026-09-19T16:00:00.000Z",
+      },
+    },
+  };
+  assert.match(String(card.shadowRoot?.innerHTML || ""), /camera-card/);
 });
 
 test("camera normalizeConfig forces mosaic feed and accepts tap action objects", () => {

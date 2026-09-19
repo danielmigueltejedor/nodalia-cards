@@ -1003,7 +1003,7 @@
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
   var EDITOR_TAG = "nodalia-camera-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.17b";
+  var CARD_VERSION = "2.3.0-alpha.18b";
   var CAMERA_LAYOUT = "mosaic";
   var CAMERA_PRESENTATION = "feed";
   var MAX_CAMERAS = 4;
@@ -1072,11 +1072,11 @@
     }
     cursor[parts[parts.length - 1]] = value;
   }
-  function normalizeTextKey2(value) {
+  function normalizeTextKey(value) {
     return String(value ?? "").trim().toLowerCase();
   }
   function isUnavailableState(state) {
-    const key = normalizeTextKey2(state?.state);
+    const key = normalizeTextKey(state?.state);
     return key === "unavailable" || key === "unknown";
   }
   function appendQueryParam(url, key, value) {
@@ -1177,7 +1177,7 @@
     walk(result, defaults);
     return result;
   }
-  function normalizeCameraEntityId2(value) {
+  function normalizeCameraEntityId(value) {
     if (isObject(value)) {
       return String(value.entity ?? value.entity_id ?? "").trim();
     }
@@ -1187,7 +1187,7 @@
     const seen = /* @__PURE__ */ new Set();
     const ids = [];
     const pushId = (value) => {
-      const id = normalizeCameraEntityId2(value);
+      const id = normalizeCameraEntityId(value);
       if (!id || seen.has(id)) {
         return;
       }
@@ -1212,7 +1212,7 @@
       if (!entity) {
         return null;
       }
-      const action = normalizeTextKey2(item.tap_action || "toggle");
+      const action = normalizeTextKey(item.tap_action || "toggle");
       return {
         entity,
         name: String(item.name ?? "").trim(),
@@ -1237,7 +1237,7 @@
       if (!isObject(item)) {
         return null;
       }
-      const camera = normalizeCameraEntityId2(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
       const action = normalizeExpandedActions([item])[0];
       if (!camera || !action || validCameras.size && !validCameras.has(camera)) {
         return null;
@@ -1257,7 +1257,7 @@
       if (!isObject(item)) {
         return null;
       }
-      const camera = normalizeCameraEntityId2(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
       if (!camera || seen.has(camera) || validCameras.size && !validCameras.has(camera)) {
         return null;
       }
@@ -1283,7 +1283,7 @@
           newTabKey: "tap_new_tab"
         }, item.tap_action ?? "toggle", "toggle");
       }
-      const action = normalizeTextKey2(normalized.tap_action || "toggle");
+      const action = normalizeTextKey(normalized.tap_action || "toggle");
       normalized.tap_action = TAP_ACTIONS.has(action) ? action : "toggle";
       normalized.tap_service = String(normalized.tap_service ?? "").trim();
       normalized.tap_service_data = serializeActionObject(normalized.tap_service_data);
@@ -1299,7 +1299,7 @@
   }
   function compactCameraTapAction(rawAction = {}, fallbackAction = "toggle") {
     const source = isObject(rawAction) ? rawAction : { tap_action: rawAction };
-    const action = TAP_ACTIONS.has(normalizeTextKey2(source.tap_action)) ? normalizeTextKey2(source.tap_action) : fallbackAction;
+    const action = TAP_ACTIONS.has(normalizeTextKey(source.tap_action)) ? normalizeTextKey(source.tap_action) : fallbackAction;
     const compact = { tap_action: action };
     if (action === "service") {
       compact.tap_service = String(source.tap_service || "").trim();
@@ -1313,7 +1313,7 @@
     }
     return compact;
   }
-  function compactCameraTapActions2(rawActions = [], globalTapConfig = "toggle") {
+  function compactCameraTapActions(rawActions = [], globalTapConfig = "toggle") {
     const fallback = compactCameraTapAction(globalTapConfig, "toggle");
     return rawActions.map((item) => {
       if (!item?.camera) {
@@ -1326,6 +1326,9 @@
       return { camera: item.camera, ...actionConfig };
     }).filter(Boolean);
   }
+  function cameraStreamName(entityId) {
+    return String(entityId || "").trim().replace(/^camera\./, "");
+  }
   function normalizeCameraStreams(rawStreams = [], cameraIds = []) {
     if (!Array.isArray(rawStreams)) {
       return [];
@@ -1336,15 +1339,15 @@
       if (!isObject(item)) {
         return null;
       }
-      const camera = normalizeCameraEntityId2(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
       if (!camera || seen.has(camera) || validCameras.size && !validCameras.has(camera)) {
         return null;
       }
       seen.add(camera);
-      const configuredProvider = normalizeTextKey2(item.provider || "home_assistant").replaceAll("-", "_");
+      const configuredProvider = normalizeTextKey(item.provider || "home_assistant").replaceAll("-", "_");
       const rawProvider = configuredProvider === "advanced_camera_card" ? "frigate_go2rtc" : configuredProvider;
       const provider = STREAM_PROVIDERS.has(rawProvider) ? rawProvider : "home_assistant";
-      const rawMode = normalizeTextKey2(item.mode || "auto");
+      const rawMode = normalizeTextKey(item.mode || "auto");
       return {
         camera,
         provider,
@@ -1358,7 +1361,7 @@
       };
     }).filter(Boolean).slice(0, MAX_CAMERAS);
   }
-  function compactCameraStreams2(rawStreams = []) {
+  function compactCameraStreams(rawStreams = []) {
     return rawStreams.map((item) => {
       if (item.provider === "frigate_go2rtc") {
         return {
@@ -1581,8 +1584,8 @@
         newTabKey: "hold_new_tab"
       }, rawConfig?.hold_action ?? config.hold_action, "none");
     }
-    config.tap_action = TAP_ACTIONS.has(normalizeTextKey2(config.tap_action)) ? normalizeTextKey2(config.tap_action) : DEFAULT_CONFIG.tap_action;
-    config.hold_action = HOLD_ACTIONS.has(normalizeTextKey2(config.hold_action)) ? normalizeTextKey2(config.hold_action) : DEFAULT_CONFIG.hold_action;
+    config.tap_action = TAP_ACTIONS.has(normalizeTextKey(config.tap_action)) ? normalizeTextKey(config.tap_action) : DEFAULT_CONFIG.tap_action;
+    config.hold_action = HOLD_ACTIONS.has(normalizeTextKey(config.hold_action)) ? normalizeTextKey(config.hold_action) : DEFAULT_CONFIG.hold_action;
     const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
     config.tap_service = String(config.tap_service ?? "").trim();
     config.tap_service_data = serializeActionObject(config.tap_service_data);
@@ -4104,8 +4107,8 @@
     normalizeCameraActions,
     normalizeCameraTapActions: normalizeCameraTapActions2,
     normalizeCameraStreams,
-    compactCameraTapActions: compactCameraTapActions2,
-    compactCameraStreams: compactCameraStreams2,
+    compactCameraTapActions,
+    compactCameraStreams,
     buildGo2rtcViewerUrl,
     buildGo2rtcWebSocketEndpoint,
     buildFrigateGo2rtcPath,

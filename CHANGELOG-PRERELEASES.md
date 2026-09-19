@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.18b] - 2026-09-19
+
+Eighteenth experimental TypeScript architecture preview on the parallel `b` line.
+Camera Card no longer throws during Lovelace render after the TypeScript split.
+
+### Fixed
+
+- Camera Card imports `normalizeTextKey` and `cameraStreamName`, so the first
+  `hass` render no longer raises a `ReferenceError` that Lovelace shows as a
+  configuration error.
+- Camera editor imports stream and tap-action compact helpers used when saving
+  YAML.
+
+### Validation
+
+- Node regression for Camera `setConfig` plus connected `hass` render. Full
+  suite **506** tests.
+
 ## [2.3.0-alpha.17b] - 2026-09-19
 
 Seventeenth experimental TypeScript architecture preview on the parallel `b` line.

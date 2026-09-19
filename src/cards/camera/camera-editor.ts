@@ -4,8 +4,12 @@ import { MAX_CAMERAS } from "./camera-constants";
 import { escapeHtml, getByPath, isObject } from "./camera-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./camera-config";
 import {
+  cameraStreamName,
+  compactCameraStreams,
+  compactCameraTapActions,
   fireEvent,
   mergeConfig,
+  normalizeCameraEntityId,
   setByPath,
   stripEqualToDefaults,
 } from "./camera-helpers";
